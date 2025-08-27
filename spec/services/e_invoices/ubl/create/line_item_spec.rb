@@ -74,10 +74,22 @@ RSpec.describe EInvoices::Ubl::Create::LineItem, type: :service do
           end
         end
 
-        it "have the item taxes rate" do
-          expect(subject).to contains_xml_node(
-            "#{root}/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent"
-          ).with_value(fee.taxes_rate)
+        context "when Percent" do
+          it "have the item taxes rate" do
+            expect(subject).to contains_xml_node(
+              "#{root}/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent"
+            ).with_value(fee.taxes_rate)
+          end
+
+          context "with O_CATEGORY" do
+            let(:fee_type) { :credit }
+
+            it "do not have percent tag" do
+              expect(subject).not_to contains_xml_node(
+                "#{root}/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent"
+              )
+            end
+          end
         end
 
         it "have the item taxes scheme" do
