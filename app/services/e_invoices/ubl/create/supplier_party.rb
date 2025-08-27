@@ -19,14 +19,17 @@ module EInvoices
                   xml["cbc"].IdentificationCode billing_entity.country
                 end
               end
-              xml["cac"].PartyTaxScheme do
-                xml["cbc"].CompanyID billing_entity.tax_identification_number
-                xml["cac"].TaxScheme do
-                  xml["cbc"].ID VAT
+              unless invoice.credit?
+                xml["cac"].PartyTaxScheme do
+                  xml["cbc"].CompanyID billing_entity.tax_identification_number
+                  xml["cac"].TaxScheme do
+                    xml["cbc"].ID VAT
+                  end
                 end
               end
               xml["cac"].PartyLegalEntity do
                 xml["cbc"].RegistrationName billing_entity.legal_name
+                xml["cbc"].CompanyID billing_entity.tax_identification_number
               end
             end
           end
