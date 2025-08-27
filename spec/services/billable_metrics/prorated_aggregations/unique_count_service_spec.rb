@@ -824,8 +824,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         result = unique_count_service.per_event_aggregation
 
-        expect(result.event_aggregation).to eq([1])
-        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([16.fdiv(31).ceil(5)])
+        expect(result.event_aggregation).to eq([1, -1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([16.fdiv(31).ceil(5), 0.0])
       end
 
       context "when removed on the last day of the period" do
@@ -844,8 +844,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
           result = unique_count_service.per_event_aggregation
 
-          expect(result.event_aggregation).to eq([1])
-          expect(result.event_prorated_aggregation).to eq([1])
+          expect(result.event_aggregation).to eq([1, -1])
+          expect(result.event_prorated_aggregation).to eq([1, 0.0])
         end
       end
     end
@@ -868,8 +868,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         result = unique_count_service.per_event_aggregation
 
-        expect(result.event_aggregation).to eq([1])
-        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([29.fdiv(31).ceil(5)])
+        expect(result.event_aggregation).to eq([1, -1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([29.fdiv(31).ceil(5), 0.0])
       end
 
       context "when added and removed the same day" do
@@ -890,8 +890,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
           result = unique_count_service.per_event_aggregation
 
-          expect(result.event_aggregation).to eq([1])
-          expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1.fdiv(31).ceil(5)])
+          expect(result.event_aggregation).to eq([1, -1])
+          expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1.fdiv(31).ceil(5), 0.0])
         end
       end
     end
@@ -937,8 +937,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         first = 21.fdiv(31).ceil(5)
         second = 1.fdiv(31).ceil(5)
 
-        expect(result.event_aggregation).to eq([1, 1, 1])
-        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([first, first, second])
+        expect(result.event_aggregation).to eq([1, 1, 1, -1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([first, first, second, 0.0])
       end
     end
 
@@ -981,8 +981,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         second = 21.fdiv(31).ceil(5)
         third = 1.fdiv(31).ceil(5)
 
-        expect(result.event_aggregation).to eq([1, 1, 1])
-        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1, second, third])
+        expect(result.event_aggregation).to eq([1, 1, 1, -1])
+        expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([1, second, third, 0.0])
       end
     end
   end
