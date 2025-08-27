@@ -5331,6 +5331,14 @@ input FixedChargeInput {
   units: String
 }
 
+input FixedChargeOverridesInput {
+  addOnId: ID!
+  id: ID
+  invoiceDisplayName: String
+  properties: FixedChargePropertiesInput
+  taxCodes: [String!]
+}
+
 type FixedChargeProperties {
   amount: String
   graduatedRanges: [GraduatedRange!]
@@ -8011,6 +8019,7 @@ input PlanOverridesInput {
   amountCurrency: CurrencyEnum
   charges: [ChargeOverridesInput!]
   description: String
+  fixedCharges: [FixedChargeOverridesInput!]
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
   name: String
