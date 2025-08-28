@@ -84,25 +84,7 @@ module Events
     end
 
     def produce_kafka_event(event)
-      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
-
-      Karafka.producer.produce_async(
-        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
-        key: "#{organization.id}-#{event.external_subscription_id}",
-        payload: {
-          organization_id: organization.id,
-          external_customer_id: event.external_customer_id,
-          external_subscription_id: event.external_subscription_id,
-          transaction_id: event.transaction_id,
-          timestamp: event.timestamp.to_f,
-          code: event.code,
-          properties: event.properties,
-          ingested_at: Time.zone.now.iso8601[...-1],
-          precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
-          source: "http_ruby"
-        }.to_json
-      )
+      Events::KafkaProducerService.call!(event:, organization:)
     end
   end
 end
