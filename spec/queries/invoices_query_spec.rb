@@ -579,8 +579,8 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {amount_from:, amount_to:} }
 
     let!(:invoices) do
-      (1..5).to_a.map do |i|
-        create(:invoice, total_amount_cents: i.succ * 1_000, organization:)
+      (2..6).to_a.map do |i|
+        create(:invoice, total_amount_cents: i * 1_000, organization:)
       end # from smallest to biggest
     end
 
@@ -611,6 +611,16 @@ RSpec.describe InvoicesQuery, type: :query do
       it "returns invoices with total cents amount in provided range" do
         expect(result).to be_success
         expect(result.invoices.pluck(:id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
+
+    context "when amount from and amount to are provided as strings or decimals" do
+      let(:amount_from) { 0.5 }
+      let(:amount_to) { "3000.00" }
+
+      it "returns invoices with total cents amount in provided range" do
+        expect(result).to be_success
+        expect(result.invoices.pluck(:id)).to match_array invoices[0..1].pluck(:id)
       end
     end
   end
