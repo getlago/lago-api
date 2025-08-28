@@ -207,6 +207,15 @@ module Api
               :conversion_rate
             ]
           ],
+          fixed_charges: [
+            :id,
+            :add_on_id,
+            :invoice_display_name,
+            :charge_model,
+            :units,
+            properties: {},
+            tax_codes: []
+          ],
           usage_thresholds: [
             :id,
             :threshold_display_name,
