@@ -433,6 +433,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         .and change(feature.entitlement_values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
+      expect(json[:entitlement][:code]).to eq "seats"
+      expect(json[:entitlement][:privileges].sole[:code]).to eq "max"
     end
 
     it "returns not found error when plan does not exist" do

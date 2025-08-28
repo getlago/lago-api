@@ -290,7 +290,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
           expect(privilege_removal.reload).to be_discarded
           expect(entitlement.reload).to be_discarded
           expect(entitlement_value.reload).to be_discarded
-          pp subscription.entitlement_removals.pluck(:entitlement_feature_id)
           expect(subscription.entitlement_removals.where(feature:)).to exist
         end
       end
