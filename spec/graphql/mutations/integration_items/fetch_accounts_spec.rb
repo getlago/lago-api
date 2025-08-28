@@ -32,7 +32,7 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts, type: :graphql do
     allow(Integrations::Aggregator::SyncService).to receive(:new).and_return(sync_service)
     allow(sync_service).to receive(:call).and_return(true)
 
-    stub_request(:get, "https://api.nango.dev/v1/netsuite/accounts?cursor=&limit=450")
+    stub_request(:get, "https://api.nango.dev/v1/netsuite/accounts?limit=450")
       .to_return(status: 200, body: accounts_response, headers: {})
 
     integration_item
