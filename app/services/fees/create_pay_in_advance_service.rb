@@ -222,7 +222,8 @@ module Fees
       result.fees_taxes = taxes_result.fees
 
       fees_result.each do |fee|
-        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
+        item_id = fee.id || fee.item_id
+        fee_taxes = result.fees_taxes.find { |item| item.item_id == item_id }
 
         res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
         res.raise_if_error!
