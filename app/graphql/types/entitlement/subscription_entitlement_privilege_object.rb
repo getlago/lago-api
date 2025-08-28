@@ -9,6 +9,17 @@ module Types
       field :value_type, Types::Entitlement::PrivilegeValueTypeEnum, null: false
 
       field :value, String, null: true
+
+      def value
+        # NOTE: If the boolean `true`/`false` were sent to via the API, ActiveRecord will store them as `"t"`/`"f"`
+        #       We convert them to full words, as string, for the frontent
+        if object.value_type == "boolean"
+          return "false" if object.value == "f"
+          return "true" if object.value == "t"
+        end
+
+        object.value
+      end
     end
   end
 end
