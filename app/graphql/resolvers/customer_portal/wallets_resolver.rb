@@ -17,9 +17,7 @@ module Resolvers
         wallets = context[:customer_portal_user]
           .wallets
 
-        # Default to active wallets for backwards compatibility unless a status is provided
         wallets = status.present? ? wallets.where(status:) : wallets.active
-
         wallets
           .page(page)
           .per(limit)
