@@ -379,13 +379,13 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:fixed_charge) { create(:fixed_charge, plan:, units: 2) }
       let(:params) do
         {
-        external_customer_id: customer.external_id,
-        plan_code:,
-        name: "subscription name",
-        external_id: SecureRandom.uuid,
-        billing_time: "anniversary",
-        subscription_at:,
-        ending_at:,
+          external_customer_id: customer.external_id,
+          plan_code:,
+          name: "subscription name",
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          ending_at:,
           plan_overrides: {
             fixed_charges: [{id: fixed_charge.id, units: "10"}]
           }
