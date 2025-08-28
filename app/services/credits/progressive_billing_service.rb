@@ -59,12 +59,13 @@ module Credits
     attr_reader :invoice
 
     def apply_credit_to_fees(progressive_billing_invoice)
+      invoice_fees = invoice.fees.charge.to_a
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
-        fee = invoice.fees.find_by(
-          charge_id: progressive_fee.charge_id,
-          charge_filter_id: progressive_fee.charge_filter_id,
-          grouped_by: progressive_fee.grouped_by
-        )
+        fee = invoice_fees.find { |f|
+          f.charge_id == progressive_fee.charge_id &&
+            f.charge_filter_id == progressive_fee.charge_filter_id &&
+            f.grouped_by == progressive_fee.grouped_by
+        }
         next unless fee
 
         fee.precise_coupons_amount_cents += progressive_fee.amount_cents
