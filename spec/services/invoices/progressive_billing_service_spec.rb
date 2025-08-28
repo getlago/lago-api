@@ -149,6 +149,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
 
         create(
           :charge_fee,
+          charge:,
           invoice:,
           amount_cents: 20
         )
