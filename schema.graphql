@@ -2627,7 +2627,7 @@ input CreateCustomerWalletInput {
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
-  priority: Int
+  priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
 }
