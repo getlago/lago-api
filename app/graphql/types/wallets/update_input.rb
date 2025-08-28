@@ -13,7 +13,7 @@ module Types
       argument :paid_top_up_max_amount_cents, GraphQL::Types::BigInt, required: false
       argument :paid_top_up_min_amount_cents, GraphQL::Types::BigInt, required: false
 
-      argument :priority, Integer, required: false
+      argument :priority, Integer, required: true
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::UpdateInput], required: false
 
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
