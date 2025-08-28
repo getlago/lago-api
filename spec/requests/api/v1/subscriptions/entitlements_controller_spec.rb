@@ -293,6 +293,16 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
           expect(subscription.entitlement_removals.where(feature:)).to exist
         end
       end
+
+      context "when feature was already removed via entitlement removal" do
+        it "returns a success" do
+          create(:subscription_feature_removal, feature:, subscription:)
+          expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription)).to be_empty
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:entitlements]).to be_empty
+        end
+      end
     end
 
     it "returns not found error when subscription does not exist" do

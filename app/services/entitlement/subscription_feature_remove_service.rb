@@ -55,7 +55,11 @@ module Entitlement
     def add_feature_removal_if_feature_is_in_plan
       plan_id = subscription.plan.parent_id || subscription.plan.id
       return unless Entitlement.where(plan_id: plan_id, entitlement_feature_id: feature.id).exists?
-      SubscriptionFeatureRemoval.create!(organization:, subscription: subscription, feature: feature)
+
+      SubscriptionFeatureRemoval.insert_all( # rubocop:disable Rails/SkipsModelValidations
+        [{organization_id: organization.id, subscription_id: subscription.id, entitlement_feature_id: feature.id}],
+        unique_by: :idx_unique_feature_removal_per_subscription
+      )
     end
   end
 end

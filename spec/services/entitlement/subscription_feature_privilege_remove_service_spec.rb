@@ -87,6 +87,14 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService, type: :se
         expect(removal.organization).to eq(organization)
         expect(removal.privilege).to eq(privilege)
       end
+
+      context "when privilege is already removed" do
+        it "succeeds" do
+          create(:subscription_feature_removal, subscription:, privilege:)
+          expect { result }.not_to change(subscription.entitlement_removals.where(privilege:), :count)
+          expect(result).to be_success
+        end
+      end
     end
 
     context "when privilege is on subscription" do

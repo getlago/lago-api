@@ -60,6 +60,19 @@ RSpec.describe Api::V1::Subscriptions::Entitlements::PrivilegesController, type:
         plan_entitlement_value
         expect { subject }.to change(subscription.entitlement_removals.where(privilege:), :count).from(0).to(1)
       end
+
+      context "when privilege removal already exists" do
+        before do
+          create(:subscription_feature_removal, subscription:, privilege: plan_entitlement_value.privilege)
+        end
+
+        it "returns a success" do
+          expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).sole.privileges).to be_empty
+          expect { subject }.not_to change(subscription.entitlement_removals.where(privilege:), :count)
+          expect(response).to have_http_status(:success)
+          expect(json[:entitlements].sole[:privileges]).to be_empty
+        end
+      end
     end
   end
 end

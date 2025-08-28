@@ -56,7 +56,11 @@ module Entitlement
     def add_privilege_removal_if_privilege_is_in_plan
       plan_id = subscription.plan.parent_id || subscription.plan.id
       return unless Entitlement.where(plan_id:, feature:).exists?
-      subscription.entitlement_removals.create!(organization:, privilege:)
+
+      SubscriptionFeatureRemoval.insert_all( # rubocop:disable Rails/SkipsModelValidations
+        [{organization_id: organization.id, subscription_id: subscription.id, entitlement_privilege_id: privilege.id}],
+        unique_by: :idx_unique_privilege_removal_per_subscription
+      )
     end
   end
 end
