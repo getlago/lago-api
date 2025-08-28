@@ -8585,7 +8585,7 @@ type Query {
   """
   Query wallets
   """
-  customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+  customerPortalWallets(limit: Int, page: Int, status: WalletStatusEnum): CustomerPortalWalletCollection!
 
   """
   Query the projected usage of the customer on the current billing period
