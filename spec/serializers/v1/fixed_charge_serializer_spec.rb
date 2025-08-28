@@ -11,8 +11,9 @@ RSpec.describe ::V1::FixedChargeSerializer do
 
   it "serializes the object" do
     expect(result["fixed_charge"]["lago_id"]).to eq(fixed_charge.id)
-    expect(result["fixed_charge"]["add_on_id"]).to eq(fixed_charge.add_on_id)
+    expect(result["fixed_charge"]["lago_add_on_id"]).to eq(fixed_charge.add_on_id)
     expect(result["fixed_charge"]["invoice_display_name"]).to eq(fixed_charge.invoice_display_name)
+    expect(result["fixed_charge"]["add_on_code"]).to eq(fixed_charge.add_on.code)
     expect(result["fixed_charge"]["created_at"]).to eq(fixed_charge.created_at.iso8601)
     expect(result["fixed_charge"]["charge_model"]).to eq(fixed_charge.charge_model)
     expect(result["fixed_charge"]["pay_in_advance"]).to eq(fixed_charge.pay_in_advance)

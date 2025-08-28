@@ -190,5 +190,80 @@ RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
         expect(next_subscription.reload).to be_canceled
       end
     end
+
+    context "when sending plan_overrides" do
+      context "when License is premium" do
+        around { |test| lago_premium!(&test) }
+
+        context "when upgrading with plan_overrides that contain only fixed_charges with units" do
+          let(:add_on) { create(:add_on, organization:) }
+          let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, organization:, units: 2) }
+          let(:fixed_charge2) { create(:fixed_charge, plan:, add_on:, organization:, units: 3) }
+          let(:params) do
+            {
+              name: subscription_name,
+              plan_overrides: {
+                fixed_charges: [
+                  {id: fixed_charge.id, units: 5},
+                  {id: fixed_charge2.id, units: 7}
+                ]
+              }
+            }
+          end
+
+          before do
+            fixed_charge
+            fixed_charge2
+          end
+
+          it "creates new subscription with original plan and fixed charge unit overrides" do
+            expect(result).to be_success
+            expect(result.subscription.plan).to eq(plan)
+            expect(result.subscription.subscription_fixed_charge_units_overrides.count).to eq(2)
+            expect(result.subscription.subscription_fixed_charge_units_overrides.map(&:units)).to match_array([5, 7])
+          end
+
+          it "only calls FixedChargeUnitOverrideService for each fixed charge" do
+            allow(Subscriptions::FixedChargeUnitOverrideService).to receive(:call!)
+            allow(Plans::OverrideService).to receive(:call)
+
+            result
+
+            expect(Subscriptions::FixedChargeUnitOverrideService).to have_received(:call!).twice
+            expect(Plans::OverrideService).not_to have_received(:call)
+          end
+        end
+
+        context "when plan_overrides contains other fields changes, but only units are changed for fixed_charges" do
+          let(:add_on) { create(:add_on, organization:) }
+          let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, organization:, units: 2) }
+          let(:params) do
+            {
+              name: subscription_name,
+              plan_overrides: {
+                fixed_charges: [
+                  {id: fixed_charge.id, units: 5}
+                ],
+                amount_cents: 200
+              }
+            }
+          end
+
+          before do
+            fixed_charge
+          end
+
+          it "calls Plans::OverrideService instead of creating unit overrides" do
+            allow(Plans::OverrideService).to receive(:call).and_call_original
+            allow(Subscriptions::FixedChargeUnitOverrideService).to receive(:call!)
+
+            result
+
+            expect(Plans::OverrideService).to have_received(:call)
+            expect(Subscriptions::FixedChargeUnitOverrideService).not_to have_received(:call!)
+          end
+        end
+      end
+    end
   end
 end

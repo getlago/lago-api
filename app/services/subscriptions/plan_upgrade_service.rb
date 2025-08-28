@@ -34,6 +34,8 @@ module Subscriptions
         )
 
         new_subscription.mark_as_active!
+        create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
+
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
           Utils::ActivityLog.produce(new_subscription, "subscription.started")
@@ -58,7 +60,7 @@ module Subscriptions
       Subscription.new(
         organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
-        plan: params.key?(:plan_overrides) ? override_plan : plan,
+        plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
         previous_subscription_id: current_subscription.id,
@@ -78,8 +80,27 @@ module Subscriptions
       end
     end
 
-    def override_plan
+    def plan_for_override_params(plan)
+      if overrides_only_fixed_charge_units?
+        return plan
+      end
+
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def overrides_only_fixed_charge_units?
+      params[:plan_overrides] && params[:plan_overrides].keys == [:fixed_charges] &&
+        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.sort == [:id, :units]
+    end
+
+    def create_fixed_charge_units_override(subscription)
+      params[:plan_overrides][:fixed_charges].each do |fixed_charge|
+        FixedChargeUnitOverrideService.call!(
+          subscription:,
+          fixed_charge: subscription.plan.fixed_charges.find(fixed_charge[:id]),
+          units: fixed_charge[:units]
+        )
+      end
     end
 
     def cancel_pending_subscription

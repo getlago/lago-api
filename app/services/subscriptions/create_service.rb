@@ -101,7 +101,7 @@ module Subscriptions
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
         subscription_at:,
         name:,
         external_id:,
@@ -116,6 +116,7 @@ module Subscriptions
       else
         new_subscription.mark_as_active!
       end
+      create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
 
       if should_be_billed_today?(new_subscription)
         # NOTE: Since job is launched from inside a db transaction
@@ -162,10 +163,10 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      current_subscription.next_subscriptions.create!(
+      new_subscription = current_subscription.next_subscriptions.create!(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
         subscription_at: current_subscription.subscription_at,
@@ -173,6 +174,7 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
+      create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)
@@ -223,8 +225,27 @@ module Subscriptions
         .order(started_at: :desc)
     end
 
-    def override_plan(plan)
+    def plan_for_override_params(plan)
+      if overrides_only_fixed_charge_units?
+        return plan
+      end
+
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def overrides_only_fixed_charge_units?
+      params[:plan_overrides] && params[:plan_overrides].keys == [:fixed_charges] &&
+        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.sort == [:id, :units]
+    end
+
+    def create_fixed_charge_units_override(subscription)
+      params[:plan_overrides][:fixed_charges].each do |fixed_charge|
+        FixedChargeUnitOverrideService.call!(
+          subscription:,
+          fixed_charge: subscription.plan.fixed_charges.find(fixed_charge[:id]),
+          units: fixed_charge[:units]
+        )
+      end
     end
   end
 end
