@@ -70,7 +70,7 @@ module PaymentProviders
         end
 
         def generate_checkout_url(async)
-          return PaymentProviderCustomers::StripeCheckoutUrlJob.perform_later(result.provider_customer) if async
+          return PaymentProviderCustomers::StripeCheckoutUrlJob.perform_after_commit(result.provider_customer) if async
 
           PaymentProviderCustomers::StripeCheckoutUrlJob.perform_now(result.provider_customer)
         end
@@ -88,7 +88,8 @@ module PaymentProviders
           !result.provider_customer.id_previously_changed?(from: nil) && # it was not created but updated
             result.provider_customer.provider_customer_id_previously_changed? &&
             result.provider_customer.provider_customer_id? &&
-            result.provider_customer.sync_with_provider.blank?
+            result.provider_customer.sync_with_provider.blank? &&
+            result.provider_customer.provider_payment_methods_require_setup?
         end
       end
     end

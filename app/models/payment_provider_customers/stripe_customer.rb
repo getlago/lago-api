@@ -21,6 +21,10 @@ module PaymentProviderCustomers
       provider_payment_methods & PAYMENT_METHODS_WITH_SETUP
     end
 
+    def provider_payment_methods_require_setup?
+      provider_payment_methods_with_setup.present?
+    end
+
     def provider_payment_methods=(provider_payment_methods)
       push_to_settings(key: "provider_payment_methods", value: provider_payment_methods.to_a)
     end

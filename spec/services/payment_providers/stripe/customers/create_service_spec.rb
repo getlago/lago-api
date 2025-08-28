@@ -104,23 +104,16 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService, type: :servic
         expect do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(result.provider_customer.provider_customer_id).to be_nil
-          end
+          expect(result.provider_customer.provider_customer_id).to be_nil
         end.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
       end
     end
 
     context "when provider customer id is set" do
       let(:params) do
-        {provider_customer_id: "id", sync_with_provider:, provider_payment_methods: %w[card]}
-      end
-
-      before do
-        allow(create_service).to receive(:generate_checkout_url).and_return(true)
-        allow(create_service).to receive(:create_customer_on_provider_service).and_return(true)
+        {provider_customer_id: "id", sync_with_provider:, provider_payment_methods:}
       end
 
       context "when sync with provider is blank" do
@@ -133,26 +126,39 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService, type: :servic
             create(:stripe_customer, customer:, payment_provider_id: provider.id)
           end
 
-          it "generates checkout url" do
-            create_service.call
-            expect(create_service).to have_received(:generate_checkout_url)
+          context "when provider payment methods require setup" do
+            let(:provider_payment_methods) { %w[card sepa_debit] }
+
+            it "generates checkout url" do
+              result = nil
+              expect do
+                result = create_service.call
+              end.to have_enqueued_job_after_commit(PaymentProviderCustomers::StripeCheckoutUrlJob).with do |stripe_customer|
+                expect(stripe_customer).to eq(result.provider_customer)
+              end
+            end
+          end
+
+          context "when provider payment methods do not require setup" do
+            let(:provider_payment_methods) { %w[crypto] }
+
+            it "does not generate checkout url" do
+              expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCheckoutUrlJob)
+            end
           end
 
           it "does not create customer" do
-            create_service.call
-            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
           end
         end
 
         context "when provider customer does not exist" do
           it "does not generate checkout url" do
-            create_service.call
-            expect(create_service).not_to have_received(:generate_checkout_url)
+            expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCheckoutUrlJob)
           end
 
           it "does not create customer" do
-            create_service.call
-            expect(create_service).not_to have_received(:create_customer_on_provider_service)
+            expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
           end
         end
       end
@@ -162,12 +168,11 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService, type: :servic
         let(:provider) { create(:stripe_provider, organization: customer.organization) }
 
         it "does not generate checkout url" do
-          create_service.call
-          expect(create_service).not_to have_received(:generate_checkout_url)
+          expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCheckoutUrlJob)
         end
 
         it "does not enqueue a job to create the customer on the provider" do
-          expect { create_service.call }.not_to enqueue_job(PaymentProviderCustomers::StripeCreateJob)
+          expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
         end
       end
     end
