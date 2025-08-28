@@ -93,8 +93,6 @@ module CreditNotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ArgumentError
-      result.single_validation_failure!(field: :reason, error_code: "value_is_invalid")
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -112,6 +110,10 @@ module CreditNotes
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
+
+    def invalid_reason?
+      CreditNote.reasons.keys.exclude?(reason.to_s)
+    end
 
     def should_create_credit_note?
       # NOTE: created from subscription termination
