@@ -9,6 +9,7 @@ module Types
       argument :invoice_display_name, String, required: false
       argument :properties, Types::FixedCharges::PropertiesInput, required: false
       argument :tax_codes, [String], required: false
+      argument :units, String, required: true
     end
   end
 end
