@@ -5337,6 +5337,7 @@ input FixedChargeOverridesInput {
   invoiceDisplayName: String
   properties: FixedChargePropertiesInput
   taxCodes: [String!]
+  units: String!
 }
 
 type FixedChargeProperties {

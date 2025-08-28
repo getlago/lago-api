@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Types::Subscriptions::Object do
   subject { described_class }
+
   it do
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:external_id).of_type("String!")

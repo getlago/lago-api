@@ -9,7 +9,7 @@ RSpec.describe Types::Subscriptions::PlanOverridesInput do
     expect(subject).to accept_argument(:amount_cents).of_type("BigInt")
     expect(subject).to accept_argument(:amount_currency).of_type("CurrencyEnum")
     expect(subject).to accept_argument(:charges).of_type("[ChargeOverridesInput!]")
-    expect(subject).to accept_argument(:fixed_charges).of_type("[FixedChargeOverridesInput]")
+    expect(subject).to accept_argument(:fixed_charges).of_type("[FixedChargeOverridesInput!]")
     expect(subject).to accept_argument(:description).of_type("String")
     expect(subject).to accept_argument(:minimum_commitment).of_type("CommitmentInput")
     expect(subject).to accept_argument(:invoice_display_name).of_type("String")
