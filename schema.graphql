@@ -1045,7 +1045,7 @@ enum CountryCode {
   AD
 
   """
-  United Arab Emirates
+  United Arab Emirates (the)
   """
   AE
 
@@ -1195,7 +1195,7 @@ enum CountryCode {
   BR
 
   """
-  Bahamas
+  Bahamas (the)
   """
   BS
 
@@ -1230,22 +1230,22 @@ enum CountryCode {
   CA
 
   """
-  Cocos (Keeling) Islands
+  Cocos (Keeling) Islands (the)
   """
   CC
 
   """
-  Congo (Democratic Republic of the)
+  Congo (the Democratic Republic of the)
   """
   CD
 
   """
-  Central African Republic
+  Central African Republic (the)
   """
   CF
 
   """
-  Congo
+  Congo (the)
   """
   CG
 
@@ -1260,7 +1260,7 @@ enum CountryCode {
   CI
 
   """
-  Cook Islands
+  Cook Islands (the)
   """
   CK
 
@@ -1340,7 +1340,7 @@ enum CountryCode {
   DM
 
   """
-  Dominican Republic
+  Dominican Republic (the)
   """
   DO
 
@@ -1395,7 +1395,7 @@ enum CountryCode {
   FJ
 
   """
-  Falkland Islands (Malvinas)
+  Falkland Islands (the) [Malvinas]
   """
   FK
 
@@ -1405,7 +1405,7 @@ enum CountryCode {
   FM
 
   """
-  Faroe Islands
+  Faroe Islands (the)
   """
   FO
 
@@ -1420,7 +1420,7 @@ enum CountryCode {
   GA
 
   """
-  United Kingdom of Great Britain and Northern Ireland
+  United Kingdom of Great Britain and Northern Ireland (the)
   """
   GB
 
@@ -1460,7 +1460,7 @@ enum CountryCode {
   GL
 
   """
-  Gambia
+  Gambia (the)
   """
   GM
 
@@ -1565,7 +1565,7 @@ enum CountryCode {
   IN
 
   """
-  British Indian Ocean Territory
+  British Indian Ocean Territory (the)
   """
   IO
 
@@ -1630,7 +1630,7 @@ enum CountryCode {
   KI
 
   """
-  Comoros
+  Comoros (the)
   """
   KM
 
@@ -1640,12 +1640,12 @@ enum CountryCode {
   KN
 
   """
-  Korea (Democratic People's Republic of)
+  Korea (the Democratic People's Republic of)
   """
   KP
 
   """
-  Korea (Republic of)
+  Korea (the Republic of)
   """
   KR
 
@@ -1655,7 +1655,7 @@ enum CountryCode {
   KW
 
   """
-  Cayman Islands
+  Cayman Islands (the)
   """
   KY
 
@@ -1665,7 +1665,7 @@ enum CountryCode {
   KZ
 
   """
-  Lao People's Democratic Republic
+  Lao People's Democratic Republic (the)
   """
   LA
 
@@ -1730,7 +1730,7 @@ enum CountryCode {
   MC
 
   """
-  Moldova (Republic of)
+  Moldova (the Republic of)
   """
   MD
 
@@ -1750,7 +1750,7 @@ enum CountryCode {
   MG
 
   """
-  Marshall Islands
+  Marshall Islands (the)
   """
   MH
 
@@ -1780,7 +1780,7 @@ enum CountryCode {
   MO
 
   """
-  Northern Mariana Islands
+  Northern Mariana Islands (the)
   """
   MP
 
@@ -1845,7 +1845,7 @@ enum CountryCode {
   NC
 
   """
-  Niger
+  Niger (the)
   """
   NE
 
@@ -1865,7 +1865,7 @@ enum CountryCode {
   NI
 
   """
-  Netherlands
+  Netherlands (the)
   """
   NL
 
@@ -1920,7 +1920,7 @@ enum CountryCode {
   PG
 
   """
-  Philippines
+  Philippines (the)
   """
   PH
 
@@ -1990,7 +1990,7 @@ enum CountryCode {
   RS
 
   """
-  Russian Federation
+  Russian Federation (the)
   """
   RU
 
@@ -2015,7 +2015,7 @@ enum CountryCode {
   SC
 
   """
-  Sudan
+  Sudan (the)
   """
   SD
 
@@ -2105,7 +2105,7 @@ enum CountryCode {
   SZ
 
   """
-  Turks and Caicos Islands
+  Turks and Caicos Islands (the)
   """
   TC
 
@@ -2115,7 +2115,7 @@ enum CountryCode {
   TD
 
   """
-  French Southern Territories
+  French Southern Territories (the)
   """
   TF
 
@@ -2175,7 +2175,7 @@ enum CountryCode {
   TV
 
   """
-  Taiwan, Province of China
+  Taiwan (Province of China)
   """
   TW
 
@@ -2195,12 +2195,12 @@ enum CountryCode {
   UG
 
   """
-  United States Minor Outlying Islands
+  United States Minor Outlying Islands (the)
   """
   UM
 
   """
-  United States of America
+  United States of America (the)
   """
   US
 
@@ -2215,7 +2215,7 @@ enum CountryCode {
   UZ
 
   """
-  Holy See
+  Holy See (the)
   """
   VA
 
@@ -2258,6 +2258,11 @@ enum CountryCode {
   Samoa
   """
   WS
+
+  """
+  Kosovo
+  """
+  XK
 
   """
   Yemen
