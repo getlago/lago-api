@@ -23,7 +23,7 @@ module PaymentProviderCustomers
 
       deliver_success_webhook
       sync_funding_instructions
-      if stripe_customer.provider_payment_methods_require_setup?
+      if payment_methods_require_setup?
         PaymentProviderCustomers::StripeCheckoutUrlJob.perform_after_commit(stripe_customer)
       end
 
@@ -68,28 +68,19 @@ module PaymentProviderCustomers
       return result unless customer # NOTE: Customer is nil when deleted.
       return result if customer.organization.webhook_endpoints.none? && send_webhook && payment_provider(customer)
 
-      if payment_methods_do_not_require_setup?
+      unless payment_methods_require_setup?
         return result.single_validation_failure!(
           field: :provider_payment_methods,
           error_code: "no_payment_methods_to_setup_available"
         )
       end
 
-      res = ::Stripe::Checkout::Session.create(
-        checkout_link_params,
-        {
-          api_key:
-        }
-      )
+      res = ::Stripe::Checkout::Session.create(checkout_link_params, {api_key:})
 
       result.checkout_url = res["url"]
 
       if send_webhook
-        SendWebhookJob.perform_later(
-          "customer.checkout_url_generated",
-          customer,
-          checkout_url: result.checkout_url
-        )
+        SendWebhookJob.perform_later("customer.checkout_url_generated", customer, checkout_url: result.checkout_url)
       end
 
       result
@@ -109,8 +100,8 @@ module PaymentProviderCustomers
 
     delegate :customer, to: :stripe_customer
 
-    def payment_methods_do_not_require_setup?
-      !stripe_customer.provider_payment_methods_require_setup?
+    def payment_methods_require_setup?
+      stripe_customer.provider_payment_methods_require_setup?
     end
 
     def organization

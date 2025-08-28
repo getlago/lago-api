@@ -43,7 +43,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
         expect(PaymentProviderCustomers::StripeSyncFundingInstructionsJob)
           .to have_been_enqueued.with(stripe_customer)
-        expect(StripeCheckoutUrlJob).not_to have_been_enqueued
+        expect(PaymentProviderCustomers::StripeCheckoutUrlJob).not_to have_been_enqueued
       end
     end
 
