@@ -1,5 +1,13 @@
 # frozen_string_literal: true
 
+def clean_up_feature!(feature)
+  Entitlement::SubscriptionFeatureRemoval.where(feature: feature).with_discarded.delete_all
+  Entitlement::SubscriptionFeatureRemoval.where(privilege: feature.privileges.with_discarded).with_discarded.delete_all
+  Entitlement::EntitlementValue.where(privilege: feature.privileges.with_discarded).with_discarded.delete_all
+  Entitlement::Entitlement.where(feature: feature).with_discarded.delete_all
+  feature.privileges.with_discarded.delete_all
+end
+
 # Created in 01_base.rb
 organization ||= Organization.find_by!(name: "Hooli")
 plan = Plan.find_by!(code: "standard_plan")
@@ -40,15 +48,13 @@ if sub.nil?
   end
 end
 
-# SEATS - feature with privilege and subscription overrides
+# == seats - feature with privilege and subscription overrides
 seats = Entitlement::Feature.create_with(
   name: "Number of seats",
   description: "Number of users of the account"
 ).find_or_create_by!(organization:, code: "seats")
 
-Entitlement::EntitlementValue.where(organization:, privilege: seats.privileges.with_discarded).with_discarded.delete_all
-Entitlement::Entitlement.where(organization:, feature: seats).with_discarded.delete_all
-seats.privileges.with_discarded.delete_all
+clean_up_feature!(seats)
 
 max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer", created_at: 20.minutes.ago)
 max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer", created_at: 10.minutes.ago)
@@ -64,52 +70,52 @@ fe_sub = Entitlement::Entitlement.create!(organization:, feature: seats, subscri
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: max, value: 99)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: root, value: true)
 
-# Feature in the plan, without any privilege
+# == analytics_api - Feature in the plan, without any privilege
 analytics_api_feature = Entitlement::Feature.create_with(
   name: "Analytics API",
   description: "Access to all analytics data via REST API"
 ).find_or_create_by!(organization:, code: "analytics_api")
-analytics_api_feature.privileges.with_discarded.delete_all
 
-Entitlement::Entitlement.where(organization:, feature: analytics_api_feature, plan:).with_discarded.delete_all
+clean_up_feature!(analytics_api_feature)
+
 Entitlement::Entitlement.create!(organization:, feature: analytics_api_feature, plan:, created_at: 1.year.ago)
 
-# Feature was in the plan but deleted, and in subscription but deleted
+# == acls - Feature was in the plan but deleted, and in subscription but deleted
 acls = Entitlement::Feature.create_with(
   name: "Granular permissions"
 ).find_or_create_by!(organization:, code: "acls")
-acls.privileges.with_discarded.delete_all
 
-Entitlement::Entitlement.where(organization:, feature: acls).with_discarded.delete_all
+clean_up_feature!(acls)
+
 Entitlement::Entitlement.create!(organization:, feature: acls, plan:, deleted_at: Time.current)
 # Entitlement::Entitlement.create!(organization:, feature: acls, subscription: sub, deleted_at: Time.current)
 
-# Feature not in the plan but added to the subscription
+# == salesforce - Feature not in the plan but added to the subscription
 salesforce = Entitlement::Feature.create_with(
   name: "Salesforce Integration"
 ).find_or_create_by!(organization:, code: "salesforce")
-salesforce.privileges.with_discarded.delete_all
 
-Entitlement::Entitlement.where(organization:, feature: salesforce).with_discarded.delete_all
+clean_up_feature!(salesforce)
+
 Entitlement::Entitlement.create!(organization:, feature: salesforce, subscription_id: sub.id)
 
-# Feature attached to the plan but removed from the subscription
+# == support - Feature attached to the plan but removed from the subscription
 support = Entitlement::Feature.create_with(
   name: "Premium Support"
 ).find_or_create_by!(organization:, code: "premium_support")
-Entitlement::SubscriptionFeatureRemoval.where(feature: support).with_discarded.delete_all
-Entitlement::Entitlement.where(organization:, feature: support).with_discarded.delete_all
+
+clean_up_feature!(support)
+
 Entitlement::Entitlement.create!(organization:, feature: support, plan:)
 Entitlement::Entitlement.create!(organization:, feature: support, subscription_id: sub.id)
 Entitlement::SubscriptionFeatureRemoval.create!(organization:, feature: support, subscription_id: sub.id)
 
-# Feature with Select and ALL PRIVILEGE OVERRIDDEN ("empty line" added)
+# == sso - Feature with Select and ALL PRIVILEGE OVERRIDDEN ("empty line" added)
 sso = Entitlement::Feature.create_with(
   name: "SSO"
 ).find_or_create_by!(organization:, code: "sso")
-Entitlement::SubscriptionFeatureRemoval.where(feature: sso).with_discarded.delete_all
-Entitlement::EntitlementValue.where(organization:, privilege: sso.privileges).with_discarded.delete_all
-sso.privileges.with_discarded.delete_all
+
+clean_up_feature!(sso)
 
 provider = sso.privileges.create!(organization:,
   code: "provider",
@@ -117,7 +123,6 @@ provider = sso.privileges.create!(organization:,
   value_type: "select",
   config: {select_options: %w[okta ad google custom]})
 
-Entitlement::Entitlement.where(organization:, feature: sso).with_discarded.delete_all
 fe = Entitlement::Entitlement.create!(organization:, feature: sso, plan:, created_at: 10.days.ago)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: provider, value: "okta")
 
