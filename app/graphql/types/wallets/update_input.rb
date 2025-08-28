@@ -9,7 +9,7 @@ module Types
       argument :id, ID, required: true
       argument :invoice_requires_successful_payment, Boolean, required: false
       argument :name, String, required: false
-      argument :priority, Integer, required: false
+      argument :priority, Integer, required: true
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::UpdateInput], required: false
 
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
