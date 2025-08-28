@@ -128,6 +128,10 @@ module Api
           invoice_custom_section_codes: []
         )
       end
+
+      def resource_name
+        "billing_entity"
+      end
     end
   end
 end
