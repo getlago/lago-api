@@ -30,17 +30,6 @@ module Types
       def add_on
         AddOn.with_discarded.find_by(id: object.add_on_id)
       end
-
-      def units
-        # If we have subscription context, check for overridden units
-        if subscription_context = instance_variable_get(:@subscription_context)
-          override = subscription_context.subscription_fixed_charge_units_overrides.find_by(fixed_charge: object)
-          return override.units.to_s if override
-        end
-        
-        # Return the default units from the fixed charge
-        object.units.to_s
-      end
     end
   end
 end

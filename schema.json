@@ -39554,6 +39554,22 @@
               "args": []
             },
             {
+              "name": "fixedChargesCount",
+              "description": "Number of fixed charges attached to a plan",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "hasActiveSubscriptions",
               "description": null,
               "type": {

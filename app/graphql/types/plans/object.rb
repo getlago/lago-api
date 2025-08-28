@@ -44,6 +44,7 @@ module Types
 
       field :active_subscriptions_count, Integer, null: false
       field :charges_count, Integer, null: false, description: "Number of charges attached to a plan"
+      field :fixed_charges_count, Integer, null: false, description: "Number of fixed charges attached to a plan"
       field :customers_count, Integer, null: false, description: "Number of customers attached to a plan"
       field :draft_invoices_count, Integer, null: false
       field :is_overridden, Boolean, null: false
@@ -62,20 +63,15 @@ module Types
       end
 
       def fixed_charges
-        charges = object.fixed_charges.order(created_at: :asc)
-        
-        # If we have subscription context, pass it to each fixed charge
-        if subscription_context = instance_variable_get(:@subscription_context)
-          charges.each do |charge|
-            charge.instance_variable_set(:@subscription_context, subscription_context)
-          end
-        end
-        
-        charges
+        object.fixed_charges.order(created_at: :asc)
       end
 
       def charges_count
         object.charges.count
+      end
+
+      def fixed_charges_count
+        object.fixed_charges.order(created_at: :asc)
       end
 
       def subscriptions_count

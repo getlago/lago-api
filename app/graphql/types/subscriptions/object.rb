@@ -82,13 +82,6 @@ module Types
       def dates_service
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
       end
-
-      def plan
-        # Pass the subscription context to the plan so it can show overridden units
-        plan_object = object.plan
-        plan_object.instance_variable_set(:@subscription_context, object)
-        plan_object
-      end
     end
   end
 end

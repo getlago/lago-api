@@ -7954,6 +7954,11 @@ type Plan {
   draftInvoicesCount: Int!
   entitlements: [PlanEntitlement!]
   fixedCharges: [FixedCharge!]
+
+  """
+  Number of fixed charges attached to a plan
+  """
+  fixedChargesCount: Int!
   hasActiveSubscriptions: Boolean!
   hasCharges: Boolean!
   hasCustomers: Boolean!
