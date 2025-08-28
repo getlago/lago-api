@@ -150,8 +150,8 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_amount_range(scope)
-    scope = scope.where("invoices.total_amount_cents >= ?", filters.amount_from) if filters.amount_from
-    scope = scope.where("invoices.total_amount_cents <= ?", filters.amount_to) if filters.amount_to
+    scope = scope.where("invoices.total_amount_cents >= ?::numeric", filters.amount_from) if filters.amount_from
+    scope = scope.where("invoices.total_amount_cents <= ?::numeric", filters.amount_to) if filters.amount_to
     scope
   end
 
