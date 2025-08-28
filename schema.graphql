@@ -10727,7 +10727,7 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
-  priority: Int
+  priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
