@@ -230,9 +230,10 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
   end
 
   context "when plan has entitlements" do
+    let(:feature) { create(:feature, organization:, code: "seats") }
+    let(:entitlement) { create(:entitlement, plan:, feature:) }
+
     before do
-      feature = create(:feature, organization:, code: "seats")
-      entitlement = create(:entitlement, plan:, feature:)
       create(:entitlement_value, entitlement:, privilege: create(:privilege, feature:, code: "max", value_type: "integer"), value: 10)
 
       feature2 = create(:feature, organization:, code: "storage")
@@ -246,6 +247,22 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       expect(entitlements.first["privileges"].sole["value"]).to eq "2"
       expect(entitlements.second["code"]).to eq "seats"
       expect(entitlements.second["privileges"].sole["value"]).to eq "10"
+    end
+
+    context "when privilege is boolean" do
+      let(:enabled) { create(:privilege, feature:, code: "enabled", value_type: "boolean") }
+      let(:beta) { create(:privilege, feature:, code: "beta", value_type: "boolean") }
+      let(:enabled_value) { create(:entitlement_value, entitlement:, privilege: enabled, value: true) }
+      let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: false) }
+
+      it "casts boolean values to strings" do
+        expect(enabled_value.value).to eq("t")
+        expect(beta_value.value).to eq("f")
+
+        result = subject
+        feat = result["data"]["plan"]["entitlements"].find { |e| e["code"] == feature.code }
+        expect(feat["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
+      end
     end
 
     context "when plan is an override" do

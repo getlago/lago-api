@@ -74,6 +74,14 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService, type: :service do
         expect(removal.subscription).to eq(subscription)
         expect(removal.feature).to eq(feature)
       end
+
+      context "when the feature is already removed" do
+        it "succeeds" do
+          create(:subscription_feature_removal, subscription:, feature:)
+          expect { result }.not_to change(subscription.entitlement_removals.where(feature:), :count)
+          expect(result).to be_success
+        end
+      end
     end
 
     context "when feature is on subscription" do

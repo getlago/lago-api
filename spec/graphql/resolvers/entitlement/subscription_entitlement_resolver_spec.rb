@@ -52,8 +52,9 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver, type: :g
   end
 
   context "when subscription has features" do
+    let(:entitlement) { create(:entitlement, feature:, plan:) }
+
     before do
-      entitlement = create(:entitlement, feature:, plan:)
       create(:entitlement_value, entitlement:, privilege:, value: 10)
     end
 
@@ -77,6 +78,22 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver, type: :g
           }
         ]
       })
+    end
+
+    context "when privilege is boolean" do
+      let(:enabled) { create(:privilege, feature:, code: "enabled", value_type: "boolean") }
+      let(:beta) { create(:privilege, feature:, code: "beta", value_type: "boolean") }
+      let(:enabled_value) { create(:entitlement_value, entitlement:, privilege: enabled, value: true) }
+      let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: false) }
+
+      it "casts boolean values to strings" do
+        expect(enabled_value.value).to eq("t")
+        expect(beta_value.value).to eq("f")
+
+        result = subject
+        data = result["data"]["subscriptionEntitlement"]
+        expect(data["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
+      end
     end
 
     context "when requesting a feature not on the subscription" do
