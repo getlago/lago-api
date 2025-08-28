@@ -71,7 +71,7 @@ module Types
       end
 
       def fixed_charges_count
-        object.fixed_charges.order(created_at: :asc)
+        object.fixed_charges.count
       end
 
       def subscriptions_count
