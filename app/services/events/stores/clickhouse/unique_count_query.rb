@@ -48,7 +48,6 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            -- Only NOT ignore remove events if they are the last event of the day
             same_day_ignored AS (
               SELECT
                 property,
@@ -463,6 +462,7 @@ module Events
         end
 
         def ignore_remove_events_sql
+          # NOTE: Only NOT ignore remove events if they are the last event of the day
           <<-SQL
             CASE
               -- Never ignore add events
