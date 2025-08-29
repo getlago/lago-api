@@ -113,7 +113,7 @@ module Events
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names.join(", ")}, property
+              GROUP BY #{group_names}, property
             )
 
             SELECT
@@ -360,7 +360,7 @@ module Events
               ))
               ,
               (if(
-                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names  .join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
