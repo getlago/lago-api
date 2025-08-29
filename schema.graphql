@@ -8583,6 +8583,16 @@ type Query {
   customerPortalUser: CustomerPortalCustomer
 
   """
+  Query a single wallet from the customer portal
+  """
+  customerPortalWallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): CustomerPortalWallet
+
+  """
   Query wallets
   """
   customerPortalWallets(limit: Int, page: Int, status: WalletStatusEnum): CustomerPortalWalletCollection!
