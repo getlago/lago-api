@@ -16,7 +16,7 @@ class SlimHelper
     return "" if [address_line1, city, country_code].all?(&:blank?)
 
     road = [address_line1, address_line2].compact_blank.join("\n")
-    
+
     address_components = {
       "road" => road.presence,
       "city" => city.presence,
