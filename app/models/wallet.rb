@@ -24,6 +24,7 @@ class Wallet < ApplicationRecord
 
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
+  validates :priority, inclusion: {in: 1..50}
 
   STATUSES = [
     :active,
@@ -82,6 +83,7 @@ end
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
+#  priority                            :integer          default(50), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null

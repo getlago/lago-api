@@ -3302,7 +3302,8 @@ CREATE TABLE public.wallets (
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
-    last_ongoing_balance_sync_at timestamp without time zone
+    last_ongoing_balance_sync_at timestamp without time zone,
+    priority integer DEFAULT 50 NOT NULL
 );
 
 
@@ -9754,6 +9755,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250821094638'),
 ('20250820200921'),
 ('20250818154000'),
+('20250813174100'),
+('20250813172434'),
 ('20250812132802'),
 ('20250812082721'),
 ('20250806174150'),
