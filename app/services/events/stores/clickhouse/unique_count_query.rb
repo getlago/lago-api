@@ -113,7 +113,7 @@ module Events
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names.join(", ")}, property
+              GROUP BY #{group_names}, property
             )
 
             SELECT
