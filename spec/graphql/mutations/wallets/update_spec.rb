@@ -105,6 +105,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "id" => wallet.id,
       "name" => "New name",
       "status" => "active",
+      "priority" => 22,
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601
     )
