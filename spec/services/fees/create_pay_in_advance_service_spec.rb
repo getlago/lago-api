@@ -489,6 +489,88 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         end
       end
 
+      context "when customer has a tax customer" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:, organization:) }
+        let(:anrok_response_body) do
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+          anrok_response_body = File.read(p)
+          # Replace placeholder lago_fee_id with billable_metric.id
+          anrok_response_body.gsub("lago_fee_id", billable_metric.id)
+        end
+        let(:anrok_request_body) do
+          [
+            {
+              "issuing_date" => Time.zone.today.to_s,
+              "currency" => "EUR",
+              "contact" => {
+                "external_id" => integration_customer.external_customer_id,
+                "name" => customer.name,
+                "address_line_1" => customer.address_line1,
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "country" => customer.country,
+                "taxable" => false,
+                "tax_number" => nil
+              },
+              "fees" => [
+                {
+                  "item_key" => a_kind_of(Integer),
+                  "item_id" => billable_metric.id,
+                  "item_code" => nil,
+                  "amount_cents" => 10
+                }
+              ],
+              "id" => a_kind_of(String)
+            }
+          ]
+        end
+
+        def mock_anrok_request
+          stub_request(:post, "https://api.nango.dev/v1/anrok/finalized_invoices")
+            .with(body: anrok_request_body)
+            .to_return(status: 200, body: anrok_response_body)
+        end
+
+        before do
+          integration_customer
+
+          mock_anrok_request
+        end
+
+        it "calculates taxes" do
+          result = fee_service.call
+
+          expect(result).to be_success
+
+          expect(result.fees.count).to eq(1)
+          expect(result.fees.first).to have_attributes(
+            subscription:,
+            charge:,
+            organization_id: organization.id,
+            billing_entity_id: billing_entity.id,
+            amount_cents: 10,
+            precise_amount_cents: 10.0,
+            amount_currency: "EUR",
+            fee_type: "charge",
+            pay_in_advance: true,
+            invoiceable: charge,
+            units: 9,
+            properties: Hash,
+            events_count: 1,
+            charge_filter: nil,
+            pay_in_advance_event_id: event.id,
+            pay_in_advance_event_transaction_id: event.transaction_id,
+            payment_status: "pending",
+            unit_amount_cents: 1,
+            precise_unit_amount: 0.01111111111,
+            taxes_rate: 10.0,
+            taxes_amount_cents: 1,
+            taxes_precise_amount_cents: 1.0
+          )
+        end
+      end
+
       it "does not deliver a webhook" do
         fee_service.call
 
