@@ -393,7 +393,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
               units: "10",
               invoice_display_name: "another name",
               charge_model: "standard",
-              properties: { amount: "20" },
+              properties: {amount: "20"},
               tax_codes: [tax.code]
             }]
           }
@@ -409,7 +409,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           units: "10.0",
           invoice_display_name: "another name",
           charge_model: "standard",
-          properties: { amount: "20"},
+          properties: {amount: "20"}
         )
         expect(json[:subscription][:plan][:fixed_charges].first[:taxes].first).to include(
           code: tax.code,
