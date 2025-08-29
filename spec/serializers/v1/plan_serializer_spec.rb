@@ -185,7 +185,7 @@ RSpec.describe ::V1::PlanSerializer do
         "lago_id" => tax.id,
         "name" => tax.name,
         "code" => tax.code,
-        "rate" => tax.rate,
+        "rate" => tax.rate
       })
     end
   end
