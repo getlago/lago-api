@@ -7,7 +7,7 @@ RSpec.describe ::V1::PlanSerializer do
     described_class.new(
       plan,
       root_name: "plan",
-      includes: %i[charges entitlements taxes minimum_commitment usage_thresholds]
+      includes: %i[charges fixed_charges entitlements taxes minimum_commitment usage_thresholds]
     )
   end
 
@@ -157,6 +157,35 @@ RSpec.describe ::V1::PlanSerializer do
             "value_type" => "integer"
           }
         ]
+      })
+    end
+  end
+
+  context "when plan has fixed charges" do
+    let(:fixed_charge) { create(:fixed_charge, plan:) }
+    let(:tax) { create(:tax, organization: plan.organization) }
+    let(:fixed_charge_tax) { create(:fixed_charge_applied_tax, fixed_charge:, tax:) }
+
+    before do
+      fixed_charge
+      fixed_charge_tax
+    end
+
+    it "serializes the fixed charges" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["plan"]["fixed_charges"].count).to eq(1)
+      expect(result["plan"]["fixed_charges"].first).to include({
+        "lago_id" => fixed_charge.id,
+        "lago_add_on_id" => fixed_charge.add_on_id,
+        "invoice_display_name" => fixed_charge.invoice_display_name,
+        "add_on_code" => fixed_charge.add_on.code
+      })
+      expect(result["plan"]["fixed_charges"].first["taxes"].count).to eq(1)
+      expect(result["plan"]["fixed_charges"].first["taxes"].first).to include({
+        "lago_id" => tax.id,
+        "name" => tax.name,
+        "code" => tax.code,
+        "rate" => tax.rate
       })
     end
   end
