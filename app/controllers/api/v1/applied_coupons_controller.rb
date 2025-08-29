@@ -38,10 +38,12 @@ module Api
           filters: index_filters
         )
 
+        preload_applied_coupons_associations(result.applied_coupons)
+
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.applied_coupons.includes(:credits),
+              result.applied_coupons,
               ::V1::AppliedCouponSerializer,
               collection_name: "applied_coupons",
               meta: pagination_metadata(result.applied_coupons),
@@ -73,6 +75,15 @@ module Api
 
       def resource_name
         "applied_coupon"
+      end
+
+      def preload_applied_coupons_associations(applied_coupons)
+        [
+          :credits,
+          [:coupon, Coupon.with_discarded]
+        ].each do |associations, scope|
+          ActiveRecord::Associations::Preloader.new(records: applied_coupons, associations:, scope:).call
+        end
       end
     end
   end

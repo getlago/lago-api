@@ -90,6 +90,24 @@ RSpec.describe AppliedCouponsQuery, type: :query do
       expect(result.applied_coupons).to match_array([applied_coupon_2])
     end
 
+    context "when the coupon is deleted" do
+      let(:coupon_2) { create(:coupon, :deleted, organization:) }
+      let!(:applied_coupon_2) do
+        create(
+          :applied_coupon,
+          :terminated,
+          customer: customer_2,
+          coupon: coupon_2
+        )
+      end
+
+      it "returns the applied coupon" do
+        expect(result).to be_success
+        expect(result.applied_coupons.count).to eq(1)
+        expect(result.applied_coupons).to match_array([applied_coupon_2])
+      end
+    end
+
     context "when coupon code is not found" do
       let(:filters) { {coupon_code: "nonexistent"} }
 
