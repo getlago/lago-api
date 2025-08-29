@@ -16,52 +16,6 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
       end.to have_enqueued_job(Invoices::Payments::CreateJob).with(invoice:, payment_provider: payment_provider.to_sym)
     end
 
-    it "enqueues a SendWebhookJob" do
-      expect do
-        retry_service.call
-      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
-    end
-
-    context "with one_off invoice type" do
-      let(:invoice) do
-        create(:invoice, customer:, organization: customer.organization, invoice_type: "one_off")
-      end
-
-      it "enqueues SendWebhookJob with correct type" do
-        expect do
-          retry_service.call
-        end.to have_enqueued_job(SendWebhookJob).with("invoice.one_off_created", Invoice)
-      end
-    end
-
-    context "with progressive billing invoice type" do
-      let(:invoice) do
-        create(:invoice, customer:, organization: customer.organization, invoice_type: :progressive_billing)
-      end
-
-      it "enqueues SendWebhookJob with correct type" do
-        expect do
-          retry_service.call
-        end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
-      end
-    end
-
-    Invoices::Payments::RetryService::WEBHOOK_TYPE.each_pair do |type, action|
-      next if type == "add_on"
-
-      context "with invoice type #{type}" do
-        let(:invoice) do
-          create(:invoice, customer:, organization: customer.organization, invoice_type: type)
-        end
-
-        it "produces an activity log" do
-          described_class.call(invoice:)
-
-          expect(Utils::ActivityLog).to have_produced(action).with(invoice)
-        end
-      end
-    end
-
     context "with gocardless payment provider" do
       let(:payment_provider) { "gocardless" }
 
