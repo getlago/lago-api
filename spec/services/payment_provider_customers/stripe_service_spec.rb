@@ -21,7 +21,10 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       it "creates a stripe customer with the customer name" do
         allow(Stripe::Customer).to receive(:create)
           .and_return(Stripe::Customer.new(id: "cus_123456"))
-        stripe_service.create
+
+        expect do
+          stripe_service.create
+        end.to have_enqueued_job_after_commit(PaymentProviderCustomers::StripeCheckoutUrlJob).with(stripe_customer)
 
         expect(Stripe::Customer).to have_received(:create).with(hash_including(name: customer_name), anything)
       end
@@ -40,6 +43,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
         expect(PaymentProviderCustomers::StripeSyncFundingInstructionsJob)
           .to have_been_enqueued.with(stripe_customer)
+        expect(PaymentProviderCustomers::StripeCheckoutUrlJob).not_to have_been_enqueued
       end
     end
 
@@ -555,6 +559,17 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               error_code: nil
             }
           ).on_queue(webhook_queue)
+      end
+    end
+
+    context "when payment methods do not require setup" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: %w[crypto]) }
+
+      it "returns an error result" do
+        result = described_class.new(stripe_customer).generate_checkout_url
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(provider_payment_methods: ["no_payment_methods_to_setup_available"])
       end
     end
   end
