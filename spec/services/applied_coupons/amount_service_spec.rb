@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe AppliedCoupons::AmountService do
   subject(:amount_service) do
-    described_class.new(applied_coupon:, base_amount_cents:)
+    described_class.new(applied_coupon:, base_amount_cents:, invoice:)
   end
 
   let(:organization) { create(:organization) }
@@ -12,8 +12,15 @@ RSpec.describe AppliedCoupons::AmountService do
   let(:base_amount_cents) { 300 }
   let(:coupon) { create(:coupon, organization:) }
   let(:applied_coupon) { create(:applied_coupon, amount_cents: 12, coupon:, customer:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, timestamp: invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
+  let(:subscription) { invoice_subscription.subscription }
 
   describe "call" do
+    before do
+      invoice_subscription
+    end
+
     it "calculates amount" do
       result = amount_service.call
 
@@ -104,6 +111,63 @@ RSpec.describe AppliedCoupons::AmountService do
 
           expect(result).to be_success
           expect(result.amount).to eq(6)
+        end
+      end
+
+      context "when the coupon was already applied to some invoice" do
+        let(:prev_invoice) { create(:invoice, customer:, organization:, issuing_date: 2.weeks.ago) }
+        let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 10) }
+        let(:prev_invoice_subscription) do
+          create(
+            :invoice_subscription,
+            subscription:,
+            invoice: prev_invoice,
+            timestamp: prev_invoice.issuing_date,
+            charges_to_datetime: invoice.issuing_date,
+            charges_from_datetime: invoice.issuing_date - 1.month
+          )
+        end
+        let(:prev_invoice_fee) do
+          create(:fee, invoice: prev_invoice, subscription:, amount_cents: 20,
+            properties: {charges_from_datetime: prev_invoice_subscription.charges_from_datetime,
+                         charges_to_datetime: prev_invoice_subscription.charges_to_datetime})
+        end
+
+        before do
+          prev_invoice_fee
+          credit
+        end
+
+        it "calculates the remaining amount" do
+          result = amount_service.call
+
+          expect(result).to be_success
+          expect(result.amount).to eq(2)
+        end
+
+        context "when coupon is completely used" do
+          let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 12) }
+
+          it "returns 0" do
+            result = amount_service.call
+
+            expect(result).to be_success
+            expect(result.amount).to eq(0)
+          end
+        end
+
+        context "when previous invoice is from another billing period" do
+          before do
+            prev_invoice_subscription.update(charges_from_datetime: prev_invoice.issuing_date - 2.months, charges_to_datetime: prev_invoice.issuing_date - 1.month)
+            prev_invoice_fee.update(properties: {charges_from_datetime: prev_invoice_subscription.charges_from_datetime, charges_to_datetime: prev_invoice_subscription.charges_to_datetime})
+          end
+
+          it "calculates the remaining amount" do
+            result = amount_service.call
+
+            expect(result).to be_success
+            expect(result.amount).to eq(12)
+          end
         end
       end
     end
