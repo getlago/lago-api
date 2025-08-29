@@ -54,20 +54,14 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- Never ignore add events
-                  WHEN operation_type = 'add' THEN false
-                  -- Only ignore remove events if they are NOT the last event of the day
-                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_events_sql} AS is_ignored
               FROM (
                 SELECT
                   timestamp,
                   property,
                   operation_type,
                   -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp)) AS is_last_event_of_day
+                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -106,7 +100,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names.join(", ")},
+                #{group_names},
                 property,
                 SUM(adjusted_value) AS sum_adjusted_value
               FROM (
@@ -114,7 +108,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names.join(", ")},
+                  #{group_names},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
@@ -123,10 +117,10 @@ module Events
             )
 
             SELECT
-              #{group_names.join(", ")},
+              #{group_names},
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names.join(", ")}
+            GROUP BY #{group_names}
           SQL
         end
 
@@ -136,25 +130,19 @@ module Events
             -- Only ignore remove events if they are NOT the last event of the day
             same_day_ignored AS (
               SELECT
-                #{group_names.join(", ")},
+                #{group_names},
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- Never ignore add events
-                  WHEN operation_type = 'add' THEN false
-                  -- Only ignore remove events if they are NOT the last event of the day
-                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_events_sql} AS is_ignored
               FROM (
                 SELECT
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names.join(", ")},
+                  #{group_names},
                   -- Check if this is the last event of the day for this property and group
-                  timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names.join(", ")}, property, toDate(timestamp)) AS is_last_event_of_day
+                  timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -162,7 +150,7 @@ module Events
             -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
               SELECT
-                #{group_names.join(", ")},
+                #{group_names},
                 property,
                 operation_type,
                 timestamp
@@ -171,26 +159,26 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names.join(", ")},
+                  #{group_names},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM same_day_ignored
                 WHERE is_ignored = false
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
+              GROUP BY #{group_names}, property, operation_type, timestamp
             )
 
             SELECT
-              #{group_names.join(", ")},
+              #{group_names},
               coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names.join(", ")}
+                #{group_names}
               FROM event_values
             ) cumulated_ratios
-            GROUP BY #{group_names.join(", ")}
+            GROUP BY #{group_names}
           SQL
         end
 
@@ -228,20 +216,14 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- Never ignore add events
-                  WHEN operation_type = 'add' THEN false
-                  -- Only ignore remove events if they are NOT the last event of the day
-                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_events_sql} AS is_ignored
               FROM (
                 SELECT
                   timestamp,
                   property,
                   operation_type,
                   -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp)) AS is_last_event_of_day
+                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -372,13 +354,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names  .join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -397,11 +379,11 @@ module Events
                   -- this is crasy: to_datetime is the 1 day of the NEXT billing period, so 1st of Aug - 31 of Jul returns correctly 1 day;
                   -- the timestamp of remove is the LAST DAY, that still should be calculated, but 3 Jul - 1 Jul == 2 days, but we need 3,
                   -- that's why for to_datetime when it's a timestamp we add 1 day to it
-                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(toDate(timestamp, :timezone) < toDate(:from_datetime, :timezone), toDate(:from_datetime, :timezone), toDate(timestamp, :timezone)),
                   if(
-                    toDate(leadInFrame(timestamp, 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
-                    toDate(:from_datetime, 'UTC'),
-                    leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    toDate(leadInFrame(timestamp, 1, toDate(:to_datetime, :timezone)) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, :timezone),
+                    toDate(:from_datetime, :timezone),
+                    leadInFrame(addDays(toDate(timestamp, :timezone), 1), 1, toDate(:to_datetime, :timezone)) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                   ),
                   :timezone
                 )
@@ -425,11 +407,11 @@ module Events
                 -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
                 date_diff(
                   'days',
-                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(toDate(timestamp, :timezone) < toDate(:from_datetime, :timezone), toDate(:from_datetime, :timezone), toDate(timestamp, :timezone)),
                   if(
-                      toDate(leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
-                      toDate(:to_datetime, 'UTC'),
-                      leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                      toDate(leadInFrame(addDays(toDate(timestamp, :timezone), 1), 1, toDate(:to_datetime, :timezone)) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, :timezone),
+                      toDate(:to_datetime, :timezone),
+                      leadInFrame(addDays(toDate(timestamp, :timezone), 1), 1, toDate(:to_datetime, :timezone)) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                     ),
                   :timezone
                 )
@@ -445,8 +427,20 @@ module Events
           SQL
         end
 
+        def ignore_remove_events_sql
+          <<-SQL
+            CASE
+              -- Never ignore add events
+              WHEN operation_type = 'add' THEN false
+              -- Only ignore remove events if they are NOT the last event of the day
+              WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
+              ELSE false
+            END
+          SQL
+        end
+
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end
