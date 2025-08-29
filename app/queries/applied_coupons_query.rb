@@ -22,7 +22,10 @@ class AppliedCouponsQuery < BaseQuery
   end
 
   def with_coupon_code(scope)
-    scope.joins(:coupon).where(coupons: {code: filters.coupon_code})
+    # We don't use `.joins(:coupon)` because we still want to retrieve applied coupons
+    # even if the coupon is deleted
+    scope.joins("INNER JOIN coupons ON coupons.id = applied_coupons.coupon_id")
+      .where(coupons: {code: filters.coupon_code})
   end
 
   def with_external_customer(scope)

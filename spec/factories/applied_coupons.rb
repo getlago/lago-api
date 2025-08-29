@@ -10,5 +10,9 @@ FactoryBot.define do
     amount_currency { "EUR" }
     status { "active" }
     frequency { "once" }
+
+    trait :terminated do
+      terminated_at { 1.day.ago }
+    end
   end
 end
