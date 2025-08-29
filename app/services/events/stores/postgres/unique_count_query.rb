@@ -37,7 +37,7 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            -- Check if for remove event there is a following add event the same day
+            -- ignore if for remove event there is a following add event the same day that nullifies this one
             same_day_ignored AS (
               SELECT
                 property,
@@ -107,7 +107,7 @@ module Events
         def grouped_prorated_query
           <<-SQL
             #{grouped_events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- ignore if for remove event there is a following add event the same day (for grouped events) that nullifies this one
             same_day_ignored AS (
               SELECT
                 #{group_names.join(", ")},
@@ -188,7 +188,7 @@ module Events
         def prorated_breakdown_query(with_remove: false)
           <<-SQL
             #{events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- ignore if for remove event there is a following add event the same day that nullifies this one
             same_day_ignored AS (
               SELECT
                 property,
@@ -363,7 +363,7 @@ module Events
             CASE
               -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
               WHEN operation_type = 'add' THEN false
-              -- if the next event the same day is the opposite operation type, it should be ignored
+              -- if there is a next event the same day is the opposite operation type, this should be ignored
               WHEN #{existing_event_opposite_operation_type_sql} THEN true
               ELSE false
             END
