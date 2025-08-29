@@ -2535,7 +2535,8 @@ CREATE TABLE public.fees (
     organization_id uuid NOT NULL,
     billing_entity_id uuid NOT NULL,
     precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
-    fixed_charge_id uuid
+    fixed_charge_id uuid,
+    duplicated_in_advance boolean DEFAULT false
 );
 
 
@@ -9746,6 +9747,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250828144553'),
+('20250828142848'),
 ('20250826081205'),
 ('20250822100111'),
 ('20250821094638'),

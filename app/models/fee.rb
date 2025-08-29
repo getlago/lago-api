@@ -4,6 +4,7 @@ class Fee < ApplicationRecord
   include Currencies
   include Discard::Model
   self.discard_column = :deleted_at
+  self.ignored_columns += %w[duplicated_in_advance]
   default_scope -> { kept }
 
   belongs_to :invoice, optional: true
@@ -236,6 +237,7 @@ end
 #  amount_details                      :jsonb            not null
 #  deleted_at                          :datetime
 #  description                         :string
+#  duplicated_in_advance               :boolean          default(FALSE)
 #  events_count                        :integer
 #  failed_at                           :datetime
 #  fee_type                            :integer
