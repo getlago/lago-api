@@ -45,6 +45,7 @@ gem "countries"
 gem "money-rails"
 gem "timecop", require: false
 gem "tzinfo-data", platforms: %i[mingw mswin x64_mingw jruby]
+gem "address_composer"
 
 # GraphQL
 gem "graphql"

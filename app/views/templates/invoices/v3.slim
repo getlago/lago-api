@@ -376,8 +376,7 @@ html
               | #{billing_entity.name}
           - if billing_entity.legal_number.present?
             .body-2 #{billing_entity.legal_number}
-          - SlimHelper.format_address(billing_entity.address_line1, billing_entity.address_line2, billing_entity.city, billing_entity.state, billing_entity.zipcode, billing_entity.country).each do |line|
-            .body-2 = line
+          .body-2 == SlimHelper.format_address(billing_entity.address_line1, billing_entity.address_line2, billing_entity.city, billing_entity.state, billing_entity.zipcode, billing_entity.country)
           .body-2 = billing_entity.email
           - if billing_entity.tax_identification_number.present?
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: billing_entity.tax_identification_number)
@@ -386,8 +385,7 @@ html
           .body-2 = customer.display_name
           - if customer.legal_number.present?
             .body-2 #{customer.legal_number}
-          - SlimHelper.format_address(customer.address_line1, customer.address_line2, customer.city, customer.state, customer.zipcode, customer.country).each do |line|
-            .body-2 = line
+          .body-2 == SlimHelper.format_address(customer.address_line1, customer.address_line2, customer.city, customer.state, customer.zipcode, customer.country)
           .body-2 = customer.email
           - if customer.tax_identification_number.present?
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)

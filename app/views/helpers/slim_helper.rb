@@ -13,44 +13,19 @@ class SlimHelper
   end
 
   def self.format_address(address_line1, address_line2, city, state, zipcode, country_code)
-    country = ISO3166::Country.new(country_code)&.common_name
+    return "" if [address_line1, city, country_code].all?(&:blank?)
 
-    case country_code&.upcase
-    when "DE", "FR", "IT"
-      [
-        address_line1,
-        address_line2,
-        [zipcode, city].compact.join(" "),
-        country
-      ].compact.reject(&:empty?)
-    when "US", "CA", "GB", "AU"
-      [
-        address_line1,
-        address_line2,
-        [city, [state, zipcode].compact.join(" ")].compact.join(", "),
-        country
-      ].compact.reject(&:empty?)
-    when "BR"
-      [
-        address_line1,
-        address_line2,
-        [city, state].compact.join(" - ") + (zipcode.present? ? ", #{zipcode}" : ""),
-        country
-      ].compact.reject(&:empty?)
-    when "ES"
-      [
-        address_line1,
-        address_line2,
-        [zipcode, [city, state].compact.join(", ")].compact.join(" "),
-        country
-      ].compact.reject(&:empty?)
-    else
-      [
-        address_line1,
-        address_line2,
-        [city, [state, zipcode].compact.join(" ")].compact.join(", "),
-        country
-      ].compact.reject(&:empty?)
-    end
+    road = [address_line1, address_line2].compact_blank.join("\n")
+    
+    address_components = {
+      "road" => road.presence,
+      "city" => city.presence,
+      "state" => state.presence,
+      "postcode" => zipcode.presence,
+      "country" => ISO3166::Country.new(country_code)&.common_name,
+      "country_code" => country_code.presence
+    }.compact
+
+    AddressComposer.compose(address_components).gsub("\n", "<br>")
   end
 end
