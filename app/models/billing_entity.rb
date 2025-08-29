@@ -14,6 +14,8 @@ class BillingEntity < ApplicationRecord
     "payment_receipt.created"
   ]
 
+  EINVOICING_COUNTRIES = %w[FR].map(&:upcase)
+
   belongs_to :organization
 
   has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
@@ -84,6 +86,7 @@ class BillingEntity < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
 
   validate :validate_email_settings
+  validate :validate_einvoicing
 
   after_create :generate_document_number_prefix
 
@@ -140,6 +143,16 @@ class BillingEntity < ApplicationRecord
 
     errors.add(:email_settings, :unsupported_value)
   end
+
+  def validate_einvoicing
+    return unless einvoicing
+
+    if country.nil?
+      errors.add(:einvoicing, :country_must_be_present)
+    elsif EINVOICING_COUNTRIES.exclude?(country.upcase)
+      errors.add(:einvoicing, :country_not_supported)
+    end
+  end
 end
 
 # == Schema Information
@@ -158,6 +171,7 @@ end
 #  document_locale              :string           default("en"), not null
 #  document_number_prefix       :string
 #  document_numbering           :enum             default("per_customer"), not null
+#  einvoicing                   :boolean          default(FALSE), not null
 #  email                        :string
 #  email_settings               :string           default([]), not null, is an Array
 #  eu_tax_management            :boolean          default(FALSE)
