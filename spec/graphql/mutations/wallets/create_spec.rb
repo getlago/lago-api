@@ -18,6 +18,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           rateAmount
           status
           currency
+          priority
           expirationAt
           invoiceRequiresSuccessfulPayment
           recurringTransactionRules {
@@ -69,6 +70,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           rateAmount: "1",
           paidCredits: "0.00",
           grantedCredits: "0.00",
+          priority: 33,
           expirationAt: expiration_at.iso8601,
           currency: "EUR",
           invoiceRequiresSuccessfulPayment: true,
@@ -100,6 +102,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data["id"]).to be_present
       expect(result_data["name"]).to eq("First Wallet")
       expect(result_data["invoiceRequiresSuccessfulPayment"]).to eq(true)
+      expect(result_data["priority"]).to eq(33)
       expect(result_data["expirationAt"]).to eq(expiration_at.iso8601)
       expect(result_data["recurringTransactionRules"].count).to eq(1)
       expect(result_data["recurringTransactionRules"][0]["lagoId"]).to be_present
@@ -135,6 +138,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           input: {
             customerId: customer.id,
             name: nil,
+            priority: 11,
             rateAmount: "1",
             paidCredits: "0.00",
             grantedCredits: "0.00",
@@ -149,6 +153,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       aggregate_failures do
         expect(result_data["id"]).to be_present
         expect(result_data["name"]).to be_nil
+        expect(result_data["priority"]).to eq(11)
       end
     end
   end
