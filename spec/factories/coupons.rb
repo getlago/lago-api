@@ -12,5 +12,9 @@ FactoryBot.define do
     amount_currency { "EUR" }
     frequency { "once" }
     description { "Coupon Description" }
+
+    trait :deleted do
+      deleted_at { 1.day.ago }
+    end
   end
 end
