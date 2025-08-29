@@ -37,21 +37,13 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- Check if for remove event there is a following add event the same day
             same_day_ignored AS (
               SELECT
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
-                  WHEN operation_type = 'add'
-                  THEN false
-                  -- if the next event the same day is the opposite operation type, it should be ignored
-                  WHEN #{existing_event_opposite_operation_type_sql}
-                  THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_events_sql} AS is_ignored
               FROM events_data as e
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
@@ -65,7 +57,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql} AS adjusted_value,
                 FROM same_day_ignored
                 WHERE is_ignored = false
                 ORDER BY timestamp ASC
@@ -122,15 +114,7 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
-                  WHEN operation_type = 'add'
-                  THEN false
-                  -- if the next event the same day is the opposite operation type, it should be ignored
-                  WHEN #{existing_grouped_event_opposite_operation_type_sql}
-                  THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_grouped_events_sql} AS is_ignored
               FROM (
                 SELECT
                   #{group_names.join(", ")},
@@ -210,14 +194,7 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
-                  WHEN operation_type = 'add'
-                  THEN false
-                  WHEN #{existing_event_opposite_operation_type_sql}
-                  THEN true
-                  ELSE false
-                END AS is_ignored
+                #{ignore_remove_events_sql} AS is_ignored
               FROM events_data as e
             ),
             -- Check if the operation type is repeated, so it nullifies this one at the same day
@@ -377,6 +354,30 @@ module Events
               #{charges_duration || 1}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
+            END
+          SQL
+        end
+
+        def ignore_remove_events_sql
+          <<-SQL
+            CASE
+              -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+              WHEN operation_type = 'add' THEN false
+              -- if the next event the same day is the opposite operation type, it should be ignored
+              WHEN #{existing_event_opposite_operation_type_sql} THEN true
+              ELSE false
+            END
+          SQL
+        end
+
+        def ignore_remove_grouped_events_sql
+          <<-SQL
+            CASE
+              -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+              WHEN operation_type = 'add' THEN false
+              -- if the next event the same day is the opposite operation type, it should be ignored
+              WHEN #{existing_grouped_event_opposite_operation_type_sql} THEN true
+              ELSE false
             END
           SQL
         end
