@@ -18,6 +18,7 @@ RSpec.describe Mutations::Wallets::Create do
           rateAmount
           status
           currency
+          priority
           expirationAt
           invoiceRequiresSuccessfulPayment
           paidTopUpMinAmountCents
@@ -70,6 +71,7 @@ RSpec.describe Mutations::Wallets::Create do
           rateAmount: "1",
           paidCredits: "10.00",
           grantedCredits: "0.00",
+          priority: 33,
           expirationAt: expiration_at.iso8601,
           currency: "EUR",
           invoiceRequiresSuccessfulPayment: true,
@@ -105,6 +107,7 @@ RSpec.describe Mutations::Wallets::Create do
     expect(result_data["id"]).to be_present
     expect(result_data["name"]).to eq("First Wallet")
     expect(result_data["invoiceRequiresSuccessfulPayment"]).to eq(true)
+    expect(result_data["priority"]).to eq(33)
     expect(result_data["expirationAt"]).to eq(expiration_at.iso8601)
     expect(result_data["paidTopUpMinAmountCents"]).to eq("100")
     expect(result_data["paidTopUpMaxAmountCents"]).to eq("10000")
@@ -143,6 +146,7 @@ RSpec.describe Mutations::Wallets::Create do
           input: {
             customerId: customer.id,
             name: nil,
+            priority: 11,
             rateAmount: "1",
             paidCredits: "0.00",
             grantedCredits: "0.00",

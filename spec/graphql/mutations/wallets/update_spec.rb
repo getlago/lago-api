@@ -113,6 +113,7 @@ RSpec.describe Mutations::Wallets::Update do
       "id" => wallet.id,
       "name" => "New name",
       "status" => "active",
+      "priority" => 22,
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601,
       "paidTopUpMinAmountCents" => "100",
