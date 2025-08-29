@@ -52,7 +52,7 @@ module Events
     def customer
       return @customer if defined? @customer
 
-      @customer = organization.subscriptions.order(created_at: :desc).find_by(external_id: event.external_subscription_id)&.customer
+      @customer = organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
     end
 
     def subscriptions

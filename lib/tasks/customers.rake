@@ -48,21 +48,10 @@ namespace :customers do
       new_cust.last_dunning_campaign_attempt_at = nil
       new_cust.save!
 
-      cust.subscriptions.each do |sub|
-        if sub.active?
-          new_sub = sub.dup
-          new_sub.customer = new_cust
-          sub.update(on_termination_invoice: :skip)
-          Subscriptions::TerminateService.call(subscription: sub, async: false)
-          new_sub.save!
-          new_ltu = sub.lifetime_usage.dup
-          new_ltu.subscription = new_sub
-          new_ltu.save!
-        else
-          new_sub = sub.dup
-          new_sub.customer = new_cust
-          new_sub.save!
-        end
+      cust.subscriptions.active.each do |sub|
+        puts "Terminating active subscription with id #{sub.id} for customer #{cust.id}"
+        sub.update(on_termination_invoice: :skip)
+        Subscriptions::TerminateService.call(subscription: sub, async: false)
       end
 
       cust.integration_customers.each do |int_cust|
