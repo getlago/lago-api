@@ -39,8 +39,8 @@ class BaseResult
     validation_failure!(errors: record.errors.messages)
   end
 
-  def validation_failure!(errors:)
-    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors))
+  def validation_failure!(errors:, extra: nil)
+    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, extra:))
   end
 
   def single_validation_failure!(error_code:, field: :base)

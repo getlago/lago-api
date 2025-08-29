@@ -123,4 +123,65 @@ RSpec.describe ::BaseService, type: :service do
       end
     end
   end
+
+  context "with validation error" do
+    [true, false].each do |legacy_result|
+      context "when extra hash is valid" do
+        it "sets the extra details" do
+          service_class = Class.new(described_class) do
+            unless legacy_result
+              const_set(:Result, BaseResult)
+            end
+
+            def call
+              result.validation_failure!(
+                errors: {threshold: ["value_is_not_in_range"]},
+                extra: {threshold: {value_is_not_in_range: {min: 12, max: 100}}}
+              )
+            end
+          end
+          err = service_class.call
+          expect(err).not_to be_success
+          expect(err.error.messages).to eq(threshold: ["value_is_not_in_range"])
+          expect(err.error.extra).to eq(threshold: {value_is_not_in_range: {min: 12, max: 100}})
+        end
+      end
+
+      context "when extra hash doesn't match errors field code" do
+        it "raises an error" do
+          service_class = Class.new(described_class) do
+            unless legacy_result
+              const_set(:Result, BaseResult)
+            end
+
+            def call
+              result.validation_failure!(
+                errors: {threshold: ["value_is_not_in_range"]},
+                extra: {NOT_threshold: {value_is_not_in_range: {min: 12, max: 100}}}
+              )
+            end
+          end
+          expect { service_class.call }.to raise_error(ArgumentError)
+        end
+      end
+
+      context "when extra hash doesn't match errors codes for field" do
+        it "raises an error" do
+          service_class = Class.new(described_class) do
+            unless legacy_result
+              const_set(:Result, BaseResult)
+            end
+
+            def call
+              result.validation_failure!(
+                errors: {threshold: ["value_is_not_in_range"]},
+                extra: {threshold: {error_not_in_array: {min: 12, max: 100}}}
+              )
+            end
+          end
+          expect { service_class.call }.to raise_error(ArgumentError)
+        end
+      end
+    end
+  end
 end
