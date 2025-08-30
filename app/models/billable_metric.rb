@@ -8,6 +8,7 @@ class BillableMetric < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :charges, dependent: :destroy
   has_many :plans, through: :charges
   has_many :subscriptions, through: :plans
