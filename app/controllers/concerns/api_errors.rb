@@ -23,13 +23,14 @@ module ApiErrors
     )
   end
 
-  def validation_errors(errors:)
+  def validation_errors(error:)
     render(
       json: {
         status: 422,
         error: "Unprocessable Entity",
         code: "validation_errors",
-        error_details: errors
+        error_details: error.messages,
+        error_extra: error.extra || {}
       },
       status: :unprocessable_entity
     )
@@ -71,7 +72,7 @@ module ApiErrors
     render json: response, status: :unprocessable_entity
   end
 
-  def thirdpary_error(error:)
+  def thirdparty_error(error:)
     render(
       json: {
         status: 422,
@@ -108,7 +109,7 @@ module ApiErrors
     when BaseService::MethodNotAllowedFailure
       method_not_allowed_error(code: error_result.error.code)
     when BaseService::ValidationFailure
-      validation_errors(errors: error_result.error.messages)
+      validation_errors(error: error_result.error)
     when BaseService::ForbiddenFailure
       forbidden_error(code: error_result.error.code)
     when BaseService::UnauthorizedFailure
@@ -118,7 +119,7 @@ module ApiErrors
     when BaseService::TooManyProviderRequestsFailure
       too_many_provider_requests_error(error: error_result.error)
     when BaseService::ThirdPartyFailure
-      thirdpary_error(error: error_result.error)
+      thirdparty_error(error: error_result.error)
     else
       raise(error_result.error)
     end

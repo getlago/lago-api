@@ -94,4 +94,32 @@ RSpec.describe Api::BaseController, type: :controller do
     expect(json[:status]).to eq(400)
     expect(json[:error]).to eq("BadRequest: param is missing or the value is empty or invalid: input")
   end
+
+  describe "validation_failure" do
+    controller do
+      include ApiErrors
+
+      def index
+        result = Class.new(BaseService) do
+          def call
+            result.validation_failure!(
+              errors: {name: ["an_error_code"]},
+              extra: {name: {an_error_code: {min: 12, max: 100, yolo: true}}}
+            )
+          end
+        end.call
+        render_error_response(result)
+      end
+    end
+
+    it do
+      request.headers["Authorization"] = "Bearer #{api_key.value}"
+      get :index
+      json = JSON.parse(response.body, symbolize_names: true)
+      expect(json[:error_details][:name]).to eq(["an_error_code"])
+      expect(json[:error_extra][:name][:an_error_code]).to eq({
+        min: 12, max: 100, yolo: true
+      })
+    end
+  end
 end

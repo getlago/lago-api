@@ -56,18 +56,33 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    attr_reader :messages
+    attr_reader :messages, :extra
 
-    def initialize(result, messages:)
+    def initialize(result, messages:, extra: nil)
       @messages = messages
+      @extra = extra
 
       super(result, format_messages)
+
+      validate_extra! unless Rails.env.production?
     end
 
     private
 
     def format_messages
       "Validation errors: #{messages.to_json}"
+    end
+
+    def validate_extra!
+      return if extra.blank?
+
+      extra.each do |field, extra_for_field|
+        raise ArgumentError, "Validation extra: Invalid field value" unless messages.has_key?(field)
+        extra_for_field.each do |error_code, x|
+          raise ArgumentError, "Validation extra: Invalid error code" unless messages[field].include?(error_code.to_s)
+          raise ArgumentError, "Validation extra: Invalid extra value" unless x.is_a?(Hash)
+        end
+      end
     end
   end
 
@@ -180,8 +195,8 @@ class BaseService
       validation_failure!(errors: record.errors.messages)
     end
 
-    def validation_failure!(errors:)
-      fail_with_error!(ValidationFailure.new(self, messages: errors))
+    def validation_failure!(errors:, extra: nil)
+      fail_with_error!(ValidationFailure.new(self, messages: errors, extra:))
     end
 
     def single_validation_failure!(error_code:, field: :base)
