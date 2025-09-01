@@ -127,11 +127,30 @@ module Events
       end
 
       def sum
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          sql = aggregated_events_sql(select: [
+            to_decimal128(Arel::Nodes::NamedFunction.new(
+              "sumMerge",
+              [aggregated_arel_table[:sum_state]]
+            )).as("sum_value")
+          ])
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_sum
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          sql = aggregated_events_sql(select: [
+            aggregated_arel_table[:grouped_by],
+            to_decimal128(Arel::Nodes::NamedFunction.new(
+              "sumMerge",
+              [aggregated_arel_table[:sum_state]]
+            )).as("sum_value")
+          ])
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
