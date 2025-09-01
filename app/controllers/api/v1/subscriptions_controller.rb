@@ -6,7 +6,8 @@ module Api
       def create
         response = {}
         billing_entity_result = BillingEntities::ResolveService.call(
-          organization: current_organization, billing_entity_code: params.dig(:subscription, :billing_entity_code)
+          organization: current_organization,
+          billing_entity_code: params.dig(:subscription, :billing_entity_code)
         )
         return render_error_response(billing_entity_result) unless billing_entity_result.success?
         billing_entity = billing_entity_result.billing_entity
@@ -173,7 +174,6 @@ module Api
             :name,
             :external_id,
             :billing_time,
-            :subscription_date,
             :subscription_at,
             :ending_at,
             plan_overrides:
@@ -183,7 +183,6 @@ module Api
       def update_params
         params.require(:subscription).permit(
           :name,
-          :subscription_date,
           :subscription_at,
           :ending_at,
           :on_termination_credit_note,
@@ -202,7 +201,6 @@ module Api
           :trial_period,
           tax_codes: [],
           minimum_commitment: [
-            :id,
             :invoice_display_name,
             :amount_cents,
             tax_codes: []
@@ -221,12 +219,10 @@ module Api
             ],
             tax_codes: [],
             applied_pricing_unit: [
-              :code,
               :conversion_rate
             ]
           ],
           usage_thresholds: [
-            :id,
             :threshold_display_name,
             :amount_cents,
             :recurring
