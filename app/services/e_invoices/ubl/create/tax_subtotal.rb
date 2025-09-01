@@ -41,8 +41,6 @@ module EInvoices
         end
 
         def taxable_amount
-          return 0 if tax_rate.zero?
-
           amount
         end
 
