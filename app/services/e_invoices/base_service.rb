@@ -127,9 +127,7 @@ module EInvoices
       invoice.coupons_amount_cents + invoice.progressive_billing_credit_amount_cents
     end
 
-    def allowance_charges(&block)
-      return unless allowances.positive?
-
+    def allowances_per_tax_rate
       invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
         total_amount = fees.sum(&:precise_amount_cents)
 
@@ -137,10 +135,18 @@ module EInvoices
           total_taxes = fees.sum(&:taxes_precise_amount_cents)
           charged_amount = (total_taxes * 100).fdiv(tax_rate)
 
-          yield tax_rate, Money.new(total_amount - charged_amount)
+          [tax_rate, total_amount - charged_amount]
         else
-          yield tax_rate, Money.new(total_amount)
+          [tax_rate, total_amount / invoice.fee_total_amount_cents * allowances]
         end
+      end.to_h
+    end
+
+    def allowance_charges(&block)
+      return unless allowances.positive?
+
+      allowances_per_tax_rate.each_pair do |tax_rate, amount|
+        yield tax_rate, Money.new(amount)
       end
     end
 
@@ -152,6 +158,8 @@ module EInvoices
         else
           fees.sum(&:precise_amount_cents)
         end
+
+        charged_amount -= allowances_per_tax_rate[tax_rate]
 
         yield tax_rate, Money.new(charged_amount), Money.new(total_taxes)
       end
