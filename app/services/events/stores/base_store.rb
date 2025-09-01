@@ -10,6 +10,8 @@ module Events
 
         @filters = filters
 
+        @charge_id = filters[:charge_id]
+        @charge_filter_id = filters[:charge_filter_id]
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
 
