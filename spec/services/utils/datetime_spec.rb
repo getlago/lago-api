@@ -6,25 +6,44 @@ RSpec.describe Utils::Datetime, type: :service do
   subject(:datetime) { described_class }
 
   describe ".valid_format?" do
-    it "returns false for invalid format" do
-      expect(datetime).not_to be_valid_format("aaa")
-    end
+    context "when the parameter is a string" do
+      context "when the date is not in ISO8601 format" do
+        it "returns false for invalid format" do
+          expect(datetime).not_to be_valid_format("2022-12-13 12:00:00Z")
+        end
+      end
 
-    context "when parameter is string and is valid" do
-      it "returns true" do
-        expect(datetime).to be_valid_format("2022-12-13T12:00:00Z")
+      context "when the date is in ISO8601 format" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2022-12-13T12:00:00Z")
+        end
+      end
+
+      context "when the date includes microseconds" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2024-05-30T09:45:44.394316274Z")
+        end
       end
     end
 
-    context "when parameter is datetime object" do
+    context "when the parameter is a datetime object" do
       it "returns true" do
         expect(datetime).to be_valid_format(Time.current)
       end
     end
 
-    context "when parameter is a string with microseconds" do
-      it "returns true" do
-        expect(datetime).to be_valid_format("2024-05-30T09:45:44.394316274Z")
+    context "when :any format is specified" do
+      context "when the date format is valid" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2022-12-13T12:00:00Z", format: :any)
+          expect(datetime).to be_valid_format("2022-12-13 12:00:00Z", format: :any)
+        end
+      end
+
+      context "when the date is invalid" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("aaa", format: :any)
+        end
       end
     end
   end

@@ -2,8 +2,16 @@
 
 module Utils
   class Datetime
-    def self.valid_format?(datetime)
-      datetime.respond_to?(:strftime) || datetime.is_a?(String) && Time.zone.parse(datetime.to_s).present?
+    def self.valid_format?(datetime, format: :iso8601)
+      return true if datetime.respond_to?(:strftime)
+      return false unless datetime.is_a?(String)
+
+      case format
+      when :any
+        Time.zone.parse(datetime).present?
+      else
+        Time.zone.iso8601(datetime).present?
+      end
     rescue ArgumentError
       false
     end
