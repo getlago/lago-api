@@ -200,45 +200,37 @@ module Api
           :name,
           :invoice_display_name,
           :trial_period,
-          {tax_codes: []},
-          {
-            minimum_commitment: [
-              :id,
+          tax_codes: [],
+          minimum_commitment: [
+            :id,
+            :invoice_display_name,
+            :amount_cents,
+            tax_codes: []
+          ],
+          charges: [
+            :id,
+            :billable_metric_id,
+            :min_amount_cents,
+            :invoice_display_name,
+            :charge_model,
+            properties: {},
+            filters: [
               :invoice_display_name,
-              :amount_cents,
-              {tax_codes: []}
+              properties: {},
+              values: {}
             ],
-            charges: [
-              :id,
-              :billable_metric_id,
-              :min_amount_cents,
-              :invoice_display_name,
-              :charge_model,
-              {properties: {}},
-              {
-                filters: [
-                  :invoice_display_name,
-                  {
-                    properties: {},
-                    values: {}
-                  }
-                ]
-              },
-              {tax_codes: []},
-              {
-                applied_pricing_unit: [
-                  :code,
-                  :conversion_rate
-                ]
-              }
-            ],
-            usage_thresholds: [
-              :id,
-              :threshold_display_name,
-              :amount_cents,
-              :recurring
+            tax_codes: [],
+            applied_pricing_unit: [
+              :code,
+              :conversion_rate
             ]
-          }
+          ],
+          usage_thresholds: [
+            :id,
+            :threshold_display_name,
+            :amount_cents,
+            :recurring
+          ]
         ]
       end
 
