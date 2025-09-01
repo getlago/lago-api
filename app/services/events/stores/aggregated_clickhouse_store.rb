@@ -390,7 +390,25 @@ module Events
       end
 
       def weighted_sum(initial_value: 0)
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE,
+                initial_value: initial_value || 0
+              }
+            ]
+          )
+
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
       def grouped_weighted_sum(initial_values: [])
