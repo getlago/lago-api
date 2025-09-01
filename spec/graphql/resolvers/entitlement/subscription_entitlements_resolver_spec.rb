@@ -127,7 +127,7 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementsResolver, type: :
     end
   end
 
-  it "does not trigger N+1 queries for privileges", with_bullet: true do
+  it "does not trigger N+1 queries for privileges", :with_bullet do
     features = create_list(:feature, 3, organization:)
     features.each do |feature|
       privilege = create(:privilege, feature:)
@@ -135,10 +135,6 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementsResolver, type: :
       Entitlement::EntitlementValue.create(organization:, entitlement:, privilege:, value: "val")
     end
 
-    Bullet.start_request
-
     subject
-
-    expect(Bullet).not_to be_notification
   end
 end

@@ -128,14 +128,16 @@ RSpec.configure do |config|
   config.include_context "with Time travel enabled", :time_travel
 
   config.before do |example|
+    metadata = example.metadata
+
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
-    if example.metadata[:scenarios]
+    if metadata[:scenarios]
       stub_pdf_generation
     end
 
-    if (clickhouse = example.metadata[:clickhouse])
+    if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
 
       if clickhouse.is_a?(Hash) && clickhouse[:clean_before]
@@ -143,16 +145,20 @@ RSpec.configure do |config|
       end
     end
 
-    if example.metadata[:with_bullet]
+    if metadata[:with_bullet] || metadata[:bullet]
       Bullet.enable = true
+      bullet_metadata = example.metadata[:bullet] || {}
+      Bullet.n_plus_one_query_enable = bullet_metadata.fetch(:n_plus_one_query, true)
+      Bullet.unused_eager_loading_enable = bullet_metadata.fetch(:unused_eager_loading, true)
+      Bullet.start_request
     end
 
-    if example.metadata[:cache]
+    if metadata[:cache]
       Rails.cache = if example.metadata[:cache].to_sym == :memory
         ActiveSupport::Cache.lookup_store(:memory_store)
-      elsif example.metadata[:cache].to_sym == :null
+      elsif metadata[:cache].to_sym == :null
         ActiveSupport::Cache.lookup_store(:null_store)
-      elsif example.metadata[:cache].to_sym == :redis
+      elsif metadata[:cache].to_sym == :redis
         ActiveSupport::Cache.lookup_store(:redis_cache_store)
       else
         raise "Unknown cache store: #{example.metadata[:cache]}"
@@ -161,9 +167,11 @@ RSpec.configure do |config|
   end
 
   config.after do |example|
-    if example.metadata[:with_bullet]
+    if example.metadata[:with_bullet] || example.metadata[:bullet]
+      Bullet.perform_out_of_channel_notifications if Bullet.notification?
       Bullet.end_request
     end
+    Bullet.enable = false
   end
 
   config.around do |example|

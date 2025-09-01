@@ -72,17 +72,13 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
     expect(result["data"]["features"]["metadata"]["totalCount"]).to eq(2)
   end
 
-  it "does not trigger N+1 queries for privileges", with_bullet: true do
+  it "does not trigger N+1 queries for privileges", :with_bullet do
     features = create_list(:feature, 3, organization:)
     features.each do |feature|
       create(:privilege, feature:)
     end
 
-    Bullet.start_request
-
     subject
-
-    expect(Bullet).not_to be_notification
   end
 
   context "when search_term is provided" do

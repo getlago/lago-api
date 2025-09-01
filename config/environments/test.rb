@@ -55,4 +55,9 @@ Rails.application.configure do
 
   # Set default API URL for test environment
   ENV["LAGO_API_URL"] ||= "http://localhost:3000"
+
+  config.after_initialize do
+    Bullet.bullet_logger = true
+    Bullet.raise = true # raise an error if n+1 query occurs
+  end
 end
