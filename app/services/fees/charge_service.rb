@@ -344,7 +344,7 @@ module Fees
     end
 
     def aggregation_filters(charge_filter: nil)
-      filters = {}
+      filters = {charge_id: charge.id}
 
       model = charge_filter.presence || charge
       filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?

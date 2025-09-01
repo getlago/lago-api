@@ -13,6 +13,8 @@ module Events
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
 
+        @charge_id = filters[:charge_id]
+        @charge_filter_id = filters[:charge_filter]&.id
         @matching_filters = filters[:matching_filters] || {}
         @ignored_filters = filters[:ignored_filters] || []
 
@@ -129,7 +131,7 @@ module Events
         query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
       protected
 
