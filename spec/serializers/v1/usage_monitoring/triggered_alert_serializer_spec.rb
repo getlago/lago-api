@@ -48,7 +48,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
     end
 
     context "when billable_metric and alert are deleted" do
-      it "retrieve te alert correctly" do
+      it "retrieves the alert correctly" do
         alert.billable_metric.discard!
         alert.discard!
         triggered_alert.reload
