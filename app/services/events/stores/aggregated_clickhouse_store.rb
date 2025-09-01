@@ -142,7 +142,7 @@ module Events
       def grouped_sum
         connection_with_retry do |connection|
           sql = aggregated_events_sql(select: [
-            aggregated_arel_table[:grouped_by],
+            cast_to_json(aggregated_arel_table[:grouped_by]),
             to_decimal128(Arel::Nodes::NamedFunction.new(
               "sumMerge",
               [aggregated_arel_table[:sum_state]]

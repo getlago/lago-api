@@ -61,7 +61,11 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         applied_grouped_by_values = grouped_by_values || with_grouped_by_values
 
         if applied_grouped_by_values.present?
+<<<<<<< HEAD
           applied_grouped_by_values.each { |grouped_by, value| groups[grouped_by] = value }
+=======
+        # applied_grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
+>>>>>>> a80b0ceaa (feat(pre-aggregation): Implement count aggregation)
         elsif grouped_by.present?
           grouped_by.each do |group|
             groups[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
@@ -85,8 +89,13 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         aggregation_type: "count",
         charge_id:,
         charge_version: charge.updated_at,
+<<<<<<< HEAD
         charge_filter_id: charge_filter&.id || "",
         charge_filter_version: charge_filter&.updated_at || "",
+=======
+        charge_filter_id: charge_filter&.id,
+        charge_filter_version: charge_filter&.updated_at,
+>>>>>>> a80b0ceaa (feat(pre-aggregation): Implement count aggregation)
         timestamp: boundaries[:from_datetime] + (i + 1).days,
         properties:,
         value: (i + 1).to_s,
