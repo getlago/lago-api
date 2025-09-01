@@ -212,7 +212,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
       end
     end
 
-    context "with bullet gem to detect N+1 queries", with_bullet: true do
+    context "with bullet gem to detect N+1 queries", bullet: {unused_eager_loading: false} do
       context "when updating multiple features with multiple privileges" do
         let(:feature) { create(:feature, organization:) }
         let(:feature2) { create(:feature, organization:, code: "storage") }
@@ -258,13 +258,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
         end
 
         it "does not trigger N+1 queries when updating multiple features and privileges" do
-          Bullet.start_request
-
           result
 
-          # NOTE: the final `plan.entitlements.includes(...).reload` triggers Bullet::Notification::UnusedEagerLoading
-          #       but the eager loading is important for the serializer
-          expect(Bullet.text_notifications).to be_empty
           expect(result).to be_success
           expect(result.entitlements.count).to eq(3)
         end
