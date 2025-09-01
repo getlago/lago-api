@@ -26,6 +26,7 @@ RSpec.describe Fees::ProjectionService do
   let(:charge) do
     instance_double(
       "Charge",
+      id: SecureRandom.uuid,
       properties: charge_properties,
       applied_pricing_unit: applied_pricing_unit,
       filters: [],
@@ -93,7 +94,7 @@ RSpec.describe Fees::ProjectionService do
       success?: true,
       error: nil,
       projected_amount: BigDecimal("100.50"),
-      projected_units: BigDecimal("10"),
+      projected_units: BigDecimal(10),
       unit_amount: BigDecimal("10.05")
     )
   end
@@ -158,7 +159,7 @@ RSpec.describe Fees::ProjectionService do
 
         expect(result).to be_success
         expect(result.projected_amount_cents).to eq(10050) # 100.50 * 100
-        expect(result.projected_units).to eq(BigDecimal("10"))
+        expect(result.projected_units).to eq(BigDecimal(10))
         expect(result.projected_pricing_unit_amount_cents).to eq(nil) # No applied_pricing_unit
       end
 
@@ -174,7 +175,7 @@ RSpec.describe Fees::ProjectionService do
             to_datetime: to_datetime.to_date,
             charges_duration: charges_duration
           },
-          filters: {},
+          filters: {charge_id: charge.id},
           current_usage: true
         )
         expect(aggregator).to have_received(:aggregate).with(options: {is_current_usage: true})
@@ -237,6 +238,7 @@ RSpec.describe Fees::ProjectionService do
             charges_duration: charges_duration
           },
           filters: {
+            charge_id: charge.id,
             charge_filter: charge_filter,
             matching_filters: ["filter1"],
             ignored_filters: ["filter2"]
@@ -320,7 +322,7 @@ RSpec.describe Fees::ProjectionService do
           success?: true,
           error: nil,
           projected_amount: nil,
-          projected_units: BigDecimal("10"),
+          projected_units: BigDecimal(10),
           unit_amount: nil
         )
       end

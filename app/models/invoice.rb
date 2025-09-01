@@ -230,7 +230,7 @@ class Invoice < ApplicationRecord
       raise(NotImplementedError)
     end
 
-    filters = {}
+    filters = {charge_id: fee.charge_id}
     if fee.charge_filter
       result = ChargeFilters::MatchingAndIgnoredService.call(charge: fee.charge, filter: fee.charge_filter)
       filters[:charge_filter] = fee.charge_filter if fee.charge_filter
