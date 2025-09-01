@@ -100,10 +100,10 @@ module Invoices
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .find_each do |charge|
         bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
-        fees.concat(charge_usage(charge, bypass_aggregation))
+        fees += charge_usage(charge, bypass_aggregation)
       end
 
-      fees
+      fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
     def charge_usage(charge, bypass_aggregation)
