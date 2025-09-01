@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickhouse: true do
+  group_values = {
+    cloud: %w[aws azure gcp],
+    region: %w[eu me us]
+  }
+
   subject(:event_store) do
     described_class.new(
       code:,
@@ -65,7 +70,7 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
           applied_grouped_by_values.each { |grouped_by, value| groups[grouped_by] = value }
         elsif grouped_by.present?
           grouped_by.each do |group|
-            groups[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
+            groups[group] = group_values[group.to_sym][i / 2]
           end
         end
       elsif grouped_by.present?
@@ -143,10 +148,10 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
       null_group = result.find { |v| v[:groups]["cloud"].nil? }
       expect(null_group[:value]).to eq(2)
 
-      result.each do |row|
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
         next if row[:groups]["cloud"].nil?
 
-        expect(row[:groups]["cloud"]).not_to be_nil
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
         expect(row[:value]).to eq(1)
       end
     end
@@ -163,11 +168,11 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         expect(null_group[:groups]["region"]).to be_nil
         expect(null_group[:value]).to eq(2)
 
-        result[...-1].each do |row|
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
           next if row[:groups]["cloud"].nil?
 
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
           expect(row[:value]).to eq(1)
         end
       end
@@ -194,10 +199,10 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
       null_group = result.find { |v| v[:groups]["cloud"].nil? }
       expect(null_group[:value]).to eq(6)
 
-      result[...-1].each do |row|
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
         next if row[:groups]["cloud"].nil?
 
-        expect(row[:groups]["cloud"]).not_to be_nil
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
         expect(row[:value]).not_to be_nil
       end
     end
@@ -214,11 +219,67 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         expect(null_group[:groups]["region"]).to be_nil
         expect(null_group[:value]).to eq(6)
 
-        result[...-1].each do |row|
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
           next if row[:groups]["cloud"].nil?
 
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
+  describe ".max" do
+    let(:aggregation_type) { "max" }
+
+    it "returns the max value" do
+      expect(event_store.max).to eq(5)
+    end
+  end
+
+  describe ".grouped_max" do
+    let(:grouped_by) { %w[cloud] }
+    let(:aggregation_type) { "max" }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it "returns the max values grouped by the provided group" do
+      result = event_store.grouped_max
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]["cloud"].nil? }
+      expect(null_group[:value]).to eq(4)
+
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+        next if row[:groups]["cloud"].nil?
+
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[cloud region] }
+
+      it "returns the max values grouped by the provided groups" do
+        result = event_store.grouped_max
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["region"]).to be_nil
+        expect(null_group[:value]).to eq(4)
+
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
           expect(row[:value]).not_to be_nil
         end
       end
