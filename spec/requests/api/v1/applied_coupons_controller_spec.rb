@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::AppliedCouponsController, type: :request do
+RSpec.describe Api::V1::AppliedCouponsController, :with_bullet, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
 
@@ -196,6 +196,28 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
             expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
           end
         end
+
+        context "when the coupon is deleted" do
+          let(:coupon_1) { create(:coupon, :deleted, organization:) }
+          let!(:applied_coupon_1) do
+            create(
+              :applied_coupon,
+              :terminated,
+              customer:,
+              coupon: coupon_1,
+              amount_cents: 10,
+              amount_currency: customer.currency
+            )
+          end
+
+          it "returns the applied coupon" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:applied_coupons].count).to eq(1)
+            expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
+          end
+        end
       end
 
       context "when no applied coupons match the coupon code" do
@@ -209,6 +231,30 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
             expect(json[:applied_coupons]).to be_empty
           end
         end
+      end
+    end
+
+    context "when the coupon is deleted" do
+      let(:coupon_1) { create(:coupon, :deleted, organization:) }
+      let!(:applied_coupon_1) do
+        create(
+          :applied_coupon,
+          :terminated,
+          customer:,
+          coupon: coupon_1,
+          amount_cents: 10,
+          amount_currency: customer.currency
+        )
+      end
+
+      it "returns the applied coupon" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_coupons].count).to eq(2)
+        expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
+        expect(json[:applied_coupons].last[:coupon_code]).to eq(coupon_1.code)
+        expect(json[:applied_coupons].last[:coupon_name]).to eq(coupon_1.name)
       end
     end
   end
