@@ -3,6 +3,10 @@
 module Clickhouse
   class EventsAggregated < BaseRecord
     self.table_name = "events_aggregated"
+
+    def readonly?
+      true
+    end
   end
 end
 
