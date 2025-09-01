@@ -27,6 +27,7 @@ RSpec.describe DataExports::ProcessPartService do
       payment_status: "pending",
       status: "finalized",
       file_url: "http://api.lago.com/invoice.pdf",
+      xml_url: "http://api.lago.com/invoice.xml",
       currency: "USD",
       fees_amount_cents: 70000,
       coupons_amount_cents: 1655,
@@ -52,7 +53,7 @@ RSpec.describe DataExports::ProcessPartService do
   describe "#call" do
     it "processes the part" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
+        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,http://api.lago.com/invoice.xml,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
       expect(result).to be_success
       expect(result.data_export_part.csv_lines).to eq(expected_csv)
