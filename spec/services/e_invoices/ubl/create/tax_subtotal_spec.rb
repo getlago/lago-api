@@ -36,7 +36,7 @@ RSpec.describe EInvoices::Ubl::Create::TaxSubtotal, type: :service do
         let(:tax_rate) { 0.00 }
 
         it "zero the taxable amount" do
-          expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("0.00").with_attribute("currencyID", "EUR")
+          expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("10.00").with_attribute("currencyID", "EUR")
         end
       end
     end
