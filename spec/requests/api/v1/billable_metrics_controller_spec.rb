@@ -198,7 +198,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       expect { subject }.to change(BillableMetric, :count).by(-1)
     end
 
-    it "deletes a alerts associated with billable_metric" do
+    it "deletes alerts associated with billable_metric" do
       create(:billable_metric_current_usage_amount_alert, billable_metric:, organization:)
       expect { subject }.to change(organization.alerts, :count).by(-1)
     end
