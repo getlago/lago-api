@@ -60,22 +60,27 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     5.times do |i|
       properties = {billable_metric.field_name => i + 1}
       groups = {}
+      charge_filter_id = ""
+      charge_filter_version = ""
 
       if i.even?
-        # matching_filters.each { |key, values| properties[key] = values.first }
-
         applied_grouped_by_values = grouped_by_values || with_grouped_by_values
 
         if applied_grouped_by_values.present?
-          applied_grouped_by_values.each { |grouped_by, value| groups[grouped_by] = value }
+          applied_grouped_by_values.each { |grouped_by, value| groups[grouped_by] = value || described_class::NIL_GROUP_VALUE }
         elsif grouped_by.present?
           grouped_by.each do |group|
             groups[group] = group_values[group.to_sym][i / 2]
           end
         end
-      elsif grouped_by.present?
-        grouped_by.each do |group|
-          groups[group] = described_class::NIL_GROUP_VALUE
+      else
+        charge_filter_id = charge_filter&.id || ""
+        charge_filter_version = charge_filter&.updated_at || ""
+
+        if grouped_by.present?
+          grouped_by.each do |group|
+            groups[group] = described_class::NIL_GROUP_VALUE
+          end
         end
       end
 
@@ -91,8 +96,8 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         aggregation_type:,
         charge_id:,
         charge_version: charge.updated_at,
-        charge_filter_id: charge_filter&.id || "",
-        charge_filter_version: charge_filter&.updated_at || "",
+        charge_filter_id:,
+        charge_filter_version:,
         timestamp: boundaries[:from_datetime] + (i + 1).days,
         properties:,
         value: (i + 1).to_s,
@@ -123,6 +128,36 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     Clickhouse::BaseRecord.connection.execute("TRUNCATE TABLE events_aggregated")
   end
 
+  describe ".events" do
+    it "returns a list of events" do
+      expect(event_store.events.count).to eq(5)
+    end
+
+    context "with grouped_by_values" do
+      let(:grouped_by_values) { {"region" => "europe"} }
+
+      it "returns a list of events" do
+        expect(event_store.events.count).to eq(3)
+      end
+
+      context "when grouped_by_values value is nil" do
+        let(:grouped_by_values) { {"region" => nil} }
+
+        it "returns a list of events" do
+          expect(event_store.events.count).to eq(3)
+        end
+      end
+    end
+
+    context "with filters" do
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      it "returns a list of events" do
+        expect(event_store.events.count).to eq(2) # 1st event is ignored
+      end
+    end
+  end
+
   describe ".distinct_charge_filter_ids" do
     it "returns an empty array of when no charge filters are present" do
       expect(event_store.distinct_charge_filter_ids).to be_empty
@@ -130,9 +165,34 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
 
     context "when charge filters are present" do
       let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:charge_filter2) { create(:charge_filter, charge:) }
+
+      let(:other_event) do
+        Clickhouse::EventsEnrichedExpanded.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          subscription_id: subscription.id,
+          plan_id: plan.id,
+          code:,
+          aggregation_type:,
+          charge_id:,
+          charge_version: charge.updated_at,
+          charge_filter_id: charge_filter2.id,
+          charge_filter_version: charge_filter2.updated_at,
+          timestamp: boundaries[:from_datetime] + 4.days,
+          properties: {},
+          value: 4.to_s,
+          decimal_value: 4.to_d,
+          precise_total_amount_cents: 4 + 1.1,
+          grouped_by: {}
+        )
+      end
+
+      before { other_event }
 
       it "returns an array of distinct charge filter ids" do
-        expect(event_store.distinct_charge_filter_ids).to eq([charge_filter.id])
+        expect(event_store.distinct_charge_filter_ids).to match_array([charge_filter.id, charge_filter2.id])
       end
     end
   end
@@ -186,6 +246,12 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         event
 
         expect(event_store.events_values(exclude_event: true)).to eq([1, 2, 3, 4, 5])
+      end
+    end
+
+    context "with a limit" do
+      it "returns the value attached to each event" do
+        expect(event_store.events_values(limit: 2)).to eq([1, 2])
       end
     end
   end
@@ -459,6 +525,104 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
           expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
           expect(row[:value]).not_to be_nil
         end
+      end
+    end
+  end
+
+  describe ".active_unique_property?" do
+    before { event_store.aggregation_property = billable_metric.field_name }
+
+    it "returns false when no previous events exist" do
+      bm_value = SecureRandom.uuid
+
+      event = ::Clickhouse::EventsEnrichedExpanded.create!(
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code:,
+        timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+        properties: {
+          billable_metric.field_name => bm_value
+        },
+        value: bm_value
+      )
+
+      expect(event_store).not_to be_active_unique_property(event)
+    end
+
+    context "when event is already active" do
+      it "returns true if the event property is active" do
+        ::Clickhouse::EventsEnrichedExpanded.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        event = ::Clickhouse::EventsEnrichedExpanded.create!(
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        expect(event_store).to be_active_unique_property(event)
+      end
+    end
+
+    context "with a previous removed event" do
+      it "returns false" do
+        ::Clickhouse::EventsEnrichedExpanded.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          subscription_id: subscription.id,
+          plan_id: plan.id,
+          code:,
+          aggregation_type: "unique_count",
+          charge_id:,
+          charge_version: charge.updated_at,
+          charge_filter_id: charge_filter&.id,
+          charge_filter_version: charge_filter&.updated_at,
+          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+            :operation_type => "remove"
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        event = ::Clickhouse::EventsEnrichedExpanded.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          subscription_id: subscription.id,
+          plan_id: plan.id,
+          code:,
+          aggregation_type: "unique_count",
+          charge_id:,
+          charge_version: charge.updated_at,
+          charge_filter_id: charge_filter&.id,
+          charge_filter_version: charge_filter&.updated_at,
+          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        expect(event_store).not_to be_active_unique_property(event)
       end
     end
   end
