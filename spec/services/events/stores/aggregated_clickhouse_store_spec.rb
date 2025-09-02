@@ -97,7 +97,7 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         properties:,
         value: (i + 1).to_s,
         decimal_value: (i + 1).to_d,
-        precise_total_amount_cents: i + 1,
+        precise_total_amount_cents: i + 1.1,
         grouped_by: groups
       )
     end
@@ -218,6 +218,57 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         null_group = result.find { |v| v[:groups]["cloud"].nil? }
         expect(null_group[:groups]["region"]).to be_nil
         expect(null_group[:value]).to eq(6)
+
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
+  describe "#sum_precise_total_amount_cents" do
+    let(:aggregation_type) { "sum" }
+
+    it "returns the sum of precise_total_amount_cent values" do
+      expect(event_store.sum_precise_total_amount_cents).to eq(15.5)
+    end
+  end
+
+  describe "#grouped_sum_precise_total_amount_cents" do
+    let(:aggregation_type) { "sum" }
+    let(:grouped_by) { %w[cloud] }
+
+    it "returns the sum of values grouped by the provided group" do
+      result = event_store.grouped_sum_precise_total_amount_cents
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]["cloud"].nil? }
+      expect(null_group[:value]).to eq(6.2)
+
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+        next if row[:groups]["cloud"].nil?
+
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[cloud region] }
+
+      it "returns the sum of values grouped by the provided groups" do
+        result = event_store.grouped_sum_precise_total_amount_cents
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["region"]).to be_nil
+        expect(null_group[:value]).to eq(6.2)
 
         result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
           next if row[:groups]["cloud"].nil?

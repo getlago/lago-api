@@ -100,11 +100,11 @@ module Events
       end
 
       def sum_precise_total_amount_cents
-        # TODO(pre-aggregation): Implement
+        merge_aggregation("sumMerge", :precise_total_amount_cents_sum_state, "sum_value")
       end
 
       def grouped_sum_precise_total_amount_cents
-        # TODO(pre-aggregation): Implement
+        grouped_merge_aggregation("sumMerge", :precise_total_amount_cents_sum_state, "sum_value")
       end
 
       def sum
