@@ -6,7 +6,26 @@ module Events
       NIL_GROUP_VALUE = "<nil>"
 
       def events(force_from: false, ordered: false)
-        # TODO(pre-aggregation): Implement
+        with_retry do
+          scope = ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization_id)
+            .where(charge_id:)
+            .where(charge_filter_id: charge_filter_id || "")
+
+          scope = scope.order(timestamp: :asc) if ordered
+          scope.where(timestamp: from_datetime..) if force_from || use_from_boundary
+          scope.where(timestamp: ..to_datetime) if to_datetime
+
+          scope = if grouped_by_values?
+            scope.where(sorted_grouped_by: formated_grouped_by_values)
+          else
+            # TODO: take grouped by into account when no grouped_by_values
+            scope.where(sorted_grouped_by: "{}")
+          end
+
+          scope
+        end
       end
 
       def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star])
@@ -29,12 +48,30 @@ module Events
         query.project(select).to_sql
       end
 
-      def events_values
-        # TODO(pre-aggregation): Implement
+      def distinct_charge_filter_ids
+        ::Clickhouse::EventsEnrichedExpanded
+          .where(subscription_id: subscription.id)
+          .where(organization_id: subscription.organization_id)
+          .where(timestamp: from_datetime..to_datetime)
+          .pluck("DISTINCT(charge_filter_id)")
+          .reject(&:blank?)
+      end
+
+      def events_values(limit: nil, force_from: false, exclude_event: false)
+        with_retry do
+          scope = events(force_from:, ordered: true)
+
+          scope = scope.where.not(transaction_id: filters[:event].transaction_id) if exclude_event
+          scope = scope.limit(limit) if limit
+
+          scope.pluck(:decimal_value)
+        end
       end
 
       def prorated_events_values(total_duration)
-        # TODO(pre-aggregation): Implement
+        ratio_sql = duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, total_duration)
+
+        with_retry { events(ordered: true).pluck(Arel.sql("events_enriched_expanded.decimal_value * (#{ratio_sql})")) }
       end
 
       def last_event
