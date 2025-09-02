@@ -10,7 +10,7 @@ module Invoices
       end
     end
 
-    retry_on Sequenced::SequenceError
+    retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
     retry_on ActiveRecord::LockWaitTimeout, PG::LockNotAvailable, queue: :low_priority, wait: :polynomially_longer, attempts: 15

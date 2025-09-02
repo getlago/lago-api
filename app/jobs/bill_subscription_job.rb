@@ -11,7 +11,7 @@ class BillSubscriptionJob < ApplicationJob
 
   unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
-  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
+  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
   def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false)
     result = Invoices::SubscriptionService.call(

@@ -9,7 +9,7 @@ class BillAddOnJob < ApplicationJob
     end
   end
 
-  retry_on Sequenced::SequenceError
+  retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
   def perform(applied_add_on, timestamp)
     result = Invoices::AddOnService.new(
