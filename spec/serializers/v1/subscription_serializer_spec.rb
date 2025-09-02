@@ -7,7 +7,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
 
   let(:started_at) { Time.zone.parse("2024-04-23 10:00") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
-  let!(:subscription) do
+  let(:subscription) do
     create(:subscription, created_at: started_at, started_at:, ending_at:)
   end
 
@@ -165,6 +165,24 @@ RSpec.describe ::V1::SubscriptionSerializer do
         ],
         "overrides" => {"max" => 99}
       })
+    end
+  end
+
+  context "when subscription has fixed charges" do
+    let(:plan) { create(:plan) }
+    let(:fixed_charge) { create(:fixed_charge, plan:) }
+    let(:subscription) { create(:subscription, plan:) }
+
+    before { fixed_charge }
+
+    it "serializes the fixed charges" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["subscription"]["plan"]["fixed_charges"].count).to eq 1
+      expect(result["subscription"]["plan"]["fixed_charges"].first).to include(
+        "lago_id" => fixed_charge.id,
+        "lago_add_on_id" => fixed_charge.add_on.id,
+        "units" => fixed_charge.units.to_s
+      )
     end
   end
 end

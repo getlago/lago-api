@@ -373,6 +373,50 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         end
       end
     end
+
+    context "with fixed charges override" do
+      let(:plan) { create(:plan, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, units: 2, charge_model: "standard", properties: {amount: "10"}) }
+      let(:tax) { create(:tax, organization:) }
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          name: "subscription name",
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          ending_at:,
+          plan_overrides: {
+            fixed_charges: [{
+              id: fixed_charge.id,
+              units: "10",
+              invoice_display_name: "another name",
+              charge_model: "standard",
+              properties: {amount: "20"},
+              tax_codes: [tax.code]
+            }]
+          }
+        }
+      end
+
+      it "creates a subscription with overridden plan with fixed_charges" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:plan][:fixed_charges].first).to include(
+          lago_add_on_id: fixed_charge.add_on.id,
+          units: "10.0",
+          invoice_display_name: "another name",
+          charge_model: "standard",
+          properties: {amount: "20"}
+        )
+        expect(json[:subscription][:plan][:fixed_charges].first[:taxes].first).to include(
+          code: tax.code,
+          rate: tax.rate
+        )
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
