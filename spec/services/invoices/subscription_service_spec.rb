@@ -34,7 +34,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
     let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
     let(:timestamp) { Time.zone.now.beginning_of_month }
-    let(:started_at) { Time.zone.now - 2.years }
+    let(:started_at) { Time.zone.parse("2022-10-01T00:00:00.000Z") }
 
     let(:plan) { create(:plan, interval: "monthly", pay_in_advance:) }
     let(:pay_in_advance) { false }
@@ -331,8 +331,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         create(
           :invoice,
           created_at: timestamp + 1.second,
-          customer: subscription.customer,
-          organization: plan.organization
+          customer: subscription.customer
         )
       end
 
