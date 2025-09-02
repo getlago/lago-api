@@ -219,10 +219,12 @@ module Api
             ],
             tax_codes: [],
             applied_pricing_unit: [
+              :code,
               :conversion_rate
             ]
           ],
           usage_thresholds: [
+            :id,
             :threshold_display_name,
             :amount_cents,
             :recurring
