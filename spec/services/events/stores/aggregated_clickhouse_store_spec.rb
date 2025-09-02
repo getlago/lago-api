@@ -20,6 +20,7 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
   end
 
   let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
+  let(:aggregation_type) { "count" }
   let(:organization) { billable_metric.organization }
 
   let(:customer) { create(:customer, organization:) }
@@ -61,11 +62,7 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         applied_grouped_by_values = grouped_by_values || with_grouped_by_values
 
         if applied_grouped_by_values.present?
-<<<<<<< HEAD
           applied_grouped_by_values.each { |grouped_by, value| groups[grouped_by] = value }
-=======
-        # applied_grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
->>>>>>> a80b0ceaa (feat(pre-aggregation): Implement count aggregation)
         elsif grouped_by.present?
           grouped_by.each do |group|
             groups[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
@@ -86,16 +83,11 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
         subscription_id: subscription.id,
         plan_id: plan.id,
         code:,
-        aggregation_type: "count",
+        aggregation_type:,
         charge_id:,
         charge_version: charge.updated_at,
-<<<<<<< HEAD
         charge_filter_id: charge_filter&.id || "",
         charge_filter_version: charge_filter&.updated_at || "",
-=======
-        charge_filter_id: charge_filter&.id,
-        charge_filter_version: charge_filter&.updated_at,
->>>>>>> a80b0ceaa (feat(pre-aggregation): Implement count aggregation)
         timestamp: boundaries[:from_datetime] + (i + 1).days,
         properties:,
         value: (i + 1).to_s,
@@ -177,6 +169,57 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
           expect(row[:groups]["cloud"]).not_to be_nil
           expect(row[:groups]["region"]).not_to be_nil
           expect(row[:value]).to eq(1)
+        end
+      end
+    end
+  end
+
+  describe ".sum" do
+    let(:aggregation_type) { "sum" }
+
+    it "returns the sum of event properties" do
+      expect(event_store.sum).to eq(15)
+    end
+  end
+
+  describe ".grouped_sum" do
+    let(:aggregation_type) { "sum" }
+    let(:grouped_by) { %w[cloud] }
+
+    it "returns the sum of values grouped by the provided group" do
+      result = event_store.grouped_sum
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]["cloud"].nil? }
+      expect(null_group[:value]).to eq(6)
+
+      result[...-1].each do |row|
+        next if row[:groups]["cloud"].nil?
+
+        expect(row[:groups]["cloud"]).not_to be_nil
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[cloud region] }
+
+      it "returns the sum of values grouped by the provided groups" do
+        result = event_store.grouped_sum
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["region"]).to be_nil
+        expect(null_group[:value]).to eq(6)
+
+        result[...-1].each do |row|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).not_to be_nil
+          expect(row[:groups]["region"]).not_to be_nil
+          expect(row[:value]).not_to be_nil
         end
       end
     end
