@@ -285,4 +285,55 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
       end
     end
   end
+
+  describe ".last" do
+    let(:aggregation_type) { "latest" }
+
+    it "returns the last event" do
+      expect(event_store.last).to eq(5)
+    end
+  end
+
+  describe ".grouped_last" do
+    let(:grouped_by) { %w[cloud] }
+    let(:aggregation_type) { "latest" }
+
+    it "returns the value attached to each event prorated on the provided duration" do
+      result = event_store.grouped_last
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]["cloud"].nil? }
+      expect(null_group[:value]).to eq(4)
+
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+        next if row[:groups]["cloud"].nil?
+
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[cloud region] }
+
+      it "returns the last value for each provided groups" do
+        result = event_store.grouped_last
+
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["region"]).to be_nil
+        expect(null_group[:value]).to eq(4)
+
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
 end
