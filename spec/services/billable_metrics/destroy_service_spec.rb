@@ -32,6 +32,13 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       end
     end
 
+    it "soft deletes all the related alerts" do
+      alert = create(:billable_metric_current_usage_amount_alert, billable_metric:, organization:)
+      freeze_time do
+        expect { destroy_service.call }.to change { alert.reload.deleted_at }.from(nil).to(Time.current)
+      end
+    end
+
     it "enqueues a BillableMetricFilters::DestroyAllJob" do
       expect { destroy_service.call }
         .to have_enqueued_job(BillableMetricFilters::DestroyAllJob).with(billable_metric.id)
