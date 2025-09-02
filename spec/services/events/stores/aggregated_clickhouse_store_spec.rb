@@ -123,6 +123,81 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     Clickhouse::BaseRecord.connection.execute("TRUNCATE TABLE events_aggregated")
   end
 
+  describe ".distinct_charge_filter_ids" do
+    it "returns an empty array of when no charge filters are present" do
+      expect(event_store.distinct_charge_filter_ids).to be_empty
+    end
+
+    context "when charge filters are present" do
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      it "returns an array of distinct charge filter ids" do
+        expect(event_store.distinct_charge_filter_ids).to eq([charge_filter.id])
+      end
+    end
+  end
+
+  describe ".events_values" do
+    it "returns the value attached to each event" do
+      expect(event_store.events_values).to eq([1, 2, 3, 4, 5])
+    end
+
+    context "when exclude_event is true" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            charge_id:,
+            charge_filter:,
+            matching_filters:,
+            ignored_filters:,
+            event:
+          }
+        )
+      end
+
+      let(:event) do
+        Clickhouse::EventsEnrichedExpanded.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          subscription_id: subscription.id,
+          plan_id: plan.id,
+          code:,
+          aggregation_type: "count",
+          charge_id:,
+          charge_version: charge.updated_at,
+          charge_filter_id: charge_filter&.id,
+          charge_filter_version: charge_filter&.updated_at,
+          timestamp: boundaries[:from_datetime] + 1.day,
+          properties: {billable_metric.field_name => 6},
+          value: "6",
+          decimal_value: 6,
+          precise_total_amount_cents: 0,
+          grouped_by: {}
+        )
+      end
+
+      it "excludes current event but returns the value attached to other events" do
+        event
+
+        expect(event_store.events_values(exclude_event: true)).to eq([1, 2, 3, 4, 5])
+      end
+    end
+  end
+
+  describe ".prorated_events_values" do
+    it "returns the values attached to each event with prorata on period duration" do
+      expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
+        [0.516, 0.968, 1.355, 1.677, 1.935]
+      )
+    end
+  end
+
   describe ".count" do
     it "returns the number of unique events" do
       expect(event_store.count).to eq(5)
