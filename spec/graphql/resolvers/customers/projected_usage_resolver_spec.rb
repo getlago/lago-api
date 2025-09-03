@@ -167,17 +167,6 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver, type: :graphql do
         expect(usage_response["taxesAmountCents"]).to eq("0")
 
         charge_usage = usage_response["chargesUsage"].first
-        expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
-        expect(charge_usage["billableMetric"]["code"]).to eq(metric.code)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
-        expect(charge_usage["pricingUnitAmountCents"]).to eq(nil)
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["amountCents"]).to eq("5")
-        expect(charge_usage["projectedAmountCents"]).to eq("9")
-
-        charge_usage = usage_response["chargesUsage"].last
         expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
         expect(charge_usage["billableMetric"]["code"]).to eq(sum_metric.code)
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
@@ -189,7 +178,20 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver, type: :graphql do
         expect(charge_usage["amountCents"]).to eq("100")
         expect(charge_usage["projectedAmountCents"]).to eq("827")
 
-        grouped_usage = charge_usage["groupedUsage"].first
+        charge_usage = usage_response["chargesUsage"].last
+        expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
+        expect(charge_usage["billableMetric"]["code"]).to eq(metric.code)
+        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
+        expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
+        expect(charge_usage["pricingUnitAmountCents"]).to eq(nil)
+        expect(charge_usage["units"]).to eq(4.0)
+        expect(charge_usage["projectedUnits"]).to eq(8.27)
+        expect(charge_usage["amountCents"]).to eq("5")
+        expect(charge_usage["projectedAmountCents"]).to eq("9")
+
+        # Check grouped usage on the first charge (sum_metric with grouping)
+        first_charge_usage = usage_response["chargesUsage"].first
+        grouped_usage = first_charge_usage["groupedUsage"].first
         expect(grouped_usage["amountCents"]).to eq("100")
         expect(grouped_usage["projectedAmountCents"]).to eq("827")
         expect(grouped_usage["units"]).to eq(4.0)
