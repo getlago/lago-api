@@ -3,15 +3,15 @@
 module Types
   module GraphqlSubscriptions
     class AiConversation < Types::BaseSubscription
-      argument :conversation_id, ID, required: true
+      argument :id, ID, required: true
       type Types::AiConversations::Stream, null: false
 
-      def subscribe(conversation_id:)
+      def subscribe(id:)
         # Return an empty object to keep subscription alive
         { chunk: nil, done: false }
       end
 
-      def update(conversation_id:)
+      def update(id:)
         object
       end
     end

@@ -4,26 +4,21 @@ class AiConversation < ApplicationRecord
   belongs_to :membership
   belongs_to :organization
 
-  validates :conversation_id, presence: true
-  validates :input_data, presence: true
-  validates :status, presence: true
-
-  STATUS = %w[pending completed].freeze
-  enum :status, STATUS.map { |s| [s, s] }.to_h, default: :pending
+  validates :name, presence: true
 end
 
 # == Schema Information
 #
 # Table name: ai_conversations
 #
-#  id              :uuid             not null, primary key
-#  input_data      :string           not null
-#  status          :string           default("pending"), not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  conversation_id :string           not null
-#  membership_id   :uuid             not null
-#  organization_id :uuid             not null
+#  id                      :uuid             not null, primary key
+#  name                    :string           not null
+#  status                  :string           default("pending"), not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  membership_id           :uuid             not null
+#  mistral_conversation_id :string
+#  organization_id         :uuid             not null
 #
 # Indexes
 #
