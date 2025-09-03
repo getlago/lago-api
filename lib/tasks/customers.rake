@@ -22,7 +22,7 @@ namespace :customers do
     raise "Coupons not implemented" if cust.coupons.any?
 
     # triggered dunning_campaign can be not a problem if all payments and payment_requests are managed - to figure it out with the organization
-    raise "Customer has dunning campaigns triggered" if  cust.last_dunning_campaign_attempt != 0
+    raise "Customer has dunning campaigns triggered" if cust.last_dunning_campaign_attempt != 0
     raise "Customer has dunning campaigns triggered" unless cust.last_dunning_campaign_attempt_at.nil?
     raise "Customer should not have payment requests" if cust.payment_requests.any?
     # pay_in_advance will immediately trigger the invoice, which is not a desired behaviour

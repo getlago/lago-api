@@ -133,7 +133,7 @@ module Fees
 
     def calculate_projected_amount_cents(amount_result)
       return 0 unless amount_result.projected_amount
-      
+
       # Prevent negative projected amounts from negative events
       return 0 if amount_result.projected_amount.negative?
 
