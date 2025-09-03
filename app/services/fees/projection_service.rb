@@ -15,7 +15,7 @@ module Fees
       @to_datetime = @first_fee&.properties&.dig("to_datetime")
       @charges_duration_in_days = @first_fee&.properties&.dig("charges_duration")
       @currency = @subscription&.plan&.amount&.currency
-      @properties_for_charge_model = @charge_filter&.properties || @charge&.properties
+      @properties_for_charge_model = @charge_filter&.properties&.presence || @charge&.properties
 
       super(nil)
     end
@@ -63,7 +63,7 @@ module Fees
       end
 
       result.projected_amount_cents = calculate_projected_amount_cents(charge_model_result)
-      result.projected_units = charge_model_result.projected_units
+      result.projected_units = charge_model_result.projected_units&.negative? ? BigDecimal(0) : charge_model_result.projected_units
       result.projected_pricing_unit_amount_cents = calculate_projected_pricing_unit_amount_cents(charge_model_result)
       result
     end
@@ -133,6 +133,9 @@ module Fees
 
     def calculate_projected_amount_cents(amount_result)
       return 0 unless amount_result.projected_amount
+      
+      # Prevent negative projected amounts from negative events
+      return 0 if amount_result.projected_amount.negative?
 
       rounded_projected_amount = amount_result.projected_amount.round(currency.exponent)
       rounded_projected_amount * currency.subunit_to_unit
