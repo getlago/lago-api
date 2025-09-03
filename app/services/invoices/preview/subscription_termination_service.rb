@@ -42,7 +42,7 @@ module Invoices
       attr_reader :current_subscription, :terminated_at
 
       def parsed_terminated_at
-        return unless Utils::Datetime.valid_format?(terminated_at)
+        return unless Utils::Datetime.valid_format?(terminated_at, format: :any)
 
         Time.zone.parse(terminated_at)
       end

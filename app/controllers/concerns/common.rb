@@ -8,7 +8,7 @@ module Common
   def valid_date?(date)
     return false unless date
 
-    Date.strptime(date)
+    Date.iso8601(date)
     true
   rescue Date::Error
     false

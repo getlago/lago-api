@@ -75,7 +75,7 @@ module Payments
     end
 
     def valid_paid_at?
-      params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at])
+      params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at], format: :any)
     end
   end
 end

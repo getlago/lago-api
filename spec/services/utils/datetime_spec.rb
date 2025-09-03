@@ -6,25 +6,82 @@ RSpec.describe Utils::Datetime, type: :service do
   subject(:datetime) { described_class }
 
   describe ".valid_format?" do
-    it "returns false for invalid format" do
-      expect(datetime).not_to be_valid_format("aaa")
-    end
+    context "when the parameter is a string" do
+      context "when the date is not in ISO8601 format" do
+        it "returns false for invalid format" do
+          expect(datetime).not_to be_valid_format("2022-12-13 12:00:00Z")
+        end
+      end
 
-    context "when parameter is string and is valid" do
-      it "returns true" do
-        expect(datetime).to be_valid_format("2022-12-13T12:00:00Z")
+      context "when the date is in ISO8601 format" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2022-12-13T12:00:00Z")
+        end
+      end
+
+      context "when the date includes microseconds" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2024-05-30T09:45:44.394316274Z")
+        end
       end
     end
 
-    context "when parameter is datetime object" do
+    context "when the parameter is a datetime object" do
       it "returns true" do
         expect(datetime).to be_valid_format(Time.current)
       end
     end
 
-    context "when parameter is a string with microseconds" do
+    context "when :any format is specified" do
+      context "when the date format is valid" do
+        it "returns true" do
+          expect(datetime).to be_valid_format("2022-12-13T12:00:00Z", format: :any)
+          expect(datetime).to be_valid_format("2022-12-13 12:00:00Z", format: :any)
+        end
+      end
+
+      context "when the date is invalid" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("aaa", format: :any)
+        end
+      end
+    end
+  end
+
+  describe ".future_date?" do
+    context "when the date is in the future" do
       it "returns true" do
-        expect(datetime).to be_valid_format("2024-05-30T09:45:44.394316274Z")
+        expect(datetime).to be_future_date("2064-12-13T12:00:00Z")
+        expect(datetime).to be_future_date("2064-12-13 12:00:00")
+        expect(datetime).to be_future_date("2064-12-13")
+      end
+    end
+
+    context "when the date is in the past" do
+      it "returns false" do
+        expect(datetime).not_to be_future_date("2022-12-13T12:00:00Z")
+        expect(datetime).not_to be_future_date("2022-12-13 12:00:00")
+        expect(datetime).not_to be_future_date("2022-12-13")
+      end
+    end
+
+    context "when the format is invalid" do
+      it "returns false" do
+        expect(datetime).not_to be_future_date("aaa")
+      end
+    end
+
+    context "when the date is an ActiveSupport::TimeWithZone" do
+      context "when the date is in the future" do
+        it "returns true" do
+          expect(datetime).to be_future_date(Time.current + 1.day)
+        end
+      end
+
+      context "when the date is in the past" do
+        it "returns false" do
+          expect(datetime).not_to be_future_date(Time.current - 1.day)
+        end
       end
     end
   end

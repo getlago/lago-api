@@ -56,10 +56,6 @@ module Subscriptions
       end
 
       add_error(field: :ending_at, error_code: "invalid_date")
-
-      false
-    rescue Date::Error
-      add_error(field: :ending_at, error_code: "invalid_date")
       false
     end
 
@@ -83,9 +79,7 @@ module Subscriptions
 
     def ending_at
       @ending_at ||= if args[:ending_at].is_a?(String)
-        args[:ending_at].include?(".") ?
-          DateTime.strptime(args[:ending_at], "%Y-%m-%dT%H:%M:%S.%LZ") :
-          DateTime.strptime(args[:ending_at])
+        DateTime.iso8601(args[:ending_at])
       else
         args[:ending_at]
       end
@@ -93,9 +87,7 @@ module Subscriptions
 
     def subscription_at
       @subscription_at ||= if args[:subscription_at].is_a?(String)
-        args[:subscription_at].include?(".") ?
-          DateTime.strptime(args[:subscription_at], "%Y-%m-%dT%H:%M:%S.%LZ") :
-          DateTime.strptime(args[:subscription_at])
+        DateTime.iso8601(args[:subscription_at])
       else
         args[:subscription_at]
       end

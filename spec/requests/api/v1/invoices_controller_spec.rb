@@ -365,6 +365,17 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].count).to eq(1)
         expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
       end
+
+      context "when issuing date is not a valid date" do
+        let(:params) { {issuing_date_from: "2020 01 01", issuing_date_to: "01/01/2030"} }
+
+        it "returns the result without filtering" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].count).to eq(2)
+        end
+      end
     end
 
     context "with external_customer_id params" do

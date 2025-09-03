@@ -31,10 +31,10 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
     subject(:method_call) { validate_service.__send__(:ending_at) }
 
     context "when date contains milliseconds" do
-      let(:ending_at) { "2020-01-01T00:00:00.000Z" }
+      let(:ending_at) { "2020-01-01T00:00:00.123Z" }
 
       it "returns the date" do
-        expect(subject).to eq(DateTime.strptime(ending_at, "%Y-%m-%dT%H:%M:%S.%LZ"))
+        expect(subject).to eq(DateTime.iso8601(ending_at))
       end
     end
 
@@ -42,7 +42,7 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       let(:ending_at) { "2020-01-01T00:00:00Z" }
 
       it "returns the date" do
-        expect(subject).to eq(DateTime.strptime(ending_at))
+        expect(subject).to eq(DateTime.iso8601(ending_at))
       end
     end
   end
@@ -51,10 +51,10 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
     subject(:method_call) { validate_service.__send__(:subscription_at) }
 
     context "when date contains milliseconds" do
-      let(:subscription_at) { "2021-02-01T00:00:00.00Z" }
+      let(:subscription_at) { "2021-02-01T00:00:00.123Z" }
 
       it "returns the date" do
-        expect(subject).to eq(DateTime.strptime(subscription_at, "%Y-%m-%dT%H:%M:%S.%LZ"))
+        expect(subject).to eq(DateTime.iso8601(subscription_at))
       end
     end
 
@@ -62,7 +62,7 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       let(:subscription_at) { "2020-01-01T00:00:00Z" }
 
       it "returns the date" do
-        expect(subject).to eq(DateTime.strptime(subscription_at))
+        expect(subject).to eq(DateTime.iso8601(subscription_at))
       end
     end
   end
@@ -78,10 +78,8 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
 
-        aggregate_failures do
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("customer_not_found")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("customer_not_found")
       end
     end
 
@@ -91,16 +89,14 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
 
-        aggregate_failures do
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("plan_not_found")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("plan_not_found")
       end
     end
 
     context "with invalid subscription_at" do
-      context "when string cannot be parsed to date" do
-        let(:subscription_at) { "invalid" }
+      context "when string is not a valid iso8601 datetime" do
+        let(:subscription_at) { "2022-12-13 12:00:00Z" }
 
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
