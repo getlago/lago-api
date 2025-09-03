@@ -3,7 +3,7 @@
 class BillPaidCreditJob < ApplicationJob
   queue_as "high_priority"
 
-  retry_on Sequenced::SequenceError
+  retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
   def perform(wallet_transaction, timestamp, invoice: nil)
     result = Invoices::PaidCreditService.call(
