@@ -9,4 +9,7 @@ module Regex
   }ix
 
   INVISIBLE_CHARS = /[\u200B\u200C\u200D\u00A0\u200E\u200F]/
+
+  # Matches ISO8601 datetime strings, e.g., "2022-09-05T12:23:12Z" or "2022-09-05T12:23:12+00:00"
+  ISO8601_DATETIME = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
 end

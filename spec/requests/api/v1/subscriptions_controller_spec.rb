@@ -551,10 +551,39 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         name: "subscription name new",
         subscription_at: "2022-09-05T12:23:12Z",
         plan_overrides: {
-          name: "plan new name",
+          name: "Override",
+          invoice_display_name: "Override plan",
+          interval: "monthly",
+          description: "This plan is used to test the override functionality",
+          amount_cents: 200,
+          amount_currency: "USD",
+          charges: [
+            {
+              applied_pricing_unit: {code: pricing_unit.code, conversion_rate: "2"},
+              billable_metric_id: package_charge.billable_metric.id,
+              charge_model: "package",
+              id: package_charge.id,
+              invoice_display_name: "Setup",
+              invoiceable: true,
+              min_amount_cents: 6000,
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              tax_codes: [tax.code]
+            },
+            # This charge should be ignored as no id is provided
+            {
+              billable_metric_id: other_billable_metric.id,
+              charge_model: "package",
+              invoice_display_name: "Setup 2",
+              invoiceable: true,
+              min_amount_cents: 6000,
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              tax_codes: [tax.code]
+            }
+          ],
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
-            amount_cents: 1234
+            amount_cents: commitment_amount_cents,
+            tax_codes: [tax.code]
           },
           usage_thresholds: [
             id: usage_threshold.id,
@@ -565,6 +594,12 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       }
     end
 
+    let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
+    let(:package_charge) { create(:package_charge, plan:, organization:) }
+    let(:other_billable_metric) { create(:billable_metric, organization:) }
+    let(:pricing_unit) { create(:pricing_unit, organization:, code: "ETH", short_name: "ETH") }
+    let(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: package_charge, pricing_unit:, organization:) }
+    let(:tax) { create(:tax, organization:) }
     let(:override_amount_cents) { 999 }
     let(:override_display_name) { "Overriden Threshold 1" }
     let(:usage_threshold) { create(:usage_threshold, plan:) }
@@ -572,25 +607,113 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     before do
       subscription
       usage_threshold
+      package_charge
+      applied_pricing_unit
     end
 
     include_examples "requires API permission", "subscription", "write"
 
-    it "updates a subscription", :aggregate_failures do
+    it "updates a subscription" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:subscription][:lago_id]).to eq(subscription.id)
-      expect(json[:subscription][:name]).to eq("subscription name new")
-      expect(json[:subscription][:subscription_at].to_s).to eq("2022-09-05T12:23:12Z")
-
-      expect(json[:subscription][:plan]).to include(
-        name: "plan new name"
+      subscription = json[:subscription]
+      expect(subscription).to include(
+        lago_id: Regex::UUID,
+        name: "subscription name new",
+        subscription_at: "2022-09-05T12:23:12Z"
       )
-
-      expect(json[:subscription][:plan][:minimum_commitment]).to include(
-        invoice_display_name: commitment_invoice_display_name,
-        amount_cents: commitment_amount_cents
+      plan_json = subscription[:plan]
+      expect(plan_json).to include(
+        lago_id: Regex::UUID,
+        name: "Override",
+        invoice_display_name: "Override plan",
+        created_at: Regex::ISO8601_DATETIME,
+        code: a_kind_of(String),
+        interval: "monthly",
+        description: "This plan is used to test the override functionality",
+        amount_cents: 200,
+        amount_currency: "USD",
+        trial_period: nil,
+        pay_in_advance: false,
+        bill_charges_monthly: nil,
+        bill_fixed_charges_monthly: false,
+        customers_count: 0,
+        active_subscriptions_count: 0,
+        draft_invoices_count: 0,
+        parent_id: plan.id,
+        pending_deletion: false,
+        taxes: [],
+        usage_thresholds: []
+      )
+      minimum_commitment = plan_json[:minimum_commitment]
+      expect(minimum_commitment).to match(
+        {
+          invoice_display_name: commitment_invoice_display_name,
+          amount_cents: commitment_amount_cents,
+          lago_id: Regex::UUID,
+          plan_code: a_kind_of(String),
+          interval: "monthly",
+          created_at: Regex::ISO8601_DATETIME,
+          updated_at: Regex::ISO8601_DATETIME,
+          taxes: [
+            {
+              lago_id: Regex::UUID,
+              name: "VAT",
+              code: a_kind_of(String),
+              rate: 20.0,
+              description: "French Standard VAT",
+              applied_to_organization: false,
+              add_ons_count: 0,
+              customers_count: 0,
+              plans_count: 0,
+              charges_count: 0,
+              commitments_count: 0,
+              created_at: Regex::ISO8601_DATETIME
+            }
+          ]
+        }
+      )
+      charges = plan_json[:charges]
+      expect(charges.length).to eq(1)
+      charge = charges.first
+      expect(charge).to match(
+        {
+          lago_id: Regex::UUID,
+          lago_billable_metric_id: package_charge.billable_metric.id,
+          invoice_display_name: "Setup",
+          billable_metric_code: package_charge.billable_metric.code,
+          created_at: Regex::ISO8601_DATETIME,
+          charge_model: "package",
+          invoiceable: true,
+          regroup_paid_fees: nil,
+          pay_in_advance: false,
+          prorated: false,
+          min_amount_cents: 6000,
+          properties: {
+            amount: "60",
+            free_units: 200,
+            package_size: 2000
+          },
+          applied_pricing_unit: {conversion_rate: "2.0", code: pricing_unit.code},
+          filters: [],
+          taxes: [
+            {
+              lago_id: Regex::UUID,
+              name: "VAT",
+              code: a_kind_of(String),
+              rate: 20.0,
+              description: "French Standard VAT",
+              applied_to_organization: false,
+              add_ons_count: 0,
+              customers_count: 0,
+              plans_count: 0,
+              charges_count: 0,
+              commitments_count: 0,
+              created_at: Regex::ISO8601_DATETIME
+            }
+          ]
+        }
       )
     end
 
@@ -606,10 +729,252 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
         expect(response).to have_http_status(:success)
 
-        expect(json[:subscription][:plan][:usage_thresholds].first).to include(
-          amount_cents: override_amount_cents,
-          threshold_display_name: override_display_name
+        expect(json[:subscription][:plan][:usage_thresholds]).to match_array(
+          [
+            {
+              lago_id: Regex::UUID,
+              threshold_display_name: "Overriden Threshold 1",
+              amount_cents: 999,
+              recurring: false,
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME
+            }
+          ]
         )
+      end
+    end
+
+    context "when the plan has already been overriden" do
+      let(:update_params) do
+        {
+          name: "subscription name new",
+          subscription_at: "2022-09-05T12:23:12Z",
+          plan_overrides: {
+            name: "Override",
+            invoice_display_name: "Override plan",
+            interval: "monthly",
+            description: "This plan is used to test the override functionality",
+            amount_cents: 400,
+            amount_currency: "USD",
+            charges: [
+              {
+                billable_metric_id: overriden_package_charge.billable_metric.id,
+                charge_model: "package",
+                id: overriden_package_charge.id,
+                invoice_display_name: "Setup",
+                invoiceable: true,
+                min_amount_cents: 6000,
+                properties: {amount: "60", free_units: 200, package_size: 2000},
+                tax_codes: [tax.code]
+              },
+              {
+                applied_pricing_unit: {code: pricing_unit.code, conversion_rate: "40"},
+                billable_metric_id: other_billable_metric.id,
+                charge_model: "package",
+                invoice_display_name: "Setup 2",
+                invoiceable: true,
+                min_amount_cents: 6000,
+                properties: {amount: "60", free_units: 200, package_size: 2000},
+                tax_codes: [tax.code]
+              }
+            ],
+            minimum_commitment: {
+              invoice_display_name: commitment_invoice_display_name,
+              amount_cents: commitment_amount_cents,
+              tax_codes: [tax.code]
+            },
+            usage_thresholds: [
+              {
+                id: overriden_usage_threshold.id,
+                amount_cents: override_amount_cents
+              },
+              {
+                amount_cents: 4000,
+                threshold_display_name: "Threshold 2"
+              }
+            ]
+          }
+        }
+      end
+
+      let(:subscription) { create(:subscription, :pending, customer:, plan: overriden_plan) }
+      let(:overriden_plan) { create(:plan, organization:, parent_id: plan.id) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:overriden_package_charge) { create(:package_charge, plan: overriden_plan, organization:, billable_metric:) }
+      let(:commitment) { create(:commitment, plan: overriden_plan) }
+      let(:overriden_usage_threshold) { create(:usage_threshold, plan: overriden_plan, threshold_display_name: "Threshold 1", amount_cents: 1000) }
+      let(:other_billable_metric) { create(:billable_metric, organization:) }
+
+      before do
+        overriden_package_charge
+        overriden_usage_threshold
+        commitment
+        other_billable_metric
+      end
+
+      context "when progressive billing premium integration is present" do
+        around { |test| lago_premium!(&test) }
+
+        before do
+          organization.update!(premium_integrations: ["progressive_billing"])
+        end
+
+        it "updates a subscription" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          subscription = json[:subscription]
+          expect(subscription).to include(
+            lago_id: Regex::UUID,
+            name: "subscription name new",
+            subscription_at: "2022-09-05T12:23:12Z"
+          )
+          plan_json = subscription[:plan]
+          expect(plan_json).to include(
+            lago_id: Regex::UUID,
+            name: "Override",
+            invoice_display_name: "Override plan",
+            created_at: Regex::ISO8601_DATETIME,
+            code: a_kind_of(String),
+            interval: "monthly",
+            description: "This plan is used to test the override functionality",
+            amount_cents: 400,
+            amount_currency: "EUR",
+            trial_period: nil,
+            pay_in_advance: false,
+            bill_charges_monthly: nil,
+            bill_fixed_charges_monthly: false,
+            customers_count: 0,
+            active_subscriptions_count: 0,
+            draft_invoices_count: 0,
+            parent_id: plan.id,
+            pending_deletion: false,
+            taxes: []
+          )
+          minimum_commitment = plan_json[:minimum_commitment]
+          expect(minimum_commitment).to match(
+            {
+              invoice_display_name: commitment_invoice_display_name,
+              amount_cents: commitment_amount_cents,
+              lago_id: Regex::UUID,
+              plan_code: a_kind_of(String),
+              interval: "monthly",
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME,
+              taxes: [
+                {
+                  lago_id: Regex::UUID,
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
+          charges = plan_json[:charges]
+          expect(charges.length).to eq(2)
+          first_charge = charges.first
+          second_charge = charges.second
+          expect(first_charge).to match(
+            {
+              lago_id: Regex::UUID,
+              lago_billable_metric_id: overriden_package_charge.billable_metric.id,
+              invoice_display_name: "Setup",
+              billable_metric_code: overriden_package_charge.billable_metric.code,
+              created_at: Regex::ISO8601_DATETIME,
+              charge_model: "package",
+              invoiceable: true,
+              regroup_paid_fees: nil,
+              pay_in_advance: false,
+              prorated: false,
+              min_amount_cents: 0,
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              applied_pricing_unit: nil,
+              filters: [],
+              taxes: [
+                {
+                  lago_id: Regex::UUID,
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
+          expect(second_charge).to match(
+            {
+              lago_id: Regex::UUID,
+              lago_billable_metric_id: other_billable_metric.id,
+              invoice_display_name: "Setup 2",
+              billable_metric_code: other_billable_metric.code,
+              created_at: Regex::ISO8601_DATETIME,
+              charge_model: "package",
+              invoiceable: true,
+              regroup_paid_fees: nil,
+              pay_in_advance: false,
+              prorated: false,
+              min_amount_cents: 6000,
+              applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              filters: [],
+              taxes: [
+                {
+                  lago_id: Regex::UUID,
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
+
+          usage_thresholds = plan_json[:usage_thresholds]
+          expect(usage_thresholds.length).to eq(2)
+          expect(usage_thresholds.first).to match(
+            {
+              lago_id: overriden_usage_threshold.id,
+              threshold_display_name: "Threshold 1",
+              amount_cents: 999,
+              recurring: false,
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME
+            }
+          )
+          expect(usage_thresholds.second).to match(
+            {
+              lago_id: Regex::UUID,
+              threshold_display_name: "Threshold 2",
+              amount_cents: 4000,
+              recurring: false,
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME
+            }
+          )
+        end
       end
     end
 
@@ -638,7 +1003,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscription][:name]).to eq("subscription name new")
 
         expect(json[:subscription][:plan]).to include(
-          name: "plan new name"
+          name: "Override"
         )
       end
 
@@ -654,7 +1019,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           expect(json[:subscription][:subscription_at].to_s).to eq("2022-09-05T12:23:12Z")
 
           expect(json[:subscription][:plan]).to include(
-            name: "plan new name"
+            name: "Override"
           )
         end
       end
