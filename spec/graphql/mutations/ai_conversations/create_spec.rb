@@ -9,21 +9,21 @@ RSpec.describe Mutations::AiConversations::Create, type: :graphql do
       current_organization: membership.organization,
       permissions: required_permission,
       query:,
-      variables: {input: {inputData: input_data}}
+      variables: {input: {message: message}}
     )
   end
 
   let(:query) do
     <<-GQL
       mutation($input: CreateAiConversationInput!) {
-        createAiConversation(input: $input) { id inputData }
+        createAiConversation(input: $input) { id name }
       }
     GQL
   end
 
   let(:required_permission) { "ai_conversations:create" }
   let!(:membership) { create(:membership) }
-  let(:input_data) { Faker::Lorem.word }
+  let(:message) { Faker::Lorem.word }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -31,11 +31,13 @@ RSpec.describe Mutations::AiConversations::Create, type: :graphql do
 
   it "creates a new AI conversation" do
     expect { result }.to change(AiConversation, :count).by(1)
-    expect(result["data"]["createAiConversation"]["inputData"]).to eq(input_data)
+    expect(result["data"]["createAiConversation"]["name"]).to eq(message)
   end
 
   it "triggers streaming" do
-    result
-    expect(AiConversations::StreamJob).to have_been_enqueued
+    expect { result }.to have_enqueued_job(AiConversations::StreamJob).with(
+      kind_of(AiConversation),
+      message:
+    ).on_queue("default")
   end
 end

@@ -6,9 +6,8 @@ class CreateAiConversations < ActiveRecord::Migration[8.0]
       t.references :organization, type: :uuid, null: false, foreign_key: true
       t.references :membership, type: :uuid, null: false, foreign_key: true
 
-      t.string :conversation_id, null: false
-      t.string :input_data, null: false
-      t.string :status, null: false, default: "pending"
+      t.string :name, null: false
+      t.string :mistral_conversation_id
       t.timestamps
     end
   end

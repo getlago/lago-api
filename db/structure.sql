@@ -1289,8 +1289,8 @@ CREATE TABLE public.ai_conversations (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     membership_id uuid NOT NULL,
-    conversation_id character varying NOT NULL,
-    input_data character varying NOT NULL,
+    name character varying NOT NULL,
+    mistral_conversation_id character varying,
     status character varying DEFAULT 'pending'::character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL

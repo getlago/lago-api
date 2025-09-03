@@ -8,9 +8,8 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
 
-      field :conversation_id, String, null: false
-      field :input_data, String, null: false
-      field :status, Types::AiConversations::StatusEnum, null: false
+      field :mistral_conversation_id, String
+      field :name, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

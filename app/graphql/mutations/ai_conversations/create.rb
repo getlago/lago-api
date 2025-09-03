@@ -9,24 +9,22 @@ module Mutations
       REQUIRED_PERMISSION = "ai_conversations:create"
 
       graphql_name "CreateAiConversation"
-      description "Creates a new AI conversation"
+      description "Creates an AI conversation and appends a message to it"
 
-      argument :input_data, String, required: true
+      argument :message, String, required: true
 
       type Types::AiConversations::Object
 
-      def resolve(input_data:)
+      def resolve(message:)
         membership = current_organization.memberships.find_by(user_id: context[:current_user].id)
 
-        ai_conversation = current_organization.ai_conversations.find_or_create_by!(
-          conversation_id: SecureRandom.uuid,
-          status: :pending,
+        ai_conversation = current_organization.ai_conversations.create!(
           membership:,
-          input_data:
+          name: message
         )
-      
-        ::AiConversations::StreamJob.perform_later(ai_conversation.id)
-      
+
+        ::AiConversations::StreamJob.perform_later(ai_conversation, message:)
+
         ai_conversation
       end
     end

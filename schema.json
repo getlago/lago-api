@@ -1774,22 +1774,6 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "conversationId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "createdAt",
               "description": null,
               "type": {
@@ -1822,7 +1806,19 @@
               "args": []
             },
             {
-              "name": "inputData",
+              "name": "mistralConversationId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "name",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -1841,23 +1837,11 @@
               "name": "organization",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "Organization",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "status",
-              "description": null,
-              "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "ENUM",
-                  "name": "StatusEnum",
+                  "kind": "OBJECT",
+                  "name": "Organization",
                   "ofType": null
                 }
               },
@@ -9085,7 +9069,7 @@
               "deprecationReason": null
             },
             {
-              "name": "inputData",
+              "name": "message",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -27154,7 +27138,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "conversationId",
+                  "name": "id",
                   "description": null,
                   "type": {
                     "kind": "NON_NULL",
@@ -32123,7 +32107,7 @@
             },
             {
               "name": "createAiConversation",
-              "description": "Creates a new AI conversation",
+              "description": "Creates an AI conversation and appends a message to it",
               "type": {
                 "kind": "OBJECT",
                 "name": "AiConversation",
@@ -50491,29 +50475,6 @@
           ],
           "inputFields": null,
           "enumValues": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "StatusEnum",
-          "description": null,
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": null,
-          "enumValues": [
-            {
-              "name": "pending",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "completed",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ]
         },
         {
           "kind": "ENUM",

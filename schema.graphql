@@ -461,12 +461,11 @@ enum AggregationTypeEnum {
 }
 
 type AiConversation {
-  conversationId: String!
   createdAt: ISO8601DateTime!
   id: ID!
-  inputData: String!
-  organization: Organization
-  status: StatusEnum!
+  mistralConversationId: String
+  name: String!
+  organization: Organization!
   updatedAt: ISO8601DateTime!
 }
 
@@ -2425,7 +2424,7 @@ input CreateAiConversationInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  inputData: String!
+  message: String!
 }
 
 """
@@ -5521,7 +5520,7 @@ input GraduatedRangeInput {
 }
 
 type GraphqlSubscription {
-  aiConversationStreamed(conversationId: ID!): AiConversationStream!
+  aiConversationStreamed(id: ID!): AiConversationStream!
 }
 
 type GrossRevenue {
@@ -6255,7 +6254,7 @@ type Mutation {
   ): Fee
 
   """
-  Creates a new AI conversation
+  Creates an AI conversation and appends a message to it
   """
   createAiConversation(
     """
@@ -9442,11 +9441,6 @@ type SanitizedApiKeyCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
-}
-
-enum StatusEnum {
-  completed
-  pending
 }
 
 enum StatusTypeEnum {
