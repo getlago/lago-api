@@ -617,97 +617,103 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json).to match(
-        subscription: hash_including(
-          lago_id: subscription.id,
-          name: "subscription name new",
-          subscription_at: "2022-09-05T12:23:12Z",
-          plan: {
-            lago_id: Regex::UUID,
-            name: "Override",
-            invoice_display_name: "Override plan",
-            created_at: Regex::ISO8601_DATETIME,
-            code: a_kind_of(String),
-            interval: "monthly",
-            description: "This plan is used to test the override functionality",
-            amount_cents: 200,
-            amount_currency: "USD",
-            trial_period: nil,
-            pay_in_advance: false,
-            bill_charges_monthly: nil,
-            bill_fixed_charges_monthly: false,
-            customers_count: 0,
-            active_subscriptions_count: 0,
-            draft_invoices_count: 0,
-            parent_id: plan.id,
-            pending_deletion: false,
-            minimum_commitment: {
-              invoice_display_name: commitment_invoice_display_name,
-              amount_cents: commitment_amount_cents,
+      subscription = json[:subscription]
+      expect(subscription).to include(
+        lago_id: Regex::UUID,
+        name: "subscription name new",
+        subscription_at: "2022-09-05T12:23:12Z"
+      )
+      plan_json = subscription[:plan]
+      expect(plan_json).to include(
+        lago_id: Regex::UUID,
+        name: "Override",
+        invoice_display_name: "Override plan",
+        created_at: Regex::ISO8601_DATETIME,
+        code: a_kind_of(String),
+        interval: "monthly",
+        description: "This plan is used to test the override functionality",
+        amount_cents: 200,
+        amount_currency: "USD",
+        trial_period: nil,
+        pay_in_advance: false,
+        bill_charges_monthly: nil,
+        bill_fixed_charges_monthly: false,
+        customers_count: 0,
+        active_subscriptions_count: 0,
+        draft_invoices_count: 0,
+        parent_id: plan.id,
+        pending_deletion: false,
+        taxes: [],
+        usage_thresholds: []
+      )
+      minimum_commitment = plan_json[:minimum_commitment]
+      expect(minimum_commitment).to match(
+        {
+          invoice_display_name: commitment_invoice_display_name,
+          amount_cents: commitment_amount_cents,
+          lago_id: Regex::UUID,
+          plan_code: a_kind_of(String),
+          interval: "monthly",
+          created_at: Regex::ISO8601_DATETIME,
+          updated_at: Regex::ISO8601_DATETIME,
+          taxes: [
+            {
               lago_id: Regex::UUID,
-              plan_code: a_kind_of(String),
-              interval: "monthly",
-              created_at: Regex::ISO8601_DATETIME,
-              updated_at: Regex::ISO8601_DATETIME,
-              taxes: [
-                {
-                  lago_id: Regex::UUID,
-                  name: "VAT",
-                  code: a_kind_of(String),
-                  rate: 20.0,
-                  description: "French Standard VAT",
-                  applied_to_organization: false,
-                  add_ons_count: 0,
-                  customers_count: 0,
-                  plans_count: 0,
-                  charges_count: 0,
-                  commitments_count: 0,
-                  created_at: Regex::ISO8601_DATETIME
-                }
-              ]
-            },
-            taxes: [],
-            charges: [
-              {
-                lago_id: Regex::UUID,
-                lago_billable_metric_id: package_charge.billable_metric.id,
-                invoice_display_name: "Setup",
-                billable_metric_code: package_charge.billable_metric.code,
-                created_at: Regex::ISO8601_DATETIME,
-                charge_model: "package",
-                invoiceable: true,
-                regroup_paid_fees: nil,
-                pay_in_advance: false,
-                prorated: false,
-                min_amount_cents: 6000,
-                properties: {
-                  amount: "60",
-                  free_units: 200,
-                  package_size: 2000
-                },
-                applied_pricing_unit: {conversion_rate: "2.0", code: pricing_unit.code},
-                filters: [],
-                taxes: [
-                  {
-                    lago_id: Regex::UUID,
-                    name: "VAT",
-                    code: a_kind_of(String),
-                    rate: 20.0,
-                    description: "French Standard VAT",
-                    applied_to_organization: false,
-                    add_ons_count: 0,
-                    customers_count: 0,
-                    plans_count: 0,
-                    charges_count: 0,
-                    commitments_count: 0,
-                    created_at: Regex::ISO8601_DATETIME
-                  }
-                ]
-              }
-            ],
-            usage_thresholds: []
-          }
-        )
+              name: "VAT",
+              code: a_kind_of(String),
+              rate: 20.0,
+              description: "French Standard VAT",
+              applied_to_organization: false,
+              add_ons_count: 0,
+              customers_count: 0,
+              plans_count: 0,
+              charges_count: 0,
+              commitments_count: 0,
+              created_at: Regex::ISO8601_DATETIME
+            }
+          ]
+        }
+      )
+      charges = plan_json[:charges]
+      expect(charges.length).to eq(1)
+      charge = charges.first
+      expect(charge).to match(
+        {
+          lago_id: Regex::UUID,
+          lago_billable_metric_id: package_charge.billable_metric.id,
+          invoice_display_name: "Setup",
+          billable_metric_code: package_charge.billable_metric.code,
+          created_at: Regex::ISO8601_DATETIME,
+          charge_model: "package",
+          invoiceable: true,
+          regroup_paid_fees: nil,
+          pay_in_advance: false,
+          prorated: false,
+          min_amount_cents: 6000,
+          properties: {
+            amount: "60",
+            free_units: 200,
+            package_size: 2000
+          },
+          applied_pricing_unit: {conversion_rate: "2.0", code: pricing_unit.code},
+          filters: [],
+          taxes: [
+            {
+              lago_id: Regex::UUID,
+              name: "VAT",
+              code: a_kind_of(String),
+              rate: 20.0,
+              description: "French Standard VAT",
+              applied_to_organization: false,
+              add_ons_count: 0,
+              customers_count: 0,
+              plans_count: 0,
+              charges_count: 0,
+              commitments_count: 0,
+              created_at: Regex::ISO8601_DATETIME
+            }
+          ]
+        }
       )
     end
 
@@ -817,151 +823,156 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(json).to match(
-            subscription: hash_including(
-              lago_id: subscription.id,
-              name: "subscription name new",
-              subscription_at: "2022-09-05T12:23:12Z",
-              plan: {
-                lago_id: Regex::UUID,
-                name: "Override",
-                invoice_display_name: "Override plan",
-                created_at: Regex::ISO8601_DATETIME,
-                code: a_kind_of(String),
-                interval: "monthly",
-                description: "This plan is used to test the override functionality",
-                amount_cents: 400,
-                amount_currency: "EUR", # Not update because plan is attached
-                trial_period: nil,
-                pay_in_advance: false,
-                bill_charges_monthly: nil,
-                bill_fixed_charges_monthly: false,
-                customers_count: 0,
-                active_subscriptions_count: 0,
-                draft_invoices_count: 0,
-                parent_id: plan.id,
-                pending_deletion: false,
-                charges: [
-                  {
-                    lago_id: Regex::UUID,
-                    lago_billable_metric_id: overriden_package_charge.billable_metric.id,
-                    invoice_display_name: "Setup",
-                    billable_metric_code: overriden_package_charge.billable_metric.code,
-                    created_at: Regex::ISO8601_DATETIME,
-                    charge_model: "package",
-                    invoiceable: true,
-                    regroup_paid_fees: nil,
-                    pay_in_advance: false,
-                    prorated: false,
-                    min_amount_cents: 0, # Not updated because plan is attached
-                    properties: {
-                      amount: "60",
-                      free_units: 200,
-                      package_size: 2000
-                    },
-                    applied_pricing_unit: nil,
-                    filters: [],
-                    taxes: [
-                      {
-                        lago_id: Regex::UUID,
-                        name: "VAT",
-                        code: a_kind_of(String),
-                        rate: 20.0,
-                        description: "French Standard VAT",
-                        applied_to_organization: false,
-                        add_ons_count: 0,
-                        customers_count: 0,
-                        plans_count: 0,
-                        charges_count: 0,
-                        commitments_count: 0,
-                        created_at: Regex::ISO8601_DATETIME
-                      }
-                    ]
-                  },
-                  {
-                    lago_id: Regex::UUID,
-                    lago_billable_metric_id: other_billable_metric.id,
-                    invoice_display_name: "Setup 2",
-                    billable_metric_code: other_billable_metric.code,
-                    created_at: Regex::ISO8601_DATETIME,
-                    charge_model: "package",
-                    invoiceable: true,
-                    regroup_paid_fees: nil,
-                    pay_in_advance: false,
-                    prorated: false,
-                    min_amount_cents: 6000,
-                    applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
-                    properties: {
-                      amount: "60",
-                      free_units: 200,
-                      package_size: 2000
-                    },
-                    filters: [],
-                    taxes: [
-                      {
-                        lago_id: Regex::UUID,
-                        name: "VAT",
-                        code: a_kind_of(String),
-                        rate: 20.0,
-                        description: "French Standard VAT",
-                        applied_to_organization: false,
-                        add_ons_count: 0,
-                        customers_count: 0,
-                        plans_count: 0,
-                        charges_count: 0,
-                        commitments_count: 0,
-                        created_at: Regex::ISO8601_DATETIME
-                      }
-                    ]
-                  }
-                ],
-                minimum_commitment: {
-                  invoice_display_name: commitment_invoice_display_name,
-                  amount_cents: commitment_amount_cents,
+          subscription = json[:subscription]
+          expect(subscription).to include(
+            lago_id: Regex::UUID,
+            name: "subscription name new",
+            subscription_at: "2022-09-05T12:23:12Z"
+          )
+          plan_json = subscription[:plan]
+          expect(plan_json).to include(
+            lago_id: Regex::UUID,
+            name: "Override",
+            invoice_display_name: "Override plan",
+            created_at: Regex::ISO8601_DATETIME,
+            code: a_kind_of(String),
+            interval: "monthly",
+            description: "This plan is used to test the override functionality",
+            amount_cents: 400,
+            amount_currency: "EUR",
+            trial_period: nil,
+            pay_in_advance: false,
+            bill_charges_monthly: nil,
+            bill_fixed_charges_monthly: false,
+            customers_count: 0,
+            active_subscriptions_count: 0,
+            draft_invoices_count: 0,
+            parent_id: plan.id,
+            pending_deletion: false,
+            taxes: []
+          )
+          minimum_commitment = plan_json[:minimum_commitment]
+          expect(minimum_commitment).to match(
+            {
+              invoice_display_name: commitment_invoice_display_name,
+              amount_cents: commitment_amount_cents,
+              lago_id: Regex::UUID,
+              plan_code: a_kind_of(String),
+              interval: "monthly",
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME,
+              taxes: [
+                {
                   lago_id: Regex::UUID,
-                  plan_code: a_kind_of(String),
-                  interval: "monthly",
-                  created_at: Regex::ISO8601_DATETIME,
-                  updated_at: Regex::ISO8601_DATETIME,
-                  taxes: [
-                    {
-                      lago_id: Regex::UUID,
-                      name: "VAT",
-                      code: a_kind_of(String),
-                      rate: 20.0,
-                      description: "French Standard VAT",
-                      applied_to_organization: false,
-                      add_ons_count: 0,
-                      customers_count: 0,
-                      plans_count: 0,
-                      charges_count: 0,
-                      commitments_count: 0,
-                      created_at: Regex::ISO8601_DATETIME
-                    }
-                  ]
-                },
-                usage_thresholds: [
-                  {
-                    lago_id: overriden_usage_threshold.id,
-                    threshold_display_name: "Threshold 1",
-                    amount_cents: 999,
-                    recurring: false,
-                    created_at: Regex::ISO8601_DATETIME,
-                    updated_at: Regex::ISO8601_DATETIME
-                  },
-                  {
-                    lago_id: Regex::UUID,
-                    threshold_display_name: "Threshold 2",
-                    amount_cents: 4000,
-                    recurring: false,
-                    created_at: Regex::ISO8601_DATETIME,
-                    updated_at: Regex::ISO8601_DATETIME
-                  }
-                ],
-                taxes: []
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
+          charges = plan_json[:charges]
+          expect(charges.length).to eq(2)
+          first_charge = charges.first
+          second_charge = charges.second
+          expect(first_charge).to match(
+            {
+              lago_id: Regex::UUID,
+              lago_billable_metric_id: overriden_package_charge.billable_metric.id,
+              invoice_display_name: "Setup",
+              billable_metric_code: overriden_package_charge.billable_metric.code,
+              created_at: Regex::ISO8601_DATETIME,
+              charge_model: "package",
+              invoiceable: true,
+              regroup_paid_fees: nil,
+              pay_in_advance: false,
+              prorated: false,
+              min_amount_cents: 0,
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              applied_pricing_unit: nil,
+              filters: [],
+              taxes: [
+                {
+                  lago_id: Regex::UUID,
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
+          expect(second_charge).to match(
+            {
+              lago_id: Regex::UUID,
+              lago_billable_metric_id: other_billable_metric.id,
+              invoice_display_name: "Setup 2",
+              billable_metric_code: other_billable_metric.code,
+              created_at: Regex::ISO8601_DATETIME,
+              charge_model: "package",
+              invoiceable: true,
+              regroup_paid_fees: nil,
+              pay_in_advance: false,
+              prorated: false,
+              min_amount_cents: 6000,
+              applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
+              properties: {amount: "60", free_units: 200, package_size: 2000},
+              filters: [],
+              taxes: [
+                {
+                  lago_id: Regex::UUID,
+                  name: "VAT",
+                  code: a_kind_of(String),
+                  rate: 20.0,
+                  description: "French Standard VAT",
+                  applied_to_organization: false,
+                  add_ons_count: 0,
+                  customers_count: 0,
+                  plans_count: 0,
+                  charges_count: 0,
+                  commitments_count: 0,
+                  created_at: Regex::ISO8601_DATETIME
+                }
+              ]
+            }
+          )
 
-              }
-            )
+          usage_thresholds = plan_json[:usage_thresholds]
+          expect(usage_thresholds.length).to eq(2)
+          expect(usage_thresholds.first).to match(
+            {
+              lago_id: overriden_usage_threshold.id,
+              threshold_display_name: "Threshold 1",
+              amount_cents: 999,
+              recurring: false,
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME
+            }
+          )
+          expect(usage_thresholds.second).to match(
+            {
+              lago_id: Regex::UUID,
+              threshold_display_name: "Threshold 2",
+              amount_cents: 4000,
+              recurring: false,
+              created_at: Regex::ISO8601_DATETIME,
+              updated_at: Regex::ISO8601_DATETIME
+            }
           )
         end
       end
