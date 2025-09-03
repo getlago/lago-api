@@ -56,8 +56,8 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver, type: :graphql do
   end
   let(:plan) { create(:plan, interval: "monthly") }
 
-  let(:metric) { create(:billable_metric, aggregation_type: "count_agg") }
-  let(:sum_metric) { create(:sum_billable_metric, organization:) }
+  let(:metric) { create(:billable_metric, name: "count_metric", aggregation_type: "count_agg") }
+  let(:sum_metric) { create(:sum_billable_metric, name: "sum_metric", organization:) }
   let(:charge) do
     create(
       :graduated_charge,
