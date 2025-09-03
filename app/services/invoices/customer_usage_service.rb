@@ -103,7 +103,7 @@ module Invoices
         fees += charge_usage(charge, bypass_aggregation)
       end
 
-      fees.sort_by { |f| [f.billable_metric.name.downcase, f.billable_metric.updated_at] }
+      fees.sort_by { |f| [f.billable_metric.name.downcase, f.created_at] }
     end
 
     def charge_usage(charge, bypass_aggregation)
