@@ -18,7 +18,7 @@ module Utils
 
     def self.future_date?(datetime)
       return true if datetime.is_a?(ActiveSupport::TimeWithZone) && datetime.future?
-      return false unless valid_format?(datetime)
+      return false unless valid_format?(datetime, format: :any)
 
       parsed_date = Time.zone.parse(datetime.to_s)
       parsed_date&.future? || false

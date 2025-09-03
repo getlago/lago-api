@@ -48,6 +48,44 @@ RSpec.describe Utils::Datetime, type: :service do
     end
   end
 
+  describe ".future_date?" do
+    context "when the date is in the future" do
+      it "returns true" do
+        expect(datetime).to be_future_date("2064-12-13T12:00:00Z")
+        expect(datetime).to be_future_date("2064-12-13 12:00:00")
+        expect(datetime).to be_future_date("2064-12-13")
+      end
+    end
+
+    context "when the date is in the past" do
+      it "returns false" do
+        expect(datetime).not_to be_future_date("2022-12-13T12:00:00Z")
+        expect(datetime).not_to be_future_date("2022-12-13 12:00:00")
+        expect(datetime).not_to be_future_date("2022-12-13")
+      end
+    end
+
+    context "when the format is invalid" do
+      it "returns false" do
+        expect(datetime).not_to be_future_date("aaa")
+      end
+    end
+
+    context "when the date is an ActiveSupport::TimeWithZone" do
+      context "when the date is in the future" do
+        it "returns true" do
+          expect(datetime).to be_future_date(Time.current + 1.day)
+        end
+      end
+
+      context "when the date is in the past" do
+        it "returns false" do
+          expect(datetime).not_to be_future_date(Time.current - 1.day)
+        end
+      end
+    end
+  end
+
   describe ".date_diff_with_timezone" do
     let(:from_datetime) { Time.zone.parse("2023-08-31T23:10:00") }
     let(:to_datetime) { Time.zone.parse("2023-09-30T22:59:59") }
