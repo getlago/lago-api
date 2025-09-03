@@ -237,7 +237,6 @@ end
 #  amount_details                      :jsonb            not null
 #  deleted_at                          :datetime
 #  description                         :string
-#  duplicated_in_advance               :boolean          default(FALSE)
 #  events_count                        :integer
 #  failed_at                           :datetime
 #  fee_type                            :integer
