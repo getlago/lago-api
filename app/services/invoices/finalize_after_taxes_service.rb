@@ -4,6 +4,7 @@ module Invoices
   class FinalizeAfterTaxesService < BaseService
     def initialize(invoice:, provider_taxes: nil)
       @invoice = invoice
+      @provider_taxes = provider_taxes
 
       super
     end
