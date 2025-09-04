@@ -29,8 +29,8 @@ module EInvoices
                 FacturX::TradeSettlementPayment.call(xml:, resource:, type:, amount:)
               end
 
-              taxes(invoice) do |tax_category, tax_rate, amount, tax|
-                FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, amount: amount, tax: tax)
+              taxes(invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
+                FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
               end
 
               allowance_charges(invoice) do |tax_rate, amount|

@@ -14,7 +14,7 @@ module EInvoices
       delegate :billing_entity, to: :resource
       delegate :customer, to: :resource
 
-      def initialize(xml:, resource: nil, options: Options.new)
+      def initialize(xml:, resource:, options: Options.new)
         super(xml:, resource:)
 
         @options = options

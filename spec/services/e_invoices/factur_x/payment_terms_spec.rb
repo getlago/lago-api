@@ -2,16 +2,16 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::PaymentTerms, type: :service do
+RSpec.describe EInvoices::FacturX::PaymentTerms, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice:) do
+      described_class.call(xml:, due_date:, description:) do
       end
     end
   end
 
-  let(:invoice) { create(:invoice, billing_entity:, payment_due_date: "20250316".to_date) }
-  let(:billing_entity) { create(:billing_entity, net_payment_term: 0) }
+  let(:due_date) { "20250316".to_date }
+  let(:description) { "This is just a description, I can write anything" }
 
   let(:root) { "//ram:SpecifiedTradePaymentTerms" }
 
@@ -24,7 +24,7 @@ RSpec.describe EInvoices::FacturX::Create::PaymentTerms, type: :service do
 
     it "have Description" do
       expect(subject).to contains_xml_node("#{root}/ram:Description")
-        .with_value("Payment term 0 days")
+        .with_value(description)
     end
 
     it "have DueDate" do

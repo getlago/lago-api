@@ -2,16 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::TradeAgreement, type: :service do
+RSpec.describe EInvoices::FacturX::TradeAgreement, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice:)
+      described_class.call(xml:, resource:, options:)
     end
   end
 
+  let(:options) { described_class::Options.new }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
+  let(:resource) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
   let(:invoice_type) { :subscription }
   let(:customer) do
     create(:customer,
@@ -79,8 +80,8 @@ RSpec.describe EInvoices::FacturX::Create::TradeAgreement, type: :service do
             .with_attribute("schemeID", "VA")
         end
 
-        context "with credit invoice" do
-          let(:invoice_type) { :credit }
+        context "with tax_registration false" do
+          let(:options) { described_class::Options.new(tax_registration: false) }
 
           it "dont have the tax id" do
             expect(subject).not_to contains_xml_node("#{seller_tax_root}/ram:ID")

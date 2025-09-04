@@ -2,14 +2,16 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::TradeAllowanceCharge, type: :service do
+RSpec.describe EInvoices::FacturX::TradeAllowanceCharge, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice: nil, tax_rate:, amount:) do
+      described_class.call(xml:, resource:, indicator:, tax_rate:, amount:) do
       end
     end
   end
 
+  let(:indicator) { described_class::INVOICE_DISCOUNT }
+  let(:resource) { create(:invoice) }
   let(:tax_rate) { 19.00 }
   let(:amount) { Money.new(1000) }
 
@@ -22,9 +24,20 @@ RSpec.describe EInvoices::FacturX::Create::TradeAllowanceCharge, type: :service 
       expect(subject).to contains_xml_comment("Allowance/Charge - Discount 19.00% portion")
     end
 
-    it "is a discount" do
-      expect(subject).to contains_xml_node("#{root}/ram:ChargeIndicator/udt:Indicator")
-        .with_value(false)
+    context "when discount" do
+      it "use discount indicator" do
+        expect(subject).to contains_xml_node("#{root}/ram:ChargeIndicator/udt:Indicator")
+          .with_value(false)
+      end
+    end
+
+    context "when charge" do
+      let(:indicator) { described_class::INVOICE_CHARGE }
+
+      it "use charge indicator" do
+        expect(subject).to contains_xml_node("#{root}/ram:ChargeIndicator/udt:Indicator")
+          .with_value(false)
+      end
     end
 
     it "has the ActualAmount" do
