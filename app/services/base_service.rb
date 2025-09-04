@@ -56,12 +56,36 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    attr_reader :messages
+    attr_reader :messages, :metadata
 
-    def initialize(result, messages:)
+    def initialize(result, messages:, metadata:)
       @messages = messages
+      @metadata = metadata
 
       super(result, format_messages)
+    end
+
+    def self.from_errors(result, errors)
+      messages = {}
+      metadata = []
+
+      errors.deep_symbolize_keys.each do |field, field_errors|
+        messages[field] = []
+
+        field_errors.each do |err|
+          if err.is_a?(String) || err.is_a?(Symbol)
+            # err is an error code
+            messages[field] << err.to_s
+            metadata << {field: field.to_s, code: err.to_s}
+          elsif err.is_a?(Hash)
+            # err is a hash with error code and metadata
+            messages[field] << err[:code].to_s
+            metadata << err.merge(field: field.to_s, code: err[:code].to_s)
+          end
+        end
+      end
+
+      new(result, messages:, metadata:)
     end
 
     private
