@@ -17,9 +17,8 @@ Rails.application.configure do
     #{config.root}/dev
   ]
 
-  # Allow requests from any origin
   config.action_cable.disable_request_forgery_protection = true
-  config.action_cable.allowed_request_origins = ["https://api.lago.dev"]
+  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
 
   config.enable_reloading = true
   config.eager_load = false

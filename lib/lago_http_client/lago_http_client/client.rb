@@ -79,7 +79,7 @@ module LagoHttpClient
     end
 
     def post_with_stream(body, headers = {}, &block)
-      req = Net::HTTP::Post.new(uri.request_uri, { "Content-Type" => "application/json" }.merge(headers))
+      req = Net::HTTP::Post.new(uri.request_uri, {"Content-Type" => "application/json"}.merge(headers))
       req.body = body.to_json
 
       parser = EventStreamParser::Parser.new

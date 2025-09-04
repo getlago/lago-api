@@ -8,7 +8,7 @@ module Types
 
       def subscribe(id:)
         # Return an empty object to keep subscription alive
-        { chunk: nil, done: false }
+        {chunk: nil, done: false}
       end
 
       def update(id:)
