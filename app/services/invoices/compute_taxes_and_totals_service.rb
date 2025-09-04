@@ -20,7 +20,7 @@ module Invoices
 
         return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
       elsif customer.vies_check_in_progress?
-        invoice.status = "pending" if finalizing
+        invoice.status = "failed" if finalizing
         invoice.tax_status = "failed"
         invoice.save!
 

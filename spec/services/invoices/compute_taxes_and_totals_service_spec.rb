@@ -206,10 +206,10 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
       context "when finalizing" do
         let(:finalizing) { true }
 
-        it "sets the invoice status to pending and tax_status to failed" do
+        it "sets the invoice status to failed and tax_status to failed" do
           subject
 
-          expect(invoice.reload.status).to eq("pending")
+          expect(invoice.reload.status).to eq("failed")
           expect(invoice.reload.tax_status).to eq("failed")
         end
 
