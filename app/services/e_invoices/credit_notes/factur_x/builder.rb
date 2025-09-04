@@ -51,7 +51,7 @@ module EInvoices
       def monetary_summation_amounts
         FacturX::MonetarySummation::Amounts.new(
           line_total_amount: Money.new(-credit_note.fees.sum(:amount_cents)),
-          charges_amount: credit_note.coupons_adjustment_amount,
+          charges_amount: Money.new(allowances(credit_note.invoice)),
           tax_basis_amount: -credit_note.sub_total_excluding_taxes_amount,
           tax_amount: -credit_note.taxes_amount,
           grand_total_amount: -credit_note.total_amount,
