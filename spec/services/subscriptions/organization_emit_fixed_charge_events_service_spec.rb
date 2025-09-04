@@ -134,16 +134,6 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         include_examples "does not enqueue any jobs"
       end
 
-      context "when subscriptions are pending" do
-        before do
-          subscription_1.update!(status: :pending)
-          subscription_2.update!(status: :pending)
-          subscription_3.update!(status: :pending)
-        end
-
-        include_examples "does not enqueue any jobs"
-      end
-
       context "when subscription already emitted on timestamp" do
         before do
           create(:fixed_charge_event, subscription: subscription_1, timestamp:)
@@ -434,6 +424,54 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
       end
     end
 
+    context "when subscriptions are active" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+      before do
+        fixed_charge
+        subscription_1.update!(status: :active)
+      end
+
+      it "enqueues a job for the subscription" do
+        travel_to(timestamp) do
+          expect(service.call).to be_a_success
+
+          expect(Subscriptions::EmitFixedChargeEventsJob)
+            .to have_been_enqueued
+            .with(subscriptions: contain_exactly(subscription_1), timestamp: timestamp.to_i)
+            .once
+        end
+      end
+    end
+
+    context "when subscriptions are pending" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+      before do
+        fixed_charge
+        subscription_1.update!(status: :pending)
+      end
+
+      include_examples "does not enqueue any jobs"
+    end
+
+    context "when subscriptions are terminated" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-06-01") }
+
+      before do
+        fixed_charge
+        subscription_1.update!(status: :terminated)
+      end
+
+      include_examples "does not enqueue any jobs"
+    end
+
     context "when subscription is downgraded" do
       let(:interval) { :monthly }
       let(:customer) { create(:customer, organization:) }
@@ -473,6 +511,104 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
       end
 
       include_examples "does not enqueue any jobs"
+    end
+
+    context "when subscriptions belongs to a different organization" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-10-01") }
+
+      before do
+        fixed_charge
+        subscription_1.update!(organization: create(:organization))
+      end
+
+      include_examples "does not enqueue any jobs"
+    end
+
+    context "when subscription has fixed charges with and without events already emitted on timestamp" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+      let(:fixed_charge_1) { create(:fixed_charge, plan:, add_on:) }
+      let(:fixed_charge_2) { create(:fixed_charge, plan:, add_on:) }
+
+      before do
+        fixed_charge_1
+        fixed_charge_2
+        subscription_1
+        create(:fixed_charge_event, subscription: subscription_1, fixed_charge: fixed_charge_1, timestamp:)
+      end
+
+      # TODO: This scenario could happen when the plan is editted and some fixed charges are applied on the spot
+      #       and the events emitted, then, how do we handle this? Is it okay to emit the events again?
+      #       Maybe the scenario is not even possible? Need to confirm with product team.
+      include_examples "does not enqueue any jobs"
+    end
+
+    # TODO: need to confirm with product team
+    # context "when subscription has fixed charges with events emitted before timestamp" do
+    #   let(:interval) { :monthly }
+    #   let(:billing_time) { :calendar }
+    #   let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+    #   before do
+    #     fixed_charge
+    #     subscription_1
+    #     create(:fixed_charge_event, subscription: subscription_1, fixed_charge: fixed_charge, timestamp: timestamp - 1.day)
+    #   end
+
+    #   include_examples "does not enqueue any jobs"
+    # end
+
+    # TODO: need to confirm with product team
+    # context "when subscription has fixed charges with events emitted after timestamp" do
+    #   let(:interval) { :monthly }
+    #   let(:billing_time) { :calendar }
+    #   let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+    #   before do
+    #     fixed_charge
+    #     subscription_1
+    #     create(:fixed_charge_event, subscription: subscription_1, fixed_charge: fixed_charge, timestamp: timestamp + 1.day)
+    #   end
+
+    #   include_examples "does not enqueue any jobs"
+    # end
+
+    context "with timezone handling" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:customer_1) { create(:customer, organization:, timezone: "America/New_York") }
+      let(:timestamp) { nil }
+      let(:subscription_at) { Time.zone.parse("2025-01-01") }
+      let(:subscription_created_at) { subscription_at }
+
+      before do
+        fixed_charge
+        subscription_1
+      end
+
+      it "respects customer timezone for billing date calculation" do
+        # January 1st UTC would be December 31st in New York timezone
+        travel_to(Time.zone.parse("2025-02-01 04:00 UTC")) do
+          expect(described_class.new(organization:).call).to be_a_success
+          expect(Subscriptions::EmitFixedChargeEventsJob).not_to have_been_enqueued
+        end
+
+        # January 1st in New York timezone
+        travel_to(Time.zone.parse("2025-02-01 10:00 UTC")) do
+          expect(described_class.new(organization:).call).to be_a_success
+          expect(Subscriptions::EmitFixedChargeEventsJob)
+            .to have_been_enqueued
+            .with(
+              subscriptions: contain_exactly(subscription_1),
+              timestamp: Time.zone.parse("2025-02-01 10:00 UTC").to_i
+            )
+            .once
+        end
+      end
     end
   end
 end
