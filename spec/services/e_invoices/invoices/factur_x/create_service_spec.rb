@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::CreateService, type: :service do
+RSpec.describe EInvoices::Invoices::FacturX::CreateService, type: :service do
   let(:invoice) { create(:invoice) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
   let(:xml_content) { "<xml>content</xml>" }
@@ -13,7 +13,7 @@ RSpec.describe EInvoices::FacturX::CreateService, type: :service do
         allow(Nokogiri::XML::Builder).to receive(:new).with(encoding: "UTF-8")
           .and_yield(xml_builder_double).and_return(xml_builder_double)
 
-        allow(EInvoices::FacturX::Create::Builder).to receive(:call)
+        allow(EInvoices::Invoices::FacturX::Builder).to receive(:call)
           .with(xml: xml_builder_double, invoice:)
 
         result = described_class.new(invoice:).call

@@ -2,13 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
+RSpec.describe EInvoices::FacturX::LineItem, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, line_id:, fee:)
+      described_class.call(xml:, resource:, fee:, line_id:)
     end
   end
 
+  let(:resource) { create(:invoice) }
   let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:, fee_type:) }
   let(:taxes_rate) { 20.00 }
   let(:fee_type) { :subscription }
@@ -110,6 +111,26 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
       expect(subject).to contains_xml_node(
         "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
       ).with_value(fee.amount)
+    end
+
+    context "when resource is a credit_note" do
+      let(:resource) { create(:credit_note) }
+
+      context "with BilledQuantity" do
+        let(:xpath) { "#{root}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity" }
+
+        it "have the item negative units" do
+          expect(subject).to contains_xml_node(xpath)
+            .with_value(-fee.units)
+            .with_attribute("unitCode", "C62")
+        end
+      end
+
+      it "have the negative item total amount" do
+        expect(subject).to contains_xml_node(
+          "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
+        ).with_value(-fee.amount)
+      end
     end
   end
 end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
+RSpec.describe EInvoices::Invoices::FacturX::Builder, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
       described_class.call(xml:, invoice:)

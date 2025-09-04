@@ -2,15 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::TradeSettlement, type: :service do
+RSpec.describe EInvoices::FacturX::TradeSettlement, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice:) do
+      described_class.call(xml:, resource:) do
       end
     end
   end
 
-  let(:invoice) { create(:invoice, currency: "EUR") }
+  let(:resource) { create(:invoice, currency: "EUR") }
 
   let(:root) { "//ram:ApplicableHeaderTradeSettlement" }
 
@@ -24,6 +24,15 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlement, type: :service do
     it "have the invoice currency" do
       expect(subject).to contains_xml_node("#{root}/ram:InvoiceCurrencyCode")
         .with_value("EUR")
+    end
+
+    context "when resource is credit note" do
+      let(:resource) { create(:credit_note, total_amount_currency: "EUR") }
+
+      it "have the invoice currency" do
+        expect(subject).to contains_xml_node("#{root}/ram:InvoiceCurrencyCode")
+          .with_value("EUR")
+      end
     end
   end
 end

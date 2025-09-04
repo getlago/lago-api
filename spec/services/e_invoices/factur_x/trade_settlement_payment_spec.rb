@@ -2,15 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :service do
+RSpec.describe EInvoices::FacturX::TradeSettlementPayment, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice:, type:, amount:)
+      described_class.call(xml:, resource:, type:, amount:)
     end
   end
 
-  let(:invoice) { create(:invoice, currency: "USD") }
-  let(:type) { described_class::STANDARD }
+  let(:resource) { create(:invoice, currency: "USD") }
+  let(:type) { described_class::STANDARD_PAYMENT }
   let(:amount) { Money.new(1000) }
 
   let(:root) { "//ram:SpecifiedTradeSettlementPaymentMeans" }
@@ -18,8 +18,8 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :servic
   describe ".call" do
     it { is_expected.not_to be_nil }
 
-    context "when STANDARD" do
-      let(:type) { described_class::STANDARD }
+    context "when STANDARD_PAYMENT" do
+      let(:type) { described_class::STANDARD_PAYMENT }
 
       it "contains section name as comment" do
         expect(subject).to contains_xml_comment("Payment Means: Standard payment")
@@ -31,8 +31,8 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :servic
       end
     end
 
-    context "when PREPAID" do
-      let(:type) { described_class::PREPAID }
+    context "when PREPAID_PAYMENT" do
+      let(:type) { described_class::PREPAID_PAYMENT }
 
       it "contains section name as comment" do
         expect(subject).to contains_xml_comment("Payment Means: Prepaid credits")
@@ -44,8 +44,8 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :servic
       end
     end
 
-    context "when CREDIT_NOTE" do
-      let(:type) { described_class::CREDIT_NOTE }
+    context "when CREDIT_NOTE_PAYMENT" do
+      let(:type) { described_class::CREDIT_NOTE_PAYMENT }
 
       it "contains section name as comment" do
         expect(subject).to contains_xml_comment("Payment Means: Credit notes")

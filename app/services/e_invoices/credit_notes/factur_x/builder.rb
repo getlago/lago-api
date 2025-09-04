@@ -26,19 +26,19 @@ module EInvoices
             FacturX::TradeDelivery.call(xml:, delivery_date: credit_note.created_at)
             FacturX::TradeSettlement.call(xml:, resource:) do
               credits_and_payments do |type, amount|
-                FacturX::TradeSettlementPayment.call(xml:, resource:, type:, amount:)
-
-                taxes(credit_note.invoice) do |tax_category, tax_rate, amount, tax|
-                  FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, amount: -amount, tax: -tax)
-                end
-
-                allowance_charges(credit_note.invoice) do |tax_rate, amount|
-                  FacturX::TradeAllowanceCharge.call(xml:, resource:, indicator: INVOICE_CHARGE, tax_rate:, amount: amount)
-                end
-
-                FacturX::PaymentTerms.call(xml:, due_date: credit_note.created_at, description: "Credit note - immediate settlement")
-                FacturX::MonetarySummation.call(xml:, resource:, amounts: monetary_summation_amounts)
+                FacturX::TradeSettlementPayment.call(xml:, type:, amount:)
               end
+
+              taxes(credit_note.invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
+                FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, basis_amount: -basis_amount, tax_amount: -tax_amount)
+              end
+
+              allowance_charges(credit_note.invoice) do |tax_rate, amount|
+                FacturX::TradeAllowanceCharge.call(xml:, resource:, indicator: INVOICE_CHARGE, tax_rate:, amount: amount)
+              end
+
+              FacturX::PaymentTerms.call(xml:, due_date: credit_note.created_at, description: "Credit note - immediate settlement")
+              FacturX::MonetarySummation.call(xml:, resource:, amounts: monetary_summation_amounts)
             end
           end
         end

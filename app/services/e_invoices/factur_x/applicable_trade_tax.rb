@@ -3,21 +3,21 @@
 module EInvoices
   module FacturX
     class ApplicableTradeTax < BaseService
-      def initialize(xml:, tax_category:, tax_rate:, amount:, tax:)
+      def initialize(xml:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
         super(xml:)
 
         @tax_category = tax_category
         @tax_rate = tax_rate
-        @amount = amount
-        @tax = tax
+        @basis_amount = basis_amount
+        @tax_amount = tax_amount
       end
 
       def call
         xml.comment "Tax Information #{percent(tax_rate)} #{VAT}"
         xml["ram"].ApplicableTradeTax do
-          xml["ram"].CalculatedAmount format_number(tax)
+          xml["ram"].CalculatedAmount format_number(tax_amount)
           xml["ram"].TypeCode VAT
-          xml["ram"].BasisAmount format_number(amount)
+          xml["ram"].BasisAmount format_number(basis_amount)
           xml["ram"].CategoryCode tax_category
           if outside_scope_of_tax?
             xml["ram"].ExemptionReasonCode O_VAT_EXEMPTION
@@ -29,7 +29,7 @@ module EInvoices
 
       private
 
-      attr_accessor :tax_category, :tax_rate, :amount, :tax
+      attr_accessor :tax_category, :tax_rate, :basis_amount, :tax_amount
 
       def outside_scope_of_tax?
         tax_category == O_CATEGORY
