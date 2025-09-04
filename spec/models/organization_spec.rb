@@ -41,6 +41,7 @@ RSpec.describe Organization, type: :model do
       expect(subject).to have_many(:dunning_campaigns)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:invoice_custom_sections)
+      expect(subject).to have_many(:ai_conversations)
       expect(subject).to have_many(:manual_invoice_custom_sections).conditions(section_type: "manual")
       expect(subject).to have_many(:system_generated_invoice_custom_sections).conditions(section_type: "system_generated")
 

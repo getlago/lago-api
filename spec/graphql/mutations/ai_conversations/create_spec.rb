@@ -36,7 +36,7 @@ RSpec.describe Mutations::AiConversations::Create, type: :graphql do
 
   it "triggers streaming" do
     expect { result }.to have_enqueued_job(AiConversations::StreamJob).with(
-      kind_of(AiConversation),
+      ai_conversation: kind_of(AiConversation),
       message:
     ).on_queue("default")
   end

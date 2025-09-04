@@ -11,19 +11,24 @@ module Mutations
       graphql_name "CreateAiConversation"
       description "Creates an AI conversation and appends a message to it"
 
+      argument :conversation_id, ID, required: false
       argument :message, String, required: true
 
       type Types::AiConversations::Object
 
-      def resolve(message:)
+      def resolve(message:, conversation_id: nil)
         membership = current_organization.memberships.find_by(user_id: context[:current_user].id)
 
-        ai_conversation = current_organization.ai_conversations.create!(
-          membership:,
-          name: message
-        )
+        ai_conversation = if conversation_id.present?
+          current_organization.ai_conversations.find(conversation_id)
+        else
+          current_organization.ai_conversations.create!(
+            membership:,
+            name: message
+          )
+        end
 
-        ::AiConversations::StreamJob.perform_later(ai_conversation, message:)
+        ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation
       end

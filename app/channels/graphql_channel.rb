@@ -15,10 +15,15 @@ class GraphqlChannel < ApplicationCable::Channel
 
     # Track the subscription here so we can remove it on unsubscribe.
     if result.context[:subscription_id]
+      @subscription_ids ||= []
       @subscription_ids << result.context[:subscription_id]
     end
 
-    transmit(payload)
+    if result.context[:subscription_id]
+      transmit(payload.merge(more: true))
+    else
+      transmit(payload.merge(more: false))
+    end
   end
 
   def unsubscribed
