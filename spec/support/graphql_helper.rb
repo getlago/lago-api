@@ -73,7 +73,8 @@ module GraphQLHelper
       e[:message].to_s == message.to_s || e[:extensions][:code].to_s == message.to_s
     end
 
-    expect(error).to be_present, "error message for #{message} is not present"
+    errors = symbolized_result[:errors].map { |e| "- #{e[:message]} (#{e[:extensions][:code]})" }.join("\n")
+    expect(error).to be_present, "error message for #{message} is not present, got:\n#{errors}"
   end
 
   def expect_unauthorized_error(result)

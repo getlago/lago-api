@@ -9,6 +9,8 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
   let(:amount_cents) { 10 }
   let(:credit_amount_cents) { 12 }
   let(:refund_amount_cents) { 0 }
+  let(:precise_taxes_amount_cents) { 2 }
+  let(:precise_coupons_adjustment_amount_cents) { 0 }
   let(:credit_note) do
     create(
       :credit_note,
@@ -16,8 +18,8 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       customer:,
       credit_amount_cents:,
       refund_amount_cents:,
-      precise_coupons_adjustment_amount_cents: 0,
-      precise_taxes_amount_cents: 2
+      precise_coupons_adjustment_amount_cents:,
+      precise_taxes_amount_cents:
     )
   end
   let(:item) do
@@ -80,12 +82,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:amount_cents) { 1 }
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["does_not_match_item_amounts"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["does_not_match_item_amounts"])
       end
     end
 
@@ -97,12 +97,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       end
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
     end
 
@@ -115,12 +113,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       end
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
     end
 
@@ -130,12 +126,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       end
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
     end
 
@@ -149,12 +143,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:refund_amount_cents) { 10 }
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
     end
 
@@ -170,12 +162,10 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       end
 
       it "fails the validation" do
-        aggregate_failures do
-          expect(validator).not_to be_valid
+        expect(validator).not_to be_valid
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["higher_than_remaining_invoice_amount"])
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["higher_than_remaining_invoice_amount"])
       end
     end
 
@@ -197,26 +187,8 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
       let(:amount_cents) { 20 }
       let(:credit_amount_cents) { 22 }
       let(:refund_amount_cents) { 0 }
-      let(:credit_note) do
-        create(
-          :credit_note,
-          invoice:,
-          customer:,
-          credit_amount_cents:,
-          refund_amount_cents:,
-          precise_coupons_adjustment_amount_cents: 2,
-          precise_taxes_amount_cents: 3.6
-        )
-      end
-      let(:item) do
-        create(
-          :credit_note_item,
-          credit_note:,
-          amount_cents:,
-          precise_amount_cents: amount_cents,
-          fee:
-        )
-      end
+      let(:precise_taxes_amount_cents) { 3.6 }
+      let(:precise_coupons_adjustment_amount_cents) { 2 }
 
       it "validates the credit_note" do
         expect(validator).to be_valid
@@ -226,26 +198,25 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
         let(:amount_cents) { 1 }
 
         it "fails the validation" do
-          aggregate_failures do
-            expect(validator).not_to be_valid
+          expect(validator).not_to be_valid
 
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:base]).to eq(["does_not_match_item_amounts"])
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:base]).to eq(["does_not_match_item_amounts"])
         end
       end
 
       context "when total amount is zero" do
         let(:credit_amount_cents) { 0 }
         let(:refund_amount_cents) { 0 }
+        let(:amount_cents) { 0 }
+        let(:precise_taxes_amount_cents) { 0 }
+        let(:precise_coupons_adjustment_amount_cents) { 0 }
 
         it "fails the validation" do
-          aggregate_failures do
-            expect(validator).not_to be_valid
+          expect(validator).not_to be_valid
 
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:base]).to eq(["total_amount_must_be_positive"])
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:base]).to eq(["total_amount_must_be_positive"])
         end
       end
     end
