@@ -46,30 +46,11 @@ module Events
       end
 
       def count
-        connection_with_retry do |connection|
-          sql = aggregated_events_sql(select: [
-            Arel::Nodes::NamedFunction.new(
-              "countMerge",
-              [aggregated_arel_table[:count_state]]
-            ).as("total_count")
-          ])
-
-          connection.select_value(sql).to_i
-        end
+        merge_aggregation("countMerge", :count_state, "total_count").to_i
       end
 
       def grouped_count
-        connection_with_retry do |connection|
-          sql = aggregated_events_sql(select: [
-            cast_to_json(aggregated_arel_table[:grouped_by]),
-            to_decimal128(Arel::Nodes::NamedFunction.new(
-              "countMerge",
-              [aggregated_arel_table[:count_state]]
-            )).as("total_count")
-          ])
-
-          prepare_grouped_result(connection.select_all(sql).rows)
-        end
+        grouped_merge_aggregation("countMerge", :count_state, "total_count")
       end
 
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
@@ -127,11 +108,11 @@ module Events
       end
 
       def sum
-        # TODO(pre-aggregation): Implement
+        merge_aggregation("sumMerge", :sum_state, "sum_value")
       end
 
       def grouped_sum
-        # TODO(pre-aggregation): Implement
+        grouped_merge_aggregation("sumMerge", :sum_state, "sum_value")
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -204,6 +185,33 @@ module Events
 
       def cast_to_json(attribute)
         Arel::Nodes::SqlLiteral.new("#{attribute.relation.name}.#{attribute.name}::JSON")
+      end
+
+      def merge_aggregation(aggregation_type, column, as)
+        connection_with_retry do |connection|
+          sql = aggregated_events_sql(select: [
+            to_decimal128(Arel::Nodes::NamedFunction.new(
+              aggregation_type,
+              [aggregated_arel_table[column]]
+            )).as(as)
+          ])
+
+          connection.select_value(sql)
+        end
+      end
+
+      def grouped_merge_aggregation(aggregation_type, column, as)
+        connection_with_retry do |connection|
+          sql = aggregated_events_sql(select: [
+            cast_to_json(aggregated_arel_table[:grouped_by]),
+            to_decimal128(Arel::Nodes::NamedFunction.new(
+              aggregation_type,
+              [aggregated_arel_table[column]]
+            )).as(as)
+          ])
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
     end
   end
