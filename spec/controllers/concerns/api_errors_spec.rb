@@ -6,7 +6,7 @@ RSpec.describe ApiErrors, type: :controller do
   describe "#validation_errors" do
     context "with simple errors" do
       controller(ApplicationController) do # rubocop:disable RSpec/DescribedClass
-        include ApiErrors
+        include described_class
 
         def index
           result = BaseService::LegacyResult.new.validation_failure!(
@@ -32,7 +32,7 @@ RSpec.describe ApiErrors, type: :controller do
 
     context "with errors including metadata" do
       controller(ApplicationController) do # rubocop:disable RSpec/DescribedClass
-        include ApiErrors
+        include described_class
 
         def index
           result = BaseService::LegacyResult.new.validation_failure!(
