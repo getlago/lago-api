@@ -166,30 +166,33 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver, type: :graphql do
         expect(usage_response["totalAmountCents"]).to eq("105")
         expect(usage_response["taxesAmountCents"]).to eq("0")
 
-        charge_usage = usage_response["chargesUsage"].first
-        expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
-        expect(charge_usage["billableMetric"]["code"]).to eq(metric.code)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
-        expect(charge_usage["pricingUnitAmountCents"]).to eq(nil)
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["amountCents"]).to eq("5")
-        expect(charge_usage["projectedAmountCents"]).to eq("9")
+        # Find standard charge by charge model
+        standard_charge_usage = usage_response["chargesUsage"].find { |usage| usage["charge"]["chargeModel"] == "standard" }
+        expect(standard_charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
+        expect(standard_charge_usage["billableMetric"]["code"]).to eq(sum_metric.code)
+        expect(standard_charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
+        expect(standard_charge_usage["charge"]["chargeModel"]).to eq("standard")
+        expect(standard_charge_usage["pricingUnitAmountCents"]).to eq("400")
+        expect(standard_charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
+        expect(standard_charge_usage["units"]).to eq(4.0)
+        expect(standard_charge_usage["projectedUnits"]).to eq(8.27)
+        expect(standard_charge_usage["amountCents"]).to eq("100")
+        expect(standard_charge_usage["projectedAmountCents"]).to eq("827")
 
-        charge_usage = usage_response["chargesUsage"].last
-        expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
-        expect(charge_usage["billableMetric"]["code"]).to eq(sum_metric.code)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
-        expect(charge_usage["pricingUnitAmountCents"]).to eq("400")
-        expect(charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["amountCents"]).to eq("100")
-        expect(charge_usage["projectedAmountCents"]).to eq("827")
+        # Find graduated charge by charge model
+        graduated_charge_usage = usage_response["chargesUsage"].find { |usage| usage["charge"]["chargeModel"] == "graduated" }
+        expect(graduated_charge_usage["billableMetric"]["name"]).to eq(metric.name)
+        expect(graduated_charge_usage["billableMetric"]["code"]).to eq(metric.code)
+        expect(graduated_charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
+        expect(graduated_charge_usage["charge"]["chargeModel"]).to eq("graduated")
+        expect(graduated_charge_usage["pricingUnitAmountCents"]).to eq(nil)
+        expect(graduated_charge_usage["units"]).to eq(4.0)
+        expect(graduated_charge_usage["projectedUnits"]).to eq(8.27)
+        expect(graduated_charge_usage["amountCents"]).to eq("5")
+        expect(graduated_charge_usage["projectedAmountCents"]).to eq("9")
 
-        grouped_usage = charge_usage["groupedUsage"].first
+        # Check grouped usage on the standard charge (sum_metric with grouping)
+        grouped_usage = standard_charge_usage["groupedUsage"].first
         expect(grouped_usage["amountCents"]).to eq("100")
         expect(grouped_usage["projectedAmountCents"]).to eq("827")
         expect(grouped_usage["units"]).to eq(4.0)
