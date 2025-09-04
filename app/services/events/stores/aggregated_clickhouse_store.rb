@@ -92,11 +92,11 @@ module Events
       end
 
       def last
-        # TODO(pre-aggregation): Implement
+        merge_aggregation("argMaxMerge", :latest_state, "latest_value")
       end
 
       def grouped_last
-        # TODO(pre-aggregation): Implement
+        grouped_merge_aggregation("argMaxMerge", :latest_state, "latest_value")
       end
 
       def sum_precise_total_amount_cents
