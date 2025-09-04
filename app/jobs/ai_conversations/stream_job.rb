@@ -5,7 +5,7 @@ module AiConversations
     queue_as :default
 
     def perform(ai_conversation, message:)
-      AiConversations::StreamService.call!(
+      AiConversations::StreamService.call(
         ai_conversation:,
         message:
       )
