@@ -119,7 +119,7 @@ RSpec.describe ExecutionErrorResponder do
     end
 
     context "when the service result is a ValidationFailure" do
-      let(:error) { BaseService::ValidationFailure.new(result, messages: {name: ["can't be blank"]}) }
+      let(:error) { BaseService::ValidationFailure.from_errors(result, {name: ["can't be blank"]}) }
 
       it "returns a validation error" do
         expect(subject).to be_a(GraphQL::ExecutionError)

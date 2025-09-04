@@ -9,8 +9,8 @@ RSpec.describe ErrorDetail, type: :model do
   context "when creating an invoice generation error for an invoice" do
     let(:invoice) { create(:invoice, :generating) }
     let(:result) { BaseService::Result.new }
-    let(:error) { BaseService::ValidationFailure.new(result, messages: messages) }
-    let(:messages) { ["message1", "message2"] }
+    let(:error) { BaseService::ValidationFailure.from_errors(result, errors) }
+    let(:errors) { {field: ["message1", "message2"]} }
 
     let(:error_with_backtrace) do
       error = OpenStruct.new
