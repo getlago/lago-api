@@ -102,7 +102,7 @@ module EInvoices
 
           [tax_rate, total_amount - charged_amount]
         else
-          [tax_rate, total_amount / invoice.fee_total_amount_cents * allowances(invoice)]
+          [tax_rate, total_amount.fdiv(invoice.fees.sum(:precise_amount_cents)) * allowances(invoice)]
         end
       end.to_h
     end

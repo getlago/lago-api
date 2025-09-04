@@ -9,15 +9,17 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
     end
   end
 
-  let(:credit_note) { create(:credit_note, total_amount_currency: "EUR") }
-  let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }
-  let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2) }
+  let(:credit_note) { create(:credit_note, total_amount_currency: "EUR", credit_amount: 1) }
+  let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:, precise_amount_cents: 1000) }
+  let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 2500) }
   let(:fee) { create(:fee, units: 5, amount: 10, precise_unit_amount: 2) }
   let(:fee2) { create(:fee, units: 1, amount: 25, precise_unit_amount: 25) }
 
   before do
     credit_note_item
     credit_note_item2
+
+    credit_note.reload
   end
 
   describe ".call" do
@@ -125,6 +127,205 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
       it "contains InvoiceCurrencyCode" do
         expect(subject).to contains_xml_node("//ram:ApplicableHeaderTradeSettlement/ram:InvoiceCurrencyCode")
           .with_value(credit_note.currency)
+      end
+    end
+
+    context "when SpecifiedTradeSettlementPaymentMeans tag" do
+      it "contains the tag" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementPaymentMeans")
+      end
+
+      it "contains TypeCode" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementPaymentMeans//ram:TypeCode")
+          .with_value(described_class::STANDARD_PAYMENT)
+      end
+
+      it "contains Information" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementPaymentMeans//ram:Information")
+          .with_value(I18n.t("invoice.e_invoicing.standard_payment"))
+      end
+    end
+
+    context "when ApplicableTradeTax tag" do
+      let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:ApplicableTradeTax" }
+
+      let(:invoice) { create(:invoice) }
+      let(:credit_note) { create(:credit_note, invoice:) }
+      let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
+      let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 5) }
+      let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 15) }
+      let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
+
+      before do
+        invoice_fee1
+        invoice_fee2
+        invoice_fee3
+        invoice_fee4
+      end
+
+      context "without allowances" do
+        it "contains ApplicableTradeTax tags" do
+          expect(subject.xpath(root).length).to eq(3)
+        end
+
+        context "with one tag per tax rate" do
+          it "contains 0.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[1]/ram:CalculatedAmount").with_value("0.00")
+            expect(subject).to contains_xml_node("#{root}[1]/ram:BasisAmount").with_value("-10.00")
+            expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[1]/ram:RateApplicablePercent").with_value("0.00")
+          end
+
+          it "contains 5.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[2]/ram:CalculatedAmount").with_value("-0.20")
+            expect(subject).to contains_xml_node("#{root}[2]/ram:BasisAmount").with_value("-4.00")
+            expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[2]/ram:RateApplicablePercent").with_value("5.00")
+          end
+
+          it "contains 10.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[3]/ram:CalculatedAmount").with_value("-0.60")
+            expect(subject).to contains_xml_node("#{root}[3]/ram:BasisAmount").with_value("-6.00")
+            expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[3]/ram:RateApplicablePercent").with_value("10.00")
+          end
+        end
+      end
+
+      context "with invoice allowances" do
+        let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
+        let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
+        let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
+        let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
+        let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+
+        context "with one tag per tax rate" do
+          it "contains 0.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[1]/ram:CalculatedAmount").with_value("0.00")
+            expect(subject).to contains_xml_node("#{root}[1]/ram:BasisAmount").with_value("-9.50")
+            expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[1]/ram:RateApplicablePercent").with_value("0.00")
+          end
+
+          it "contains 5.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[2]/ram:CalculatedAmount").with_value("-0.19")
+            expect(subject).to contains_xml_node("#{root}[2]/ram:BasisAmount").with_value("-3.80")
+            expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[2]/ram:RateApplicablePercent").with_value("5.00")
+          end
+
+          it "contains 10.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[3]/ram:CalculatedAmount").with_value("-0.57")
+            expect(subject).to contains_xml_node("#{root}[3]/ram:BasisAmount").with_value("-5.70")
+            expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[3]/ram:RateApplicablePercent").with_value("10.00")
+          end
+        end
+      end
+    end
+
+    context "when SpecifiedTradeAllowanceCharge tag" do
+      let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:SpecifiedTradeAllowanceCharge" }
+
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
+      let(:credit_note) { create(:credit_note, invoice:) }
+      let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
+      let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
+      let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
+      let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+
+      before do
+        invoice_fee1
+        invoice_fee2
+        invoice_fee3
+        invoice_fee4
+      end
+
+      it "contains SpecifiedTradeAllowanceCharge tags" do
+        expect(subject.xpath(root).length).to eq(3)
+      end
+
+      # For credit_note, allowances are turned into charges
+      context "with one tag per tax rate" do
+        it "contains 0.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[1]/ram:ChargeIndicator/udt:Indicator").with_value(described_class::INVOICE_CHARGE)
+          expect(subject).to contains_xml_node("#{root}[1]/ram:ActualAmount").with_value("0.50")
+          expect(subject).to contains_xml_node("#{root}[1]/ram:Reason")
+          expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryTradeTax/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("0.00")
+        end
+
+        it "contains 5.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[2]/ram:ChargeIndicator/udt:Indicator").with_value(described_class::INVOICE_CHARGE)
+          expect(subject).to contains_xml_node("#{root}[2]/ram:ActualAmount").with_value("0.20")
+          expect(subject).to contains_xml_node("#{root}[2]/ram:Reason")
+          expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryTradeTax/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("5.00")
+        end
+
+        it "contains 10.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[3]/ram:ChargeIndicator/udt:Indicator").with_value(described_class::INVOICE_CHARGE)
+          expect(subject).to contains_xml_node("#{root}[3]/ram:ActualAmount").with_value("0.30")
+          expect(subject).to contains_xml_node("#{root}[3]/ram:Reason")
+          expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryTradeTax/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("10.00")
+        end
+      end
+    end
+
+    context "when SpecifiedTradePaymentTerms tag" do
+      it "contains the tag" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradePaymentTerms")
+      end
+
+      it "contains Description tag" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradePaymentTerms/ram:Description")
+          .with_value("Credit note - immediate settlement")
+      end
+
+      it "contains DueDateDateTime tag" do
+        expect(subject).to contains_xml_node("//ram:SpecifiedTradePaymentTerms//udt:DateTimeString")
+          .with_value(credit_note.created_at.strftime(described_class::DATEFORMAT))
+          .with_attribute("format", described_class::CCYYMMDD)
+      end
+    end
+
+    context "when SpecifiedTradeSettlementHeaderMonetarySummation tag" do
+      let(:root) { "//ram:ApplicableHeaderTradeSettlement//ram:SpecifiedTradeSettlementHeaderMonetarySummation" }
+
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
+      let(:credit_note) { create(:credit_note, invoice:, taxes_amount: 10, total_amount: 20, credit_amount: 10) }
+
+      it "contains the tag" do
+        expect(subject).to contains_xml_node(root)
+      end
+
+      it "contains LineTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:LineTotalAmount").with_value("-35.00")
+      end
+
+      it "contains ChargeTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:ChargeTotalAmount").with_value("1.00")
+      end
+
+      it "contains AllowanceTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:AllowanceTotalAmount").with_value("0.00")
+      end
+
+      it "contains TaxBasisTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:TaxBasisTotalAmount").with_value("-35.00")
+      end
+
+      it "contains TaxTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:TaxTotalAmount").with_value("-10.00")
+      end
+
+      it "contains GrandTotalAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:GrandTotalAmount").with_value("-20.00")
+      end
+
+      it "contains DuePayableAmount tag" do
+        expect(subject).to contains_xml_node("#{root}/ram:DuePayableAmount").with_value("-10.00")
       end
     end
   end
