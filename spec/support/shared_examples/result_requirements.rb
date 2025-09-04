@@ -89,15 +89,91 @@ RSpec.shared_examples "a result object" do
   end
 
   describe ".validation_failure!" do
-    before { result.validation_failure!(errors: {field: ["error"]}) }
+    it { expect { result.validation_failure!(errors: {field: ["error"]}).raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
-    it { expect(result).not_to be_success }
-    it { expect(result).to be_failure }
-    it { expect(result.error).to be_a(BaseService::ValidationFailure) }
-    it { expect(result.error.messages).to eq({field: ["error"]}) }
-    it { expect(result.error.message).to eq('Validation errors: {"field":["error"]}') }
+    context "when error codes are passed" do
+      it do
+        result.validation_failure!(errors: {
+          :email => ["invalid_email"],
+          "name" => ["no_bueno", :no_good]
+        })
 
-    it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
+        expect(result).not_to be_success
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.message).to eq('Validation errors: {"email":["invalid_email"],"name":["no_bueno","no_good"]}')
+
+        expect(result.error.messages).to eq({
+          email: ["invalid_email"],
+          name: ["no_bueno", "no_good"]
+        })
+        expect(result.error.metadata).to eq([
+          {field: "email", code: "invalid_email"},
+          {field: "name", code: "no_bueno"},
+          {field: "name", code: "no_good"}
+        ])
+      end
+    end
+
+    context "when hash with metadata is passed" do
+      it do
+        result.validation_failure!(errors: {
+          :email => [
+            {:code => :invalid_email, "other" => "extra"}
+          ],
+          "name" => [
+            {"code" => "no_bueno", "other" => :sym},
+            {"code" => :no_good, :min => 12, :max => 100}
+          ]
+        })
+
+        expect(result).not_to be_success
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.message).to eq('Validation errors: {"email":["invalid_email"],"name":["no_bueno","no_good"]}')
+
+        expect(result.error.messages).to eq({
+          email: ["invalid_email"],
+          name: ["no_bueno", "no_good"]
+        })
+        expect(result.error.metadata).to eq([
+          {field: "email", code: "invalid_email", other: "extra"},
+          {field: "name", code: "no_bueno", other: :sym}, # For extra values, they are not casted
+          {field: "name", code: "no_good", min: 12, max: 100}
+        ])
+      end
+    end
+
+    context "when passing a mix of error codes and hashes" do
+      it do
+        result.validation_failure!(errors: {
+          email: [
+            {code: :wrong_format, format: "/regex/"},
+            "invalid_email"
+          ],
+          name: [
+            "no_bueno",
+            {"code" => :no_good, :min => 12, :max => 100}
+          ]
+        })
+
+        expect(result).not_to be_success
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.message).to eq('Validation errors: {"email":["wrong_format","invalid_email"],"name":["no_bueno","no_good"]}')
+
+        expect(result.error.messages).to eq({
+          email: ["wrong_format", "invalid_email"],
+          name: ["no_bueno", "no_good"]
+        })
+        expect(result.error.metadata).to eq([
+          {field: "email", code: "wrong_format", format: "/regex/"},
+          {field: "email", code: "invalid_email"},
+          {field: "name", code: "no_bueno"},
+          {field: "name", code: "no_good", min: 12, max: 100}
+        ])
+      end
+    end
   end
 
   describe ".record_validation_failure!" do
