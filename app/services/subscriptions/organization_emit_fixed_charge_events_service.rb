@@ -75,6 +75,21 @@ module Subscriptions
         WHERE
           billing_entities.organization_id = '#{organization.id}'
 
+          -- Exclude subscriptions already emitted on timestamp
+          AND already_emitted_on_timestamp.emitted_count IS NULL
+
+          -- Do not emit events for subscriptions that have started _after_ :timestamp (excludes subscriptions starting on timestamp! and also importantly subscriptions that might have started after this service is run)
+          AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:timestamp#{at_time_zone})
+
+          -- Do not bill subscriptions that were not created on timestamp
+          AND DATE(subscriptions.created_at) <= Date(:timestamp)
+
+          -- Do not bill subscriptions that are ending on timestamp
+          AND (
+            subscriptions.ending_at IS NULL OR
+            DATE(subscriptions.ending_at#{at_time_zone}) != DATE(:timestamp#{at_time_zone})
+          )
+
         GROUP BY subscriptions.id
       SQL
 
