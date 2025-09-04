@@ -49,7 +49,7 @@ if !Tax.exists?(organization:, code: "lago_eu_fr_standard")
     params: {
       name: "FR Standard",
       code: "lago_eu_fr_standard",
-      description: "Lago EU FR Standard",
+      description: "FR Standard",
       rate: 20
     }
   )
