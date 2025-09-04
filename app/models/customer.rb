@@ -272,6 +272,10 @@ class Customer < ApplicationRecord
     end
   end
 
+  def vies_check_finished?
+    billing_entity.eu_tax_management? && taxes.where("code ILIKE ?", "lago_eu%").any?
+  end
+
   private
 
   def ensure_slug
