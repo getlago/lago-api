@@ -70,14 +70,38 @@ RSpec.describe ExecutionErrorResponder do
   end
 
   describe "validation_error" do
-    subject(:error) { responder.validation_error(messages: {name: ["can't be blank"]}) }
+    subject(:error) { responder.validation_error(error: failure) }
 
+    let(:failure) { BaseService::ValidationFailure.from_errors(BaseService::LegacyResult.new, {field_name: ["cannot_be_blank"]}) }
     let(:extensions) do
-      {status: 422, code: "unprocessable_entity", details: {"name" => ["can't be blank"]}}
+      {status: 422, code: "unprocessable_entity", details: {"fieldName" => ["cannot_be_blank"]}, metadata: [
+        {field: "fieldName", code: "cannot_be_blank"}
+      ]}
     end
 
     it "returns a 422 validation error with messages" do
       expect(subject.extensions).to eq(extensions)
+    end
+
+    context "when the failure has metadata" do
+      let(:failure) do
+        BaseService::ValidationFailure.from_errors(BaseService::LegacyResult.new, {
+          field_name: [
+            {code: "cannot_be_blank", something: true, other: 12}
+          ]
+        })
+      end
+
+      it "returns a 422 validation error with metadata" do
+        expect(subject.extensions).to eq({
+          status: 422,
+          code: "unprocessable_entity",
+          details: {"fieldName" => ["cannot_be_blank"]},
+          metadata: [
+            {field: "fieldName", code: "cannot_be_blank", something: true, other: 12}
+          ]
+        })
+      end
     end
   end
 
