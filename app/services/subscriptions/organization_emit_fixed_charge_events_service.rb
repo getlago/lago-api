@@ -17,6 +17,8 @@ module Subscriptions
           emitting_subscriptions << subscription
         end
 
+        next if emitting_subscriptions.empty?
+
         Subscriptions::EmitFixedChargeEventsJob.perform_later(
           subscriptions: emitting_subscriptions,
           timestamp: timestamp.to_i
@@ -69,11 +71,19 @@ module Subscriptions
         SELECT DISTINCT(subscriptions.*)
         FROM subscriptions
           INNER JOIN emittable_subscriptions ON emittable_subscriptions.subscription_id = subscriptions.id
+          INNER JOIN plans ON plans.id = subscriptions.plan_id
+          INNER JOIN fixed_charges ON fixed_charges.plan_id = plans.id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           LEFT JOIN already_emitted_on_timestamp ON already_emitted_on_timestamp.subscription_id = subscriptions.id
         WHERE
-          billing_entities.organization_id = '#{organization.id}'
+          subscriptions.organization_id = '#{organization.id}'
+
+          -- Plan has fixed charges
+          AND (
+            fixed_charges.id IS NOT NULL AND
+            (fixed_charges.deleted_at IS NULL OR fixed_charges.deleted_at > :timestamp)
+          )
 
           -- Exclude subscriptions already emitted on timestamp
           AND already_emitted_on_timestamp.emitted_count IS NULL
@@ -109,10 +119,10 @@ module Subscriptions
           INNER JOIN plans ON plans.id = subscriptions.plan_id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-        WHERE subscriptions.status = #{Subscription.statuses[:active]}
+        WHERE subscriptions.organization_id = '#{organization.id}'
+          AND subscriptions.status = #{Subscription.statuses[:active]}
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
-          AND billing_entities.organization_id = '#{organization.id}'
           AND #{conditions.join(" AND ")}
         GROUP BY subscriptions.id
       SQL
