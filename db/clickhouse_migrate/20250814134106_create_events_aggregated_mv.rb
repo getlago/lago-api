@@ -14,6 +14,7 @@ class CreateEventsAggregatedMv < ActiveRecord::Migration[8.0]
         charge_filter_id,
         sorted_grouped_by as grouped_by,
         -- Aggregate states based on aggregation type
+        sumState(coalesce(precise_total_amount_cents, toDecimal128(0, 15))) AS precise_total_amount_cents_sum_state,
         multiIf(aggregation_type = 'sum', sumState(coalesce(decimal_value, 0)), sumState(toDecimal128(0, 26))) AS sum_state,
         multiIf(aggregation_type = 'count', countState(), countStateIf(false)) AS count_state,
         multiIf(aggregation_type = 'max', maxState(coalesce(decimal_value, 0)), maxState(toDecimal128(0, 26))) AS max_state,

@@ -28,6 +28,7 @@ class CreateEventsAggregated < ActiveRecord::Migration[8.0]
       t.string :charge_id, null: false
       t.string :charge_filter_id, null: false, default: -> { "''" }
       t.string :grouped_by, null: false
+      t.column :precise_total_amount_cents_sum_state, "AggregateFunction(sum, Decimal(40, 15))", null: false
       # Multiple aggregation states for different charge models
       # Only one will be populated based on the charge's aggregation type
       t.column :sum_state, "AggregateFunction(sum, Decimal(38, 26))", null: false
