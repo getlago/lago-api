@@ -81,6 +81,8 @@ class BaseService
             # err is a hash with error code and metadata
             messages[field] << err[:code].to_s
             metadata << err.merge(field: field.to_s, code: err[:code].to_s)
+          elsif !Rails.env.production?
+            raise ArgumentError, "Invalid error format for validation failure"
           end
         end
       end
