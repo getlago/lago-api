@@ -12,11 +12,15 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.not_allowed_failure!(code: "invalid_status") unless invoice.failed?
 
-      invoice.status = "pending"
-      invoice.tax_status = "pending"
-      invoice.save!
+      if invoice.customer.vies_check_finished?
+        Invoices::FinalizeAfterTaxesService.call(invoice:)
+      else
+        invoice.status = "pending"
+        invoice.tax_status = "pending"
+        invoice.save!
 
-      Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:)
+        Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:)
+      end
 
       result.invoice = invoice
       result
