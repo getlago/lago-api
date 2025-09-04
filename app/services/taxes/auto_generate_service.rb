@@ -28,7 +28,7 @@ module Taxes
 
       country_rates = country_taxes[:rates]
       tax_code = "lago_eu_#{country_code.downcase}_standard"
-      tax_name = "Lago EU #{country_code.upcase} Standard"
+      tax_name = "#{country_code.upcase} Standard"
       create_tax(tax_code, tax_name, country_rates["standard"])
 
       country_exceptions = country_taxes[:exceptions]
@@ -37,14 +37,14 @@ module Taxes
       country_exceptions.each do |exception|
         exception_code = exception["name"].parameterize.underscore
         tax_code = "lago_eu_#{country_code.downcase}_exception_#{exception_code}"
-        tax_name = "Lago EU #{country_code.upcase} #{exception["name"]} Standard"
+        tax_name = "#{country_code.upcase} #{exception["name"]} Standard"
         create_tax(tax_code, tax_name, exception["standard"])
       end
     end
 
     def create_generic_taxes
-      create_tax("lago_eu_reverse_charge", "Lago EU Reverse Charge", 0.0)
-      create_tax("lago_eu_tax_exempt", "Lago EU Tax Exempt", 0.0)
+      create_tax("lago_eu_reverse_charge", "Reverse Charge", 0.0)
+      create_tax("lago_eu_tax_exempt", "Tax Exempt", 0.0)
     end
 
     def create_tax(tax_code, tax_name, rate)
