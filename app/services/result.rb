@@ -37,7 +37,7 @@ module Result
   end
 
   def validation_failure!(errors:)
-    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors))
+    fail_with_error!(BaseService::ValidationFailure.from_errors(self, errors))
   end
 
   def single_validation_failure!(error_code:, field: :base)
