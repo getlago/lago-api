@@ -73,7 +73,13 @@ module GraphQLHelper
       e[:message].to_s == message.to_s || e[:extensions][:code].to_s == message.to_s
     end
 
-    errors = symbolized_result[:errors].map { |e| "- #{e[:message]} (#{e[:extensions][:code]})" }.join("\n")
+    errors = symbolized_result[:errors].map do |error|
+      formatted_error = "- #{error[:message]}"
+      if (code = error.dig(:extensions, :code))
+        formatted_error += " (#{code})"
+      end
+      formatted_error
+    end.join("\n")
     expect(error).to be_present, "error message for #{message} is not present, got:\n#{errors}"
   end
 
