@@ -26,7 +26,7 @@ module EInvoices
             FacturX::TradeDelivery.call(xml:, delivery_date: credit_note.created_at)
             FacturX::TradeSettlement.call(xml:, resource:) do
               credits_and_payments do |type, amount|
-                FacturX::TradeSettlementPayment.call(xml:, type:, amount:)
+                FacturX::TradeSettlementPayment.call(xml:, resource:, type:, amount:)
               end
 
               taxes(credit_note.invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
