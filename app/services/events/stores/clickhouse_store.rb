@@ -33,7 +33,11 @@ module Events
         query = query.order(arel_table[:timestamp].desc) if ordered
 
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        if filters[:event]
+          query = query.where(arel_table[:timestamp].lteq(filters[:event].timestamp))
+        elsif to_datetime
+          query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        end
         query = query.limit_by(1, "events_enriched.transaction_id")
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?

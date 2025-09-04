@@ -148,6 +148,29 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     it "returns the number of unique events" do
       expect(event_store.count).to eq(5)
     end
+
+    context "when event is provided" do
+      subject(:event_store) do
+        described_class.new(
+          code:,
+          subscription:,
+          boundaries:,
+          filters: {
+            grouped_by:,
+            grouped_by_values:,
+            matching_filters:,
+            ignored_filters:,
+            event:
+          }
+        )
+      end
+
+      let(:event) { events.sort_by(&:timestamp).third }
+
+      it "returns the number of unique events until the provided event.timestamp" do
+        expect(event_store.count).to eq(3)
+      end
+    end
   end
 
   describe "#grouped_count" do
