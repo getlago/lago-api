@@ -84,11 +84,11 @@ module Events
       end
 
       def max
-        # TODO(pre-aggregation): Implement
+        merge_aggregation("maxMerge", :max_state, "max_value")
       end
 
       def grouped_max
-        # TODO(pre-aggregation): Implement
+        grouped_merge_aggregation("maxMerge", :max_state, "max_value")
       end
 
       def last
