@@ -134,4 +134,38 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
       expect_not_found(result)
     end
   end
+
+  context "when total amount is zero" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            reason: "duplicated_charge",
+            invoiceId: invoice.id,
+            creditAmountCents: 0,
+            refundAmountCents: 0,
+            items: [
+              {
+                feeId: fee1.id,
+                amountCents: 0
+              },
+              {
+                feeId: fee2.id,
+                amountCents: 0
+              }
+            ]
+          }
+        }
+      )
+
+      expect_graphql_error(
+        result:,
+        message: "Total amount must be positive"
+      )
+    end
+  end
 end

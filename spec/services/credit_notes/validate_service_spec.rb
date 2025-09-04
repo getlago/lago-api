@@ -234,6 +234,20 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
           end
         end
       end
+
+      context "when total amount is zero" do
+        let(:credit_amount_cents) { 0 }
+        let(:refund_amount_cents) { 0 }
+
+        it "fails the validation" do
+          aggregate_failures do
+            expect(validator).not_to be_valid
+
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:base]).to eq(["total_amount_must_be_positive"])
+          end
+        end
+      end
     end
   end
 end
