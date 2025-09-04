@@ -134,6 +134,16 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         include_examples "does not enqueue any jobs"
       end
 
+      context "when subscriptions are pending" do
+        before do
+          subscription_1.update!(status: :pending)
+          subscription_2.update!(status: :pending)
+          subscription_3.update!(status: :pending)
+        end
+
+        include_examples "does not enqueue any jobs"
+      end
+
       context "when subscription already emitted on timestamp" do
         before do
           create(:fixed_charge_event, subscription: subscription_1, timestamp:)
@@ -158,9 +168,7 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         end
         let(:customer_3) { create(:customer, organization:) }
 
-        before do
-          subscription_4
-        end
+        before { subscription_4 }
 
         it "does not enqueue a job for the subscription" do
           travel_to(timestamp) do
@@ -191,9 +199,7 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         end
         let(:customer_3) { create(:customer, organization:) }
 
-        before do
-          subscription_4
-        end
+        before { subscription_4 }
 
         it "does not enqueue a job on billing day" do
           travel_to(timestamp) do
@@ -207,6 +213,24 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
               )
           end
         end
+      end
+
+      context "when plan fixed charges are discarded after timestamp" do
+        before { fixed_charge.update!(deleted_at: timestamp + 1.day) }
+
+        include_examples "enqueues jobs for each customer"
+      end
+
+      context "when plan fixed charges are discarded" do
+        before { fixed_charge.update!(deleted_at: timestamp) }
+
+        include_examples "does not enqueue any jobs"
+      end
+
+      context "when plan has no fixed charges" do
+        before { fixed_charge.destroy! }
+
+        include_examples "does not enqueue any jobs"
       end
     end
 
@@ -383,6 +407,72 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
 
         include_examples "does not enqueue any jobs"
       end
+    end
+
+    context "when on subscription creation day" do
+      let(:subscription_created_at) { DateTime.parse("2022-12-13T12:00:00Z") }
+      let(:subscription_at) { subscription_created_at }
+      let(:timestamp) { subscription_created_at }
+      let(:timezone) { nil }
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+
+      let(:customer_1) { create(:customer, organization:, timezone:) }
+
+      before do
+        fixed_charge
+        subscription_1
+      end
+
+      include_examples "does not enqueue any jobs"
+
+      context "with customer timezone" do
+        let(:timezone) { "Pacific/Noumea" }
+        let(:timestamp) { subscription_created_at + 10.hours }
+
+        include_examples "does not enqueue any jobs"
+      end
+    end
+
+    context "when subscription is downgraded" do
+      let(:interval) { :monthly }
+      let(:customer) { create(:customer, organization:) }
+      let(:timestamp) { DateTime.parse("1 Feb 2022") }
+      let(:downgrade_plan) { create(:plan, organization:, interval:) }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          :calendar,
+          customer:,
+          plan: downgrade_plan,
+          status: :pending,
+          subscription_at: previous_subscription_created_at,
+          started_at: nil,
+          previous_subscription:,
+          created_at: timestamp - 10.days
+        )
+      end
+
+      let(:previous_subscription_created_at) { timestamp - 3.months }
+      let(:previous_subscription) do
+        create(
+          :subscription,
+          :calendar,
+          customer:,
+          plan:,
+          subscription_at: previous_subscription_created_at,
+          started_at: previous_subscription_created_at,
+          created_at: previous_subscription_created_at
+        )
+      end
+
+      before do
+        fixed_charge
+        subscription
+      end
+
+      include_examples "does not enqueue any jobs"
     end
   end
 end
