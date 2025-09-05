@@ -90,6 +90,34 @@ class BaseService
       new(result, messages:, metadata:)
     end
 
+    def self.from_indexed_errors(result, indexed_errors)
+      messages = {}
+      metadata = []
+
+      indexed_errors.each do |index, errors|
+        messages[index] = {}
+        errors.deep_symbolize_keys.each do |field, field_errors|
+          messages[index][field] = []
+
+          field_errors.each do |err|
+            if err.is_a?(String) || err.is_a?(Symbol)
+              # err is an error code
+              messages[index][field] << err.to_s
+              metadata << {field: field.to_s, code: err.to_s, index: index.to_i}
+            elsif err.is_a?(Hash)
+              # err is a hash with error code and metadata
+              messages[index][field] << err[:code].to_s
+              metadata << err.merge(field: field.to_s, code: err[:code].to_s, index: index.to_i)
+            elsif !Rails.env.production?
+              raise ArgumentError, "Invalid error format for validation failure"
+            end
+          end
+        end
+      end
+
+      new(result, messages:, metadata:)
+    end
+
     private
 
     def format_messages
