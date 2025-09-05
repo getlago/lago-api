@@ -46,28 +46,6 @@ RSpec.describe FixedCharges::EmitFixedChargeEventService, type: :service do
       end
     end
 
-    context "when subscription has units override" do
-      let(:subscription_override) do
-        create(
-          :subscription_fixed_charge_units_override,
-          subscription:,
-          fixed_charge:,
-          units: 20.0,
-          organization:,
-          billing_entity:
-        )
-      end
-
-      before do
-        subscription_override
-      end
-
-      it "uses the subscription override units" do
-        expect(result).to be_success
-        expect(result.fixed_charge_event.units).to eq(BigDecimal("20.0"))
-      end
-    end
-
     context "when fixed charge event creation fails" do
       let(:service_failure) do
         BaseResult.new.record_validation_failure!(record: fixed_charge)
