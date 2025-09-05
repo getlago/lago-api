@@ -44,3 +44,7 @@ preload_app! if ENV["WEB_CONCURRENCY"].present?
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
+
+# Activate Yabeda
+activate_control_app
+plugin :yabeda
