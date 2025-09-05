@@ -65,8 +65,8 @@ RSpec.describe BillableMetricsQuery, type: :query do
 
     it "captures all validation errors" do
       expect(result).not_to be_success
-      expect(result.error.messages[:filters][:recurring]).to include("must be boolean")
-      expect(result.error.messages[:filters][:aggregation_types][0]).to include("must be one of: max_agg, count_agg")
+      expect(result.error.messages[:recurring]).to include("must be boolean")
+      expect(result.error.messages[:aggregation_types][0]).to include("must be one of: max_agg, count_agg")
     end
   end
 
