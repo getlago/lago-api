@@ -11,6 +11,7 @@ module Types
 
       field :code, String, null: false
       field :default_currency, Types::CurrencyEnum, null: false
+      field :einvoicing, Boolean, null: false
       field :email, String
       field :logo_url, String
       field :name, String, null: false
