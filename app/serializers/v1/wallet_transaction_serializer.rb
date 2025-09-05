@@ -16,7 +16,8 @@ module V1
         failed_at: model.failed_at&.iso8601,
         created_at: model.created_at.iso8601,
         invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
-        metadata: model.metadata
+        metadata: model.metadata,
+        name: model.name
       }
 
       payload.merge!(wallet) if include?(:wallet)
