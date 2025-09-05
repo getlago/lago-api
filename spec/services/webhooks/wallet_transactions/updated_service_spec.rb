@@ -11,6 +11,7 @@ RSpec.describe Webhooks::WalletTransactions::UpdatedService do
   let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
   describe ".call" do
-    it_behaves_like "creates webhook", "wallet_transaction.updated", "wallet_transaction"
+    it_behaves_like "creates webhook", "wallet_transaction.updated", "wallet_transaction",
+      {"lago_id" => String, "wallet" => Hash}
   end
 end
