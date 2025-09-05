@@ -434,6 +434,67 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     end
   end
 
+  describe ".grouped_prorated_sum" do
+    let(:grouped_by) { %w[cloud] }
+
+    it "returns the prorated sum of event properties" do
+      result = event_store.grouped_prorated_sum(period_duration: 31)
+
+      expect(result.count).to eq(4)
+
+      null_group = result.find { |v| v[:groups]["cloud"].nil? }
+      expect(null_group[:groups]["cloud"]).to be_nil
+      expect(null_group[:value].round(5)).to eq(2.64516)
+
+      result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+        next if row[:groups]["cloud"].nil?
+
+        expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+        expect(row[:value]).not_to be_nil
+      end
+    end
+
+    context "with persisted_duration" do
+      it "returns the prorated sum of event properties" do
+        result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["cloud"]).to be_nil
+        expect(null_group[:value].round(5)).to eq(1.93548)
+
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[cloud region] }
+
+      it "returns the sum of values grouped by the provided groups" do
+        result = event_store.grouped_prorated_sum(period_duration: 31)
+        expect(result.count).to eq(4)
+
+        null_group = result.find { |v| v[:groups]["cloud"].nil? }
+        expect(null_group[:groups]["cloud"]).to be_nil
+        expect(null_group[:groups]["region"]).to be_nil
+        expect(null_group[:value].round(5)).to eq(2.64516)
+
+        result.sort_by { |it| it[:groups]["cloud"] || "" }.each_with_index do |row, index|
+          next if row[:groups]["cloud"].nil?
+
+          expect(row[:groups]["cloud"]).to eq(group_values[:cloud][index - 1])
+          expect(row[:groups]["region"]).to eq(group_values[:region][index - 1])
+          expect(row[:value]).not_to be_nil
+        end
+      end
+    end
+  end
+
   describe ".max" do
     let(:aggregation_type) { "max" }
 

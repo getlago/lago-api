@@ -49,10 +49,10 @@ module Events
               [arel_enriched_table[:sorted_grouped_by]]
             ).eq(formated_grouped_by_values)
           )
-        elsif grouped_by.present?
-          query.group(arel_enriched_table[:sorted_grouped_by])
-        else
+        elsif grouped_by.blank?
           query.where(arel_enriched_table[:sorted_grouped_by].eq("{}"))
+        else
+          query
         end
 
         query.project(select).to_sql
@@ -225,7 +225,36 @@ module Events
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
-        # TODO(pre-aggregation): Implement
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, period_duration)
+        end
+
+        connection_with_retry do |connection|
+          cte_sql = events_sql(
+            select: [
+              arel_enriched_table[:grouped_by],
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_enriched_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ]
+          )
+
+          sql = <<-SQL
+            WITH events AS (#{cte_sql})
+
+            SELECT
+              events.grouped_by,
+              sum(events.prorated_value)
+            FROM events
+            GROUP BY events.grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       def sum_date_breakdown
