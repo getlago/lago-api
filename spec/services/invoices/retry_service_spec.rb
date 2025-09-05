@@ -13,9 +13,9 @@ RSpec.describe Invoices::RetryService do
       create(
         :invoice,
         :failed,
-        :with_tax_error,
         :subscription,
         customer:,
+        tax_status: "failed",
         organization:,
         subscriptions: [subscription],
         currency: "EUR",
@@ -148,11 +148,8 @@ RSpec.describe Invoices::RetryService do
           expect(Invoices::FinalizeAfterTaxesService).not_to have_received(:call).with(invoice:)
         end
 
-        it "sets correct statuses" do
-          retry_service.call
-
-          expect(invoice.reload.status).to eq("failed")
-          expect(invoice.reload.tax_status).to eq("failed")
+        it "does not update the invoice" do
+          expect { retry_service.call }.not_to change { invoice.reload.attributes }
         end
       end
     end

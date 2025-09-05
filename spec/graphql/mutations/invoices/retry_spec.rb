@@ -6,8 +6,10 @@ RSpec.describe Mutations::Invoices::Retry do
   let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: "gocardless") }
+  let(:customer) { create(:customer, organization:, payment_provider: "gocardless", billing_entity:) }
   let(:user) { membership.user }
+  let(:billing_entity) { create(:billing_entity, organization:, eu_tax_management: true) }
+  let(:tax) { create(:tax, organization:) }
 
   let(:invoice) do
     create(
@@ -56,6 +58,7 @@ RSpec.describe Mutations::Invoices::Retry do
 
   before do
     fee_subscription
+    customer.applied_taxes.create!(organization:, tax:)
   end
 
   it_behaves_like "requires current user"
@@ -77,7 +80,7 @@ RSpec.describe Mutations::Invoices::Retry do
       data = result["data"]["retryInvoice"]
 
       expect(data["id"]).to eq(invoice.id)
-      expect(data["status"]).to eq("pending")
+      expect(data["status"]).to eq("failed")
     end
   end
 end
