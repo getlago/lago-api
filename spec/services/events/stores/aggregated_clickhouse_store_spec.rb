@@ -422,6 +422,18 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     end
   end
 
+  describe ".prorated_sum" do
+    it "returns the prorated sum of event properties" do
+      expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
+    end
+
+    context "with persisted_duration" do
+      it "returns the prorated sum of event properties" do
+        expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
+      end
+    end
+  end
+
   describe ".max" do
     let(:aggregation_type) { "max" }
 

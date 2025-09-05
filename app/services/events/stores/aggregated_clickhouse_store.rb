@@ -28,6 +28,36 @@ module Events
         end
       end
 
+      def events_sql(force_from: false, ordered: false, select: arel_enriched_table[Arel.star])
+        query = arel_enriched_table.where(
+          arel_enriched_table[:subscription_id].eq(subscription.id)
+            .and(arel_enriched_table[:organization_id].eq(subscription.organization_id)
+            .and(arel_enriched_table[:charge_id].eq(charge_id)
+            .and(arel_enriched_table[:charge_filter_id].eq(charge_filter_id || ""))))
+        )
+
+        query = query.order(arel_enriched_table[:timestamp].desc) if ordered
+
+        query = query.where(arel_enriched_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
+        query = query.where(arel_enriched_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query = query.limit_by(1, "events_enriched_expanded.transaction_id")
+
+        query = if grouped_by_values?
+          query.where(
+            Arel::Nodes::NamedFunction.new(
+              "toJSONString",
+              [arel_enriched_table[:sorted_grouped_by]]
+            ).eq(formated_grouped_by_values)
+          )
+        elsif grouped_by.present?
+          query.group(arel_enriched_table[:sorted_grouped_by])
+        else
+          query.where(arel_enriched_table[:sorted_grouped_by].eq("{}"))
+        end
+
+        query.project(select).to_sql
+      end
+
       def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star])
         query = aggregated_arel_table.where(
           aggregated_arel_table[:subscription_id].eq(subscription.id)
@@ -166,7 +196,32 @@ module Events
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
-        # TODO(pre-aggregation): Implement
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, period_duration)
+        end
+
+        connection_with_retry do |connection|
+          cte_sql = events_sql(
+            select: [
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_enriched_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ]
+          )
+
+          sql = <<-SQL
+            WITH events AS (#{cte_sql})
+
+            SELECT sum(events.prorated_value)
+            FROM events
+          SQL
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -192,6 +247,10 @@ module Events
 
       def aggregated_arel_table
         @aggregated_arel_table ||= ::Clickhouse::EventsAggregated.arel_table
+      end
+
+      def arel_enriched_table
+        @arel_enriched_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
       def formated_grouped_by_values
