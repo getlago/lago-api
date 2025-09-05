@@ -65,8 +65,8 @@ module Subscriptions
             UNION
             (#{yearly_anniversary})
           ),
-          -- Filter subscriptions that already have fixed charge events emitted on timestamp
-          already_emitted_on_timestamp AS (#{already_emitted_on_timestamp})
+          -- Filter fixed charges that already have events emitted on timestamp
+          already_emitted_fixed_charges AS (#{already_emitted_fixed_charges})
 
         SELECT DISTINCT(subscriptions.*)
         FROM subscriptions
@@ -75,7 +75,10 @@ module Subscriptions
           INNER JOIN fixed_charges ON fixed_charges.plan_id = plans.id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-          LEFT JOIN already_emitted_on_timestamp ON already_emitted_on_timestamp.subscription_id = subscriptions.id
+          LEFT JOIN already_emitted_fixed_charges ON (
+            already_emitted_fixed_charges.subscription_id = subscriptions.id
+            AND already_emitted_fixed_charges.fixed_charge_id = fixed_charges.id
+          )
         WHERE
           subscriptions.organization_id = '#{organization.id}'
 
@@ -85,8 +88,8 @@ module Subscriptions
             (fixed_charges.deleted_at IS NULL OR fixed_charges.deleted_at > :timestamp)
           )
 
-          -- Exclude subscriptions already emitted on timestamp
-          AND already_emitted_on_timestamp.emitted_count IS NULL
+          -- Exclude fixed charges already emitted on timestamp
+          AND already_emitted_fixed_charges.fixed_charge_id IS NULL
 
           -- Do not emit events for subscriptions that have started _after_ :timestamp (excludes subscriptions starting on timestamp! and also importantly subscriptions that might have started after this service is run)
           AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:timestamp#{at_time_zone})
@@ -319,11 +322,11 @@ module Subscriptions
       SQL
     end
 
-    def already_emitted_on_timestamp
+    def already_emitted_fixed_charges
       <<-SQL
         SELECT DISTINCT
           fixed_charge_events.subscription_id,
-          COUNT(fixed_charge_events.id) AS emitted_count
+          fixed_charge_events.fixed_charge_id
         FROM fixed_charge_events
           INNER JOIN subscriptions ON fixed_charge_events.subscription_id = subscriptions.id
           INNER JOIN customers ON subscriptions.customer_id = customers.id
@@ -332,7 +335,6 @@ module Subscriptions
           AND fixed_charge_events.organization_id = '#{organization.id}'
           AND fixed_charge_events.timestamp IS NOT NULL
           AND DATE(fixed_charge_events.timestamp#{at_time_zone}) = DATE(:timestamp#{at_time_zone})
-        GROUP BY fixed_charge_events.subscription_id
       SQL
     end
   end
