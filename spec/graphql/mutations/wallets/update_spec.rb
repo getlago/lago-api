@@ -20,6 +20,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           id
           name
           status
+          priority
           expirationAt
           invoiceRequiresSuccessfulPayment
           recurringTransactionRules {
@@ -70,6 +71,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
         input: {
           id: wallet.id,
           name: "New name",
+          priority: 22,
           expirationAt: expiration_at.iso8601,
           invoiceRequiresSuccessfulPayment: true,
           recurringTransactionRules: [
@@ -103,6 +105,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "id" => wallet.id,
       "name" => "New name",
       "status" => "active",
+      "priority" => 22,
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601
     )
