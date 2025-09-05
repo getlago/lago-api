@@ -566,6 +566,34 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "when total amount is zero" do
+      let(:create_params) do
+        {
+          invoice_id:,
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          items: [
+            {
+              fee_id: fee1.id,
+              amount_cents: 0
+            },
+            {
+              fee_id: fee2.id,
+              amount_cents: 0
+            }
+          ]
+        }
+      end
+
+      it "returns validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:base]).to eq(["total_amount_must_be_positive"])
+      end
+    end
   end
 
   describe "PUT /api/v1/credit_notes/:id/void" do

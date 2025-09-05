@@ -7,7 +7,8 @@ module CreditNotes
       valid_items_amount?
       valid_refund_amount?
       valid_credit_amount?
-      valid_global_amount?
+      valid_remaining_invoice_amount?
+      valid_total_amount_positive?
 
       if errors?
         result.validation_failure!(errors:)
@@ -97,10 +98,17 @@ module CreditNotes
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
-    def valid_global_amount?
+    def valid_remaining_invoice_amount?
       return true if total_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
       add_error(field: :base, error_code: "higher_than_remaining_invoice_amount")
+    end
+
+    # NOTE: Check if total amount is greater than 0
+    def valid_total_amount_positive?
+      return true if total_amount_cents > 0
+
+      add_error(field: :base, error_code: "total_amount_must_be_positive")
     end
   end
 end

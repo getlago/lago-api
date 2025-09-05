@@ -653,6 +653,32 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
+    context "when total amount is zero" do
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 0 }
+      let(:items) do
+        [
+          {
+            fee_id: fee1.id,
+            amount_cents: 0
+          },
+          {
+            fee_id: fee2.id,
+            amount_cents: 0
+          }
+        ]
+      end
+
+      it "returns a failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(CreditNote.count).to eq(0)
+
+        expect(result.error.messages).to eq(base: ["total_amount_must_be_positive"])
+      end
+    end
+
     context "when reason is invalid" do
       let(:args) { {reason: "invalid"} }
 
