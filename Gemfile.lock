@@ -337,6 +337,7 @@ GEM
     hashie (5.0.0)
     highline (3.1.2)
       reline
+    htmlbeautifier (1.4.3)
     httpclient (2.8.3)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
@@ -786,6 +787,9 @@ GEM
       rspec-expectations (~> 3.13)
       rspec-mocks (~> 3.13)
       rspec-support (~> 3.13)
+    rspec-snapshot (2.0.3)
+      awesome_print (> 1.0.0)
+      rspec (> 3.0.0)
     rspec-support (3.13.2)
     rubocop (1.75.5)
       json (~> 2.3)
@@ -1004,6 +1008,7 @@ DEPENDENCIES
   graphql
   graphql-pagination
   guard-rspec
+  htmlbeautifier (~> 1.4)
   i18n-tasks!
   jwt
   kaminari-activerecord
@@ -1035,6 +1040,7 @@ DEPENDENCIES
   redis
   rspec-graphql_matchers
   rspec-rails
+  rspec-snapshot (~> 2.0)
   rubocop-graphql
   rubocop-performance
   rubocop-rails
