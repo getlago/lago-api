@@ -71,5 +71,14 @@ module FixedCharges
         raise ArgumentError, "Either add_on_id or add_on_code must be provided"
       end
     end
+
+    def emit_events_for_active_subscriptions(fixed_charge)
+      plan.subscriptions.active.find_each do |subscription|
+        FixedCharges::EmitFixedChargeEventService.call!(
+          subscription:,
+          fixed_charge:
+        )
+      end
+    end
   end
 end
