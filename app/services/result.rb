@@ -36,6 +36,10 @@ module Result
     validation_failure!(errors: record.errors.messages)
   end
 
+  def indexed_validation_failure!(indexed_errors:)
+    fail_with_error!(BaseService::ValidationFailure.from_indexed_errors(self, indexed_errors))
+  end
+
   def validation_failure!(errors:)
     fail_with_error!(BaseService::ValidationFailure.from_errors(self, errors))
   end

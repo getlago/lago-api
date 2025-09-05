@@ -25,10 +25,10 @@ module Events
       end
 
       validate_events
-      return result.validation_failure!(errors: result.errors) if result.errors.present?
+      return result.indexed_validation_failure!(indexed_errors: result.errors) if result.errors.present?
 
       post_validate_events
-      return result.validation_failure!(errors: result.errors) if result.errors.present?
+      return result.indexed_validation_failure!(indexed_errors: result.errors) if result.errors.present?
 
       result
     end
