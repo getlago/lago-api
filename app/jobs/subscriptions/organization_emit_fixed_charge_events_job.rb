@@ -15,7 +15,7 @@ module Subscriptions
     def perform(organization:, timestamp: Time.current.to_i)
       Subscriptions::OrganizationEmitFixedChargeEventsService.call!(
         organization:,
-        timestamp: Time.at(timestamp || Time.current.to_i)
+        timestamp: Time.zone.at(timestamp || Time.current.to_i)
       )
     end
   end
