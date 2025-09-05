@@ -8600,7 +8600,7 @@ type Query {
   """
   Query forecasted usages of an organization
   """
-  dataApiUsagesForecasted(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageForecastedCollection!
+  dataApiUsagesForecasted(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isCustomerTinEmpty: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageForecastedCollection!
 
   """
   Query invoiced usages of an organization
