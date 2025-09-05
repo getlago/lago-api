@@ -53,7 +53,7 @@ module Events
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         expression_result = CalculateExpressionService.call(organization:, event:)
-        result.errors[index] = expression_result.error.message unless expression_result.success?
+        result.errors[index] = expression_result.error.as_validation_failure_arg unless expression_result.success?
 
         result.events.push(event)
         result.errors[index] = event.errors.messages unless event.valid?

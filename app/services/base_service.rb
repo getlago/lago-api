@@ -134,6 +134,14 @@ class BaseService
 
       super(result, "#{code}: #{error_message}", original_error:)
     end
+
+    def as_validation_failure_arg(field: :base)
+      {
+        field => [
+          {code:, message: error_message}
+        ]
+      }
+    end
   end
 
   class UnknownTaxFailure < FailedResult
