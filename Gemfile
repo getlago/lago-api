@@ -132,6 +132,10 @@ end
 group :test do
   gem "guard-rspec", require: false
   gem "karafka-testing"
+
+  # HTML testing (invoice rendering)
+  gem "rspec-snapshot", "~> 2.0"
+  gem "htmlbeautifier", "~> 1.4"
 end
 
 group :development do
