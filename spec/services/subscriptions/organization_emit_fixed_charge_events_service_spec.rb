@@ -134,16 +134,6 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         include_examples "does not enqueue any jobs"
       end
 
-      context "when subscription already emitted on timestamp" do
-        before do
-          create(:fixed_charge_event, subscription: subscription_1, timestamp:)
-          create(:fixed_charge_event, subscription: subscription_2, timestamp:)
-          create(:fixed_charge_event, subscription: subscription_3, timestamp:)
-        end
-
-        include_examples "does not enqueue any jobs"
-      end
-
       context "when ending_at is the same as billing day" do
         let(:subscription_4) do
           create(
@@ -541,9 +531,32 @@ RSpec.describe Subscriptions::OrganizationEmitFixedChargeEventsService, type: :s
         create(:fixed_charge_event, subscription: subscription_1, fixed_charge: fixed_charge_1, timestamp:)
       end
 
-      # TODO: This scenario could happen when the plan is editted and some fixed charges are applied on the spot
-      #       and the events emitted, then, how do we handle this? Is it okay to emit the events again?
-      #       Maybe the scenario is not even possible? Need to confirm with product team.
+      it "enqueues jobs for the subscription" do
+        travel_to(timestamp) do
+          expect(service.call).to be_a_success
+
+          expect(Subscriptions::EmitFixedChargeEventsJob)
+            .to have_been_enqueued
+            .with(
+              subscriptions: contain_exactly(subscription_1),
+              timestamp: timestamp.to_i
+            )
+            .once
+        end
+      end
+    end
+
+    context "when subscription has all its fixed charges with events emitted on timestamp" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :calendar }
+      let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+      before do
+        fixed_charge
+        subscription_1
+        create(:fixed_charge_event, subscription: subscription_1, fixed_charge:, timestamp:)
+      end
+
       include_examples "does not enqueue any jobs"
     end
 
