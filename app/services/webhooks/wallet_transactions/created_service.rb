@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V1::WalletTransactionSerializer.new(object, root_name: "wallet_transaction")
+        ::V1::WalletTransactionSerializer.new(object, root_name: "wallet_transaction", includes: %i[wallet])
       end
 
       def webhook_type

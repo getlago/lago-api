@@ -3,7 +3,7 @@
 module V1
   class WalletTransactionSerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         lago_wallet_id: model.wallet_id,
         status: model.status,
@@ -17,6 +17,17 @@ module V1
         created_at: model.created_at.iso8601,
         invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
         metadata: model.metadata
+      }
+
+      payload.merge!(wallet) if include?(:wallet)
+      payload
+    end
+
+    private
+
+    def wallet
+      {
+        wallet: ::V1::WalletSerializer.new(model.wallet).serialize
       }
     end
   end
