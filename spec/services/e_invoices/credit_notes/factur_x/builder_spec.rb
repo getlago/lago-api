@@ -58,6 +58,12 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
               .with_attribute("format", described_class::CCYYMMDD)
           end
         end
+
+        context "when IncludedNote" do
+          it "contains the notes" do
+            expect(subject.xpath("#{root}/ram:IncludedNote/ram:Content").length).to eq(3)
+          end
+        end
       end
     end
 
@@ -71,7 +77,7 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
       it "has all fees" do
         expect(
           subject.xpath(
-            "//rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem"
+            "//rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem"
           ).length
         ).to eq(credit_note.fees.count)
       end

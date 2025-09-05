@@ -131,7 +131,7 @@ module EInvoices
     end
 
     def line_items(&block)
-      resource.fees.each_with_index do |fee, index|
+      resource.fees.order(amount_cents: :asc).each_with_index do |fee, index|
         yield fee, index + 1
       end
     end
