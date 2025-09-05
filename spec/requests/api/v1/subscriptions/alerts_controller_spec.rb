@@ -106,6 +106,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
           code: "validation_errors",
           error: "Unprocessable Entity",
           error_details: {code: ["value_already_exist"]},
+          metadata: [{code: "value_already_exist", field: "code"}],
           status: 422
         })
       end
@@ -120,6 +121,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
             code: "validation_errors",
             error: "Unprocessable Entity",
             error_details: {field => array_including("value_is_mandatory")},
+            metadata: array_including({code: "value_is_mandatory", field: field.to_s}),
             status: 422
           })
         end
@@ -141,6 +143,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
           code: "validation_errors",
           error: "Unprocessable Entity",
           error_details: {alert_type: ["invalid_type"]},
+          metadata: [{code: "invalid_type", field: "alert_type"}],
           status: 422
         })
       end
@@ -238,6 +241,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
           code: "validation_errors",
           error: "Unprocessable Entity",
           error_details: {code: ["value_already_exist"]},
+          metadata: [{code: "value_already_exist", field: "code"}],
           status: 422
         })
 
@@ -260,7 +264,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {billable_metric: ["value_must_be_blank"]}, # Because `param[:alert_type] as ignored
+          error_details: {billable_metric: ["value_must_be_blank"]}, # Because `param[:alert_type]` is ignored
+          metadata: [{code: "value_must_be_blank", field: "billable_metric"}],
           status: 422
         })
       end
