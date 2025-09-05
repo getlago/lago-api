@@ -2,8 +2,15 @@
 
 require "rails_helper"
 
+# This spec relies on `rspec-snapshot` gem (https://github.com/levinmr/rspec-snapshot) in order to serialize and compare
+# the rendered invoice HTML.
+#
+# To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
+
 RSpec.describe "invoices/v4/_credit.slim", type: :view do
   subject(:rendered_template) do
+    # We have to use both `pretty: true` and `HtmlBeautifier.beautify` to ensure proper formatting which eases the
+    # snapshot diff review.
     html = Slim::Template.new(template, 1, pretty: true).render(invoice)
     HtmlBeautifier.beautify(html, stop_on_errors: true)
   end
