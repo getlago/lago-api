@@ -21,7 +21,8 @@ module WalletTransactions
           transaction_type: :outbound,
           status: :settled,
           settled_at: Time.current,
-          transaction_status: :voided
+          transaction_status: :voided,
+          name:
         ).wallet_transaction
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
@@ -33,5 +34,9 @@ module WalletTransactions
     private
 
     attr_reader :wallet, :wallet_credit, :transaction_params
+
+    def name
+      transaction_params[:name].presence
+    end
   end
 end

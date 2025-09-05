@@ -18,6 +18,7 @@ module WalletTransactions
           :credit_note_id,
           :invoice_id,
           :invoice_requires_successful_payment,
+          :name,
           :priority,
           :settled_at,
           :source,
