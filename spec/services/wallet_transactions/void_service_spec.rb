@@ -56,7 +56,8 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
               source: "manual",
               metadata: [],
               priority: 50,
-              credit_note_id: nil
+              credit_note_id: nil,
+              name: nil
             )
         end
       end
@@ -78,7 +79,8 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
           metadata:,
           credit_note_id:,
           source: :threshold,
-          priority: 25
+          priority: 25,
+          name: "Void Transaction"
         }
       end
 
@@ -101,7 +103,8 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
               metadata:,
               credit_note_id:,
               source: "threshold",
-              priority: 25
+              priority: 25,
+              name: "Void Transaction"
             )
         end
       end
@@ -111,6 +114,16 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
 
         expect(wallet.balance_cents).to eq(0)
         expect(wallet.credits_balance).to eq(0.0)
+      end
+    end
+
+    ["", nil].each do |name|
+      context "with #{name.inspect} name" do
+        let(:args) { {name:} }
+
+        it "creates a wallet transaction with nil name" do
+          expect(result.wallet_transaction.name).to be_nil
+        end
       end
     end
   end

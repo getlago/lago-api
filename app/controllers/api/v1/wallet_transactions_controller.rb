@@ -89,6 +89,7 @@ module Api
           :granted_credits,
           :voided_credits,
           :invoice_requires_successful_payment,
+          :name,
           metadata: [
             :key,
             :value

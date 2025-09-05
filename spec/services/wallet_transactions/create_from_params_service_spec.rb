@@ -37,16 +37,18 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
         paid_credits:,
         granted_credits:,
         voided_credits:,
-        source: :manual
+        source: :manual,
+        **((name == :undefined) ? {} : {name:})
       }
     end
+    let(:name) { :undefined }
 
     it "creates wallet transactions" do
       expect { subject }.to change(WalletTransaction, :count).by(3)
     end
 
-    it "sets priority to default (50)" do
-      expect(result.wallet_transactions).to all(have_attributes(priority: 50))
+    it "sets priority to default (50) and name to nil" do
+      expect(result.wallet_transactions).to all(have_attributes(priority: 50, name: nil))
     end
 
     it "sets expected transaction status" do
@@ -179,6 +181,30 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
 
       it "creates wallet transactions with specified priority" do
         expect(result.wallet_transactions).to all(have_attributes(priority:))
+      end
+    end
+
+    context "when name parameter specified" do
+      let(:name) { "Custom Top-up Name" }
+
+      it "creates wallet transactions with specified name" do
+        expect(result.wallet_transactions).to all(have_attributes(name: "Custom Top-up Name"))
+      end
+    end
+
+    context "when name parameter is blank" do
+      let(:name) { "" }
+
+      it "creates wallet transactions with nil name" do
+        expect(result.wallet_transactions).to all(have_attributes(name: nil))
+      end
+    end
+
+    context "when name parameter is nil" do
+      let(:name) { nil }
+
+      it "creates wallet transactions with nil name" do
+        expect(result.wallet_transactions).to all(have_attributes(name: nil))
       end
     end
   end

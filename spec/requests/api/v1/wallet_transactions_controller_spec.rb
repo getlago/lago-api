@@ -27,9 +27,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       {
         wallet_id:,
         paid_credits: "10",
-        granted_credits: "10"
+        granted_credits: "10",
+        **((name == :undefined) ? {} : {name:})
       }
     end
+    let(:name) { :undefined }
 
     include_examples "requires API permission", "wallet_transaction", "write"
 
@@ -45,6 +47,19 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       expect(json[:wallet_transactions].second[:status]).to eq("settled")
       expect(json[:wallet_transactions].first[:lago_wallet_id]).to eq(wallet.id)
       expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
+    end
+
+    context "with name parameter" do
+      let(:name) { "Custom Top-up Name" }
+
+      it "creates wallet transactions with the specified name" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:wallet_transactions].count).to eq(2)
+        expect(json[:wallet_transactions].pluck(:name)).to eq(["Custom Top-up Name", "Custom Top-up Name"])
+      end
     end
 
     context "with voided credits" do

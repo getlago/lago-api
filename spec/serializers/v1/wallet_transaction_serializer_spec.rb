@@ -26,8 +26,19 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "failed_at" => wallet_transaction.failed_at&.iso8601,
         "created_at" => wallet_transaction.created_at.iso8601,
         "invoice_requires_successful_payment" => wallet_transaction.invoice_requires_successful_payment?,
-        "metadata" => wallet_transaction.metadata
+        "metadata" => wallet_transaction.metadata,
+        "name" => nil
       )
+    end
+  end
+
+  context "when wallet transaction has a name" do
+    let(:wallet_transaction) { create(:wallet_transaction, name: "Custom Transaction Name") }
+
+    it "includes the name in serialization" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["name"]).to eq("Custom Transaction Name")
     end
   end
 end
