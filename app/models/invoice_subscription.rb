@@ -46,7 +46,7 @@ class InvoiceSubscription < ApplicationRecord
 
     base_query = base_query.recurring if recurring
 
-    if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+    if subscription.plan.charges_billed_in_monthly_split_intervals?
       base_query = base_query
         .where(charges_from_datetime: boundaries.charges_from_datetime)
         .where(charges_to_datetime: boundaries.charges_to_datetime)
