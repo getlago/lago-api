@@ -495,6 +495,21 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     end
   end
 
+  describe ".sum_date_breakdown" do
+    let(:aggregation_type) { "sum" }
+
+    it "returns the sum grouped by day" do
+      expect(event_store.sum_date_breakdown).to eq(
+        events.map do |e|
+          {
+            date: e.timestamp.to_date,
+            value: e.decimal_value
+          }
+        end
+      )
+    end
+  end
+
   describe ".max" do
     let(:aggregation_type) { "max" }
 

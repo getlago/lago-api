@@ -58,7 +58,7 @@ module Events
         query.project(select).to_sql
       end
 
-      def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star])
+      def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star], group: nil, order: nil)
         query = aggregated_arel_table.where(
           aggregated_arel_table[:subscription_id].eq(subscription.id)
             .and(aggregated_arel_table[:organization_id].eq(subscription.organization_id)
@@ -69,12 +69,16 @@ module Events
         query = query.where(aggregated_arel_table[:started_at].gteq(from_datetime.beginning_of_minute)) if force_from || use_from_boundary
         query = query.where(aggregated_arel_table[:started_at].lteq(to_datetime)) if to_datetime
 
-        query = if grouped_by_values
-          query.where(aggregated_arel_table[:grouped_by].eq(formated_grouped_by_values))
+        if grouped_by_values
+          query = query.where(aggregated_arel_table[:grouped_by].eq(formated_grouped_by_values))
+          query = query.group(group) if group
+        elsif group
+          query = query.group([group, aggregated_arel_table[:grouped_by]])
         else
-          query.group(aggregated_arel_table[:grouped_by])
+          query = query.group(aggregated_arel_table[:grouped_by])
         end
 
+        query = query.order(order) if order
         query.project(select).to_sql
       end
 
@@ -258,7 +262,28 @@ module Events
       end
 
       def sum_date_breakdown
-        # TODO(pre-aggregation): Implement
+        date_field = date_in_customer_timezone_sql("events_aggregated.started_at")
+
+        connection_with_retry do |connection|
+          sql = aggregated_events_sql(
+            select: [
+              Arel::Nodes::NamedFunction.new(
+                "toDate",
+                [Arel::Nodes::SqlLiteral.new(date_field)]
+              ).as("day"),
+              to_decimal128(Arel::Nodes::NamedFunction.new(
+                "sumMerge",
+                [aggregated_arel_table[:sum_state]]
+              )).as("property")
+            ],
+            group: Arel::Nodes::SqlLiteral.new("day"),
+            order: Arel::Nodes::SqlLiteral.new("day")
+          )
+
+          connection.select_all(Arel.sql(sql)).rows.map do |row|
+            {date: row.first.to_date, value: row.last}
+          end
+        end
       end
 
       def weighted_sum(initial_value: 0)
