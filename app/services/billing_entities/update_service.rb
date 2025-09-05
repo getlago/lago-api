@@ -85,8 +85,6 @@ module BillingEntities
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ArgumentError => e
-      result.single_validation_failure!(error_code: e.message)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end

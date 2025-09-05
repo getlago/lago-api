@@ -14,7 +14,7 @@ class ErrorDetail < ApplicationRecord
     tax_voiding_error: 2,
     invoice_generation_error: 3
   }.freeze
-  enum :error_code, ERROR_CODES
+  enum :error_code, ERROR_CODES, validate: true
 
   def self.create_generation_error_for(invoice:, error:)
     return unless invoice

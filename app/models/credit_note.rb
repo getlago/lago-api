@@ -55,7 +55,7 @@ class CreditNote < ApplicationRecord
   STATUS = %i[draft finalized].freeze
 
   enum :credit_status, CREDIT_STATUS
-  enum :refund_status, REFUND_STATUS
+  enum :refund_status, REFUND_STATUS, validate: {allow_nil: true}
   enum :reason, REASON, validate: true
   enum :status, STATUS
 

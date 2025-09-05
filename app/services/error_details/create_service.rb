@@ -21,8 +21,6 @@ module ErrorDetails
 
       result.error_details = new_error
       result
-    rescue ArgumentError => e
-      result.validation_failure!(errors: e.message)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end

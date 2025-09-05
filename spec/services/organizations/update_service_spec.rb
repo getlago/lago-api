@@ -317,7 +317,7 @@ RSpec.describe Organizations::UpdateService do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base].first).to include("not a valid document_numbering")
+          expect(result.error.messages[:document_numbering]).to eq(["value_is_invalid"])
         end
       end
     end

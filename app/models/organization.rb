@@ -123,7 +123,7 @@ class Organization < ApplicationRecord
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
-  enum :document_numbering, DOCUMENT_NUMBERINGS
+  enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
