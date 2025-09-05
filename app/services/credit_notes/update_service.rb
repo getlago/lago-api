@@ -23,8 +23,8 @@ module CreditNotes
       Utils::SegmentTrack.refund_status_changed(credit_note.refund_status, credit_note.id, credit_note.organization.id)
 
       result
-    rescue ArgumentError
-      result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
