@@ -102,13 +102,13 @@ module Api
 
       def feature_create_params
         params.require(:feature).permit(:code, :name, :description, privileges: [
-          :code, :name, :value_type, :config
+          :code, :name, :value_type, config: {}
         ])
       end
 
       def feature_update_params
         params.require(:feature).permit(:name, :description, privileges: [
-          :code, :name, :value_type, :config
+          :code, :name, :value_type, config: {}
         ])
       end
 
