@@ -24,7 +24,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         paid_credits: "10",
         granted_credits: "10",
         expiration_at:,
-        invoice_requires_successful_payment: true
+        invoice_requires_successful_payment: true,
+        paid_top_up_min_amount_cents: 5_00,
+        paid_top_up_max_amount_cents: 100_00
       }
     end
 
@@ -45,6 +47,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
       expect(json[:wallet][:expiration_at]).to eq(expiration_at)
       expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+
+      # TODO: only test response attributes when we have the new fields in the serializer
+      wallet = Wallet.find json[:wallet][:lago_id]
+      expect(wallet.paid_top_up_min_amount_cents).to eq(5_00)
+      expect(wallet.paid_top_up_max_amount_cents).to eq(100_00)
+      # expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
+      # expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
 
       expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
 
@@ -125,7 +134,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           recurring_transaction_rules: [
             {
               trigger: "interval",
-              interval: "monthly"
+              interval: "monthly",
+              ignore_paid_top_up_limits: true
             }
           ]
         }
@@ -145,6 +155,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:granted_credits]).to eq("10.0")
           expect(recurring_rules.first[:method]).to eq("fixed")
           expect(recurring_rules.first[:trigger]).to eq("interval")
+
+          # TODO: only test response attributes when we have the new fields in the serializer
+          wallet = Wallet.find json[:wallet][:lago_id]
+          expect(wallet.recurring_transaction_rules.first.ignore_paid_top_up_limits).to eq(true)
+          # expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
         end
       end
 
@@ -336,7 +351,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       {
         name: "wallet1",
         expiration_at:,
-        invoice_requires_successful_payment: true
+        invoice_requires_successful_payment: true,
+        paid_top_up_min_amount_cents: 6_00,
+        paid_top_up_max_amount_cents: 10_00
       }
     end
 
@@ -354,6 +371,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:name]).to eq(update_params[:name])
         expect(json[:wallet][:expiration_at]).to eq(expiration_at)
         expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+
+        # TODO: only test response attributes when we have the new fields in the serializer
+        wallet = Wallet.find json[:wallet][:lago_id]
+        expect(wallet.paid_top_up_min_amount_cents).to eq(6_00)
+        expect(wallet.paid_top_up_max_amount_cents).to eq(10_00)
+        # expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
+        # expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(10_00)
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end
@@ -410,7 +434,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               paid_credits: "105",
               granted_credits: "105",
               target_ongoing_balance: "300",
-              invoice_requires_successful_payment: true
+              invoice_requires_successful_payment: true,
+              ignore_paid_top_up_limits: true
             }
           ]
         }
@@ -435,6 +460,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:method]).to eq("target")
           expect(recurring_rules.first[:trigger]).to eq("interval")
           expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+
+          # TODO: only test response attributes when we have the new fields in the serializer
+          wallet = Wallet.find json[:wallet][:lago_id]
+          expect(wallet.recurring_transaction_rules.first.ignore_paid_top_up_limits).to eq(true)
+          # expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
 
           expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end

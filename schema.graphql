@@ -2627,6 +2627,8 @@ input CreateCustomerWalletInput {
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMinAmountCents: BigInt
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
 }
@@ -2947,6 +2949,7 @@ input CreatePricingUnitInput {
 input CreateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
@@ -9038,6 +9041,7 @@ type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  ignorePaidTopUpLimits: Boolean!
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean!
   lagoId: ID!
@@ -10740,6 +10744,8 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMinAmountCents: BigInt
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11075,6 +11081,7 @@ input UpdatePrivilegeInput {
 input UpdateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
   lagoId: ID
@@ -11275,6 +11282,8 @@ type Wallet {
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMinAmountCents: BigInt
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!

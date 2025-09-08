@@ -3303,7 +3303,9 @@ CREATE TABLE public.wallets (
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
-    last_ongoing_balance_sync_at timestamp without time zone
+    last_ongoing_balance_sync_at timestamp without time zone,
+    paid_top_up_min_amount_cents integer,
+    paid_top_up_max_amount_cents integer
 );
 
 
@@ -3843,7 +3845,8 @@ CREATE TABLE public.recurring_transaction_rules (
     expiration_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    ignore_paid_top_up_limits boolean DEFAULT false NOT NULL
 );
 
 
@@ -9755,6 +9758,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250908085959'),
 ('20250901141844'),
 ('20250828153138'),
 ('20250828144553'),
@@ -10573,4 +10577,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

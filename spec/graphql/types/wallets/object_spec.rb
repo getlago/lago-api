@@ -33,6 +33,9 @@ RSpec.describe Types::Wallets::Object do
 
     expect(subject).to have_field(:invoice_requires_successful_payment).of_type("Boolean!")
 
+    expect(subject).to have_field(:paid_top_up_max_amount_cents).of_type("BigInt")
+    expect(subject).to have_field(:paid_top_up_min_amount_cents).of_type("BigInt")
+
     expect(subject).to have_field(:applies_to).of_type("WalletAppliesTo")
 
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")

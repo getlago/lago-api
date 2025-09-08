@@ -87,6 +87,8 @@ module Api
           :granted_credits,
           :expiration_at,
           :invoice_requires_successful_payment,
+          :paid_top_up_min_amount_cents,
+          :paid_top_up_max_amount_cents,
           transaction_metadata: [
             :key,
             :value
@@ -102,6 +104,7 @@ module Api
             :threshold_credits,
             :trigger,
             :invoice_requires_successful_payment,
+            :ignore_paid_top_up_limits,
             transaction_metadata: [
               :key,
               :value
@@ -123,6 +126,8 @@ module Api
           :name,
           :expiration_at,
           :invoice_requires_successful_payment,
+          :paid_top_up_min_amount_cents,
+          :paid_top_up_max_amount_cents,
           recurring_transaction_rules: [
             :lago_id,
             :interval,
@@ -135,6 +140,7 @@ module Api
             :paid_credits,
             :granted_credits,
             :invoice_requires_successful_payment,
+            :ignore_paid_top_up_limits,
             transaction_metadata: [
               :key,
               :value
