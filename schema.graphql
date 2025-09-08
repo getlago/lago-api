@@ -5377,6 +5377,7 @@ input FixedChargeInput {
   addOnId: ID!
   applyUnitsImmediately: Boolean
   chargeModel: FixedChargeChargeModelEnum!
+  id: ID
   invoiceDisplayName: String
   payInAdvance: Boolean
   properties: FixedChargePropertiesInput
