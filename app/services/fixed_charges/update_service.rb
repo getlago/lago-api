@@ -2,6 +2,8 @@
 
 module FixedCharges
   class UpdateService < BaseService
+    Result = BaseResult[:fixed_charge]
+
     def initialize(fixed_charge:, params:, cascade_options: {})
       @fixed_charge = fixed_charge
       @params = params.to_h.deep_symbolize_keys
@@ -30,6 +32,10 @@ module FixedCharges
         fixed_charge.save!
         result.fixed_charge = fixed_charge
 
+        if params[:apply_units_immediately] && fixed_charge.units_previously_changed?
+          emit_events_for_active_subscriptions(fixed_charge)
+        end
+
         unless cascade || plan.attached_to_subscriptions?
           if (tax_codes = params.delete(:tax_codes))
             taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge:, tax_codes:)
@@ -50,5 +56,14 @@ module FixedCharges
     attr_reader :fixed_charge, :params, :cascade_options, :cascade
 
     delegate :plan, to: :fixed_charge
+
+    def emit_events_for_active_subscriptions(fixed_charge)
+      plan.subscriptions.active.find_each do |subscription|
+        FixedCharges::EmitFixedChargeEventService.call!(
+          subscription:,
+          fixed_charge:
+        )
+      end
+    end
   end
 end
