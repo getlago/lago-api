@@ -103,15 +103,13 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
           voided_credits:,
           source: :manual,
           metadata: metadata
-        }
+        }.with_indifferent_access
       end
 
       it "processes the transaction normally and includes the metadata" do
         expect(result).to be_success
         transactions = WalletTransaction.where(wallet_id: wallet.id)
-        expect(transactions.first.metadata).to include("key" => "valid_value", "value" => "also_valid")
-        expect(transactions.second.metadata).to include("key" => "valid_value", "value" => "also_valid")
-        expect(transactions.third.metadata).to include("key" => "valid_value", "value" => "also_valid")
+        expect(transactions).to all(have_attributes(metadata: [{"key" => "valid_value", "value" => "also_valid"}]))
       end
     end
 

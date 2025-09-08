@@ -6,7 +6,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, credits_balance: 10, balance_cents: 1000) }
   let(:wallet_id) { wallet.id }
 
   before do
@@ -78,6 +78,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
           wallet_id:,
           paid_credits: "10",
           granted_credits: "10",
+          voided_credits: "5",
           metadata: [{"key" => "valid_value", "value" => "also_valid"}]
         }
       end
@@ -86,11 +87,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet_transactions].count).to eq(2)
-        expect(json[:wallet_transactions].first[:metadata]).to be_present
-        expect(json[:wallet_transactions].second[:metadata]).to be_present
-        expect(json[:wallet_transactions].first[:metadata]).to include(key: "valid_value", value: "also_valid")
-        expect(json[:wallet_transactions].second[:metadata]).to include(key: "valid_value", value: "also_valid")
+
+        wallet_transactions = json[:wallet_transactions]
+
+        expect(wallet_transactions.count).to eq(3)
+        expect(wallet_transactions).to all(include(metadata: [{key: "valid_value", value: "also_valid"}]))
       end
     end
 
