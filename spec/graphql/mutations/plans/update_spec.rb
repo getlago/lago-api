@@ -433,9 +433,23 @@ RSpec.describe Mutations::Plans::Update do
   end
 
   context "when fixed charges are provided" do
-    let(:add_on_1) { create(:add_on, organization:) }
-    let(:add_on_2) { create(:add_on, organization:) }
-    let(:add_on_3) { create(:add_on, organization:) }
+    let(:add_ons) { create_list(:add_on, 5, organization:) }
+    let(:add_on_1) { add_ons[0] }
+    let(:add_on_2) { add_ons[1] }
+    let(:add_on_3) { add_ons[2] }
+    let(:add_on_4) { add_ons[3] }
+    let(:add_on_5) { add_ons[4] }
+
+    let(:fixed_charge_1) { create(:fixed_charge, plan:, add_on: add_on_1, units: 10) }
+    let(:fixed_charge_2) { create(:fixed_charge, plan:, add_on: add_on_2, units: 5) }
+
+    let(:active_subscription) { create(:subscription, plan:) }
+
+    before do
+      fixed_charge_1
+      fixed_charge_2
+      active_subscription
+    end
 
     it "updates the plan with the provided fixed charges" do
       result = execute_graphql(
@@ -455,15 +469,34 @@ RSpec.describe Mutations::Plans::Update do
             charges: [],
             fixedCharges: [
               {
+                id: fixed_charge_1.id,
                 addOnId: add_on_1.id,
+                # does not change units
                 units: "10",
+                chargeModel: "standard",
+                properties: {amount: "10.00"},
+                applyUnitsImmediately: true
+              },
+              {
+                id: fixed_charge_2.id,
+                addOnId: add_on_2.id,
+                # changes units
+                units: "20",
                 chargeModel: "standard",
                 properties: {amount: "100.00"},
                 applyUnitsImmediately: true
               },
               {
-                addOnId: add_on_2.id,
-                units: "5",
+                # newly added fixed charge
+                addOnId: add_on_3.id,
+                units: "30",
+                chargeModel: "standard",
+                properties: {amount: "1000.00"},
+                applyUnitsImmediately: true
+              },
+              {
+                addOnId: add_on_4.id,
+                units: "40",
                 chargeModel: "graduated",
                 properties: {
                   graduatedRanges: [
@@ -473,8 +506,8 @@ RSpec.describe Mutations::Plans::Update do
                 }
               },
               {
-                addOnId: add_on_3.id,
-                units: "1",
+                addOnId: add_on_5.id,
+                units: "50",
                 chargeModel: "volume",
                 properties: {
                   volumeRanges: [
@@ -489,25 +522,39 @@ RSpec.describe Mutations::Plans::Update do
 
       result_data = result["data"]["updatePlan"]
 
-      expect(result_data["fixedCharges"].count).to eq(3)
+      expect(result_data["fixedCharges"].count).to eq(5)
 
-      expect(result_data["fixedCharges"].first["chargeModel"]).to eq("standard")
+      expect(result_data["fixedCharges"].first["id"]).to eq(fixed_charge_1.id)
       expect(result_data["fixedCharges"].first["units"]).to eq("10.0")
-      expect(result_data["fixedCharges"].first["properties"]["amount"]).to eq("100.00")
-      expect(result_data["fixedCharges"].first["addOn"]["id"]).to eq(add_on_1.id)
-      expect(result_data["fixedCharges"].first["addOn"]["name"]).to eq(add_on_1.name)
+      expect(result_data["fixedCharges"].first["properties"]["amount"]).to eq("10.00")
+      expect(result_data["fixedCharges"].first["addOn"]["id"]).to eq(fixed_charge_1.add_on_id)
 
-      expect(result_data["fixedCharges"].second["chargeModel"]).to eq("graduated")
-      expect(result_data["fixedCharges"].second["units"]).to eq("5.0")
-      expect(result_data["fixedCharges"].second["properties"]["graduatedRanges"].count).to eq(2)
-      expect(result_data["fixedCharges"].second["addOn"]["id"]).to eq(add_on_2.id)
-      expect(result_data["fixedCharges"].second["addOn"]["name"]).to eq(add_on_2.name)
+      expect(result_data["fixedCharges"].second["id"]).to eq(fixed_charge_2.id)
+      expect(result_data["fixedCharges"].second["units"]).to eq("20.0")
+      expect(result_data["fixedCharges"].second["properties"]["amount"]).to eq("100.00")
+      expect(result_data["fixedCharges"].second["addOn"]["id"]).to eq(fixed_charge_2.add_on_id)
 
-      expect(result_data["fixedCharges"].third["chargeModel"]).to eq("volume")
-      expect(result_data["fixedCharges"].third["units"]).to eq("1.0")
-      expect(result_data["fixedCharges"].third["properties"]["volumeRanges"].count).to eq(1)
+      expect(result_data["fixedCharges"].third["chargeModel"]).to eq("standard")
+      expect(result_data["fixedCharges"].third["units"]).to eq("30.0")
+      expect(result_data["fixedCharges"].third["properties"]["amount"]).to eq("1000.00")
       expect(result_data["fixedCharges"].third["addOn"]["id"]).to eq(add_on_3.id)
       expect(result_data["fixedCharges"].third["addOn"]["name"]).to eq(add_on_3.name)
+
+      expect(result_data["fixedCharges"].fourth["chargeModel"]).to eq("graduated")
+      expect(result_data["fixedCharges"].fourth["units"]).to eq("40.0")
+      expect(result_data["fixedCharges"].fourth["properties"]["graduatedRanges"].count).to eq(2)
+      expect(result_data["fixedCharges"].fourth["addOn"]["id"]).to eq(add_on_4.id)
+      expect(result_data["fixedCharges"].fourth["addOn"]["name"]).to eq(add_on_4.name)
+
+      expect(result_data["fixedCharges"].fifth["chargeModel"]).to eq("volume")
+      expect(result_data["fixedCharges"].fifth["units"]).to eq("50.0")
+      expect(result_data["fixedCharges"].fifth["properties"]["volumeRanges"].count).to eq(1)
+      expect(result_data["fixedCharges"].fifth["addOn"]["id"]).to eq(add_on_5.id)
+      expect(result_data["fixedCharges"].fifth["addOn"]["name"]).to eq(add_on_5.name)
+
+      expect(FixedChargeEvent.count).to eq(2)
+      expect(FixedChargeEvent.order(created_at: :asc).first).to have_attributes(units: BigDecimal("20"))
+      expect(FixedChargeEvent.order(created_at: :asc).second).to have_attributes(units: BigDecimal("30"))
     end
   end
 
