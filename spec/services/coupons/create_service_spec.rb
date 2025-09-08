@@ -181,6 +181,22 @@ RSpec.describe Coupons::CreateService, type: :service do
         expect { create_service.call }
           .to change(CouponTarget, :count).by(1)
       end
+
+      context "when a parent plan has childs" do
+        let(:child_plan) { create(:plan, organization:, parent: plan, code: plan.code) }
+
+        before { child_plan }
+
+        it "creates a coupon" do
+          expect { create_service.call }
+            .to change(Coupon, :count).by(1)
+        end
+
+        it "creates a coupon target" do
+          expect { create_service.call }
+            .to change(CouponTarget, :count).by(2)
+        end
+      end
     end
 
     context "with billable metric limitations in graphql context" do
