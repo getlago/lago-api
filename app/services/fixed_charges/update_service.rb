@@ -59,5 +59,14 @@ module FixedCharges
     attr_reader :fixed_charge, :params, :cascade_options, :cascade
 
     delegate :plan, to: :fixed_charge
+
+    def emit_events_for_active_subscriptions(fixed_charge)
+      plan.subscriptions.active.find_each do |subscription|
+        FixedCharges::EmitFixedChargeEventService.call!(
+          subscription:,
+          fixed_charge:
+        )
+      end
+    end
   end
 end
