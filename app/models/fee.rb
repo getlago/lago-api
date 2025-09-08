@@ -147,7 +147,6 @@ class Fee < ApplicationRecord
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
     return invoiceable.name.presence || fee_type if credit?
-    return fee_type if credit?
     return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
 
     subscription.plan.invoice_display_name
