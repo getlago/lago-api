@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe Types::FixedCharges::Input do
   subject { described_class }
 
+  it { is_expected.to accept_argument(:id).of_type("ID") }
   it { is_expected.to accept_argument(:add_on_id).of_type("ID!") }
   it { is_expected.to accept_argument(:apply_units_immediately).of_type("Boolean") }
   it { is_expected.to accept_argument(:charge_model).of_type("FixedChargeChargeModelEnum!") }
