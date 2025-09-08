@@ -12,8 +12,8 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false
-    argument :to_date, GraphQL::Types::ISO8601Date, required: false
+    argument :from_date, GraphQL::Types::ISO8601DateTime, required: false
+    argument :to_date, GraphQL::Types::ISO8601DateTime, required: false
 
     argument :api_key_ids, [String], required: false
     argument :http_methods, [Types::ApiLogs::HttpMethodEnum], required: false

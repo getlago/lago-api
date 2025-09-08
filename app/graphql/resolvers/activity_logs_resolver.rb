@@ -18,10 +18,10 @@ module Resolvers
     argument :api_key_ids, [String], required: false
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false
+    argument :from_date, GraphQL::Types::ISO8601DateTime, required: false
     argument :resource_ids, [String], required: false
     argument :resource_types, [Types::ActivityLogs::ResourceTypeEnum], required: false
-    argument :to_date, GraphQL::Types::ISO8601Date, required: false
+    argument :to_date, GraphQL::Types::ISO8601DateTime, required: false
     argument :user_emails, [String], required: false
 
     type Types::ActivityLogs::Object.collection_type, null: true
