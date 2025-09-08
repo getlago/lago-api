@@ -463,10 +463,17 @@ enum AggregationTypeEnum {
 type AiConversation {
   createdAt: ISO8601DateTime!
   id: ID!
+  messages: [AiConversationMessage!]
   mistralConversationId: String
   name: String!
   organization: Organization!
   updatedAt: ISO8601DateTime!
+}
+
+type AiConversationMessage {
+  content: String!
+  createdAt: ISO8601DateTime!
+  type: String!
 }
 
 type AiConversationStream {
@@ -8387,6 +8394,16 @@ type Query {
   Query add-ons of an organization
   """
   addOns(limit: Int, page: Int, searchTerm: String): AddOnCollection!
+
+  """
+  Query a single ai conversation of an organization
+  """
+  aiConversation(
+    """
+    Uniq ID of the ai conversation
+    """
+    id: ID!
+  ): AiConversation
 
   """
   Query a single alert
