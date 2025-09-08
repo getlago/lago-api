@@ -6,7 +6,26 @@ module Events
       NIL_GROUP_VALUE = "<nil>"
 
       def events(force_from: false, ordered: false)
-        # TODO(pre-aggregation): Implement
+        with_retry do
+          scope = ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization_id)
+            .where(charge_id:)
+            .where(charge_filter_id: charge_filter_id || "")
+
+          scope = scope.order(timestamp: :asc) if ordered
+          scope = scope.where(timestamp: from_datetime..) if force_from || use_from_boundary
+          scope = scope.where(timestamp: ..to_datetime) if to_datetime
+
+          scope = if grouped_by_values?
+            scope.where("toJSONString(sorted_grouped_by) = ?", formated_grouped_by_values)
+          else
+            # TODO: take grouped by into account when no grouped_by_values
+            scope.where(sorted_grouped_by: "{}")
+          end
+
+          scope
+        end
       end
 
       def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star])
@@ -29,12 +48,33 @@ module Events
         query.project(select).to_sql
       end
 
-      def events_values
-        # TODO(pre-aggregation): Implement
+      def distinct_charge_filter_ids
+        ::Clickhouse::EventsEnrichedExpanded
+          .where(subscription_id: subscription.id)
+          .where(organization_id: subscription.organization_id)
+          .where(timestamp: from_datetime..to_datetime)
+          .where.not(charge_filter_id: "")
+          .pluck("DISTINCT(charge_filter_id)")
+      end
+
+      def events_values(limit: nil, force_from: false, exclude_event: false)
+        with_retry do
+          scope = events(force_from:, ordered: true)
+
+          if exclude_event && filters[:event].present?
+            scope = scope.where.not(transaction_id: filters[:event].transaction_id)
+          end
+
+          scope = scope.limit(limit) if limit
+
+          scope.pluck(:decimal_value)
+        end
       end
 
       def prorated_events_values(total_duration)
-        # TODO(pre-aggregation): Implement
+        ratio_sql = duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, total_duration)
+
+        with_retry { events(ordered: true).pluck(Arel.sql("events_enriched_expanded.decimal_value * (#{ratio_sql})")) }
       end
 
       def last_event
@@ -56,7 +96,17 @@ module Events
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
-        # TODO(pre-aggregation): Implement
+        previous_event = with_retry do
+          events.where(value: event.properties[aggregation_property])
+            .where(timestamp: ...event.timestamp)
+            .order(timestamp: :desc)
+            .first
+        end
+
+        previous_event && (
+          previous_event.properties["operation_type"].nil? ||
+          previous_event.properties["operation_type"] == "add"
+        )
       end
 
       def unique_count
@@ -151,7 +201,7 @@ module Events
           .transform_values { |value| value || NIL_GROUP_VALUE }
           .sort_by { |key, _| key }
           .to_h
-          .to_json
+          .to_json(escape_html_entities: false) # to_json is escaping < and >, leading to invalid group keys when expecting "<nil>"
       end
 
       # NOTE: returns the values for each groups
