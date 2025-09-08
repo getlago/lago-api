@@ -144,4 +144,15 @@ FactoryBot.define do
       fee.write_attribute(:fixed_charge_id, evaluator.fixed_charge.id)
     end
   end
+
+  factory :credit_fee, parent: :fee do
+    transient do
+      wallet_transaction { association(:wallet_transaction, organization:) }
+    end
+    fee_type { "credit" }
+    invoiceable_id { wallet_transaction.id }
+    invoiceable_type { "WalletTransaction" }
+    subscription { nil }
+    charge { nil }
+  end
 end

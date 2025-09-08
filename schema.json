@@ -10850,6 +10850,18 @@
               "deprecationReason": null
             },
             {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paidCredits",
               "description": null,
               "type": {
@@ -24317,6 +24329,18 @@
                   "name": "Float",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "walletTransaction",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "WalletTransaction",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -59604,6 +59628,18 @@
               "args": []
             },
             {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "priority",
               "description": null,
               "type": {
@@ -59717,6 +59753,18 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Wallet",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "walletName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,

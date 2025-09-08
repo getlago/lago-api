@@ -95,6 +95,10 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
                 shortName
               }
             }
+            walletTransaction {
+              name
+              walletName
+            }
           }
         }
       }
@@ -354,6 +358,24 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
         expect(data["customer"]["name"]).to eq(customer.name)
         expect(data["customer"]["deletedAt"]).to eq(customer.deleted_at.iso8601)
       end
+    end
+  end
+
+  context "with a credit invoice" do
+    let(:invoice) { create(:invoice, :credit, customer:, organization:) }
+    let(:fee) { create(:credit_fee, invoice:, invoiceable: wallet_transaction) }
+    let(:wallet_transaction) { create(:wallet_transaction, organization:, wallet:) }
+    let(:wallet) { create(:wallet, organization:, name: "wallet name") }
+
+    before { fee }
+
+    it "returns the invoice with the credit invoice" do
+      result = execute_query(query:, variables: {id: invoice.id})
+
+      data = result["data"]["invoice"]
+      graphql_wallet_transaction = data.dig("fees", 0, "walletTransaction")
+      expect(graphql_wallet_transaction["name"]).to eq("Custom Transaction Name")
+      expect(graphql_wallet_transaction["walletName"]).to eq("wallet name")
     end
   end
 end

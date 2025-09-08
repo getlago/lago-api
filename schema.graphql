@@ -2644,6 +2644,7 @@ input CreateCustomerWalletTransactionInput {
   grantedCredits: String
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
+  name: String
   paidCredits: String
   priority: Int
   voidedCredits: String
@@ -5136,6 +5137,7 @@ type Fee implements InvoiceItem {
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
+  walletTransaction: WalletTransaction
 }
 
 type FeeAmountDetails {
@@ -11325,6 +11327,7 @@ type WalletTransaction {
   invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
+  name: String
   priority: Int!
   settledAt: ISO8601DateTime
   source: WalletTransactionSourceEnum!
@@ -11333,6 +11336,7 @@ type WalletTransaction {
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
   wallet: Wallet
+  walletName: String
 }
 
 """
