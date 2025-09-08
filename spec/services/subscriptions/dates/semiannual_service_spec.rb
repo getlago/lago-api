@@ -384,6 +384,23 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
           expect(result).to eq("2022-01-01 00:00:00 UTC")
         end
       end
+
+      context "when billing charge monthly" do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it "returns the begining of the previous month" do
+          expect(result).to eq("2022-06-01 00:00:00 UTC")
+        end
+
+        context "when subscription started in the middle of a period" do
+          let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+          let(:started_at) { Time.zone.parse("03 Mar 2022") }
+
+          it "returns the start date" do
+            expect(result).to eq(subscription.started_at.utc.to_s)
+          end
+        end
+      end
     end
 
     context "when billing_time is anniversary" do
@@ -457,6 +474,37 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
 
         it "returns the end of the previous period" do
           expect(result).to eq((date_service.from_datetime - 1.day).end_of_day.to_s)
+        end
+      end
+
+      context "when billing charge monthly" do
+        let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it "returns to_date" do
+          expect(result).to eq(date_service.to_datetime.to_s)
+        end
+
+        context "when subscription terminated in the middle of a period" do
+          let(:terminated_at) { Time.zone.parse("05 Mar 2022") }
+          let(:billing_at) { Time.zone.parse("07 Mar 2022") }
+
+          before { subscription.mark_as_terminated!(terminated_at) }
+
+          it "returns the terminated_at date" do
+            expect(result).to eq(subscription.terminated_at.utc.to_s)
+          end
+        end
+
+        context "when plan is pay in advance" do
+          let(:pay_in_advance) { true }
+          let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+          let(:billing_at) { Time.zone.parse("07 Mar 2022") }
+
+          it "returns the end of the current period" do
+            expect(result).to eq("2022-02-28 23:59:59 UTC")
+          end
         end
       end
     end
@@ -660,6 +708,14 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
           expect(result).to eq(182)
         end
       end
+
+      context "when billing charge monthly" do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it "returns the month duration" do
+          expect(result).to eq(30)
+        end
+      end
     end
 
     context "when billing_time is anniversary" do
@@ -677,6 +733,14 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
 
         it "returns the duration in days" do
           expect(result).to eq(181)
+        end
+      end
+
+      context "when billing charge monthly" do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        it "returns the month duration" do
+          expect(result).to eq(30)
         end
       end
     end

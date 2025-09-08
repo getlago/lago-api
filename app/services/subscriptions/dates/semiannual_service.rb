@@ -36,6 +36,8 @@ module Subscriptions
       end
 
       def compute_charges_from_date
+        return monthly_service.compute_charges_from_date if plan.bill_charges_monthly
+
         if terminated?
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_half_year
         end
@@ -47,6 +49,7 @@ module Subscriptions
       end
 
       def compute_charges_to_date
+        return monthly_service.compute_charges_to_date if plan.bill_charges_monthly
         return compute_charges_from_date.end_of_half_year if calendar?
 
         compute_to_date(compute_charges_from_date)
@@ -58,7 +61,11 @@ module Subscriptions
         (next_to_date.to_date + 1.day - from_date.to_date).to_i
       end
 
-      alias_method :compute_charges_duration, :compute_duration
+      def compute_charges_duration(from_date:)
+        return monthly_service.compute_charges_duration(from_date:) if plan.bill_charges_monthly
+
+        compute_duration(from_date:)
+      end
 
       def compute_base_date
         # NOTE: if subscription anniversary is on last day of month and current month days count
