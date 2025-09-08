@@ -839,6 +839,74 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
+    context "when adding a fixed charge with apply_units_immediately" do
+      let(:subscription) { create(:subscription, plan:) }
+
+      let(:fixed_charges_params) do
+        [
+          {
+            apply_units_immediately: true,
+            invoice_display_name: "Fixed charge 2",
+            units: 100,
+            add_on_id: add_on.id,
+            charge_model: "standard",
+            properties: {amount: "10"}
+          }
+        ]
+      end
+
+      before { subscription }
+
+      it "adds a fixed charge and creates fixed charge events for all active subscriptions" do
+        expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+        fixed_charge = FixedCharge.find(json[:plan][:fixed_charges].first[:lago_id])
+
+        expect(fixed_charge.events.first).to have_attributes(
+          subscription:,
+          fixed_charge:,
+          units: 100
+        )
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:fixed_charges].count).to eq(1)
+        expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 2")
+        expect(json[:plan][:fixed_charges].first[:units]).to eq("100.0")
+      end
+    end
+
+    context "when editing a fixed charge with apply_units_immediately" do
+      let(:subscription) { create(:subscription, plan:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, units: 1) }
+
+      let(:fixed_charges_params) do
+        [
+          {
+            id: fixed_charge.id,
+            apply_units_immediately: true,
+            units: 25,
+            properties: {amount: "10"}
+          }
+        ]
+      end
+
+      before { subscription }
+
+      it "updates a fixed charge and creates fixed charge events for all active subscriptions" do
+        expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+        expect(fixed_charge.events.first).to have_attributes(
+          subscription:,
+          fixed_charge:,
+          units: 25
+        )
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:fixed_charges].count).to eq(1)
+        expect(json[:plan][:fixed_charges].first[:units]).to eq("25.0")
+      end
+    end
+
     describe "update conversion rate on charges" do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
       let!(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: charge) }
