@@ -14,6 +14,7 @@ module Types
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
+    field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::UsageMonitoring::AlertResolver
     field :alerts, resolver: Resolvers::UsageMonitoring::SubscriptionAlertsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver

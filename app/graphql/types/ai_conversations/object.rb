@@ -8,8 +8,8 @@ module Types
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
 
-      field :mistral_conversation_id, String
       field :messages, [Types::AiConversations::Message]
+      field :mistral_conversation_id, String
       field :name, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
