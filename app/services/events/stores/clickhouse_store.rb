@@ -210,7 +210,7 @@ module Events
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }
