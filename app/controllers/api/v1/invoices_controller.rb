@@ -327,14 +327,6 @@ module Api
         )
       end
 
-      def valid_payment_status?(status)
-        Invoice.payment_statuses.key?(status)
-      end
-
-      def valid_statuses?(statuses)
-        Array.wrap(statuses).all? { |status| Invoice.statuses.key?(status) }
-      end
-
       def customer
         Customer.find_by(
           external_id: create_params[:external_customer_id],

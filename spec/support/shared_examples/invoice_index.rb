@@ -105,6 +105,21 @@ RSpec.shared_examples "an invoice index endpoint" do
       expect(json[:invoices].count).to eq(1)
       expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
     end
+
+    context "with statuses params" do
+      let(:params) { {statuses: ["finalized", "failed"]} }
+      let(:failed_invoice) { create(:invoice, :failed, customer:, organization:) }
+
+      before { failed_invoice }
+
+      it "returns invoices for the given statuses" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(2)
+        expect(json[:invoices].map { |i| i[:lago_id] }).to include(matching_invoice.id, failed_invoice.id)
+      end
+    end
   end
 
   context "with payment status param" do
@@ -113,10 +128,12 @@ RSpec.shared_examples "an invoice index endpoint" do
     let!(:matching_invoice) do
       create(:invoice, customer:, payment_status: :pending, organization:)
     end
+    let!(:payment_failed_invoice) do
+      create(:invoice, customer:, payment_status: :failed, organization:)
+    end
 
     before do
       create(:invoice, customer:, payment_status: :succeeded, organization:)
-      create(:invoice, customer:, payment_status: :failed, organization:)
     end
 
     it "returns invoices with correct payment status" do
@@ -125,6 +142,18 @@ RSpec.shared_examples "an invoice index endpoint" do
       expect(response).to have_http_status(:success)
       expect(json[:invoices].count).to eq(1)
       expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
+    end
+
+    context "with multiple payment statuses params" do
+      let(:params) { {payment_statuses: ["pending", "failed"]} }
+
+      it "returns invoices with correct payment status" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(2)
+        expect(json[:invoices].map { |i| i[:lago_id] }).to include(matching_invoice.id, payment_failed_invoice.id)
+      end
     end
   end
 

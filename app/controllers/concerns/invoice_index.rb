@@ -28,9 +28,9 @@ module InvoiceIndex
         partially_paid: params[:partially_paid],
         payment_dispute_lost: params[:payment_dispute_lost],
         payment_overdue: params[:payment_overdue],
-        payment_status: params[:payment_status],
+        payment_status: params[:payment_status] || params[:payment_statuses],
         self_billed: params[:self_billed],
-        status: params[:status]
+        status: params[:status] || params[:statuses]
       }
     )
 
