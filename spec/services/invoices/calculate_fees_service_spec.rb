@@ -1778,7 +1778,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500)
           expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_050)
           expect(result.invoice.progressive_billing_credit_amount_cents).to eq(3_000)
-          expect(result.invoice.total_amount_cents).to eq(9_726) # 17_050 - 1_000 (credit note) - 6_323 (wallet)
+          expect(result.invoice.total_amount_cents).to eq(9_727) # 17_050 - 1_000 (credit note) - 6_323 (wallet)
         end
       end
     end
