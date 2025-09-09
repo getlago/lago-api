@@ -768,4 +768,35 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
       end
     end
   end
+
+  describe "#unique_count" do
+    it "returns the number of unique active event properties" do
+      Clickhouse::EventsEnrichedExpanded.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        subscription_id: subscription.id,
+        plan_id: plan.id,
+        code:,
+        aggregation_type:,
+        charge_id:,
+        charge_version: charge.updated_at,
+        charge_filter_id: "",
+        charge_filter_version: "",
+        timestamp: boundaries[:from_datetime] + 3.days,
+        properties: {
+          billable_metric.field_name => 2,
+          :operation_type => "remove"
+        },
+        value: "2",
+        decimal_value: 2.0,
+        precise_total_amount_cents: 0,
+        grouped_by: {}
+      )
+
+      event_store.aggregation_property = billable_metric.field_name
+
+      expect(event_store.unique_count).to eq(4) # 5 events added / 1 removed
+    end
+  end
 end

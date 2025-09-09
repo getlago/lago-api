@@ -175,7 +175,18 @@ module Events
       end
 
       def unique_count
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {decimal_scale: DECIMAL_SCALE}
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
       def unique_count_breakdown
