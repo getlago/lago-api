@@ -24,7 +24,9 @@ module Wallets
         name: params[:name],
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
-        status: :active
+        status: :active,
+        paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
+        paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents]
       }
 
       if params.key?(:invoice_requires_successful_payment)

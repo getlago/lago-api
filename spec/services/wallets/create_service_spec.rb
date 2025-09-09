@@ -24,7 +24,9 @@ RSpec.describe Wallets::CreateService, type: :service do
         rate_amount: "1.00",
         expiration_at:,
         paid_credits:,
-        granted_credits:
+        granted_credits:,
+        paid_top_up_min_amount_cents: 1_00,
+        paid_top_up_max_amount_cents: 1_000_00
       }
     end
 
@@ -44,6 +46,8 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(wallet.recurring_transaction_rules.count).to eq(0)
         expect(wallet.invoice_requires_successful_payment).to eq(false)
+        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
       end
     end
 

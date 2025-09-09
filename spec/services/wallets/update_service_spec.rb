@@ -23,7 +23,9 @@ RSpec.describe Wallets::UpdateService, type: :service do
         id: wallet&.id,
         name: "new name",
         expiration_at:,
-        invoice_requires_successful_payment: true
+        invoice_requires_successful_payment: true,
+        paid_top_up_min_amount_cents: 1_00,
+        paid_top_up_max_amount_cents: 1_000_00
       }
     end
 
@@ -35,6 +37,8 @@ RSpec.describe Wallets::UpdateService, type: :service do
         expect(result.wallet.name).to eq("new name")
         expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(result.wallet.invoice_requires_successful_payment).to eq(true)
+        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)

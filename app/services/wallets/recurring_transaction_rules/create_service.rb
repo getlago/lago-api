@@ -32,6 +32,10 @@ module Wallets
           transaction_metadata: rule_params[:transaction_metadata] || []
         }
 
+        if rule_params.key? :ignore_paid_top_up_limits
+          attributes[:ignore_paid_top_up_limits] = ActiveModel::Type::Boolean.new.cast(rule_params[:ignore_paid_top_up_limits])
+        end
+
         attributes[:invoice_requires_successful_payment] = if rule_params.key?(:invoice_requires_successful_payment)
           ActiveModel::Type::Boolean.new.cast(rule_params[:invoice_requires_successful_payment])
         else

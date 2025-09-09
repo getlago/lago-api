@@ -22,7 +22,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       granted_credits: "5.0",
       started_at: "2024-05-30T12:48:26Z",
       target_ongoing_balance: "100.0",
-      trigger: "interval"
+      trigger: "interval",
+      ignore_paid_top_up_limits: "true"
     }
   end
 
@@ -48,7 +49,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           target_ongoing_balance: 100.0,
           threshold_credits: 0.0,
           trigger: "interval",
-          invoice_requires_successful_payment: false
+          invoice_requires_successful_payment: false,
+          ignore_paid_top_up_limits: true
         )
       end
 

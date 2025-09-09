@@ -20,6 +20,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           currency
           expirationAt
           invoiceRequiresSuccessfulPayment
+          paidTopUpMinAmountCents
+          paidTopUpMaxAmountCents
           recurringTransactionRules {
             lagoId
             method
@@ -31,6 +33,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
             expirationAt
+            ignorePaidTopUpLimits
             transactionMetadata {
               key
               value
@@ -72,6 +75,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
           expirationAt: expiration_at.iso8601,
           currency: "EUR",
           invoiceRequiresSuccessfulPayment: true,
+          paidTopUpMinAmountCents: 1_00,
+          paidTopUpMaxAmountCents: 100_00,
           recurringTransactionRules: [
             {
               method: "target",
@@ -80,6 +85,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               targetOngoingBalance: "0.0",
               invoiceRequiresSuccessfulPayment: true,
               expirationAt: expiration_at.iso8601,
+              ignorePaidTopUpLimits: true,
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
@@ -101,6 +107,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data["name"]).to eq("First Wallet")
       expect(result_data["invoiceRequiresSuccessfulPayment"]).to eq(true)
       expect(result_data["expirationAt"]).to eq(expiration_at.iso8601)
+      expect(result_data["paidTopUpMinAmountCents"]).to eq("100")
+      expect(result_data["paidTopUpMaxAmountCents"]).to eq("10000")
       expect(result_data["recurringTransactionRules"].count).to eq(1)
       expect(result_data["recurringTransactionRules"][0]["lagoId"]).to be_present
       expect(result_data["recurringTransactionRules"][0]["method"]).to eq("target")
@@ -109,6 +117,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data["recurringTransactionRules"][0]["paidCredits"]).to eq("0.0")
       expect(result_data["recurringTransactionRules"][0]["grantedCredits"]).to eq("0.0")
       expect(result_data["recurringTransactionRules"][0]["invoiceRequiresSuccessfulPayment"]).to eq(true)
+      expect(result_data["recurringTransactionRules"][0]["ignorePaidTopUpLimits"]).to eq(true)
       expect(result_data["recurringTransactionRules"][0]["transactionMetadata"]).to contain_exactly(
         {"key" => "example_key", "value" => "example_value"},
         {"key" => "another_key", "value" => "another_value"}
