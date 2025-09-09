@@ -99,7 +99,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                grouped_by,
                 property,
                 operation_type,
                 timestamp
@@ -108,25 +108,25 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  grouped_by,
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
+              GROUP BY grouped_by, property, operation_type, timestamp
             )
 
             SELECT
-              #{group_names},
+              grouped_by::JSON,
               coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
+                grouped_by
               FROM event_values
             ) cumulated_ratios
-            GROUP BY #{group_names}
+            GROUP BY grouped_by
           SQL
         end
 
@@ -304,24 +304,43 @@ module Events
             toDecimal128(
               if(
                 operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
+                (
+                  -- inclusive day count in customer TZ, same as PG
                   date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:from_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    'days',
+                    toDate(
+                      toTimezone(
+                        if(
+                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          timestamp
+                        ),
+                        :timezone
+                      )
                     ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
+                    toDate(
+                      toTimezone(
+                        if(
+                          -- if next event is before the period start, clamp to :from_datetime (no +1 day),
+                          -- else add 1 day to make the range inclusive, just like PG does.
+                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                            OVER (PARTITION BY property ORDER BY timestamp ASC
+                              ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          addDays(
+                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                              OVER (PARTITION BY property ORDER BY timestamp ASC
+                                ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            ),
+                            1
+                          )
+                        ),
+                        :timezone
+                      )
+                    )
+                  ) / #{charges_duration || 1}
+                ),
                 0
               ),
               :decimal_scale
@@ -334,33 +353,45 @@ module Events
             toDecimal128(
               if(
                 operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
+                (
                   date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:to_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    'days',
+                    toDate(
+                      toTimezone(
+                        if(
+                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          timestamp
+                        ),
+                        :timezone
+                      )
                     ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
+                    toDate(
+                      toTimezone(
+                        if(
+                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                            OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC
+                              ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          addDays(
+                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                              OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC
+                                ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            ),
+                            1
+                          )
+                        ),
+                        :timezone
+                      )
+                    )
+                  ) / #{charges_duration || 1}
+                ),
                 0
               ),
               :decimal_scale
             )
           SQL
-        end
-
-        def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end

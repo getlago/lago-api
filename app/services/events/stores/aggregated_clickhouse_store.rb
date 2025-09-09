@@ -202,7 +202,7 @@ module Events
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }
@@ -220,7 +220,7 @@ module Events
             [
               sanitize_colon(query.grouped_query),
               {
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE
               }
             ]
@@ -231,7 +231,22 @@ module Events
       end
 
       def grouped_prorated_unique_count
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       def max
