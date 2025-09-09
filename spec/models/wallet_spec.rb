@@ -21,7 +21,7 @@ RSpec.describe Wallet, type: :model do
       subject.paid_top_up_max_amount_cents = 1
 
       expect(subject).not_to be_valid
-      expect(subject.errors["paid_top_up_max_amount_cents"]).to eq ["must_be_greater_than_min"]
+      expect(subject.errors["paid_top_up_max_amount_cents"]).to eq ["must_be_greater_than_or_equal_min"]
 
       subject.paid_top_up_max_amount_cents = subject.paid_top_up_min_amount_cents
       expect(subject).to be_valid

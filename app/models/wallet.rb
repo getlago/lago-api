@@ -26,7 +26,7 @@ class Wallet < ApplicationRecord
   validates :currency, inclusion: {in: currency_list}
   validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
-  validate :paid_top_up_max_greater_than_min
+  validate :paid_top_up_max_greater_than_or_equal_min
 
   STATUSES = [
     :active,
@@ -62,12 +62,12 @@ class Wallet < ApplicationRecord
 
   private
 
-  def paid_top_up_max_greater_than_min
+  def paid_top_up_max_greater_than_or_equal_min
     return if paid_top_up_min_amount_cents.nil?
     return if paid_top_up_max_amount_cents.nil?
 
     if paid_top_up_max_amount_cents < paid_top_up_min_amount_cents
-      errors.add(:paid_top_up_max_amount_cents, :must_be_greater_than_min)
+      errors.add(:paid_top_up_max_amount_cents, :must_be_greater_than_or_equal_min)
     end
   end
 end
