@@ -2,8 +2,12 @@
 
 module Events
   module Stores
-    class AggregatedClickhouseStore < ClickhouseStore
+    class AggregatedClickhouseStore < BaseStore
+      include Concerns::ClickhouseConnection
+      include Concerns::ClickhouseSqlHelpers
+
       NIL_GROUP_VALUE = "<nil>"
+      DECIMAL_SCALE = 26
 
       def events(force_from: false, ordered: false)
         with_retry do
