@@ -236,6 +236,107 @@ RSpec.describe FixedCharges::OverrideService do
           expect(result.error.messages[:properties]).to eq(["value_is_mandatory"])
         end
       end
+
+      context "when apply_units_immediately is true" do
+        let(:customer_1) { create(:customer, organization:) }
+        let(:customer_2) { create(:customer, organization:) }
+        let(:active_subscription_1) { create(:subscription, :active, plan: plan2, customer: customer_1) }
+        let(:active_subscription_2) { create(:subscription, :active, plan: plan2, customer: customer_2) }
+        let(:terminated_subscription) { create(:subscription, :terminated, plan: plan2, customer: customer_1) }
+
+        let(:params) do
+          {
+            apply_units_immediately: true,
+            units: 25,
+            plan_id: plan2.id
+          }
+        end
+
+        before do
+          active_subscription_1
+          active_subscription_2
+          terminated_subscription
+          allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+        end
+
+        it "updates the fixed charge" do
+          result = override_service.call
+
+          expect(result).to be_success
+          expect(result.fixed_charge.units).to eq(25)
+        end
+
+        it "emits fixed charge events for all active subscriptions" do
+          result = override_service.call
+
+          expect(FixedCharges::EmitFixedChargeEventService)
+            .to have_received(:call!)
+            .with(subscription: active_subscription_1, fixed_charge: result.fixed_charge)
+            .once
+
+          expect(FixedCharges::EmitFixedChargeEventService)
+            .to have_received(:call!)
+            .with(subscription: active_subscription_2, fixed_charge: result.fixed_charge)
+            .once
+        end
+
+        it "does not emit events for terminated subscriptions" do
+          result = override_service.call
+
+          expect(FixedCharges::EmitFixedChargeEventService)
+            .not_to have_received(:call!)
+            .with(subscription: terminated_subscription, fixed_charge: result.fixed_charge)
+        end
+
+        context "when units does not change" do
+          let(:params) do
+            {
+              apply_units_immediately: true,
+              units: fixed_charge.units,
+              properties: {amount: "200"},
+              plan_id: plan2.id
+            }
+          end
+
+          it "does not emit any fixed charge events" do
+            override_service.call
+
+            expect(FixedCharges::EmitFixedChargeEventService).not_to have_received(:call!)
+          end
+        end
+      end
+
+      context "when apply_units_immediately is false" do
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) { create(:subscription, plan:, customer:) }
+
+        let(:params) do
+          {
+            apply_units_immediately: false,
+            units: 1_000,
+            properties: {amount: "200"},
+            plan_id: plan2.id
+          }
+        end
+
+        before do
+          subscription
+          allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+        end
+
+        it "updates the fixed charge" do
+          result = override_service.call
+
+          expect(result).to be_success
+          expect(result.fixed_charge.units).to eq(1_000)
+        end
+
+        it "does not emit any fixed charge events" do
+          override_service.call
+
+          expect(FixedCharges::EmitFixedChargeEventService).not_to have_received(:call!)
+        end
+      end
     end
   end
 end
