@@ -470,6 +470,21 @@ type AiConversation {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+AiConversationCollection type
+"""
+type AiConversationCollection {
+  """
+  A collection of paginated AiConversationCollection
+  """
+  collection: [AiConversation!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type AiConversationMessage {
   content: String!
   createdAt: ISO8601DateTime!
@@ -8404,6 +8419,11 @@ type Query {
     """
     id: ID!
   ): AiConversation
+
+  """
+  Query the latest AI conversations of current organization
+  """
+  aiConversations(limit: Int): AiConversationCollection
 
   """
   Query a single alert
