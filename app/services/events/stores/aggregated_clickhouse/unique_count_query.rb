@@ -23,7 +23,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
@@ -47,19 +47,20 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
+            ),
+            cumulated_ratios AS (
+              SELECT (#{period_ratio_sql(partition_by: %w[property])}) AS period_ratio
+              FROM event_values
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
-            FROM (
-              SELECT (#{period_ratio_sql}) AS period_ratio
-              FROM event_values
-            ) cumulated_ratios
+            FROM cumulated_ratios
           SQL
         end
 
@@ -78,7 +79,7 @@ module Events
                   property,
                   operation_type,
                   grouped_by,
-                  #{grouped_operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
@@ -99,7 +100,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                grouped_by,
                 property,
                 operation_type,
                 timestamp
@@ -108,25 +109,26 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
-                  #{grouped_operation_value_sql} AS adjusted_value
+                  grouped_by,
+                  #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
+              GROUP BY grouped_by, property, operation_type, timestamp
+            ),
+            cumulated_ratios AS (
+              SELECT
+                (#{period_ratio_sql(partition_by: %w[grouped_by property])}) AS period_ratio,
+                grouped_by
+              FROM event_values
             )
 
             SELECT
-              #{group_names},
+              grouped_by::JSON,
               coalesce(SUM(period_ratio), 0) as aggregation
-            FROM (
-              SELECT
-                (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
-              FROM event_values
-            ) cumulated_ratios
-            GROUP BY #{group_names}
+            FROM cumulated_ratios
+            GROUP BY grouped_by
           SQL
         end
 
@@ -148,7 +150,7 @@ module Events
               timestamp,
               property,
               operation_type,
-              #{operation_value_sql},
+              #{operation_value_sql(partition_by: %w[property])},
               anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
             ORDER BY timestamp ASC
@@ -168,7 +170,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
@@ -183,7 +185,7 @@ module Events
               operation_type
             FROM (
               SELECT
-                (#{period_ratio_sql}) AS prorated_value,
+                (#{period_ratio_sql(partition_by: %w[property])}) AS prorated_value,
                 timestamp,
                 property,
                 operation_type
@@ -255,7 +257,9 @@ module Events
           SQL
         end
 
-        def operation_value_sql
+        def operation_value_sql(partition_by:)
+          partition = partition_by.join(", ")
+
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
@@ -263,13 +267,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                (anyOrNull(operation_type) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -277,90 +281,55 @@ module Events
           SQL
         end
 
-        def grouped_operation_value_sql
-          # NOTE: Returns 1 for relevant addition, -1 for relevant removal
-          # If property already added, another addition returns 0 ; it returns 1 otherwise
-          # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
-          <<-SQL
-            if (
-              operation_type = 'add',
-              (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(1, :decimal_scale)
-              ))
-              ,
-              (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(-1, :decimal_scale)
-              ))
-            )
-          SQL
-        end
+        def period_ratio_sql(partition_by:)
+          partition = partition_by.join(", ")
 
-        def period_ratio_sql
           <<-SQL
             toDecimal128(
               if(
                 operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
+                (
+                  -- inclusive day count in customer TZ, same as PG
                   date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:from_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    'days',
+                    toDate(
+                      toTimezone(
+                        if(
+                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          timestamp
+                        ),
+                        :timezone
+                      )
                     ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
+                    toDate(
+                      toTimezone(
+                        if(
+                          -- if next event is before the period start, clamp to :from_datetime (no +1 day),
+                          -- else add 1 day to make the range inclusive, just like PG does.
+                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                            OVER (PARTITION BY #{partition} ORDER BY timestamp ASC
+                              ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          addDays(
+                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                              OVER (PARTITION BY #{partition} ORDER BY timestamp ASC
+                                ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            ),
+                            1
+                          )
+                        ),
+                        :timezone
+                      )
+                    )
+                  ) / #{charges_duration || 1}
+                ),
                 0
               ),
               :decimal_scale
             )
           SQL
-        end
-
-        def grouped_period_ratio_sql
-          <<-SQL
-            toDecimal128(
-              if(
-                operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
-                  date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:to_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                    ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
-                0
-              ),
-              :decimal_scale
-            )
-          SQL
-        end
-
-        def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end
