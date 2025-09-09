@@ -347,6 +347,36 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           end
         end
       end
+
+      context "when transaction_name is set" do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "Wallet1",
+            currency: "EUR",
+            paid_credits: "10",
+            expiration_at:,
+            recurring_transaction_rules: [
+              {
+                trigger: "interval",
+                interval: "monthly",
+                transaction_name: "Custom Wallet Top-up"
+              }
+            ]
+          }
+        end
+
+        it "creates the rule with transaction_name" do
+          subject
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:transaction_name]).to eq("Custom Wallet Top-up")
+        end
+      end
     end
 
     context "with limitations" do
@@ -575,6 +605,39 @@ RSpec.describe Api::V1::WalletsController, type: :request do
             expect(response).to have_http_status(:success)
             expect(recurring_rules).to be_present
             expect(recurring_rules.first[:transaction_metadata]).to eq(update_transaction_metadata)
+
+            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+          end
+        end
+      end
+
+      context "when transaction_name is updated" do
+        let(:update_params) do
+          {
+            name: "wallet1",
+            recurring_transaction_rules: [
+              {
+                lago_id: recurring_transaction_rule.id,
+                method: "target",
+                trigger: "interval",
+                interval: "weekly",
+                paid_credits: "105",
+                granted_credits: "105",
+                target_ongoing_balance: "300",
+                transaction_name: "Updated Transaction Name"
+              }
+            ]
+          }
+        end
+
+        it "updates the rule with transaction_name" do
+          subject
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:transaction_name]).to eq("Updated Transaction Name")
 
             expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
           end

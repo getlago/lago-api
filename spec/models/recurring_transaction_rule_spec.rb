@@ -19,6 +19,10 @@ RSpec.describe RecurringTransactionRule, type: :model do
     end
   end
 
+  describe "validations" do
+    it { is_expected.to validate_length_of(:transaction_name).is_at_least(1).is_at_most(255).allow_nil }
+  end
+
   describe "scopes" do
     let!(:active_rule) { create(:recurring_transaction_rule, status: :active, expiration_at: nil) }
     let!(:future_rule) { create(:recurring_transaction_rule, status: :active, expiration_at: 1.day.from_now) }

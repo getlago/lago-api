@@ -18,7 +18,8 @@ module Wallets
             granted_credits: granted_credits.to_s,
             source: :interval,
             invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?,
-            metadata: recurring_transaction_rule.transaction_metadata
+            metadata: recurring_transaction_rule.transaction_metadata,
+            name: recurring_transaction_rule.transaction_name
           }
         )
       end
@@ -84,7 +85,7 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-        WHERE wallets.status = #{Wallet.statuses[:active]} 
+        WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}

@@ -8,5 +8,6 @@ FactoryBot.define do
     granted_credits { "10.00" }
     interval { "monthly" }
     trigger { "interval" }
+    transaction_name { "Recurring Transaction Rule" }
   end
 end
