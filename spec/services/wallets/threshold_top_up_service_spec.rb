@@ -42,7 +42,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             granted_credits: "3.0",
             source: :threshold,
             invoice_requires_successful_payment: false,
-            metadata: []
+            metadata: [],
+            name: "Recurring Transaction Rule"
           },
           unique_transaction: true
         )
@@ -91,6 +92,29 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
           .with(
             organization_id: wallet.organization.id,
             params: hash_including(metadata: transaction_metadata),
+            unique_transaction: true
+          )
+      end
+    end
+
+    context "when rule contains nil transaction_name" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          paid_credits: "10.0",
+          granted_credits: "3.0",
+          transaction_name: nil
+        )
+      end
+
+      it "calls wallet transaction create job with the transaction name" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          .with(
+            organization_id: wallet.organization.id,
+            params: hash_including(name: nil),
             unique_transaction: true
           )
       end
@@ -154,7 +178,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               granted_credits: "0.0",
               source: :threshold,
               invoice_requires_successful_payment: false,
-              metadata: []
+              metadata: [],
+              name: "Recurring Transaction Rule"
             },
             unique_transaction: true
           )

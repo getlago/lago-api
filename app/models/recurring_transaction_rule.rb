@@ -6,6 +6,8 @@ class RecurringTransactionRule < ApplicationRecord
   belongs_to :wallet
   belongs_to :organization
 
+  validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
+
   STATUSES = [
     :active,
     :terminated
@@ -33,17 +35,17 @@ class RecurringTransactionRule < ApplicationRecord
   enum :trigger, TRIGGERS
   enum :status, STATUSES
 
-  def mark_as_terminated!(timestamp = Time.zone.now)
-    self.terminated_at ||= timestamp
-    terminated!
-  end
-
   scope :active, -> { where(status: statuses[:active]).where("expiration_at IS NULL OR expiration_at > ?", Time.current) }
   scope :eligible_for_termination, -> {
     where(status: statuses[:active])
       .where("expiration_at IS NOT NULL AND expiration_at <= ?", Time.current)
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
+  end
 
   def apply_min_top_up_limits(credit_amount:)
     if ignore_paid_top_up_limits?
@@ -101,6 +103,7 @@ end
 #  terminated_at                       :datetime
 #  threshold_credits                   :decimal(30, 5)   default(0.0)
 #  transaction_metadata                :jsonb
+#  transaction_name                    :string(255)
 #  trigger                             :integer          default("interval"), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null

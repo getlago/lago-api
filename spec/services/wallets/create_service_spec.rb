@@ -204,6 +204,29 @@ RSpec.describe Wallets::CreateService, type: :service do
         end
       end
 
+      context "when recurring transaction rule has transaction_name" do
+        let(:rules) do
+          [
+            {
+              interval: "monthly",
+              method: "target",
+              paid_credits: "10.0",
+              granted_credits: "5.0",
+              target_ongoing_balance: "100.0",
+              trigger: "interval",
+              transaction_name: "Custom Top-up"
+            }
+          ]
+        end
+
+        it "creates a recurring rule with transaction_name" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+
+          wallet = service_result.wallet
+          expect(wallet.reload.recurring_transaction_rules.first.transaction_name).to eq("Custom Top-up")
+        end
+      end
+
       context "when number of rules is incorrect" do
         let(:rules) do
           [
