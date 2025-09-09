@@ -331,8 +331,8 @@ module Api
         Invoice.payment_statuses.key?(status)
       end
 
-      def valid_status?(status)
-        Invoice.statuses.key?(status)
+      def valid_statuses?(statuses)
+        Array.wrap(statuses).all? { |status| Invoice.statuses.key?(status) }
       end
 
       def customer
