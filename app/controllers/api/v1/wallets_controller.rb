@@ -89,6 +89,7 @@ module Api
           :invoice_requires_successful_payment,
           :paid_top_up_min_amount_cents,
           :paid_top_up_max_amount_cents,
+          :ignore_paid_top_up_limits_on_creation,
           transaction_metadata: [
             :key,
             :value

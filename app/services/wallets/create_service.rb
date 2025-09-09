@@ -39,6 +39,8 @@ module Wallets
 
       wallet = Wallet.new(attributes)
 
+      return result unless wallet_amount_valid?(wallet)
+
       ActiveRecord::Base.transaction do
         if params[:currency].present?
           Customers::UpdateCurrencyService.call!(customer: result.current_customer, currency: params[:currency])
@@ -84,6 +86,15 @@ module Wallets
 
     def valid?
       Wallets::ValidateService.new(result, **params).valid?
+    end
+
+    def wallet_amount_valid?(wallet)
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: ActiveModel::Type::Integer.new.cast(params[:paid_credits]),
+        ignore_validation: params[:ignore_paid_top_up_limits_on_creation]
+      ).valid?
     end
 
     def billable_metric_identifiers
