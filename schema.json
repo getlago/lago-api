@@ -10699,6 +10699,18 @@
               "deprecationReason": null
             },
             {
+              "name": "ignorePaidTopUpLimitsOnCreation",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paidTopUpMaxAmountCents",
               "description": null,
               "type": {
