@@ -189,12 +189,40 @@ module Events
         result["aggregation"]
       end
 
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def unique_count_breakdown
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {decimal_scale: DECIMAL_SCALE}
+              ]
+            )
+          ).rows
+        end
       end
 
       def prorated_unique_count
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
