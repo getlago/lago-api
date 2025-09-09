@@ -69,7 +69,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                grouped_by,
                 property,
                 SUM(adjusted_value) AS sum_adjusted_value
               FROM (
@@ -77,19 +77,19 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  grouped_by,
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names}, property
+              GROUP BY grouped_by, property
             )
 
             SELECT
-              #{group_names},
+              grouped_by::JSON,
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names}
+            GROUP BY grouped_by
           SQL
         end
 
@@ -228,13 +228,15 @@ module Events
         end
 
         def grouped_events_cte_sql
-          groups, _ = grouped_arel_columns
-
           <<-SQL
             WITH events_data AS (#{
               events_sql(
                 ordered: true,
-                select: groups + [
+                select: [
+                  Arel::Nodes::NamedFunction.new(
+                    "toJSONString",
+                    [arel_enriched_table[:sorted_grouped_by]]
+                  ).as("grouped_by"),
                   arel_enriched_table[:timestamp].as("timestamp"),
                   arel_enriched_table[:value].as("property"),
                   Arel::Nodes::NamedFunction.new(
@@ -283,13 +285,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                (anyOrNull(operation_type) OVER (PARTITION BY grouped_by, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
