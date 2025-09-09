@@ -2,8 +2,12 @@
 
 module Events
   module Stores
-    class AggregatedClickhouseStore < ClickhouseStore
+    class AggregatedClickhouseStore < BaseStore
+      include Concerns::ClickhouseConnection
+      include Concerns::ClickhouseSqlHelpers
+
       NIL_GROUP_VALUE = "<nil>"
+      DECIMAL_SCALE = 26
 
       def events(force_from: false, ordered: false)
         with_retry do
@@ -55,7 +59,7 @@ module Events
           query
         end
 
-        query.project(select).to_sql
+        "#{query.project(select).to_sql} LIMIT 1 by events_enriched_expanded.transaction_id"
       end
 
       def aggregated_events_sql(force_from: false, select: aggregated_arel_table[Arel.star], group: nil, order: nil)

@@ -10,29 +10,31 @@ module Events
 
         def query
           <<-SQL
-            #{events_cte_sql}
-
-            SELECT sum(period_ratio) as aggregation
-            FROM (
+            #{events_cte_sql},
+            cumulated_ratios AS (
               SELECT (#{period_ratio_sql}) as period_ratio
               FROM events_data
-            ) cumulated_ratios
+            )
+
+            SELECT sum(period_ratio) as aggregation
+            FROM cumulated_ratios
           SQL
         end
 
         def grouped_query(initial_values:)
           <<-SQL
-            #{grouped_events_cte_sql(initial_values)}
-
-            SELECT
-              grouped_by::JSON,
-              SUM(period_ratio) as aggregation
-            FROM (
+            #{grouped_events_cte_sql(initial_values)},
+            cumulated_ratios AS (
               SELECT
                 grouped_by,
                 (#{grouped_period_ratio_sql}) AS period_ratio
               FROM events_data
-            ) cumulated_ratios
+            )
+
+            SELECT
+              grouped_by::JSON,
+              SUM(period_ratio) as aggregation
+            FROM cumulated_ratios
             GROUP BY grouped_by
           SQL
         end

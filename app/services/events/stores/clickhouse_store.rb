@@ -3,8 +3,10 @@
 module Events
   module Stores
     class ClickhouseStore < BaseStore
+      include Concerns::ClickhouseConnection
+      include Concerns::ClickhouseSqlHelpers
+
       DECIMAL_SCALE = 26
-      MAX_RETRIES = 3
 
       def events(force_from: false, ordered: false)
         with_retry do
@@ -638,27 +640,6 @@ module Events
         )
       end
 
-      def date_in_customer_timezone_sql(date)
-        sql = if date.is_a?(String)
-          "toTimezone(#{date}, :timezone)"
-        else
-          "toTimezone(toDateTime64(:date, 5, 'UTC'), :timezone)"
-        end
-
-        ActiveRecord::Base.sanitize_sql_for_conditions(
-          [sql, {date:, timezone: customer.applicable_timezone}]
-        )
-      end
-
-      # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
-      #       Dates are in customer timezone to make sure the duration is good
-      def duration_ratio_sql(from, to, duration)
-        from_in_timezone = date_in_customer_timezone_sql(from)
-        to_in_timezone = date_in_customer_timezone_sql(to)
-
-        "(date_diff('days', #{from_in_timezone}, #{to_in_timezone}) + 1) / #{duration}"
-      end
-
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
@@ -689,38 +670,6 @@ module Events
           end,
           grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         ]
-      end
-
-      def with_retry(&)
-        attempts = 0
-
-        begin
-          attempts += 1
-
-          yield
-        rescue Errno::ECONNRESET, ActiveRecord::ActiveRecordError, NoMethodError
-          if attempts < MAX_RETRIES
-            sleep(0.05)
-            retry
-          end
-
-          raise
-        end
-      end
-
-      def connection_with_retry(&)
-        attempts = 0
-
-        begin
-          attempts += 1
-          ::Clickhouse::BaseRecord.with_connection(&)
-        rescue Errno::ECONNRESET, ActiveRecord::ActiveRecordError, NoMethodError
-          if attempts < MAX_RETRIES
-            sleep(0.05)
-            retry
-          end
-          raise
-        end
       end
     end
   end
