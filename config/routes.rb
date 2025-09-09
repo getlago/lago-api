@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   mount Sidekiq::Web, at: "/sidekiq" if ENV["LAGO_SIDEKIQ_WEB"] == "true" && defined? Sidekiq::Web
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
-  mount Yabeda::Prometheus::Exporter, at: "/probe"
+  mount Yabeda::Prometheus::Exporter, at: "/metrics"
 
   post "/graphql", to: "graphql#execute"
 
