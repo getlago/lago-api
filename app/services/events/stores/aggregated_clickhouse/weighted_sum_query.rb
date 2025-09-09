@@ -25,7 +25,7 @@ module Events
             #{grouped_events_cte_sql(initial_values)}
 
             SELECT
-              grouped_by,
+              grouped_by::JSON,
               SUM(period_ratio) as aggregation
             FROM (
               SELECT
@@ -142,46 +142,26 @@ module Events
 
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
-              "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-            end
-
             [
-              groups,
+              "'#{formated_groupes_values(initial_value)}'",
               "toDateTime64(:from_datetime, 5, 'UTC')",
               "toDecimal128(#{initial_value[:value]}, :decimal_scale)"
-            ].flatten.join(", ")
+            ].join(", ")
           end
 
-          <<-SQL
-            SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{store.grouped_by.count + 1} AS timestamp,
-              tuple.#{store.grouped_by.count + 2} AS difference
-            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
-          SQL
+          tuple_select_sql(values)
         end
 
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
-              "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-            end
-
             [
-              groups,
+              "'#{formated_groupes_values(initial_value)}'",
               "toDateTime64(:to_datetime, 5, 'UTC')",
               "toDecimal128(0, :decimal_scale)"
-            ].flatten.join(", ")
+            ].join(", ")
           end
 
-          <<-SQL
-            SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{store.grouped_by.count + 1} AS timestamp,
-              tuple.#{store.grouped_by.count + 2} AS difference
-            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
-          SQL
+          tuple_select_sql(values)
         end
 
         def grouped_period_ratio_sql
@@ -202,6 +182,24 @@ module Events
               -- NOTE: duration was null so usage is null
               toDecimal128(0, :decimal_scale)
             )
+          SQL
+        end
+
+        def formated_groupes_values(initial_value)
+          store.grouped_by
+            .index_with { initial_value[:groups][it] || store.class::NIL_GROUP_VALUE }
+            .sort_by { |key, _| key }
+            .to_h
+            .to_json(escape_html_entities: false)
+        end
+
+        def tuple_select_sql(values)
+          <<-SQL
+            SELECT
+              tuple.1 AS grouped_by,
+              tuple.2 AS timestamp,
+              tuple.3 AS difference
+            FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
         end
       end
