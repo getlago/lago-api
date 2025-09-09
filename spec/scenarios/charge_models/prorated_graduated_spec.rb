@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false do
-  let(:organization) { create(:organization, webhook_url: nil) }
+describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false, clickhouse: true do
+  let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }
 
@@ -674,14 +674,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           }
         )
 
-        travel_to(DateTime.new(2023, 9, 10)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 9, 10)) do
+          puts "\n  DateTime.new(2025, 9, 10)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2025-09-10 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-09-10 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -690,14 +705,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
-        travel_to(DateTime.new(2023, 9, 12)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "remove"}
-            }
+        travel_to(DateTime.new(2025, 9, 12)) do
+          puts "\n  DateTime.new(2025, 9, 12)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "remove"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2025-09-12 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "remove"
+            },
+            timestamp: Time.zone.parse("2025-09-12 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -706,14 +736,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
         end
 
-        travel_to(DateTime.new(2023, 9, 14)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 9, 14)) do
+          puts "\n  DateTime.new(2025, 9, 14)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2025-09-14 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-09-14 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -722,14 +767,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
-        travel_to(DateTime.new(2023, 9, 15)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "2222", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 9, 15)) do
+          puts "\n  DateTime.new(2025, 9, 15)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            value: "2222",
+            timestamp: Time.zone.parse("2025-09-15 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-09-15 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -738,14 +798,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
-        travel_to(DateTime.new(2023, 9, 16)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "2222", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 9, 16)) do
+          puts "\n  DateTime.new(2025, 9, 16)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            value: "2222",
+            timestamp: Time.zone.parse("2025-09-16 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-09-16 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -754,14 +829,29 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
-        travel_to(DateTime.new(2023, 9, 20)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "3333", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 9, 20)) do
+          puts "\n  DateTime.new(2025, 9, 20)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "3333", operation_type: "add"
+            },
+            value: "3333",
+            timestamp: Time.zone.parse("2025-09-20 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "3333", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-09-20 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -770,7 +860,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
-        travel_to(DateTime.new(2023, 10, 1)) do
+        travel_to(DateTime.new(2025, 10, 1)) do
+          puts "\n  DateTime.new(2025, 10, 1)  \n"
           perform_billing
 
           subscription = customer.subscriptions.first
@@ -782,21 +873,37 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           end
         end
 
-        travel_to(DateTime.new(2023, 10, 5)) do
+        travel_to(DateTime.new(2025, 10, 5)) do
+          puts "\n  DateTime.new(2025, 10, 5)  \n"
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_000) # 100 + 10 + 50 + 5 + 5
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_000)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
-        travel_to(DateTime.new(2023, 10, 17)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "4444", operation_type: "add"}
-            }
+        travel_to(DateTime.new(2025, 10, 17)) do
+          puts "\n  DateTime.new(2025, 10, 17)  \n"
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "4444", operation_type: "add"
+            },
+            value: "4444",
+            timestamp: Time.zone.parse("2025-10-17 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "4444", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-10-17 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -805,7 +912,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("4.0")
         end
 
-        travel_to(DateTime.new(2023, 11, 5)) do
+        travel_to(DateTime.new(2025, 11, 5)) do
+          puts "\n  DateTime.new(2025, 11, 5)  \n"
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_500) # 100 + 10 + 50 + 5 + 5
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_500)
@@ -853,13 +961,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         )
 
         travel_to(DateTime.new(2023, 9, 10)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2023-09-10 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-09-10 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -888,13 +1010,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 17)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "remove"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "remove"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2023-10-17 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "remove"
+            },
+            timestamp: Time.zone.parse("2023-10-17 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -904,13 +1040,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 19, 0, 0, 0)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "2222", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            value: "2222",
+            timestamp: Time.zone.parse("2023-10-19 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-19 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -979,13 +1129,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         )
 
         travel_to(DateTime.new(2023, 10, 10)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "1111", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            value: "1111",
+            timestamp: Time.zone.parse("2023-10-10 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "1111", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-10 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -995,13 +1159,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "2222", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            value: "2222",
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "2222", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -1011,13 +1189,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "3333", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "3333", operation_type: "add"
+            },
+            value: "3333",
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "3333", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -1027,13 +1219,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "4444", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "4444", operation_type: "add"
+            },
+            value: "4444",
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "4444", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -1043,13 +1249,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 20)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "5555", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "5555", operation_type: "add"
+            },
+            value: "5555",
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "5555", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-20 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -1059,13 +1279,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2023, 10, 25)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {amount: "6666", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "6666", operation_type: "add"
+            },
+            value: "6666",
+            timestamp: Time.zone.parse("2023-10-25 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              amount: "6666", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2023-10-25 00:00:00.000")
           )
 
           fetch_current_usage(customer:)
@@ -1135,13 +1369,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
 
           travel_to(DateTime.new(2023, 10, 5)) do
-            create_event(
-              {
-                code: billable_metric.code,
-                transaction_id: SecureRandom.uuid,
-                external_subscription_id: subscription.external_id,
-                properties: {amount: "1111", operation_type: "add"}
-              }
+            Clickhouse::EventsEnriched.create!(
+              organization_id: organization.id,
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {
+                amount: "1111", operation_type: "add"
+              },
+              value: "1111",
+              timestamp: Time.zone.parse("2023-10-05 00:00:00.000")
+            )
+
+            Event.create!(
+              organization_id: organization.id,
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {
+                amount: "1111", operation_type: "add"
+              },
+              timestamp: Time.zone.parse("2023-10-05 00:00:00.000")
             )
           end
 
@@ -1151,13 +1399,27 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
             expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(1_500)
             expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
 
-            create_event(
-              {
-                code: billable_metric.code,
-                transaction_id: SecureRandom.uuid,
-                external_subscription_id: subscription.external_id,
-                properties: {amount: "2222", operation_type: "add"}
-              }
+            Clickhouse::EventsEnriched.create!(
+              organization_id: organization.id,
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {
+                amount: "2222", operation_type: "add"
+              },
+              value: "2222",
+              timestamp: Time.zone.parse("2023-12-07 00:00:00.000")
+            )
+
+            Event.create!(
+              organization_id: organization.id,
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {
+                amount: "2222", operation_type: "add"
+              },
+              timestamp: Time.zone.parse("2023-12-07 00:00:00.000")
             )
 
             fetch_current_usage(customer:)
@@ -1182,7 +1444,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
     # Customer use-case
     context "with combinations of add and remove" do
-      let(:organization) { create(:organization, webhook_url: nil) }
+      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
       let(:field_name) { "user_id" }
 
       let(:charge) do
@@ -1225,57 +1487,127 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         end
 
         travel_to(DateTime.new(2025, 5, 21)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {user_id: "49303", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49303", operation_type: "add"
+            },
+            value: "49303",
+            timestamp: Time.zone.parse("2025-05-21 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49303", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-05-21 00:00:00.000")
           )
         end
 
         travel_to(DateTime.new(2025, 5, 31)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {user_id: "49067", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49067", operation_type: "add"
+            },
+            value: "49067",
+            timestamp: Time.zone.parse("2025-05-31 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49067", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-05-31 00:00:00.000")
           )
         end
 
         travel_to(DateTime.new(2025, 7, 23)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {user_id: "62741", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "62741", operation_type: "add"
+            },
+            value: "62741",
+            timestamp: Time.zone.parse("2025-07-23 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "62741", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-07-23 00:00:00.000")
           )
         end
 
         travel_to(DateTime.new(2025, 7, 24)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {user_id: "49067", operation_type: "remove"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49067", operation_type: "remove"
+            },
+            value: "49067",
+            timestamp: Time.zone.parse("2025-07-24 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "49067", operation_type: "remove"
+            },
+            timestamp: Time.zone.parse("2025-07-24 00:00:00.000")
           )
         end
 
         travel_to(DateTime.new(2025, 7, 24)) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: customer.external_id,
-              properties: {user_id: "63011", operation_type: "add"}
-            }
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "63011", operation_type: "add"
+            },
+            value: "63011",
+            timestamp: Time.zone.parse("2025-07-24 00:00:00.000")
+          )
+
+          Event.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {
+              user_id: "63011", operation_type: "add"
+            },
+            timestamp: Time.zone.parse("2025-07-24 00:00:00.000")
           )
         end
 

@@ -126,6 +126,7 @@ module Events
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
+        puts "\n\n\n  ***************** POSTGRES STORE *****************  \n\n\n"
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [

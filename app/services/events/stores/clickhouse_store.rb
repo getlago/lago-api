@@ -203,6 +203,7 @@ module Events
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
+        puts "\n\n\n  ***************** CLICKHOUSE STORE *****************  \n\n\n"
         connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
@@ -210,7 +211,7 @@ module Events
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime: to_datetime,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }

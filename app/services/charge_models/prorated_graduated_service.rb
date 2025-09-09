@@ -18,6 +18,9 @@ module ChargeModels
       end
       units_count = prorated_units.count
 
+      puts "\n\n\nfull_units: #{full_units}"
+      puts "prorated_units: #{prorated_units}"
+
       index = 0
       overflow = 0
       full_sum = 0
