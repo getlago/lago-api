@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :service do
-  subject(:service) { described_class.new(fixed_charge:) }
+  subject(:service) { described_class.new(fixed_charge:, subscription:) }
+
+  let(:subscription) { nil }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -64,6 +66,38 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
 
       it "returns success result" do
         expect(result).to be_success
+      end
+    end
+
+    context "when a subscription is provided" do
+      let(:subscription) { create(:subscription, :active, plan:) }
+      let(:other_subscription) { create(:subscription, :active, plan:) }
+
+      before do
+        subscription
+        other_subscription
+        allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+      end
+
+      it "returns success result" do
+        expect(result).to be_success
+      end
+
+      it "emits fixed charge event only for the subscription" do
+        result
+
+        expect(FixedCharges::EmitFixedChargeEventService)
+          .to have_received(:call!)
+          .with(subscription:, fixed_charge:)
+          .once
+      end
+
+      it "does not emit events for other subscriptions on the same plan" do
+        result
+
+        expect(FixedCharges::EmitFixedChargeEventService)
+          .not_to have_received(:call!)
+          .with(subscription: other_subscription, fixed_charge:)
       end
     end
   end
