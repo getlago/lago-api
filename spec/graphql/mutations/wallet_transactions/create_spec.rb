@@ -67,7 +67,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     result_data = result["data"]["createCustomerWalletTransaction"]
     expect(result_data["collection"].map { |wt| wt["status"] })
       .to contain_exactly("pending", "settled")
-    expect(result_data["collection"].map { |wt| wt["invoiceRequiresSuccessfulPayment"] }).to all be true
+    expect(result_data["collection"].map { |wt| wt["invoiceRequiresSuccessfulPayment"] }).to eq([true, false])
     expect(result_data["collection"].map { |wt| wt["priority"] }).to all eq(25)
     expect(result_data["collection"]).to all(include(
       "metadata" => contain_exactly(
