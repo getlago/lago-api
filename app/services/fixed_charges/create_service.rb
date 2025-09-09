@@ -40,7 +40,7 @@ module FixedCharges
         end
 
         if params[:apply_units_immediately]
-          emit_events_for_active_subscriptions(fixed_charge)
+          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(fixed_charge:)
         end
 
         result.fixed_charge = fixed_charge
@@ -68,15 +68,6 @@ module FixedCharges
         organization.add_ons.find_by!(code: params[:add_on_code])
       else
         raise ArgumentError, "Either add_on_id or add_on_code must be provided"
-      end
-    end
-
-    def emit_events_for_active_subscriptions(fixed_charge)
-      plan.subscriptions.active.find_each do |subscription|
-        FixedCharges::EmitFixedChargeEventService.call!(
-          subscription:,
-          fixed_charge:
-        )
       end
     end
   end

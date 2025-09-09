@@ -32,7 +32,7 @@ module FixedCharges
         new_fixed_charge.save!
 
         if params[:apply_units_immediately] && new_fixed_charge.units != fixed_charge.units
-          emit_events_for_active_subscriptions(new_fixed_charge)
+          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(fixed_charge: new_fixed_charge)
         end
 
         if params.key?(:tax_codes)
@@ -53,14 +53,5 @@ module FixedCharges
     private
 
     attr_reader :fixed_charge, :params
-
-    def emit_events_for_active_subscriptions(new_fixed_charge)
-      new_fixed_charge.plan.subscriptions.active.find_each do |subscription|
-        FixedCharges::EmitFixedChargeEventService.call!(
-          subscription:,
-          fixed_charge: new_fixed_charge
-        )
-      end
-    end
   end
 end
