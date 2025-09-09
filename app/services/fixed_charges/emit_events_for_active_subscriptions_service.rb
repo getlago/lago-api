@@ -17,6 +17,14 @@ module FixedCharges
           fixed_charge:,
           timestamp: apply_units_immediately ? timestamp : next_billing_period(subscription)
         )
+      else
+        # Default behavior: emit events for all active subscriptions on the plan
+        fixed_charge.plan.subscriptions.active.find_each do |subscription|
+          FixedCharges::EmitFixedChargeEventService.call!(
+            subscription:,
+            fixed_charge:
+          )
+        end
       end
 
       result
