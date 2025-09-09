@@ -759,6 +759,7 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickh
     end
 
     it "returns the weighted sum of event properties" do
+      byebug
       expect(event_store.weighted_sum.round(5)).to eq(0.02218)
     end
 
