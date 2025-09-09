@@ -417,7 +417,23 @@ module Events
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {
+                  from_datetime:,
+                  to_datetime: to_datetime.ceil,
+                  decimal_scale: DECIMAL_SCALE,
+                  initial_value: initial_value || 0
+                }
+              ]
+            )
+          ).rows
+        end
       end
 
       def aggregated_arel_table
