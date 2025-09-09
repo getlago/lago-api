@@ -5,6 +5,7 @@ module Types
     module RecurringTransactionRules
       class UpdateInput < Types::BaseInputObject
         graphql_name "UpdateRecurringTransactionRuleInput"
+
         argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
         argument :granted_credits, String, required: false
         argument :ignore_paid_top_up_limits, Boolean, required: false

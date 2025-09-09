@@ -15,6 +15,7 @@ RSpec.describe Types::Wallets::CreateInput do
     expect(subject).to accept_argument(:paid_credits).of_type("String!")
     expect(subject).to accept_argument(:rate_amount).of_type("String!")
 
+    expect(subject).to accept_argument(:ignore_paid_top_up_limits_on_creation).of_type("Boolean")
     expect(subject).to accept_argument(:paid_top_up_max_amount_cents).of_type("BigInt")
     expect(subject).to accept_argument(:paid_top_up_min_amount_cents).of_type("BigInt")
 

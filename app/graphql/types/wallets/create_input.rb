@@ -14,6 +14,7 @@ module Types
       argument :paid_credits, String, required: true
       argument :rate_amount, String, required: true
 
+      argument :ignore_paid_top_up_limits_on_creation, Boolean, required: false
       argument :paid_top_up_max_amount_cents, GraphQL::Types::BigInt, required: false
       argument :paid_top_up_min_amount_cents, GraphQL::Types::BigInt, required: false
 

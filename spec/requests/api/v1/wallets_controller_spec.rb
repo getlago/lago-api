@@ -26,7 +26,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expiration_at:,
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 5_00,
-        paid_top_up_max_amount_cents: 100_00
+        paid_top_up_max_amount_cents: 100_00,
+        ignore_paid_top_up_limits_on_creation: "false"
       }
     end
 
@@ -34,6 +35,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     it "creates a wallet" do
       allow(WalletTransactions::CreateFromParamsService).to receive(:call!).and_call_original
+      allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
       allow(SendWebhookJob).to receive(:perform_later).and_call_original
       stub_pdf_generation
 
@@ -54,6 +56,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(wallet.paid_top_up_max_amount_cents).to eq(100_00)
       # expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
       # expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
+
+      expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new).with(
+        BaseService::LegacyResult,
+        wallet: Wallet,
+        credits_amount: 10,
+        ignore_validation: "false"
+      )
 
       expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
 
