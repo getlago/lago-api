@@ -3,7 +3,7 @@
 module Types
   module Subscriptions
     class FixedChargeOverridesInput < Types::BaseInputObject
-      argument :add_on_id, ID, required: true
+      argument :add_on_id, ID, required: false
       argument :id, ID, required: false
 
       argument :apply_units_immediately, Boolean, required: false
