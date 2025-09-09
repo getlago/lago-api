@@ -55,7 +55,8 @@ module WalletTransactions
 
         if params[:voided_credits]
           wallet_credit = WalletCredit.new(wallet:, credit_amount: BigDecimal(params[:voided_credits]).floor(5), invoiceable: false)
-          void_result = WalletTransactions::VoidService.call(**params, wallet:, wallet_credit:)
+          void_params = params.to_h.symbolize_keys.slice(:metadata, :source, :priority)
+          void_result = WalletTransactions::VoidService.call(wallet:, wallet_credit:, **void_params)
           wallet_transactions << void_result.wallet_transaction
         end
       end
