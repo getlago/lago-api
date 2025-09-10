@@ -89,7 +89,7 @@ module Wallets
     end
 
     def validate_wallet_amount!(wallet)
-      return if params[:paid_credits].blank?
+      return unless positive_paid_credit_amount?
 
       Validators::WalletTransactionAmountLimitsValidator.new(
         result,
@@ -99,6 +99,12 @@ module Wallets
       ).valid?
 
       result.raise_if_error!
+    end
+
+    def positive_paid_credit_amount?
+      BigDecimal(params[:paid_credits]).positive?
+    rescue ArgumentError, TypeError
+      false
     end
 
     def billable_metric_identifiers

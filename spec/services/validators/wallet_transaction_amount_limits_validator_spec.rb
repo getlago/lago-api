@@ -36,6 +36,16 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
       end
     end
 
+    context "when credits_amount is zero" do
+      let(:credits_amount) { "0.00" }
+
+      it do
+        expect(subject).to be false
+        expect(result).to be_failure
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_amount"])
+      end
+    end
+
     context "when credits_amount is less than min amount" do
       let(:credits_amount) { "4.99" }
 
@@ -61,6 +71,13 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
       let(:paid_top_up_max_amount_cents) { paid_top_up_min_amount_cents }
 
       it { is_expected.to be true }
+    end
+
+    context "when field_name is provided" do
+      it "sets the field name in the result errors" do
+        described_class.new(result, wallet:, credits_amount: "0", ignore_validation: false, field_name: :other_name).valid?
+        expect(result.error.messages[:other_name]).to eq(["invalid_amount"])
+      end
     end
   end
 end

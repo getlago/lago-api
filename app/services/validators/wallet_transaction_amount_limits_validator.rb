@@ -2,11 +2,12 @@
 
 module Validators
   class WalletTransactionAmountLimitsValidator
-    def initialize(result, wallet:, credits_amount:, ignore_validation: false)
+    def initialize(result, wallet:, credits_amount:, ignore_validation: false, field_name: :paid_credits)
       @result = result
       @wallet = wallet
       @credits_amount = credits_amount
       @ignore_validation = ActiveModel::Type::Boolean.new.cast(ignore_validation)
+      @field_name = field_name
     end
 
     def valid?
@@ -19,12 +20,10 @@ module Validators
         credit_amount: BigDecimal(credits_amount).floor(5)
       )
 
-      return true if wallet_credit.amount_cents.zero?
-
       if paid_top_up_min_amount_cents && wallet_credit.amount_cents < paid_top_up_min_amount_cents
-        result.single_validation_failure!(error_code: "amount_below_minimum", field: :paid_credits)
+        result.single_validation_failure!(error_code: "amount_below_minimum", field: field_name)
       elsif paid_top_up_max_amount_cents && wallet_credit.amount_cents > paid_top_up_max_amount_cents
-        result.single_validation_failure!(error_code: "amount_above_maximum", field: :paid_credits)
+        result.single_validation_failure!(error_code: "amount_above_maximum", field: field_name)
       end
 
       result.success?
@@ -32,13 +31,13 @@ module Validators
 
     private
 
-    attr_reader :result, :wallet, :credits_amount, :ignore_validation
+    attr_reader :result, :wallet, :credits_amount, :ignore_validation, :field_name
     delegate :paid_top_up_min_amount_cents, :paid_top_up_max_amount_cents, to: :wallet
 
     def valid_paid_credits_amount?
-      return true if ::Validators::DecimalAmountService.new(credits_amount).valid_amount?
+      return true if ::Validators::DecimalAmountService.new(credits_amount).valid_positive_amount?
 
-      result.single_validation_failure!(error_code: "invalid_amount", field: :paid_credits)
+      result.single_validation_failure!(error_code: "invalid_amount", field: field_name)
       false
     end
   end
