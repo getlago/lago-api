@@ -22,9 +22,11 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
       organization_id: organization.id,
       paid_credits:,
       granted_credits:,
-      voided_credits:
+      voided_credits:,
+      **((name == :undefined) ? {} : {name:})
     }
   end
+  let(:name) { :undefined }
 
   before { subscription }
 
@@ -94,6 +96,48 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
       it "returns false and result has errors for metadata" do
         expect(validate_service).not_to be_valid
         expect(result.error.messages[:metadata]).to eq(["nested_structure_not_allowed"])
+      end
+    end
+
+    context "with valid name" do
+      let(:name) { "Valid Transaction Name" }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "with blank name" do
+      let(:name) { "" }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "with nil name" do
+      let(:name) { nil }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "with name at maximum length" do
+      let(:name) { "a" * 255 }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "with name that is too long" do
+      let(:name) { "a" * 256 }
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:name]).to eq(["too_long"])
+      end
+    end
+
+    context "with name that is not a string" do
+      let(:name) { 123 }
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:name]).to eq(["invalid_value"])
       end
     end
   end

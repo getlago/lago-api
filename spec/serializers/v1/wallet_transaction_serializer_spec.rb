@@ -28,7 +28,8 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "failed_at" => wallet_transaction.failed_at&.iso8601,
         "created_at" => wallet_transaction.created_at.iso8601,
         "invoice_requires_successful_payment" => wallet_transaction.invoice_requires_successful_payment?,
-        "metadata" => wallet_transaction.metadata
+        "metadata" => wallet_transaction.metadata,
+        "name" => "Custom Transaction Name"
       )
     end
   end

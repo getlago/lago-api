@@ -9,7 +9,8 @@ module WalletTransactions
         :source,
         :metadata,
         :priority,
-        :credit_note_id
+        :credit_note_id,
+        :name
       )
 
       super

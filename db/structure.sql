@@ -3224,7 +3224,8 @@ CREATE TABLE public.wallet_transactions (
     failed_at timestamp(6) without time zone,
     organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
-    priority integer DEFAULT 50 NOT NULL
+    priority integer DEFAULT 50 NOT NULL,
+    name character varying(255)
 );
 
 
@@ -9759,6 +9760,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250908085959'),
+('20250903165724'),
 ('20250901141844'),
 ('20250828153138'),
 ('20250828144553'),

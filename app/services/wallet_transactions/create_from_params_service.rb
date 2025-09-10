@@ -53,10 +53,7 @@ module WalletTransactions
         end
 
         if params[:voided_credits]
-          wallet_credit = WalletCredit.new(wallet:, credit_amount: BigDecimal(params[:voided_credits]).floor(5), invoiceable: false)
-          void_params = params.to_h.symbolize_keys.slice(:metadata, :source, :priority)
-          void_result = WalletTransactions::VoidService.call(wallet:, wallet_credit:, **void_params)
-          wallet_transactions << void_result.wallet_transaction
+          wallet_transactions << handle_voided_credits(wallet)
         end
       end
 
@@ -84,6 +81,17 @@ module WalletTransactions
 
     attr_reader :organization, :params, :source, :metadata, :priority
 
+    def name
+      params[:name].presence
+    end
+
+    def handle_voided_credits(wallet)
+      credit_amount = BigDecimal(params[:voided_credits]).floor(5)
+      wallet_credit = WalletCredit.new(wallet:, credit_amount:, invoiceable: false)
+      void_params = params.to_h.symbolize_keys.slice(:metadata, :source, :priority).merge(name:)
+      WalletTransactions::VoidService.call!(wallet:, wallet_credit:, **void_params).wallet_transaction
+    end
+
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
       return if credits_amount.zero?
 
@@ -97,7 +105,8 @@ module WalletTransactions
         transaction_status: :purchased,
         invoice_requires_successful_payment:,
         metadata:,
-        priority:
+        priority:,
+        name:
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -119,7 +128,8 @@ module WalletTransactions
           source:,
           transaction_status: :granted,
           metadata:,
-          priority:
+          priority:,
+          name:
         ).wallet_transaction
 
         Wallets::Balance::IncreaseService.new(
@@ -133,10 +143,8 @@ module WalletTransactions
     end
 
     def valid?
-      WalletTransactions::ValidateService.new(
-        result,
-        **params.merge(organization: organization)
-      ).valid?
+      validate_params = params.merge(organization: organization)
+      WalletTransactions::ValidateService.new(result, **validate_params).valid?
     end
   end
 end

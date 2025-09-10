@@ -27,7 +27,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       {
         wallet_id:,
         paid_credits: "10",
-        granted_credits: "10"
+        granted_credits: "10",
+        name: "Custom Top-up Name"
       }
     end
 
@@ -38,13 +39,18 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(json[:wallet_transactions].count).to eq(2)
-      expect(json[:wallet_transactions].first[:lago_id]).to be_present
-      expect(json[:wallet_transactions].second[:lago_id]).to be_present
-      expect(json[:wallet_transactions].first[:status]).to eq("pending")
-      expect(json[:wallet_transactions].second[:status]).to eq("settled")
-      expect(json[:wallet_transactions].first[:lago_wallet_id]).to eq(wallet.id)
-      expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
+      wallet_transactions = json[:wallet_transactions]
+
+      expect(wallet_transactions.count).to eq(2)
+
+      paid_transaction = wallet_transactions.first
+      granted_transaction = wallet_transactions.second
+
+      expect(paid_transaction[:lago_id]).to be_present
+      expect(paid_transaction[:status]).to eq("pending")
+      expect(granted_transaction[:status]).to eq("settled")
+      expect(granted_transaction[:lago_id]).to be_present
+      expect(wallet_transactions).to all(include(name: "Custom Top-up Name", lago_wallet_id: wallet.id))
     end
 
     context "with voided credits" do
