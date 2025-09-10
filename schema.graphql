@@ -2624,6 +2624,7 @@ input CreateCustomerWalletInput {
   customerId: ID!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  ignorePaidTopUpLimitsOnCreation: Boolean
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!

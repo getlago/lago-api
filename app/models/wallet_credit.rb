@@ -7,14 +7,15 @@ class WalletCredit
   def self.from_amount_cents(wallet:, amount_cents:)
     currency = wallet.currency_for_balance
     amount = amount_cents.round.fdiv(currency.subunit_to_unit)
-    new(wallet:, credit_amount: amount.fdiv(wallet.rate_amount))
+    new(wallet:, credit_amount: amount.fdiv(wallet.rate_amount), amount_cents:)
   end
 
   # we'll assume you construct this normally for a wallet and a credit amount
-  def initialize(wallet:, credit_amount:, invoiceable: true)
+  def initialize(wallet:, credit_amount:, invoiceable: true, amount_cents: nil)
     @wallet = wallet
     currency = wallet.currency_for_balance
     @amount = (credit_amount * wallet.rate_amount).round(currency.exponent)
+    @amount_cents = (amount_cents || @amount * currency.subunit_to_unit).to_i
 
     @credit_amount = if invoiceable
       # Here we convert to amount andconvert back to credits
@@ -25,5 +26,5 @@ class WalletCredit
     end
   end
 
-  attr_reader :wallet, :credit_amount, :amount
+  attr_reader :wallet, :credit_amount, :amount, :amount_cents
 end

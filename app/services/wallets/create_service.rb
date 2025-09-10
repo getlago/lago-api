@@ -47,6 +47,8 @@ module Wallets
         wallet.currency = wallet.customer.currency
         wallet.save!
 
+        validate_wallet_amount! wallet
+
         if params[:recurring_transaction_rules].present?
           Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
         end
@@ -84,6 +86,25 @@ module Wallets
 
     def valid?
       Wallets::ValidateService.new(result, **params).valid?
+    end
+
+    def validate_wallet_amount!(wallet)
+      return unless positive_paid_credit_amount?
+
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: params[:paid_credits],
+        ignore_validation: params[:ignore_paid_top_up_limits_on_creation]
+      ).valid?
+
+      result.raise_if_error!
+    end
+
+    def positive_paid_credit_amount?
+      BigDecimal(params[:paid_credits]).positive?
+    rescue ArgumentError, TypeError
+      false
     end
 
     def billable_metric_identifiers

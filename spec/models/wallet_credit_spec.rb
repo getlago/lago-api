@@ -41,6 +41,12 @@ RSpec.describe WalletCredit do
         expect(subject.amount).to eq(1.03)
       end
     end
+
+    describe "#amount_cents" do
+      it "returns the amount cents" do
+        expect(subject.amount_cents).to eq(103)
+      end
+    end
   end
 
   describe ".from_amount_cents" do
@@ -60,6 +66,12 @@ RSpec.describe WalletCredit do
       end
     end
 
+    describe "#amount_cents" do
+      it "returns the amount cents" do
+        expect(subject.amount_cents).to eq(10)
+      end
+    end
+
     context "when amount cents has precision" do
       let(:rate_amount) { 0.001 }
       let(:amount_cents) { BigDecimal("103.4589") }
@@ -73,6 +85,12 @@ RSpec.describe WalletCredit do
       describe "#amount" do
         it "returns the amount" do
           expect(subject.amount).to eq(1.03)
+        end
+      end
+
+      describe "#amount_cents" do
+        it "returns the amount cents" do
+          expect(subject.amount_cents).to eq(103)
         end
       end
     end

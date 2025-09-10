@@ -26,7 +26,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expiration_at:,
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 5_00,
-        paid_top_up_max_amount_cents: 100_00
+        paid_top_up_max_amount_cents: 100_00,
+        ignore_paid_top_up_limits_on_creation: "true"
       }
     end
 
@@ -34,6 +35,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
     it "creates a wallet" do
       allow(WalletTransactions::CreateFromParamsService).to receive(:call!).and_call_original
+      allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
       allow(SendWebhookJob).to receive(:perform_later).and_call_original
       stub_pdf_generation
 
@@ -55,6 +57,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       # expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
       # expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
 
+      expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new).with(
+        BaseService::LegacyResult,
+        wallet: Wallet,
+        credits_amount: "10",
+        ignore_validation: "true"
+      )
+
       expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
 
       expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(
@@ -66,6 +75,42 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           source: :manual
         )
       )
+    end
+
+    context "when paid_credit is below the minimum" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          paid_credits: "10",
+          paid_top_up_min_amount_cents: 30_00
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:paid_credits]).to eq ["amount_below_minimum"]
+      end
+
+      context "when the ignore_paid_top_up_limits_on_creation is set to true" do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            paid_credits: "10",
+            paid_top_up_min_amount_cents: 30_00,
+            ignore_paid_top_up_limits_on_creation: "true"
+          }
+        end
+
+        it "ignores the amount limits" do
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet][:lago_id]).to be_present
+          expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+        end
+      end
     end
 
     context "with transaction metadata" do

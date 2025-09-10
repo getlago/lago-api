@@ -76,6 +76,16 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
+    context "when paid_credits is above the maximum" do
+      let(:paid_credits) { "1002.0" }
+
+      it "returns an error" do
+        expect { service_result }.not_to change(organization.wallets, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:paid_credits]).to eq(["amount_above_maximum"])
+      end
+    end
+
     context "when invoice_requires_successful_payment is set " do
       let(:params) do
         {
