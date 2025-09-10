@@ -174,6 +174,32 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
         expect(result).not_to be_success
         expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
       end
+
+      context "when paid_credits is below the wallet minimum" do
+        let(:paid_credits) { "5.00" }
+
+        before { wallet.update! paid_top_up_min_amount_cents: 100_00 }
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:paid_credits]).to eq(["amount_below_minimum"])
+        end
+
+        context "when ignore_paid_top_up_limits is true" do
+          let(:params) do
+            {
+              wallet_id: wallet.id,
+              paid_credits:,
+              ignore_paid_top_up_limits: true
+            }
+          end
+
+          it "creates wallet transaction" do
+            expect(result).to be_success
+            expect(result.wallet_transactions.first.credit_amount).to eq(5)
+          end
+        end
+      end
     end
 
     context "with decimal value" do

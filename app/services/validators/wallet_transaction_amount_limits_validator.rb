@@ -5,9 +5,15 @@ module Validators
     def initialize(result, wallet:, credits_amount:, ignore_validation: false, field_name: :paid_credits)
       @result = result
       @wallet = wallet
+      # NOTE: credits_amount must be a string to be able to use ::Validators::DecimalAmountService
       @credits_amount = credits_amount
       @ignore_validation = ActiveModel::Type::Boolean.new.cast(ignore_validation)
       @field_name = field_name
+    end
+
+    def raise_if_invalid!
+      return if valid?
+      result.raise_if_error! # NOTE: if you didn't set the error in result, this won't raise if `valid?` is false
     end
 
     def valid?

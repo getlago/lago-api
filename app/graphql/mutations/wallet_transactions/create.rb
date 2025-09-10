@@ -11,15 +11,7 @@ module Mutations
       graphql_name "CreateCustomerWalletTransaction"
       description "Creates a new Customer Wallet Transaction"
 
-      argument :wallet_id, ID, required: true
-
-      argument :granted_credits, String, required: false
-      argument :invoice_requires_successful_payment, Boolean, required: false
-      argument :metadata, [Types::WalletTransactions::MetadataInput], required: false
-      argument :name, String, required: false
-      argument :paid_credits, String, required: false
-      argument :priority, Integer, required: false
-      argument :voided_credits, String, required: false
+      input_object_class Types::WalletTransactions::CreateInput
 
       type Types::WalletTransactions::Object.collection_type
 
