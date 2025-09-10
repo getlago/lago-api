@@ -9,7 +9,7 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents:, paid_top_up_max_amount_cents:) }
   let(:paid_top_up_min_amount_cents) { 5_00 }
   let(:paid_top_up_max_amount_cents) { 100_00 }
-  let(:credits_amount) { 1 }
+  let(:credits_amount) { "1.0" }
   let(:ignore_validation) { false }
 
   describe "#valid?" do
@@ -27,13 +27,17 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
     end
 
     context "when credits_amount is blank" do
-      let(:credits_amount) { nil } # TODO: HANDLE CREDITS AMOUNT AS STRING
+      let(:credits_amount) { nil }
 
-      it { is_expected.to be true }
+      it do
+        expect(subject).to be false
+        expect(result).to be_failure
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_amount"])
+      end
     end
 
     context "when credits_amount is less than min amount" do
-      let(:credits_amount) { 4.99 }
+      let(:credits_amount) { "4.99" }
 
       it do
         expect(subject).to be false
@@ -43,7 +47,7 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
     end
 
     context "when credits_amount is more than max amount" do
-      let(:credits_amount) { 100.1 }
+      let(:credits_amount) { "100.1" }
 
       it do
         expect(subject).to be false
@@ -53,7 +57,7 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
     end
 
     context "when credits_amount is equal to a limit" do
-      let(:credits_amount) { 5 }
+      let(:credits_amount) { "5" }
       let(:paid_top_up_max_amount_cents) { paid_top_up_min_amount_cents }
 
       it { is_expected.to be true }

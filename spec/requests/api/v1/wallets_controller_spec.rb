@@ -27,7 +27,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 5_00,
         paid_top_up_max_amount_cents: 100_00,
-        ignore_paid_top_up_limits_on_creation: "false"
+        ignore_paid_top_up_limits_on_creation: "true"
       }
     end
 
@@ -60,8 +60,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new).with(
         BaseService::LegacyResult,
         wallet: Wallet,
-        credits_amount: 10,
-        ignore_validation: "false"
+        credits_amount: "10",
+        ignore_validation: "true"
       )
 
       expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
@@ -75,6 +75,42 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           source: :manual
         )
       )
+    end
+
+    context "when paid_credit is below the minimum" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          paid_credits: "10",
+          paid_top_up_min_amount_cents: 30_00
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:paid_credits]).to eq ["amount_below_minimum"]
+      end
+
+      context "when the ignore_paid_top_up_limits_on_creation is set to true" do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            paid_credits: "10",
+            paid_top_up_min_amount_cents: 30_00,
+            ignore_paid_top_up_limits_on_creation: "true"
+          }
+        end
+
+        it "ignores the amount limits" do
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet][:lago_id]).to be_present
+          expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+        end
+      end
     end
 
     context "with transaction metadata" do
