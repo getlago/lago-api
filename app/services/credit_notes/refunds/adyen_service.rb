@@ -56,8 +56,8 @@ module CreditNotes
         end
 
         result
-      rescue ArgumentError
-        result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       end
 
       private
