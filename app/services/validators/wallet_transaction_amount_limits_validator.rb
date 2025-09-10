@@ -13,8 +13,7 @@ module Validators
 
     def raise_if_invalid!
       return if valid?
-      result.raise_if_error!
-      raise "invalid but no error set in result" # TODO: find generic error to raise instead
+      result.raise_if_error! # NOTE: if you didn't set the error in result, this won't raise if `valid?` is false
     end
 
     def valid?

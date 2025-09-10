@@ -123,7 +123,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
       end
 
       it "creates the transaction" do
-        expect { result }.to change(organization.wallet_transactions, :count).by(1)
+        expect { subject }.to change(organization.wallet_transactions, :count).by(1)
 
         result_data = result["data"]["createCustomerWalletTransaction"]
         expect(result_data["collection"].count).to eq 1

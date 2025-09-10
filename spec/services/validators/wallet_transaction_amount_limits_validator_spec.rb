@@ -11,9 +11,17 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
   let(:ignore_validation) { false }
 
   describe "#raise_if_invalid!" do
-    subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).raise_if_invalid! }
+    context "when invalid" do
+      subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).raise_if_invalid! }
 
-    it { expect { subject }.to raise_error(BaseService::ValidationFailure) }
+      it { expect { subject }.to raise_error(BaseService::ValidationFailure) }
+    end
+
+    context "when valid" do
+      subject { described_class.new(result, wallet:, credits_amount:, ignore_validation: true).raise_if_invalid! }
+
+      it { expect { subject }.not_to raise_error }
+    end
   end
 
   describe "#valid?" do
