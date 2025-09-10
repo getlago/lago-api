@@ -6,10 +6,6 @@ module Types
       graphql_name "FixedChargeInput"
 
       argument :id, ID, required: false
-<<<<<<< HEAD
-
-=======
->>>>>>> 765f2151c (Bugfix: add fixed charge id on input type to allow edit existing ones)
       argument :add_on_id, ID, required: true
       argument :apply_units_immediately, Boolean, required: false
       argument :charge_model, Types::FixedCharges::ChargeModelEnum, required: true
