@@ -59,7 +59,7 @@ module Api
             amount_to: params[:amount_to],
             billing_entity_ids: billing_entities&.ids,
             currency: params[:currency],
-            customer_external_id: params[:external_customer_id],
+            customer_external_id: params[:external_customer_id] || params[:customer_external_id],
             invoice_type: params[:invoice_type],
             issuing_date_from: (Date.iso8601(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
             issuing_date_to: (Date.iso8601(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),

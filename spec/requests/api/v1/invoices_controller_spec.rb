@@ -378,39 +378,41 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with external_customer_id params" do
-      let(:params) { {external_customer_id:} }
+    [:external_customer_id, :customer_external_id].each do |param_name|
+      context "with #{param_name} params" do
+        let(:params) { {param_name => external_customer_id} }
 
-      let!(:matching_invoice) { create(:invoice, customer:, organization:) }
-      let(:external_customer_id) { customer.external_id }
-
-      before do
-        another_customer = create(:customer, organization:)
-        create(:invoice, customer: another_customer, organization:)
-      end
-
-      it "returns invoices of the customer" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoices].count).to eq(1)
-        expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
-      end
-
-      context "with deleted customer" do
-        let(:params) { {external_customer_id:} }
-        let(:customer) { create(:customer, :deleted, organization:) }
-        let(:external_customer_id) { customer.external_id }
         let!(:matching_invoice) { create(:invoice, customer:, organization:) }
+        let(:external_customer_id) { customer.external_id }
 
-        it "returns the invoices of the customer" do
+        before do
+          another_customer = create(:customer, organization:)
+          create(:invoice, customer: another_customer, organization:)
+        end
+
+        it "returns invoices of the customer" do
           subject
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(json[:invoices].count).to eq(1)
-            expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
-            expect(json[:invoices].first[:customer][:lago_id]).to eq(customer.id)
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].count).to eq(1)
+          expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
+        end
+
+        context "with deleted customer" do
+          let(:params) { {external_customer_id:} }
+          let(:customer) { create(:customer, :deleted, organization:) }
+          let(:external_customer_id) { customer.external_id }
+          let!(:matching_invoice) { create(:invoice, customer:, organization:) }
+
+          it "returns the invoices of the customer" do
+            subject
+
+            aggregate_failures do
+              expect(response).to have_http_status(:success)
+              expect(json[:invoices].count).to eq(1)
+              expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
+              expect(json[:invoices].first[:customer][:lago_id]).to eq(customer.id)
+            end
           end
         end
       end
