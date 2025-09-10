@@ -16,6 +16,7 @@ class FixedCharge < ApplicationRecord
   has_many :taxes, through: :applied_taxes
   has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
   has_many :fees
+  has_many :events, class_name: "FixedChargeEvent", dependent: :destroy
 
   has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes

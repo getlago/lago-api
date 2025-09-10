@@ -39,6 +39,10 @@ module FixedCharges
           taxes_result.raise_if_error!
         end
 
+        if params[:apply_units_immediately]
+          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(fixed_charge:)
+        end
+
         result.fixed_charge = fixed_charge
       end
 
