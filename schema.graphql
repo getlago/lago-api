@@ -2643,6 +2643,7 @@ input CreateCustomerWalletTransactionInput {
   """
   clientMutationId: String
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
   name: String

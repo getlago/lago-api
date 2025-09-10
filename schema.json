@@ -10790,18 +10790,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "walletId",
               "description": null,
               "type": {
@@ -10823,6 +10811,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ignorePaidTopUpLimits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -10900,6 +10900,18 @@
             {
               "name": "voidedCredits",
               "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
