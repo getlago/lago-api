@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :validator do
-  subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).valid? }
-
   let(:result) { BaseService::LegacyResult.new }
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents:, paid_top_up_max_amount_cents:) }
   let(:paid_top_up_min_amount_cents) { 5_00 }
@@ -12,7 +10,15 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :valida
   let(:credits_amount) { "1.0" }
   let(:ignore_validation) { false }
 
+  describe "#raise_if_invalid!" do
+    subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).raise_if_invalid! }
+
+    it { expect { subject }.to raise_error(BaseService::ValidationFailure) }
+  end
+
   describe "#valid?" do
+    subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).valid? }
+
     context "when  ignore_validation is true" do
       let(:ignore_validation) { true }
 

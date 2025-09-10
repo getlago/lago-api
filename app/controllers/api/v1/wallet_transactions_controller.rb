@@ -90,6 +90,7 @@ module Api
           :voided_credits,
           :invoice_requires_successful_payment,
           :name,
+          :ignore_paid_top_up_limits,
           metadata: [
             :key,
             :value

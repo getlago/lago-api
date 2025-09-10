@@ -53,6 +53,15 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       expect(wallet_transactions).to all(include(name: "Custom Top-up Name", lago_wallet_id: wallet.id))
     end
 
+    context "when paid credits is below the wallet minimum" do
+      it "returns an error" do
+        wallet.update!(paid_top_up_min_amount_cents: 20_00)
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:paid_credits]).to eq(["amount_below_minimum"])
+      end
+    end
+
     context "with voided credits" do
       let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
       let(:params) do

@@ -40,6 +40,26 @@ RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create, type: :gra
     expect(result_data["collection"].first["amount"]).to eq "5.0"
   end
 
+  context "when wallet has a minimum amount" do
+    it "returns an error" do
+      wallet.update!(paid_top_up_min_amount_cents: 10_00)
+
+      result = execute_graphql(
+        customer_portal_user: wallet.customer,
+        query: mutation,
+        variables: {
+          input: {
+            walletId: wallet.id,
+            paidCredits: "5.123459999"
+          }
+        }
+      )
+
+      # TODO: improve when we have metadata on errors
+      expect_unprocessable_entity(result)
+    end
+  end
+
   context "without customer portal user" do
     it "returns an error" do
       result = execute_graphql(

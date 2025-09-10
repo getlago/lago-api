@@ -67,6 +67,8 @@ module WalletTransactions
 
       result.wallet_transactions = transactions
       result
+    rescue BaseService::FailedResult
+      result
     rescue ActiveRecord::StaleObjectError
       if @update_attempts <= MAX_WALLET_UPDATE_ATTEMPTS
         sleep(rand(0.1..0.5))
@@ -94,6 +96,13 @@ module WalletTransactions
 
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
       return if credits_amount.zero?
+
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: credits_amount.to_s,
+        ignore_validation: params[:ignore_paid_top_up_limits]
+      ).raise_if_invalid!
 
       wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount)
       wallet_transaction = WalletTransactions::CreateService.call!(
