@@ -7,7 +7,7 @@ require "rails_helper"
 #
 # To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
 
-RSpec.describe "invoices/v4/_credit.slim", type: :view do
+RSpec.describe "templates/invoices/v4.slim", type: :view do
   subject(:rendered_template) do
     # We have to use both `pretty: true` and `HtmlBeautifier.beautify` to ensure proper formatting which eases the
     # snapshot diff review.
@@ -95,9 +95,11 @@ RSpec.describe "invoices/v4/_credit.slim", type: :view do
       :wallet_transaction,
       wallet: wallet,
       credit_amount: BigDecimal("10.50"),
-      amount: BigDecimal("10.50")
+      amount: BigDecimal("10.50"),
+      name: wallet_transaction_name
     )
   end
+  let(:wallet_transaction_name) { nil }
 
   # Static fee data
   let(:fee) do
@@ -147,19 +149,31 @@ RSpec.describe "invoices/v4/_credit.slim", type: :view do
   end
 
   context "when invoice_type is credit" do
-    context "when wallet has no name" do
-      let(:wallet_name) { nil }
+    context "when wallet transaction has a name" do
+      let(:wallet_transaction_name) { "Wallet Transaction Name" }
 
       it "renders correctly" do
         expect_to_match_snapshot
       end
     end
 
-    context "when wallet has a name" do
-      let(:wallet_name) { "Premium Wallet" }
+    context "when wallet transaction has no name" do
+      let(:wallet_transaction_name) { nil }
 
-      it "renders correctly" do
-        expect_to_match_snapshot
+      context "when wallet has no name" do
+        let(:wallet_name) { nil }
+
+        it "renders correctly" do
+          expect_to_match_snapshot
+        end
+      end
+
+      context "when wallet has a name" do
+        let(:wallet_name) { "Premium Wallet" }
+
+        it "renders correctly" do
+          expect_to_match_snapshot
+        end
       end
     end
   end
