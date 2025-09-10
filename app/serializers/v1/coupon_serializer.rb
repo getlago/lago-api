@@ -17,7 +17,7 @@ module V1
         reusable: model.reusable,
         limited_plans: model.limited_plans,
         limited_billable_metrics: model.limited_billable_metrics,
-        plan_codes: model.plans.pluck(:code),
+        plan_codes: model.plans.parents.pluck(:code),
         billable_metric_codes: model.billable_metrics.pluck(:code),
         created_at: model.created_at.iso8601,
         expiration: model.expiration,

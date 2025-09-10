@@ -30,4 +30,17 @@ RSpec.describe ::V1::CouponSerializer do
       expect(result["coupon"]["billable_metric_codes"]).to eq([])
     end
   end
+
+  context "when plan has childs" do
+    before do
+      child_plan = create(:plan, parent: coupon_plan.plan, code: coupon_plan.plan.code)
+      create(:coupon_plan, coupon:, plan: child_plan)
+    end
+
+    it "only list parent plans" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["coupon"]["plan_codes"]).to eq([coupon_plan.plan.code])
+    end
+  end
 end
