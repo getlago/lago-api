@@ -57,7 +57,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value,
+                  #{operation_value_sql} AS adjusted_value
                 FROM same_day_ignored
                 WHERE is_ignored = false
                 ORDER BY timestamp ASC
@@ -410,7 +410,7 @@ module Events
                 1
               FROM events_data next_event
               WHERE next_event.property = e.property
-                AND DATE(next_event.timestamp) = DATE(e.timestamp)
+                AND DATE((next_event.timestamp)::timestamptz AT TIME ZONE :timezone) = DATE((e.timestamp)::timestamptz AT TIME ZONE :timezone)
                 AND next_event.operation_type <> e.operation_type
                 AND next_event.timestamp > e.timestamp
               LIMIT 1
@@ -426,7 +426,7 @@ module Events
               FROM events_data next_event
               WHERE next_event.property = e.property
                 AND #{group_names.map { |name| "next_event.#{name} = e.#{name}" }.join(" AND ")}
-                AND DATE(next_event.timestamp) = DATE(e.timestamp)
+                AND DATE((next_event.timestamp)::timestamptz AT TIME ZONE :timezone) = DATE((e.timestamp)::timestamptz AT TIME ZONE :timezone)
                 AND next_event.operation_type <> e.operation_type
                 AND next_event.timestamp > e.timestamp
               LIMIT 1
