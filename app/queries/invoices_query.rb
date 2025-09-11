@@ -24,6 +24,8 @@ class InvoicesQuery < BaseQuery
   ]
 
   def call
+    return result unless validate_filters.success?
+
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = paginate(invoices)
     invoices = apply_consistent_ordering(
@@ -55,6 +57,10 @@ class InvoicesQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
+  end
 
   def base_scope
     organization.invoices.visible.ransack(search_params)
