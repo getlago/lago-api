@@ -42514,8 +42514,8 @@
                     "ofType": null
                   },
                   "defaultValue": null,
-                  "isDeprecated": true,
-                  "deprecationReason": "Use from_datetime instead"
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "fromDatetime",
@@ -42578,8 +42578,8 @@
                     "ofType": null
                   },
                   "defaultValue": null,
-                  "isDeprecated": true,
-                  "deprecationReason": "Use to_datetime instead"
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 },
                 {
                   "name": "toDatetime",
