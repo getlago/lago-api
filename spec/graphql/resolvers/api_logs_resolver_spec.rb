@@ -173,10 +173,10 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
           expect(api_logs.count).to eq(1)
 
           api_logs = execute_and_get_collection("fromDate: \"2025-09-08T15:10:00Z\"")
-          expect(api_logs.count).to eq(0)
-
-          api_logs = execute_and_get_collection("fromDate: \"2025-09-08T16:00:00+02:00\"")
           expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-09T16:00:00+02:00\"")
+          expect(api_logs.count).to eq(0)
         end
       end
     end
@@ -196,16 +196,71 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
 
       context "when toDate is a datetime" do
         it "returns expected activity logs" do
-          api_logs = execute_and_get_collection("toDate: \"2025-09-08T15:15:00Z\"")
+          api_logs = execute_and_get_collection("toDate: \"2025-09-09T15:15:00Z\"")
           expect(api_logs.count).to eq(1)
 
           api_logs = execute_and_get_collection("toDate: \"2025-09-08T16:15:00+01:00\"")
-          expect(api_logs.count).to eq(1)
+          expect(api_logs.count).to eq(0)
 
           api_logs = execute_and_get_collection("toDate: \"2025-09-08T15:00:00Z\"")
           expect(api_logs.count).to eq(0)
+        end
+      end
+    end
 
-          api_logs = execute_and_get_collection("toDate: \"2025-09-08T16:00:00+02:00\"")
+    context "with fromDatetime filter" do
+      context "when fromDatetime is a date" do
+        it "returns expected activity logs" do
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-09\"")
+          expect(activity_logs.count).to eq(0)
+        end
+      end
+
+      context "when fromDatetime is a datetime" do
+        it "returns expected activity logs" do
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T15:00:00Z\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T16:00:00+01:00\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T15:10:00Z\"")
+          expect(activity_logs.count).to eq(0)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T16:00:00+02:00\"")
+          expect(activity_logs.count).to eq(1)
+        end
+      end
+    end
+
+    context "with toDatetime filter" do
+      context "when toDatetime is a date" do
+        let(:query) {}
+
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-09\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08\"")
+          expect(api_logs.count).to eq(0)
+        end
+      end
+
+      context "when toDatetime is a datetime" do
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T15:15:00Z\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T16:15:00+01:00\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T15:00:00Z\"")
+          expect(api_logs.count).to eq(0)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T16:00:00+02:00\"")
           expect(api_logs.count).to eq(0)
         end
       end

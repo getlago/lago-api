@@ -12,8 +12,11 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
-    argument :from_date, GraphQL::Types::ISO8601DateTime, required: false
-    argument :to_date, GraphQL::Types::ISO8601DateTime, required: false
+    # You can't use union types with scalars, so we need a new argument for each type
+    argument :from_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use from_datetime instead"
+    argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
+    argument :to_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use to_datetime instead"
+    argument :to_datetime, GraphQL::Types::ISO8601DateTime, required: false
 
     argument :api_key_ids, [String], required: false
     argument :http_methods, [Types::ApiLogs::HttpMethodEnum], required: false
@@ -30,8 +33,8 @@ module Resolvers
       result = ApiLogsQuery.call(
         organization: current_organization,
         filters: {
-          from_date: args[:from_date],
-          to_date: args[:to_date],
+          from_date: args[:from_datetime] || args[:from_date],
+          to_date: args[:to_datetime] || args[:to_date],
           api_key_ids: args[:api_key_ids],
           request_ids: args[:request_ids],
           http_statuses: args[:http_statuses],

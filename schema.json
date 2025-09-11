@@ -42510,6 +42510,18 @@
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": true,
+                  "deprecationReason": "Use from_datetime instead"
+                },
+                {
+                  "name": "fromDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
                     "name": "ISO8601DateTime",
                     "ofType": null
                   },
@@ -42559,6 +42571,18 @@
                 },
                 {
                   "name": "toDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": true,
+                  "deprecationReason": "Use to_datetime instead"
+                },
+                {
+                  "name": "toDatetime",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -42902,6 +42926,18 @@
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": true,
+                  "deprecationReason": "Use from_datetime instead"
+                },
+                {
+                  "name": "fromDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
                     "name": "ISO8601DateTime",
                     "ofType": null
                   },
@@ -42911,6 +42947,18 @@
                 },
                 {
                   "name": "toDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": true,
+                  "deprecationReason": "Use to_datetime instead"
+                },
+                {
+                  "name": "toDatetime",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
