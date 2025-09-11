@@ -172,7 +172,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
 
       it "returns an error" do
         expect(result).not_to be_success
-        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
       end
 
       context "when paid_credits is below the wallet minimum" do
