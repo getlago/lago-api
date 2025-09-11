@@ -72,7 +72,7 @@ RSpec.describe Wallets::CreateService, type: :service do
 
       it "returns an error" do
         expect(service_result).not_to be_success
-        expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
       end
     end
 
