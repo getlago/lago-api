@@ -400,20 +400,19 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         }
       end
 
-      it "creates a subscription with overridden plan with fixed_charges" do
+      it "creates a subscription with overridden plan with fixed_charges, but does not send them in the response" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:subscription][:plan][:fixed_charges].first).to include(
+        expect(json[:subscription][:plan][:fixed_charges]).to be_nil
+        subscription.reload
+        expect(subscription.fixed_charges.count).to eq(1)
+        expect(subscription.fixed_charges.first).to include(
           lago_add_on_id: fixed_charge.add_on.id,
           units: "10.0",
           invoice_display_name: "another name",
           charge_model: "standard",
           properties: {amount: "20"}
-        )
-        expect(json[:subscription][:plan][:fixed_charges].first[:taxes].first).to include(
-          code: tax.code,
-          rate: tax.rate
         )
       end
     end

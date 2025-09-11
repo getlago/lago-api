@@ -229,6 +229,7 @@ module Api
             :invoice_display_name,
             :charge_model,
             :units,
+            :apply_units_immediately,
             properties: {},
             tax_codes: []
           ],
