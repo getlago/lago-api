@@ -19,12 +19,12 @@ module Resolvers
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false
     # You can't use union types with scalars, so we need a new argument for each type
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use from_datetime instead"
+    argument :from_date, GraphQL::Types::ISO8601Date, required: false
     argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
     argument :resource_ids, [String], required: false
     argument :resource_types, [Types::ActivityLogs::ResourceTypeEnum], required: false
     # You can't use union types with scalars, so we need a new argument for each type
-    argument :to_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use to_datetime instead"
+    argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :to_datetime, GraphQL::Types::ISO8601DateTime, required: false
     argument :user_emails, [String], required: false
 
