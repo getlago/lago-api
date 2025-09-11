@@ -3,8 +3,7 @@
 module Api
   module V1
     module Subscriptions
-      class AlertsController < Api::BaseController
-        before_action :find_subscription
+      class AlertsController < BaseController
         before_action :find_alert, only: %i[show update destroy]
 
         def index
@@ -86,14 +85,6 @@ module Api
           )
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "alert")
-        end
-
-        def find_subscription
-          @subscription = current_organization.subscriptions.find_by!(
-            external_id: params[:subscription_external_id]
-          )
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "subscription")
         end
 
         def render_alert(alert)
