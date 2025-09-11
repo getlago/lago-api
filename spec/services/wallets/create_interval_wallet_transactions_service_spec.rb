@@ -24,6 +24,22 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
     before { recurring_transaction_rule }
 
+    def expect_to_have_scheduled_wallet_transaction(**attrs)
+      expect(WalletTransactions::CreateJob).to have_been_enqueued
+        .with(
+          organization_id: customer.organization_id,
+          params: {
+            wallet_id: wallet.id,
+            paid_credits: recurring_transaction_rule.paid_credits.to_s,
+            granted_credits: recurring_transaction_rule.granted_credits.to_s,
+            source: :interval,
+            invoice_requires_successful_payment: false,
+            metadata: [],
+            name: "Recurring Transaction Rule"
+          }.merge(attrs)
+        )
+    end
+
     context "when recurring transactions should be created weekly" do
       let(:interval) { :weekly }
 
@@ -35,24 +51,35 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: false,
-                metadata: []
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction
         end
       end
 
       it "does not enqueue a job on other day" do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+        end
+      end
+
+      context "when recurring transaction rule has no transaction_name" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval:,
+            created_at: created_at + 1.second,
+            started_at:,
+            transaction_name: nil
+          )
+        end
+
+        it "enqueues a job with transaction_name" do
+          travel_to(current_date) do
+            create_interval_transactions_service.call
+
+            expect_to_have_scheduled_wallet_transaction(name: nil)
+          end
         end
       end
 
@@ -71,18 +98,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -102,18 +118,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
         it "calls wallet transaction create job with expected params" do
           travel_to(current_date) do
-            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
-              .with(
-                organization_id: wallet.organization.id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: "150.0",
-                  granted_credits: "0.0",
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            create_interval_transactions_service.call
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "150.0", granted_credits: "0.0")
           end
         end
       end
@@ -127,18 +133,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: false,
-                metadata: []
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction
         end
       end
 
@@ -156,18 +151,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -190,18 +174,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -215,18 +188,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: false,
-                metadata: []
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction
         end
       end
 
@@ -244,18 +206,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -268,18 +219,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -293,18 +233,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: false,
-                metadata: []
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction
         end
       end
 
@@ -322,18 +251,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect(WalletTransactions::CreateJob).to have_been_enqueued
-              .with(
-                organization_id: customer.organization_id,
-                params: {
-                  wallet_id: wallet.id,
-                  paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                  granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                  source: :interval,
-                  invoice_requires_successful_payment: false,
-                  metadata: []
-                }
-              )
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -417,18 +335,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: true,
-                metadata: []
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction(invoice_requires_successful_payment: true)
         end
       end
     end
@@ -457,18 +364,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         travel_to(current_date) do
           create_interval_transactions_service.call
 
-          expect(WalletTransactions::CreateJob).to have_been_enqueued
-            .with(
-              organization_id: customer.organization_id,
-              params: {
-                wallet_id: wallet.id,
-                paid_credits: recurring_transaction_rule.paid_credits.to_s,
-                granted_credits: recurring_transaction_rule.granted_credits.to_s,
-                source: :interval,
-                invoice_requires_successful_payment: false,
-                metadata: transaction_metadata
-              }
-            )
+          expect_to_have_scheduled_wallet_transaction(metadata: transaction_metadata)
         end
       end
     end
@@ -545,7 +441,9 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
         it "enqueues a job" do
           travel_to(current_date) do
-            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            create_interval_transactions_service.call
+
+            expect_to_have_scheduled_wallet_transaction
           end
         end
       end
@@ -566,7 +464,9 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
         it "enqueues a job" do
           travel_to(current_date) do
-            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            create_interval_transactions_service.call
+
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
           end
         end
       end
@@ -588,7 +488,9 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
         it "enqueues a job" do
           travel_to(current_date) do
-            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+            create_interval_transactions_service.call
+
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
           end
         end
       end

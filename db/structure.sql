@@ -3847,7 +3847,8 @@ CREATE TABLE public.recurring_transaction_rules (
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
     organization_id uuid NOT NULL,
-    ignore_paid_top_up_limits boolean DEFAULT false NOT NULL
+    ignore_paid_top_up_limits boolean DEFAULT false NOT NULL,
+    transaction_name character varying(255)
 );
 
 
@@ -9759,6 +9760,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250909125858'),
 ('20250908085959'),
 ('20250903165724'),
 ('20250901141844'),

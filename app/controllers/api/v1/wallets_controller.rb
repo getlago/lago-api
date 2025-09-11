@@ -106,6 +106,7 @@ module Api
             :trigger,
             :invoice_requires_successful_payment,
             :ignore_paid_top_up_limits,
+            :transaction_name,
             transaction_metadata: [
               :key,
               :value
@@ -142,6 +143,7 @@ module Api
             :granted_credits,
             :invoice_requires_successful_payment,
             :ignore_paid_top_up_limits,
+            :transaction_name,
             transaction_metadata: [
               :key,
               :value

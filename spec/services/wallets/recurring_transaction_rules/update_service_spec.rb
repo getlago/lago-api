@@ -134,5 +134,34 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         end
       end
     end
+
+    {
+      "Updated Transaction Name" => "Updated Transaction Name",
+      "" => nil,
+      "   " => nil,
+      nil => nil
+    }.each do |transaction_name, expected_transaction_name|
+      context "when transaction_name is #{transaction_name.inspect}" do
+        let(:params) do
+          [
+            {
+              lago_id: recurring_transaction_rule.id,
+              trigger: "interval",
+              interval: "weekly",
+              paid_credits: "105",
+              granted_credits: "105",
+              transaction_name:
+            }
+          ]
+        end
+
+        it "updates existing recurring transaction rule with new transaction_name" do
+          result = update_service.call
+
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
+          expect(rule.transaction_name).to eq(expected_transaction_name)
+        end
+      end
+    end
   end
 end
