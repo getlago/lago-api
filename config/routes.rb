@@ -41,6 +41,7 @@ Rails.application.routes.draw do
           resources :applied_coupons, only: %i[destroy]
           resources :invoices, only: %i[index]
           resources :payments, only: %i[index]
+          resources :subscriptions, only: %i[index]
         end
       end
 
