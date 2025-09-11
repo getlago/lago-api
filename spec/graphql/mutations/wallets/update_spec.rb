@@ -40,6 +40,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               key
               value
             }
+            transactionName
           }
           appliesTo {
             feeTypes
@@ -92,7 +93,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
-              ]
+              ],
+              transactionName: "Updated Credits Transaction"
             }
           ],
           appliesTo: {
@@ -120,6 +122,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       {"key" => "example_key", "value" => "example_value"},
       {"key" => "another_key", "value" => "another_value"}
     )
+    expect(result_data["recurringTransactionRules"][0]["transactionName"]).to eq("Updated Credits Transaction")
     expect(result_data["recurringTransactionRules"][0]).to include(
       "lagoId" => recurring_transaction_rule.id,
       "method" => "target",

@@ -97,7 +97,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
       end
     end
 
-    context "when rule contains nil transaction_name" do
+    context "when rule does not contain transaction_name" do
       let(:recurring_transaction_rule) do
         create(
           :recurring_transaction_rule,
