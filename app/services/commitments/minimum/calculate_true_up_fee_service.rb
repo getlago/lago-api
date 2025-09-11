@@ -48,14 +48,18 @@ module Commitments
         subscription_fees.sum(:amount_cents) +
           charge_fees.sum(:amount_cents) +
           charge_in_advance_fees.sum(:amount_cents) +
-          charge_in_advance_recurring_fees.sum(:amount_cents)
+          charge_in_advance_recurring_fees.sum(:amount_cents) +
+          fixed_charge_fees.sum(:amount_cents) +
+          fixed_charge_in_advance_fees.sum(:amount_cents)
       end
 
       def fees_total_precise_amount_cents
         subscription_fees.sum(:precise_amount_cents) +
           charge_fees.sum(:precise_amount_cents) +
           charge_in_advance_fees.sum(:precise_amount_cents) +
-          charge_in_advance_recurring_fees.sum(:precise_amount_cents)
+          charge_in_advance_recurring_fees.sum(:precise_amount_cents) +
+          fixed_charge_fees.sum(:precise_amount_cents) +
+          fixed_charge_in_advance_fees.sum(:precise_amount_cents)
       end
 
       def commitment_amount_cents
