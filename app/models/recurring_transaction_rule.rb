@@ -44,6 +44,42 @@ class RecurringTransactionRule < ApplicationRecord
       .where("expiration_at IS NOT NULL AND expiration_at <= ?", Time.current)
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
+
+  def apply_top_up_limits(credit_amount:)
+    if ignore_paid_top_up_limits?
+      credit_amount
+    else
+      wallet.apply_top_up_limits(credit_amount:)
+    end
+  end
+
+  def compute_paid_credits(ongoing_balance:)
+    if target?
+      compute_target_paid_credits(ongoing_balance:)
+    else
+      paid_credits
+    end
+  end
+
+  def compute_granted_credits
+    if target?
+      0.0
+    else
+      granted_credits
+    end
+  end
+
+  private
+
+  def compute_target_paid_credits(ongoing_balance:)
+    if ongoing_balance >= target_ongoing_balance
+      return 0.0
+    end
+
+    gap = target_ongoing_balance - ongoing_balance
+
+    apply_top_up_limits(credit_amount: gap)
+  end
 end
 
 # == Schema Information

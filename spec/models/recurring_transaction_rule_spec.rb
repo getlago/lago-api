@@ -41,4 +41,34 @@ RSpec.describe RecurringTransactionRule, type: :model do
         .from("active").to("terminated")
     end
   end
+
+  describe "#apply_top_up_limits" do
+    subject { rule.apply_top_up_limits(credit_amount:) }
+
+    let(:rule) { create(:recurring_transaction_rule, wallet:, ignore_paid_top_up_limits:) }
+    let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 10_00, paid_top_up_max_amount_cents: 20_00) }
+    let(:credit_amount) { 5 }
+
+    context "when recurring transaction rule ignores paid top up limits" do
+      let(:ignore_paid_top_up_limits) { true }
+
+      it "returns not changed value" do
+        expect(subject).to eq credit_amount
+      end
+    end
+
+    context "when recurring transaction rule does not ignore paid top up limits" do
+      let(:ignore_paid_top_up_limits) { false }
+
+      it "returns normalized to wallet limits value" do
+        expect(subject).to eq 10
+      end
+    end
+  end
+
+  describe "#compute_granted_credits" do
+    subject { rule.compute_granted_credits }
+
+    let(:rule) { create(:recurring_transaction_rule, wallet:, ignore_paid_top_up_limits:) }
+  end
 end
