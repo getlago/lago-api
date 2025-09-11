@@ -8,6 +8,9 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
       query($id: ID!) {
         wallet(id: $id) {
           id name status creditsBalance
+          recurringTransactionRules {
+            transactionName
+          }
         }
       }
     GQL
@@ -16,7 +19,7 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, :with_recurring_transaction_rules, customer:) }
 
   before { wallet }
 
@@ -30,12 +33,11 @@ RSpec.describe Resolvers::WalletResolver, type: :graphql do
 
     coupon_response = result["data"]["wallet"]
 
-    aggregate_failures do
-      expect(coupon_response["id"]).to eq(wallet.id)
-      expect(coupon_response["name"]).to eq(wallet.name)
-      expect(coupon_response["status"]).to eq("active")
-      expect(coupon_response["creditsBalance"]).to eq(0)
-    end
+    expect(coupon_response).to eq(
+      {
+        "creditsBalance" => 0.0, "id" => wallet.id, "name" => wallet.name, "recurringTransactionRules" => [{"transactionName" => "Recurring Transaction Rule"}], "status" => "active"
+      }
+    )
   end
 
   context "without current organization" do
