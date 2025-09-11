@@ -161,7 +161,7 @@ RSpec.describe Wallet, type: :model do
       let(:paid_top_up_min_amount_cents) { nil }
 
       context "when wallet has maximum top up limit specified" do
-        let(:paid_top_up_max_amount_cents) { 50 }
+        let(:paid_top_up_max_amount_cents) { 50_00 }
 
         context "when provided value is greater than maximum" do
           let(:credit_amount) { 100 }
