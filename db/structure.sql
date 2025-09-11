@@ -1,3 +1,8 @@
+\restrict BDUViTJDgZ2gkP7SodzHnA1LsZHHZm7L5sG3hBndxjdhMosfiM52C5KmdYAD1bF
+
+-- Dumped from database version 14.0
+-- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -3228,7 +3233,7 @@ CREATE TABLE public.wallet_transactions (
     organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     priority integer DEFAULT 50 NOT NULL,
-    name character varying(255)
+    name character varying
 );
 
 
@@ -3850,6 +3855,7 @@ CREATE TABLE public.recurring_transaction_rules (
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
     organization_id uuid NOT NULL,
+    transaction_name character varying,
     ignore_paid_top_up_limits boolean DEFAULT false NOT NULL
 );
 
@@ -9766,10 +9772,13 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
+\unrestrict BDUViTJDgZ2gkP7SodzHnA1LsZHHZm7L5sG3hBndxjdhMosfiM52C5KmdYAD1bF
+
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250911111448'),
+('20250909125858'),
 ('20250908085959'),
 ('20250903165724'),
 ('20250901141844'),
@@ -10590,3 +10599,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
