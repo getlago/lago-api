@@ -3,6 +3,8 @@
 module Api
   module V1
     class WalletsController < Api::BaseController
+      include WalletIndex
+
       def create
         result = Wallets::CreateService.call(
           params: input_params
@@ -52,28 +54,10 @@ module Api
       end
 
       def index
-        result = WalletsQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: {external_customer_id: params[:external_customer_id]}
-        )
+        permitted_params = params.permit(:external_customer_id)
+        external_customer_id = permitted_params[:external_customer_id]
 
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.wallets.includes(:recurring_transaction_rules),
-              ::V1::WalletSerializer,
-              collection_name: "wallets",
-              meta: pagination_metadata(result.wallets),
-              includes: %i[recurring_transaction_rules limitations]
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        wallet_index(external_customer_id:)
       end
 
       private
