@@ -38,12 +38,6 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController, type: :request do
           units: fixed_charge.units.to_s
         })
       end
-
-      it "excludes deleted fixed charges" do
-        subject
-        expect(json[:fixed_charges].map { |fc| fc[:lago_id] }).not_to include(deleted_fixed_charge.id)
-        expect(json[:fixed_charges].count).to eq 1
-      end
     end
 
     context "when there is only deleted fixed charges" do
@@ -62,6 +56,12 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController, type: :request do
         subject
         expect(json[:fixed_charges].first).to include(:taxes)
         expect(json[:fixed_charges].first[:taxes]).to be_an(Array)
+        expect(json[:fixed_charges].first[:taxes].first).to include(
+          lago_id: fixed_charge.applied_taxes.first.tax.id,
+          name: fixed_charge.applied_taxes.first.tax.name,
+          code: fixed_charge.applied_taxes.first.tax.code,
+          rate: fixed_charge.applied_taxes.first.tax.rate
+        )
       end
     end
 
