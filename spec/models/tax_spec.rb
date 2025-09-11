@@ -63,4 +63,51 @@ RSpec.describe Tax, type: :model do
       end
     end
   end
+
+  describe "#destroy" do
+    subject { tax.destroy! }
+
+    let(:tax) { create(:tax) }
+
+    context "when associated to applied_taxes" do
+      context "with invoices and fees" do
+        let(:invoice_status) { :finalized }
+        let(:invoice) { create(:invoice, status: invoice_status) }
+        let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax:) }
+        let(:fee) { create(:fee, invoice:) }
+        let(:fee_applied_tax) { create(:fee_applied_tax, fee:, tax:) }
+
+        before do
+          invoice_applied_tax
+          fee_applied_tax
+        end
+
+        context "when invoice finalized" do
+          it "does not remove applied taxes" do
+            subject
+
+            expect(invoice.applied_taxes).to eq([invoice_applied_tax])
+            expect(invoice_applied_tax.reload.tax).to be_nil
+
+            expect(fee.applied_taxes).to eq([fee_applied_tax])
+            expect(fee_applied_tax.reload.tax).to be_nil
+          end
+        end
+
+        context "when invoice draft" do
+          let(:invoice_status) { :draft }
+
+          it "does remove applied taxes" do
+            subject
+
+            expect(invoice.applied_taxes).to be_empty
+            expect { invoice_applied_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+
+            expect(fee.applied_taxes).to be_empty
+            expect { fee_applied_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+          end
+        end
+      end
+    end
+  end
 end

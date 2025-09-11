@@ -10,9 +10,11 @@ class Tax < ApplicationRecord
 
   has_many :billing_entities_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
   has_many :billing_entities, through: :billing_entities_taxes
-  has_many :fees_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
+  has_many :draft_fee_taxes, -> { joins(fee: :invoice).where(invoices: {status: :draft}) }, class_name: "Fee::AppliedTax", dependent: :destroy
+  has_many :fees_taxes, class_name: "Fee::AppliedTax"
   has_many :fees, through: :fees_taxes
-  has_many :invoices_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
+  has_many :draft_invoice_taxes, -> { joins(:invoice).where(invoices: {status: :draft}) }, class_name: "Invoice::AppliedTax", dependent: :destroy
+  has_many :invoices_taxes, class_name: "Invoice::AppliedTax"
   has_many :invoices, through: :invoices_taxes
   has_many :credit_notes_taxes, class_name: "CreditNote::AppliedTax", dependent: :destroy
   has_many :credit_notes, through: :credit_notes_taxes
