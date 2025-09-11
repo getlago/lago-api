@@ -38,6 +38,7 @@ Rails.application.routes.draw do
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
+          resources :invoices, only: %i[index]
         end
       end
 
