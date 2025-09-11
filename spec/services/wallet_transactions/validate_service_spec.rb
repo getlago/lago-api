@@ -49,7 +49,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
       end
     end
 
@@ -58,7 +58,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:granted_credits]).to eq(["invalid_granted_credits"])
+        expect(result.error.messages[:granted_credits]).to eq(["invalid_granted_credits", "invalid_amount"])
       end
     end
 
@@ -67,7 +67,7 @@ RSpec.describe WalletTransactions::ValidateService, type: :service do
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:voided_credits]).to eq(["invalid_voided_credits"])
+        expect(result.error.messages[:voided_credits]).to eq(["invalid_voided_credits", "invalid_amount"])
       end
     end
 
