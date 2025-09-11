@@ -22,8 +22,12 @@
               td.body-1 = subscription_fee&.invoice_display_name
             - else
               td.body-1 = I18n.t('invoice.subscription_interval', plan_interval: I18n.t("invoice.#{subscription.plan.interval}"), plan_name: subscription.plan.invoice_name)
-            td.body-2 = 1
-            td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
+            - if !subscription_fee || subscription_fee.units.to_i == 1
+              td.body-2 = 1
+              td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
+            - else
+              td.body-2 = subscription_fee.units
+              td.body-2 = MoneyHelper.format(subscription_fee.unit_amount)
             td.body-2 == TaxHelper.applied_taxes(subscription_fee)
             td.body-2 = MoneyHelper.format(invoice_subscription.subscription_amount)
 
