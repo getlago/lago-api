@@ -405,14 +405,14 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:subscription][:plan][:fixed_charges]).to be_nil
-        subscription.reload
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
         expect(subscription.fixed_charges.count).to eq(1)
-        expect(subscription.fixed_charges.first).to include(
-          lago_add_on_id: fixed_charge.add_on.id,
-          units: "10.0",
+        expect(subscription.fixed_charges.first.attributes.symbolize_keys).to include(
+          add_on_id: fixed_charge.add_on.id,
+          units: 10.0,
           invoice_display_name: "another name",
           charge_model: "standard",
-          properties: {amount: "20"}
+          properties: {"amount" => "20"}
         )
       end
     end
