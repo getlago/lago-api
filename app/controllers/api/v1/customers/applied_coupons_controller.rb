@@ -3,11 +3,33 @@
 module Api
   module V1
     module Customers
-      class AppliedCouponsController < Api::BaseController
-        def destroy
-          customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
-          return not_found_error(resource: "customer") unless customer
+      class AppliedCouponsController < BaseController
+        def index
+          result = AppliedCouponsQuery.call(
+            organization: current_organization,
+            pagination: {
+              page: params[:page],
+              limit: params[:per_page] || PER_PAGE
+            },
+            filters: params.permit(:status, coupon_code: []).merge(external_customer_id: customer.external_id)
+          )
 
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.applied_coupons.includes(:credits, :coupon, :customer),
+                ::V1::AppliedCouponSerializer,
+                collection_name: "applied_coupons",
+                meta: pagination_metadata(result.applied_coupons),
+                includes: %i[credits]
+              )
+            )
+          else
+            render_error_response(result)
+          end
+        end
+
+        def destroy
           applied_coupon = customer.applied_coupons.find_by(id: params[:id])
           return not_found_error(resource: "applied_coupon") unless applied_coupon
 
