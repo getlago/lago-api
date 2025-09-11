@@ -298,6 +298,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
@@ -2758,7 +2759,9 @@ CREATE TABLE public.invoice_subscriptions (
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
     organization_id uuid NOT NULL,
-    regenerated_invoice_id uuid
+    regenerated_invoice_id uuid,
+    fixed_charges_from_datetime timestamp(6) without time zone,
+    fixed_charges_to_datetime timestamp(6) without time zone
 );
 
 
@@ -7615,6 +7618,13 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime
 
 
 --
+-- Name: index_uniq_invoice_subscriptions_on_fixed_charges_boundaries; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries ON public.invoice_subscriptions USING btree (subscription_id, fixed_charges_from_datetime, fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
+
+
+--
 -- Name: index_unique_applied_to_organization_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9759,6 +9769,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250911111448'),
 ('20250908085959'),
 ('20250903165724'),
 ('20250901141844'),
