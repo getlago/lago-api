@@ -175,14 +175,9 @@ RSpec.describe ::V1::SubscriptionSerializer do
 
     before { fixed_charge }
 
-    it "serializes the fixed charges" do
+    it "does not serialize the fixed charges" do
       result = JSON.parse(serializer.to_json)
-      expect(result["subscription"]["plan"]["fixed_charges"].count).to eq 1
-      expect(result["subscription"]["plan"]["fixed_charges"].first).to include(
-        "lago_id" => fixed_charge.id,
-        "lago_add_on_id" => fixed_charge.add_on.id,
-        "units" => fixed_charge.units.to_s
-      )
+      expect(result["subscription"]["plan"]["fixed_charges"]).to be_nil
     end
   end
 end

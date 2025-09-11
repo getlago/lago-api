@@ -3,8 +3,11 @@
 module Api
   module V1
     module Subscriptions
-      class EntitlementsController < BaseController
+      class EntitlementsController < Api::BaseController
         include PremiumFeatureOnly
+
+        # Shall we update BaseController to include hae active subscriptions only?
+        before_action :find_subscription
 
         def index
           render(
@@ -62,6 +65,17 @@ module Api
 
         def update_params
           params.fetch(:entitlements, {}).permit!
+        end
+
+        def find_subscription
+          @subscription = current_organization.subscriptions
+            .order("terminated_at DESC NULLS FIRST, started_at DESC") # TODO: Confirm
+            .find_by!(
+              external_id: params[:subscription_external_id],
+              status: :active # TODO: Confirm
+            )
+        rescue ActiveRecord::RecordNotFound
+          not_found_error(resource: "subscription")
         end
       end
     end

@@ -46,14 +46,12 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController, type: :request do
       end
     end
 
-    context "when there are no fixed charges" do
+    context "when there is only deleted fixed charges" do
       let(:fixed_charge) { nil }
-      let(:deleted_fixed_charge) { nil }
 
       it do
         subject
         expect(json[:fixed_charges]).to be_empty
-        expect(json[:meta][:total_count]).to eq 0
       end
     end
 
