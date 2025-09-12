@@ -2,8 +2,12 @@
 
 module Events
   module Stores
-    class AggregatedClickhouseStore < ClickhouseStore
+    class AggregatedClickhouseStore < BaseStore
+      include Concerns::ClickhouseConnection
+      include Concerns::ClickhouseSqlHelpers
+
       NIL_GROUP_VALUE = "<nil>"
+      DECIMAL_SCALE = 26
 
       def events(force_from: false, ordered: false)
         with_retry do
@@ -287,16 +291,82 @@ module Events
       end
 
       def weighted_sum(initial_value: 0)
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE,
+                initial_value: initial_value || 0
+              }
+            ]
+          )
+
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
       def grouped_weighted_sum(initial_values: [])
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = AggregatedClickhouse::WeightedSumQuery.new(store: self)
+
+          # NOTE: build the list of initial values for each groups
+          #       from the events in the period
+          formated_initial_values = grouped_count.map do |group|
+            value = 0
+            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+            value = previous_group[:value] if previous_group
+            {groups: group[:groups], value:}
+          end
+
+          # NOTE: add the initial values for groups that are not in the events
+          initial_values.each do |intial_value|
+            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+
+            formated_initial_values << intial_value
+          end
+          return [] if formated_initial_values.empty?
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {
+                  from_datetime:,
+                  to_datetime: to_datetime.ceil,
+                  decimal_scale: DECIMAL_SCALE,
+                  initial_value: initial_value || 0
+                }
+              ]
+            )
+          ).rows
+        end
       end
 
       def aggregated_arel_table
