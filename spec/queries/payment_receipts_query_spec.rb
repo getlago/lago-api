@@ -79,7 +79,7 @@ RSpec.describe PaymentReceiptsQuery, type: :query do
 
     it "returns a validation error" do
       expect(result).not_to be_success
-      expect(result.error.messages[:filters][:invoice_id]).to include("is in invalid format")
+      expect(result.error.messages[:invoice_id]).to include("is in invalid format")
     end
   end
 

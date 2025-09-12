@@ -240,7 +240,7 @@ RSpec.describe CustomersQuery, type: :query do
 
     it "captures all validation errors" do
       expect(result).not_to be_success
-      expect(result.error.messages[:filters][:account_type]).to eq({0 => ["must be one of: customer, partner"]})
+      expect(result.error.messages[:account_type]).to eq({0 => ["must be one of: customer, partner"]})
     end
   end
 end
