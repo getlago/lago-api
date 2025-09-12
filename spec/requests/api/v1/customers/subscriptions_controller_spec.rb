@@ -3,151 +3,38 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::SubscriptionsController, type: :request do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-
-  let(:plan) { create(:plan, organization:) }
-
-  let(:external_id) { customer.external_id }
-
   describe "GET /api/v1/customers/:external_id/subscriptions" do
     subject { get_with_token(organization, "/api/v1/customers/#{external_id}/subscriptions", params) }
 
-    let!(:subscription) { create(:subscription, customer:, plan:) }
-
-    let(:params) { {} }
-
-    include_examples "requires API permission", "subscription", "read"
-
-    it "returns subscriptions" do
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(json[:subscriptions].count).to eq(1)
-      expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
-    end
-
-    context "with next and previous subscriptions" do
-      let(:previous_subscription) do
-        create(
-          :subscription,
-          customer:,
-          plan: create(:plan, organization:),
-          status: :terminated
-        )
-      end
-
-      let(:next_subscription) do
-        create(
-          :subscription,
-          customer:,
-          plan: create(:plan, organization:),
-          status: :pending
-        )
-      end
+    it_behaves_like "a subscription index endpoint" do
+      let(:external_id) { customer.external_id }
+      let(:subscription_2) { create(:subscription, customer: customer_2, organization:, plan:) }
+      let(:customer_2) { create(:customer, organization:) }
 
       before do
-        subscription.update!(previous_subscription:, next_subscriptions: [next_subscription])
+        subscription_2
       end
 
-      it "returns next and previous plan code" do
-        subject
+      context "with unknown customer id" do
+        let(:external_id) { "unknown_customer_id" }
 
-        subscription = json[:subscriptions].first
-        expect(subscription[:previous_plan_code]).to eq(previous_subscription.plan.code)
-        expect(subscription[:next_plan_code]).to eq(next_subscription.plan.code)
-      end
-
-      it "returns the downgrade plan date" do
-        current_date = DateTime.parse("20 Jun 2022")
-
-        travel_to(current_date) do
+        it "returns an error" do
           subject
 
-          subscription = json[:subscriptions].first
-          expect(subscription[:downgrade_plan_date]).to eq("2022-07-01")
+          expect(response).to have_http_status(:not_found)
+          expect(json[:code]).to eq("customer_not_found")
         end
       end
-    end
 
-    context "with pagination" do
-      let(:params) do
-        {
-          page: 1,
-          per_page: 1
-        }
-      end
+      context "when customer does not belongs to the organization" do
+        let(:customer) { create(:customer) }
 
-      before do
-        another_plan = create(:plan, organization:, amount_cents: 30_000)
-        create(:subscription, customer:, plan: another_plan)
-      end
+        it "returns an error" do
+          subject
 
-      it "returns subscriptions with correct meta data" do
-        subject
-
-        expect(response).to have_http_status(:success)
-
-        expect(json[:subscriptions].count).to eq(1)
-        expect(json[:meta][:current_page]).to eq(1)
-        expect(json[:meta][:next_page]).to eq(2)
-        expect(json[:meta][:prev_page]).to eq(nil)
-        expect(json[:meta][:total_pages]).to eq(2)
-        expect(json[:meta][:total_count]).to eq(2)
-      end
-    end
-
-    context "with plan code" do
-      let(:params) { {plan_code: plan.code} }
-
-      it "returns subscriptions" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:subscriptions].count).to eq(1)
-        expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
-      end
-    end
-
-    context "with terminated status" do
-      let!(:terminated_subscription) do
-        create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
-      end
-
-      let(:params) do
-        {
-          status: ["terminated"]
-        }
-      end
-
-      it "returns terminated subscriptions" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:subscriptions].count).to eq(1)
-        expect(json[:subscriptions].first[:lago_id]).to eq(terminated_subscription.id)
-      end
-    end
-
-    context "with unknown customer id" do
-      let(:external_id) { "unknown_customer_id" }
-
-      it "returns an error" do
-        subject
-
-        expect(response).to have_http_status(:not_found)
-        expect(json[:code]).to eq("customer_not_found")
-      end
-    end
-
-    context "when customer does not belongs to the organization" do
-      let(:customer) { create(:customer) }
-
-      it "returns an error" do
-        subject
-
-        expect(response).to have_http_status(:not_found)
-        expect(json[:code]).to eq("customer_not_found")
+          expect(response).to have_http_status(:not_found)
+          expect(json[:code]).to eq("customer_not_found")
+        end
       end
     end
   end

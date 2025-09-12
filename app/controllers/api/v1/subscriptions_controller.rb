@@ -3,6 +3,8 @@
 module Api
   module V1
     class SubscriptionsController < Api::BaseController
+      include SubscriptionIndex
+
       def create
         response = {}
         billing_entity_result = BillingEntities::ResolveService.call(
@@ -141,27 +143,9 @@ module Api
       end
 
       def index
-        result = SubscriptionsQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: index_filters
-        )
-
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.subscriptions,
-              ::V1::SubscriptionSerializer,
-              collection_name: "subscriptions",
-              meta: pagination_metadata(result.subscriptions)
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        permitted_params = params.permit(:external_customer_id)
+        external_customer_id = permitted_params[:external_customer_id]
+        subscription_index(external_customer_id:)
       end
 
       private
@@ -230,12 +214,6 @@ module Api
             :recurring
           ]
         ]
-      end
-
-      def index_filters
-        filters = params.permit(:external_customer_id, :plan_code, status: [])
-        filters[:status] = ["active"] if filters[:status].blank?
-        filters
       end
 
       def render_subscription(subscription)
