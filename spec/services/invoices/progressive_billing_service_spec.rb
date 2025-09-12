@@ -191,9 +191,9 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       expect { create_service.call }.to have_enqueued_job(SendWebhookJob)
     end
 
-    it "enqueue an GeneratePdfAndNotifyJob with email false" do
+    it "enqueue an GenerateFilesAndNotifyJob with email false" do
       expect { create_service.call }
-        .to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+        .to have_enqueued_job(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: false))
     end
 
     it "produces an activity log" do
@@ -205,17 +205,17 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
     context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it "enqueues an GeneratePdfAndNotifyJob with email true" do
+      it "enqueues an GenerateFilesAndNotifyJob with email true" do
         expect { create_service.call }
-          .to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+          .to have_enqueued_job(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: true))
       end
 
       context "when organization does not have right email settings" do
         before { subscription.billing_entity.update!(email_settings: []) }
 
-        it "enqueue an GeneratePdfAndNotifyJob with email false" do
+        it "enqueue an GenerateFilesAndNotifyJob with email false" do
           expect { create_service.call }
-            .to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+            .to have_enqueued_job(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: false))
         end
       end
     end

@@ -9,6 +9,7 @@ module Types
       argument :name, String, required: true
 
       argument :default_currency, Types::CurrencyEnum, required: false
+      argument :einvoicing, Boolean, required: false
       argument :email, String, required: false
       argument :legal_name, String, required: false
       argument :legal_number, String, required: false
