@@ -15,7 +15,8 @@ class RecurringTransactionRule < ApplicationRecord
     :weekly,
     :monthly,
     :quarterly,
-    :yearly
+    :yearly,
+    :semiannual
   ].freeze
 
   METHODS = [
