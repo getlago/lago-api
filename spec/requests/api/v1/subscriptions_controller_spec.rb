@@ -392,7 +392,6 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
               id: fixed_charge.id,
               units: "10",
               invoice_display_name: "another name",
-              charge_model: "standard",
               properties: {amount: "20"},
               tax_codes: [tax.code]
             }]
@@ -412,7 +411,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           units: 10.0,
           invoice_display_name: "another name",
           charge_model: "standard",
-          properties: {"amount" => "20"}
+          properties: {"amount" => "20"},
+          parent_id: fixed_charge.id
         )
       end
     end
