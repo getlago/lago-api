@@ -8791,7 +8791,7 @@ ALTER TABLE ONLY public.adjusted_fees
 --
 
 ALTER TABLE ONLY public.invoices_taxes
-    ADD CONSTRAINT fk_rails_6e148ccbb1 FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
+    ADD CONSTRAINT fk_rails_6e148ccbb1 FOREIGN KEY (tax_id) REFERENCES public.taxes(id) ON DELETE SET NULL;
 
 
 --
@@ -9727,7 +9727,7 @@ ALTER TABLE ONLY public.billing_entities
 --
 
 ALTER TABLE ONLY public.fees_taxes
-    ADD CONSTRAINT fk_rails_f98413d404 FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
+    ADD CONSTRAINT fk_rails_f98413d404 FOREIGN KEY (tax_id) REFERENCES public.taxes(id) ON DELETE SET NULL;
 
 
 --
@@ -9770,6 +9770,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250912081524'),
+('20250911124033'),
 ('20250911111448'),
 ('20250908085959'),
 ('20250903165724'),
