@@ -209,9 +209,7 @@ module Api
           ],
           fixed_charges: [
             :id,
-            :add_on_id,
             :invoice_display_name,
-            :charge_model,
             :units,
             :apply_units_immediately,
             properties: {},
