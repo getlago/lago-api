@@ -7,10 +7,6 @@ class Wallet < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
 
-  # TODO: remove this when the new column is added
-  attribute :paid_top_up_min_amount_cents
-  attribute :paid_top_up_max_amount_cents
-
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
