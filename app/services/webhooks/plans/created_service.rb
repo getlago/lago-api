@@ -9,7 +9,7 @@ module Webhooks
         ::V1::PlanSerializer.new(
           object,
           root_name: "plan",
-          includes: %i[charges usage_thresholds taxes minimum_commitment]
+          includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
         )
       end
 
