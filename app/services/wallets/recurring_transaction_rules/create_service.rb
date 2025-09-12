@@ -42,9 +42,16 @@ module Wallets
           wallet.invoice_requires_successful_payment?
         end
 
+        validate_paid_credits!(
+          credits_amount: attributes[:paid_credits],
+          ignore_validation: attributes[:ignore_paid_top_up_limits]
+        )
+
         rule = wallet.recurring_transaction_rules.create!(attributes)
 
         result.recurring_transaction_rule = rule
+        result
+      rescue BaseService::FailedResult
         result
       end
 
@@ -58,6 +65,17 @@ module Wallets
 
       def method
         @method ||= rule_params[:method] || "fixed"
+      end
+
+      def validate_paid_credits!(credits_amount:, ignore_validation:)
+        return unless method == "fixed"
+
+        Validators::WalletTransactionAmountLimitsValidator.new(
+          result,
+          wallet:,
+          credits_amount:,
+          ignore_validation:
+        ).raise_if_invalid!
       end
     end
   end
