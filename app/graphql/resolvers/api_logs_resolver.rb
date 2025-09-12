@@ -12,10 +12,10 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
-    # You can't use union types with scalars, so we need a new argument for each type
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use from_datetime instead"
+    # from_date and to_date are deprecated in favor of from_datetime and to_datetime as it is not possible to update the type in-place (See commit).
+    argument :from_date, GraphQL::Types::ISO8601Date, required: false
     argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
-    argument :to_date, GraphQL::Types::ISO8601Date, required: false, deprecation_reason: "Use to_datetime instead"
+    argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :to_datetime, GraphQL::Types::ISO8601DateTime, required: false
 
     argument :api_key_ids, [String], required: false

@@ -18,15 +18,15 @@ module Resolvers
     argument :api_key_ids, [String], required: false
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false
-    # You can't use union types with scalars, so we need a new argument for each type
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false
-    argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
     argument :resource_ids, [String], required: false
     argument :resource_types, [Types::ActivityLogs::ResourceTypeEnum], required: false
-    # You can't use union types with scalars, so we need a new argument for each type
+    argument :user_emails, [String], required: false
+
+    # from_date and to_date are deprecated in favor of from_datetime and to_datetime as it is not possible to update the type in-place (See commit).
+    argument :from_date, GraphQL::Types::ISO8601Date, required: false
+    argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
     argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :to_datetime, GraphQL::Types::ISO8601DateTime, required: false
-    argument :user_emails, [String], required: false
 
     type Types::ActivityLogs::Object.collection_type, null: true
 

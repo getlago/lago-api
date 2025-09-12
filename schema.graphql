@@ -8348,7 +8348,7 @@ type Query {
   """
   Query api logs of an organization
   """
-  apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date @deprecated(reason: "Use from_datetime instead"), fromDatetime: ISO8601DateTime, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date @deprecated(reason: "Use to_datetime instead"), toDatetime: ISO8601DateTime): ApiLogCollection
+  apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, fromDatetime: ISO8601DateTime, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date, toDatetime: ISO8601DateTime): ApiLogCollection
 
   """
   Query a single billable metric of an organization
