@@ -27,8 +27,6 @@ module Resolvers
       raise unauthorized_error unless License.premium?
       raise forbidden_error(code: "feature_unavailable") unless Utils::ApiLog.available?
 
-      Rails.logger.info("to_date: #{args[:to_date].class} #{args[:to_date]}")
-
       result = ApiLogsQuery.call(
         organization: current_organization,
         filters: {
