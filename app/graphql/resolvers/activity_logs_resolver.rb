@@ -18,11 +18,15 @@ module Resolvers
     argument :api_key_ids, [String], required: false
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false
-    argument :from_date, GraphQL::Types::ISO8601Date, required: false
     argument :resource_ids, [String], required: false
     argument :resource_types, [Types::ActivityLogs::ResourceTypeEnum], required: false
-    argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :user_emails, [String], required: false
+
+    # from_date and to_date are deprecated in favor of from_datetime and to_datetime as it is not possible to update the type in-place (See commit).
+    argument :from_date, GraphQL::Types::ISO8601Date, required: false
+    argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
+    argument :to_date, GraphQL::Types::ISO8601Date, required: false
+    argument :to_datetime, GraphQL::Types::ISO8601DateTime, required: false
 
     type Types::ActivityLogs::Object.collection_type, null: true
 
@@ -33,8 +37,8 @@ module Resolvers
       result = ActivityLogsQuery.call(
         organization: current_organization,
         filters: {
-          from_date: args[:from_date],
-          to_date: args[:to_date],
+          from_date: args[:from_datetime] || args[:from_date],
+          to_date: args[:to_datetime] || args[:to_date],
           api_key_ids: args[:api_key_ids],
           activity_ids: args[:activity_ids],
           activity_types: args[:activity_types],
