@@ -118,7 +118,7 @@ RSpec.describe RecurringTransactionRule, type: :model do
 
     let(:rule) { create(:recurring_transaction_rule, wallet:, method:, target_ongoing_balance:) }
     let(:ongoing_balance) { 100.0 }
-    let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 25_00) }
+    let(:wallet) { create(:wallet, rate_amount: 0.5, paid_top_up_min_amount_cents: 25_00) }
 
     context "when method is fixed" do
       let(:method) { :fixed }
@@ -152,7 +152,7 @@ RSpec.describe RecurringTransactionRule, type: :model do
         let(:target_ongoing_balance) { 101.0 }
 
         it "returns the gag with applied limits from wallet" do
-          expect(subject).to eq 25.0
+          expect(subject).to eq 50.0 # min amount 25 x 2 because of wallet's rate 0.5
         end
       end
     end

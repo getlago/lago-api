@@ -82,8 +82,9 @@ RSpec.describe Wallet, type: :model do
 
   describe "#paid_top_up_min_credits" do
     it "converts min amount cents to credits using the wallet rate" do
+      wallet.rate_amount = 25
       wallet.paid_top_up_min_amount_cents = 1_00
-      expect(wallet.paid_top_up_min_credits).to eq(1.0)
+      expect(wallet.paid_top_up_min_credits).to eq(0.04)
 
       wallet.paid_top_up_min_amount_cents = nil
       expect(wallet.paid_top_up_min_credits).to be_nil
