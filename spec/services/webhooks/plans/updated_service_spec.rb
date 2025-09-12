@@ -9,6 +9,12 @@ RSpec.describe Webhooks::Plans::UpdatedService do
   let(:plan) { create(:plan, organization:) }
 
   describe ".call" do
-    it_behaves_like "creates webhook", "plan.updated", "plan"
+    it_behaves_like "creates webhook", "plan.updated", "plan", {
+      "code" => String,
+      "charges" => Array,
+      "usage_thresholds" => Array,
+      "taxes" => Array,
+      "entitlements" => Array
+    }
   end
 end
