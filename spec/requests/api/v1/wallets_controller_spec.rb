@@ -760,12 +760,14 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   describe "GET /api/v1/wallets" do
     it_behaves_like "a wallet index endpoint" do
       subject do
-        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
+        get_with_token(organization, "/api/v1/wallets", params)
       end
 
       context "when external_customer_id does not belong to the current organization" do
         let(:other_org_customer) { create(:customer) }
         let(:external_id) { other_org_customer.external_id }
+
+        let(:params) { {external_customer_id: external_id} }
 
         it "returns a not found error" do
           subject
