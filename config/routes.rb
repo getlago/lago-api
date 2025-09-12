@@ -39,6 +39,7 @@ Rails.application.routes.draw do
 
         scope module: :customers do
           resources :applied_coupons, only: %i[destroy]
+          resources :credit_notes, only: %i[index]
           resources :invoices, only: %i[index]
           resources :payments, only: %i[index]
         end
