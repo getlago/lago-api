@@ -11287,7 +11287,9 @@ type Wallet {
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
   paidTopUpMaxAmountCents: BigInt
+  paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
+  paidTopUpMinCredits: BigInt
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
