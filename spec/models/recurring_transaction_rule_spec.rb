@@ -64,6 +64,15 @@ RSpec.describe RecurringTransactionRule, type: :model do
         expect(subject).to eq 10
       end
 
+      context "when this is no minimum" do
+        let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: nil) }
+        let(:credit_amount) { 5 }
+
+        it "returns the credit amounts" do
+          expect(subject).to eq 5
+        end
+      end
+
       context "when credit amount is lower than wallet min limit" do
         let(:credit_amount) { 5 }
 
