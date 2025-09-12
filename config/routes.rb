@@ -42,6 +42,7 @@ Rails.application.routes.draw do
           resources :credit_notes, only: %i[index]
           resources :invoices, only: %i[index]
           resources :payments, only: %i[index]
+          resources :subscriptions, only: %i[index]
         end
       end
 
