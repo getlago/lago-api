@@ -59348,7 +59348,31 @@
               "args": []
             },
             {
+              "name": "paidTopUpMaxCredits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "paidTopUpMinAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "paidTopUpMinCredits",
               "description": null,
               "type": {
                 "kind": "SCALAR",

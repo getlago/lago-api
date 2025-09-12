@@ -6,10 +6,19 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
   subject(:create_interval_transactions_service) { described_class.new }
 
   describe ".call" do
-    let(:wallet) { create(:wallet, customer:, created_at:, credits_ongoing_balance: 50) }
     let(:created_at) { DateTime.parse("20 Feb 2021") }
     let(:customer) { create(:customer) }
     let(:started_at) { nil }
+
+    let(:wallet) do
+      create(
+        :wallet,
+        customer:,
+        created_at:,
+        credits_ongoing_balance: 50,
+        paid_top_up_min_amount_cents: 200_00
+      )
+    end
 
     let(:recurring_transaction_rule) do
       create(
@@ -107,7 +116,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
                 organization_id: wallet.organization.id,
                 params: {
                   wallet_id: wallet.id,
-                  paid_credits: "150.0",
+                  paid_credits: "200.0", # the gap is 150 but wallet has min amount set to 200
                   granted_credits: "0.0",
                   source: :interval,
                   invoice_requires_successful_payment: false,

@@ -41,4 +41,120 @@ RSpec.describe RecurringTransactionRule, type: :model do
         .from("active").to("terminated")
     end
   end
+
+  describe "#apply_min_top_up_limits" do
+    subject { rule.apply_min_top_up_limits(credit_amount:) }
+
+    let(:rule) { create(:recurring_transaction_rule, wallet:, ignore_paid_top_up_limits:) }
+    let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 10_00, paid_top_up_max_amount_cents: 20_00) }
+    let(:credit_amount) { 5 }
+
+    context "when recurring transaction rule ignores paid top up limits" do
+      let(:ignore_paid_top_up_limits) { true }
+
+      it "returns not changed value" do
+        expect(subject).to eq credit_amount
+      end
+    end
+
+    context "when recurring transaction rule does not ignore paid top up limits" do
+      let(:ignore_paid_top_up_limits) { false }
+
+      it "returns normalized to wallet limits value" do
+        expect(subject).to eq 10
+      end
+
+      context "when this is no minimum" do
+        let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: nil) }
+        let(:credit_amount) { 5 }
+
+        it "returns the credit amounts" do
+          expect(subject).to eq 5
+        end
+      end
+
+      context "when credit amount is lower than wallet min limit" do
+        let(:credit_amount) { 5 }
+
+        it "returns wallet minimum" do
+          expect(subject).to eq 10
+        end
+      end
+
+      context "when credit amount is greater than wallet max limit" do
+        let(:credit_amount) { 25 }
+
+        it "returns credit amount anyway" do
+          expect(subject).to eq 25
+        end
+      end
+    end
+  end
+
+  describe "#compute_granted_credits" do
+    subject { rule.compute_granted_credits }
+
+    let(:rule) { create(:recurring_transaction_rule, method:) }
+
+    context "when method is fixed" do
+      let(:method) { :fixed }
+
+      it "returns granted credits specified on rule" do
+        expect(subject).to eq rule.granted_credits
+      end
+    end
+
+    context "when method is target" do
+      let(:method) { :target }
+
+      it "returns zero" do
+        expect(subject).to eq 0.0
+      end
+    end
+  end
+
+  describe "#compute_paid_credits" do
+    subject { rule.compute_paid_credits(ongoing_balance:) }
+
+    let(:rule) { create(:recurring_transaction_rule, wallet:, method:, target_ongoing_balance:) }
+    let(:ongoing_balance) { 100.0 }
+    let(:wallet) { create(:wallet, rate_amount: 0.5, paid_top_up_min_amount_cents: 25_00) }
+
+    context "when method is fixed" do
+      let(:method) { :fixed }
+      let(:target_ongoing_balance) { 100.0 }
+
+      it "returns paid credits specified on rule" do
+        expect(subject).to eq rule.paid_credits
+      end
+    end
+
+    context "when method is target" do
+      let(:method) { :target }
+
+      context "when ongoing balance is greater than target balance" do
+        let(:target_ongoing_balance) { 99.0 }
+
+        it "returns zero" do
+          expect(subject).to eq 0.0
+        end
+      end
+
+      context "when ongoing balance equals to target balance" do
+        let(:target_ongoing_balance) { 100.0 }
+
+        it "returns zero" do
+          expect(subject).to eq 0.0
+        end
+      end
+
+      context "when ongoing balance is smaller than target balance" do
+        let(:target_ongoing_balance) { 101.0 }
+
+        it "returns the gag with applied limits from wallet" do
+          expect(subject).to eq 50.0 # min amount 25 x 2 because of wallet's rate 0.5
+        end
+      end
+    end
+  end
 end

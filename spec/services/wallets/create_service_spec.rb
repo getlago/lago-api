@@ -21,7 +21,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         customer:,
         organization_id: organization.id,
         currency: "EUR",
-        rate_amount: "1.00",
+        rate_amount: "5.00",
         expiration_at:,
         paid_credits:,
         granted_credits:,
@@ -42,7 +42,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.customer_id).to eq(customer.id)
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.currency).to eq("EUR")
-        expect(wallet.rate_amount).to eq(1.0)
+        expect(wallet.rate_amount).to eq(5.0)
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(wallet.recurring_transaction_rules.count).to eq(0)
         expect(wallet.invoice_requires_successful_payment).to eq(false)

@@ -13,7 +13,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
       ongoing_usage_balance_cents: 450,
       credits_balance: 10.0,
       credits_ongoing_balance: 5.5,
-      credits_ongoing_usage_balance: 4.0
+      credits_ongoing_usage_balance: 4.0,
+      paid_top_up_min_amount_cents: 205_50
     )
   end
 
@@ -149,7 +150,7 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             organization_id: wallet.organization.id,
             params: {
               wallet_id: wallet.id,
-              paid_credits: "194.5",
+              paid_credits: "205.5", # the gap is 194.5 but min transaction is 205.5
               granted_credits: "0.0",
               source: :threshold,
               invoice_requires_successful_payment: false,
