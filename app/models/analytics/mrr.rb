@@ -58,6 +58,7 @@ module Analytics
                 WHEN p.interval = 1 THEN 'monthly'
                 WHEN p.interval = 2 THEN 'yearly'
                 WHEN p.interval = 3 THEN 'quarterly'
+                WHEN p.interval = 4 THEN 'semiannual'
               END AS plan_interval
             FROM fees f
             LEFT JOIN invoices i ON f.invoice_id = i.id
@@ -103,6 +104,40 @@ module Analytics
             LATERAL GENERATE_SERIES(0, CEIL(billed_months::numeric) - 1) AS gs(month_index)
             WHERE pay_in_advance = FALSE
             AND plan_interval = 'quarterly'
+          ),
+          semiannual_advance AS (
+            SELECT
+              DATE_TRUNC('month', issuing_date) + INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                  WHEN gs.month_index = 0 THEN (amount_cents / billed_months) * (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))
+                  WHEN gs.month_index = CEIL(billed_months) - 1 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 1 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                  WHEN gs.month_index = CEIL(billed_months) - 2 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 2 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                  WHEN gs.month_index = CEIL(billed_months) - 3 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 3 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                  WHEN gs.month_index = CEIL(billed_months) - 4 THEN (amount_cents - (amount_cents / billed_months) * (FLOOR(billed_months) - 4 + (DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - issuing_date) / DATE_PART('day', DATE_TRUNC('month', issuing_date + INTERVAL '1 month') - DATE_TRUNC('month', issuing_date)))))
+                  ELSE amount_cents / billed_months
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months) - 1) AS gs(month_index)
+            WHERE pay_in_advance = TRUE
+            AND plan_interval = 'semiannual'
+          ),
+          semiannual_arrears AS (
+            SELECT
+              DATE_TRUNC('month', issuing_date) - INTERVAL '1 month' * gs.month_index AS month,
+              CASE
+                WHEN gs.month_index < CEIL(billed_months::numeric) - 1 THEN
+                  amount_cents::numeric / billed_months::numeric
+                ELSE
+                  amount_cents::numeric - (amount_cents::numeric / billed_months::numeric) * (CEIL(billed_months::numeric) - 1)
+              END AS amount_cents,
+              currency,
+              name
+            FROM invoice_details,
+            LATERAL GENERATE_SERIES(0, CEIL(billed_months::numeric) - 1) AS gs(month_index)
+            WHERE pay_in_advance = FALSE
+            AND plan_interval = 'semiannual'
           ),
           yearly_advance AS (
             SELECT
@@ -158,6 +193,12 @@ module Analytics
             UNION ALL
             SELECT month, amount_cents::numeric, currency
             FROM quarterly_advance
+            UNION ALL
+            SELECT month, amount_cents::numeric, currency
+            FROM semiannual_arrears
+            UNION ALL
+            SELECT month, amount_cents::numeric, currency
+            FROM semiannual_advance
             UNION ALL
             SELECT month, amount_cents::numeric, currency
             FROM yearly_arrears

@@ -39,6 +39,7 @@ class Plan < ApplicationRecord
     monthly
     yearly
     quarterly
+    semiannual
   ].freeze
 
   enum :interval, INTERVALS
@@ -69,6 +70,10 @@ class Plan < ApplicationRecord
     trial_period.present? && trial_period.positive?
   end
 
+  def charges_billed_in_monthly_split_intervals?
+    bill_charges_monthly? && (yearly? || semiannual?)
+  end
+
   def invoice_name
     invoice_display_name.presence || name
   end
@@ -80,6 +85,7 @@ class Plan < ApplicationRecord
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
     return amount_cents * 4 if quarterly?
+    return amount_cents * 2 if semiannual?
 
     amount_cents * 52
   end
