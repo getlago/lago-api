@@ -38,10 +38,11 @@ Rails.application.routes.draw do
         post :checkout_url
 
         scope module: :customers do
-          resources :applied_coupons, only: %i[destroy]
+          resources :applied_coupons, only: %i[index destroy]
           resources :credit_notes, only: %i[index]
           resources :invoices, only: %i[index]
           resources :payments, only: %i[index]
+          resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
         end
       end
