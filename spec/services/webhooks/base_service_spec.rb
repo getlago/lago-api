@@ -27,7 +27,7 @@ RSpec.describe Webhooks::BaseService, type: :service do
         expect(webhook.object_type).to eq("Invoice")
         expect(webhook.http_status).to be_nil
         expect(webhook.response).to be_nil
-        expect(webhook.payload.keys).to eq %w[webhook_type object_type dummy]
+        expect(webhook.payload.keys).to eq %w[webhook_type object_type organization_id dummy]
       end
     end
 
