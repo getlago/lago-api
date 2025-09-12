@@ -758,50 +758,19 @@ RSpec.describe Api::V1::WalletsController, type: :request do
   end
 
   describe "GET /api/v1/wallets" do
-    subject do
-      get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}&page=1&per_page=1")
-    end
-
-    let!(:wallet) { create(:wallet, customer:) }
-    let(:external_id) { customer.external_id }
-
-    include_examples "requires API permission", "wallet", "read"
-
-    it "returns wallets" do
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(json[:wallets].count).to eq(1)
-      expect(json[:wallets].first[:lago_id]).to eq(wallet.id)
-      expect(json[:wallets].first[:name]).to eq(wallet.name)
-      expect(json[:wallets].first[:recurring_transaction_rules]).to be_empty
-      expect(json[:wallets].first[:applies_to]).to be_present
-    end
-
-    context "with pagination" do
-      before { create(:wallet, customer:) }
-
-      it "returns wallets with correct meta data" do
-        subject
-
-        expect(response).to have_http_status(:success)
-
-        expect(json[:wallets].count).to eq(1)
-        expect(json[:meta][:current_page]).to eq(1)
-        expect(json[:meta][:next_page]).to eq(2)
-        expect(json[:meta][:prev_page]).to eq(nil)
-        expect(json[:meta][:total_pages]).to eq(2)
-        expect(json[:meta][:total_count]).to eq(2)
+    it_behaves_like "a wallet index endpoint" do
+      subject do
+        get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
       end
-    end
 
-    context "when external_customer_id does not belong to the current organization" do
-      let(:other_org_customer) { create(:customer) }
-      let(:external_id) { other_org_customer.external_id }
+      context "when external_customer_id does not belong to the current organization" do
+        let(:other_org_customer) { create(:customer) }
+        let(:external_id) { other_org_customer.external_id }
 
-      it "returns a not found error" do
-        subject
-        expect(response).to have_http_status(:not_found)
+        it "returns a not found error" do
+          subject
+          expect(response).to have_http_status(:not_found)
+        end
       end
     end
   end
