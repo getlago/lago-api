@@ -4,7 +4,7 @@ module SubscriptionIndex
   include Pagination
   extend ActiveSupport::Concern
 
-  def subscription_index(external_customer_id: nil)
+  def subscription_index(external_customer_id:)
     filters = params.permit(:plan_code, status: [])
     filters[:status] = ["active"] if filters[:status].blank?
     filters[:external_customer_id] = external_customer_id

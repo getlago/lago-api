@@ -29,7 +29,7 @@ class WalletsQuery < BaseQuery
   end
 
   def validate_filters
-    if filters.to_h.key? :external_customer_id
+    if filters.external_customer_id
       result.not_found_failure!(resource: "customer") unless customer_exists?
     end
   end
