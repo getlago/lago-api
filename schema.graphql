@@ -2664,6 +2664,7 @@ input CreateCustomerWalletInput {
   paidTopUpMinAmountCents: BigInt
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
+  transactionName: String
 }
 
 """

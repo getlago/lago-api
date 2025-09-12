@@ -164,6 +164,30 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
+    context "when transaction_name is provided" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          transaction_name: "Custom Transaction Name"
+        }
+      end
+
+      it "enqueues the wallet transaction job with the transaction name" do
+        expect { service_result }.to have_enqueued_job(
+          WalletTransactions::CreateJob
+        ).with(hash_including(
+          params: hash_including(name: "Custom Transaction Name")
+        ))
+      end
+    end
+
     context "with recurring transaction rules" do
       around { |test| lago_premium!(&test) }
 
