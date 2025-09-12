@@ -42,8 +42,8 @@ RSpec.describe RecurringTransactionRule, type: :model do
     end
   end
 
-  describe "#apply_top_up_limits" do
-    subject { rule.apply_top_up_limits(credit_amount:) }
+  describe "#apply_min_top_up_limits" do
+    subject { rule.apply_min_top_up_limits(credit_amount:) }
 
     let(:rule) { create(:recurring_transaction_rule, wallet:, ignore_paid_top_up_limits:) }
     let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 10_00, paid_top_up_max_amount_cents: 20_00) }
@@ -62,6 +62,22 @@ RSpec.describe RecurringTransactionRule, type: :model do
 
       it "returns normalized to wallet limits value" do
         expect(subject).to eq 10
+      end
+
+      context "when credit amount is lower than wallet min limit" do
+        let(:credit_amount) { 5 }
+
+        it "returns wallet minimum" do
+          expect(subject).to eq 10
+        end
+      end
+
+      context "when credit amount is greater than wallet max limit" do
+        let(:credit_amount) { 25 }
+
+        it "returns credit amount anyway" do
+          expect(subject).to eq 25
+        end
       end
     end
   end

@@ -45,11 +45,11 @@ class RecurringTransactionRule < ApplicationRecord
   }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 
-  def apply_top_up_limits(credit_amount:)
+  def apply_min_top_up_limits(credit_amount:)
     if ignore_paid_top_up_limits?
       credit_amount
     else
-      wallet.apply_top_up_limits(credit_amount:)
+      credit_amount.clamp(wallet.paid_top_up_min_credits, nil)
     end
   end
 
@@ -78,7 +78,8 @@ class RecurringTransactionRule < ApplicationRecord
 
     gap = target_ongoing_balance - ongoing_balance
 
-    apply_top_up_limits(credit_amount: gap)
+    # NOTE: in case of target rule, we don't apply max because reaching target balance is the most important
+    apply_min_top_up_limits(credit_amount: gap)
   end
 end
 

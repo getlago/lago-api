@@ -55,10 +55,6 @@ class Wallet < ApplicationRecord
     WalletCredit.from_amount_cents(wallet: self, amount_cents: paid_top_up_max_amount_cents).credit_amount
   end
 
-  def apply_top_up_limits(credit_amount:)
-    credit_amount.clamp(paid_top_up_min_credits, paid_top_up_max_credits)
-  end
-
   def currency=(currency)
     self.balance_currency = currency
     self.consumed_amount_currency = currency
