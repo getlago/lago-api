@@ -23,6 +23,9 @@ pricing_units:
   view: true
   create: false
   update: false
+ai_conversations:
+  view: true
+  create: true
 addons:
   create: false
   update: false
