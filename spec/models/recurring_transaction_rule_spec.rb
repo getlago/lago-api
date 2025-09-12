@@ -11,7 +11,7 @@ RSpec.describe RecurringTransactionRule, type: :model do
   describe "enums" do
     it "defines expected enum values" do
       expect(described_class.defined_enums).to include(
-        "interval" => hash_including("weekly", "monthly", "quarterly", "yearly"),
+        "interval" => hash_including("weekly", "monthly", "quarterly", "yearly", "semiannual"),
         "method" => hash_including("fixed", "target"),
         "trigger" => hash_including("interval", "threshold"),
         "status" => hash_including("active", "terminated")
