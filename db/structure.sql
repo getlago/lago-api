@@ -3308,8 +3308,8 @@ CREATE TABLE public.wallets (
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
-    paid_top_up_min_amount_cents integer,
-    paid_top_up_max_amount_cents integer
+    paid_top_up_min_amount_cents bigint,
+    paid_top_up_max_amount_cents bigint
 );
 
 
@@ -9769,6 +9769,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250912081524'),
 ('20250911111448'),
 ('20250908085959'),
 ('20250903165724'),
