@@ -1,9 +1,22 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
-  def api_call
+  def api_call(perform_jobs: true, raise_on_error: true)
     yield
-    perform_all_enqueued_jobs
+
+    if raise_on_error && response.status >= 400
+      request = response.request
+      message_parts = ["API call failed:",
+        "- Method: #{request.method}",
+        "- Path: #{request.path}",
+        "- Request body: #{request.body.read}",
+        "- HTTP status: #{response.status}",
+        "- Response body: #{response.body}"]
+      message = message_parts.join("\n")
+      raise message
+    end
+
+    perform_all_enqueued_jobs if perform_jobs
     json.with_indifferent_access
   end
 
@@ -92,9 +105,9 @@ module ScenariosHelper
     end
   end
 
-  def terminate_subscription(subscription)
-    api_call do
-      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
+  def terminate_subscription(subscription, params: {}, perform_jobs: true, raise_on_error: true)
+    api_call(perform_jobs:, raise_on_error:) do
+      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}?#{params.to_query}")
     end
   end
 
@@ -156,6 +169,20 @@ module ScenariosHelper
   def retry_invoice_payment(invoice_id)
     api_call do
       post_with_token(organization, "/api/v1/invoices/#{invoice_id}/retry_payment")
+    end
+  end
+
+  ### Payments
+
+  def create_payment(customer, invoice, amount_cents)
+    api_call do
+      post_with_token(organization, "/api/v1/payments", {
+        payment: {
+          invoice_id: invoice.id,
+          amount_cents:,
+          reference: SecureRandom.uuid.to_s
+        }
+      })
     end
   end
 
@@ -232,14 +259,14 @@ module ScenariosHelper
 
   ### Credit notes
 
-  def create_credit_note(params)
-    api_call do
+  def create_credit_note(params, raise_on_error: true)
+    api_call(raise_on_error:) do
       post_with_token(organization, "/api/v1/credit_notes", {credit_note: params})
     end
   end
 
-  def estimate_credit_note(params)
-    api_call do
+  def estimate_credit_note(params, raise_on_error: true)
+    api_call(raise_on_error:) do
       post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: params})
     end
   end

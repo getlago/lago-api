@@ -200,4 +200,12 @@ RSpec.configure do |config|
       example.run
     end
   end
+
+  config.around do |example|
+    if example.metadata[:premium]
+      lago_premium!(&example)
+    else
+      example.run
+    end
+  end
 end
