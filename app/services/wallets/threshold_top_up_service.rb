@@ -2,52 +2,44 @@
 
 module Wallets
   class ThresholdTopUpService < BaseService
+    Result = BaseResult
+
     def initialize(wallet:)
       @wallet = wallet
       super
     end
 
     def call
-      return if threshold_rule.nil?
-      return if wallet.credits_ongoing_balance > threshold_rule.threshold_credits
-      return if (pending_transactions_amount + wallet.credits_ongoing_balance) > threshold_rule.threshold_credits
+      return result if rule.nil?
+      return result if wallet.credits_ongoing_balance > rule.threshold_credits
+      return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
 
       WalletTransactions::CreateJob.set(wait: 2.seconds).perform_later(
         organization_id: wallet.organization.id,
         params: {
           wallet_id: wallet.id,
-          paid_credits:,
-          granted_credits:,
+          paid_credits: rule.compute_paid_credits(ongoing_balance: wallet.credits_ongoing_balance).to_s,
+          granted_credits: rule.compute_granted_credits.to_s,
           source: :threshold,
-          invoice_requires_successful_payment: threshold_rule.invoice_requires_successful_payment?,
-          metadata: threshold_rule.transaction_metadata
+          invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
+          metadata: rule.transaction_metadata
         },
         unique_transaction: true
       )
+
+      result
     end
 
     private
 
     attr_reader :wallet
 
-    def threshold_rule
-      @threshold_rule ||= wallet.recurring_transaction_rules.active.where(trigger: :threshold).first
+    def rule
+      @rule ||= wallet.recurring_transaction_rules.active.where(trigger: :threshold).first
     end
 
     def pending_transactions_amount
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:amount)
-    end
-
-    def paid_credits
-      return (threshold_rule.target_ongoing_balance - wallet.credits_ongoing_balance).to_s if threshold_rule.target?
-
-      threshold_rule.paid_credits.to_s
-    end
-
-    def granted_credits
-      return "0.0" if threshold_rule.target?
-
-      threshold_rule.granted_credits.to_s
     end
   end
 end

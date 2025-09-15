@@ -43,6 +43,18 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
+  def paid_top_up_min_credits
+    return if paid_top_up_min_amount_cents.nil?
+
+    WalletCredit.from_amount_cents(wallet: self, amount_cents: paid_top_up_min_amount_cents).credit_amount
+  end
+
+  def paid_top_up_max_credits
+    return if paid_top_up_max_amount_cents.nil?
+
+    WalletCredit.from_amount_cents(wallet: self, amount_cents: paid_top_up_max_amount_cents).credit_amount
+  end
+
   def currency=(currency)
     self.balance_currency = currency
     self.consumed_amount_currency = currency
