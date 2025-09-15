@@ -1,3 +1,8 @@
+\restrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+
+-- Dumped from database version 14.0
+-- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -672,6 +677,7 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_ba78f5f5a5;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
+DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
@@ -4990,6 +4996,13 @@ CREATE INDEX idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp ON 
 --
 
 CREATE UNIQUE INDEX idx_features_code_unique_per_organization ON public.entitlement_features USING btree (code, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_invoice_subscriptions_on_subscription_with_timestamps; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invoice_subscriptions_on_subscription_with_timestamps ON public.invoice_subscriptions USING btree (subscription_id, COALESCE(to_datetime, created_at) DESC);
 
 
 --
@@ -9752,9 +9765,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
+\unrestrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250915100607'),
 ('20250901141844'),
 ('20250828153138'),
 ('20250828144553'),
