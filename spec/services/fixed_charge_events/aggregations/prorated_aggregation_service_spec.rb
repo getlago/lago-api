@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::FixedChargesEvents::ProratedAggregationService do
+RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
   let(:charges_from_datetime) { 9.days.ago } # total duration is 10 days
@@ -26,6 +26,20 @@ RSpec.describe FixedCharges::FixedChargesEvents::ProratedAggregationService do
     # the result is 2 * 5/10 = 1
     it "returns the prorated aggregation" do
       expect(subject.call).to eq(1)
+    end
+  end
+
+  context "when there are only events in the previous period" do
+    let(:events) do
+      create(:fixed_charge_event, fixed_charge:, subscription:, units: 10, timestamp: 30.days.ago)
+      create(:fixed_charge_event, fixed_charge:, subscription:, units: 100, timestamp: 15.days.ago)
+    end
+    
+    before { events }
+    
+    # the result is 100 * 10/10 = 100
+    it "returns the prorated aggregation" do
+      expect(subject.call).to eq(100)
     end
   end
 
