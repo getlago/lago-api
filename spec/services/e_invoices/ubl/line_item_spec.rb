@@ -2,13 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::LineItem, type: :service do
+RSpec.describe EInvoices::Ubl::LineItem, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, fee:, line_id:)
+      described_class.call(xml:, resource:, fee:, line_id:)
     end
   end
 
+  let(:resource) { fee.invoice }
   let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:, fee_type:) }
   let(:taxes_rate) { 20.00 }
   let(:fee_type) { :subscription }

@@ -2,13 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
+RSpec.describe EInvoices::Ubl::SupplierParty, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, invoice:)
+      described_class.call(xml:, resource:, options:)
     end
   end
 
+  let(:options) { described_class::Options.new }
+  let(:resource) { invoice }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:, billing_entity:, invoice_type:) }
@@ -71,11 +73,11 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
           expect(subject).to contains_xml_node("#{xpath}/cac:TaxScheme/cbc:ID").with_value("VAT")
         end
 
-        context "when invoice is credit" do
-          let(:invoice_type) { :credit }
+        context "with tax_registration as false" do
+          let(:options) { described_class::Options.new(tax_registration: false) }
 
-          it "is not rendered" do
-            expect(subject).not_to contains_xml_node(xpath)
+          it "does not have the tag" do
+            expect(subject).not_to contains_xml_node("#{root}/cac:PartyTaxScheme")
           end
         end
       end

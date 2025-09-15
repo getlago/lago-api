@@ -2,18 +2,20 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::TaxSubtotal, type: :service do
+RSpec.describe EInvoices::Ubl::TaxSubtotal, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, invoice:, tax_rate:, amount:, tax:)
+      described_class.call(xml:, resource:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
     end
   end
 
-  let(:invoice) { create(:invoice, invoice_type:) }
-  let(:amount) { 10 }
-  let(:tax) { amount * (tax_rate / 100) }
+  let(:resource) { invoice }
+  let(:tax_category) { described_class::S_CATEGORY }
   let(:tax_rate) { 20.00 }
-  let(:invoice_type) { "subscription" }
+  let(:basis_amount) { 10 }
+  let(:tax_amount) { basis_amount * (tax_rate / 100) }
+  let(:invoice) { create(:invoice) }
+
   let(:root) { "//cac:TaxSubtotal" }
 
   describe ".call" do
@@ -31,14 +33,6 @@ RSpec.describe EInvoices::Ubl::Create::TaxSubtotal, type: :service do
       it "has the tax taxable amount" do
         expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("10.00").with_attribute("currencyID", "EUR")
       end
-
-      context "when taxes are zero" do
-        let(:tax_rate) { 0.00 }
-
-        it "zero the taxable amount" do
-          expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("10.00").with_attribute("currencyID", "EUR")
-        end
-      end
     end
 
     it "has the tax type scheme" do
@@ -49,26 +43,18 @@ RSpec.describe EInvoices::Ubl::Create::TaxSubtotal, type: :service do
       let(:xpath) { "#{root}/cac:TaxCategory/cbc:ID" }
 
       it "has the S tax category code" do
-        expect(subject).to contains_xml_node(xpath).with_value("S")
+        expect(subject).to contains_xml_node(xpath).with_value(tax_category)
       end
 
       it "has the tax rate applicable percent" do
         expect(subject).to contains_xml_node("#{root}/cac:TaxCategory/cbc:Percent").with_value("20.00")
       end
 
-      context "when taxes are zero" do
-        let(:tax_rate) { 0.00 }
-
-        it "has the Z category code" do
-          expect(subject).to contains_xml_node(xpath).with_value("Z")
-        end
-      end
-
-      context "when credit invoice" do
-        let(:invoice_type) { "credit" }
+      context "when O category code" do
+        let(:tax_category) { described_class::O_CATEGORY }
 
         it "has the O category code" do
-          expect(subject).to contains_xml_node(xpath).with_value("O")
+          expect(subject).to contains_xml_node(xpath).with_value(tax_category)
         end
 
         it "has TaxExemptionReasonCode and TaxExemptionReason" do

@@ -2,13 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::CustomerParty, type: :service do
+RSpec.describe EInvoices::Ubl::CustomerParty, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, invoice:)
+      described_class.call(xml:, resource:)
     end
   end
 
+  let(:resource) { invoice }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:, customer:) }

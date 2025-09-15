@@ -2,26 +2,28 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::MonetaryTotal, type: :service do
+RSpec.describe EInvoices::Ubl::MonetaryTotal, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, invoice:) do
+      described_class.call(xml:, resource:, amounts:) do
       end
     end
   end
 
+  let(:resource) { invoice }
+  let(:amounts) do
+    described_class::Amounts.new(
+      line_extension_amount: 1000,
+      tax_exclusive_amount: 990,
+      tax_inclusive_amount: 1188.84,
+      allowance_total_amount: 10,
+      charge_total_amount: 0,
+      prepaid_amount: 21.86,
+      payable_amount: 1188.84
+    )
+  end
   let(:invoice) do
-    create(:invoice,
-      fees_amount_cents: 100000,
-      coupons_amount_cents: 1000,
-      sub_total_excluding_taxes_amount_cents: 99000,
-      taxes_amount_cents: 19884,
-      currency: "USD",
-      sub_total_including_taxes_amount_cents: 118884,
-      prepaid_credit_amount_cents: 1186,
-      credit_notes_amount_cents: 1000,
-      total_paid_amount_cents: 2186,
-      total_amount_cents: 118884)
+    create(:invoice, currency: "USD")
   end
 
   let(:root) { "//cac:LegalMonetaryTotal" }

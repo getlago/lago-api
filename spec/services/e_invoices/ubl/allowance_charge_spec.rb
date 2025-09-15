@@ -2,13 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::AllowanceCharge, type: :service do
+RSpec.describe EInvoices::Ubl::AllowanceCharge, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, invoice: invoice, tax_rate:, amount:)
+      described_class.call(xml:, resource:, indicator:, tax_rate:, amount:)
     end
   end
 
+  let(:indicator) { described_class::INVOICE_DISCOUNT }
+  let(:resource) { invoice }
   let(:invoice) { create(:invoice, currency: "USD") }
   let(:tax_rate) { 19.00 }
   let(:amount) { Money.new(1000) }
@@ -25,7 +27,7 @@ RSpec.describe EInvoices::Ubl::Create::AllowanceCharge, type: :service do
     end
 
     it "has the ChargeIndicator" do
-      expect(subject).to contains_xml_node("#{root}/cbc:ChargeIndicator").with_value(false)
+      expect(subject).to contains_xml_node("#{root}/cbc:ChargeIndicator").with_value(indicator)
     end
 
     it "has the AllowanceChargeReason" do
