@@ -6,11 +6,8 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
   subject { described_class }
 
   describe ".perform" do
-    let(:overdue_invoice) { create(:invoice, payment_due_date: 1.day.ago) }
-
-    before do
-      overdue_invoice
-    end
+    let!(:overdue_invoice_1) { create(:invoice, payment_due_date: 1.day.ago) }
+    let!(:overdue_invoice_2) { create(:invoice, payment_due_date: 2.days.ago) }
 
     it "marks expected invoices as payment overdue" do
       create(:invoice, :draft, payment_due_date: 1.day.ago)
@@ -19,14 +16,10 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
       create(:invoice, payment_due_date: nil)
       create(:invoice, payment_due_date: 1.day.from_now)
 
-      described_class.perform_now
-      expect(Invoice.payment_overdue).to eq([overdue_invoice])
-    end
-
-    it "enqueues a SendWebhookJob" do
       expect do
         described_class.perform_now
-      end.to have_enqueued_job(SendWebhookJob).with("invoice.payment_overdue", Invoice)
+      end.to have_enqueued_job(Invoices::Payments::MarkOverdueJob).with(invoice: overdue_invoice_1)
+        .and have_enqueued_job(Invoices::Payments::MarkOverdueJob).with(invoice: overdue_invoice_2)
     end
   end
 end
