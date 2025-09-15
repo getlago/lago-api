@@ -10,7 +10,7 @@ module Subscriptions
     end
 
     def call
-      return date_service unless subscription.terminated? && subscription.next_subscription.nil?
+      return date_service if !subscription.terminated? || subscription.next_subscription.present?
 
       # First we need to ensure that termination date is not started_at date. In that case boundaries are correct
       # and we should bill only one day. If this is not the case we should proceed.
@@ -22,7 +22,10 @@ module Subscriptions
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp - 1.day, current_usage: true)
 
       return date_service if timestamp < new_dates_service.charges_to_datetime
-      return date_service unless (timestamp - new_dates_service.charges_to_datetime) < 1.day
+      return date_service if (timestamp - new_dates_service.charges_to_datetime) >= 1.day
+
+      return date_service if timestamp < new_dates_service.fixed_charges_to_datetime
+      return date_service if (timestamp - new_dates_service.fixed_charges_to_datetime) >= 1.day
 
       # We should calculate boundaries as if subscription was not terminated
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp, current_usage: false)
@@ -47,6 +50,12 @@ module Subscriptions
         base_query = base_query
           .where(charges_from_datetime: date_service.charges_from_datetime)
           .where(charges_to_datetime: date_service.charges_to_datetime)
+      end
+
+      if subscription.plan.fixed_charges_billed_in_monthly_split_intervals?
+        base_query = base_query
+          .where(fixed_charges_from_datetime: date_service.fixed_charges_from_datetime)
+          .where(fixed_charges_to_datetime: date_service.fixed_charges_to_datetime)
       end
 
       base_query.exists?

@@ -74,6 +74,10 @@ class Plan < ApplicationRecord
     bill_charges_monthly? && (yearly? || semiannual?)
   end
 
+  def fixed_charges_billed_in_monthly_split_intervals?
+    bill_fixed_charges_monthly? && (yearly? || semiannual?)
+  end
+
   def invoice_name
     invoice_display_name.presence || name
   end
