@@ -773,7 +773,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
           taxes_amount_cents: 386,
-          precise_taxes_amount_cents: "386.0",
+          precise_taxes_amount_cents: "385.94932",
           sub_total_excluding_taxes_amount_cents: 1930,
           max_creditable_amount_cents: 2316,
           coupons_adjustment_amount_cents: 69,
@@ -796,11 +796,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           credit_amount_cents: 2316,
           total_amount_cents: 2316,
           taxes_amount_cents: 386,
-          precise_taxes_amount_cents: 386.0,
+          precise_taxes_amount_cents: 385.94932,
           precise_coupons_adjustment_amount_cents: 69.25342
         )
-        expect(credit_note.precise_total).to eq(2315.74658)
-        expect(credit_note.taxes_rounding_adjustment).to eq(0)
+        expect(credit_note.precise_total).to eq(2315.6959)
+        expect(credit_note.taxes_rounding_adjustment).to eq(0.05068)
         # real remaining: 334_38 - 23_16 = 311_22
         expect(invoice.creditable_amount_cents).to eq(31122.253421098216)
 
@@ -819,16 +819,16 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
           taxes_amount_cents: 1319,
-          precise_taxes_amount_cents: "1319.2",
+          precise_taxes_amount_cents: "1319.25547",
           sub_total_excluding_taxes_amount_cents: 6596,
-          max_creditable_amount_cents: 7915,
+          max_creditable_amount_cents: 7916,
           coupons_adjustment_amount_cents: 237,
           taxes_rate: 20.0
         )
         create_credit_note(
           invoice_id: invoice.id,
           reason: :other,
-          credit_amount_cents: 7915,
+          credit_amount_cents: 7916,
           items: [
             {
               fee_id: first_charge.id,
@@ -839,15 +839,15 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         credit_note = invoice.credit_notes.order(:created_at).last
         expect(credit_note).to have_attributes(
-          credit_amount_cents: 7915,
-          total_amount_cents: 7915,
+          credit_amount_cents: 7916,
+          total_amount_cents: 7916,
           taxes_amount_cents: 1319,
-          precise_taxes_amount_cents: 1319.2,
+          precise_taxes_amount_cents: 1319.25547,
           precise_coupons_adjustment_amount_cents: 236.72267
         )
-        expect(credit_note.precise_total).to eq(7915.47733)
-        expect(credit_note.taxes_rounding_adjustment).to eq(-0.2)
-        # real remaining: 311_22 - 79_15 = 232_07
+        expect(credit_note.precise_total).to eq(7915.5328)
+        expect(credit_note.taxes_rounding_adjustment).to eq(-0.25547)
+        # real remaining: 311_22 - 79_16 = 232_07
         expect(invoice.creditable_amount_cents).to eq(23206.97609561753)
 
         # issue a CN for the full last charge - 200_33 before taxes and coupons
@@ -865,7 +865,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
           taxes_amount_cents: 3868,
-          precise_taxes_amount_cents: "3868.0",
+          precise_taxes_amount_cents: "3868.00001",
           sub_total_excluding_taxes_amount_cents: 19339,
           max_creditable_amount_cents: 23207,
           coupons_adjustment_amount_cents: 694,
@@ -888,11 +888,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           credit_amount_cents: 23207,
           total_amount_cents: 23207,
           taxes_amount_cents: 3868,
-          precise_taxes_amount_cents: 3868.0,
+          precise_taxes_amount_cents: 3868.00001,
           precise_coupons_adjustment_amount_cents: 694.0239
         )
-        expect(credit_note.precise_total).to eq(23206.9761)
-        expect(credit_note.taxes_rounding_adjustment).to eq(0)
+        expect(credit_note.precise_total).to eq(23206.97611)
+        expect(credit_note.taxes_rounding_adjustment).to eq(-0.00001)
         # real remaining: 232_07 - 23_207 = 0
         expect(invoice.creditable_amount_cents).to eq(0)
       end

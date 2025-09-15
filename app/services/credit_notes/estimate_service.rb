@@ -78,14 +78,14 @@ module CreditNotes
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
-      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.precise_taxes_amount_cents = taxes_result.precise_taxes_amount_cents
       adjust_credit_note_tax_precise_rounding if credit_note_for_all_remaining_amount?
 
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
       credit_note.taxes_rate = taxes_result.taxes_rate
 
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
-
+      byebug
       credit_note.credit_amount_cents = (
         credit_note.items.sum(&:amount_cents) -
         taxes_result.coupons_adjustment_amount_cents +
