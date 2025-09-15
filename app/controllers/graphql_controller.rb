@@ -5,7 +5,6 @@ class GraphqlController < ApplicationController
 
   include AuthenticableUser
   include CustomerPortalUser
-  include OrganizationHeader
   include Trackable
 
   before_action :set_context_source
@@ -24,14 +23,13 @@ class GraphqlController < ApplicationController
     query = params[:query]
     operation_name = params[:operationName]
     context = {
-      current_user:,
       login_method:,
+      current_user:,
       current_organization:,
+      current_membership:,
       customer_portal_user:,
       request:,
-      permissions:
-        current_user&.memberships&.find_by(organization: current_organization)&.permissions_hash ||
-          Permission::EMPTY_PERMISSIONS_HASH
+      permissions: current_membership&.permissions_hash || Permission::EMPTY_PERMISSIONS_HASH
     }
 
     if query.present? && query.length > MAX_QUERY_LENGTH

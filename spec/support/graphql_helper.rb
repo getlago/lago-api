@@ -17,15 +17,19 @@ module GraphQLHelper
     execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      current_membership: membership,
       permissions: required_permission,
       query:,
       variables:
     )
   end
 
-  def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
+  def execute_graphql(current_user: nil, query: nil, current_organization: nil, current_membership: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
     previous_source = CurrentContext.source
     CurrentContext.source = "graphql"
+
+    current_membership ||= membership if defined?(membership)
+    current_membership ||= current_user&.memberships&.active&.find_by(organization: current_organization)
 
     unless permissions.is_a?(Hash)
       # we allow passing a single permission string or an array for convenience
@@ -43,6 +47,7 @@ module GraphQLHelper
         controller:,
         current_user:,
         current_organization:,
+        current_membership:,
         customer_portal_user:,
         request:,
         permissions:
