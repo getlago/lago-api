@@ -897,4 +897,44 @@ RSpec.describe Subscriptions::Dates::QuarterlyService, type: :service do
       end
     end
   end
+
+  describe "fixed_charges_duration_in_days" do
+    subject(:result) { date_service.fixed_charges_duration_in_days }
+
+    context "when billing_time is calendar" do
+      let(:billing_time) { :calendar }
+      let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+      it "returns the quarter duration" do
+        expect(result).to eq(91)
+      end
+
+      context "when on a leap year" do
+        let(:subscription_at) { Time.zone.parse("28 Feb 2019") }
+        let(:billing_at) { Time.zone.parse("01 Apr 2020") }
+
+        it "returns the duration in days" do
+          expect(result).to eq(91)
+        end
+      end
+    end
+
+    context "when billing_time is anniversary" do
+      let(:billing_time) { :anniversary }
+      let(:billing_at) { Time.zone.parse("02 May 2020") }
+
+      it "returns the month duration" do
+        expect(result).to eq(90)
+      end
+
+      context "when not on a leap year" do
+        let(:subscription_at) { Time.zone.parse("02 Feb 2019") }
+        let(:billing_at) { Time.zone.parse("02 May 2021") }
+
+        it "returns the duration in days" do
+          expect(result).to eq(89)
+        end
+      end
+    end
+  end
 end

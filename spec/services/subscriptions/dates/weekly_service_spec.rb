@@ -720,4 +720,15 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
       expect(result).to eq(7)
     end
   end
+
+  describe "#fixed_charges_duration_in_days" do
+    subject(:result) { date_service.fixed_charges_duration_in_days }
+
+    let(:billing_time) { :anniversary }
+    let(:billing_at) { Time.zone.parse("08 Mar 2022") }
+
+    it "returns the duration of the period" do
+      expect(result).to eq(7)
+    end
+  end
 end

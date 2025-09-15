@@ -173,6 +173,10 @@ module Subscriptions
       compute_charges_duration(from_date: compute_charges_from_date)
     end
 
+    def fixed_charges_duration_in_days
+      compute_fixed_charges_duration(from_date: compute_fixed_charges_from_date)
+    end
+
     private
 
     attr_accessor :subscription, :billing_at, :current_usage
@@ -273,6 +277,14 @@ module Subscriptions
     end
 
     def compute_charges_to_date
+      raise(NotImplementedError)
+    end
+
+    def compute_fixed_charges_from_date
+      raise(NotImplementedError)
+    end
+
+    def compute_fixed_charges_to_date
       raise(NotImplementedError)
     end
 

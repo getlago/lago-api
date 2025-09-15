@@ -958,6 +958,44 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     end
   end
 
+  describe "#fixed_charges_duration_in_days" do
+    subject(:result) { date_service.fixed_charges_duration_in_days }
+
+    context "when billing_time is calendar" do
+      let(:billing_time) { :calendar }
+
+      it "returns the month duration" do
+        expect(result).to eq(28)
+      end
+
+      context "when on a leap year" do
+        let(:subscription_at) { Time.zone.parse("28 Feb 2019") }
+        let(:billing_at) { Time.zone.parse("01 Mar 2020") }
+
+        it "returns the month duration" do
+          expect(result).to eq(29)
+        end
+      end
+    end
+
+    context "when billing_time is anniversary" do
+      let(:billing_time) { :anniversary }
+
+      it "returns the month duration" do
+        expect(result).to eq(28)
+      end
+
+      context "when on a leap year" do
+        let(:subscription_at) { Time.zone.parse("02 Feb 2019") }
+        let(:billing_at) { Time.zone.parse("08 Mar 2020") }
+
+        it "returns the month duration" do
+          expect(result).to eq(29)
+        end
+      end
+    end
+  end
+
   # In February 2022, customer changed timezone from Asia/Tokyo to America/Los_Angeles.
   # The invoice generated in February 2022 had subscription from Feb 1st to Feb 28th
   # and usage-based charges from Jan 1st to Jan 31st.

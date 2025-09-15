@@ -101,6 +101,20 @@ RSpec.describe Subscriptions::DatesService, type: :service do
     end
   end
 
+  describe "fixed_charges_from_datetime" do
+    it "raises a not implemented error" do
+      expect { date_service.fixed_charges_from_datetime }
+        .to raise_error(NotImplementedError)
+    end
+  end
+
+  describe "fixed_charges_to_datetime" do
+    it "raises a not implemented error" do
+      expect { date_service.fixed_charges_to_datetime }
+        .to raise_error(NotImplementedError)
+    end
+  end
+
   describe "next_end_of_period" do
     it "raises a not implemented error" do
       expect { date_service.next_end_of_period }
@@ -118,6 +132,13 @@ RSpec.describe Subscriptions::DatesService, type: :service do
   describe "charges_duration_in_days" do
     it "raises a not implemented error" do
       expect { date_service.charges_duration_in_days }
+        .to raise_error(NotImplementedError)
+    end
+  end
+
+  describe "fixed_charges_duration_in_days" do
+    it "raises a not implemented error" do
+      expect { date_service.fixed_charges_duration_in_days }
         .to raise_error(NotImplementedError)
     end
   end
