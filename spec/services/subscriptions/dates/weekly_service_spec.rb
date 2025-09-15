@@ -386,6 +386,222 @@ RSpec.describe Subscriptions::Dates::WeeklyService, type: :service do
     end
   end
 
+  describe "#fixed_charges_from_datetime" do
+    subject(:result) { date_service.fixed_charges_from_datetime }
+
+    context "when billing_time is calendar" do
+      let(:billing_time) { :calendar }
+
+      it "returns from_datetime" do
+        expect(result).to eq(date_service.from_datetime)
+      end
+
+      context "when subscription is not yet started" do
+        let(:started_at) { nil }
+
+        it "returns nil" do
+          expect(result).to be_nil
+        end
+      end
+
+      context "with customer timezone" do
+        let(:timezone) { "America/New_York" }
+
+        it "takes customer timezone into account and returns from_datetime" do
+          expect(result).to eq(date_service.from_datetime)
+        end
+
+        context "when timezone has changed" do
+          let(:billing_at) { Time.zone.parse("08 Mar 2022") }
+
+          let(:previous_invoice_subscription) do
+            create(
+              :invoice_subscription,
+              subscription:,
+              fixed_charges_to_datetime: "2022-02-27T22:59:59Z"
+            )
+          end
+
+          before do
+            previous_invoice_subscription
+            subscription.customer.update!(timezone: "America/Los_Angeles")
+          end
+
+          it "takes previous invoice into account and returns from_datetime" do
+            expect(result.to_s).to match_datetime("2022-02-27 23:00:00")
+          end
+        end
+
+        context "when timezone has changed and there are no invoices generated in the past" do
+          let(:billing_at) { Time.zone.parse("02 Mar 2022") }
+
+          before do
+            subscription.customer.update!(timezone: "America/Los_Angeles")
+          end
+
+          it "takes calculates correct datetime" do
+            expect(result).to eq(date_service.from_datetime)
+          end
+        end
+      end
+
+      context "when subscription started in the middle of a period" do
+        let(:started_at) { Time.zone.parse("03 Mar 2022") }
+
+        it "returns the start date" do
+          expect(result).to eq(subscription.started_at.utc)
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it "returns the start of the previous period" do
+          expect(result).to eq(date_service.from_datetime - 1.week)
+        end
+      end
+
+      context "when previous subscription is upgraded" do
+        let(:started_at) { Time.zone.parse("2024-02-22T16:13:00") }
+
+        before do
+          create(
+            :subscription,
+            :terminated,
+            terminated_at: started_at
+          )
+        end
+
+        it "returns the beginning of the start date" do
+          expect(result).to eq(subscription.started_at.utc) # boundary should be terminated_at
+        end
+      end
+    end
+
+    context "when billing_time is anniversary" do
+      let(:billing_time) { :anniversary }
+      let(:billing_at) { Time.zone.parse("09 Mar 2022") }
+
+      it "returns from_datetime" do
+        expect(result).to eq(date_service.from_datetime)
+      end
+
+      context "when subscription started in the middle of a period" do
+        let(:started_at) { Time.zone.parse("03 Mar 2022") }
+
+        it "returns the start date" do
+          expect(result).to eq(subscription.started_at.utc)
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it "returns the start of the previous period" do
+          expect(result).to eq(date_service.from_datetime - 1.week)
+        end
+      end
+    end
+  end
+
+  describe "#fixed_charges_to_datetime" do
+    subject(:result) { date_service.fixed_charges_to_datetime }
+
+    context "when billing_time is calendar" do
+      let(:billing_time) { :calendar }
+
+      it "returns to_datetime" do
+        expect(result).to eq(date_service.to_datetime)
+      end
+
+      context "when subscription is not yet started" do
+        let(:started_at) { nil }
+
+        it "returns nil" do
+          expect(result).to be_nil
+        end
+      end
+
+      context "with customer timezone" do
+        let(:timezone) { "America/New_York" }
+
+        it "takes customer timezone into account" do
+          expect(result).to eq(date_service.to_datetime)
+        end
+      end
+
+      context "when subscription is terminated in the middle of a period" do
+        let(:terminated_at) { Time.zone.parse("06 Mar 2022") }
+
+        before do
+          subscription.update!(status: :terminated, terminated_at:)
+        end
+
+        it "returns the terminated date" do
+          expect(result).to eq(subscription.terminated_at.utc)
+        end
+
+        context "when subscription was upgraded" do
+          before do
+            create(
+              :subscription,
+              started_at: terminated_at,
+              previous_subscription: subscription
+            )
+          end
+
+          it "returns the terminated_at" do
+            expect(result).to eq(subscription.terminated_at)
+          end
+
+          context "when end of previous day is before fixed_charges_from_datetime" do
+            let(:started_at) { Time.zone.parse("2022-03-06T10:23:00") }
+            let(:terminated_at) { Time.zone.parse("2022-03-06T12:23:00") }
+
+            it "returns the fixed_charges_from_datetime" do
+              expect(result).to eq(subscription.terminated_at)
+            end
+          end
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it "returns the end of the previous period" do
+          expect(result).to eq((date_service.from_datetime - 1.day).end_of_day)
+        end
+      end
+    end
+
+    context "when billing_time is anniversary" do
+      let(:billing_time) { :anniversary }
+      let(:billing_at) { Time.zone.parse("09 Mar 2022") }
+
+      it "returns to_datetime" do
+        expect(result).to eq(date_service.to_datetime)
+      end
+
+      context "when subscription is terminated in the middle of a period" do
+        let(:terminated_at) { Time.zone.parse("6 Mar 2022") }
+
+        before { subscription.mark_as_terminated!(terminated_at) }
+
+        it "returns the terminated date" do
+          expect(result).to eq(subscription.terminated_at.utc)
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it "returns the end of the previous period" do
+          expect(result).to eq((date_service.from_datetime - 1.day).end_of_day)
+        end
+      end
+    end
+  end
+
   describe "next_end_of_period" do
     let(:result) { date_service.next_end_of_period.to_s }
 
