@@ -3,7 +3,7 @@
 class AddSubscriptionWithTimestampIndexToInvoiceSubscriptions < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
-  INDEX_NAME = "idx_invoice_subscriptions_on_subscription_with_timestamps".freeze
+  INDEX_NAME = "idx_invoice_subscriptions_on_subscription_with_timestamps"
 
   def up
     safety_assured do
