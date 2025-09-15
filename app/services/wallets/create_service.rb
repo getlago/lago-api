@@ -50,7 +50,7 @@ module Wallets
         validate_wallet_initial_amount! wallet
 
         if params[:recurring_transaction_rules].present?
-          Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
+          Wallets::RecurringTransactionRules::CreateService.call!(wallet:, wallet_params: params)
         end
 
         billable_metrics.each do |bm|

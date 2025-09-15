@@ -189,7 +189,8 @@ RSpec.describe Wallets::CreateService, type: :service do
           expiration_at:,
           paid_credits:,
           granted_credits:,
-          recurring_transaction_rules: rules
+          recurring_transaction_rules: rules,
+          paid_top_up_max_amount_cents: "5000"
         }
       end
 
@@ -253,6 +254,23 @@ RSpec.describe Wallets::CreateService, type: :service do
 
         it "returns an error" do
           expect(service_result).not_to be_success
+          expect(service_result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
+        end
+      end
+
+      context "when paid credits exceeds wallet limits" do
+        let(:rules) do
+          [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              paid_credits: "100"
+            }
+          ]
+        end
+
+        it "returns an error" do
+          expect(service_result).to be_failure
           expect(service_result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
         end
       end

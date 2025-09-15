@@ -68,14 +68,19 @@ module Wallets
       end
 
       def validate_paid_credits!(credits_amount:, ignore_validation:)
-        return unless method == "fixed"
+        return if method != "fixed" || BigDecimal(credits_amount).floor(5).zero?
 
-        Validators::WalletTransactionAmountLimitsValidator.new(
+        validator = Validators::WalletTransactionAmountLimitsValidator.new(
           result,
           wallet:,
           credits_amount:,
           ignore_validation:
-        ).raise_if_invalid!
+        )
+
+        unless validator.valid?
+          result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
+          result.raise_if_error!
+        end
       end
     end
   end

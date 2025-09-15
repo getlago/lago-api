@@ -109,7 +109,24 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
             expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
 
             expect(create_service.call).to be_failure
-            expect(create_service.call.error.messages).to match({paid_credits: ["amount_below_minimum"]})
+            expect(create_service.call.error.messages).to match({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
+        end
+
+        context "when paid credits amount is zero" do
+          let(:paid_credits) { "0" }
+
+          it "creates rule with expected attributes" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              granted_credits: 0.0,
+              method: "fixed",
+              paid_credits: 0.0,
+              target_ongoing_balance: nil,
+              threshold_credits: 1.0,
+              trigger: "threshold"
+            )
           end
         end
       end
