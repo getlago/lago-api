@@ -73,6 +73,3 @@ module FixedChargeEvents
     end
   end
 end
-
-
-        

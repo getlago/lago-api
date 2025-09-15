@@ -28,7 +28,7 @@ module FixedChargeEvents
         @events_in_range ||= begin
           events_in_period_ids = base_events.where(timestamp: from_datetime..to_datetime).ids
           last_event_before_range_id = base_events.where("timestamp < ?", from_datetime).order(timestamp: :desc).limit(1).ids
-          
+
           # Combine using UNION
           FixedChargeEvent.where(id: events_in_period_ids + last_event_before_range_id)
             .order(timestamp: :asc)
