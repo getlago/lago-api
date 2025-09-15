@@ -35,6 +35,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       "currency" => credit_note.currency,
       "total_amount_cents" => credit_note.total_amount_cents,
       "taxes_amount_cents" => credit_note.taxes_amount_cents,
+      "precise_taxes_amount_cents" => credit_note.precise_taxes_amount_cents,
       "sub_total_excluding_taxes_amount_cents" => credit_note.sub_total_excluding_taxes_amount_cents,
       "balance_amount_cents" => credit_note.balance_amount_cents,
       "credit_amount_cents" => credit_note.credit_amount_cents,
