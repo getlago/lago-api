@@ -35,7 +35,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "invoice_custom_sections:view"
 
-  it "returns a list of sorted invoice_custom_sections: alphabetical, selected first without duplicates" do
+  it "returns a list of sorted invoice_custom_sections: alphabetical" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

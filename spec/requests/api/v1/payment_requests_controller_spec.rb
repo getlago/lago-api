@@ -54,61 +54,40 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
   end
 
   describe "GET /api/v1/payment_requests" do
-    subject { get_with_token(organization, "/api/v1/payment_requests", params) }
+    include_examples "a payment request index endpoint" do
+      subject { get_with_token(organization, "/api/v1/payment_requests", params) }
 
-    let(:params) { {} }
+      context "with external_customer_id filter" do
+        let(:params) { {external_customer_id: customer.external_id} }
 
-    include_examples "requires API permission", "payment_request", "read"
+        before do
+          payment_request
+        end
 
-    it "returns organization's payment requests", :aggregate_failures do
-      first_customer = create(:customer, organization:)
-      second_customer = create(:customer, organization:)
-      first_payment_request = create(:payment_request, customer: first_customer)
-      second_payment_request = create(:payment_request, customer: second_customer)
+        it "returns customer's payment requests" do
+          subject
 
-      subject
+          expect(response).to have_http_status(:success)
+          expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(
+            payment_request.id
+          )
+          expect(json[:payment_requests].first[:customer][:lago_id]).to eq(customer.id)
+        end
 
-      expect(response).to have_http_status(:success)
-      expect(json[:payment_requests].count).to eq(2)
-      expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(
-        first_payment_request.id,
-        second_payment_request.id
-      )
-    end
+        context "with a not found customer" do
+          let(:params) { {external_customer_id: SecureRandom.uuid} }
 
-    context "with a not found customer", :aggregate_failures do
-      let(:params) { {external_customer_id: SecureRandom.uuid} }
+          before do
+            payment_request
+          end
 
-      before do
-        customer = create(:customer, organization:)
-        create(:payment_request, customer:)
-      end
+          it "returns an empty result" do
+            subject
 
-      it "returns an empty result" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:payment_requests]).to be_empty
-      end
-    end
-
-    context "with customer" do
-      let(:params) { {external_customer_id: customer.external_id} }
-      let(:customer) { create(:customer, organization:) }
-
-      it "returns customer's payment requests", :aggregate_failures do
-        invoice = create(:invoice, customer:)
-        first_payment_request = create(:payment_request, customer:, invoices: [invoice])
-        create(:payment_request)
-
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:payment_requests].map { |r| r[:lago_id] }).to contain_exactly(
-          first_payment_request.id
-        )
-        expect(json[:payment_requests].first[:customer][:lago_id]).to eq(customer.id)
-        expect(json[:payment_requests].first[:invoices].first[:lago_id]).to eq(invoice.id)
+            expect(response).to have_http_status(:success)
+            expect(json[:payment_requests]).to be_empty
+          end
+        end
       end
     end
   end

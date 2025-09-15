@@ -11,9 +11,9 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
   let(:subscription) do
     travel_to(DateTime.new(2023, 1, 1)) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: "sub_#{customer.external_id}",
-        plan_code: plan.code
+        {external_customer_id: customer.external_id,
+         external_id: "sub_#{customer.external_id}",
+         plan_code: plan.code}
       )
     end
 

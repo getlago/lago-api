@@ -10699,6 +10699,42 @@
               "deprecationReason": null
             },
             {
+              "name": "ignorePaidTopUpLimitsOnCreation",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paidTopUpMaxAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paidTopUpMinAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "recurringTransactionRules",
               "description": null,
               "type": {
@@ -10754,18 +10790,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "walletId",
               "description": null,
               "type": {
@@ -10787,6 +10811,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ignorePaidTopUpLimits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -10826,6 +10862,18 @@
               "deprecationReason": null
             },
             {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paidCredits",
               "description": null,
               "type": {
@@ -10852,6 +10900,18 @@
             {
               "name": "voidedCredits",
               "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
@@ -11731,18 +11791,6 @@
                   "name": "String",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "selected",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -12764,6 +12812,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ignorePaidTopUpLimits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -24285,6 +24345,18 @@
               "isDeprecated": false,
               "deprecationReason": null,
               "args": []
+            },
+            {
+              "name": "walletTransaction",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "WalletTransaction",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
             }
           ],
           "inputFields": null,
@@ -29632,22 +29704,6 @@
                 "kind": "OBJECT",
                 "name": "Organization",
                 "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "selected",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -42506,18 +42562,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "fromDate",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ISO8601Date",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "resourceIds",
                   "description": null,
                   "type": {
@@ -42558,18 +42602,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "toDate",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ISO8601Date",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "userEmails",
                   "description": null,
                   "type": {
@@ -42584,6 +42616,54 @@
                         "ofType": null
                       }
                     }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "fromDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "fromDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601DateTime",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "toDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "toDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601DateTime",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -42910,11 +42990,35 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "fromDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601DateTime",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "toDate",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
                     "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "toDatetime",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601DateTime",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -48467,6 +48571,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "ignorePaidTopUpLimits",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
                   "ofType": null
                 }
               },
@@ -55287,6 +55407,30 @@
               "deprecationReason": null
             },
             {
+              "name": "paidTopUpMaxAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paidTopUpMinAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "recurringTransactionRules",
               "description": null,
               "type": {
@@ -56231,18 +56375,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "selected",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -57529,6 +57661,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "ignorePaidTopUpLimits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
@@ -59152,6 +59296,54 @@
               "args": []
             },
             {
+              "name": "paidTopUpMaxAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "paidTopUpMaxCredits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "paidTopUpMinAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "paidTopUpMinCredits",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "rateAmount",
               "description": null,
               "type": {
@@ -59492,6 +59684,18 @@
               "args": []
             },
             {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "priority",
               "description": null,
               "type": {
@@ -59605,6 +59809,18 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Wallet",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "walletName",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,

@@ -24,38 +24,38 @@ describe "Change charge model with filters", :scenarios, type: :request do
   it "allows the edition of the charge filter" do
     update_plan(
       plan,
-      amount_cents: plan.amount_cents,
-      name: plan.name,
-      invoice_display_name: plan.invoice_display_name,
-      description: plan.description,
-      charges: [
-        {
-          billable_metric_id: billable_metric.id,
-          id: charge.id,
-          invoice_display_name: charge.invoice_display_name,
-          charge_model: "graduated",
-          properties: {
-            graduated_ranges: [
-              {from_value: 0, to_value: 100, per_unit_amount: "10", flat_amount: "0"},
-              {from_value: 101, to_value: nil, per_unit_amount: "20", flat_amount: "0"}
-            ]
-          },
-          filters: [
-            {
-              invoice_display_name: charge_filter.invoice_display_name,
-              properties: {
-                graduated_ranges: [
-                  {from_value: 0, to_value: 100, per_unit_amount: "12", flat_amount: "0"},
-                  {from_value: 101, to_value: nil, per_unit_amount: "22", flat_amount: "0"}
-                ]
-              },
-              values: {
-                cloud: ["aws"]
-              }
-            }
-          ]
-        }
-      ]
+      {amount_cents: plan.amount_cents,
+       name: plan.name,
+       invoice_display_name: plan.invoice_display_name,
+       description: plan.description,
+       charges: [
+         {
+           billable_metric_id: billable_metric.id,
+           id: charge.id,
+           invoice_display_name: charge.invoice_display_name,
+           charge_model: "graduated",
+           properties: {
+             graduated_ranges: [
+               {from_value: 0, to_value: 100, per_unit_amount: "10", flat_amount: "0"},
+               {from_value: 101, to_value: nil, per_unit_amount: "20", flat_amount: "0"}
+             ]
+           },
+           filters: [
+             {
+               invoice_display_name: charge_filter.invoice_display_name,
+               properties: {
+                 graduated_ranges: [
+                   {from_value: 0, to_value: 100, per_unit_amount: "12", flat_amount: "0"},
+                   {from_value: 101, to_value: nil, per_unit_amount: "22", flat_amount: "0"}
+                 ]
+               },
+               values: {
+                 cloud: ["aws"]
+               }
+             }
+           ]
+         }
+       ]}
     )
 
     plan.reload

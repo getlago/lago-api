@@ -3,6 +3,8 @@
 module Api
   module V1
     class PaymentRequestsController < Api::BaseController
+      include PaymentRequestIndex
+
       def create
         result = PaymentRequests::CreateService.call(
           organization: current_organization,
@@ -23,28 +25,9 @@ module Api
       end
 
       def index
-        result = PaymentRequestsQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: index_filters
-        )
-
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.payment_requests.preload(:customer, :invoices),
-              ::V1::PaymentRequestSerializer,
-              collection_name: "payment_requests",
-              meta: pagination_metadata(result.payment_requests),
-              includes: %i[customer invoices]
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        permitted_params = params.permit(:external_customer_id, :payment_status)
+        external_customer_id = permitted_params[:external_customer_id]
+        payment_request_index(external_customer_id: external_customer_id)
       end
 
       def show
@@ -62,10 +45,6 @@ module Api
           :external_customer_id,
           lago_invoice_ids: []
         )
-      end
-
-      def index_filters
-        params.permit(:external_customer_id, :payment_status)
       end
 
       def render_payment_request(payment_request)

@@ -41,5 +41,5 @@ end
 #
 #  fk_rails_...  (fee_id => fees.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (tax_id => taxes.id)
+#  fk_rails_...  (tax_id => taxes.id) ON DELETE => nullify
 #

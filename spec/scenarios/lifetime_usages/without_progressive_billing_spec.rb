@@ -89,11 +89,11 @@ describe "Lifetime usage without progressive billing", :time_travel, :scenarios,
     expect(invoice.invoice_type).to eq("subscription")
 
     pass_time 1.day
-    update_plan(plan, usage_thresholds: [
+    update_plan(plan, {usage_thresholds: [
       {
         amount_cents: threshold_amount_cents
       }
-    ])
+    ]})
 
     pass_time 2.days
 

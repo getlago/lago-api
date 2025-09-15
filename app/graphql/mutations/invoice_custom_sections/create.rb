@@ -16,9 +16,8 @@ module Mutations
       type Types::InvoiceCustomSections::Object
 
       def resolve(**args)
-        selected = args.delete(:selected) || false
         result = ::InvoiceCustomSections::CreateService.call(
-          organization: current_organization, create_params: args.to_h, selected: selected
+          organization: current_organization, create_params: args.to_h
         )
 
         result.success? ? result.invoice_custom_section : result_error(result)

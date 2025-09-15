@@ -104,8 +104,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
     context "with fee type limitations" do
       let(:subscription_fees) { [fee1, fee2] }
-      let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 60, taxes_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, taxes_amount_cents: 4) }
+      let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[charge]) }
 
       before { subscription_fees }
@@ -137,8 +137,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 10_000 }
-        let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 6_000, taxes_amount_cents: 600) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 4_000, taxes_amount_cents: 400) }
+        let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400) }
 
         it "calculates prepaid credit" do
           result = credit_service.call
@@ -167,8 +167,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
     context "with billable metric limitations" do
       let(:subscription_fees) { [fee1, fee2] }
-      let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 60, taxes_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, taxes_amount_cents: 4, charge:) }
+      let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 40, taxes_precise_amount_cents: 4, charge:) }
       let(:charge) { create(:standard_charge, organization: wallet.organization, billable_metric:) }
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
       let(:billable_metric) { create(:billable_metric, organization: wallet.organization) }
@@ -206,8 +206,8 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 10_000 }
-        let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 6_000, taxes_amount_cents: 600) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 4_000, taxes_amount_cents: 400, charge:) }
+        let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400, charge:) }
 
         it "calculates prepaid credit" do
           result = credit_service.call
@@ -236,9 +236,9 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
 
     context "with billable metric limitations and fee type limitation" do
       let(:subscription_fees) { [fee1, fee2, fee3] }
-      let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 60, taxes_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 2, charge:) }
-      let(:fee3) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 2) }
+      let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 20, taxes_precise_amount_cents: 2, charge:) }
+      let(:fee3) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 20, taxes_precise_amount_cents: 2) }
       let(:charge) { create(:standard_charge, organization: wallet.organization, billable_metric:) }
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[subscription]) }
       let(:billable_metric) { create(:billable_metric, organization: wallet.organization) }

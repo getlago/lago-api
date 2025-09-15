@@ -53,8 +53,7 @@ module PaymentProviderCustomers
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
             details: formatted_details,
             section_type: :system_generated
-          },
-          selected: false
+          }
         )
 
         created.invoice_custom_section

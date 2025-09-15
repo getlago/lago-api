@@ -190,7 +190,7 @@ module Events
               sanitize_colon(query.prorated_query),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }
@@ -210,7 +210,7 @@ module Events
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }
@@ -228,7 +228,7 @@ module Events
             [
               sanitize_colon(query.grouped_query),
               {
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE
               }
             ]
@@ -246,7 +246,7 @@ module Events
               sanitize_colon(query.grouped_prorated_query),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
+                to_datetime:,
                 decimal_scale: DECIMAL_SCALE,
                 timezone: customer.applicable_timezone
               }

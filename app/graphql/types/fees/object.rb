@@ -18,6 +18,7 @@ module Types
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
       field :true_up_parent_fee, Types::Fees::Object, null: true
+      field :wallet_transaction, Types::WalletTransactions::Object, null: true
 
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
       field :events_count, GraphQL::Types::BigInt, null: true
@@ -38,6 +39,10 @@ module Types
       field :charge_filter, Types::ChargeFilters::Object, null: true
       field :pricing_unit_usage, Types::PricingUnitUsages::Object, null: true
       field :properties, Types::Fees::Properties, null: true, method: :itself
+
+      def wallet_transaction
+        object.invoiceable if object.credit?
+      end
 
       def item_type
         object.fee_type

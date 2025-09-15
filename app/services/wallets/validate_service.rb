@@ -40,12 +40,14 @@ module Wallets
       return true if ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
 
       add_error(field: :paid_credits, error_code: "invalid_paid_credits")
+      add_error(field: :paid_credits, error_code: "invalid_amount")
     end
 
     def valid_granted_credits_amount?
       return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
 
       add_error(field: :granted_credits, error_code: "invalid_granted_credits")
+      add_error(field: :granted_credits, error_code: "invalid_amount")
     end
 
     def valid_expiration_at?

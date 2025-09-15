@@ -27,10 +27,10 @@ describe "Billing Boundaries Scenario", :scenarios, type: :request do
   it "creates invoices" do
     travel_to(Time.zone.parse("2024-01-31T01:00:00Z")) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: customer.external_id,
-        plan_code: plan.code,
-        billing_time:
+        {external_customer_id: customer.external_id,
+         external_id: customer.external_id,
+         plan_code: plan.code,
+         billing_time:}
       )
     end
 
@@ -82,10 +82,10 @@ describe "Billing Boundaries Scenario", :scenarios, type: :request do
     it "creates invoices" do
       travel_to(Time.zone.parse("2024-01-30T00:00:00Z")) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time:
+          {external_customer_id: customer.external_id,
+           external_id: customer.external_id,
+           plan_code: plan.code,
+           billing_time:}
         )
       end
 

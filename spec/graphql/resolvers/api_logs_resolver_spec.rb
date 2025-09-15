@@ -4,10 +4,18 @@ require "rails_helper"
 
 RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
   let(:required_permission) { "audit_logs:view" }
-  let(:query) do
+  let(:query) { build_query(limit: 5) }
+
+  let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+  let(:api_log) { create(:clickhouse_api_log, membership:, logged_at: Time.iso8601("2025-09-08T15:04:45.016Z")) }
+
+  before { api_log }
+
+  def build_query(limit: 5, filters: "")
     <<~GQL
       query {
-        apiLogs(limit: 5) {
+        apiLogs(limit: #{limit}#{filters.present? ? ", #{filters}" : ""}) {
           collection {
             requestId
           }
@@ -17,11 +25,11 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:api_log) { create(:clickhouse_api_log, membership:) }
+  def execute_and_get_collection(filters = "")
+    result = execute_query(query: build_query(filters:))
 
-  before { api_log }
+    result.dig("data", "apiLogs", "collection")
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -29,13 +37,7 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
 
   shared_examples "blocked feature" do |message|
     it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:
-      )
-
+      result = execute_query(query:)
       expect_graphql_error(result:, message:)
     end
   end
@@ -60,10 +62,7 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
     around { |test| lago_premium!(&test) }
 
     it "returns the list of api logs" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
+      result = execute_query(
         query:
       )
 
@@ -76,95 +75,194 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
       expect(api_logs_response["metadata"]["totalCount"]).to eq(1)
     end
 
-    context "with graphql filters" do
-      context "when httpStatuses" do
-        let(:failed_api_log) { create(:clickhouse_api_log, membership:, http_status: 404) }
-        let(:query) do
-          <<~GQL
-            query {
-              apiLogs(limit: 5, httpStatuses: [#{http_status}]) {
-                collection {
-                  requestId
-                }
-                metadata { currentPage, totalCount }
-              }
-            }
-          GQL
+    context "with httpStatuses filter" do
+      let(:failed_api_log) { create(:clickhouse_api_log, membership:, http_status: 404) }
+
+      before { failed_api_log }
+
+      context "with string" do
+        let(:http_status) { "failed" }
+
+        it "return failed api logs" do
+          result = execute_query(query: build_query(filters: "httpStatuses: [#{http_status}]"))
+
+          api_logs_response = result["data"]["apiLogs"]
+
+          expect(api_logs_response["collection"].first["requestId"]).to eq(failed_api_log.request_id)
+
+          expect(api_logs_response["metadata"]["currentPage"]).to eq(1)
+          expect(api_logs_response["metadata"]["totalCount"]).to eq(1)
         end
+      end
 
-        before { failed_api_log }
+      context "with integer" do
+        let(:http_status) { 404 }
 
-        context "with string" do
-          let(:http_status) { "failed" }
+        it "return failed api logs" do
+          result = execute_query(
+            query: build_query(filters: "httpStatuses: [#{http_status}]")
+          )
 
-          it "return failed api logs" do
-            result = execute_graphql(
-              current_user: membership.user,
-              current_organization: organization,
-              permissions: required_permission,
-              query:
-            )
+          api_logs_response = result["data"]["apiLogs"]
 
-            api_logs_response = result["data"]["apiLogs"]
+          expect(api_logs_response["collection"].first["requestId"]).to eq(failed_api_log.request_id)
 
-            expect(api_logs_response["collection"].first["requestId"]).to eq(failed_api_log.request_id)
-
-            expect(api_logs_response["metadata"]["currentPage"]).to eq(1)
-            expect(api_logs_response["metadata"]["totalCount"]).to eq(1)
-          end
-        end
-
-        context "with integer" do
-          let(:http_status) { 404 }
-
-          it "return failed api logs" do
-            result = execute_graphql(
-              current_user: membership.user,
-              current_organization: organization,
-              permissions: required_permission,
-              query:
-            )
-
-            api_logs_response = result["data"]["apiLogs"]
-
-            expect(api_logs_response["collection"].first["requestId"]).to eq(failed_api_log.request_id)
-
-            expect(api_logs_response["metadata"]["currentPage"]).to eq(1)
-            expect(api_logs_response["metadata"]["totalCount"]).to eq(1)
-          end
+          expect(api_logs_response["metadata"]["currentPage"]).to eq(1)
+          expect(api_logs_response["metadata"]["totalCount"]).to eq(1)
         end
       end
     end
 
-    context "with query filters" do
-      let(:filters) do
-        {
-          from_date: nil,
-          to_date: nil,
-          http_methods: nil,
-          http_statuses: nil,
-          api_version: nil,
-          api_key_ids: nil,
-          request_ids: nil,
-          request_paths: nil
-        }
+    context "with httpMethods filter" do
+      it "return api logs with the http method" do
+        api_logs = execute_and_get_collection("httpMethods: [post]")
+        expect(api_logs.count).to eq(1)
+
+        api_logs = execute_and_get_collection("httpMethods: [put]")
+        expect(api_logs.count).to eq(0)
+      end
+    end
+
+    context "with apiKeyIds filter" do
+      it "return api logs with the api key id" do
+        api_logs = execute_and_get_collection("apiKeyIds: [\"#{api_log.api_key_id}\"]")
+        expect(api_logs.count).to eq(1)
+
+        api_logs = execute_and_get_collection("apiKeyIds: [\"other\"]")
+        expect(api_logs.count).to eq(0)
+      end
+    end
+
+    context "with requestIds filter" do
+      it "return api logs with the request id" do
+        api_logs = execute_and_get_collection("requestIds: [\"#{api_log.request_id}\"]")
+        expect(api_logs.count).to eq(1)
+
+        api_logs = execute_and_get_collection("requestIds: [\"other\"]")
+        expect(api_logs.count).to eq(0)
+      end
+    end
+
+    context "with requestPaths filter" do
+      it "return api logs with the request path" do
+        api_logs = execute_and_get_collection("requestPaths: [\"#{api_log.request_path}\"]")
+        expect(api_logs.count).to eq(1)
+
+        api_logs = execute_and_get_collection("requestPaths: [\"other\"]")
+        expect(api_logs.count).to eq(0)
+      end
+    end
+
+    context "with fromDate filter" do
+      context "when fromDate is a date" do
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-08\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-09\"")
+          expect(api_logs.count).to eq(0)
+        end
       end
 
-      it "sends all possible filters to query" do
-        allow(ApiLogsQuery).to receive(:call).and_call_original
+      context "when fromDate is a datetime" do
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-08T15:00:00Z\"")
+          expect(api_logs.count).to eq(1)
 
-        execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query:
-        )
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-08T16:00:00+01:00\"")
+          expect(api_logs.count).to eq(1)
 
-        expect(ApiLogsQuery).to have_received(:call).with(
-          organization: organization,
-          pagination: {limit: 5, page: nil},
-          filters:
-        )
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-08T15:10:00Z\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("fromDate: \"2025-09-09T16:00:00+02:00\"")
+          expect(api_logs.count).to eq(0)
+        end
+      end
+    end
+
+    context "with toDate filter" do
+      context "when toDate is a date" do
+        let(:query) {}
+
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDate: \"2025-09-09\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDate: \"2025-09-08\"")
+          expect(api_logs.count).to eq(0)
+        end
+      end
+
+      context "when toDate is a datetime" do
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDate: \"2025-09-09T15:15:00Z\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDate: \"2025-09-08T16:15:00+01:00\"")
+          expect(api_logs.count).to eq(0)
+
+          api_logs = execute_and_get_collection("toDate: \"2025-09-08T15:00:00Z\"")
+          expect(api_logs.count).to eq(0)
+        end
+      end
+    end
+
+    context "with fromDatetime filter" do
+      context "when fromDatetime is a date" do
+        it "returns expected activity logs" do
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-09\"")
+          expect(activity_logs.count).to eq(0)
+        end
+      end
+
+      context "when fromDatetime is a datetime" do
+        it "returns expected activity logs" do
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T15:00:00Z\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T16:00:00+01:00\"")
+          expect(activity_logs.count).to eq(1)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T15:10:00Z\"")
+          expect(activity_logs.count).to eq(0)
+
+          activity_logs = execute_and_get_collection("fromDatetime: \"2025-09-08T16:00:00+02:00\"")
+          expect(activity_logs.count).to eq(1)
+        end
+      end
+    end
+
+    context "with toDatetime filter" do
+      context "when toDatetime is a date" do
+        let(:query) {}
+
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-09\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08\"")
+          expect(api_logs.count).to eq(0)
+        end
+      end
+
+      context "when toDatetime is a datetime" do
+        it "returns expected activity logs" do
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T15:15:00Z\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T16:15:00+01:00\"")
+          expect(api_logs.count).to eq(1)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T15:00:00Z\"")
+          expect(api_logs.count).to eq(0)
+
+          api_logs = execute_and_get_collection("toDatetime: \"2025-09-08T16:00:00+02:00\"")
+          expect(api_logs.count).to eq(0)
+        end
       end
     end
   end

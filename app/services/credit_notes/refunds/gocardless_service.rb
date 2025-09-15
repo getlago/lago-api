@@ -39,6 +39,8 @@ module CreditNotes
 
         result.refund = refund
         result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       rescue GoCardlessPro::Error, GoCardlessPro::ValidationError => e
         deliver_error_webhook(message: e.message, code: e.code)
         update_credit_note_status(:failed)
@@ -70,8 +72,8 @@ module CreditNotes
         end
 
         result
-      rescue ArgumentError
-        result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       end
 
       private

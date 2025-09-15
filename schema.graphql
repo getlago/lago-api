@@ -2624,9 +2624,12 @@ input CreateCustomerWalletInput {
   customerId: ID!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  ignorePaidTopUpLimitsOnCreation: Boolean
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMinAmountCents: BigInt
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
 }
@@ -2640,8 +2643,10 @@ input CreateCustomerWalletTransactionInput {
   """
   clientMutationId: String
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
+  name: String
   paidCredits: String
   priority: Int
   voidedCredits: String
@@ -2798,7 +2803,6 @@ input CreateInvoiceCustomSectionInput {
   details: String
   displayName: String
   name: String!
-  selected: Boolean
 }
 
 """
@@ -2947,6 +2951,7 @@ input CreatePricingUnitInput {
 input CreateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
@@ -5133,6 +5138,7 @@ type Fee implements InvoiceItem {
   trueUpFee: Fee
   trueUpParentFee: Fee
   units: Float!
+  walletTransaction: WalletTransaction
 }
 
 type FeeAmountDetails {
@@ -5801,7 +5807,6 @@ type InvoiceCustomSection {
   id: ID!
   name: String!
   organization: Organization
-  selected: Boolean!
 }
 
 """
@@ -8280,7 +8285,7 @@ type Query {
   """
   Query activity logs of an organization
   """
-  activityLogs(activityIds: [String!], activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [ResourceTypeEnum!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
+  activityLogs(activityIds: [String!], activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, fromDatetime: ISO8601DateTime, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [ResourceTypeEnum!], toDate: ISO8601Date, toDatetime: ISO8601DateTime, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization
@@ -8348,7 +8353,7 @@ type Query {
   """
   Query api logs of an organization
   """
-  apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date): ApiLogCollection
+  apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, fromDatetime: ISO8601DateTime, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date, toDatetime: ISO8601DateTime): ApiLogCollection
 
   """
   Query a single billable metric of an organization
@@ -9038,6 +9043,7 @@ type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
   expirationAt: ISO8601DateTime
   grantedCredits: String!
+  ignorePaidTopUpLimits: Boolean!
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean!
   lagoId: ID!
@@ -10740,6 +10746,8 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMinAmountCents: BigInt
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -10902,7 +10910,6 @@ input UpdateInvoiceCustomSectionInput {
   displayName: String
   id: ID!
   name: String
-  selected: Boolean
 }
 
 """
@@ -11075,6 +11082,7 @@ input UpdatePrivilegeInput {
 input UpdateRecurringTransactionRuleInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String
+  ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
   lagoId: ID
@@ -11275,6 +11283,10 @@ type Wallet {
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
+  paidTopUpMaxAmountCents: BigInt
+  paidTopUpMaxCredits: BigInt
+  paidTopUpMinAmountCents: BigInt
+  paidTopUpMinCredits: BigInt
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
@@ -11316,6 +11328,7 @@ type WalletTransaction {
   invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
+  name: String
   priority: Int!
   settledAt: ISO8601DateTime
   source: WalletTransactionSourceEnum!
@@ -11324,6 +11337,7 @@ type WalletTransaction {
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
   wallet: Wallet
+  walletName: String
 }
 
 """

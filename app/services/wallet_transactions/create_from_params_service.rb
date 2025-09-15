@@ -47,16 +47,13 @@ module WalletTransactions
           transaction = handle_granted_credits(
             wallet:,
             credits_amount: BigDecimal(params[:granted_credits]).floor(5),
-            reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
-            invoice_requires_successful_payment:
+            reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits])
           )
           wallet_transactions << transaction
         end
 
         if params[:voided_credits]
-          wallet_credit = WalletCredit.new(wallet:, credit_amount: BigDecimal(params[:voided_credits]).floor(5), invoiceable: false)
-          void_result = WalletTransactions::VoidService.call(**params, wallet:, wallet_credit:)
-          wallet_transactions << void_result.wallet_transaction
+          wallet_transactions << handle_voided_credits(wallet)
         end
       end
 
@@ -69,6 +66,8 @@ module WalletTransactions
       end
 
       result.wallet_transactions = transactions
+      result
+    rescue BaseService::FailedResult
       result
     rescue ActiveRecord::StaleObjectError
       if @update_attempts <= MAX_WALLET_UPDATE_ATTEMPTS
@@ -84,8 +83,26 @@ module WalletTransactions
 
     attr_reader :organization, :params, :source, :metadata, :priority
 
+    def name
+      params[:name].presence
+    end
+
+    def handle_voided_credits(wallet)
+      credit_amount = BigDecimal(params[:voided_credits]).floor(5)
+      wallet_credit = WalletCredit.new(wallet:, credit_amount:, invoiceable: false)
+      void_params = params.to_h.symbolize_keys.slice(:metadata, :source, :priority).merge(name:)
+      WalletTransactions::VoidService.call!(wallet:, wallet_credit:, **void_params).wallet_transaction
+    end
+
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
       return if credits_amount.zero?
+
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: credits_amount.to_s,
+        ignore_validation: params[:ignore_paid_top_up_limits]
+      ).raise_if_invalid!
 
       wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount)
       wallet_transaction = WalletTransactions::CreateService.call!(
@@ -97,7 +114,8 @@ module WalletTransactions
         transaction_status: :purchased,
         invoice_requires_successful_payment:,
         metadata:,
-        priority:
+        priority:,
+        name:
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -105,7 +123,7 @@ module WalletTransactions
       wallet_transaction
     end
 
-    def handle_granted_credits(wallet:, credits_amount:, invoice_requires_successful_payment:, reset_consumed_credits: false)
+    def handle_granted_credits(wallet:, credits_amount:, reset_consumed_credits: false)
       return if credits_amount.zero?
 
       wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount, invoiceable: false)
@@ -118,9 +136,9 @@ module WalletTransactions
           settled_at: Time.current,
           source:,
           transaction_status: :granted,
-          invoice_requires_successful_payment:,
           metadata:,
-          priority:
+          priority:,
+          name:
         ).wallet_transaction
 
         Wallets::Balance::IncreaseService.new(
@@ -134,10 +152,8 @@ module WalletTransactions
     end
 
     def valid?
-      WalletTransactions::ValidateService.new(
-        result,
-        **params.merge(organization: organization)
-      ).valid?
+      validate_params = params.merge(organization: organization)
+      WalletTransactions::ValidateService.new(result, **validate_params).valid?
     end
   end
 end

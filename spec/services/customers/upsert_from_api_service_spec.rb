@@ -230,7 +230,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with an external_id already in use in a different billing entity" do
+  context "with an external_id already in use in a not-default billing entity" do
     let(:customer) do
       create(:customer, organization:, billing_entity: billing_entity_2, external_id:)
     end
@@ -257,6 +257,21 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     context "when the customer already has an invoice" do
       before do
         create(:invoice, customer: customer)
+      end
+
+      it "does not update the billing_entity of the customer" do
+        expect(result).to be_success
+        expect(result.customer).to eq(customer)
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+    end
+
+    context "when not sending billing_entity_code" do
+      let(:create_args) do
+        {
+          external_id:,
+          name: "Updated name"
+        }
       end
 
       it "does not update the billing_entity of the customer" do
@@ -490,6 +505,12 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       result
 
       expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
+    end
+
+    it "produces an activity log" do
+      result = described_class.call(organization:, params: create_args)
+
+      expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(result.customer)
     end
 
     context "with provider customer" do

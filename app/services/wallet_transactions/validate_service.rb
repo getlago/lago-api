@@ -8,6 +8,7 @@ module WalletTransactions
       valid_granted_credits_amount? if args[:granted_credits]
       valid_voided_credits_amount? if args[:voided_credits] && result.current_wallet
       valid_metadata? if args[:metadata]
+      valid_name? if args[:name]
 
       if errors?
         result.validation_failure!(errors:)
@@ -34,17 +35,21 @@ module WalletTransactions
       return true if ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
 
       add_error(field: :paid_credits, error_code: "invalid_paid_credits")
+      add_error(field: :paid_credits, error_code: "invalid_amount")
     end
 
     def valid_granted_credits_amount?
       return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
 
       add_error(field: :granted_credits, error_code: "invalid_granted_credits")
+      add_error(field: :granted_credits, error_code: "invalid_amount")
     end
 
     def valid_voided_credits_amount?
       unless ::Validators::DecimalAmountService.new(args[:voided_credits]).valid_amount?
-        return add_error(field: :voided_credits, error_code: "invalid_voided_credits")
+        add_error(field: :voided_credits, error_code: "invalid_voided_credits")
+        add_error(field: :voided_credits, error_code: "invalid_amount")
+        return false
       end
 
       if BigDecimal(args[:voided_credits]) > result.current_wallet.credits_balance
@@ -64,6 +69,24 @@ module WalletTransactions
       end
 
       true
+    end
+
+    def valid_name?
+      name = args[:name]
+
+      return true if name.blank?
+
+      if !name.is_a?(String)
+        add_error(field: :name, error_code: "invalid_value")
+        return false
+      end
+
+      if name.length > 255
+        add_error(field: :name, error_code: "too_long")
+        return false
+      end
+
+      false
     end
   end
 end

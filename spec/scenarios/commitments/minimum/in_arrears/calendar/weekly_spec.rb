@@ -174,9 +174,9 @@ describe "Billing Minimum Commitments In Arrears Scenario", :scenarios, type: :r
 
     before do
       apply_coupon(
-        external_customer_id: customer.external_id,
-        coupon_code: coupon_target.coupon.code,
-        amount_cents: 1_000_000
+        {external_customer_id: customer.external_id,
+         coupon_code: coupon_target.coupon.code,
+         amount_cents: 1_000_000}
       )
 
       travel_to((subscription_time + 1.week).beginning_of_week) do

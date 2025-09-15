@@ -13,13 +13,6 @@ module Customers
       super
     end
 
-    # TODO: Split this service into multiple services (create and update)
-    #       Add activity log for update
-    activity_loggable(
-      action: "customer.created",
-      record: -> { result.customer }
-    )
-
     def call
       billing_entity = BillingEntities::ResolveService.call(
         organization:, billing_entity_code: params[:billing_entity_code]
@@ -53,7 +46,7 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
-        customer.billing_entity = billing_entity if customer.editable?
+        customer.billing_entity = billing_entity if new_customer || (customer.editable? && params.key?(:billing_entity_code))
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
@@ -141,8 +134,10 @@ module Customers
 
       if new_customer
         SendWebhookJob.perform_later("customer.created", customer)
+        Utils::ActivityLog.produce_after_commit(customer, "customer.created")
       else
         SendWebhookJob.perform_later("customer.updated", customer)
+        Utils::ActivityLog.produce_after_commit(customer, "customer.updated")
       end
 
       result

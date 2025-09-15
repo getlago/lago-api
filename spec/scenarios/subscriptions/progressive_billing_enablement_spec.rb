@@ -49,11 +49,11 @@ describe "Progressive Billing enablement", :scenarios, type: :request, transacti
       # update plan and add a threshold
       travel_to time_0 + 6.days
 
-      update_plan(plan, usage_thresholds: [
+      update_plan(plan, {usage_thresholds: [
         {
           amount_cents: usage_threshold.amount_cents
         }
-      ])
+      ]})
 
       perform_all_enqueued_jobs
       perform_usage_update
@@ -108,11 +108,11 @@ describe "Progressive Billing enablement", :scenarios, type: :request, transacti
       # update plan and add a threshold
       travel_to time_0 + 36.days
 
-      update_plan(plan, usage_thresholds: [
+      update_plan(plan, {usage_thresholds: [
         {
           amount_cents: usage_threshold.amount_cents
         }
-      ])
+      ]})
 
       perform_all_enqueued_jobs
       perform_usage_update

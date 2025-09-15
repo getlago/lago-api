@@ -2,44 +2,35 @@
 
 module Wallets
   class CreateIntervalWalletTransactionsService < BaseService
-    def call
-      recurring_transaction_rules.each do |recurring_transaction_rule|
-        wallet = recurring_transaction_rule.wallet
-        paid_credits = paid_credits(recurring_transaction_rule)
-        granted_credits = granted_credits(recurring_transaction_rule)
+    Result = BaseResult
 
-        next if recurring_transaction_rule.target? && paid_credits.zero? && granted_credits.zero?
+    def call
+      recurring_transaction_rules.each do |rule|
+        paid_credits = rule.compute_paid_credits(ongoing_balance: rule.wallet.credits_ongoing_balance)
+        granted_credits = rule.compute_granted_credits
+
+        next if rule.target? && paid_credits.zero? && granted_credits.zero?
 
         WalletTransactions::CreateJob.perform_later(
-          organization_id: wallet.organization.id,
+          organization_id: rule.wallet.organization.id,
           params: {
-            wallet_id: wallet.id,
+            wallet_id: rule.wallet.id,
             paid_credits: paid_credits.to_s,
             granted_credits: granted_credits.to_s,
             source: :interval,
-            invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?,
-            metadata: recurring_transaction_rule.transaction_metadata
+            invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
+            metadata: rule.transaction_metadata
           }
         )
       end
+
+      result
     end
 
     private
 
     def today
       @today ||= Time.current
-    end
-
-    def paid_credits(rule)
-      return [(rule.target_ongoing_balance - rule.wallet.credits_ongoing_balance), 0.0].max if rule.target?
-
-      rule.paid_credits
-    end
-
-    def granted_credits(rule)
-      return 0.0 if rule.target?
-
-      rule.granted_credits
     end
 
     # NOTE: Retrieve list of recurring_transaction_rules that should create wallet transactions today
@@ -84,7 +75,7 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-        WHERE wallets.status = #{Wallet.statuses[:active]} 
+        WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}

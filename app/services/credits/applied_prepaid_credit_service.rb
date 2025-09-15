@@ -102,7 +102,7 @@ module Credits
 
     def limited_fees_total(applicable_fees)
       applicable_fees.sum do |f|
-        f.sub_total_excluding_taxes_amount_cents + f.taxes_amount_cents - f.precise_credit_notes_amount_cents
+        f.sub_total_excluding_taxes_precise_amount_cents + f.taxes_precise_amount_cents - f.precise_credit_notes_amount_cents
       end
     end
   end

@@ -24,6 +24,9 @@ class Wallet < ApplicationRecord
 
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
+  validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
+  validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
+  validate :paid_top_up_max_greater_than_or_equal_min
 
   STATUSES = [
     :active,
@@ -32,13 +35,25 @@ class Wallet < ApplicationRecord
 
   enum :status, STATUSES
 
+  scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
+  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
+
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
     terminated!
   end
 
-  scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
-  scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
+  def paid_top_up_min_credits
+    return if paid_top_up_min_amount_cents.nil?
+
+    WalletCredit.from_amount_cents(wallet: self, amount_cents: paid_top_up_min_amount_cents).credit_amount
+  end
+
+  def paid_top_up_max_credits
+    return if paid_top_up_max_amount_cents.nil?
+
+    WalletCredit.from_amount_cents(wallet: self, amount_cents: paid_top_up_max_amount_cents).credit_amount
+  end
 
   def currency=(currency)
     self.balance_currency = currency
@@ -55,6 +70,17 @@ class Wallet < ApplicationRecord
 
   def limited_to_billable_metrics?
     billable_metrics.any?
+  end
+
+  private
+
+  def paid_top_up_max_greater_than_or_equal_min
+    return if paid_top_up_min_amount_cents.nil?
+    return if paid_top_up_max_amount_cents.nil?
+
+    if paid_top_up_max_amount_cents < paid_top_up_min_amount_cents
+      errors.add(:paid_top_up_max_amount_cents, :must_be_greater_than_or_equal_min)
+    end
   end
 end
 
@@ -82,6 +108,8 @@ end
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
+#  paid_top_up_max_amount_cents        :bigint
+#  paid_top_up_min_amount_cents        :bigint
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null

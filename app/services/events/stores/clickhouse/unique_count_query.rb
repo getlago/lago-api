@@ -302,24 +302,43 @@ module Events
             toDecimal128(
               if(
                 operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
+                (
+                  -- inclusive day count in customer TZ, same as PG
                   date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:from_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    'days',
+                    toDate(
+                      toTimezone(
+                        if(
+                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          timestamp
+                        ),
+                        :timezone
+                      )
                     ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
+                    toDate(
+                      toTimezone(
+                        if(
+                          -- if next event is before the period start, clamp to :from_datetime (no +1 day),
+                          -- else add 1 day to make the range inclusive, just like PG does.
+                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                             OVER (PARTITION BY property ORDER BY timestamp ASC
+                                   ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          addDays(
+                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                               OVER (PARTITION BY property ORDER BY timestamp ASC
+                                     ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            ),
+                            1
+                          )
+                        ),
+                        :timezone
+                      )
+                    )
+                  ) / #{charges_duration || 1}
+                ),
                 0
               ),
               :decimal_scale
@@ -332,24 +351,40 @@ module Events
             toDecimal128(
               if(
                 operation_type = 'add',
-                -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
+                (
                   date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:to_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    'days',
+                    toDate(
+                      toTimezone(
+                        if(
+                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          timestamp
+                        ),
+                        :timezone
+                      )
                     ),
-                    :timezone
-                  ) / 86400
-                )
-                /
-                -- NOTE: full duration of the period
-                #{charges_duration || 1},
-
-                -- NOTE: operation was a remove, so the duration is 0
+                    toDate(
+                      toTimezone(
+                        if(
+                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                             OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
+                                   ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
+                          toDateTime64(:from_datetime, 3, 'UTC'),
+                          addDays(
+                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
+                               OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
+                                     ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            ),
+                            1
+                          )
+                        ),
+                        :timezone
+                      )
+                    )
+                  ) / #{charges_duration || 1}
+                ),
                 0
               ),
               :decimal_scale

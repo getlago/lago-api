@@ -10,7 +10,6 @@ module V1
         description: model.description,
         details: model.details,
         display_name: model.display_name,
-        applied_to_organization: model.selected_for_default_billing_entity?,
         organization_id: model.organization_id
       }
     end

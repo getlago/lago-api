@@ -21,10 +21,12 @@ RSpec.describe Wallets::CreateService, type: :service do
         customer:,
         organization_id: organization.id,
         currency: "EUR",
-        rate_amount: "1.00",
+        rate_amount: "5.00",
         expiration_at:,
         paid_credits:,
-        granted_credits:
+        granted_credits:,
+        paid_top_up_min_amount_cents: 1_00,
+        paid_top_up_max_amount_cents: 1_000_00
       }
     end
 
@@ -40,10 +42,12 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.customer_id).to eq(customer.id)
         expect(wallet.name).to eq("New Wallet")
         expect(wallet.currency).to eq("EUR")
-        expect(wallet.rate_amount).to eq(1.0)
+        expect(wallet.rate_amount).to eq(5.0)
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
         expect(wallet.recurring_transaction_rules.count).to eq(0)
         expect(wallet.invoice_requires_successful_payment).to eq(false)
+        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
       end
     end
 
@@ -68,7 +72,17 @@ RSpec.describe Wallets::CreateService, type: :service do
 
       it "returns an error" do
         expect(service_result).not_to be_success
-        expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(service_result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
+      end
+    end
+
+    context "when paid_credits is above the maximum" do
+      let(:paid_credits) { "1002.0" }
+
+      it "returns an error" do
+        expect { service_result }.not_to change(organization.wallets, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:paid_credits]).to eq(["amount_above_maximum"])
       end
     end
 

@@ -38,7 +38,7 @@ module Coupons
         reusable:
       )
 
-      if plan_identifiers.present? && plans.count != plan_identifiers.count
+      if plan_identifiers.present? && (plan_identifiers - plans.pluck(plan_key)).present?
         return result.not_found_failure!(resource: "plans")
       end
 
@@ -75,15 +75,15 @@ module Coupons
       limitations[key]&.compact&.uniq
     end
 
+    def plan_key
+      api_context? ? :code : :id
+    end
+
     def plans
       return @plans if defined? @plans
       return [] if plan_identifiers.blank?
 
-      @plans = if api_context?
-        Plan.where(code: plan_identifiers, organization_id:)
-      else
-        Plan.where(id: plan_identifiers, organization_id:)
-      end
+      @plans = Plan.where(plan_key => plan_identifiers, :organization_id => organization_id)
     end
 
     def billable_metric_identifiers

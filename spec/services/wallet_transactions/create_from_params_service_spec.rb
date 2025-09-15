@@ -37,30 +37,27 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
         paid_credits:,
         granted_credits:,
         voided_credits:,
-        source: :manual
+        **((name == :undefined) ? {} : {name:})
       }
     end
+    let(:name) { :undefined }
 
     it "creates wallet transactions" do
       expect { subject }.to change(WalletTransaction, :count).by(3)
     end
 
-    it "sets priority to default (50)" do
-      expect(result.wallet_transactions).to all(have_attributes(priority: 50))
+    it "defaults priority to 50, name to nil and source to manual" do
+      expect(result.wallet_transactions).to all(have_attributes(priority: 50, name: nil, source: "manual"))
+      expect(WalletTransaction.where(wallet_id: wallet.id)).to all(have_attributes(priority: 50, name: nil, source: "manual"))
     end
 
     it "sets expected transaction status" do
       subject
       transactions = WalletTransaction.where(wallet_id: wallet.id)
 
-      expect(transactions.purchased.first.credit_amount).to eq(10)
-      expect(transactions.granted.first.credit_amount).to eq(15)
-      expect(transactions.voided.first.credit_amount).to eq(3)
-    end
-
-    it "sets expected source" do
-      subject
-      expect(WalletTransaction.where(wallet_id: wallet.id).pluck(:source).uniq).to eq(["manual"])
+      expect(transactions.find(&:purchased?).credit_amount).to eq(10)
+      expect(transactions.find(&:granted?).credit_amount).to eq(15)
+      expect(transactions.find(&:voided?).credit_amount).to eq(3)
     end
 
     it "enqueues the BillPaidCreditJob" do
@@ -93,7 +90,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
       expect(Utils::ActivityLog).to have_received(:produce).thrice.with(an_instance_of(WalletTransaction), "wallet_transaction.created")
     end
 
-    context "with valid metadata" do
+    context "with metadata parameter" do
       let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
       let(:params) do
         {
@@ -101,17 +98,72 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
           paid_credits:,
           granted_credits:,
           voided_credits:,
-          source: :manual,
           metadata: metadata
-        }
+        }.with_indifferent_access
       end
 
       it "processes the transaction normally and includes the metadata" do
         expect(result).to be_success
         transactions = WalletTransaction.where(wallet_id: wallet.id)
-        expect(transactions.first.metadata).to include("key" => "valid_value", "value" => "also_valid")
-        expect(transactions.second.metadata).to include("key" => "valid_value", "value" => "also_valid")
-        expect(transactions.third.metadata).to include("key" => "valid_value", "value" => "also_valid")
+        expect(transactions).to all(have_attributes(metadata: [{"key" => "valid_value", "value" => "also_valid"}]))
+      end
+    end
+
+    context "with priority parameter" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          priority:
+        }
+      end
+
+      let(:priority) { 25 }
+
+      it "creates wallet transactions with specified priority" do
+        expect(result.wallet_transactions).to all(have_attributes(priority:))
+      end
+    end
+
+    context "with source parameter" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          source: :interval
+        }
+      end
+
+      it "creates wallet transactions with specified source" do
+        expect(result.wallet_transactions).to all(have_attributes(source: "interval"))
+      end
+    end
+
+    context "with name parameter" do
+      let(:name) { "Custom Top-up Name" }
+
+      it "creates wallet transactions with specified name" do
+        expect(result.wallet_transactions).to all(have_attributes(name: "Custom Top-up Name"))
+      end
+
+      context "when name parameter is blank" do
+        let(:name) { "" }
+
+        it "creates wallet transactions with nil name" do
+          expect(result.wallet_transactions).to all(have_attributes(name: nil))
+        end
+      end
+
+      context "when name parameter is nil" do
+        let(:name) { nil }
+
+        it "creates wallet transactions with nil name" do
+          expect(result.wallet_transactions).to all(have_attributes(name: nil))
+        end
       end
     end
 
@@ -120,7 +172,33 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
 
       it "returns an error" do
         expect(result).not_to be_success
-        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
+      end
+
+      context "when paid_credits is below the wallet minimum" do
+        let(:paid_credits) { "5.00" }
+
+        before { wallet.update! paid_top_up_min_amount_cents: 100_00 }
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:paid_credits]).to eq(["amount_below_minimum"])
+        end
+
+        context "when ignore_paid_top_up_limits is true" do
+          let(:params) do
+            {
+              wallet_id: wallet.id,
+              paid_credits:,
+              ignore_paid_top_up_limits: true
+            }
+          end
+
+          it "creates wallet transaction" do
+            expect(result).to be_success
+            expect(result.wallet_transactions.first.credit_amount).to eq(5)
+          end
+        end
       end
     end
 
@@ -160,25 +238,6 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
       it "creates wallet transaction with rounded value" do
         expect(result.wallet_transactions.first.credit_amount).to eq(4)
         expect(result.wallet_transactions.first.amount).to eq(4)
-      end
-    end
-
-    context "when priority parameter specified" do
-      let(:params) do
-        {
-          wallet_id: wallet.id,
-          paid_credits:,
-          granted_credits:,
-          voided_credits:,
-          priority:,
-          source: :manual
-        }
-      end
-
-      let(:priority) { 25 }
-
-      it "creates wallet transactions with specified priority" do
-        expect(result.wallet_transactions).to all(have_attributes(priority:))
       end
     end
   end

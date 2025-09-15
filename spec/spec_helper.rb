@@ -49,7 +49,7 @@ require "sidekiq/testing"
 Sidekiq::Testing.fake!
 ActiveJob::Uniqueness.test_mode!
 
-Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
+Dir[Rails.root.join("spec/support/**/*.rb")].sort.reject { |f| f.include?("_spec.rb") }.each { |f| require f }
 
 begin
   ActiveRecord::Migration.check_all_pending!
@@ -72,6 +72,7 @@ RSpec.configure do |config|
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
+  config.include GraphQL::Testing::Helpers.for(LagoApiSchema)
 
   # NOTE: these files make real API calls and should be excluded from build
   #       run them manually when needed
@@ -196,6 +197,14 @@ RSpec.configure do |config|
     DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].strategy = DatabaseCleaner::NullStrategy.new
 
     DatabaseCleaner.cleaning do
+      example.run
+    end
+  end
+
+  config.around do |example|
+    if example.metadata[:premium]
+      lago_premium!(&example)
+    else
       example.run
     end
   end
