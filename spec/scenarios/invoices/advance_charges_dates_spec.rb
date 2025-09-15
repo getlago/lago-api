@@ -88,7 +88,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, both fees are finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 
@@ -146,8 +146,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
       # Next year, the card_3 and card_5 fees are marked as paid
       travel_to(DateTime.new(2025, 1, 7, 10)) do
-        update_fee(fees.first, payment_status: :succeeded)
-        update_fee(fees.last, payment_status: :succeeded)
+        update_fee(fees.first, {payment_status: :succeeded})
+        update_fee(fees.last, {payment_status: :succeeded})
       end
 
       # The subscription is terminated. Customer have no other subscriptions
@@ -234,7 +234,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, both fees are finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 
@@ -320,7 +320,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, the fee from initial sub is finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 

@@ -60,26 +60,26 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     # Creates two subscriptions
     travel_to(DateTime.new(2022, 12, 19, 12)) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: "#{customer.external_id}_1",
-        plan_code: plan1.code,
-        billing_time: :anniversary
+        {external_customer_id: customer.external_id,
+         external_id: "#{customer.external_id}_1",
+         plan_code: plan1.code,
+         billing_time: :anniversary}
       )
 
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: "#{customer.external_id}_2",
-        plan_code: plan2.code,
-        billing_time: :anniversary
+        {external_customer_id: customer.external_id,
+         external_id: "#{customer.external_id}_2",
+         plan_code: plan2.code,
+         billing_time: :anniversary}
       )
     end
 
     # Apply a coupon to the customer
     travel_to(DateTime.new(2023, 8, 29)) do
       apply_coupon(
-        external_customer_id: customer.external_id,
-        coupon_code: coupon_target.coupon.code,
-        amount_cents: 250_00
+        {external_customer_id: customer.external_id,
+         coupon_code: coupon_target.coupon.code,
+         amount_cents: 250_00}
       )
     end
 
@@ -109,17 +109,17 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
       # Estimate the credit notes amount on full fees
       estimate_credit_note(
-        invoice_id: invoice.id,
-        items: [
-          {
-            fee_id: fee1.id,
-            amount_cents: fee1.amount_cents
-          },
-          {
-            fee_id: fee2.id,
-            amount_cents: fee2.amount_cents
-          }
-        ]
+        {invoice_id: invoice.id,
+         items: [
+           {
+             fee_id: fee1.id,
+             amount_cents: fee1.amount_cents
+           },
+           {
+             fee_id: fee2.id,
+             amount_cents: fee2.amount_cents
+           }
+         ]}
       )
 
       estimate = json[:estimated_credit_note]
@@ -131,13 +131,13 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(estimate[:taxes_rate]).to eq(14.54268)
 
       estimate_credit_note(
-        invoice_id: invoice.id,
-        items: [
-          {
-            fee_id: fee2.id,
-            amount_cents: 26_260
-          }
-        ]
+        {invoice_id: invoice.id,
+         items: [
+           {
+             fee_id: fee2.id,
+             amount_cents: 26_260
+           }
+         ]}
       )
 
       # Estimate the credit notes amount on one partial fee
@@ -150,18 +150,16 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(estimate[:taxes_rate]).to eq(20)
 
       # Emit a credit note on only one fee
-      create_credit_note(
-        invoice_id: invoice.id,
-        reason: :other,
-        credit_amount_cents: 0,
-        refund_amount_cents: 11_768,
-        items: [
-          {
-            fee_id: fee2.id,
-            amount_cents: 26_260
-          }
-        ]
-      )
+      create_credit_note({invoice_id: invoice.id,
+         reason: :other,
+         credit_amount_cents: 0,
+         refund_amount_cents: 11_768,
+         items: [
+           {
+             fee_id: fee2.id,
+             amount_cents: 26_260
+           }
+         ]})
     end
 
     credit_note = invoice.credit_notes.first
@@ -246,25 +244,25 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       # Creates two subscriptions
       travel_to(DateTime.new(2022, 12, 19, 12)) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: "#{customer.external_id}_1",
-          plan_code: plan.code,
-          billing_time: :anniversary
+          {external_customer_id: customer.external_id,
+           external_id: "#{customer.external_id}_1",
+           plan_code: plan.code,
+           billing_time: :anniversary}
         )
       end
 
       # Apply a coupon twice to the customer
       travel_to(DateTime.new(2023, 8, 29)) do
         apply_coupon(
-          external_customer_id: customer.external_id,
-          coupon_code: coupon.code,
-          amount_cents: 1_000
+          {external_customer_id: customer.external_id,
+           coupon_code: coupon.code,
+           amount_cents: 1_000}
         )
 
         apply_coupon(
-          external_customer_id: customer.external_id,
-          coupon_code: coupon.code,
-          amount_cents: 1_000
+          {external_customer_id: customer.external_id,
+           coupon_code: coupon.code,
+           amount_cents: 1_000}
         )
       end
 
@@ -304,7 +302,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           params: {invoice_id: invoice.id, amount_cents: 40, reference: "ref2"}
         )
 
-        estimate_credit_note(
+        estimate_credit_note({
           invoice_id: invoice.id,
           items: [
             {
@@ -328,7 +326,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 100
             }
           ]
-        )
+        })
 
         estimate = json[:estimated_credit_note]
         expect(estimate[:coupons_adjustment_amount_cents]).to eq(2)
@@ -364,13 +362,13 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           # estimate and create credit notes for first item - full refund; the taxes are rounded to higher number
           estimate_credit_note(
-            invoice_id: invoice.id,
-            items: [
-              {
-                fee_id: fees[0].id,
-                amount_cents: 68_33
-              }
-            ]
+            {invoice_id: invoice.id,
+             items: [
+               {
+                 fee_id: fees[0].id,
+                 amount_cents: 68_33
+               }
+             ]}
           )
 
           # Estimate the credit notes amount on one fee rounds the taxes to higher number
@@ -385,7 +383,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # Emit a credit note on only one fee
-          create_credit_note(
+          create_credit_note({
             invoice_id: invoice.id,
             reason: :other,
             credit_amount_cents: 0,
@@ -396,7 +394,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 68_33
               }
             ]
-          )
+          })
 
           credit_note = invoice.credit_notes.order(:created_at).last
           expect(credit_note).to have_attributes(
@@ -414,7 +412,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # when issuing second credit note, it should be rounded to lower number
-          estimate_credit_note(
+          estimate_credit_note({
             invoice_id: invoice.id,
             items: [
               {
@@ -422,7 +420,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 68_33
               }
             ]
-          )
+          })
 
           estimate = json[:estimated_credit_note]
 
@@ -436,7 +434,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # Emit a credit note on only one fee
-          create_credit_note(
+          create_credit_note({
             invoice_id: invoice.id,
             reason: :other,
             credit_amount_cents: 0,
@@ -447,7 +445,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 68_33
               }
             ]
-          )
+          })
 
           credit_note = invoice.credit_notes.order(:created_at).last
           expect(credit_note).to have_attributes(
@@ -482,7 +480,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           # estimate and create credit notes for first three items - full refund; the taxes are rounded to higher number
           3.times do |i|
-            estimate_credit_note(
+            estimate_credit_note({
               invoice_id: invoice.id,
               items: [
                 {
@@ -490,7 +488,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                   amount_cents: 68_33
                 }
               ]
-            )
+            })
 
             # Estimate the credit notes amount on one fee rounds the taxes to higher number
             estimate = json[:estimated_credit_note]
@@ -504,7 +502,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             )
 
             # Emit a credit note on only one fee
-            create_credit_note(
+            create_credit_note({
               invoice_id: invoice.id,
               reason: :other,
               credit_amount_cents: 0,
@@ -515,7 +513,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                   amount_cents: 68_33
                 }
               ]
-            )
+            })
 
             credit_note = invoice.credit_notes.order(:created_at).last
             expect(credit_note).to have_attributes(
@@ -535,7 +533,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           # next two are rounded to higher number
           # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
           # CN1
-          estimate_credit_note(
+          estimate_credit_note({
             invoice_id: invoice.id,
             items: [
               {
@@ -543,7 +541,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 13_67
               }
             ]
-          )
+          })
 
           estimate = json[:estimated_credit_note]
           expect(estimate).to include(
@@ -556,7 +554,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # Emit a credit note on only one fee
-          create_credit_note(
+          create_credit_note({
             invoice_id: invoice.id,
             reason: :other,
             credit_amount_cents: 0,
@@ -567,7 +565,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 1367
               }
             ]
-          )
+          })
 
           credit_note = invoice.credit_notes.order(:created_at).last
           expect(credit_note).to have_attributes(
@@ -583,7 +581,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
           # CN2
-          estimate_credit_note(
+          estimate_credit_note({
             invoice_id: invoice.id,
             items: [
               {
@@ -591,7 +589,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 22_33
               }
             ]
-          )
+          })
 
           estimate = json[:estimated_credit_note]
           expect(estimate).to include(
@@ -604,7 +602,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # Emit a credit note on only one fee
-          create_credit_note(
+          create_credit_note({
             invoice_id: invoice.id,
             reason: :other,
             credit_amount_cents: 0,
@@ -615,7 +613,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 2233
               }
             ]
-          )
+          })
 
           credit_note = invoice.credit_notes.order(:created_at).last
           expect(credit_note).to have_attributes(
@@ -631,7 +629,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
           # CN3
-          estimate_credit_note(
+          estimate_credit_note({
             invoice_id: invoice.id,
             items: [
               {
@@ -639,7 +637,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 32_33
               }
             ]
-          )
+          })
 
           estimate = json[:estimated_credit_note]
           expect(estimate).to include(
@@ -652,7 +650,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           # Emit a credit note on only one fee
-          create_credit_note(
+          create_credit_note({
             invoice_id: invoice.id,
             reason: :other,
             credit_amount_cents: 0,
@@ -663,7 +661,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
                 amount_cents: 3233
               }
             ]
-          )
+          })
 
           credit_note = invoice.credit_notes.order(:created_at).last
           expect(credit_note).to have_attributes(
@@ -730,19 +728,19 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         # Creates two subscriptions
         travel_to(DateTime.new(2022, 12, 19, 12)) do
           create_subscription(
-            external_customer_id: customer.external_id,
-            external_id: "#{customer.external_id}_1",
-            plan_code: plan.code,
-            billing_time: :anniversary
+            {external_customer_id: customer.external_id,
+             external_id: "#{customer.external_id}_1",
+             plan_code: plan.code,
+             billing_time: :anniversary}
           )
         end
 
         # Apply a coupon twice to the customer
         travel_to(DateTime.new(2023, 8, 29)) do
           apply_coupon(
-            external_customer_id: customer.external_id,
-            coupon_code: coupon.code,
-            amount_cents: 10_00
+            {external_customer_id: customer.external_id,
+             coupon_code: coupon.code,
+             amount_cents: 10_00}
           )
         end
 
@@ -760,7 +758,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         # issue a CN for the full subscription fee - 19_99 before taxes and coupons
         subscription_fee = invoice.fees.find(&:subscription?)
-        estimate_credit_note(
+        estimate_credit_note({
           invoice_id: invoice.id,
           items: [
             {
@@ -768,7 +766,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 19_99
             }
           ]
-        )
+        })
 
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
@@ -779,7 +777,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           coupons_adjustment_amount_cents: 69,
           taxes_rate: 20.0
         )
-        create_credit_note(
+        create_credit_note({
           invoice_id: invoice.id,
           reason: :other,
           credit_amount_cents: 23_16,
@@ -789,7 +787,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 19_99
             }
           ]
-        )
+        })
 
         credit_note = invoice.credit_notes.order(:created_at).last
         expect(credit_note).to have_attributes(
@@ -806,7 +804,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         # issue a CN for the full first charge - 68_33 before taxes and coupons
         first_charge = invoice.fees.find { |fee| fee.amount_cents == 68_33 }
-        estimate_credit_note(
+        estimate_credit_note({
           invoice_id: invoice.id,
           items: [
             {
@@ -814,7 +812,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 68_33
             }
           ]
-        )
+        })
 
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
@@ -825,7 +823,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           coupons_adjustment_amount_cents: 237,
           taxes_rate: 20.0
         )
-        create_credit_note(
+        create_credit_note({
           invoice_id: invoice.id,
           reason: :other,
           credit_amount_cents: 7915,
@@ -835,7 +833,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 6833
             }
           ]
-        )
+        })
 
         credit_note = invoice.credit_notes.order(:created_at).last
         expect(credit_note).to have_attributes(
@@ -852,7 +850,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         # issue a CN for the full last charge - 200_33 before taxes and coupons
         last_charge = invoice.fees.find { |fee| fee.amount_cents == 200_33 }
-        estimate_credit_note(
+        estimate_credit_note({
           invoice_id: invoice.id,
           items: [
             {
@@ -860,7 +858,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 200_33
             }
           ]
-        )
+        })
 
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
@@ -871,7 +869,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           coupons_adjustment_amount_cents: 694,
           taxes_rate: 20.0
         )
-        create_credit_note(
+        create_credit_note({
           invoice_id: invoice.id,
           reason: :other,
           credit_amount_cents: 23207,
@@ -881,7 +879,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
               amount_cents: 200_33
             }
           ]
-        )
+        })
 
         credit_note = invoice.credit_notes.order(:created_at).last
         expect(credit_note).to have_attributes(
@@ -929,18 +927,19 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(invoice.refundable_amount_cents).to eq 0
 
       estimate_credit_note(
-        invoice_id: invoice.id,
-        items: [
-          {
-            fee_id: invoice.fees.first.id,
-            amount_cents: 15
-          }
-        ]
+        {invoice_id: invoice.id,
+         items: [
+           {
+             fee_id: invoice.fees.first.id,
+             amount_cents: 15
+           }
+         ]},
+        raise_on_error: false
       )
       expect(response).to have_http_status(:method_not_allowed)
 
       # it does not allow to create credit notes on invoices with payment status pending
-      create_credit_note(
+      create_credit_note({
         invoice_id: invoice.id,
         reason: :other,
         credit_amount_cents: 0,
@@ -951,11 +950,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 15
           }
         ]
-      )
+      }, raise_on_error: false)
       expect(response).to have_http_status(:method_not_allowed)
 
       # pay the invoice
-      update_invoice(invoice, payment_status: :succeeded)
+      update_invoice(invoice, {payment_status: :succeeded})
       perform_all_enqueued_jobs
       wallet.reload
       expect(wallet.balance_cents).to eq 1500
@@ -968,7 +967,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       invoice.reload
 
       # it allows to estimate a credit notes on credit invoices with payment status succeeded
-      estimate_credit_note(
+      estimate_credit_note({
         invoice_id: invoice.id,
         items: [
           {
@@ -976,7 +975,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 10
           }
         ]
-      )
+      })
       estimate = json[:estimated_credit_note]
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
       expect(estimate[:max_refundable_amount_cents]).to eq(10)
@@ -984,7 +983,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
       # it allows to create credit notes on credit invoices with payment status succeeded
       # and voids the corresponding amount of credits in the associated active wallet
-      create_credit_note(
+      create_credit_note({
         invoice_id: invoice.id,
         reason: :other,
         credit_amount_cents: 0,
@@ -995,7 +994,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 500
           }
         ]
-      )
+      })
       perform_all_enqueued_jobs
       credit_note = invoice.credit_notes.order(:created_at).last
       expect(credit_note.refund_amount_cents).to eq(500)
@@ -1008,7 +1007,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
       # when estimating a credit note with amount higher than the remaining balance, it throws an error
       wallet.update(balance_cents: 5)
-      estimate_credit_note(
+      estimate_credit_note({
         invoice_id: invoice.id,
         items: [
           {
@@ -1016,12 +1015,12 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 10
           }
         ]
-      )
+      }, raise_on_error: false)
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include("higher_than_wallet_balance")
 
       # when creating a credit note with amount higher than remaining balance, it throws an error
-      create_credit_note(
+      create_credit_note({
         invoice_id: invoice.id,
         reason: :other,
         refund_amount_cents: 10,
@@ -1031,7 +1030,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 10
           }
         ]
-      )
+      }, raise_on_error: false)
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include("higher_than_wallet_balance")
 
@@ -1040,7 +1039,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       # when wallet is terminated, it does not allow to create credit notes
       wallet.update(status: :terminated)
 
-      estimate_credit_note(
+      estimate_credit_note({
         invoice_id: invoice.id,
         items: [
           {
@@ -1048,11 +1047,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 1
           }
         ]
-      )
+      }, raise_on_error: false)
       expect(response).to have_http_status(:method_not_allowed)
       expect(response.body).to include("invalid_type_or_status")
 
-      create_credit_note(
+      create_credit_note({
         invoice_id: invoice.id,
         reason: :other,
         refund_amount_cents: 1,
@@ -1062,7 +1061,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             amount_cents: 1
           }
         ]
-      )
+      }, raise_on_error: false)
       expect(response).to have_http_status(:method_not_allowed)
       expect(response.body).to include("invalid_type_or_status")
     end

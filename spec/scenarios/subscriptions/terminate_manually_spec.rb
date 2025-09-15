@@ -6,6 +6,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "item_count") }
+  let(:plan) { create(:plan, :pay_in_advance, organization:, amount_cents: 100_00) }
   let(:subscription_date) { DateTime.new(2025, 2, 8) }
   let(:termination_date) { DateTime.new(2025, 2, 21) }
   let(:events_date) { DateTime.new(2025, 2, 10) }
@@ -43,10 +44,9 @@ describe "Subscription manual termination", :scenarios, type: :request do
     end
   end
 
-  def terminate_subscription(subscription, params = {})
-    path = "/api/v1/subscriptions/#{subscription.external_id}?#{params.to_query}"
+  def terminate_subscription_without_jobs(subscription, params = {}, raise_on_error: true)
     travel_to(termination_date) do
-      delete_with_token(organization, path)
+      terminate_subscription(subscription, params:, perform_jobs: false, raise_on_error:)
     end
     subscription.reload
     # we don't have a subscription invoice for pending or pay-in-arrears subscriptions
@@ -58,10 +58,10 @@ describe "Subscription manual termination", :scenarios, type: :request do
     travel_to(events_date) do
       5.times do
         create_event(
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: subscription.external_id,
-          properties: {"item_count" => 10}
+          {code: billable_metric.code,
+           transaction_id: SecureRandom.uuid,
+           external_subscription_id: subscription.external_id,
+           properties: {"item_count" => 10}}
         )
       end
     end
@@ -97,24 +97,34 @@ describe "Subscription manual termination", :scenarios, type: :request do
     expect(subscription_invoice.total_amount_cents).to eq(90_00)
   end
 
-  context "with pay-in-advance subscription" do
-    let(:plan) { create(:plan, :pay_in_advance, organization:, amount_cents: 100_00) }
+  def expect_subscription_to_be_terminated(on_termination_credit_note: "credit", on_termination_invoice: "generate")
+    expect(subscription.status).to eq("terminated")
+    expect(subscription.on_termination_credit_note).to eq(on_termination_credit_note)
+    expect(subscription.on_termination_invoice).to eq(on_termination_invoice)
+  end
 
-    context "when terminating with default behavior (credit)" do
-      it "creates credit note for unconsumed subscription fee" do
+  def expect_credit_note_to_be_created(refund_amount_cents: 0)
+    # (7 unused days = 7 / 28 * 100 = 25 euro) + 20% tax = 30 euro
+    total_amount_cents = 30_00
+    credit_amount_cents = total_amount_cents - refund_amount_cents
+    expect(credit_note.total_amount_cents).to eq(total_amount_cents)
+    expect(credit_note.credit_amount_cents).to eq(credit_amount_cents)
+    expect(credit_note.refund_amount_cents).to eq(refund_amount_cents)
+    expect(credit_note.balance_amount_cents).to eq(credit_amount_cents)
+  end
+
+  context "with pay-in-advance subscription" do
+    context "when terminating with default behaviors" do
+      it "creates credit note for unconsumed subscription fee and generates invoice" do
         create_subscription
         expect_pay_in_advance_to_be_billed
 
         add_events_to_subscription
 
-        terminate_subscription(subscription)
+        terminate_subscription_without_jobs(subscription)
 
-        expect(subscription.status).to eq("terminated")
-        expect(subscription.on_termination_credit_note).to eq("credit")
-
-        # (7 unused days = 7 / 28 * 100 = 25 euro) + 20% tax = 30 euro
-        expect(credit_note.credit_amount_cents).to eq(30_00)
-        expect(credit_note.balance_amount_cents).to eq(30_00)
+        expect_subscription_to_be_terminated
+        expect_credit_note_to_be_created
 
         perform_termination_jobs
 
@@ -131,17 +141,50 @@ describe "Subscription manual termination", :scenarios, type: :request do
       end
     end
 
-    context "when terminating with 'skip' parameter" do
+    context "when terminating with `on_termination_credit_note=refund`" do
+      it "creates credit note for unconsumed subscription fee", :premium do
+        create_subscription
+        expect_pay_in_advance_to_be_billed
+
+        add_events_to_subscription
+
+        create_payment(customer, subscription_invoice, 75_00)
+
+        terminate_subscription_without_jobs(subscription, {on_termination_credit_note: "refund"})
+
+        expect_subscription_to_be_terminated(on_termination_credit_note: "refund")
+
+        # We started on the 8th and terminated on the 21st, so we have:
+        # - 14 days of used subscription (60 euros)
+        # - 7 days of unused subscription (30 euros)
+        # Since we paid 75 euros, we will refund 15 euros and credit 15 euros.
+        expect_credit_note_to_be_created(refund_amount_cents: 15_00)
+
+        perform_termination_jobs
+
+        expect(subscription.invoices.count).to eq(2)
+        expect(billed_invoice.status).to eq("finalized")
+        expect(billed_invoice.sub_total_excluding_taxes_amount_cents).to eq(50_00)
+        expect(billed_invoice.taxes_amount_cents).to eq(10_00)
+        expect(billed_invoice.credit_notes_amount_cents).to eq(15_00)
+        expect(billed_invoice.total_amount_cents).to eq(45_00)
+
+        expect_charge_fees_to_be_billed
+
+        expect(credit_note.reload.balance_amount_cents).to eq(0)
+      end
+    end
+
+    context "when terminating with `on_termination_credit_note=skip`" do
       it "skips credit note creation for unconsumed subscription fee" do
         create_subscription
         expect_pay_in_advance_to_be_billed
 
         add_events_to_subscription
 
-        terminate_subscription(subscription, on_termination_credit_note: "skip")
+        terminate_subscription_without_jobs(subscription, {on_termination_credit_note: "skip"})
 
-        expect(subscription.status).to eq("terminated")
-        expect(subscription.on_termination_credit_note).to eq("skip")
+        expect_subscription_to_be_terminated(on_termination_credit_note: "skip")
 
         expect(subscription_invoice.credit_notes.count).to eq(0)
 
@@ -156,6 +199,24 @@ describe "Subscription manual termination", :scenarios, type: :request do
       end
     end
 
+    context "when terminating with `on_termination_invoice=skip`" do
+      it "skips invoice creation for charge usage" do
+        create_subscription
+        expect_pay_in_advance_to_be_billed
+
+        add_events_to_subscription
+
+        terminate_subscription_without_jobs(subscription, {on_termination_invoice: "skip"})
+
+        expect_subscription_to_be_terminated(on_termination_invoice: "skip")
+        expect_credit_note_to_be_created
+
+        perform_termination_jobs
+
+        expect(subscription.invoices.count).to eq(1)
+      end
+    end
+
     context "when subscription is terminated on the same day it was created" do
       let(:termination_date) { subscription_date + 12.hours }
       let(:events_date) { subscription_date + 5.hours }
@@ -166,7 +227,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
 
         add_events_to_subscription
 
-        terminate_subscription(subscription)
+        terminate_subscription_without_jobs(subscription)
 
         expect(subscription.status).to eq("terminated")
         expect(subscription.on_termination_credit_note).to eq("credit")
@@ -199,7 +260,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
         expect(subscription.status).to eq("pending")
         expect(subscription_invoice).to be_nil
 
-        terminate_subscription(subscription, status: "pending", on_termination_credit_note: "credit")
+        terminate_subscription_without_jobs(subscription, {status: "pending", on_termination_credit_note: "credit"})
 
         expect(response).to have_http_status(:ok)
 
@@ -222,7 +283,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
 
         add_events_to_subscription
 
-        terminate_subscription(subscription, on_termination_credit_note: "credit")
+        terminate_subscription_without_jobs(subscription, {on_termination_credit_note: "credit"})
 
         expect(subscription.status).to eq("terminated")
         expect(subscription.on_termination_credit_note).to be_nil
@@ -245,6 +306,52 @@ describe "Subscription manual termination", :scenarios, type: :request do
 
         expect_charge_fees_to_be_billed
       end
+    end
+
+    context "when terminating with `on_termination_invoice=skip`" do
+      it "skips invoice creation for charge usage" do
+        create_subscription
+
+        add_events_to_subscription
+
+        terminate_subscription_without_jobs(subscription, {on_termination_invoice: "skip"})
+
+        expect_subscription_to_be_terminated(on_termination_credit_note: nil, on_termination_invoice: "skip")
+
+        perform_termination_jobs
+
+        expect(subscription.invoices.count).to eq(0)
+      end
+    end
+  end
+
+  context "when the parameters are invalid" do
+    it "returns a validation error" do
+      create_subscription
+
+      # when the on_termination_credit_note is invalid
+      terminate_subscription_without_jobs(subscription, {on_termination_credit_note: "invalid"}, raise_on_error: false)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json).to eq(
+        {code: "validation_errors", error: "Unprocessable Entity", error_details: {on_termination_credit_note: ["invalid_value"]}, status: 422}
+      )
+
+      # when the on_termination_invoice is invalid
+      terminate_subscription_without_jobs(subscription, {on_termination_invoice: "invalid"}, raise_on_error: false)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json).to eq(
+        {code: "validation_errors", error: "Unprocessable Entity", error_details: {on_termination_invoice: ["invalid_value"]}, status: 422}
+      )
+
+      # when the subscription is not found
+      delete_with_token(organization, "/api/v1/subscriptions/#{SecureRandom.uuid}")
+
+      expect(response).to have_http_status(:not_found)
+      expect(json).to eq(
+        {code: "subscription_not_found", error: "Not Found", status: 404}
+      )
     end
   end
 end

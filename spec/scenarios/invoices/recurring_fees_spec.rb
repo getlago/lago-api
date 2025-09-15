@@ -35,10 +35,10 @@ describe "Recurring fee invoice inclusion after upgrade", :scenarios, type: :req
     travel_to Time.zone.parse("2024-12-30T03:55:00") do
       # Step 1: Create a subscription with a start date in the past
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: external_subscription_id,
-        plan_code: original_plan.code,
-        subscription_at: 2.weeks.ago
+        {external_customer_id: customer.external_id,
+         external_id: external_subscription_id,
+         plan_code: original_plan.code,
+         subscription_at: 2.weeks.ago}
       )
       subscription = customer.subscriptions.first
 
@@ -46,11 +46,11 @@ describe "Recurring fee invoice inclusion after upgrade", :scenarios, type: :req
 
       # Step 2: Send an event in the past and verify fee creation
       create_event(
-        transaction_id: SecureRandom.uuid,
-        code: billable_metric.code,
-        external_subscription_id: subscription.external_id,
-        properties: {"item_id" => 1},
-        timestamp: 1.week.ago.to_i
+        {transaction_id: SecureRandom.uuid,
+         code: billable_metric.code,
+         external_subscription_id: subscription.external_id,
+         properties: {"item_id" => 1},
+         timestamp: 1.week.ago.to_i}
       )
 
       fee_from_date = subscription.subscription_at.beginning_of_day.to_time.iso8601

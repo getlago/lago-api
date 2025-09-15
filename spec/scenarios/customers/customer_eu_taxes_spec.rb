@@ -66,7 +66,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       webhooks_sent.clear
       # Update customer to provide an INVALID EU VAT identifier
       # Nothing changes and no API call is made
-      create_or_update_customer(external_id: "user_it_123", tax_identification_number: "IT123")
+      create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT123"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_it_standard"
       expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
@@ -78,7 +78,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       # A call is made to VIES api, we mock the service rather than the HTTP call because it's a SOAP API
       # This customer now have 0% vat
       mock_vies_check!("IT12345678901")
-      create_or_update_customer(external_id: "user_it_123", tax_identification_number: "IT12345678901")
+      create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT12345678901"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
       expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "countryCode" => "IT",
@@ -86,14 +86,14 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       })
 
       mock_vies_check!("FR12345678901")
-      create_or_update_customer(external_id: "user_fr_123", tax_identification_number: "FR12345678901")
+      create_or_update_customer({external_id: "user_fr_123", tax_identification_number: "FR12345678901"})
       expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_reverse_charge"
 
       customer = Customer.find_by(external_id: "user_it_123")
       # If I had a custom tax for this Customer
       # It removes the automatic VAT
-      create_tax(name: "Banking rates", code: "banking_rates", rate: 1.3)
-      create_or_update_customer(external_id: customer.external_id, tax_codes: ["banking_rates"])
+      create_tax({name: "Banking rates", code: "banking_rates", rate: 1.3})
+      create_or_update_customer({external_id: customer.external_id, tax_codes: ["banking_rates"]})
       expect(customer.taxes.sole.code).to eq "banking_rates"
 
       # Make an invoice with this tax
@@ -103,7 +103,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
 
       # Then, remove the tax_identification_number for the customer
       # The custom tax is overridden by the default VAT of the country, even if an invoice used the previous taxes
-      create_or_update_customer(external_id: customer.external_id, tax_identification_number: nil)
+      create_or_update_customer({external_id: customer.external_id, tax_identification_number: nil})
       expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
     end
   end
@@ -125,7 +125,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       allow(Customers::RetryViesCheckJob).to receive(:set).and_return retry_job
       allow(retry_job).to receive(:perform_later)
 
-      create_or_update_customer(external_id: "user_fr_123", tax_identification_number: vat_number)
+      create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number})
 
       expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
       expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
@@ -144,7 +144,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       enable_eu_tax_management!
       expect(Customer.find_by(external_id: "user_usa_123").taxes).to be_empty
 
-      create_or_update_customer(external_id: "user_usa_123", tax_identification_number: "US-111") # Not EU VAT
+      create_or_update_customer({external_id: "user_usa_123", tax_identification_number: "US-111"}) # Not EU VAT
       expect(Customer.find_by(external_id: "user_usa_123").taxes.sole.code).to eq "lago_eu_tax_exempt"
     end
   end
@@ -153,11 +153,11 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
     it "updates taxes" do
       enable_eu_tax_management!
 
-      create_or_update_customer(french_attributes.merge(external_id: "user_moving"))
+      create_or_update_customer(french_attributes.merge({external_id: "user_moving"}))
       customer = Customer.find_by(external_id: "user_moving")
       expect(customer.reload.taxes.sole.code).to eq "lago_eu_fr_standard"
 
-      create_or_update_customer(external_id: customer.external_id, country: "DE")
+      create_or_update_customer({external_id: customer.external_id, country: "DE"})
       expect(customer.reload.taxes.sole.code).to eq "lago_eu_de_standard"
     end
   end
@@ -171,7 +171,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
 
       # Make an invoice with another tax
-      create_tax(name: "Banking rates", code: "banking_rates", rate: 1.3)
+      create_tax({name: "Banking rates", code: "banking_rates", rate: 1.3})
       addon = create(:add_on, code: :test, organization:)
       create_one_off_invoice(customer, [addon], taxes: ["banking_rates"])
       expect(customer.invoices.sole.taxes.sole.code).to eq "banking_rates"
