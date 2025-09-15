@@ -85,7 +85,6 @@ module CreditNotes
       credit_note.taxes_rate = taxes_result.taxes_rate
 
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
-      byebug
       credit_note.credit_amount_cents = (
         credit_note.items.sum(&:amount_cents) -
         taxes_result.coupons_adjustment_amount_cents +
