@@ -101,7 +101,6 @@ end
 #  terminated_at                       :datetime
 #  threshold_credits                   :decimal(30, 5)   default(0.0)
 #  transaction_metadata                :jsonb
-#  transaction_name                    :string
 #  trigger                             :integer          default("interval"), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
