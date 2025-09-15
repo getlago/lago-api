@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module FixedCharges
-  module FixedChargesEvents
-    class AggregationService < AggregationBaseService
+module FixedChargeEvents
+  module Aggregations
+    class SimpleAggregationService < BaseService
       def call
         events_in_range.last.try(:units) || 0
       end

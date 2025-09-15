@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module FixedCharges
-  module FixedChargesEvents
-    class ProratedAggregationService < AggregationBaseService
+module FixedChargeEvents
+  module Aggregations
+    class ProratedAggregationService < BaseService
       def call
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module FixedCharges
-  module FixedChargesEvents
-    class AggregationBaseService < BaseService
+module FixedChargeEvents
+  module Aggregations
+    class BaseService < BaseService
       def initialize(fixed_charge:, subscription:, charges_from_datetime:, charges_to_datetime:)
         @fixed_charge = fixed_charge
         @subscription = subscription
