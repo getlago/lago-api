@@ -11,6 +11,7 @@ class InvoiceSubscription < ApplicationRecord
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents, disable_validation: true, allow_nil: true
+  monetize :fixed_charge_amount_cents, disable_validation: true, allow_nil: true
   monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
@@ -73,6 +74,10 @@ class InvoiceSubscription < ApplicationRecord
 
   def charge_amount_cents
     fees.charge.sum(:amount_cents)
+  end
+
+  def fixed_charge_amount_cents
+    fees.fixed_charge.sum(:amount_cents)
   end
 
   def subscription_amount_cents

@@ -63,6 +63,35 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
+  describe "#fixed_charge_amount_cents" do
+    before do
+      create(
+        :fixed_charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 100
+      )
+
+      create(
+        :fixed_charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 200
+      )
+
+      create(
+        :charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 400
+      )
+    end
+
+    it "returns the sum of the related fixed charge fees" do
+      expect(invoice_subscription.fixed_charge_amount_cents).to eq(300)
+    end
+  end
+
   describe "#subscription_amount_cents" do
     it "returns the amount of the subscription fees" do
       create(
