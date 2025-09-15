@@ -13,13 +13,6 @@ module Customers
       super
     end
 
-    # TODO: Split this service into multiple services (create and update)
-    #       Add activity log for update
-    activity_loggable(
-      action: "customer.created",
-      record: -> { result.customer }
-    )
-
     def call
       billing_entity = BillingEntities::ResolveService.call(
         organization:, billing_entity_code: params[:billing_entity_code]
@@ -141,8 +134,10 @@ module Customers
 
       if new_customer
         SendWebhookJob.perform_later("customer.created", customer)
+        Utils::ActivityLog.produce_after_commit(customer, "customer.created")
       else
         SendWebhookJob.perform_later("customer.updated", customer)
+        Utils::ActivityLog.produce_after_commit(customer, "customer.updated")
       end
 
       result
