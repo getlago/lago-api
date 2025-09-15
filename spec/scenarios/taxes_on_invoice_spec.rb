@@ -15,15 +15,15 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
   context "when timezone is negative and not the same day as UTC" do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
-        create_tax(name: "Sales tax - FR", code: "sales_tax_fr", rate: 0.0)
-        create_tax(name: "Sales tax", code: "sales_tax", rate: 20.0)
+        create_tax({name: "Banking rates", code: "banking_rates", rate: 10.0})
+        create_tax({name: "Sales tax - FR", code: "sales_tax_fr", rate: 0.0})
+        create_tax({name: "Sales tax", code: "sales_tax", rate: 20.0})
 
-        create_or_update_customer(external_id: "customer-1")
+        create_or_update_customer({external_id: "customer-1"})
 
-        create_metric(name: "FX Transfers", code: "fx_transfers", aggregation_type: "sum_agg", field_name: "total")
+        create_metric({name: "FX Transfers", code: "fx_transfers", aggregation_type: "sum_agg", field_name: "total"})
         fx_transfers = organization.billable_metrics.find_by(code: "fx_transfers")
-        create_metric(name: "Cards", code: "cards", aggregation_type: "count_agg")
+        create_metric({name: "Cards", code: "cards", aggregation_type: "count_agg"})
         cards = organization.billable_metrics.find_by(code: "cards")
 
         create_plan(
@@ -164,9 +164,9 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
   context "when coupons amount is greater than fees total amount" do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
+        create_tax({name: "Banking rates", code: "banking_rates", rate: 10.0})
 
-        create_or_update_customer(external_id: "customer-1")
+        create_or_update_customer({external_id: "customer-1"})
 
         create_plan(
           {
@@ -245,9 +245,9 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
   context "when there are multiple subscriptions and coupons are covering total amount" do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
+        create_tax({name: "Banking rates", code: "banking_rates", rate: 10.0})
 
-        create_or_update_customer(external_id: "customer-1")
+        create_or_update_customer({external_id: "customer-1"})
 
         create_plan(
           {

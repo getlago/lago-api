@@ -60,26 +60,26 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     # Creates two subscriptions
     travel_to(DateTime.new(2022, 12, 19, 12)) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: "#{customer.external_id}_1",
-        plan_code: plan1.code,
-        billing_time: :anniversary
+        {external_customer_id: customer.external_id,
+         external_id: "#{customer.external_id}_1",
+         plan_code: plan1.code,
+         billing_time: :anniversary}
       )
 
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: "#{customer.external_id}_2",
-        plan_code: plan2.code,
-        billing_time: :anniversary
+        {external_customer_id: customer.external_id,
+         external_id: "#{customer.external_id}_2",
+         plan_code: plan2.code,
+         billing_time: :anniversary}
       )
     end
 
     # Apply a coupon to the customer
     travel_to(DateTime.new(2023, 8, 29)) do
       apply_coupon(
-        external_customer_id: customer.external_id,
-        coupon_code: coupon_target.coupon.code,
-        amount_cents: 250_00
+        {external_customer_id: customer.external_id,
+         coupon_code: coupon_target.coupon.code,
+         amount_cents: 250_00}
       )
     end
 
@@ -244,25 +244,25 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       # Creates two subscriptions
       travel_to(DateTime.new(2022, 12, 19, 12)) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: "#{customer.external_id}_1",
-          plan_code: plan.code,
-          billing_time: :anniversary
+          {external_customer_id: customer.external_id,
+           external_id: "#{customer.external_id}_1",
+           plan_code: plan.code,
+           billing_time: :anniversary}
         )
       end
 
       # Apply a coupon twice to the customer
       travel_to(DateTime.new(2023, 8, 29)) do
         apply_coupon(
-          external_customer_id: customer.external_id,
-          coupon_code: coupon.code,
-          amount_cents: 1_000
+          {external_customer_id: customer.external_id,
+           coupon_code: coupon.code,
+           amount_cents: 1_000}
         )
 
         apply_coupon(
-          external_customer_id: customer.external_id,
-          coupon_code: coupon.code,
-          amount_cents: 1_000
+          {external_customer_id: customer.external_id,
+           coupon_code: coupon.code,
+           amount_cents: 1_000}
         )
       end
 
@@ -728,19 +728,19 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         # Creates two subscriptions
         travel_to(DateTime.new(2022, 12, 19, 12)) do
           create_subscription(
-            external_customer_id: customer.external_id,
-            external_id: "#{customer.external_id}_1",
-            plan_code: plan.code,
-            billing_time: :anniversary
+            {external_customer_id: customer.external_id,
+             external_id: "#{customer.external_id}_1",
+             plan_code: plan.code,
+             billing_time: :anniversary}
           )
         end
 
         # Apply a coupon twice to the customer
         travel_to(DateTime.new(2023, 8, 29)) do
           apply_coupon(
-            external_customer_id: customer.external_id,
-            coupon_code: coupon.code,
-            amount_cents: 10_00
+            {external_customer_id: customer.external_id,
+             coupon_code: coupon.code,
+             amount_cents: 10_00}
           )
         end
 
@@ -954,7 +954,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(response).to have_http_status(:method_not_allowed)
 
       # pay the invoice
-      update_invoice(invoice, payment_status: :succeeded)
+      update_invoice(invoice, {payment_status: :succeeded})
       perform_all_enqueued_jobs
       wallet.reload
       expect(wallet.balance_cents).to eq 1500

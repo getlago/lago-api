@@ -58,10 +58,10 @@ describe "Subscription manual termination", :scenarios, type: :request do
     travel_to(events_date) do
       5.times do
         create_event(
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: subscription.external_id,
-          properties: {"item_count" => 10}
+          {code: billable_metric.code,
+           transaction_id: SecureRandom.uuid,
+           external_subscription_id: subscription.external_id,
+           properties: {"item_count" => 10}}
         )
       end
     end

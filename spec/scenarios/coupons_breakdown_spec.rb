@@ -14,35 +14,35 @@ describe "Coupons breakdown Spec", :scenarios, type: :request do
 
   context "when there are multiple subscriptions and coupons of different kinds" do
     it "creates an invoice for the expected period" do
-      create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+      create_metric({name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1"})
       bm1 = organization.billable_metrics.find_by(code: "bm1")
 
-      create_metric(name: "Name", code: "bm2", aggregation_type: "sum_agg", field_name: "total2")
+      create_metric({name: "Name", code: "bm2", aggregation_type: "sum_agg", field_name: "total2"})
       bm2 = organization.billable_metrics.find_by(code: "bm2")
 
-      create_metric(name: "Name", code: "bm3", aggregation_type: "sum_agg", field_name: "total3")
+      create_metric({name: "Name", code: "bm3", aggregation_type: "sum_agg", field_name: "total3"})
       bm3 = organization.billable_metrics.find_by(code: "bm3")
 
-      create_metric(name: "Name", code: "bm4", aggregation_type: "sum_agg", field_name: "total4")
+      create_metric({name: "Name", code: "bm4", aggregation_type: "sum_agg", field_name: "total4"})
       bm4 = organization.billable_metrics.find_by(code: "bm4")
 
-      create_metric(name: "Name", code: "bm5", aggregation_type: "sum_agg", field_name: "total5")
+      create_metric({name: "Name", code: "bm5", aggregation_type: "sum_agg", field_name: "total5"})
       bm5 = organization.billable_metrics.find_by(code: "bm5")
 
-      create_metric(name: "Name", code: "bm6", aggregation_type: "sum_agg", field_name: "total6")
+      create_metric({name: "Name", code: "bm6", aggregation_type: "sum_agg", field_name: "total6"})
       bm6 = organization.billable_metrics.find_by(code: "bm6")
 
-      create_metric(name: "Name", code: "bm7", aggregation_type: "sum_agg", field_name: "total7")
+      create_metric({name: "Name", code: "bm7", aggregation_type: "sum_agg", field_name: "total7"})
       bm7 = organization.billable_metrics.find_by(code: "bm7")
 
-      create_metric(name: "Name", code: "bm8", aggregation_type: "sum_agg", field_name: "total8")
+      create_metric({name: "Name", code: "bm8", aggregation_type: "sum_agg", field_name: "total8"})
       bm8 = organization.billable_metrics.find_by(code: "bm8")
 
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: "Banking rates 1", code: "banking_rates1", rate: 10.0)
-        create_tax(name: "Banking rates 2", code: "banking_rates2", rate: 20.0)
+        create_tax({name: "Banking rates 1", code: "banking_rates1", rate: 10.0})
+        create_tax({name: "Banking rates 2", code: "banking_rates2", rate: 20.0})
 
-        create_or_update_customer(external_id: "customer-12345")
+        create_or_update_customer({external_id: "customer-12345"})
 
         create_plan(
           {

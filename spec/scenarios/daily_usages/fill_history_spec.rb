@@ -27,10 +27,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
     travel_to(mar_18) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: customer.external_id,
-        plan_code: plan.code,
-        billing_time: "anniversary"
+        {external_customer_id: customer.external_id,
+         external_id: customer.external_id,
+         plan_code: plan.code,
+         billing_time: "anniversary"}
       )
     end
 
@@ -122,10 +122,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
       travel_to(started_at) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time: "calendar"
+          {external_customer_id: customer.external_id,
+           external_id: customer.external_id,
+           plan_code: plan.code,
+           billing_time: "calendar"}
         )
       end
 
@@ -170,10 +170,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
       travel_to(started_at) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time: "calendar"
+          {external_customer_id: customer.external_id,
+           external_id: customer.external_id,
+           plan_code: plan.code,
+           billing_time: "calendar"}
         )
       end
 
