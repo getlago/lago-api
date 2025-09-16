@@ -4,62 +4,90 @@ require "rails_helper"
 
 RSpec.describe GraphqlController, type: :request do
   describe "POST /graphql" do
-    let(:membership) { create(:membership) }
-    let(:user) { membership.user }
-    let(:mutation) do
-      <<~GQL
-        mutation($input: LoginUserInput!) {
-          loginUser(input: $input) {
-            token
-            user {
-              id
-              organizations { id name }
-            }
-          }
-        }
-      GQL
-    end
-
     before do
       allow(CurrentContext).to receive(:source=)
       allow(CurrentContext).to receive(:api_key_id=)
     end
 
-    it "returns GraphQL response" do
-      post "/graphql",
-        params: {
-          query: mutation,
-          variables: {
-            input: {
-              email: user.email,
-              password: "ILoveLago"
+    context "when logging in" do
+      let(:membership) { create(:membership) }
+      let(:user) { membership.user }
+
+      let(:mutation) do
+        <<~GQL
+          mutation($input: LoginUserInput!) {
+            loginUser(input: $input) {
+              token
+              user {
+                id
+                organizations { id name }
+              }
             }
           }
-        }
+        GQL
+      end
 
-      expect(response.status).to be(200)
-      expect(CurrentContext).to have_received(:source=).with("graphql")
-      expect(CurrentContext).to have_received(:api_key_id=).with(nil)
+      before do
+        post "/graphql",
+          params: {
+            query: mutation,
+            variables: {
+              input: {
+                email: user.email,
+                password: "ILoveLago"
+              }
+            }
+          }
+      end
 
-      json = JSON.parse(response.body)
-      expect(json["data"]["loginUser"]["token"]).to be_present
-      expect(json["data"]["loginUser"]["user"]["id"]).to eq(user.id)
-      expect(json["data"]["loginUser"]["user"]["organizations"].first["id"]).to eq(membership.organization_id)
+      it "returns GraphQL response" do
+        expect(response.status).to be(200)
+        expect(CurrentContext).to have_received(:source=).with("graphql")
+        expect(CurrentContext).to have_received(:api_key_id=).with(nil)
+
+        json = JSON.parse(response.body)
+        expect(json["data"]["loginUser"]["token"]).to be_present
+        expect(json["data"]["loginUser"]["user"]["id"]).to eq(user.id)
+        expect(json["data"]["loginUser"]["user"]["organizations"].first["id"]).to eq(membership.organization_id)
+      end
+
+      context "when membership is revoked" do
+        let(:membership) { create(:membership, :revoked) }
+
+        it "returns an error" do
+          expect(response.status).to be(200)
+
+          json = JSON.parse(response.body)
+          error = json["errors"].first
+          expect(error["extensions"]["code"]).to eq("unprocessable_entity")
+          expect(error.dig("extensions", "details", "base")).to eq ["incorrect_login_or_password"]
+          expect(error["extensions"]["status"]).to eq(422)
+        end
+      end
     end
 
     context "with JWT token" do
+      let(:user) { create(:user) }
+      let(:query) do
+        <<~GRAPHQL
+          query {
+            currentUser {
+              id
+              premium
+              memberships {
+                role
+                status
+                organization {
+                  id
+                }
+              }
+            }
+          }
+        GRAPHQL
+      end
+
       let(:token) do
         Auth::TokenService.encode(user:)
-      end
-      let(:near_expiration_token) do
-        JWT.encode(
-          {
-            sub: user.id,
-            exp: 30.minutes.from_now.to_i
-          },
-          ENV["SECRET_KEY_BASE"],
-          "HS256"
-        )
       end
 
       it "retrieves the current user" do
@@ -68,56 +96,82 @@ RSpec.describe GraphqlController, type: :request do
             "Authorization" => "Bearer #{token}"
           },
           params: {
-            query: mutation,
-            variables: {
-              input: {
-                email: user.email,
-                password: "ILoveLago"
-              }
-            }
+            query:
           }
 
         expect(response.status).to be(200)
+        expect(json[:data][:currentUser][:id]).to eq user.id
+        expect(json[:data][:currentUser][:memberships]).to be_empty
       end
 
-      it "retrieves the current organization" do
-        post "/graphql",
-          headers: {
-            "Authorization" => "Bearer #{token}",
-            "x-lago-organization" => membership.organization
-          },
-          params: {
-            query: mutation,
-            variables: {
-              input: {
-                email: user.email,
-                password: "ILoveLago"
+      context "when organization id header is set" do
+        context "when user is not part of organization" do
+          it "returns no membership" do
+            post "/graphql",
+              headers: {
+                "Authorization" => "Bearer #{token}",
+                "x-lago-organization" => SecureRandom.uuid
+              },
+              params: {
+                query:
               }
-            }
-          }
 
-        expect(response.status).to be(200)
+            expect(json[:data][:currentUser][:memberships]).to be_empty
+          end
+        end
+
+        context "when user is part of organization" do
+          let(:membership) { create(:membership, user:) }
+          let(:organization) { membership.organization }
+
+          it "returns the membership" do
+            post "/graphql",
+              headers: {
+                "Authorization" => "Bearer #{token}",
+                "x-lago-organization" => organization.id
+              },
+              params: {
+                query:
+              }
+
+            expect(json[:data][:currentUser][:memberships].sole[:organization][:id]).to eq organization.id
+          end
+        end
+
+        context "when membership is revoked" do
+          let(:membership) { create(:membership, :revoked, user:) }
+          let(:organization) { membership.organization }
+
+          it "returns the membership" do
+            post "/graphql",
+              headers: {
+                "Authorization" => "Bearer #{token}",
+                "x-lago-organization" => organization.id
+              },
+              params: {
+                query:
+              }
+
+            expect(json[:data][:currentUser][:memberships]).to be_empty
+          end
+        end
       end
 
-      it "renews the token" do
-        post(
-          "/graphql",
-          headers: {
-            "Authorization" => "Bearer #{near_expiration_token}"
-          },
-          params: {
-            query: mutation,
-            variables: {
-              input: {
-                email: user.email,
-                password: "ILoveLago"
-              }
+      context "when token is near expiration" do
+        it "renews the token" do
+          post(
+            "/graphql",
+            headers: {
+              "Authorization" => "Bearer #{JWT.encode({sub: user.id, exp: 30.minutes.from_now.to_i}, ENV["SECRET_KEY_BASE"], "HS256")}"
+            },
+            params: {
+              query:
             }
-          }
-        )
+          )
 
-        expect(response.status).to be(200)
-        expect(response.headers["x-lago-token"]).to be_present
+          expect(response.status).to be(200)
+          expect(response.headers["x-lago-token"]).to be_present
+        end
       end
     end
 
@@ -153,6 +207,7 @@ RSpec.describe GraphqlController, type: :request do
     end
 
     context "with query length validation" do
+      let(:user) { create(:user) }
       let(:token) do
         Auth::TokenService.encode(user:)
       end
@@ -178,20 +233,28 @@ RSpec.describe GraphqlController, type: :request do
       end
 
       it "accepts queries within maximum length" do
-        normal_query = mutation
+        query = <<~GRAPHQL
+          query {
+            currentUser {
+              id
+              premium
+              memberships {
+                role
+                status
+                organization {
+                  id
+                }
+              }
+            }
+          }
+        GRAPHQL
 
         post "/graphql",
           headers: {
             "Authorization" => "Bearer #{token}"
           },
           params: {
-            query: normal_query,
-            variables: {
-              input: {
-                email: user.email,
-                password: "ILoveLago"
-              }
-            }
+            query:
           }
 
         expect(response.status).to be(200)

@@ -23,22 +23,21 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
   it_behaves_like "requires permission", "organization:members:update"
 
   it "Revokes a membership" do
-    user = create(:user)
-    create(:membership, organization:, role: :admin, user:)
+    membership_to_remove = create(:membership, organization:, role: :admin)
 
     result = execute_graphql(
       current_organization: organization,
-      current_user: user,
+      current_user: membership.user,
       permissions: required_permission,
       query: mutation,
       variables: {
-        input: {id: membership.id}
+        input: {id: membership_to_remove.id}
       }
     )
 
     data = result["data"]["revokeMembership"]
 
-    expect(data["id"]).to eq(membership.id)
+    expect(data["id"]).to eq(membership_to_remove.id)
     expect(data["revokedAt"]).to be_present
   end
 
@@ -68,6 +67,7 @@ RSpec.describe Mutations::Memberships::Revoke, type: :graphql do
     result = execute_graphql(
       current_organization: organization,
       current_user: other_user.user,
+      current_membership: other_user,
       permissions: required_permission,
       query: mutation,
       variables: {

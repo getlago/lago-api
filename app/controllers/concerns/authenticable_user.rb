@@ -13,6 +13,23 @@ module AuthenticableUser
     @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token
   end
 
+  def current_organization
+    return unless organization_header
+    return unless current_user
+
+    @current_organization ||= current_membership&.organization
+  end
+
+  def current_membership
+    return unless current_user
+
+    @current_membership ||= current_user.memberships.active.find_by(organization_id: organization_header)
+  end
+
+  def organization_header
+    request.headers["x-lago-organization"]
+  end
+
   def login_method
     @login_method ||= decoded_token["login_method"] if token && decoded_token
   end
