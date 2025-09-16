@@ -126,15 +126,20 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
           []
         end
 
+        let(:charge) { create(:standard_charge, billable_metric:) }
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         before do
           create(
             :charge_filter_value,
+            charge_filter:,
             billable_metric_filter: filter,
             values: ["US"]
           )
 
           create(
             :charge_filter_value,
+            charge_filter:,
             billable_metric_filter: filter,
             values: ["Europe"]
           )
