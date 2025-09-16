@@ -264,7 +264,7 @@ module Fees
       end
 
       ChargeModels::Factory.new_instance(
-        charge:,
+        chargeable: charge,
         aggregation_result:,
         properties:,
         period_ratio: calculate_period_ratio,
