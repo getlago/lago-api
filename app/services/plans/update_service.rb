@@ -86,15 +86,19 @@ module Plans
     delegate :organization, to: :plan
 
     def bill_charges_monthly?
-      return if params[:interval]&.to_sym != :yearly && params[:interval]&.to_sym != :semiannual
+      return unless billable_monthly?
 
       params[:bill_charges_monthly] || false
     end
 
     def bill_fixed_charges_monthly?
-      return if params[:interval]&.to_sym != :yearly && params[:interval]&.to_sym != :semiannual
+      return unless billable_monthly?
 
       params[:bill_fixed_charges_monthly] || false
+    end
+
+    def billable_monthly?
+      @billable_monthly ||= params[:interval]&.to_sym == :yearly || params[:interval]&.to_sym == :semiannual
     end
 
     def cascade_needed?

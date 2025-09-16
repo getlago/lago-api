@@ -22,7 +22,6 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
   let(:current_usage) { false }
 
   let(:subscription_at) { Time.zone.parse("02 Feb 2021") }
-  # let(:billing_at) { Time.zone.parse("07 Mar 2022") }
   let(:started_at) { subscription_at }
   let(:timezone) { "UTC" }
 
