@@ -36,6 +36,9 @@ module Subscriptions
       end
 
       alias_method :compute_charges_duration, :compute_duration
+      alias_method :compute_fixed_charges_duration, :compute_charges_duration
+      alias_method :compute_fixed_charges_from_date, :compute_charges_from_date
+      alias_method :compute_fixed_charges_to_date, :compute_charges_to_date
 
       private
 
