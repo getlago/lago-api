@@ -58,6 +58,14 @@ RSpec.describe Subscriptions::DatesService, type: :service do
       end
     end
 
+    context "when interval is semiannual" do
+      let(:interval) { :semiannual }
+
+      it "returns a semiannual service instance" do
+        expect(result).to be_kind_of(Subscriptions::Dates::SemiannualService)
+      end
+    end
+
     context "when interval is invalid" do
       let(:interval) { :weekly }
 

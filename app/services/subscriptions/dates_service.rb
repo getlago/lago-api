@@ -12,6 +12,8 @@ module Subscriptions
         Subscriptions::Dates::YearlyService
       when :quarterly
         Subscriptions::Dates::QuarterlyService
+      when :semiannual
+        Subscriptions::Dates::SemiannualService
       else
         raise(NotImplementedError)
       end
@@ -297,6 +299,14 @@ module Subscriptions
     end
 
     def first_month_in_first_yearly_period?
+      false
+    end
+
+    def first_month_in_semiannual_period?
+      false
+    end
+
+    def first_month_in_first_semiannual_period?
       false
     end
 

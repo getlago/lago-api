@@ -24,8 +24,8 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
-        bill_fixed_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_fixed_charges_monthly] || false : nil
+        bill_charges_monthly: bill_charges_monthly(args),
+        bill_fixed_charges_monthly: bill_fixed_charges_monthly(args)
       )
 
       chargeables_validation_result = Plans::ChargeablesValidationService.call(
@@ -151,6 +151,24 @@ module Plans
       AppliedPricingUnits::CreateService.call!(charge:, params: args[:applied_pricing_unit])
 
       charge
+    end
+
+    def bill_charges_monthly(args)
+      return nil unless charges_billable_monthly?(args)
+
+      args[:bill_charges_monthly] || false
+    end
+
+    def bill_fixed_charges_monthly(args)
+      return nil unless charges_billable_monthly?(args)
+
+      args[:bill_fixed_charges_monthly] || false
+    end
+
+    def charges_billable_monthly?(args)
+      interval = args[:interval]&.to_sym
+
+      %i[yearly semiannual].include?(interval)
     end
 
     def track_plan_created(plan)
