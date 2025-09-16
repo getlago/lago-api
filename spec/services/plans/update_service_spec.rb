@@ -841,7 +841,6 @@ RSpec.describe Plans::UpdateService, type: :service do
           charges: [
             {
               id: existing_charge.id,
-              billable_metric_id: sum_billable_metric.id,
               charge_model: "standard",
               pay_in_advance: true,
               prorated: true,

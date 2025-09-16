@@ -203,6 +203,10 @@ module Plans
           next
         end
 
+        if payload_charge[:billable_metric_id].blank?
+          payload_charge[:billable_metric_id] = organization.charges.find_by(id: payload_charge[:id])&.billable_metric_id
+        end
+
         create_charge_result = Charges::CreateService.call!(plan:, params: payload_charge)
 
         after_commit { cascade_charge_creation(create_charge_result.charge, payload_charge) }
