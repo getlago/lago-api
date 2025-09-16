@@ -3,6 +3,8 @@
 module ChargeModels
   class Factory
     def self.new_instance(chargeable:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
+      raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented" unless chargeable.is_a?(Charge) || chargeable.is_a?(FixedCharge)
+
       charge_model_class = charge_model_class(chargeable:)
       common_args = {
         charge: chargeable,
