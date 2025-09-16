@@ -9,7 +9,7 @@ RSpec.describe ChargeModels::Factory, type: :service do
   let(:aggregation_result) { BaseService::Result.new }
   let(:properties) { charge.properties }
 
-  let(:result) { factory.new_instance(charge:, aggregation_result:, properties:) }
+  let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
 
   describe "#new_instance" do
     context "with standard charge model" do

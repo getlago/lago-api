@@ -2,10 +2,10 @@
 
 module ChargeModels
   class Factory
-    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
-      charge_model_class = charge_model_class(charge:)
+    def self.new_instance(chargeable:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
+      charge_model_class = charge_model_class(chargeable:)
       common_args = {
-        charge:,
+        charge: chargeable,
         aggregation_result:,
         properties:,
         period_ratio:,
@@ -22,12 +22,12 @@ module ChargeModels
       end
     end
 
-    def self.charge_model_class(charge:)
-      case charge.charge_model.to_sym
+    def self.charge_model_class(chargeable:)
+      case chargeable.charge_model.to_sym
       when :standard
         ChargeModels::StandardService
       when :graduated
-        if charge.prorated?
+        if chargeable.prorated?
           ChargeModels::ProratedGraduatedService
         else
           ChargeModels::GraduatedService
@@ -45,7 +45,7 @@ module ChargeModels
       when :dynamic
         ChargeModels::DynamicService
       else
-        raise NotImplementedError, "Charge model #{charge.charge_model} is not implemented"
+        raise NotImplementedError, "Charge model #{chargeable.charge_model} is not implemented"
       end
     end
   end

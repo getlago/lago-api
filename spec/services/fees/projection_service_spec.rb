@@ -193,8 +193,8 @@ RSpec.describe Fees::ProjectionService do
         service.call
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          charge: charge,
-          aggregation_result: aggregation_result,
+          chargeable: charge,
+          aggregation_result:,
           properties: charge_properties,
           period_ratio: expected_period_ratio,
           calculate_projected_usage: true
@@ -247,8 +247,8 @@ RSpec.describe Fees::ProjectionService do
         )
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          charge: charge,
-          aggregation_result: aggregation_result,
+          chargeable: charge,
+          aggregation_result:,
           properties: {"key" => "value"},
           period_ratio: 0.5,
           calculate_projected_usage: true
