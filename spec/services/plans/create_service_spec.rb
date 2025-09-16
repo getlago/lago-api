@@ -13,7 +13,7 @@ RSpec.describe Plans::CreateService, type: :service do
       invoice_display_name: plan_invoice_display_name,
       organization_id: organization.id,
       code: "new_plan",
-      interval: "monthly",
+      interval:,
       pay_in_advance: false,
       amount_cents: 200,
       amount_currency: "EUR",
@@ -33,6 +33,7 @@ RSpec.describe Plans::CreateService, type: :service do
   let(:plan_tax) { create(:tax, organization:) }
   let(:charge_tax) { create(:tax, organization:) }
   let(:pricing_unit) { create(:pricing_unit, organization:) }
+  let(:interval) { "monthly" }
 
   let(:billable_metric_filter) do
     create(:billable_metric_filter, billable_metric:, key: "payment_method", values: %w[card physical])
