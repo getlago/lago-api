@@ -63,6 +63,35 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
+  describe "#fixed_charge_amount_cents" do
+    before do
+      create(
+        :fixed_charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 100
+      )
+
+      create(
+        :fixed_charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 200
+      )
+
+      create(
+        :charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 400
+      )
+    end
+
+    it "returns the sum of the related fixed charge fees" do
+      expect(invoice_subscription.fixed_charge_amount_cents).to eq(300)
+    end
+  end
+
   describe "#subscription_amount_cents" do
     it "returns the amount of the subscription fees" do
       create(
@@ -110,7 +139,14 @@ RSpec.describe InvoiceSubscription, type: :model do
         amount_cents: 100
       )
 
-      expect(invoice_subscription.total_amount_cents).to eq(350)
+      create(
+        :fixed_charge_fee,
+        subscription_id: subscription.id,
+        invoice_id: invoice.id,
+        amount_cents: 25
+      )
+
+      expect(invoice_subscription.total_amount_cents).to eq(375)
     end
   end
 
@@ -123,6 +159,12 @@ RSpec.describe InvoiceSubscription, type: :model do
   describe "#charge_amount_currency" do
     it "returns the currency of the charge amount" do
       expect(invoice_subscription.charge_amount_currency).to eq(subscription.plan.amount_currency)
+    end
+  end
+
+  describe "#fixed_charge_amount_currency" do
+    it "returns the currency of the fixed charge amount" do
+      expect(invoice_subscription.fixed_charge_amount_currency).to eq(subscription.plan.amount_currency)
     end
   end
 
