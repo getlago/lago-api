@@ -17,6 +17,7 @@ module V1
         description: model.description,
         currency: model.currency,
         total_amount_cents: model.total_amount_cents,
+        precise_total_amount_cents: model.precise_total&.to_s,
         taxes_amount_cents: model.taxes_amount_cents,
         precise_taxes_amount_cents: model.precise_taxes_amount_cents&.to_s,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
