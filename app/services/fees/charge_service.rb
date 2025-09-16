@@ -263,7 +263,7 @@ module Fees
         persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
       end
 
-      Charges::ChargeModelFactory.new_instance(
+      ChargeModels::Factory.new_instance(
         charge:,
         aggregation_result:,
         properties:,

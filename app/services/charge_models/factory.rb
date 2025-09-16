@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module Charges
-  class ChargeModelFactory
+module ChargeModels
+  class Factory
     def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
       charge_model_class = charge_model_class(charge:)
       common_args = {

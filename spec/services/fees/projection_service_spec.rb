@@ -104,7 +104,7 @@ RSpec.describe Fees::ProjectionService do
       instance_double("Aggregator", aggregate: aggregation_result)
     )
 
-    allow(Charges::ChargeModelFactory).to receive(:new_instance).and_return(
+    allow(ChargeModels::Factory).to receive(:new_instance).and_return(
       instance_double("ChargeModel", apply: charge_model_result)
     )
 
@@ -192,7 +192,7 @@ RSpec.describe Fees::ProjectionService do
 
         service.call
 
-        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
+        expect(ChargeModels::Factory).to have_received(:new_instance).with(
           charge: charge,
           aggregation_result: aggregation_result,
           properties: charge_properties,
@@ -246,7 +246,7 @@ RSpec.describe Fees::ProjectionService do
           current_usage: true
         )
 
-        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
+        expect(ChargeModels::Factory).to have_received(:new_instance).with(
           charge: charge,
           aggregation_result: aggregation_result,
           properties: {"key" => "value"},
@@ -307,7 +307,7 @@ RSpec.describe Fees::ProjectionService do
 
         service.call
 
-        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
+        expect(ChargeModels::Factory).to have_received(:new_instance).with(
           hash_including(period_ratio: expected_ratio)
         )
       end

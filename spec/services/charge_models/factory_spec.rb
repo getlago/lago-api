@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModelFactory do
+RSpec.describe ChargeModels::Factory do
   subject(:factory) { described_class }
 
   let(:charge) { build(:standard_charge) }
