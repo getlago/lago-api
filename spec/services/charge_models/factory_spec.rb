@@ -12,6 +12,14 @@ RSpec.describe ChargeModels::Factory do
   let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
 
   describe "#new_instance" do
+    context "when chargeable is not a charge or a fixed charge" do
+      let(:chargeable) { build(:fee) }
+
+      it "raises an error" do
+        expect { factory.new_instance(chargeable:, aggregation_result:, properties:) }.to raise_error(NotImplementedError)
+      end
+    end
+
     context "with standard charge model" do
       it { expect(result).to be_a(ChargeModels::StandardService) }
 
