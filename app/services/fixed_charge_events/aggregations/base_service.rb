@@ -7,7 +7,7 @@ module FixedChargeEvents
         @fixed_charge = fixed_charge
         @subscription = subscription
         @from_datetime = charges_from_datetime
-        # NOTE: we add 1 day to the duration to include the last day of the period
+        # NOTE: we add 1 day to the duration to include the last day of the period. Also note: this is a DAY, not datetime
         @to_datetime = charges_to_datetime + 1.day
         @customer = subscription.customer
       end
@@ -26,12 +26,12 @@ module FixedChargeEvents
 
       def events_in_range
         @events_in_range ||= begin
-          events_in_period_ids = base_events.where(timestamp: from_datetime..to_datetime).ids
-          last_event_before_range_id = base_events.where("timestamp < ?", from_datetime).order(timestamp: :desc).limit(1).ids
+          events_in_period_ids = base_events.where("timestamp >= ? AND timestamp < ?", from_datetime, to_datetime).ids
+          last_event_before_range_id = base_events.where("created_at < ?", from_datetime).where("timestamp < ?", from_datetime).order(created_at: :desc).limit(1).ids
 
           # Combine using UNION
           FixedChargeEvent.where(id: events_in_period_ids + last_event_before_range_id)
-            .order(timestamp: :asc)
+            .order(created_at: :asc)
         end
       end
 
