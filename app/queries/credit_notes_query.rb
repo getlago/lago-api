@@ -45,7 +45,7 @@ class CreditNotesQuery < BaseQuery
 
   def base_scope
     CreditNote
-      .includes(:customer)
+      .includes(:customer, :items)
       .joins(:customer)
       .where("customers.organization_id = ?", organization.id)
       .finalized
