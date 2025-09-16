@@ -36,9 +36,9 @@ class BillingPeriodBoundaries
     charges_to_datetime:,
     charges_duration:,
     timestamp:,
-    fixed_charges_from_datetime:,
-    fixed_charges_to_datetime:,
-    fixed_charges_duration:,
+    fixed_charges_from_datetime: nil,
+    fixed_charges_to_datetime: nil,
+    fixed_charges_duration: nil,
     issuing_date: nil
   )
     @from_datetime = from_datetime
