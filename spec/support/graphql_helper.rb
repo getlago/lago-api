@@ -29,7 +29,7 @@ module GraphQLHelper
     CurrentContext.source = "graphql"
 
     current_membership ||= membership if defined?(membership)
-    current_membership ||= current_user&.memberships&.active&.find_by(organization: current_organization)
+    current_membership ||= current_user.memberships.active.find_by(organization: current_organization) if current_user
 
     unless permissions.is_a?(Hash)
       # we allow passing a single permission string or an array for convenience

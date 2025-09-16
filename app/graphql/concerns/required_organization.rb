@@ -22,6 +22,8 @@ module RequiredOrganization
   end
 
   def user_is_member_of_organization?
+    return false unless context[:current_user]
+
     context[:current_user].id == current_membership.user_id && current_membership.organization_id == current_organization.id
   end
 

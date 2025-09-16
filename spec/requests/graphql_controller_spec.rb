@@ -138,7 +138,7 @@ RSpec.describe GraphqlController, type: :request do
           end
         end
 
-        context "when membershipt is revoked" do
+        context "when membership is revoked" do
           let(:membership) { create(:membership, :revoked, user:) }
           let(:organization) { membership.organization }
 
