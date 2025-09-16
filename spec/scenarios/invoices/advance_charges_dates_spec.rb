@@ -106,7 +106,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
         expect(invoice_fees.second.properties).to eq({
           "timestamp" => "2024-07-22T10:00:00.000Z",
@@ -114,7 +117,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-07-07T00:00:00.000Z",
           "charges_duration" => 31,
           "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
-          "charges_from_datetime" => "2024-07-07T10:00:00.000Z"
+          "charges_from_datetime" => "2024-07-07T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)
@@ -252,7 +258,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
         expect(invoice_fees.second.properties).to eq({
           "timestamp" => "2024-07-22T10:00:00.000Z",
@@ -260,7 +269,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-07-01T00:00:00.000Z",
           "charges_duration" => 31,
           "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
-          "charges_from_datetime" => "2024-07-01T00:00:00.000Z"
+          "charges_from_datetime" => "2024-07-01T00:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)
@@ -337,7 +349,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)
