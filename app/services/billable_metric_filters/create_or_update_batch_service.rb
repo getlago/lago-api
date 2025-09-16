@@ -86,7 +86,7 @@ module BillableMetricFilters
       filter_value.discard!
       return if filter_value.charge_filter.values.where.not(id: filter_value.id).exists?
 
-      filter_value.charge_filter.discard!
+      filter_value.charge_filter.discard! unless filter_value.charge_filter.discarded?
     end
 
     def refresh_draft_invoices
