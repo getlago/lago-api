@@ -106,7 +106,7 @@ module Api
         end
 
         def find_plan
-          @plan = current_organization.plans.find_by!(
+          @plan = current_organization.plans.parents.find_by!(
             code: params[:plan_code]
           )
         rescue ActiveRecord::RecordNotFound

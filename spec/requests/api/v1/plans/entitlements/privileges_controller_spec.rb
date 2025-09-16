@@ -61,5 +61,22 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
         value: entitlement_value2.value
       })
     end
+
+    context "when plan has children (subscription plan overrides)" do
+      it "always retrieve the parent plan" do
+        # NOTE: It should be possible to create entitlements on a child plan,
+        #       but we want to tests that the controller retrieves only parents
+        override = create(:plan, organization:, code: plan.code, parent: plan)
+        override_entitlement = create(:entitlement, plan: override, feature:)
+        create(:entitlement_value, entitlement: override_entitlement, privilege:, value: 999, organization:)
+
+        plan.update! deleted_at: Time.current
+
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq "plan_not_found"
+      end
+    end
   end
 end
