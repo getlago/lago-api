@@ -19,6 +19,7 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:plan_tax) { create(:tax, organization:) }
     let(:charge_tax) { create(:tax, organization:) }
     let(:pricing_unit) { create(:pricing_unit, organization:) }
+    let(:interval) { "monthly" }
 
     let(:billable_metric_filter) do
       create(:billable_metric_filter, billable_metric:, key: "payment_method", values: %w[card physical])
@@ -30,7 +31,7 @@ RSpec.describe Plans::CreateService, type: :service do
         invoice_display_name: plan_invoice_display_name,
         organization_id: organization.id,
         code: "new_plan",
-        interval: "monthly",
+        interval:,
         pay_in_advance: false,
         amount_cents: 200,
         amount_currency: "EUR",
@@ -496,6 +497,16 @@ RSpec.describe Plans::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:charge_model]).to eq(["graduated_percentage_requires_premium_license"])
+        end
+      end
+
+      context "with invalid interval" do
+        let(:interval) { "daily" }
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:interval]).to eq(["value_is_invalid"])
         end
       end
     end
