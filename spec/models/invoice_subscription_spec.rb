@@ -9,7 +9,9 @@ RSpec.describe InvoiceSubscription do
       from_datetime:,
       to_datetime:,
       charges_from_datetime:,
-      charges_to_datetime:
+      charges_to_datetime:,
+      fixed_charges_from_datetime:,
+      fixed_charges_to_datetime:
     )
   end
 
@@ -20,6 +22,8 @@ RSpec.describe InvoiceSubscription do
   let(:to_datetime) { "2022-01-31 23:59:59" }
   let(:charges_from_datetime) { "2022-01-01 00:00:00" }
   let(:charges_to_datetime) { "2022-01-31 23:59:59" }
+  let(:fixed_charges_from_datetime) { "2022-01-01 00:00:00" }
+  let(:fixed_charges_to_datetime) { "2022-01-31 23:59:59" }
 
   it { is_expected.to belong_to(:organization) }
 
@@ -27,9 +31,10 @@ RSpec.describe InvoiceSubscription do
     subject(:matching?) { described_class.matching?(subscription, boundaries) }
 
     let(:subscription) { create(:subscription, plan:) }
-    let(:plan) { create(:plan, interval: plan_interval, bill_charges_monthly: bill_charges_monthly) }
+    let(:plan) { create(:plan, interval: plan_interval, bill_charges_monthly:, bill_fixed_charges_monthly:) }
     let(:plan_interval) { "monthly" }
     let(:bill_charges_monthly) { nil }
+    let(:bill_fixed_charges_monthly) { nil }
 
     let(:boundaries) do
       BillingPeriodBoundaries.new(
@@ -37,6 +42,8 @@ RSpec.describe InvoiceSubscription do
         to_datetime: to_datetime.to_datetime,
         charges_from_datetime: charges_from_datetime.to_datetime,
         charges_to_datetime: charges_to_datetime.to_datetime,
+        fixed_charges_from_datetime: fixed_charges_from_datetime.to_datetime,
+        fixed_charges_to_datetime: fixed_charges_to_datetime.to_datetime,
         charges_duration: 1.month,
         timestamp: Time.current
       )
@@ -46,11 +53,15 @@ RSpec.describe InvoiceSubscription do
     let(:base_to_datetime) { "2022-01-31 23:59:59" }
     let(:base_charges_from_datetime) { "2022-01-01 00:00:00" }
     let(:base_charges_to_datetime) { "2022-01-31 23:59:59" }
+    let(:base_fixed_charges_from_datetime) { "2022-01-01 00:00:00" }
+    let(:base_fixed_charges_to_datetime) { "2022-01-31 23:59:59" }
 
     let(:from_datetime) { base_from_datetime }
     let(:to_datetime) { base_to_datetime }
     let(:charges_from_datetime) { base_charges_from_datetime }
     let(:charges_to_datetime) { base_charges_to_datetime }
+    let(:fixed_charges_from_datetime) { base_fixed_charges_from_datetime }
+    let(:fixed_charges_to_datetime) { base_fixed_charges_to_datetime }
 
     context "when there are matching invoice subscriptions" do
       let(:invoice_subscription_recurring) { true }
@@ -63,6 +74,8 @@ RSpec.describe InvoiceSubscription do
           to_datetime: base_to_datetime,
           charges_from_datetime: base_charges_from_datetime,
           charges_to_datetime: base_charges_to_datetime,
+          fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+          fixed_charges_to_datetime: base_fixed_charges_to_datetime,
           recurring: invoice_subscription_recurring
         )
       end
@@ -104,6 +117,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -141,6 +156,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -165,6 +182,8 @@ RSpec.describe InvoiceSubscription do
           to_datetime: base_to_datetime,
           charges_from_datetime: base_charges_from_datetime,
           charges_to_datetime: base_charges_to_datetime,
+          fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+          fixed_charges_to_datetime: base_fixed_charges_to_datetime,
           recurring: true
         )
       end
@@ -187,6 +206,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -203,6 +224,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -215,6 +238,57 @@ RSpec.describe InvoiceSubscription do
 
         context "when charges_to_datetime doesn't match" do
           let(:charges_to_datetime) { "2022-02-28 23:59:59" }
+
+          it { is_expected.to eq(false) }
+        end
+      end
+    end
+
+    context "with yearly plan that bills fixed charges monthly" do
+      let(:plan_interval) { "yearly" }
+      let(:bill_fixed_charges_monthly) { true }
+
+      context "when fixed charges boundaries match" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime: base_from_datetime,
+            to_datetime: base_to_datetime,
+            charges_from_datetime: base_charges_from_datetime,
+            charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
+            recurring: true
+          )
+        end
+
+        it { is_expected.to eq(true) }
+      end
+
+      context "when fixed charges boundaries don't match" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime: base_from_datetime,
+            to_datetime: base_to_datetime,
+            charges_from_datetime: base_charges_from_datetime,
+            charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
+            recurring: true
+          )
+        end
+
+        context "when fixed_charges_from_datetime doesn't match" do
+          let(:fixed_charges_from_datetime) { "2022-02-01 00:00:00" }
+
+          it { is_expected.to eq(false) }
+        end
+
+        context "when fixed_charges_to_datetime doesn't match" do
+          let(:fixed_charges_to_datetime) { "2022-02-28 23:59:59" }
 
           it { is_expected.to eq(false) }
         end
@@ -235,6 +309,8 @@ RSpec.describe InvoiceSubscription do
           to_datetime: base_to_datetime,
           charges_from_datetime: base_charges_from_datetime,
           charges_to_datetime: base_charges_to_datetime,
+          fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+          fixed_charges_to_datetime: base_fixed_charges_to_datetime,
           recurring: true
         )
       end
@@ -257,6 +333,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -273,6 +351,8 @@ RSpec.describe InvoiceSubscription do
             to_datetime: base_to_datetime,
             charges_from_datetime: base_charges_from_datetime,
             charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
             recurring: true
           )
         end
@@ -291,6 +371,57 @@ RSpec.describe InvoiceSubscription do
       end
     end
 
+    context "with semiannual plan that bills fixed charges monthly" do
+      let(:plan_interval) { "semiannual" }
+      let(:bill_fixed_charges_monthly) { true }
+
+      context "when charges boundaries match" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime: base_from_datetime,
+            to_datetime: base_to_datetime,
+            charges_from_datetime: base_charges_from_datetime,
+            charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
+            recurring: true
+          )
+        end
+
+        it { is_expected.to eq(true) }
+      end
+
+      context "when charges boundaries don't match" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime: base_from_datetime,
+            to_datetime: base_to_datetime,
+            charges_from_datetime: base_charges_from_datetime,
+            charges_to_datetime: base_charges_to_datetime,
+            fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+            fixed_charges_to_datetime: base_fixed_charges_to_datetime,
+            recurring: true
+          )
+        end
+
+        context "when charges_from_datetime doesn't match" do
+          let(:fixed_charges_from_datetime) { "2022-02-01 00:00:00" }
+
+          it { is_expected.to eq(false) }
+        end
+
+        context "when charges_to_datetime doesn't match" do
+          let(:fixed_charges_to_datetime) { "2022-02-28 23:59:59" }
+
+          it { is_expected.to eq(false) }
+        end
+      end
+    end
+
     context "with non-yearly plans" do
       let(:charges_from_datetime) { "2022-02-01 00:00:00" }
       let(:charges_to_datetime) { "2022-02-28 23:59:59" }
@@ -303,6 +434,8 @@ RSpec.describe InvoiceSubscription do
           to_datetime: base_to_datetime,
           charges_from_datetime: base_charges_from_datetime,
           charges_to_datetime: base_charges_to_datetime,
+          fixed_charges_from_datetime: base_fixed_charges_from_datetime,
+          fixed_charges_to_datetime: base_fixed_charges_to_datetime,
           recurring: true
         )
       end
