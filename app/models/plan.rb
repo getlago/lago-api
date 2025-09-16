@@ -41,11 +41,11 @@ class Plan < ApplicationRecord
     quarterly
   ].freeze
 
-  enum :interval, INTERVALS
+  enum :interval, INTERVALS, validate: true
 
   monetize :amount_cents
 
-  validates :name, :code, :interval, presence: true
+  validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique

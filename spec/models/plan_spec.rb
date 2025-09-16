@@ -27,8 +27,7 @@ RSpec.describe Plan, type: :model do
     expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
     expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
 
-    expect(subject).to validate_presence_of(:interval)
-    expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS)
+    expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS).validating
   end
 
   describe "Clickhouse associations", clickhouse: true do
