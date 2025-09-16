@@ -82,12 +82,12 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
   context "when having a lot of events issued for this and following billing periods" do
     let(:events_matrix) do
       [
-        { units: 10, timestamp: Date.new(2025, 1, 1), created_at: Date.new(2025, 1, 1) }, # 1 Jan for 1 Jan
-        { units: 5, timestamp: Date.new(2025, 2, 1), created_at: Date.new(2025, 1, 5) }, # 5 Jan for 1 Feb
-        { units: 77, timestamp: Date.new(2025, 1, 22), created_at: Date.new(2025, 1, 7) }, # 7 Jan for 22 Jan
-        { units: 7, timestamp: Date.new(2025, 1, 20), created_at: Date.new(2025, 1, 10) }, # 10 Jan for 20 Jan
-        { units: 12, timestamp: Date.new(2025, 3, 1), created_at: Date.new(2025, 1, 20) }, # 20 Jan for 1 Mar
-        { units: 70, timestamp: Date.new(2025, 2, 10), created_at: Date.new(2025, 1, 30) } # 30 Jan for 10 Feb
+        {units: 10, timestamp: Date.new(2025, 1, 1), created_at: Date.new(2025, 1, 1)}, # 1 Jan for 1 Jan
+        {units: 5, timestamp: Date.new(2025, 2, 1), created_at: Date.new(2025, 1, 5)}, # 5 Jan for 1 Feb
+        {units: 77, timestamp: Date.new(2025, 1, 22), created_at: Date.new(2025, 1, 7)}, # 7 Jan for 22 Jan
+        {units: 7, timestamp: Date.new(2025, 1, 20), created_at: Date.new(2025, 1, 10)}, # 10 Jan for 20 Jan
+        {units: 12, timestamp: Date.new(2025, 3, 1), created_at: Date.new(2025, 1, 20)}, # 20 Jan for 1 Mar
+        {units: 70, timestamp: Date.new(2025, 2, 10), created_at: Date.new(2025, 1, 30)} # 30 Jan for 10 Feb
       ]
     end
 
