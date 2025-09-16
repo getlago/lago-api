@@ -235,6 +235,12 @@ module Invoices
     def should_create_semiannual_subscription_fee?(subscription)
       return true unless subscription.plan.semiannual?
 
+      # NOTE: we do not want to create a subscription fee for plans with bill_charges_monthly activated
+      # But we want to keep the subscription charge when it has to proceed
+      # Cases when we want to charge a subscription:
+      # - Plan is pay in advance, we're at the beginning of the period or subscription has never been billed and not started in the past
+      # - Plan is pay in arrear and we're at the beginning of the period
+
       if subscription.plan.pay_in_advance? && !subscription.started_in_past?
         return date_service(subscription).first_month_in_semiannual_period? || !subscription.already_billed?
       end
