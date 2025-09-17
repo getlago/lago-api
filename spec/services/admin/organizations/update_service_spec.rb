@@ -9,7 +9,8 @@ RSpec.describe Admin::Organizations::UpdateService do
 
   let(:params) do
     {
-      name: "FooBar"
+      name: "FooBar",
+      premium_integrations: ["okta"]
     }
   end
 
@@ -19,7 +20,12 @@ RSpec.describe Admin::Organizations::UpdateService do
 
       aggregate_failures do
         expect(result.organization.name).to eq("FooBar")
+        expect(result.organization.premium_integrations).to include("okta")
+
+        organization.reload
+
         expect(organization.reload.name).to eq("FooBar")
+        expect(organization.premium_integrations).to include("okta")
       end
     end
 
