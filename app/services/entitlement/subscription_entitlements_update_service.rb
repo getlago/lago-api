@@ -31,9 +31,7 @@ module Entitlement
       SendWebhookJob.perform_after_commit("subscription.updated", subscription)
 
       result
-    rescue BaseService::FailedResult => inner_result
-      inner_result.result
-    rescue ValidationFailure => e
+    rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       if e.record.is_a?(Entitlement::EntitlementValue)

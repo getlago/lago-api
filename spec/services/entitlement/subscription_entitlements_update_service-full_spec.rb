@@ -337,5 +337,20 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
         expect(result.error.error_code).to eq("privilege_not_found")
       end
     end
+
+    context "when value is invalid" do
+      let(:entitlements_params) do
+        {
+          "seats" => {
+            "max" => "invalid"
+          }
+        }
+      end
+
+      it "returns validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+      end
+    end
   end
 end
