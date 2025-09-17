@@ -29,7 +29,7 @@ module Wallets
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
         wallet.paid_top_up_max_amount_cents = params[:paid_top_up_max_amount_cents] if params.key?(:paid_top_up_max_amount_cents)
         if params[:recurring_transaction_rules] && License.premium?
-          Wallets::RecurringTransactionRules::UpdateService.call(wallet:, params: params[:recurring_transaction_rules])
+          Wallets::RecurringTransactionRules::UpdateService.call!(wallet:, params: params[:recurring_transaction_rules])
         end
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
@@ -47,6 +47,8 @@ module Wallets
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

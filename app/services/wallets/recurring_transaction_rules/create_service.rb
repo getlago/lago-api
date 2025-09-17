@@ -3,6 +3,8 @@
 module Wallets
   module RecurringTransactionRules
     class CreateService < BaseService
+      Result = BaseResult[:recurring_transaction_rule]
+
       def initialize(wallet:, wallet_params:)
         @wallet = wallet
         @wallet_params = wallet_params

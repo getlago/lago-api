@@ -328,6 +328,35 @@ RSpec.describe Wallets::UpdateService, type: :service do
       end
     end
 
+    context "when recurring rule paid credits exceeds wallet limits" do
+      around { |test| lago_premium!(&test) }
+
+      let(:params) do
+        {
+          id: wallet.id,
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "weekly",
+              method: "fixed",
+              paid_credits: "1000",
+              granted_credits: "0"
+            }
+          ]
+        }
+      end
+
+      before { wallet.update!(paid_top_up_max_amount_cents: 1) }
+
+      it "returns an error from nested service and does not enqueue webhook" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
+        expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
     context "with limitations" do
       let(:limitations) do
         {

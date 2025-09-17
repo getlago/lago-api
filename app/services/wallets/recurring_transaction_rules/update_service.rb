@@ -2,6 +2,8 @@
 
 module Wallets
   module RecurringTransactionRules
+    Result = BaseResult[:wallet]
+
     class UpdateService < BaseService
       def initialize(wallet:, params:)
         @wallet = wallet
@@ -16,26 +18,27 @@ module Wallets
         hash_recurring_rules = params.map { |m| m.to_h.deep_symbolize_keys }
         hash_recurring_rules.each do |payload_rule|
           lago_id = payload_rule[:lago_id]
-          rule = payload_rule.except(:lago_id)
-
+          rule_attributes = payload_rule.except(:lago_id)
           # Normalize transaction_name to nil if empty
-          rule[:transaction_name] = rule[:transaction_name].presence if rule.key?(:transaction_name)
+          rule_attributes[:transaction_name] = rule[:transaction_name].presence if rule.key?(:transaction_name)
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
+          validate_paid_credits!(attributes: rule_attributes)
+
           if recurring_rule
-            recurring_rule.update!(rule)
+            recurring_rule.update!(rule_attributes)
+          else
+            unless rule_attributes.key?(:invoice_requires_successful_payment)
+              rule_attributes[:invoice_requires_successful_payment] = wallet.invoice_requires_successful_payment
+            end
 
-            next
-          end
+            created_recurring_rule = wallet.recurring_transaction_rules.create!(
+              rule_attributes.merge(organization_id: wallet.organization_id)
+            )
 
-          # NOTE: on creation, we follow the wallet configuration if not set
-          unless rule.key?(:invoice_requires_successful_payment)
-            rule[:invoice_requires_successful_payment] = wallet.invoice_requires_successful_payment
+            created_recurring_rules_ids.push(created_recurring_rule.id)
           end
-          created_recurring_rule = wallet.recurring_transaction_rules
-            .create!(rule.merge(organization_id: wallet.organization_id))
-          created_recurring_rules_ids.push(created_recurring_rule.id)
         end
 
         # NOTE: Delete recurring_rules that are no more linked to the wallet
@@ -43,6 +46,8 @@ module Wallets
 
         result.wallet = wallet
         result
+      rescue BaseService::FailedResult => e
+        e.result
       end
 
       private
@@ -57,6 +62,31 @@ module Wallets
         wallet.recurring_transaction_rules.where(id: not_needed_ids).find_each do |recurring_transaction_rule|
           Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule:)
         end
+      end
+
+      def validate_paid_credits!(attributes:)
+        return if attributes[:method] != "fixed"
+
+        credit_amount = parsed_credits_amount(attributes[:paid_credits])
+        return if credit_amount.nil? || credit_amount.floor(5).zero?
+
+        validator = Validators::WalletTransactionAmountLimitsValidator.new(
+          result,
+          wallet:,
+          credits_amount: attributes[:paid_credits],
+          ignore_validation: attributes[:ignore_paid_top_up_limits]
+        )
+
+        unless validator.valid?
+          result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
+          result.raise_if_error!
+        end
+      end
+
+      def parsed_credits_amount(value)
+        BigDecimal(value)
+      rescue ArgumentError, TypeError
+        nil
       end
     end
   end
