@@ -2992,6 +2992,7 @@ input CreateRecurringTransactionRuleInput {
   targetOngoingBalance: String
   thresholdCredits: String
   transactionMetadata: [CreateTransactionMetadataInput!]
+  transactionName: String
   trigger: RecurringTransactionTriggerEnum!
 }
 
@@ -9103,6 +9104,7 @@ type RecurringTransactionRule {
   targetOngoingBalance: String
   thresholdCredits: String
   transactionMetadata: [TransactionMetadata!]
+  transactionName: String
   trigger: RecurringTransactionTriggerEnum!
 }
 
@@ -11142,6 +11144,7 @@ input UpdateRecurringTransactionRuleInput {
   targetOngoingBalance: String
   thresholdCredits: String
   transactionMetadata: [CreateTransactionMetadataInput!]
+  transactionName: String
   trigger: RecurringTransactionTriggerEnum
 }
 

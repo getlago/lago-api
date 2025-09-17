@@ -20,6 +20,7 @@ module Types
         field :target_ongoing_balance, String, null: true
         field :threshold_credits, String, null: true
         field :transaction_metadata, [Types::Wallets::RecurringTransactionRules::TransactionMetadataObject], null: true
+        field :transaction_name, String, null: true
         field :trigger, Types::Wallets::RecurringTransactionRules::TriggerEnum, null: false
 
         def resolver_method
