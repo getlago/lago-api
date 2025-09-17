@@ -332,7 +332,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
       # when the on_termination_credit_note is invalid
       terminate_subscription_without_jobs(subscription, {on_termination_credit_note: "invalid"}, raise_on_error: false)
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(
         {code: "validation_errors", error: "Unprocessable Entity", error_details: {on_termination_credit_note: ["invalid_value"]}, status: 422}
       )
@@ -340,7 +340,7 @@ describe "Subscription manual termination", :scenarios, type: :request do
       # when the on_termination_invoice is invalid
       terminate_subscription_without_jobs(subscription, {on_termination_invoice: "invalid"}, raise_on_error: false)
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(
         {code: "validation_errors", error: "Unprocessable Entity", error_details: {on_termination_invoice: ["invalid_value"]}, status: 422}
       )

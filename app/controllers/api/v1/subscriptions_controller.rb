@@ -41,7 +41,7 @@ module Api
                 code: "stripe_required",
                 message: "Only Stripe is supported for authorization"
               },
-              status: :unprocessable_entity
+              status: :unprocessable_content
             )
           end
 

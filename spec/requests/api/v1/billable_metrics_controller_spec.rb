@@ -118,7 +118,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
 
       it "returns unprocessable_entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -287,7 +287,7 @@ RSpec.describe Api::V1::BillableMetricsController, type: :request do
       it "returns unprocessable_entity error", :aggregate_failures do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:expression]).to eq(["value_is_mandatory"])
       end
     end

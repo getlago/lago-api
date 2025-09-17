@@ -134,7 +134,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
       it "returns an unprocessable entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end
@@ -312,7 +312,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
       it "returns validation error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:base]).to eq(["total_amount_must_be_positive"])
       end
     end

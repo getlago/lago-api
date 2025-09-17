@@ -89,7 +89,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       it "returns a validation error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:paid_credits]).to eq ["amount_below_minimum"]
       end
 
@@ -158,7 +158,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
 
         it "returns a validation error" do
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details][:metadata]).to include("invalid_type")
         end
       end
@@ -342,7 +342,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           it "returns a validation error" do
             subject
-            expect(response).to have_http_status(:unprocessable_entity)
+            expect(response).to have_http_status(:unprocessable_content)
             expect(json[:error_details][:recurring_transaction_rules]).to include("invalid_recurring_rule")
           end
         end

@@ -209,7 +209,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       it "returns an unprocessable_entity error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq({external_customer_id: %w[value_is_mandatory]})
       end
     end
@@ -228,7 +228,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
       it "returns an unprocessable_entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -344,7 +344,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
               subject
 
-              expect(response).to have_http_status(:unprocessable_entity)
+              expect(response).to have_http_status(:unprocessable_content)
               expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
             end
           end
@@ -360,7 +360,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
             )
             subject
 
-            expect(response).to have_http_status(:unprocessable_entity)
+            expect(response).to have_http_status(:unprocessable_content)
             expect(json[:code]).to eq "provider_error"
             expect(json[:provider][:code]).to start_with "stripe_account_"
             expect(json[:error_details]).to include({
@@ -450,7 +450,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           it "returns validation error" do
             subject
 
-            expect(response).to have_http_status(:unprocessable_entity)
+            expect(response).to have_http_status(:unprocessable_content)
             expect(json[:error_details]).to include(
               on_termination_credit_note: ["invalid_value"]
             )
@@ -482,7 +482,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         it "returns validation error" do
           subject
 
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include(
             on_termination_invoice: ["invalid_value"]
           )

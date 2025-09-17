@@ -74,7 +74,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         subject
 
         aggregate_failures do
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to eq({interval: %w[value_is_invalid]})
         end
       end
@@ -451,7 +451,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
       it "returns unprocessable_entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
