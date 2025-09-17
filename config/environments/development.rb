@@ -17,6 +17,9 @@ Rails.application.configure do
     #{config.root}/dev
   ]
 
+  config.action_cable.disable_request_forgery_protection = true
+  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
+
   config.enable_reloading = true
   config.eager_load = false
   config.consider_all_requests_local = true

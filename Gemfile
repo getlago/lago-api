@@ -58,6 +58,9 @@ gem "stripe"
 # Analytics
 gem "analytics-ruby", "~> 2.4.0", require: "segment/analytics"
 
+# SSE
+gem "event_stream_parser"
+
 # Logging
 gem "lograge"
 gem "logstash-event"

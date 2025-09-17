@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "net/http/post/multipart"
+require "event_stream_parser"
 
 module LagoHttpClient
   class Client
@@ -75,6 +76,25 @@ module LagoHttpClient
 
       response = request(req, encoded_form)
       JSON.parse(response.body.presence || "{}")
+    end
+
+    def post_with_stream(body, headers = {}, &block)
+      req = Net::HTTP::Post.new(uri.request_uri, {"Content-Type" => "application/json"}.merge(headers))
+      req.body = body.to_json
+
+      parser = EventStreamParser::Parser.new
+
+      http_client.start do |http|
+        http.request(req) do |response|
+          raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+
+          response.read_body do |chunk|
+            parser.feed(chunk) do |type, data, id, reconnection_time|
+              yield(type, data, id, reconnection_time) if block_given?
+            end
+          end
+        end
+      end
     end
 
     def get(headers: {}, params: nil, body: nil)
