@@ -36,10 +36,12 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     it "creates a wallet" do
       allow(WalletTransactions::CreateFromParamsService).to receive(:call!).and_call_original
       allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
-      allow(SendWebhookJob).to receive(:perform_later).and_call_original
       stub_pdf_generation
 
       subject
+
+      expect(SendWebhookJob).to have_been_enqueued.with("wallet.created", Wallet)
+
       perform_all_enqueued_jobs
 
       expect(response).to have_http_status(:success)
@@ -63,8 +65,6 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         credits_amount: "10",
         ignore_validation: "true"
       )
-
-      expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
 
       expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(
         organization: organization,
@@ -129,14 +129,14 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
 
       before do
-        allow(WalletTransactions::CreateJob).to receive(:perform_later).and_call_original
         subject
       end
 
       it "schedules a WalletTransactions::CreateJob with correct parameters" do
-        expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
+        expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
           organization_id: organization.id,
           params: hash_including(
+            name: nil,
             metadata: [{key: "valid_value", value: "also_valid"}]
           )
         )
@@ -161,6 +161,34 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(response).to have_http_status(:unprocessable_entity)
           expect(json[:error_details][:metadata]).to include("invalid_type")
         end
+      end
+    end
+
+    context "when transaction_name is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          transaction_name: "Custom Transaction Name"
+        }
+      end
+
+      before do
+        subject
+      end
+
+      it "schedules a WalletTransactions::CreateJob with the transaction name" do
+        expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
+          organization_id: organization.id,
+          params: hash_including(
+            name: "Custom Transaction Name"
+          )
+        )
       end
     end
 
@@ -191,21 +219,19 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
         recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(recurring_rules).to be_present
-          expect(recurring_rules.first[:interval]).to eq("monthly")
-          expect(recurring_rules.first[:paid_credits]).to eq("10.0")
-          expect(recurring_rules.first[:granted_credits]).to eq("10.0")
-          expect(recurring_rules.first[:method]).to eq("fixed")
-          expect(recurring_rules.first[:trigger]).to eq("interval")
+        expect(recurring_rules).to be_present
+        expect(recurring_rules.first[:interval]).to eq("monthly")
+        expect(recurring_rules.first[:paid_credits]).to eq("10.0")
+        expect(recurring_rules.first[:granted_credits]).to eq("10.0")
+        expect(recurring_rules.first[:method]).to eq("fixed")
+        expect(recurring_rules.first[:trigger]).to eq("interval")
 
-          # TODO: only test response attributes when we have the new fields in the serializer
-          wallet = Wallet.find json[:wallet][:lago_id]
-          expect(wallet.recurring_transaction_rules.first.ignore_paid_top_up_limits).to eq(true)
-          # expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
-        end
+        # TODO: only test response attributes when we have the new fields in the serializer
+        wallet = Wallet.find json[:wallet][:lago_id]
+        expect(wallet.recurring_transaction_rules.first.ignore_paid_top_up_limits).to eq(true)
+        # expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
       end
 
       context "when invoice_requires_successful_payment is set at the wallet level but the rule level" do
@@ -232,13 +258,11 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
+          expect(response).to have_http_status(:success)
 
-            expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
-          end
+          expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
         end
       end
 
@@ -295,11 +319,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
-          end
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
         end
       end
 
@@ -330,11 +352,9 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:transaction_metadata]).to eq(transaction_metadata)
-          end
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:transaction_metadata]).to eq(transaction_metadata)
         end
 
         context "when transaction metadata is a hash" do
