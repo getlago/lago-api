@@ -20,63 +20,85 @@ RSpec.describe ChargeModels::Factory do
       end
     end
 
-    context "with standard charge model" do
-      it { expect(result).to be_a(ChargeModels::StandardService) }
+    context "when chargeable is a charge" do
+      context "with standard charge model" do
+        it { expect(result).to be_a(ChargeModels::StandardService) }
 
-      context "when charge is grouped" do
-        let(:charge) { build(:standard_charge, properties: {grouped_by: ["cloud"]}) }
-        let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
+        context "when charge is grouped" do
+          let(:charge) { build(:standard_charge, properties: {grouped_by: ["cloud"]}) }
+          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
 
-        it { expect(result).to be_a(ChargeModels::GroupedService) }
+          it { expect(result).to be_a(ChargeModels::GroupedService) }
+        end
+      end
+
+      context "with graduated charge model" do
+        let(:charge) { build(:graduated_charge) }
+
+        it { expect(result).to be_a(ChargeModels::GraduatedService) }
+
+        context "when charge is prorated" do
+          let(:charge) { build(:graduated_charge, prorated: true) }
+
+          it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
+        end
+      end
+
+      context "with graduated_percentage charge model" do
+        let(:charge) { build(:graduated_percentage_charge) }
+
+        it { expect(result).to be_a(ChargeModels::GraduatedPercentageService) }
+      end
+
+      context "with package charge model" do
+        let(:charge) { build(:package_charge) }
+
+        it { expect(result).to be_a(ChargeModels::PackageService) }
+      end
+
+      context "with percentage charge model" do
+        let(:charge) { build(:percentage_charge) }
+
+        it { expect(result).to be_a(ChargeModels::PercentageService) }
+      end
+
+      context "with volume charge model" do
+        let(:charge) { build(:volume_charge) }
+
+        it { expect(result).to be_a(ChargeModels::VolumeService) }
+      end
+
+      context "with dynamic charge model" do
+        let(:charge) { build(:dynamic_charge) }
+
+        it { expect(result).to be_a(ChargeModels::DynamicService) }
+      end
+
+      context "with custom charge model" do
+        let(:charge) { build(:custom_charge) }
+
+        it { expect(result).to be_a(ChargeModels::CustomService) }
       end
     end
 
-    context "with graduated charge model" do
-      let(:charge) { build(:graduated_charge) }
+    context "when chargeable is a fixed charge" do
+      context "with standard charge model" do
+        let(:charge) { build(:fixed_charge, charge_model: :standard) }
 
-      it { expect(result).to be_a(ChargeModels::GraduatedService) }
-
-      context "when charge is prorated" do
-        let(:charge) { build(:graduated_charge, prorated: true) }
-
-        it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
+        it { expect(result).to be_a(ChargeModels::StandardService) }
       end
-    end
 
-    context "with graduated_percentage charge model" do
-      let(:charge) { build(:graduated_percentage_charge) }
+      context "with graduated charge model" do
+        let(:charge) { build(:fixed_charge, charge_model: :graduated) }
 
-      it { expect(result).to be_a(ChargeModels::GraduatedPercentageService) }
-    end
+        it { expect(result).to be_a(ChargeModels::GraduatedService) }
+      end
 
-    context "with package charge model" do
-      let(:charge) { build(:package_charge) }
+      context "with volume charge model" do
+        let(:charge) { build(:fixed_charge, charge_model: :volume) }
 
-      it { expect(result).to be_a(ChargeModels::PackageService) }
-    end
-
-    context "with percentage charge model" do
-      let(:charge) { build(:percentage_charge) }
-
-      it { expect(result).to be_a(ChargeModels::PercentageService) }
-    end
-
-    context "with volume charge model" do
-      let(:charge) { build(:volume_charge) }
-
-      it { expect(result).to be_a(ChargeModels::VolumeService) }
-    end
-
-    context "with dynamic charge model" do
-      let(:charge) { build(:dynamic_charge) }
-
-      it { expect(result).to be_a(ChargeModels::DynamicService) }
-    end
-
-    context "with custom charge model" do
-      let(:charge) { build(:custom_charge) }
-
-      it { expect(result).to be_a(ChargeModels::CustomService) }
+        it { expect(result).to be_a(ChargeModels::VolumeService) }
+      end
     end
   end
 end
