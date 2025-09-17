@@ -128,6 +128,7 @@ end
 #
 # Indexes
 #
+#  idx_invoice_subscriptions_on_subscription_with_timestamps      (subscription_id, COALESCE(to_datetime, created_at) DESC)
 #  index_invoice_subscriptions_boundaries                         (subscription_id,from_datetime,to_datetime)
 #  index_invoice_subscriptions_on_invoice_id                      (invoice_id)
 #  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE WHERE (created_at >= '2023-11-23 00:00:00'::timestamp without time zone)
