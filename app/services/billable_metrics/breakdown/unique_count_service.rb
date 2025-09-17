@@ -13,16 +13,18 @@ module BillableMetrics
             # NOTE: breakdown, is based only on the current period
             datetime = (row["timestamp"] < from_datetime) ? from_datetime : row["timestamp"]
 
-            if rows.count > 1 # NOTE: add then remove
+            if rows.count.even? # NOTE: add then remove
               operation_type = (row["timestamp"] < from_datetime) ? "remove" : "add_and_removed"
               datetime = rows.last["timestamp"] unless operation_type == "add_and_removed"
+            elsif rows.count > 2
+              operation_type = "add"
             end
 
             Item.new(
               date: datetime.in_time_zone(customer.applicable_timezone).to_date,
               action: operation_type,
               amount: row["prorated_value"].ceil,
-              duration: ((to_datetime - from_datetime).fdiv(1.day).round * row["prorated_value"]).round,
+              duration: duration(rows),
               total_duration: period_duration
             )
           end
@@ -30,6 +32,18 @@ module BillableMetrics
         # NOTE: in the breakdown, dates are in customer timezone
         result.breakdown = breakdown.sort_by(&:date)
         result
+      end
+
+      private
+
+      def duration(rows)
+        prorated_value = if rows.count > 2
+          rows.sum { |h| h["prorated_value"] }
+        else
+          rows.first["prorated_value"]
+        end
+
+        ((to_datetime - from_datetime).fdiv(1.day).round * prorated_value).round
       end
     end
   end

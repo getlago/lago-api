@@ -239,7 +239,7 @@ class Invoice < ApplicationRecord
     end
 
     service.new(
-      event_store_class: Events::Stores::PostgresStore,
+      event_store_class: Events::Stores::StoreFactory.store_class(organization:),
       charge: fee.charge,
       subscription: fee.subscription,
       boundaries: {
