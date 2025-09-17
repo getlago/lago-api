@@ -39,6 +39,8 @@ module Entitlement
       result.entitlement = SubscriptionEntitlement.for_subscription(subscription).find { it.code == feature_code }
 
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::RecordNotFound => e
       if e.message.include?("Entitlement::Feature")
         result.not_found_failure!(resource: "feature")

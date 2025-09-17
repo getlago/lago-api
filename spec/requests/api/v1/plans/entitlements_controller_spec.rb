@@ -340,6 +340,25 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
     end
 
+    context "when privilege value is invalid" do
+      let(:params) do
+        {
+          "entitlements" => {
+            "seats" => {
+              "max" => "one thousand!!"
+            }
+          }
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:max_privilege_value]).to eq(["value_is_invalid"])
+      end
+    end
+
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
       let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
