@@ -221,16 +221,18 @@ module ScenariosHelper
 
   ### Wallets
 
-  def create_wallet(params, **kwargs)
+  def create_wallet(params, as: :json, **kwargs)
     api_call(**kwargs) do
       post_with_token(organization, "/api/v1/wallets", {wallet: params})
     end
+    parse_result(as, Wallet, :wallet)
   end
 
-  def create_wallet_transaction(params, **kwargs)
+  def create_wallet_transaction(params, as: :json, **kwargs)
     api_call(**kwargs) do
       post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
     end
+    parse_result(as, WalletTransaction, :wallet_transactions)
   end
 
   def recalculate_wallet_balances
@@ -334,6 +336,22 @@ module ScenariosHelper
   def perform_dunning
     clock_job do
       Clock::ProcessDunningCampaignsJob.perform_later
+    end
+  end
+
+  def parse_result(as, model_class, key)
+    case as
+    when :json
+      json.with_indifferent_access
+    when :model
+      array = key.to_s.pluralize == key.to_s
+      if array
+        model_class.where(id: json[key].pluck(:lago_id))
+      else
+        model_class.find(json[key][:lago_id])
+      end
+    else
+      raise "Invalid as: #{as}"
     end
   end
 end
