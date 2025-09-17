@@ -18,7 +18,8 @@ module V1
           trigger: model.trigger,
           created_at: model.created_at.iso8601,
           invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
-          transaction_metadata: model.transaction_metadata
+          transaction_metadata: model.transaction_metadata,
+          transaction_name: model.transaction_name
         }
       end
     end

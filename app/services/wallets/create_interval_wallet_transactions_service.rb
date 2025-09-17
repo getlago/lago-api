@@ -19,7 +19,8 @@ module Wallets
             granted_credits: granted_credits.to_s,
             source: :interval,
             invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
-            metadata: rule.transaction_metadata
+            metadata: rule.transaction_metadata,
+            name: rule.transaction_name
           }
         )
       end

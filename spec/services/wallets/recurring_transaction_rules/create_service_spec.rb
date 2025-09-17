@@ -234,6 +234,31 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           expect(wallet.recurring_transaction_rules.first.expiration_at).to eq(expiration_at)
         end
       end
+
+      {
+        "Custom Top-up Name" => "Custom Top-up Name",
+        "" => nil,
+        "   " => nil,
+        nil => nil
+      }.each do |transaction_name, expected_transaction_name|
+        context "when transaction_name is #{transaction_name.inspect}" do
+          let(:rule_params) do
+            {
+              trigger: "threshold",
+              threshold_credits: "1.0",
+              transaction_name:
+            }
+          end
+
+          it "creates rule with expected transaction_name" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              transaction_name: expected_transaction_name
+            )
+          end
+        end
+      end
     end
   end
 end

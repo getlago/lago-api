@@ -22,7 +22,8 @@ module Wallets
           granted_credits: rule.compute_granted_credits.to_s,
           source: :threshold,
           invoice_requires_successful_payment: rule.invoice_requires_successful_payment?,
-          metadata: rule.transaction_metadata
+          metadata: rule.transaction_metadata,
+          name: rule.transaction_name
         },
         unique_transaction: true
       )
