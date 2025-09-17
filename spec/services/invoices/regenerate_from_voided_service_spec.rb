@@ -26,23 +26,26 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
     invoice.update!(status: :voided)
     invoice
   end
+  let(:fees_params) do
+    [
+      {
+        id: original_fee.id,
+        subscription_id: subscription.id,
+        invoice_display_name: "new-dis-name",
+        units: 10,
+        unit_amount_cents: 50.50
+      }
+    ]
+  end
+  let(:regenerate_result) do
+    Invoices::RegenerateFromVoidedService.new(voided_invoice: original_invoice, fees_params:).call
+  end
 
   let(:original_fee) { original_invoice.fees.first }
 
   describe "#call" do
     it "regenerates invoice with adjusted display name, units and unit amount" do
-      result = Invoices::RegenerateFromVoidedService.new(
-        voided_invoice: original_invoice,
-        fees_params: [
-          {
-            id: original_fee.id,
-            subscription_id: subscription.id,
-            invoice_display_name: "new-dis-name",
-            units: 10,
-            unit_amount_cents: 50.50
-          }
-        ]
-      ).call
+      result = regenerate_result
 
       regenerated_fee = result.invoice.fees.first
       expect(regenerated_fee.invoice_display_name).to eq "new-dis-name"
@@ -51,23 +54,54 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
       expect(regenerated_fee.amount_cents).to eq 10 * 5050
     end
 
-    it "regenerates invoice with only updated units" do
-      result = Invoices::RegenerateFromVoidedService.new(
-        voided_invoice: original_invoice,
-        fees_params: [
+    it "creates a payment" do
+      original_invoice
+
+      allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+      regenerate_result
+
+      expect(Invoices::Payments::CreateService).to have_received(:call_async).once
+    end
+
+    it "enqueues a SendWebhookJob for the invoice" do
+      expect do
+        regenerate_result
+      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
+    end
+
+    it "produces an activity log" do
+      invoice = regenerate_result.invoice
+
+      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+    end
+
+    it "enqueues GeneratePdfAndNotifyJob with email false" do
+      expect do
+        regenerate_result
+      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+    end
+
+    context "with updated units" do
+      let(:fees_params) do
+        [
           {
             id: original_fee.id,
             subscription_id: subscription.id,
             units: 3
           }
         ]
-      ).call
+      end
 
-      regenerated_fee = result.invoice.fees.first
-      expect(regenerated_fee.invoice_display_name).to eq nil
-      expect(regenerated_fee.units).to eq 3
-      expect(regenerated_fee.unit_amount_cents).to eq original_fee.unit_amount_cents
-      expect(regenerated_fee.amount_cents).to eq 3 * original_fee.unit_amount_cents
+      it "regenerates invoice" do
+        result = regenerate_result
+
+        regenerated_fee = result.invoice.fees.first
+        expect(regenerated_fee.invoice_display_name).to eq nil
+        expect(regenerated_fee.units).to eq 3
+        expect(regenerated_fee.unit_amount_cents).to eq original_fee.unit_amount_cents
+        expect(regenerated_fee.amount_cents).to eq 3 * original_fee.unit_amount_cents
+      end
     end
   end
 end
