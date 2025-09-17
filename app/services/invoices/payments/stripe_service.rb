@@ -212,11 +212,6 @@ module Invoices
         true
       end
 
-      # NOTE: Same as off_session?
-      def error_on_requires_action?
-        invoice.customer.country != "IN"
-      end
-
       def stripe_payment_provider
         @stripe_payment_provider ||= payment_provider(customer)
       end
