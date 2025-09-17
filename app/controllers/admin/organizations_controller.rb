@@ -22,7 +22,7 @@ module Admin
       result = ::Organizations::CreateService
         .call(
           name: create_params[:name],
-          document_numbering: "per_organization",
+          document_numbering: "per_customer",
           premium_integrations: create_params[:premium_integrations]
         )
 
