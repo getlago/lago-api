@@ -11,7 +11,7 @@ module Admin
       return render_error_response(result) unless result.success?
 
       render(
-        json: ::V1::OrganizationSerializer.new(
+        json: ::Admin::OrganizationSerializer.new(
           result.organization,
           root_name: "organization"
         )
@@ -20,7 +20,11 @@ module Admin
 
     def create
       result = ::Organizations::CreateService
-        .call(name: create_params[:name], document_numbering: "per_organization")
+        .call(
+          name: create_params[:name],
+          document_numbering: "per_organization",
+          premium_integrations: create_params[:premium_integrations]
+        )
 
       return render_error_response(result) unless result.success?
 
@@ -35,7 +39,7 @@ module Admin
       return render_error_response(invite_result) unless invite_result.success?
 
       render json: {
-        organization: ::V1::OrganizationSerializer.new(organization).serialize,
+        organization: ::Admin::OrganizationSerializer.new(organization).serialize,
         invite_url: invite_result.invite_url
       }, status: :created
     end
@@ -47,11 +51,11 @@ module Admin
     end
 
     def update_params
-      params.permit(:name)
+      params.permit(:name, premium_integrations: [])
     end
 
     def create_params
-      params.permit(:name, :email)
+      params.permit(:name, :email, premium_integrations: [])
     end
   end
 end

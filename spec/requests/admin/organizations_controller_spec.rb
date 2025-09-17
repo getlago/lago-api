@@ -8,7 +8,8 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
   describe "PUT /admin/organizations/:id" do
     let(:update_params) do
       {
-        name: "FooBar"
+        name: "FooBar",
+        premium_integrations: ["okta"]
       }
     end
 
@@ -22,7 +23,12 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
       aggregate_failures do
         expect(json[:organization][:name]).to eq("FooBar")
-        expect(organization.reload.name).to eq("FooBar")
+        expect(json[:organization][:premium_integrations]).to include("okta")
+
+        organization.reload
+
+        expect(organization.name).to eq("FooBar")
+        expect(organization.premium_integrations).to include("okta")
       end
     end
   end
@@ -31,7 +37,8 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
     let(:create_params) do
       {
         name: "NewCo",
-        email: "admin@newco.test"
+        email: "admin@newco.test",
+        premium_integrations: ["okta"]
       }
     end
 
@@ -50,6 +57,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
         expect(response).to have_http_status(:created)
         expect(json[:organization][:name]).to eq("NewCo")
         expect(json[:invite_url]).to be_present
+        expect(json[:organization][:premium_integrations]).to include("okta")
       end
     end
 

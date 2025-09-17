@@ -16,6 +16,7 @@ module Admin
         return result.not_found_failure!(resource: "organization") unless organization
 
         organization.name = params[:name] if params.key?(:name)
+        organization.premium_integrations = params[:premium_integrations] if params.key?(:premium_integrations)
 
         organization.save!
 
