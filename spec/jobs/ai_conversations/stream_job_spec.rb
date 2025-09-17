@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AiConversations::StreamJob, type: :job do
+RSpec.describe AiConversations::StreamJob do
   let(:ai_conversation) { create(:ai_conversation) }
   let(:message) { Faker::Lorem.word }
 

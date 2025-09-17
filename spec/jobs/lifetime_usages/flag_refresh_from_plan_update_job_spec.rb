@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateJob, type: :job do
+RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateJob do
   let(:plan) { create(:plan) }
 
   it "delegates to the FlagRefreshFromPlanUpdate service" do

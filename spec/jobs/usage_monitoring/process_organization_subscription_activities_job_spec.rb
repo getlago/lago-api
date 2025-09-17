@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob, type: :job do
+RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob do
   let(:organization) { create(:organization) }
 
   before do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::OrganizationBillingJob, type: :job do
+RSpec.describe Subscriptions::OrganizationBillingJob do
   subject { described_class }
 
   describe ".perform" do

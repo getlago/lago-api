@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::BulkProcessJob, type: :job do
+RSpec.describe DunningCampaigns::BulkProcessJob do
   let(:result) { BaseService::Result.new }
 
   before do

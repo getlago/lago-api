@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Hubspot::Companies::DeployPropertiesJob, type: :job do
+RSpec.describe Integrations::Hubspot::Companies::DeployPropertiesJob do
   describe "#perform" do
     subject(:deploy_properties_job) { described_class }
 

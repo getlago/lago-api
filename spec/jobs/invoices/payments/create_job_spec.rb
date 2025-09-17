@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::CreateJob, type: :job do
+RSpec.describe Invoices::Payments::CreateJob do
   let(:invoice) { create(:invoice) }
   let(:payment_provider) { "stripe" }
 

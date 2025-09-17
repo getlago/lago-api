@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::UpdateJob, type: :job do
+RSpec.describe IntegrationCustomers::UpdateJob do
   subject(:create_job) { described_class }
 
   let(:update_service) { instance_double(IntegrationCustomers::UpdateService) }

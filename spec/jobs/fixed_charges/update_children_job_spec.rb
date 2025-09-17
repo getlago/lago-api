@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::UpdateChildrenJob, type: :job do
+RSpec.describe FixedCharges::UpdateChildrenJob do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:add_on) { create(:add_on, organization:) }

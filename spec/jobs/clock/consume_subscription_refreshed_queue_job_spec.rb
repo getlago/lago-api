@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Clock::ConsumeSubscriptionRefreshedQueueJob, type: :job do
+RSpec.describe Clock::ConsumeSubscriptionRefreshedQueueJob do
   subject(:refresh_jobs) { described_class }
 
   describe "#perform" do

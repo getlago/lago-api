@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::UpdateChildrenJob, type: :job do
+RSpec.describe Charges::UpdateChildrenJob do
   let(:charge) { create(:standard_charge) }
   let(:child_plan1) { create(:plan, parent_id: charge.plan.id) }
   let(:child_plan2) { create(:plan, parent_id: charge.plan.id) }

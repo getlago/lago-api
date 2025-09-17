@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::GeneratePdfJob, type: :job do
+RSpec.describe CreditNotes::GeneratePdfJob do
   let(:credit_note) { create(:credit_note) }
 
   let(:result) { BaseService::Result.new }

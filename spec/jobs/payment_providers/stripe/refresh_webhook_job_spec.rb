@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::RefreshWebhookJob, type: :job do
+RSpec.describe PaymentProviders::Stripe::RefreshWebhookJob do
   it "calls the refresh webhook service" do
     allow(PaymentProviders::Stripe::RefreshWebhookService).to receive(:call!)
 

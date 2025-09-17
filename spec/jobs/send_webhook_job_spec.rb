@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe SendWebhookJob, type: :job do
+RSpec.describe SendWebhookJob do
   subject(:send_webhook_job) { described_class }
 
   let(:organization) { create(:organization, webhook_url: "http://foo.bar") }

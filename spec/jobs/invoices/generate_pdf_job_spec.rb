@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::GeneratePdfJob, type: :job do
+RSpec.describe Invoices::GeneratePdfJob do
   let(:invoice) { create(:invoice) }
 
   let(:result) { BaseService::Result.new }

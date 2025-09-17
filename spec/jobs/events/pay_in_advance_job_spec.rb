@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::PayInAdvanceJob, type: :job do
+RSpec.describe Events::PayInAdvanceJob do
   let(:pay_in_advance_service) { instance_double(Events::PayInAdvanceService) }
   let(:result) { BaseService::Result.new }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::RegisterWebhookJob, type: :job do
+RSpec.describe PaymentProviders::Stripe::RegisterWebhookJob do
   it "calls the register webhook service" do
     allow(PaymentProviders::Stripe::RegisterWebhookService).to receive(:call!)
 

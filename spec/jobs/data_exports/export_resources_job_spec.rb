@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::ExportResourcesJob, type: :job do
+RSpec.describe DataExports::ExportResourcesJob do
   let(:data_export) { create(:data_export) }
   let(:result) { BaseService::Result.new }
 

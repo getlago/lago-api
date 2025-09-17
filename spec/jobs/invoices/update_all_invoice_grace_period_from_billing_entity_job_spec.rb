@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob, type: :job do
+RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob do
   subject { described_class.perform_now(billing_entity, old_grace_period) }
 
   let(:billing_entity) { create(:billing_entity) }

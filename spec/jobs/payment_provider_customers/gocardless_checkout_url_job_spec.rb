@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::GocardlessCheckoutUrlJob, type: :job do
+RSpec.describe PaymentProviderCustomers::GocardlessCheckoutUrlJob do
   subject(:gocardless_checkout_job) { described_class }
 
   let(:gocardless_customer) { create(:gocardless_customer) }

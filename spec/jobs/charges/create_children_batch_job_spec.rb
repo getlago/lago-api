@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateChildrenBatchJob, type: :job do
+RSpec.describe Charges::CreateChildrenBatchJob do
   let(:billable_metric) { create(:billable_metric) }
   let(:plan) { create(:plan, organization: billable_metric.organization) }
   let(:child_plan) { create(:plan, organization: billable_metric.organization, parent_id: plan.id) }

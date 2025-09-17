@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob, type: :job do
+RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
   let(:payment) { create(:payment) }
   let(:provider_payment_method_id) { "pm_001" }
 

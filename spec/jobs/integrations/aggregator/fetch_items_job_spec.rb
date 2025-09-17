@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::FetchItemsJob, type: :job do
+RSpec.describe Integrations::Aggregator::FetchItemsJob do
   subject(:fetch_items_job) { described_class }
 
   let(:items_service) { instance_double(Integrations::Aggregator::ItemsService) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::GocardlessCreateJob, type: :job do
+RSpec.describe Invoices::Payments::GocardlessCreateJob do
   let(:invoice) { create(:invoice) }
 
   it "calls the stripe create service" do

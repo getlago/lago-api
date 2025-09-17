@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::UpdateOrganizationEuTaxesJob, type: :job do
+RSpec.describe Taxes::UpdateOrganizationEuTaxesJob do
   let(:organization) { create(:organization) }
 
   describe ".perform" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::CreateJob, type: :job do
+RSpec.describe WalletTransactions::CreateJob do
   subject(:create_job) { described_class }
 
   let(:organization) { create(:organization) }

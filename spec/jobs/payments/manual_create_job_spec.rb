@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payments::ManualCreateJob, type: :job do
+RSpec.describe Payments::ManualCreateJob do
   let(:organization) { invoice.customer.organization }
   let(:invoice) { create(:invoice) }
   let(:params) { {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: "ref1"} }
