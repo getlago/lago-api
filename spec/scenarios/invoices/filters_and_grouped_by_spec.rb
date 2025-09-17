@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Invoices for charges with filters and grouped by", :scenarios, type: :request do
+RSpec.describe "Invoices for charges with filters and grouped by" do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
 
   let(:customer) { create(:customer, organization:) }

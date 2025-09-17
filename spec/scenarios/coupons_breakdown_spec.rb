@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Coupons breakdown Spec", :scenarios, type: :request do
+describe "Coupons breakdown Spec" do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do

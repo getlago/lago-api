@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Free Trial Billing Subscriptions Scenario", :scenarios, type: :request do
+describe "Free Trial Billing Subscriptions Scenario" do
   let(:timezone) { "UTC" }
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:billable_metric) { create(:billable_metric, organization:) }

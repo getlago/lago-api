@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Billing Subscriptions Scenario", :scenarios, type: :request do
+describe "Billing Subscriptions Scenario" do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   let(:timezone) { "UTC" }

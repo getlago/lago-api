@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Create credit note Scenarios", :scenarios, type: :request do
+describe "Create credit note Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 

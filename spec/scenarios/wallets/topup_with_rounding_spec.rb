@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Wallet Transaction with rounding", :scenarios, type: :request do
+describe "Wallet Transaction with rounding" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

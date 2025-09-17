@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscriptions Activation Scenario", :scenarios, type: :request do
+describe "Subscriptions Activation Scenario" do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   let(:timezone) { "America/Bogota" }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Invoice Payments Scenarios", :scenarios, type: :request do
+describe "Invoice Payments Scenarios" do
   let(:webhook_url) { "https://test.co/lago" }
   let(:organization) do
     create(:organization,

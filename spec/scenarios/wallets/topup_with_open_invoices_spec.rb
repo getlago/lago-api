@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Wallet Transaction with invoice after payment", :scenarios, type: :request do
+describe "Wallet Transaction with invoice after payment" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

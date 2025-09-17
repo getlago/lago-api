@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
+describe "Taxes on Invoice Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do

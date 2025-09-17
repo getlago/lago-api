@@ -89,6 +89,9 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: Regexp.new("/spec/graphql/")) do |metadata|
     metadata[:type] = :graphql
   end
+  config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
+    metadata[:type] = :request
+  end
 
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -113,6 +116,9 @@ RSpec.configure do |config|
       meta[:aggregate_failures] = true
     end
   end
+  config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
+    metadata[:with_pdf_generation_stub] = true unless metadata.key?(:with_pdf_generation_stub)
+  end
 
   # NOTE: Database cleaner config to turn off/on transactional mode
   config.before(:suite) do |example|
@@ -131,15 +137,15 @@ RSpec.configure do |config|
 
   config.include_context "with Time travel enabled", :time_travel
 
+  config.before(:each, :with_pdf_generation_stub) do |example|
+    stub_pdf_generation
+  end
+
   config.before do |example|
     metadata = example.metadata
 
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
-
-    if metadata[:scenarios]
-      stub_pdf_generation
-    end
 
     if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))

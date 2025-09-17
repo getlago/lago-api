@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request do
+describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }

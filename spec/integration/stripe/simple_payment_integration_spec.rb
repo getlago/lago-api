@@ -8,7 +8,7 @@ require "rails_helper"
 # things still work when upgrading the API version.
 # This also creates logs on Stripe so you can copy past them to update the fixtures.
 
-describe "Stripe Payment Integration Test", :scenarios, type: :request do
+describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :request do
   let(:api_key) { ENV["STRIPE_API_KEY"] }
 
   let(:organization) { create(:organization, :premium, name: "Stripe IRL") }

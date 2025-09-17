@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscription manual termination", :scenarios, type: :request do
+describe "Subscription manual termination" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "item_count") }
