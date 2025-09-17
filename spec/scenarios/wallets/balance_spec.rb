@@ -22,31 +22,63 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     perform_usage_update
   end
 
+  def expect_to_be_a_topup_transaction(transaction, amount:, credit_amount:, metadata: [])
+    expect(transaction).to be_present
+    expect(transaction.source).to eq("manual")
+    expect(transaction.transaction_type).to eq("inbound")
+    expect(transaction.transaction_status).to eq("granted")
+    expect(transaction.status).to eq("settled")
+    expect(transaction.credit_amount).to eq(credit_amount)
+    expect(transaction.amount).to eq(amount)
+    expect(transaction.metadata).to eq(metadata)
+  end
+
+  def expect_to_be_an_invoiced_transaction(transaction, amount:, credit_amount:, metadata: [])
+    expect(transaction).to be_present
+    expect(transaction.source).to eq("manual")
+    expect(transaction.transaction_type).to eq("outbound")
+    expect(transaction.transaction_status).to eq("invoiced")
+    expect(transaction.status).to eq("settled")
+    expect(transaction.credit_amount).to eq(credit_amount)
+    expect(transaction.amount).to eq(amount)
+    expect(transaction.metadata).to eq(metadata)
+  end
+
+  def create_wallet_with_defaults(granted_credits: "10", rate_amount: "1", transaction_metadata: [])
+    create_wallet({
+      external_customer_id: customer.external_id,
+      rate_amount: rate_amount,
+      name: "Wallet1",
+      currency: "EUR",
+      granted_credits:,
+      invoice_requires_successful_payment: false, # default
+      transaction_metadata: transaction_metadata
+    }, as: :model)
+  end
+
   context "when a wallet created for a user with plain plan and usage-based charge" do
     before do
       charge
     end
 
     it "recalculates wallet's balance" do
-      # Create a wallet with 10$
-      create_wallet({
-        external_customer_id: customer.external_id,
-        rate_amount: "1",
-        name: "Wallet1",
-        currency: "EUR",
-        granted_credits: "10",
-        invoice_requires_successful_payment: false # default
-      })
-      wallet = customer.reload.wallets.sole
-      expect(wallet.credits_balance).to eq 10
-      expect(wallet.balance_cents).to eq 1000
-      expect(wallet.ongoing_balance_cents).to eq 1000
-      expect(wallet.ongoing_usage_balance_cents).to eq 0
-      expect(wallet.credits_ongoing_usage_balance).to eq 0
+      time_0 = DateTime.new(2022, 11, 30)
+      wallet = nil
+      travel_to time_0 do
+        # Create a wallet with 10$
+        wallet = create_wallet_with_defaults
+        expect(wallet.credits_balance).to eq 10
+        expect(wallet.balance_cents).to eq 1000
+        expect(wallet.ongoing_balance_cents).to eq 1000
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+
+        expect_to_be_a_topup_transaction(wallet.wallet_transactions.first, amount: 10, credit_amount: 10)
+      end
 
       # create a subscription
-      time_0 = DateTime.new(2022, 12, 1)
-      travel_to time_0 do
+      time_1 = time_0 + 1.day
+      travel_to time_1 do
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -59,7 +91,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
 
       # ingest events that would not use all wallet balance
       # the balance is not changed, but ongoing balance is updated
-      travel_to time_0 + 5.days do
+      travel_to time_1 + 5.days do
         ingest_event(subscription, 5)
         expect(subscription.invoices.count).to eq(0)
         recalculate_wallet_balances
@@ -70,13 +102,15 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.ongoing_usage_balance_cents).to eq 500
         expect(wallet.credits_ongoing_balance).to eq 5
         expect(wallet.credits_ongoing_usage_balance).to eq 5
+
+        expect(wallet.wallet_transactions.count).to eq(1)
       end
 
       # billing run; the invoice stays in draft:
       # balance is not changed, ongoing balance takes into account the draft invoice
       # (total amount including the subscription fee is 6$)
-      time_1 = time_0 + 1.month
-      travel_to time_1 do
+      time_2 = time_1 + 1.month
+      travel_to time_2 do
         perform_billing
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("draft")
@@ -88,11 +122,13 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 4
         expect(wallet.ongoing_usage_balance_cents).to eq 600
         expect(wallet.credits_ongoing_usage_balance).to eq 6
+
+        expect(wallet.wallet_transactions.count).to eq(1)
       end
 
       # ingest some events for the new billing_period
       # current usage = 6$ draft invoice + 3$ new usage = 9$
-      travel_to time_1 + 5.days do
+      travel_to time_2 + 5.days do
         ingest_event(subscription, 3)
         recalculate_wallet_balances
         wallet.reload
@@ -102,13 +138,15 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 1
         expect(wallet.ongoing_usage_balance_cents).to eq 900
         expect(wallet.credits_ongoing_usage_balance).to eq 9
+
+        expect(wallet.wallet_transactions.count).to eq(1)
       end
 
       # 11th day of the billing period; the invoice is finalized
       # invoice sum = 6$ is deducted from the balance,
       # no need to recalculate balance as it's recalculated when credits are applied
       # remaining current usage is 3$
-      travel_to time_1 + 10.days do
+      travel_to time_2 + 10.days do
         perform_finalize_refresh
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("finalized")
@@ -119,6 +157,9 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 1
         expect(wallet.ongoing_usage_balance_cents).to eq 300
         expect(wallet.credits_ongoing_usage_balance).to eq 3
+
+        expect(wallet.wallet_transactions.length).to eq(2)
+        expect_to_be_an_invoiced_transaction(wallet.wallet_transactions.max_by(&:created_at), amount: 6, credit_amount: 6)
       end
     end
   end
@@ -134,15 +175,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
 
     it "recalculates wallet's balance" do
       # Create a wallet with 100$
-      create_wallet({
-        external_customer_id: customer.external_id,
-        rate_amount: "1",
-        name: "Wallet1",
-        currency: "EUR",
-        granted_credits: "100",
-        invoice_requires_successful_payment: false # default
-      })
-      wallet = customer.reload.wallets.sole
+      wallet = create_wallet_with_defaults(granted_credits: "100")
       expect(wallet.credits_balance).to eq 100
       expect(wallet.balance_cents).to eq 10000
       expect(wallet.ongoing_balance_cents).to eq 10000
@@ -175,6 +208,10 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 45
         expect(wallet.ongoing_usage_balance_cents).to eq 0
         expect(wallet.credits_ongoing_usage_balance).to eq 0
+
+        transactions = wallet.wallet_transactions
+        expect(transactions.length).to eq(2)
+        # expect_to_be_an_invoiced_transaction(transactions.first, amount: 4500, credit_amount: 45)
       end
 
       # when the subscription invoice is generated it is not paid straight ahead with the wallet
@@ -209,25 +246,24 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     before { [charge1, charge2, charge3, usage_threshold, tax] }
 
     it "recalculates wallet's balance" do
-      # Create a wallet with 1000$
-      create_wallet({
-        external_customer_id: customer.external_id,
-        rate_amount: "10",
-        name: "Wallet1",
-        currency: "EUR",
-        granted_credits: "100",
-        invoice_requires_successful_payment: false # default
-      })
-      wallet = customer.reload.wallets.sole
-      expect(wallet.credits_balance).to eq 100
-      expect(wallet.balance_cents).to eq 1000_00
-      expect(wallet.ongoing_balance_cents).to eq 1000_00
-      expect(wallet.ongoing_usage_balance_cents).to eq 0
-      expect(wallet.credits_ongoing_usage_balance).to eq 0
-
       # create all subscriptions
-      time_0 = DateTime.new(2022, 12, 1)
+      time_0 = DateTime.new(2022, 11, 30)
+      wallet = nil
       travel_to time_0 do
+        wallet = create_wallet_with_defaults(rate_amount: "10", granted_credits: "100", transaction_metadata: [{key: "transaction_id", value: "123"}])
+        expect(wallet.credits_balance).to eq 100
+        expect(wallet.balance_cents).to eq 1000_00
+        expect(wallet.ongoing_balance_cents).to eq 1000_00
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+
+        transactions = wallet.wallet_transactions
+        expect(transactions.length).to eq(1)
+
+        expect_to_be_a_topup_transaction(transactions.first, amount: 1000, credit_amount: 100, metadata: [{"key" => "transaction_id", "value" => "123"}])
+      end
+
+      travel_to time_0 + 1.day do
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -277,13 +313,18 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 85.7
         expect(wallet.ongoing_usage_balance_cents).to eq 121_00
         expect(wallet.credits_ongoing_usage_balance).to eq 12.1
+
+        transactions = wallet.wallet_transactions.sort_by(&:created_at)
+        expect(transactions.length).to eq(2)
+
+        expect_to_be_an_invoiced_transaction(transactions.last, amount: 22, credit_amount: 2.2)
       end
 
       # ingest second events that would affect all subscriptions
       # units = 10
       # sub1 total = 10 * 1 = 10 + 10% tax = 11
       # sub2 total = 10 * 2 = 20 + 10% tax = 22 - will be billed immediately
-      # sub3 total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached
+      # sub3 total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached at 200 (110 + 110)
       travel_to time_0 + 10.days do
         ingest_event(subscription1, 10)
         ingest_event(subscription2, 10)
@@ -304,6 +345,15 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 71.4
         expect(wallet.ongoing_usage_balance_cents).to eq 22_00
         expect(wallet.credits_ongoing_usage_balance).to eq 2.2
+
+        transactions = wallet.wallet_transactions
+        expect(transactions.length).to eq(4)
+
+        third_transaction = transactions.find { |t| t.invoice_id == subscription2.invoices.last.id }
+        expect_to_be_an_invoiced_transaction(third_transaction, amount: 22, credit_amount: 2.2)
+
+        fourth_transaction = transactions.find { |t| t.invoice_id == subscription3.invoices.last.id }
+        expect_to_be_an_invoiced_transaction(fourth_transaction, amount: 220, credit_amount: 22)
       end
 
       # ingest third event only affecting third subscription
@@ -326,6 +376,12 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_balance).to eq 49.4
         expect(wallet.ongoing_usage_balance_cents).to eq 22_00
         expect(wallet.credits_ongoing_usage_balance).to eq 2.2
+
+        transactions = wallet.wallet_transactions
+        expect(transactions.length).to eq(5)
+
+        fifth_transaction = transactions.max_by(&:created_at)
+        expect_to_be_an_invoiced_transaction(fifth_transaction, amount: 220, credit_amount: 22)
       end
     end
   end
@@ -343,15 +399,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
 
     it "recalculates wallet's balance" do
       # Create a wallet with 1000$
-      create_wallet({
-        external_customer_id: customer.external_id,
-        rate_amount: "10",
-        name: "Wallet1",
-        currency: "EUR",
-        granted_credits: "100",
-        invoice_requires_successful_payment: false # default
-      })
-      wallet = customer.reload.wallets.sole
+      wallet = create_wallet_with_defaults(rate_amount: "10", granted_credits: "100")
       expect(wallet.credits_balance).to eq 100
       expect(wallet.balance_cents).to eq 1000_00
       expect(wallet.ongoing_balance_cents).to eq 1000_00
