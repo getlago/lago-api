@@ -10,7 +10,8 @@ RSpec.describe Organizations::CreateService, type: :service do
       let(:params) do
         {
           name: Faker::Company.name,
-          document_numbering: "per_customer"
+          document_numbering: "per_customer",
+          premium_integrations: ["okta"]
         }
       end
 
@@ -19,7 +20,11 @@ RSpec.describe Organizations::CreateService, type: :service do
 
         expect(service_result.organization)
           .to be_persisted
-          .and have_attributes(name: params[:name], document_numbering: params[:document_numbering])
+          .and have_attributes(
+            name: params[:name],
+            document_numbering: params[:document_numbering],
+            premium_integrations: params[:premium_integrations]
+          )
       end
 
       it "creates an API key for created organization" do
