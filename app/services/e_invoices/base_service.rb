@@ -132,6 +132,16 @@ module EInvoices
       end
     end
 
+    def fee_description(fee)
+      return fee.invoice_name if fee.invoice_name.present?
+
+      I18n.t(
+        "invoice.subscription_interval",
+        plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
+        plan_name: fee.subscription.plan.invoice_name
+      )
+    end
+
     def percent(value)
       format_number(value, "%.2f%%")
     end

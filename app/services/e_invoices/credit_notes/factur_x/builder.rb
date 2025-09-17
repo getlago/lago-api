@@ -19,7 +19,7 @@ module EInvoices
           xml.comment "Supply Chain Trade Transaction"
           xml["rsm"].SupplyChainTradeTransaction do
             line_items do |fee, line_id|
-              FacturX::LineItem.call(xml:, resource:, fee:, line_id:)
+              FacturX::LineItem.call(xml:, resource:, data: line_item_data(line_id, fee))
             end
 
             FacturX::TradeAgreement.call(xml:, resource:)
@@ -56,6 +56,20 @@ module EInvoices
           tax_amount: -credit_note.taxes_amount,
           grand_total_amount: -credit_note.total_amount,
           due_payable_amount: -credit_note.credit_amount
+        )
+      end
+
+      def line_item_data(index, fee)
+        category = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+        FacturX::LineItem::Data.new(
+          line_id: index,
+          name: fee.item_name,
+          description: fee_description(fee),
+          charge_amount: fee.precise_unit_amount,
+          billed_quantity: -fee.units,
+          category_code: category,
+          rate_percent: (category != O_CATEGORY) ? fee.taxes_rate : nil,
+          line_total_amount: -fee.amount
         )
       end
     end

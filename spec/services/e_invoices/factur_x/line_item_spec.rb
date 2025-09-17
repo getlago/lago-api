@@ -5,13 +5,26 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::LineItem, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, resource:, fee:, line_id:)
+      described_class.call(xml:, resource:, data:)
     end
   end
 
   let(:resource) { create(:invoice) }
+  let(:data) do
+    described_class::Data.new(
+      line_id:,
+      name: fee.item_name,
+      description: fee.invoice_name,
+      charge_amount: fee.precise_unit_amount,
+      billed_quantity: fee.units,
+      category_code: described_class::S_CATEGORY,
+      rate_percent:,
+      line_total_amount: fee.amount
+    )
+  end
   let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:, fee_type:) }
   let(:taxes_rate) { 20.00 }
+  let(:rate_percent) { taxes_rate }
   let(:fee_type) { :subscription }
   let(:line_id) { 1 }
 
@@ -34,16 +47,8 @@ RSpec.describe EInvoices::FacturX::LineItem, type: :service do
     end
 
     context "when Description tag" do
-      it "uses name when description not available" do
+      it "uses description data field" do
         expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value(fee.invoice_name)
-      end
-
-      context "with description field" do
-        before { fee.update(description: "Test me") }
-
-        it "uses description field" do
-          expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value("Test me")
-        end
       end
     end
 
@@ -71,22 +76,6 @@ RSpec.describe EInvoices::FacturX::LineItem, type: :service do
           expect(subject).to contains_xml_node(xpath).with_value("S")
         end
       end
-
-      context "when taxes are zero" do
-        let(:taxes_rate) { 0.00 }
-
-        it "has the Z category code" do
-          expect(subject).to contains_xml_node(xpath).with_value("Z")
-        end
-      end
-
-      context "when credit fee" do
-        let(:fee_type) { :credit }
-
-        it "has the O category code" do
-          expect(subject).to contains_xml_node(xpath).with_value("O")
-        end
-      end
     end
 
     context "when RateApplicablePercent" do
@@ -96,8 +85,8 @@ RSpec.describe EInvoices::FacturX::LineItem, type: :service do
         ).with_value(fee.taxes_rate)
       end
 
-      context "when credit fee" do
-        let(:fee_type) { :credit }
+      context "when rate_percent is not available" do
+        let(:rate_percent) { nil }
 
         it "doesnt have the tag" do
           expect(subject).not_to contains_xml_node(
@@ -111,26 +100,6 @@ RSpec.describe EInvoices::FacturX::LineItem, type: :service do
       expect(subject).to contains_xml_node(
         "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
       ).with_value(fee.amount)
-    end
-
-    context "when resource is a credit_note" do
-      let(:resource) { create(:credit_note) }
-
-      context "with BilledQuantity" do
-        let(:xpath) { "#{root}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity" }
-
-        it "have the item negative units" do
-          expect(subject).to contains_xml_node(xpath)
-            .with_value(-fee.units)
-            .with_attribute("unitCode", "C62")
-        end
-      end
-
-      it "have the negative item total amount" do
-        expect(subject).to contains_xml_node(
-          "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
-        ).with_value(-fee.amount)
-      end
     end
   end
 end
