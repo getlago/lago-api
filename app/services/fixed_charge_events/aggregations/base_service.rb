@@ -3,13 +3,18 @@
 module FixedChargeEvents
   module Aggregations
     class BaseService < BaseService
-      def initialize(fixed_charge:, subscription:, charges_from_datetime:, charges_to_datetime:)
+      Result = BaseResult[:count, :aggregation, :current_usage_units, :full_units_number, :total_aggregated_units]
+
+      def initialize(fixed_charge:, subscription:, boundaries:)
         @fixed_charge = fixed_charge
         @subscription = subscription
-        @from_datetime = charges_from_datetime
-        # NOTE: we add 1 day to the duration to include the last day of the period. Also note: this is a DAY, not datetime
-        @to_datetime = charges_to_datetime + 1.day
         @customer = subscription.customer
+        @from_datetime = boundaries.charges_from_datetime.in_time_zone(customer.applicable_timezone).to_date
+        # NOTE: we add 1 day to the duration to include the last day of the period.
+        @to_datetime = boundaries.charges_to_datetime.in_time_zone(customer.applicable_timezone).to_date + 1.day
+        @charges_duration = to_datetime - from_datetime
+
+        super(nil)
       end
 
       def call
@@ -18,7 +23,7 @@ module FixedChargeEvents
 
       private
 
-      attr_reader :fixed_charge, :subscription, :from_datetime, :to_datetime, :customer
+      attr_reader :fixed_charge, :subscription, :from_datetime, :to_datetime, :customer, :charges_duration
 
       def base_events
         @events ||= FixedChargeEvent.where(fixed_charge:, subscription:)
@@ -29,14 +34,9 @@ module FixedChargeEvents
           events_in_period_ids = base_events.where("timestamp >= ? AND timestamp < ?", from_datetime, to_datetime).ids
           last_event_before_range_id = base_events.where("created_at < ?", from_datetime).where("timestamp < ?", from_datetime).order(created_at: :desc).limit(1).ids
 
-          # Combine using UNION
           FixedChargeEvent.where(id: events_in_period_ids + last_event_before_range_id)
             .order(created_at: :asc)
         end
-      end
-
-      def charges_duration
-        @charges_duration ||= (to_datetime.to_date - from_datetime.to_date)
       end
     end
   end

@@ -15,7 +15,8 @@ module FixedChargeEvents
           ]
         )
         result = ActiveRecord::Base.connection.select_one(sql)
-        result["aggregation"]
+        result.aggregation = result["aggregation"]
+        result
       end
 
       private
