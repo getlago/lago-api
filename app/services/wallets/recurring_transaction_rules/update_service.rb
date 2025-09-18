@@ -20,7 +20,7 @@ module Wallets
           lago_id = payload_rule[:lago_id]
           rule_attributes = payload_rule.except(:lago_id)
           # Normalize transaction_name to nil if empty
-          rule_attributes[:transaction_name] = rule[:transaction_name].presence if rule.key?(:transaction_name)
+          rule_attributes[:transaction_name] = rule_attributes[:transaction_name].presence if rule_attributes.key?(:transaction_name)
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 

@@ -163,8 +163,6 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         end
 
         it "updates existing recurring transaction rule with new transaction_name" do
-          result = update_service.call
-
           rule = result.wallet.reload.recurring_transaction_rules.active.first
           expect(rule.transaction_name).to eq(expected_transaction_name)
         end
