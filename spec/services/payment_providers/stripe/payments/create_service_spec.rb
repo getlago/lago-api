@@ -354,8 +354,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             "payment.requires_action",
-            result.payment,
-            provider_customer_id: stripe_customer.provider_customer_id
+            result.payment
           )
       end
     end

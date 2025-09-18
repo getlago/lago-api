@@ -60,9 +60,7 @@ module PaymentProviders
         delegate :payment_provider, to: :provider_customer
 
         def handle_requires_action(payment)
-          SendWebhookJob.perform_later("payment.requires_action", payment, {
-            provider_customer_id: provider_customer.provider_customer_id
-          })
+          SendWebhookJob.perform_later("payment.requires_action", payment)
         end
 
         def stripe_payment_method

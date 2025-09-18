@@ -16,6 +16,29 @@ RSpec.describe ::V1::PaymentSerializer do
       it "serializes the object" do
         result = JSON.parse(serializer.to_json)
 
+        expect(result["payment"].keys).to eq(%w[
+          lago_id
+          lago_customer_id
+          external_customer_id
+          invoice_ids
+          lago_payable_id
+          payable_type
+          amount_cents
+          amount_currency
+          status
+          payment_status
+          type
+          reference
+          payment_provider_code
+          payment_provider_type
+          external_payment_id
+          provider_payment_id
+          provider_customer_id
+          next_action
+          created_at
+        ])
+
+        # NOTE: Ensure all fields from PaymentSerializer before refactor are set
         expect(result["payment"]).to include(
           "lago_id" => payment.id,
           "invoice_ids" => [payment.payable.id],
@@ -26,6 +49,22 @@ RSpec.describe ::V1::PaymentSerializer do
           "reference" => payment.reference,
           "external_payment_id" => payment.provider_payment_id,
           "created_at" => payment.created_at.iso8601
+        )
+
+        # NOTE: Ensure all fields from `RequiresActionSerializer` are still set
+        expect(result["payment"]).to include(
+          "lago_id" => payment.id,
+          "amount_cents" => payment.amount_cents,
+          "amount_currency" => payment.amount_currency,
+          "status" => payment.status,
+          "lago_payable_id" => payment.payable_id,
+          "lago_customer_id" => payment.payable.customer_id,
+          "external_customer_id" => payment.payable.customer.external_id,
+          "provider_customer_id" => payment.payment_provider_customer.provider_customer_id,
+          "payment_provider_code" => payment.payment_provider.code,
+          "payment_provider_type" => "PaymentProviders::StripeProvider",
+          "provider_payment_id" => payment.provider_payment_id,
+          "next_action" => {}
         )
       end
     end

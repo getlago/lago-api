@@ -19,6 +19,7 @@ module PaymentIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
+          # TODO: EAGER LOAD STUFF
           result.payments,
           ::V1::PaymentSerializer,
           collection_name: resource_name.pluralize,
