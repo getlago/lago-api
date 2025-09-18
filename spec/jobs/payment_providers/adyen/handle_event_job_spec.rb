@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Adyen::HandleEventJob, type: :job do
+RSpec.describe PaymentProviders::Adyen::HandleEventJob do
   subject(:handle_event_job) { described_class }
 
   let(:result) { BaseService::Result.new }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::ProcessAttemptJob, type: :job do
+RSpec.describe DunningCampaigns::ProcessAttemptJob do
   let(:result) { BaseService::Result.new }
   let(:customer) { build :customer }
   let(:dunning_campaign_threshold) { build :dunning_campaign_threshold }

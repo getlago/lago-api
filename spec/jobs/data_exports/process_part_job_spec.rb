@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::ProcessPartJob, type: :job do
+RSpec.describe DataExports::ProcessPartJob do
   let(:data_export_part) { create(:data_export_part) }
   let(:result) { BaseService::Result.new }
 

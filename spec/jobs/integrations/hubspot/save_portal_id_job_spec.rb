@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Hubspot::SavePortalIdJob, type: :job do
+RSpec.describe Integrations::Hubspot::SavePortalIdJob do
   describe "#perform" do
     subject(:job) { described_class }
 

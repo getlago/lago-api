@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::FinalizeJob, type: :job do
+RSpec.describe Invoices::FinalizeJob do
   let(:invoice) { create(:invoice) }
 
   let(:result) { BaseService::Result.new }

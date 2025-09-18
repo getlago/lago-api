@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DailyUsages::FillFromInvoiceJob, type: :job do
+RSpec.describe DailyUsages::FillFromInvoiceJob do
   subject(:compute_job) { described_class }
 
   let(:subscription) { create(:subscription) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::CreateChildrenBatchJob, type: :job do
+RSpec.describe FixedCharges::CreateChildrenBatchJob do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:add_on) { create(:add_on, organization:) }

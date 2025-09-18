@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::DestroyJob, type: :job do
+RSpec.describe Plans::DestroyJob do
   include ActiveJob::TestHelper
 
   let(:plan) { create(:plan) }

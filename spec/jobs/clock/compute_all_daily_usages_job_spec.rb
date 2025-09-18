@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Clock::ComputeAllDailyUsagesJob, type: :job do
+RSpec.describe Clock::ComputeAllDailyUsagesJob do
   subject(:compute_job) { described_class }
 
   describe ".perform" do

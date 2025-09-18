@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::RefreshOngoingBalanceJob, type: :job do
+RSpec.describe Wallets::RefreshOngoingBalanceJob do
   let(:wallet) { create(:wallet, ready_to_be_refreshed: true) }
   let(:result) { BaseService::Result.new }
 

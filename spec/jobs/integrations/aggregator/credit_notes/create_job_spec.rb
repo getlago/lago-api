@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::CreditNotes::CreateJob, type: :job do
+RSpec.describe Integrations::Aggregator::CreditNotes::CreateJob do
   subject(:create_job) { described_class }
 
   let(:service) { instance_double(Integrations::Aggregator::CreditNotes::CreateService) }

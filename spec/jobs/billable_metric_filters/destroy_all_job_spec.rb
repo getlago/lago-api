@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe BillableMetricFilters::DestroyAllJob, type: :job do
+RSpec.describe BillableMetricFilters::DestroyAllJob do
   let(:billable_metric) { create(:billable_metric, :discarded) }
 
   it "destroys all filters and filter values" do

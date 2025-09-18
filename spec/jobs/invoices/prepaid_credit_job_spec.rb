@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PrepaidCreditJob, type: :job do
+RSpec.describe Invoices::PrepaidCreditJob do
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:customer) { create(:customer) }
   let(:subscription) { create(:subscription, customer:) }

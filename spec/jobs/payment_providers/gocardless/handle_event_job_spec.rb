@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Gocardless::HandleEventJob, type: :job do
+RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
   subject(:handle_event_job) { described_class }
 
   let(:gocardless_service) { instance_double(PaymentProviders::GocardlessService) }

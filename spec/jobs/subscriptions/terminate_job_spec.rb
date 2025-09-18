@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::TerminateJob, type: :job do
+RSpec.describe Subscriptions::TerminateJob do
   let(:subscription) { create(:subscription) }
   let(:timestamp) { Time.zone.now.to_i }
 

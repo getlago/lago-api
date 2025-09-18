@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::RecalculateAndCheckJob, type: :job do
+RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
   let(:lifetime_usage) { create(:lifetime_usage) }
 
   it "delegates to the RecalculateAndCheck service" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillSubscriptionJob, type: :job do
+RSpec.describe BillSubscriptionJob do
   let(:subscriptions) { [create(:subscription)] }
   let(:timestamp) { Time.zone.now.to_i }
 

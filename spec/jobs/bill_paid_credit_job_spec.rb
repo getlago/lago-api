@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillPaidCreditJob, type: :job do
+RSpec.describe BillPaidCreditJob do
   let(:wallet_transaction) { create(:wallet_transaction) }
   let(:timestamp) { Time.current.to_i }
 

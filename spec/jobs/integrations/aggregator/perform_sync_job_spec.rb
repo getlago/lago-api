@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
+RSpec.describe Integrations::Aggregator::PerformSyncJob do
   subject(:perform_sync_job) { described_class.perform_now(integration:, sync_items:) }
 
   let(:sync_service) { instance_double(Integrations::Aggregator::SyncService) }

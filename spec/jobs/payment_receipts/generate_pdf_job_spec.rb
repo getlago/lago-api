@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceipts::GeneratePdfJob, type: :job do
+RSpec.describe PaymentReceipts::GeneratePdfJob do
   let(:payment_receipt) { create(:payment_receipt) }
   let(:result) { BaseService::Result.new }
   let(:generate_service) { instance_double(PaymentReceipts::GeneratePdfService) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::RetryViesCheckJob, type: :job do
+RSpec.describe Customers::RetryViesCheckJob do
   let(:customer) { create(:customer, tax_identification_number: "IE6388047V") }
   let(:vies_response) do
     {

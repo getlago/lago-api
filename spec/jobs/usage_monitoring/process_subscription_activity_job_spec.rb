@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob, type: :job do
+RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob do
   describe "#perform" do
     let(:subscription_activity) { create(:subscription_activity) }
     let(:subscription_activity_id) { subscription_activity.id }

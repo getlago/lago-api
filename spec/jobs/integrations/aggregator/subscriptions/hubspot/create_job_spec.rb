@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateJob, type: :job do
+RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateJob do
   subject(:create_job) { described_class }
 
   let(:service) { instance_double(Integrations::Aggregator::Subscriptions::Hubspot::CreateService) }

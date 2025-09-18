@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
+RSpec.describe Invoices::Payments::RetryAllJob do
   subject(:retry_all_job) { described_class }
 
   let(:retry_batch_service) { instance_double(Invoices::Payments::RetryBatchService) }

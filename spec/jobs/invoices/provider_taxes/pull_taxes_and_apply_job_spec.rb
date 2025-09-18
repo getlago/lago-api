@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
+RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:) }
   let(:customer) { create(:customer, organization:) }

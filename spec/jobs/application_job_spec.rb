@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApplicationJob, type: :job do
+RSpec.describe ApplicationJob do
   let(:job_class) do
     Class.new(ApplicationJob) do
       def perform(arg1, arg2, option: "default")
