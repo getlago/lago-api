@@ -3,19 +3,24 @@
 require "rails_helper"
 
 RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
-  subject { described_class.new(fixed_charge:, subscription:, charges_from_datetime:, charges_to_datetime:) }
+  subject { described_class.new(fixed_charge:, subscription:, boundaries:) }
 
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
   let(:charges_from_datetime) { 9.days.ago }
   let(:charges_to_datetime) { Time.current }
   let(:events) { [] }
+  let(:boundaries) do
+    Struct.new(:charges_from_datetime, :charges_to_datetime).new(charges_from_datetime, charges_to_datetime)
+  end
 
   before { events }
 
   context "when there are no events" do
     it "returns 0" do
-      expect(subject.call).to eq(0)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(0)
     end
   end
 
@@ -27,7 +32,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     before { events }
 
     it "returns the simple aggregation" do
-      expect(subject.call).to eq(10)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(10)
     end
   end
 
@@ -39,7 +46,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     before { events }
 
     it "returns the simple aggregation" do
-      expect(subject.call).to eq(10)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(10)
     end
   end
 
@@ -52,7 +61,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     before { events }
 
     it "returns the simple aggregation" do
-      expect(subject.call).to eq(100)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(100)
     end
   end
 
@@ -65,7 +76,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
 
     context "when aggregating for the current period" do
       it "returns the simple aggregation" do
-        expect(subject.call).to eq(100)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(100)
       end
     end
 
@@ -74,7 +87,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
       let(:charges_to_datetime) { 10.days.from_now }
 
       it "returns the simple aggregation erasing the event for the next billing period created before last event of this billing period" do
-        expect(subject.call).to eq(100)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(100)
       end
     end
   end
@@ -102,7 +117,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
       let(:charges_to_datetime) { Date.new(2025, 1, 31) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
-        expect(subject.call).to eq(7)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(7)
       end
     end
 
@@ -111,7 +128,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
       let(:charges_to_datetime) { Date.new(2025, 2, 28) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
-        expect(subject.call).to eq(70)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(70)
       end
     end
 
@@ -120,7 +139,9 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
       let(:charges_to_datetime) { Date.new(2025, 3, 31) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
-        expect(subject.call).to eq(70)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(70)
       end
     end
   end

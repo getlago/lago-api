@@ -3,16 +3,21 @@
 require "rails_helper"
 
 RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
-  subject { described_class.new(fixed_charge:, subscription:, charges_from_datetime:, charges_to_datetime:) }
+  subject { described_class.new(fixed_charge:, subscription:, boundaries:) }
 
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
   let(:charges_from_datetime) { 9.days.ago } # total duration is 10 days
   let(:charges_to_datetime) { Time.current }
+  let(:boundaries) do
+    Struct.new(:charges_from_datetime, :charges_to_datetime).new(charges_from_datetime, charges_to_datetime)
+  end
 
   context "when there are no events" do
     it "returns 0" do
-      expect(subject.call).to eq(0)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(0)
     end
   end
 
@@ -25,7 +30,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
     # the result is 2 * 5/10 = 1
     it "returns the prorated aggregation" do
-      expect(subject.call).to eq(1)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(1)
     end
   end
 
@@ -39,7 +46,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
     # the result is 100 * 10/10 = 100
     it "returns the prorated aggregation" do
-      expect(subject.call).to eq(100)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(100)
     end
   end
 
@@ -53,7 +62,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
     # the result is 100 * 9/10 + 10 * 1/10 = 91
     it "returns the prorated aggregation" do
-      expect(subject.call).to eq(91)
+      result = subject.call
+      expect(result).to be_success
+      expect(result.aggregation).to eq(91)
     end
   end
 
@@ -68,7 +79,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
     context "when aggregating for current period" do
       it "returns the prorated aggregation" do
         # 20 * 10/10 = 20
-        expect(subject.call).to eq(20)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(20)
       end
     end
 
@@ -78,7 +91,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
       it "returns the prorated aggregation" do
         # 10 * 10/10 = 10
-        expect(subject.call).to eq(10)
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(10)
       end
     end
 
@@ -92,7 +107,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
       context "when aggregating for the current period" do
         it "returns the prorated aggregation" do
           # 20 * 9/10 + 100 * 1/10 = 28
-          expect(subject.call).to eq(28)
+          result = subject.call
+          expect(result).to be_success
+          expect(result.aggregation).to eq(28)
         end
       end
 
@@ -102,7 +119,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
         it "returns the prorated aggregation erasing the event for the next billing period created before last event of this billing period" do
           # 100 * 10/10 = 100
-          expect(subject.call).to eq(100)
+          result = subject.call
+          expect(result).to be_success
+          expect(result.aggregation).to eq(100)
         end
       end
     end
@@ -131,7 +150,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
         it "returns the prorated aggregation" do
           # 10 * 19/31 + 7 * 12/31 = 8.8387
-          expect(subject.call.round(2)).to eq(8.84)
+          result = subject.call
+          expect(result).to be_success
+          expect(result.aggregation.round(2)).to eq(8.84)
         end
       end
 
@@ -141,7 +162,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
         it "returns the prorated aggregation" do
           # 7 * 9/28 + 70 * 19/28 = 49.75
-          expect(subject.call.round(2)).to eq(49.75)
+          result = subject.call
+          expect(result).to be_success
+          expect(result.aggregation.round(2)).to eq(49.75)
         end
       end
 
@@ -151,7 +174,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
         it "returns the prorated aggregation" do
           # 70 * 31/31 = 70
-          expect(subject.call.round(2)).to eq(70)
+          result = subject.call
+          expect(result).to be_success
+          expect(result.aggregation.round(2)).to eq(70)
         end
       end
     end
