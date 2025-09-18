@@ -67,6 +67,27 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
           expect(response).to have_http_status(:ok)
           expect(json[:payments].count).to eq(1)
           expect(json[:payments].first[:lago_id]).to eq(payment_1.id)
+          expect(json[:payments].first.keys).to eq(%i[
+            lago_id
+            lago_customer_id
+            external_customer_id
+            invoice_ids
+            lago_payable_id
+            payable_type
+            amount_cents
+            amount_currency
+            status
+            payment_status
+            type
+            reference
+            payment_provider_code
+            payment_provider_type
+            external_payment_id
+            provider_payment_id
+            provider_customer_id
+            next_action
+            created_at
+          ])
         end
       end
     end
@@ -89,6 +110,27 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
         expect(json[:payment][:invoice_ids].first).to eq(invoice.id)
+        expect(json[:payment].keys).to eq(%i[
+          lago_id
+          lago_customer_id
+          external_customer_id
+          invoice_ids
+          lago_payable_id
+          payable_type
+          amount_cents
+          amount_currency
+          status
+          payment_status
+          type
+          reference
+          payment_provider_code
+          payment_provider_type
+          external_payment_id
+          provider_payment_id
+          provider_customer_id
+          next_action
+          created_at
+        ])
       end
     end
 
