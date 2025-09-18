@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaignThreshold, type: :model do
+RSpec.describe DunningCampaignThreshold do
   subject(:dunning_campaign_threshold) { create(:dunning_campaign_threshold) }
 
   it_behaves_like "paper_trail traceable"

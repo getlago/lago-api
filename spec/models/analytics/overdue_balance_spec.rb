@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::OverdueBalance, type: :model do
+RSpec.describe Analytics::OverdueBalance do
   describe ".cache_key" do
     subject(:overdue_balance_cache_key) { described_class.cache_key(organization_id, **args) }
 

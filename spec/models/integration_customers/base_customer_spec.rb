@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
+RSpec.describe IntegrationCustomers::BaseCustomer do
   subject(:integration_customer) { described_class.new(integration:, customer:, type:, external_customer_id:, organization:) }
 
   let(:integration) { create(:netsuite_integration) }

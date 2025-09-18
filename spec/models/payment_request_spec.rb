@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequest, type: :model do
+RSpec.describe PaymentRequest do
   subject(:payment_request) do
     described_class.new(
       organization:,

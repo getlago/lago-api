@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntity, type: :model do
+RSpec.describe BillingEntity do
   subject(:billing_entity) { build(:billing_entity) }
 
   it_behaves_like "paper_trail traceable"

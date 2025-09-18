@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetric, type: :model do
+RSpec.describe BillableMetric do
   subject(:billable_metric) { create(:billable_metric) }
 
   it_behaves_like "paper_trail traceable"

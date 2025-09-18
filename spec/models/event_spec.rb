@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Event, type: :model do
+RSpec.describe Event do
   describe "#customer" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }

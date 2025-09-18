@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedAddOn, type: :model do
+RSpec.describe AppliedAddOn do
   subject { build(:applied_add_on) }
 
   it_behaves_like "paper_trail traceable"

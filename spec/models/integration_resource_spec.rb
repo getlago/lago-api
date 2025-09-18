@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationResource, type: :model do
+RSpec.describe IntegrationResource do
   subject(:integration_resource) { build(:integration_resource) }
 
   let(:resource_types) do

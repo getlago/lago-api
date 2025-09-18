@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PricingUnit, type: :model do
+RSpec.describe PricingUnit do
   subject { build(:pricing_unit) }
 
   it { is_expected.to belong_to(:organization) }

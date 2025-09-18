@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::AdyenCustomer, type: :model do
+RSpec.describe PaymentProviderCustomers::AdyenCustomer do
   subject(:adyen_customer) { described_class.new(attributes) }
 
   let(:attributes) {}

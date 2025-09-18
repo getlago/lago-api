@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Refund, type: :model do
+RSpec.describe Refund do
   subject(:refund) { build(:refund) }
 
   describe "associations" do

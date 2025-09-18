@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedPricingUnit, type: :model do
+RSpec.describe AppliedPricingUnit do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:pricing_unit) }
   it { is_expected.to belong_to(:pricing_unitable) }

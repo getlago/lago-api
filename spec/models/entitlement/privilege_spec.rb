@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::Privilege, type: :model do
+RSpec.describe Entitlement::Privilege do
   subject { build(:privilege) }
 
   it { expect(described_class).to be_soft_deletable }

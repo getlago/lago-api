@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionEntitlementPrivilege, type: :model do
+RSpec.describe Entitlement::SubscriptionEntitlementPrivilege do
   describe "initialization" do
     it "creates an instance with no attributes" do
       privilege = described_class.new

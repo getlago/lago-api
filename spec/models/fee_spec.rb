@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fee, type: :model do
+RSpec.describe Fee do
   subject { build(:fee) }
 
   it { is_expected.to belong_to(:add_on).optional }

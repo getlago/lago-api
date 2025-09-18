@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageThreshold, type: :model do
+RSpec.describe UsageThreshold do
   subject(:usage_threshold) { build(:usage_threshold) }
 
   it_behaves_like "paper_trail traceable"

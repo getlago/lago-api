@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaign, type: :model do
+RSpec.describe DunningCampaign do
   subject(:dunning_campaign) { create(:dunning_campaign) }
 
   it_behaves_like "paper_trail traceable"

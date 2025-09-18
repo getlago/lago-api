@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invite, type: :model do
+RSpec.describe Invite do
   subject(:invite) { create(:invite) }
 
   it_behaves_like "paper_trail traceable"

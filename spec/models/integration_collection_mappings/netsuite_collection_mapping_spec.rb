@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping, type: :model do
+RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
   subject(:mapping) { build(:netsuite_collection_mapping) }
 
   describe "#external_id" do

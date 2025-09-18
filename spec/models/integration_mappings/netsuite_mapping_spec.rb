@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationMappings::NetsuiteMapping, type: :model do
+RSpec.describe IntegrationMappings::NetsuiteMapping do
   subject(:mapping) { build(:netsuite_mapping) }
 
   describe "#external_id" do

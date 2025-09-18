@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::MoneyhashProvider, type: :model do
+RSpec.describe PaymentProviders::MoneyhashProvider do
   subject(:moneyhash_provider) { build(:moneyhash_provider, attributes) }
 
   let(:attributes) {}

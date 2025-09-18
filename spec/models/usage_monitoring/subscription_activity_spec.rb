@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::SubscriptionActivity, type: :model do
+RSpec.describe UsageMonitoring::SubscriptionActivity do
   it do
     expect(subject).to belong_to(:organization)
     expect(subject).to belong_to(:subscription)

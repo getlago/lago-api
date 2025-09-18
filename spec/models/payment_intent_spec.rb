@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentIntent, type: :model do
+RSpec.describe PaymentIntent do
   it { is_expected.to define_enum_for(:status).with_values(described_class::STATUSES) }
 
   it { is_expected.to belong_to(:invoice) }

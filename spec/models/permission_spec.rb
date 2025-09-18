@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Permission, type: :model do
+RSpec.describe Permission do
   it "defines permission hashes" do
     names = %w[DEFAULT_PERMISSIONS_HASH ADMIN_PERMISSIONS_HASH MANAGER_PERMISSIONS_HASH FINANCE_PERMISSIONS_HASH]
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Tax, type: :model do
+RSpec.describe Tax do
   subject(:tax) { create(:tax, applied_to_organization:) }
 
   let(:applied_to_organization) { false }

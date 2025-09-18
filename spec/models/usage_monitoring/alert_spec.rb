@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::Alert, type: :model do
+RSpec.describe UsageMonitoring::Alert do
   let(:alert) { create(:alert, code: "my-code", thresholds: [10, 30, 50], recurring_threshold: 100) }
 
   describe "associations" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKey, type: :model do
+RSpec.describe ApiKey do
   subject { build(:api_key, expires_at:) }
 
   let(:expires_at) { nil }

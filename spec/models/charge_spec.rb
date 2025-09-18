@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charge, type: :model do
+RSpec.describe Charge do
   subject(:charge) { create(:standard_charge) }
 
   it_behaves_like "paper_trail traceable"

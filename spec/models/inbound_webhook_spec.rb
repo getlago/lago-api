@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InboundWebhook, type: :model do
+RSpec.describe InboundWebhook do
   subject(:inbound_webhook) { build(:inbound_webhook) }
 
   it { is_expected.to belong_to(:organization) }

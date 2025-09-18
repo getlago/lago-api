@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsage, type: :model do
+RSpec.describe LifetimeUsage do
   subject(:lifetime_usage) { create(:lifetime_usage) }
 
   it { is_expected.to belong_to(:organization) }
