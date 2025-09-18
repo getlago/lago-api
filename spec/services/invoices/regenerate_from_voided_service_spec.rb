@@ -87,7 +87,7 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
         regenerate_result
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: false))
     end
 
     it_behaves_like "syncs invoice" do
