@@ -351,7 +351,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       it "returns an error from nested service and does not enqueue webhook" do
         result = update_service.call
 
-        expect(result).not_to be_success
+        expect(result).to be_failure
         expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
       end

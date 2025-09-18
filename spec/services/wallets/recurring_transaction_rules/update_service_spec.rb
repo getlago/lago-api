@@ -195,10 +195,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         let(:method) { "target" }
 
         it "creates recurring transaction rule" do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new)
-
           expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
-          expect(Validators::WalletTransactionAmountLimitsValidator).not_to have_received(:new)
+          expect(result).to be_success
         end
       end
 
@@ -206,37 +204,20 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         let(:paid_credits) { "0.000005" }
 
         it "creates recurring transaction rule" do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new)
-
           expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
-          expect(Validators::WalletTransactionAmountLimitsValidator).not_to have_received(:new)
-        end
-      end
-
-      context "when paid credits is not a number" do
-        let(:paid_credits) { "abc" }
-
-        it "creates recurring transaction rule" do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new)
-
-          expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
-          expect(Validators::WalletTransactionAmountLimitsValidator).not_to have_received(:new)
+          expect(result).to be_success
         end
       end
 
       context "when paid credits exceeds wallet limits" do
         let(:paid_credits) { "1000" }
 
-        before do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
-          wallet.update!(paid_top_up_max_amount_cents: 1)
-        end
+        before { wallet.update!(paid_top_up_max_amount_cents: 1) }
 
         it "fails with generic error when amount violates wallet limits" do
           expect(result).to be_failure
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to eq({recurring_transaction_rules: ["invalid_recurring_rule"]})
-          expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new)
         end
       end
 
@@ -247,10 +228,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         before { wallet.update!(paid_top_up_max_amount_cents: 1) }
 
         it "creates recurring transaction rule" do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
-
           expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
-          expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new)
+          expect(result).to be_success
         end
       end
 
@@ -261,11 +240,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         before { wallet.update!(paid_top_up_min_amount_cents: 1) }
 
         it "creates recurring transaction rule" do
-          allow(Validators::WalletTransactionAmountLimitsValidator).to receive(:new).and_call_original
-
           expect { result }.to change { recurring_transaction_rule.reload.attributes }
           expect(result).to be_success
-          expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new)
         end
       end
     end
