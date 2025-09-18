@@ -8,5 +8,12 @@ RSpec.describe Webhooks::Payments::RequiresActionService do
   let(:payment) { create(:payment, :requires_action) }
   let(:webhook_options) { {provider_customer_id: "customer_id"} }
 
-  it_behaves_like "creates webhook", "payment.requires_action", "payment"
+  it_behaves_like "creates webhook", "payment.requires_action", "payment", {
+    "lago_id" => String,
+    "lago_payable_id" => String,
+    "payable_type" => String,
+    "payment_provider_code" => String,
+    "provider_payment_id" => String,
+    "next_action" => Hash
+  }
 end
