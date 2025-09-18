@@ -8,8 +8,7 @@ module Webhooks
       def object_serializer
         ::V1::PaymentSerializer.new(
           object,
-          root_name: object_type,
-          provider_customer_id: options[:provider_customer_id]
+          root_name: object_type
         )
       end
 
