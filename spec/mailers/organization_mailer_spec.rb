@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe OrganizationMailer, type: :mailer do
+RSpec.describe OrganizationMailer do
   subject(:organization_mailer) do
     described_class.with(organization:, user: admin0, additions:, deletions:).authentication_methods_updated
   end

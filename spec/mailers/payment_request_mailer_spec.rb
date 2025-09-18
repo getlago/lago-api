@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequestMailer, type: :mailer do
+RSpec.describe PaymentRequestMailer do
   subject(:mailer) { described_class.with(payment_request:).requested }
 
   let(:organization) { create(:organization, document_number_prefix: "ORG-123B") }

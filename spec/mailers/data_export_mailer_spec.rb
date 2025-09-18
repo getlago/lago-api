@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExportMailer, type: :mailer do
+RSpec.describe DataExportMailer do
   let(:data_export) { create(:data_export, :completed) }
 
   describe "#completed" do

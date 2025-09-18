@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNoteMailer, type: :mailer do
+RSpec.describe CreditNoteMailer do
   subject(:credit_note_mailer) { described_class }
 
   let(:credit_note) { create(:credit_note) }

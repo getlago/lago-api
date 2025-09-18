@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceiptMailer, type: :mailer do
+RSpec.describe PaymentReceiptMailer do
   subject(:payment_receipt_mailer) { described_class }
 
   let(:payment_receipt) { create(:payment_receipt) }
