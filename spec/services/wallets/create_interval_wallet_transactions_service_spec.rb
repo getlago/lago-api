@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service do
+RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
   subject(:create_interval_transactions_service) { described_class.new }
 
   describe ".call" do

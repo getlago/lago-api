@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::DestroyService, type: :service do
+RSpec.describe Taxes::DestroyService do
   subject(:destroy_service) { described_class.new(tax:) }
 
   let(:organization) { create(:organization) }

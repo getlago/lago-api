@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::AddOnService, type: :service do
+RSpec.describe Invoices::AddOnService do
   subject(:invoice_service) do
     described_class.new(applied_add_on:, datetime:)
   end

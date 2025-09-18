@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService, type: :service do
+RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
   subject(:result) { described_class.call(subscription:, plan:, feature: seats, privilege_params:, partial:) }
 
   let(:organization) { create(:organization) }

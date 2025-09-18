@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Okta::DestroyService, type: :service do
+RSpec.describe Integrations::Okta::DestroyService do
   subject(:destroy_service) { described_class.new(integration:) }
 
   let(:membership) { create(:membership) }

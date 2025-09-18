@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeys::CacheService, type: :service, cache: :redis do
+RSpec.describe ApiKeys::CacheService, cache: :redis do
   subject(:cache_service) { described_class.new(auth_token, with_cache:) }
 
   let(:auth_token) { "token" }

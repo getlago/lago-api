@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Hubspot::CreateService, type: :service do
+RSpec.describe Integrations::Hubspot::CreateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 

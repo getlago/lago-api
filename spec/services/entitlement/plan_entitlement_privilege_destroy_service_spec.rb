@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService, type: :service do
+RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService do
   subject(:result) { described_class.call(entitlement:, privilege_code:) }
 
   let(:organization) { create(:organization) }

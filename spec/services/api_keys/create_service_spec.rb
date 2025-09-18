@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeys::CreateService, type: :service do
+RSpec.describe ApiKeys::CreateService do
   describe "#call" do
     subject(:service_result) { described_class.call(params) }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::Mrrs::PlansService, type: :service do
+RSpec.describe DataApi::Mrrs::PlansService do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

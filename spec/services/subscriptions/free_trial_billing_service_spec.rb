@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
+RSpec.describe Subscriptions::FreeTrialBillingService do
   subject(:service) { described_class.new(timestamp:) }
 
   let(:timestamp) { Time.zone.now }

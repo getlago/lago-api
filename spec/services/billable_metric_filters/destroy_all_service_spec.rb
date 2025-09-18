@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe BillableMetricFilters::DestroyAllService, type: :service do
+RSpec.describe BillableMetricFilters::DestroyAllService do
   subject(:destroy_service) { described_class.new(billable_metric) }
 
   let(:billable_metric) { create(:billable_metric, :deleted) }

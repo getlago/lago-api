@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::GenerateCheckoutUrlService, type: :service do
+RSpec.describe Customers::GenerateCheckoutUrlService do
   subject(:generate_checkout_url_service) { described_class.new(customer:) }
 
   let(:organization) { create(:organization) }

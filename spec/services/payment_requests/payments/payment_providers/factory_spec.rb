@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory, type: :service do
+RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
   subject(:factory_service) { described_class.new_instance(payable:) }
 
   let(:payment_provider) { "stripe" }

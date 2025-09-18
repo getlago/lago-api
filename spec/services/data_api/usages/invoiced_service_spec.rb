@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::Usages::InvoicedService, type: :service do
+RSpec.describe DataApi::Usages::InvoicedService do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

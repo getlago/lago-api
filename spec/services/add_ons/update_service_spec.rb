@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AddOns::UpdateService, type: :service do
+RSpec.describe AddOns::UpdateService do
   subject(:add_ons_service) { described_class.new(add_on:, params: update_args) }
 
   let(:membership) { create(:membership) }

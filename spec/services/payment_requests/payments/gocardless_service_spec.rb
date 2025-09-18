@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
+RSpec.describe PaymentRequests::Payments::GocardlessService do
   subject(:gocardless_service) { described_class.new(payment_request) }
 
   let(:organization) { create(:organization, webhook_url: "https://webhook.com") }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::Validators::PackageService, type: :service do
+RSpec.describe Charges::Validators::PackageService do
   subject(:validation_service) { described_class.new(charge:) }
 
   let(:charge) { build(:package_charge, properties: package_properties) }

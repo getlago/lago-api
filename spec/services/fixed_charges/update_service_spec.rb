@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::UpdateService, type: :service do
+RSpec.describe FixedCharges::UpdateService do
   subject(:update_service) { described_class.new(fixed_charge:, params:, cascade_options:) }
 
   let(:plan) { create(:plan) }

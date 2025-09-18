@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ApplyTaxesService, type: :service do
+RSpec.describe Fees::ApplyTaxesService do
   subject(:apply_service) { described_class.new(fee:) }
 
   let(:customer) { create(:customer) }

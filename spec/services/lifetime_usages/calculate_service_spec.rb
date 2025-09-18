@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::CalculateService, type: :service do
+RSpec.describe LifetimeUsages::CalculateService do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
 
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::CreateService, type: :service do
+RSpec.describe Events::CreateService do
   subject(:create_service) do
     described_class.new(
       organization:,

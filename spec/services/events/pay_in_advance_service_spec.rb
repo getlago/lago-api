@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::PayInAdvanceService, type: :service do
+RSpec.describe Events::PayInAdvanceService do
   let(:in_advance_service) { described_class.new(event:) }
 
   let(:organization) { create(:organization) }

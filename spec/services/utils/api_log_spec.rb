@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Utils::ApiLog, type: :service do
+RSpec.describe Utils::ApiLog do
   subject(:api_log) { described_class }
 
   let(:api_key) { create(:api_key) }

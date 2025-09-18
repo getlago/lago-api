@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::VoidService, type: :service do
+RSpec.describe CreditNotes::VoidService do
   subject(:void_service) { described_class.new(credit_note:) }
 
   let(:credit_note) { create(:credit_note) }

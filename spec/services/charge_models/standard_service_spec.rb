@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeModels::StandardService, type: :service do
+RSpec.describe ChargeModels::StandardService do
   subject(:apply_standard_service) do
     described_class.apply(
       charge:,

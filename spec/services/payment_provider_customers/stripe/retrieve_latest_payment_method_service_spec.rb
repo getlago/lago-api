@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService, type: :service do
+RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService do
   subject { described_class.new(provider_customer:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::EuAutoTaxesService, type: :service do
+RSpec.describe Customers::EuAutoTaxesService do
   subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
 
   let(:organization) { create(:organization, country: "IT", eu_tax_management: true) }

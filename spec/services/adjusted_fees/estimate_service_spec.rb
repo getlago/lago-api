@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AdjustedFees::EstimateService, type: :service do
+RSpec.describe AdjustedFees::EstimateService do
   subject(:estimate_service) { described_class.new(invoice:, params:) }
 
   let(:customer) { create(:customer) }

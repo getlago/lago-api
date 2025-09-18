@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeFilters::EventMatchingService, type: :service do
+RSpec.describe ChargeFilters::EventMatchingService do
   subject(:service_result) { described_class.call(charge:, event:) }
 
   let(:organization) { create(:organization) }

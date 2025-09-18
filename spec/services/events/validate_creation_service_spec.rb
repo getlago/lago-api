@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::ValidateCreationService, type: :service do
+RSpec.describe Events::ValidateCreationService do
   subject(:validate_event) do
     described_class.call(
       organization:,

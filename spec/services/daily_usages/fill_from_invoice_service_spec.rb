@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
+RSpec.describe DailyUsages::FillFromInvoiceService do
   subject(:fill_service) { described_class.new(invoice:, subscriptions:) }
 
   let(:organization) { create(:organization) }

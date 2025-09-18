@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::UpdateService, type: :service do
+RSpec.describe Subscriptions::UpdateService do
   subject(:update_service) { described_class.new(subscription:, params:) }
 
   let(:membership) { create(:membership) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::RefreshDraftService, type: :service do
+RSpec.describe Invoices::RefreshDraftService do
   subject(:refresh_service) { described_class.new(invoice:) }
 
   describe "#call" do

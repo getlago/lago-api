@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::GocardlessService, type: :service do
+RSpec.describe Invoices::Payments::GocardlessService do
   subject(:gocardless_service) { described_class.new(argument) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

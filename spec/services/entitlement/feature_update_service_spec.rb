@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::FeatureUpdateService, type: :service do
+RSpec.describe Entitlement::FeatureUpdateService do
   subject { described_class.call(feature:, params:, partial:) }
 
   let(:organization) { create(:organization) }

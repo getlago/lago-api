@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::EvaluateExpressionService, type: :service do
+RSpec.describe BillableMetrics::EvaluateExpressionService do
   subject(:evaluate_service) { described_class.new(expression:, event:) }
 
   let(:expression) { "round(event.properties.value * event.properties.units)" }

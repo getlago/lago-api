@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ThresholdTopUpService, type: :service do
+RSpec.describe Wallets::ThresholdTopUpService do
   subject(:top_up_service) { described_class.new(wallet:) }
 
   let(:wallet) do

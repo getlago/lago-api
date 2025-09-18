@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: :service, transaction: false do
+RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transaction: false do
   subject(:unique_count_service) do
     described_class.new(
       event_store_class:,

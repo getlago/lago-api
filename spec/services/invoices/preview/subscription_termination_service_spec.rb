@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service do
+RSpec.describe Invoices::Preview::SubscriptionTerminationService do
   describe ".call" do
     subject(:result) do
       described_class.call(current_subscription:, terminated_at: terminated_at&.to_s)

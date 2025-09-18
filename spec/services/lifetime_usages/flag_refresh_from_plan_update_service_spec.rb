@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateService, type: :service do
+RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateService do
   subject { described_class.call(plan:) }
 
   let(:plan) { create(:plan) }

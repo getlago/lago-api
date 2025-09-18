@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::EstimateInstant::StandardService, type: :service do
+RSpec.describe Charges::EstimateInstant::StandardService do
   subject { described_class.new(properties:, units:) }
 
   let(:properties) do

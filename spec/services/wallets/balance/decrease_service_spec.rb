@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::Balance::DecreaseService, type: :service do
+RSpec.describe Wallets::Balance::DecreaseService do
   subject(:create_service) { described_class.new(wallet:, wallet_transaction:) }
 
   let(:wallet) do

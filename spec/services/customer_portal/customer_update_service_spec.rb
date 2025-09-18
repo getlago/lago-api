@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
+RSpec.describe CustomerPortal::CustomerUpdateService do
   subject(:result) { described_class.call(customer:, args: update_args) }
 
   let(:customer) { create :customer }

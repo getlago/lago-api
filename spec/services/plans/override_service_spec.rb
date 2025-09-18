@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::OverrideService, type: :service do
+RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:) }
 
   let(:membership) { create(:membership) }

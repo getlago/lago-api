@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
+RSpec.describe Invoices::CreatePayInAdvanceChargeService do
   subject(:invoice_service) do
     described_class.new(charge:, event:, timestamp: timestamp.to_i)
   end

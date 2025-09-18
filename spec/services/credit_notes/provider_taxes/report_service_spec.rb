@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
+RSpec.describe CreditNotes::ProviderTaxes::ReportService do
   subject(:report_service) { described_class.new(credit_note:) }
 
   describe "#call" do

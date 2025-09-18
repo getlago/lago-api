@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
+RSpec.describe Subscriptions::ProgressiveBilledAmount do
   subject(:service) { described_class.new(subscription:, timestamp:) }
 
   let(:timestamp) { Time.current }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service do
+RSpec.describe Invoices::Preview::SubscriptionPlanChangeService do
   describe ".call" do
     subject(:result) { described_class.call(current_subscription:, target_plan_code:) }
 

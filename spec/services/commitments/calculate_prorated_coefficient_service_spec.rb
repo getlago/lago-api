@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::CalculateProratedCoefficientService, type: :service do
+RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:service) { described_class.new(commitment:, invoice_subscription:) }
   let(:commitment) { create(:commitment, plan:) }
   let(:plan) { create(:plan, organization:) }

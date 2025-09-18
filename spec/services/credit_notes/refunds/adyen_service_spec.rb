@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
+RSpec.describe CreditNotes::Refunds::AdyenService do
   subject(:adyen_service) { described_class.new(credit_note) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

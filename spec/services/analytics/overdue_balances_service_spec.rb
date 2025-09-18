@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::OverdueBalancesService, type: :service do
+RSpec.describe Analytics::OverdueBalancesService do
   let(:service) { described_class.new(organization) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

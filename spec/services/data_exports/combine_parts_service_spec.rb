@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::CombinePartsService, type: :service do
+RSpec.describe DataExports::CombinePartsService do
   subject(:result) { described_class.call(data_export:) }
 
   let(:data_export) { create :data_export, :processing, resource_type: "invoice_fees" }

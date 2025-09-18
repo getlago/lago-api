@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invites::UpdateService, type: :service do
+RSpec.describe Invites::UpdateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }

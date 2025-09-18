@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::TransitionToFinalStatusService, type: :service do
+RSpec.describe Invoices::TransitionToFinalStatusService do
   subject { described_class.new(invoice: invoice) }
 
   let(:organization) { create(:organization) }

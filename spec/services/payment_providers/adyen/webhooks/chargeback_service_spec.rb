@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService, type: :service do
+RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
   subject(:service) { described_class.new(organization_id:, event_json:) }
 
   let(:organization_id) { organization.id }

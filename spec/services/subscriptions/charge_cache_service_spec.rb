@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::ChargeCacheService, type: :service do
+RSpec.describe Subscriptions::ChargeCacheService do
   subject(:cache_service) { described_class.new(subscription:, charge:, charge_filter:) }
 
   let(:subscription) { create(:subscription) }

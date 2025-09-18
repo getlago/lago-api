@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::CreateService, type: :service do
+RSpec.describe Subscriptions::CreateService do
   subject(:create_service) { described_class.new(customer:, plan:, params:) }
 
   let(:organization) { create(:organization) }

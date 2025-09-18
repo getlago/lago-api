@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ApplyInvoiceCustomSectionsService, type: :service do
+RSpec.describe Invoices::ApplyInvoiceCustomSectionsService do
   subject(:invoice_service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization) }

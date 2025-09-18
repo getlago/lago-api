@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::DestroyService, type: :service do
+RSpec.describe BillableMetrics::DestroyService do
   subject(:destroy_service) { described_class.new(metric: billable_metric) }
 
   let(:membership) { create(:membership) }

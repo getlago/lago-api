@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::UpdateInvoiceGracePeriodService, type: :service do
+RSpec.describe BillingEntities::UpdateInvoiceGracePeriodService do
   include ActiveJob::TestHelper
 
   subject(:update_service) { described_class.new(billing_entity:, grace_period:) }

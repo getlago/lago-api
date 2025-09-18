@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
+RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
   let(:charge_service) { described_class.new(charge:, aggregation_result:, properties:) }
 
   let(:charge) { create(:standard_charge, :pay_in_advance) }

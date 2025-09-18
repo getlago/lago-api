@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Xero::UpdateService, type: :service do
+RSpec.describe Integrations::Xero::UpdateService do
   let(:integration) { create(:xero_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }

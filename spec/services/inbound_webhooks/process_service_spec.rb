@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InboundWebhooks::ProcessService, type: :service do
+RSpec.describe InboundWebhooks::ProcessService do
   subject(:result) { described_class.call(inbound_webhook:) }
 
   let(:inbound_webhook) { create :inbound_webhook, source: webhook_source }

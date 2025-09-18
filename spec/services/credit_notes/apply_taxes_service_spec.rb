@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
+RSpec.describe CreditNotes::ApplyTaxesService do
   subject(:apply_service) { described_class.new(invoice:, items:) }
 
   let(:customer) { create(:customer) }

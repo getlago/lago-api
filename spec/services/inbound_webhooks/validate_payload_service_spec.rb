@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InboundWebhooks::ValidatePayloadService, type: :service do
+RSpec.describe InboundWebhooks::ValidatePayloadService do
   subject(:result) do
     described_class.call(
       organization_id: organization.id,

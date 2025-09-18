@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true do
+RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
   subject(:event_store) do
     described_class.new(
       code:,

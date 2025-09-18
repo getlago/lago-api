@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AddOns::DestroyService, type: :service do
+RSpec.describe AddOns::DestroyService do
   subject(:destroy_service) { described_class.new(add_on:) }
 
   let(:membership) { create(:membership) }

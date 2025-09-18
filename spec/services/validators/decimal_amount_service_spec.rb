@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Validators::DecimalAmountService, type: :service do
+RSpec.describe Validators::DecimalAmountService do
   subject(:decimal_amount_service) { described_class.new(amount) }
 
   describe ".valid_amount?" do

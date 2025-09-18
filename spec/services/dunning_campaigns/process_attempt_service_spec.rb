@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregate_failures: true do
+RSpec.describe DunningCampaigns::ProcessAttemptService, aggregate_failures: true do
   subject(:result) { described_class.call(customer:, dunning_campaign_threshold:) }
 
   let(:customer) { create :customer, organization:, currency: }

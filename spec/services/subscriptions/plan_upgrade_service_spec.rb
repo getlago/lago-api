@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
+RSpec.describe Subscriptions::PlanUpgradeService do
   subject(:result) do
     described_class.call(current_subscription: subscription, plan:, params:)
   end

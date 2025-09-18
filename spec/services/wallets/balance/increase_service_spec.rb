@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::Balance::IncreaseService, type: :service do
+RSpec.describe Wallets::Balance::IncreaseService do
   subject(:create_service) { described_class.new(wallet:, wallet_transaction:) }
 
   let(:credits_amount) { BigDecimal("4.5") }

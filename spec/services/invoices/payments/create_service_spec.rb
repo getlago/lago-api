@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::CreateService, type: :service do
+RSpec.describe Invoices::Payments::CreateService do
   subject(:create_service) { described_class.new(invoice:, payment_provider: provider) }
 
   let(:organization) { create(:organization) }

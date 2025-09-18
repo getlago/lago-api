@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IdempotencyRecords::KeyService, type: :service do
+RSpec.describe IdempotencyRecords::KeyService do
   subject(:result) { described_class.call(**key_parts) }
 
   let(:key_parts) { {} }

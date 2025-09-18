@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AddOns::ApplyTaxesService, type: :service do
+RSpec.describe AddOns::ApplyTaxesService do
   subject(:apply_service) { described_class.new(add_on:, tax_codes:) }
 
   let(:organization) { create(:organization) }

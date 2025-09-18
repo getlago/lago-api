@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ApplyPaidCreditsService, type: :service do
+RSpec.describe Wallets::ApplyPaidCreditsService do
   subject(:service) { described_class.new(wallet_transaction:) }
 
   describe ".call" do

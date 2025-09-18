@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappings::DestroyService, type: :service do
+RSpec.describe IntegrationCollectionMappings::DestroyService do
   subject(:destroy_service) { described_class.new(integration_collection_mapping:) }
 
   let(:integration) { create(:netsuite_integration, organization:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsersService, type: :service do
+RSpec.describe UsersService do
   subject(:user_service) { described_class.new }
 
   describe "register" do

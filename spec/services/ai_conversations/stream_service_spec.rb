@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AiConversations::StreamService, type: :service do
+RSpec.describe AiConversations::StreamService do
   subject(:service) { described_class.new(ai_conversation:, message:) }
 
   let(:ai_conversation) { create(:ai_conversation, mistral_conversation_id: nil) }

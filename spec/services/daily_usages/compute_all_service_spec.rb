@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DailyUsages::ComputeAllService, type: :service do
+RSpec.describe DailyUsages::ComputeAllService do
   subject(:compute_service) { described_class.new(timestamp:) }
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }

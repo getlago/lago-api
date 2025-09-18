@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::FeatureDestroyService, type: :service do
+RSpec.describe Entitlement::FeatureDestroyService do
   subject { described_class.call(feature:) }
 
   let(:organization) { create(:organization) }

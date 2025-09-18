@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::AdvanceChargesService, type: :service do
+RSpec.describe Invoices::AdvanceChargesService do
   subject(:invoice_service) do
     described_class.new(initial_subscriptions: subscriptions, billing_at:)
   end

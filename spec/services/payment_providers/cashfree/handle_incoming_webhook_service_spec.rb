@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Cashfree::HandleIncomingWebhookService, type: :service do
+RSpec.describe PaymentProviders::Cashfree::HandleIncomingWebhookService do
   let(:webhook_service) { described_class.new(organization_id:, body:, code:, timestamp:, signature:) }
 
   let(:organization) { create(:organization) }

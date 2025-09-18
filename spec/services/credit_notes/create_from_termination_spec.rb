@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::CreateFromTermination, type: :service do
+RSpec.describe CreditNotes::CreateFromTermination do
   subject(:create_service) { described_class.new(subscription:, context:, **kwargs) }
 
   let(:kwargs) { {} }

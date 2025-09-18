@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
+RSpec.describe Charges::PayInAdvanceAggregationService do
   subject(:agg_service) do
     described_class.new(charge:, boundaries:, properties:, event:, charge_filter:)
   end

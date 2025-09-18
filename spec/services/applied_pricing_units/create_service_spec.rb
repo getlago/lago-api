@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedPricingUnits::CreateService, type: :service do
+RSpec.describe AppliedPricingUnits::CreateService do
   let(:create_service) { described_class.new(charge:, params:) }
 
   describe "#create_applied_pricing_unit?" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DailyUsages::ComputeDiffService, type: :service do
+RSpec.describe DailyUsages::ComputeDiffService do
   subject(:diff_service) { described_class.new(daily_usage:, previous_daily_usage:) }
 
   let(:daily_usage) { create(:daily_usage, usage:) }

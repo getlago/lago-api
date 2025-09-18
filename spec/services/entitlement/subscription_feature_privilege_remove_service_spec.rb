@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService, type: :service do
+RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
   subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
 
   let(:organization) { create(:organization) }

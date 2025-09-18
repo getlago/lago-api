@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Utils::Datetime, type: :service do
+RSpec.describe Utils::Datetime do
   subject(:datetime) { described_class }
 
   describe ".valid_format?" do

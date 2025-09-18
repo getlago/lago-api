@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service do
+RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
   subject(:service) { described_class.new_instance(invoice_subscription:) }
 
   let(:invoice_subscription) do
@@ -26,7 +26,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService, type: :service d
   let(:customer) { create(:customer, organization:) }
   let(:subscription_at) { DateTime.parse("2024-01-01T00:00:00") }
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:, pay_in_advance:, interval: :yearly) }
+  let(:plan) { create(:plan, organization:, pay_in_advance:, interval: [:semiannual, :yearly].sample) }
   let(:billing_time) { :calendar }
   let(:bill_charges_monthly) { false }
   let(:pay_in_advance) { false }

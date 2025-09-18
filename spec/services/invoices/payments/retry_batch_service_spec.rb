@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::RetryBatchService, type: :service do
+RSpec.describe Invoices::Payments::RetryBatchService do
   subject(:retry_batch_service) { described_class.new(organization_id: organization.id) }
 
   let(:customer) { create(:customer, payment_provider: "stripe") }

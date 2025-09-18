@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-Rspec.describe Credits::ProgressiveBillingService, type: :service do
+Rspec.describe Credits::ProgressiveBillingService do
   subject(:credit_service) { described_class.new(invoice:) }
 
   let(:subscription) { create(:subscription, customer_id: customer.id) }

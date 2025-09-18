@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CustomerPortal::GenerateUrlService, type: :service do
+RSpec.describe CustomerPortal::GenerateUrlService do
   subject(:generate_url_service) { described_class.new(customer:) }
 
   let(:customer) { create(:customer) }
