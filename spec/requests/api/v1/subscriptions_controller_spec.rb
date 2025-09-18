@@ -879,8 +879,9 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
               ]
             }
           )
-          charges = plan_json[:charges]
+          charges = plan_json[:charges].sort_by { |charge| charge[:invoice_display_name] }
           expect(charges.length).to eq(2)
+
           first_charge = charges.first
           second_charge = charges.second
           expect(first_charge).to match(
