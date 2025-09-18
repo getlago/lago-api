@@ -3,10 +3,6 @@
 module EInvoices
   module CreditNotes
     module Common
-      def resource
-        credit_note
-      end
-
       def notes
         [
           "Credit Note ID: #{credit_note.id}",
