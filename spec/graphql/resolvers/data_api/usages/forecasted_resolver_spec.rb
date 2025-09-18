@@ -1,0 +1,60 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, type: :graphql do
+  let(:required_permission) { "data_api:view" }
+  let(:query) do
+    <<~GQL
+      query {
+        dataApiUsagesForecasted {
+          collection {
+            amountCurrency
+            amountCents
+            amountCentsForecast10thPercentile
+            amountCentsForecast50thPercentile
+            amountCentsForecast90thPercentile
+            units
+            unitsForecast10thPercentile
+            unitsForecast50thPercentile
+            unitsForecast90thPercentile
+            endOfPeriodDt
+            startOfPeriodDt
+          }
+        }
+      }
+    GQL
+  end
+
+  let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/forecasted.json") }
+
+  before do
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/")
+      .to_return(status: 200, body: body_response, headers: {})
+  end
+
+  around { |test| lago_premium!(&test) }
+
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "data_api:view"
+
+  it "returns a list of forecasted usages" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query:
+    )
+
+    forecasted_response = result["data"]["dataApiUsagesForecasted"]
+    expect(forecasted_response["collection"].first).to include(
+      {
+        "startOfPeriodDt" => "2024-01-01",
+        "endOfPeriodDt" => "2024-01-31"
+      }
+    )
+  end
+end
