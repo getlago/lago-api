@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::PrepaidCreditsResolver, type: :graphql do
+RSpec.describe Resolvers::DataApi::PrepaidCreditsResolver do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL

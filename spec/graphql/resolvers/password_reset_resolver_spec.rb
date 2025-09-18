@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::PasswordResetResolver, type: :graphql do
+RSpec.describe Resolvers::PasswordResetResolver do
   let(:query) do
     <<~GQL
       query($token: String!) {

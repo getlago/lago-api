@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, type: :graphql do
+RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
   let(:required_permissions) { "customer_settings:update:grace_period" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

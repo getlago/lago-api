@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
+RSpec.describe Resolvers::Customers::UsageResolver do
   let(:required_permission) { "customers:view" }
   let(:query) do
     <<~GQL

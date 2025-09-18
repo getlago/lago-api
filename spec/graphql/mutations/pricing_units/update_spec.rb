@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
+RSpec.describe Mutations::PricingUnits::Update do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

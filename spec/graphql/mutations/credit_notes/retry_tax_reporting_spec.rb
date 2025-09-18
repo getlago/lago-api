@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
+RSpec.describe Mutations::CreditNotes::RetryTaxReporting do
   let(:required_permission) { "credit_notes:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::EventResolver, type: :graphql, transaction: false do
+RSpec.describe Resolvers::EventResolver, transaction: false do
   let(:query) do
     <<~GQL
       query($eventTransactionId: ID!) {

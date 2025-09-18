@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Terminate, type: :graphql do
+RSpec.describe Mutations::Wallets::Terminate do
   let(:required_permission) { "wallets:terminate" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

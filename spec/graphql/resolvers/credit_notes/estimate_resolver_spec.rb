@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
+RSpec.describe Resolvers::CreditNotes::EstimateResolver do
   let(:query) do
     <<~GQL
       query($invoiceId: ID!, $items: [CreditNoteItemInput!]!) {

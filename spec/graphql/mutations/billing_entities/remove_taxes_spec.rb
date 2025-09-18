@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillingEntities::RemoveTaxes, type: :graphql do
+RSpec.describe Mutations::BillingEntities::RemoveTaxes do
   let(:required_permission) { "billing_entities:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

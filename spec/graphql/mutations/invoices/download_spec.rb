@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Invoices::Download, type: :graphql do
+RSpec.describe Mutations::Invoices::Download do
   let(:required_permission) { "invoices:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

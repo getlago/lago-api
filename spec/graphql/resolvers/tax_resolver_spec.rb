@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::TaxResolver, type: :graphql do
+RSpec.describe Resolvers::TaxResolver do
   let(:query) do
     <<~GQL
       query($taxId: ID!) {

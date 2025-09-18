@@ -29,7 +29,7 @@ module RequiredOrganizationSpec
   end
 end
 
-RSpec.describe RequiredOrganization, type: :graphql do
+RSpec.describe RequiredOrganization do
   let(:mutation) do
     <<-GQL
       mutation($input: RenameThingInput!) {

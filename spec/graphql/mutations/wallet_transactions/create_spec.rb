@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
+RSpec.describe Mutations::WalletTransactions::Create do
   subject(:result) { execute_query(query:, input:) }
 
   let(:required_permission) { "wallets:top_up" }

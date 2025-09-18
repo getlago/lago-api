@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Invoices::RetryAllPayments, type: :graphql do
+RSpec.describe Mutations::Invoices::RetryAllPayments do
   let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

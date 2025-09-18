@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Coupons::Destroy, type: :graphql do
+RSpec.describe Mutations::Coupons::Destroy do
   let(:required_permission) { "coupons:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

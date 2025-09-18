@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
+RSpec.describe Mutations::Subscriptions::Update do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }

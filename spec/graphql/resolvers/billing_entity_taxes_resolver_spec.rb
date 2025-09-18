@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::BillingEntityTaxesResolver, type: :graphql do
+RSpec.describe Resolvers::BillingEntityTaxesResolver do
   let(:query) do
     <<~GQL
       query($billing_entity_id: ID!) {

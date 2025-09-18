@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
+RSpec.describe Mutations::Subscriptions::Terminate do
   subject(:result) do
     execute_query(
       query: mutation,

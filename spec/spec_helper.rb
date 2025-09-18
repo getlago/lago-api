@@ -86,6 +86,9 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   config.infer_spec_type_from_file_location!
+  config.define_derived_metadata(file_path: Regexp.new("/spec/graphql/")) do |metadata|
+    metadata[:type] = :graphql
+  end
 
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true

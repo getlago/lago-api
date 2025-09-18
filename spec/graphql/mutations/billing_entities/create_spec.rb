@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillingEntities::Create, type: :graphql do
+RSpec.describe Mutations::BillingEntities::Create do
   let(:required_permission) { "billing_entities:create" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization) }

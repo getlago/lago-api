@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :graphql do
+RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign do
   let(:required_permission) { "billing_entities:dunning_campaigns:update" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization) }

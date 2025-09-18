@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::UsageMonitoring::AlertResolver, type: :graphql do
+RSpec.describe Resolvers::UsageMonitoring::AlertResolver do
   let(:required_permission) { "subscriptions:view" }
   let(:query) do
     <<~GQL

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Taxes::Update, type: :graphql do
+RSpec.describe Mutations::Taxes::Update do
   let(:membership) { create(:membership) }
   let(:tax) { create(:tax, organization: membership.organization) }
   let(:input) do

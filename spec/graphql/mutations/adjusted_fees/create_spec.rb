@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
+RSpec.describe Mutations::AdjustedFees::Create do
   let(:required_permission) { "invoices:update" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }

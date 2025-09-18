@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::WalletResolver, type: :graphql do
+RSpec.describe Resolvers::WalletResolver do
   let(:query) do
     <<~GQL
       query($id: ID!) {

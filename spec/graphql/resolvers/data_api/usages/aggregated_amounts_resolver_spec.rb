@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::Usages::AggregatedAmountsResolver, type: :graphql do
+RSpec.describe Resolvers::DataApi::Usages::AggregatedAmountsResolver do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL

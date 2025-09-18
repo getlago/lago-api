@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Okta::Update, type: :graphql do
+RSpec.describe Mutations::Integrations::Okta::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:okta_integration, organization:) }
   let(:organization) { membership.organization }

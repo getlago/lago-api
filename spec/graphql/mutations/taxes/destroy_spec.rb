@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Taxes::Destroy, type: :graphql do
+RSpec.describe Mutations::Taxes::Destroy do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }

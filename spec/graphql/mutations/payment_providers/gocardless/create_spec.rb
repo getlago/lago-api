@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Gocardless::Create, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Gocardless::Create do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:access_code) { "ert_123456_abc" }

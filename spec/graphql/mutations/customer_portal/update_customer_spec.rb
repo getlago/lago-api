@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CustomerPortal::UpdateCustomer, type: :graphql do
+RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
   subject(:result) do
     execute_graphql(
       customer_portal_user: customer,

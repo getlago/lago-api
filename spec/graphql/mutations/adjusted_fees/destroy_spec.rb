@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
+RSpec.describe Mutations::AdjustedFees::Destroy do
   let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

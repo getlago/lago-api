@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
+RSpec.describe Mutations::DunningCampaigns::Create do
   let(:required_permission) { "dunning_campaigns:create" }
   let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
   let(:membership) { create(:membership, organization:) }

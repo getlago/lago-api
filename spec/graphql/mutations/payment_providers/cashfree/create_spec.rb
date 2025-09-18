@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Cashfree::Create, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Cashfree::Create do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:client_id) { "123456_abc" }

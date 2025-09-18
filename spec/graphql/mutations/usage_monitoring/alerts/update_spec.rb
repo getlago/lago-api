@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
+RSpec.describe Mutations::UsageMonitoring::Alerts::Update do
   let(:required_permission) { "subscriptions:update" }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }

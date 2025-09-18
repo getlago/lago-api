@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
+RSpec.describe Resolvers::InvoiceCustomSectionsResolver do
   let(:required_permission) { "invoice_custom_sections:view" }
   let(:query) do
     <<~GQL

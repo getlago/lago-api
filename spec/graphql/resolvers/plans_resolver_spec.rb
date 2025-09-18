@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::PlansResolver, type: :graphql do
+RSpec.describe Resolvers::PlansResolver do
   let(:required_permission) { "plans:view" }
   let(:query) do
     <<~GQL

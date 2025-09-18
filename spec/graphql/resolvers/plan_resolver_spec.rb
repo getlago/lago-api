@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::PlanResolver, type: :graphql do
+RSpec.describe Resolvers::PlanResolver do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

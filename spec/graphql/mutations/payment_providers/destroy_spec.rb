@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Destroy, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Destroy do
   let(:required_permission) { "organization:integrations:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

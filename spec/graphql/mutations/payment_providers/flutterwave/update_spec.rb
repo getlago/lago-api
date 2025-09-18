@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Flutterwave::Update, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Flutterwave::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: membership.organization) }

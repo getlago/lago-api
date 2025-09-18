@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::ActivityLogResolver, type: :graphql, clickhouse: true do
+RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
   let(:required_permission) { "audit_logs:view" }
   let(:query) do
     <<~GQL

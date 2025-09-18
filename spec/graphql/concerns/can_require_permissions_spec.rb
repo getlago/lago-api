@@ -31,7 +31,7 @@ module CanRequirePermissionsSpec
   end
 end
 
-RSpec.describe CanRequirePermissions, type: :graphql do
+RSpec.describe CanRequirePermissions do
   let(:mutation) do
     <<-GQL
       mutation($input: RenameThingInput!) {

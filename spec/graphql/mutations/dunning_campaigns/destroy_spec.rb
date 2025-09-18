@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::DunningCampaigns::Destroy, type: :graphql do
+RSpec.describe Mutations::DunningCampaigns::Destroy do
   let(:required_permissions) { "dunning_campaigns:delete" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
