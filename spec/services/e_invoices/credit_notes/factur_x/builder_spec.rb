@@ -10,13 +10,13 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
   end
 
   let(:credit_note) { create(:credit_note, total_amount_currency: "EUR", credit_amount: 1) }
-  let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:, precise_amount_cents: 1000) }
+  let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee:, precise_amount_cents: 1000) }
   let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 2500) }
   let(:fee) { create(:fee, units: 5, amount: 10, precise_unit_amount: 2) }
   let(:fee2) { create(:fee, units: 1, amount: 25, precise_unit_amount: 25) }
 
   before do
-    credit_note_item
+    credit_note_item1
     credit_note_item2
 
     credit_note.reload
@@ -157,75 +157,53 @@ RSpec.describe EInvoices::CreditNotes::FacturX::Builder, type: :service do
 
       let(:invoice) { create(:invoice) }
       let(:credit_note) { create(:credit_note, invoice:) }
-      let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
-      let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 5) }
-      let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 15) }
-      let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
+      let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
+      let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
+      let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 100) }
+      let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: fee3, precise_amount_cents: 300) }
+      let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: fee4, precise_amount_cents: 600) }
+      let(:fee0) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
+      let(:fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
+      let(:fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 5) }
+      let(:fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 15) }
+      let(:fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
+      let(:credit_note_applied_tax1) { create(:credit_note_applied_tax, credit_note:, tax_rate: 5.0, amount_cents: 20, base_amount_cents: 400) }
+      let(:credit_note_applied_tax2) { create(:credit_note_applied_tax, credit_note:, tax_rate: 10.0, amount_cents: 60, base_amount_cents: 600) }
 
       before do
-        invoice_fee1
-        invoice_fee2
-        invoice_fee3
-        invoice_fee4
+        credit_note_item0
+        credit_note_item1
+        credit_note_item2
+        credit_note_item3
+        credit_note_item4
+        credit_note_applied_tax1
+        credit_note_applied_tax2
       end
 
-      context "without allowances" do
-        it "contains ApplicableTradeTax tags" do
-          expect(subject.xpath(root).length).to eq(3)
-        end
-
-        context "with one tag per tax rate" do
-          it "contains 0.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[1]/ram:CalculatedAmount").with_value("0.00")
-            expect(subject).to contains_xml_node("#{root}[1]/ram:BasisAmount").with_value("-10.00")
-            expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[1]/ram:RateApplicablePercent").with_value("0.00")
-          end
-
-          it "contains 5.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[2]/ram:CalculatedAmount").with_value("-0.20")
-            expect(subject).to contains_xml_node("#{root}[2]/ram:BasisAmount").with_value("-4.00")
-            expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[2]/ram:RateApplicablePercent").with_value("5.00")
-          end
-
-          it "contains 10.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[3]/ram:CalculatedAmount").with_value("-0.60")
-            expect(subject).to contains_xml_node("#{root}[3]/ram:BasisAmount").with_value("-6.00")
-            expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[3]/ram:RateApplicablePercent").with_value("10.00")
-          end
-        end
+      it "contains ApplicableTradeTax tags" do
+        expect(subject.xpath(root).length).to eq(3)
       end
 
-      context "with invoice allowances" do
-        let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
-        let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
-        let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
-        let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
-        let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+      context "with one tag per tax rate" do
+        it "contains 0.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[1]/ram:CalculatedAmount").with_value("0.00")
+          expect(subject).to contains_xml_node("#{root}[1]/ram:BasisAmount").with_value("-10.00")
+          expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[1]/ram:RateApplicablePercent").with_value("0.00")
+        end
 
-        context "with one tag per tax rate" do
-          it "contains 0.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[1]/ram:CalculatedAmount").with_value("0.00")
-            expect(subject).to contains_xml_node("#{root}[1]/ram:BasisAmount").with_value("-9.50")
-            expect(subject).to contains_xml_node("#{root}[1]/ram:CategoryCode").with_value(described_class::Z_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[1]/ram:RateApplicablePercent").with_value("0.00")
-          end
+        it "contains 5.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[2]/ram:CalculatedAmount").with_value("-0.20")
+          expect(subject).to contains_xml_node("#{root}[2]/ram:BasisAmount").with_value("-4.00")
+          expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[2]/ram:RateApplicablePercent").with_value("5.00")
+        end
 
-          it "contains 5.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[2]/ram:CalculatedAmount").with_value("-0.19")
-            expect(subject).to contains_xml_node("#{root}[2]/ram:BasisAmount").with_value("-3.80")
-            expect(subject).to contains_xml_node("#{root}[2]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[2]/ram:RateApplicablePercent").with_value("5.00")
-          end
-
-          it "contains 10.00% rate" do
-            expect(subject).to contains_xml_node("#{root}[3]/ram:CalculatedAmount").with_value("-0.57")
-            expect(subject).to contains_xml_node("#{root}[3]/ram:BasisAmount").with_value("-5.70")
-            expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
-            expect(subject).to contains_xml_node("#{root}[3]/ram:RateApplicablePercent").with_value("10.00")
-          end
+        it "contains 10.00% rate" do
+          expect(subject).to contains_xml_node("#{root}[3]/ram:CalculatedAmount").with_value("-0.60")
+          expect(subject).to contains_xml_node("#{root}[3]/ram:BasisAmount").with_value("-6.00")
+          expect(subject).to contains_xml_node("#{root}[3]/ram:CategoryCode").with_value(described_class::S_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[3]/ram:RateApplicablePercent").with_value("10.00")
         end
       end
     end

@@ -3,49 +3,71 @@
 module EInvoices
   module Ubl
     class LineItem < BaseService
-      def initialize(xml:, resource:, fee:, line_id:)
+      Data = Data.define(
+        :type,
+        :line_id,
+        :quantity,
+        :line_extension_amount,
+        :currency,
+        :item_name,
+        :item_category,
+        :item_rate_percent,
+        :item_description,
+        :price_amount
+      )
+
+      def initialize(xml:, resource:, data:)
         super(xml:, resource:)
 
-        @fee = fee
-        @line_id = line_id
+        @data = data
       end
 
       def call
-        xml.comment "Line Item #{line_id}: #{line_item_description}"
-        xml["cac"].InvoiceLine do
-          xml["cbc"].ID line_id
-          xml["cbc"].InvoicedQuantity fee.units, unitCode: UNIT_CODE
-          xml["cbc"].LineExtensionAmount format_number(fee.amount), currencyID: fee.currency
+        xml.comment "Line Item #{data.line_id}: #{data.item_description}"
+        xml["cac"].send(line_tag) do
+          xml["cbc"].ID data.line_id
+          xml["cbc"].send(quantity_tag, data.quantity, unitCode: UNIT_CODE)
+          xml["cbc"].LineExtensionAmount format_number(data.line_extension_amount), currencyID: data.currency
           xml["cac"].Item do
-            xml["cbc"].Name fee.item_name
+            xml["cbc"].Name data.item_name
             xml["cac"].ClassifiedTaxCategory do
-              xml["cbc"].ID category_code
-              xml["cbc"].Percent fee.taxes_rate unless outside_scope_of_tax?
+              xml["cbc"].ID data.item_category
+              xml["cbc"].Percent data.item_rate_percent if data.item_rate_percent.present?
               xml["cac"].TaxScheme do
                 xml["cbc"].ID VAT
               end
             end
             xml["cac"].AdditionalItemProperty do
               xml["cbc"].Name "Description"
-              xml["cbc"].Value fee.description.presence || line_item_description
+              xml["cbc"].Value data.item_description
             end
           end
           xml["cac"].Price do
-            xml["cbc"].PriceAmount fee.precise_unit_amount, currencyID: fee.currency
+            xml["cbc"].PriceAmount data.price_amount, currencyID: data.currency
           end
         end
       end
 
       private
 
-      attr_accessor :fee, :line_id
+      attr_accessor :data
 
-      def category_code
-        @_category_code ||= tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+      def line_tag
+        case data.type
+        when :invoice
+          :InvoiceLine
+        when :credit_note
+          :CreditNoteLine
+        end
       end
 
-      def outside_scope_of_tax?
-        category_code == O_CATEGORY
+      def quantity_tag
+        case data.type
+        when :invoice
+          :InvoicedQuantity
+        when :credit_note
+          :CreditedQuantity
+        end
       end
     end
   end

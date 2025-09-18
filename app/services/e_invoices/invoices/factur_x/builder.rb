@@ -18,7 +18,7 @@ module EInvoices
 
           xml.comment "Supply Chain Trade Transaction"
           xml["rsm"].SupplyChainTradeTransaction do
-            line_items do |fee, line_id|
+            line_items(:fees) do |fee, line_id|
               FacturX::LineItem.call(xml:, resource:, data: line_item_data(line_id, fee))
             end
 

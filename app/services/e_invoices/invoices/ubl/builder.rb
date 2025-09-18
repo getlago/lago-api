@@ -13,7 +13,7 @@ module EInvoices
       end
 
       def call
-        xml.Invoice(ROOT_NAMESPACES) do
+        xml.Invoice(INVOICE_NAMESPACES) do
           xml.comment "UBL Version and Customization"
           xml["cbc"].UBLVersionID "2.1"
           xml["cbc"].CustomizationID "urn:cen.eu:en16931:2017"
@@ -40,8 +40,8 @@ module EInvoices
 
           Ubl::MonetaryTotal.call(xml:, resource:, amounts: monetary_summation_amounts)
 
-          line_items do |fee, line_id|
-            Ubl::LineItem.call(xml:, resource:, fee:, line_id:)
+          line_items(:fees) do |fee, line_id|
+            Ubl::LineItem.call(xml:, resource:, data: line_item_data(line_id, fee))
           end
         end
       end
@@ -79,6 +79,22 @@ module EInvoices
           allowance_total_amount: Money.new(allowances(invoice)),
           prepaid_amount: invoice.prepaid_credit_amount + invoice.credit_notes_amount,
           payable_amount: invoice.total_amount
+        )
+      end
+
+      def line_item_data(index, fee)
+        category = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+        Ubl::LineItem::Data.new(
+          type: :invoice,
+          line_id: index,
+          quantity: fee.units,
+          line_extension_amount: fee.amount,
+          currency: fee.currency,
+          item_name: fee.item_name,
+          item_category: category,
+          item_rate_percent: (category != O_CATEGORY) ? fee.taxes_rate : nil,
+          item_description: fee_description(fee),
+          price_amount: fee.precise_unit_amount
         )
       end
     end

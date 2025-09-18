@@ -18,7 +18,7 @@ module EInvoices
 
           xml.comment "Supply Chain Trade Transaction"
           xml["rsm"].SupplyChainTradeTransaction do
-            line_items do |fee, line_id|
+            line_items(:items) do |fee, line_id|
               FacturX::LineItem.call(xml:, resource:, data: line_item_data(line_id, fee))
             end
 
@@ -29,7 +29,7 @@ module EInvoices
                 FacturX::TradeSettlementPayment.call(xml:, resource:, type:, amount:)
               end
 
-              taxes(credit_note.invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
+              taxes do |tax_category, tax_rate, basis_amount, tax_amount|
                 FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, basis_amount: -basis_amount, tax_amount: -tax_amount)
               end
 
@@ -50,26 +50,26 @@ module EInvoices
 
       def monetary_summation_amounts
         FacturX::MonetarySummation::Amounts.new(
-          line_total_amount: Money.new(-credit_note.fees.sum(:amount_cents)),
+          line_total_amount: -Money.new(credit_note.items.sum(:precise_amount_cents)),
           charges_amount: Money.new(allowances(credit_note.invoice)),
-          tax_basis_amount: -credit_note.sub_total_excluding_taxes_amount,
-          tax_amount: -credit_note.taxes_amount,
-          grand_total_amount: -credit_note.total_amount,
-          due_payable_amount: -credit_note.credit_amount
+          tax_basis_amount: -Money.new(credit_note.sub_total_excluding_taxes_amount),
+          tax_amount: -Money.new(credit_note.taxes_amount),
+          grand_total_amount: -Money.new(credit_note.total_amount),
+          due_payable_amount: -Money.new(credit_note.credit_amount)
         )
       end
 
-      def line_item_data(index, fee)
-        category = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+      def line_item_data(index, item)
+        category = tax_category_code(type: item.fee.fee_type, tax_rate: item.fee.taxes_rate)
         FacturX::LineItem::Data.new(
           line_id: index,
-          name: fee.item_name,
-          description: fee_description(fee),
-          charge_amount: fee.precise_unit_amount,
-          billed_quantity: -fee.units,
+          name: item.fee.item_name,
+          description: fee_description(item.fee),
+          charge_amount: item.fee.precise_unit_amount,
+          billed_quantity: -item.fee.units,
           category_code: category,
-          rate_percent: (category != O_CATEGORY) ? fee.taxes_rate : nil,
-          line_total_amount: -fee.amount
+          rate_percent: (category != O_CATEGORY) ? item.fee.taxes_rate : nil,
+          line_total_amount: Money.new(-item.precise_amount_cents)
         )
       end
     end

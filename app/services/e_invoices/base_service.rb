@@ -64,16 +64,6 @@ module EInvoices
       end
     end
 
-    def line_item_description
-      return fee.invoice_name if fee.invoice_name.present?
-
-      I18n.t(
-        "invoice.subscription_interval",
-        plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
-        plan_name: fee.subscription.plan.invoice_name
-      )
-    end
-
     def discount_reason
       I18n.t("invoice.e_invoicing.discount_reason", tax_rate: percent(tax_rate))
     end
@@ -126,9 +116,9 @@ module EInvoices
       end
     end
 
-    def line_items(&block)
-      resource.fees.order(amount_cents: :asc).each_with_index do |fee, index|
-        yield fee, index + 1
+    def line_items(items, &block)
+      resource.send(items).order(amount_cents: :asc).each_with_index do |item, index|
+        yield item, index + 1
       end
     end
 

@@ -5,15 +5,28 @@ require "rails_helper"
 RSpec.describe EInvoices::Ubl::LineItem, type: :service do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, resource:, fee:, line_id:)
+      described_class.call(xml:, resource:, data:)
     end
   end
 
-  let(:resource) { fee.invoice }
-  let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:, fee_type:) }
-  let(:taxes_rate) { 20.00 }
-  let(:fee_type) { :subscription }
-  let(:line_id) { 1 }
+  let(:resource) { nil }
+  let(:data_type) { :invoice }
+  let(:item_category) { described_class::S_CATEGORY }
+  let(:item_rate_percent) { 20.0 }
+  let(:data) do
+    described_class::Data.new(
+      type: data_type,
+      line_id: 1,
+      quantity: 2,
+      line_extension_amount: 0.118,
+      currency: "USD",
+      item_name: "item name",
+      item_category:,
+      item_rate_percent:,
+      item_description: "fee description",
+      price_amount: 0.059
+    )
+  end
 
   let(:root) { "//cac:InvoiceLine" }
 
@@ -21,57 +34,45 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do
-      expect(subject).to contains_xml_comment("Line Item #{line_id}: #{fee.invoice_name}")
+      expect(subject).to contains_xml_comment("Line Item 1: fee description")
     end
 
     it "have the line id" do
-      expect(subject).to contains_xml_node("#{root}/cbc:ID")
-        .with_value(line_id)
+      expect(subject).to contains_xml_node("#{root}/cbc:ID").with_value(1)
     end
 
-    context "with InvoicedQuantity" do
-      it "have the item units" do
-        expect(subject).to contains_xml_node("#{root}/cbc:InvoicedQuantity")
-          .with_value(fee.units)
-          .with_attribute("unitCode", "C62")
+    context "with item units" do
+      context "when InvoicedQuantity" do
+        it "have the item units" do
+          expect(subject).to contains_xml_node("#{root}/cbc:InvoicedQuantity").with_value(2).with_attribute("unitCode", "C62")
+        end
+      end
+
+      context "when CreditedQuantity" do
+        let(:data_type) { :credit_note }
+        let(:root) { "//cac:CreditNoteLine" }
+
+        it "have the item units" do
+          expect(subject).to contains_xml_node("#{root}/cbc:CreditedQuantity").with_value(2).with_attribute("unitCode", "C62")
+        end
       end
     end
 
     it "have the item total amount" do
-      expect(subject).to contains_xml_node("#{root}/cbc:LineExtensionAmount")
-        .with_value(fee.amount)
-        .with_attribute("currencyID", fee.currency)
+      expect(subject).to contains_xml_node("#{root}/cbc:LineExtensionAmount").with_value("0.12").with_attribute("currencyID", "USD")
     end
 
     context "when Item" do
       it "have the item name" do
-        expect(subject).to contains_xml_node("#{root}/cac:Item/cbc:Name").with_value(fee.item_name)
+        expect(subject).to contains_xml_node("#{root}/cac:Item/cbc:Name").with_value("item name")
       end
 
       context "with ClassifiedTaxCategory" do
         context "with Category ID" do
           let(:xpath) { "#{root}/cac:Item/cac:ClassifiedTaxCategory/cbc:ID" }
 
-          context "when taxes are not zero" do
-            it "has the S category code" do
-              expect(subject).to contains_xml_node(xpath).with_value("S")
-            end
-          end
-
-          context "when taxes are zero" do
-            let(:taxes_rate) { 0.00 }
-
-            it "has the Z category code" do
-              expect(subject).to contains_xml_node(xpath).with_value("Z")
-            end
-          end
-
-          context "when credit fee" do
-            let(:fee_type) { :credit }
-
-            it "has the O category code" do
-              expect(subject).to contains_xml_node(xpath).with_value("O")
-            end
+          it "has the category code" do
+            expect(subject).to contains_xml_node(xpath).with_value("S")
           end
         end
 
@@ -79,11 +80,11 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
           it "have the item taxes rate" do
             expect(subject).to contains_xml_node(
               "#{root}/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent"
-            ).with_value(fee.taxes_rate)
+            ).with_value("20.0")
           end
 
-          context "with O_CATEGORY" do
-            let(:fee_type) { :credit }
+          context "with outside of tax range" do
+            let(:item_rate_percent) { nil }
 
             it "do not have percent tag" do
               expect(subject).not_to contains_xml_node(
@@ -108,17 +109,7 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
 
           expect(subject).to contains_xml_node(
             "#{root}/cac:Item/cac:AdditionalItemProperty/cbc:Value"
-          ).with_value(fee.invoice_name)
-        end
-
-        context "with fee description field" do
-          before { fee.update(description: "Test me") }
-
-          it "uses fee description field" do
-            expect(subject).to contains_xml_node(
-              "#{root}/cac:Item/cac:AdditionalItemProperty/cbc:Value"
-            ).with_value("Test me")
-          end
+          ).with_value("fee description")
         end
       end
     end
@@ -127,7 +118,7 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
       it "have the item unit amount" do
         expect(subject).to contains_xml_node("#{root}/cac:Price/cbc:PriceAmount")
           .with_value("0.059")
-          .with_attribute("currencyID", fee.currency)
+          .with_attribute("currencyID", "USD")
       end
     end
   end
