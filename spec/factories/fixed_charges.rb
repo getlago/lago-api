@@ -9,6 +9,11 @@ FactoryBot.define do
     units { 1 }
     properties { {amount: Faker::Number.between(from: 100, to: 500).to_s} }
     invoice_display_name { Faker::Fantasy::Tolkien.location }
+    pay_in_advance { false }
+
+    trait :pay_in_advance do
+      pay_in_advance { true }
+    end
 
     trait :graduated do
       charge_model { "graduated" }

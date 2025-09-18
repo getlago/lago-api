@@ -115,6 +115,53 @@ module Commitments
 
           scope
         end
+
+        def fixed_charge_fees
+          dates_service = Commitments::DatesService.new_instance(
+            commitment: minimum_commitment,
+            invoice_subscription:
+          ).call
+
+          Fee
+            .fixed_charge
+            .joins(:fixed_charge)
+            .where(
+              subscription_id: subscription.id,
+              fixed_charge: {pay_in_advance: false}
+            )
+            .where(
+              "(fees.properties->>'fixed_charges_from_datetime') >= ?",
+              dates_service.previous_beginning_of_period
+            )
+            .where(
+              "(fees.properties->>'fixed_charges_to_datetime') <= ?",
+              dates_service.end_of_period&.iso8601(3)
+            )
+        end
+
+        def fixed_charge_in_advance_fees
+          dates_service = Commitments::DatesService.new_instance(
+            commitment: minimum_commitment,
+            invoice_subscription:
+          ).call
+
+          Fee
+            .fixed_charge
+            .joins(:fixed_charge)
+            .where(
+              subscription_id: subscription.id,
+              fixed_charge: {pay_in_advance: true},
+              pay_in_advance: true
+            )
+            .where(
+              "(fees.properties->>'fixed_charges_from_datetime') >= ?",
+              dates_service.previous_beginning_of_period
+            )
+            .where(
+              "(fees.properties->>'fixed_charges_to_datetime') <= ?",
+              dates_service.end_of_period&.iso8601(3)
+            )
+        end
       end
     end
   end
