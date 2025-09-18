@@ -3,10 +3,15 @@
 require "rails_helper"
 
 describe "Wallet Transaction with rounding" do
-  let(:organization) { create(:organization, webhook_url: nil) }
-  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization, :with_static_values, webhook_url: nil) }
+  let(:customer) { create(:customer, :with_static_values, organization:) }
 
-  around { |test| lago_premium!(&test) }
+  around do |test|
+    # Set the time to have a fixed issue date in invoice
+    travel_to Time.zone.local(2025, 1, 1, 0, 0, 0) do
+      lago_premium!(&test)
+    end
+  end
 
   it "rounds the amount field when handling paid_credits" do
     wallet = create_wallet({
@@ -35,6 +40,8 @@ describe "Wallet Transaction with rounding" do
 
     # Customer does not have a payment_provider set yet
     invoice = customer.invoices.credit.sole
+    expect(invoice.file.download).to match_html_snapshot
+
     expect(invoice.status).to eq "finalized"
     expect(invoice.payment_status).to eq "pending"
     expect(invoice.total_amount_cents).to eq 1797
