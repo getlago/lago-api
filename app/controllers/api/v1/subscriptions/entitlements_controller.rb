@@ -6,7 +6,7 @@ module Api
       class EntitlementsController < Api::BaseController
         include PremiumFeatureOnly
 
-        # TODO: Share this with SubscriptionController and AlertsController
+        # Shall we update BaseController to include hae active subscriptions only?
         before_action :find_subscription
 
         def index

@@ -373,6 +373,49 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         end
       end
     end
+
+    context "with fixed charges override" do
+      let(:plan) { create(:plan, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, units: 2, charge_model: "standard", properties: {amount: "10"}) }
+      let(:tax) { create(:tax, organization:) }
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          name: "subscription name",
+          external_id: SecureRandom.uuid,
+          billing_time: "anniversary",
+          subscription_at:,
+          ending_at:,
+          plan_overrides: {
+            fixed_charges: [{
+              id: fixed_charge.id,
+              units: "10",
+              invoice_display_name: "another name",
+              properties: {amount: "20"},
+              tax_codes: [tax.code]
+            }]
+          }
+        }
+      end
+
+      it "creates a subscription with overridden plan with fixed_charges, but does not send them in the response" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:plan][:fixed_charges]).to be_nil
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.fixed_charges.count).to eq(1)
+        expect(subscription.fixed_charges.first.attributes.symbolize_keys).to include(
+          add_on_id: fixed_charge.add_on.id,
+          units: 10.0,
+          invoice_display_name: "another name",
+          charge_model: "standard",
+          properties: {"amount" => "20"},
+          parent_id: fixed_charge.id
+        )
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
