@@ -92,8 +92,8 @@ module Fees
         aggregation_result.precise_total_amount_cents = 0
       end
 
-      @amount_result = Charges::ChargeModelFactory
-        .new_instance(charge:, aggregation_result:, properties:)
+      @amount_result = ChargeModels::Factory
+        .new_instance(chargeable: charge, aggregation_result:, properties:)
         .apply
     end
 
