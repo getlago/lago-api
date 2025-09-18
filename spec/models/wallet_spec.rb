@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallet, type: :model do
+RSpec.describe Wallet do
   subject(:wallet) { build(:wallet) }
 
   it_behaves_like "paper_trail traceable"

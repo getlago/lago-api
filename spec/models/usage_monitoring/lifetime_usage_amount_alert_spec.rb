@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::LifetimeUsageAmountAlert, type: :model do
+RSpec.describe UsageMonitoring::LifetimeUsageAmountAlert do
   describe "#find_value" do
     subject { alert.find_value(lifetime_usage) }
 

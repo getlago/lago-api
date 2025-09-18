@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharge, type: :model do
+RSpec.describe FixedCharge do
   subject { build(:fixed_charge) }
 
   it_behaves_like "paper_trail traceable"

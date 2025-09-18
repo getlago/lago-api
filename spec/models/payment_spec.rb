@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payment, type: :model do
+RSpec.describe Payment do
   subject(:payment) { build(:payment, payable:, payment_type:, provider_payment_id:, reference:, amount_cents:) }
 
   let(:payable) { create(:invoice, invoice_type:, total_amount_cents: 10000) }

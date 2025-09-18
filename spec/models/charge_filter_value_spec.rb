@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeFilterValue, type: :model do
+RSpec.describe ChargeFilterValue do
   subject { build(:charge_filter_value) }
 
   it_behaves_like "paper_trail traceable"

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Clickhouse::ApiLog, type: :model, clickhouse: true do
+RSpec.describe Clickhouse::ApiLog, clickhouse: true do
   subject(:api_log) { create(:clickhouse_api_log) }
 
   it { is_expected.to belong_to(:organization) }

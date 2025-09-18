@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Coupon, type: :model do
+RSpec.describe Coupon do
   subject(:coupon) { build(:coupon) }
 
   it_behaves_like "paper_trail traceable"

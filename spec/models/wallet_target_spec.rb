@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe WalletTarget, type: :model do
+RSpec.describe WalletTarget do
   subject(:wallet_target) { build(:wallet_target) }
 
   it { is_expected.to belong_to(:organization) }

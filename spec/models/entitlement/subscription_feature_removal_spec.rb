@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionFeatureRemoval, type: :model do
+RSpec.describe Entitlement::SubscriptionFeatureRemoval do
   subject { build(:subscription_feature_removal) }
 
   it { expect(described_class).to be_soft_deletable }

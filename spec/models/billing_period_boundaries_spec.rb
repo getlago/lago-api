@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingPeriodBoundaries, type: :model do
+RSpec.describe BillingPeriodBoundaries do
   subject(:boundaries) do
     described_class.new(
       from_datetime:,

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe AiConversation, type: :model do
+RSpec.describe AiConversation do
   subject { build(:ai_conversation) }
 
   describe "associations" do

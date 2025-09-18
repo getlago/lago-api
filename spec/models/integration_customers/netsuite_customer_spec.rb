@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::NetsuiteCustomer, type: :model do
+RSpec.describe IntegrationCustomers::NetsuiteCustomer do
   subject(:netsuite_customer) { build(:netsuite_customer) }
 
   describe "#subsidiary_id" do

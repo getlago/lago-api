@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::HubspotCustomer, type: :model do
+RSpec.describe IntegrationCustomers::HubspotCustomer do
   subject(:hubspot_customer) { build(:hubspot_customer) }
 
   describe "#targeted_object" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::StripeProvider, type: :model do
+RSpec.describe PaymentProviders::StripeProvider do
   subject(:stripe_provider) { build(:stripe_provider, attributes) }
 
   let(:attributes) {}

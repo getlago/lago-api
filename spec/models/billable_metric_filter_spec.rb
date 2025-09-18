@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetricFilter, type: :model do
+RSpec.describe BillableMetricFilter do
   subject(:billable_metric_filter) { build(:billable_metric_filter) }
 
   it_behaves_like "paper_trail traceable"

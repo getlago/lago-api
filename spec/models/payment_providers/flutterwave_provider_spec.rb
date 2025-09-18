@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::FlutterwaveProvider, type: :model do
+RSpec.describe PaymentProviders::FlutterwaveProvider do
   subject(:flutterwave_provider) { build(:flutterwave_provider) }
 
   describe "validations" do

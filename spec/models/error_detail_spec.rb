@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ErrorDetail, type: :model do
+RSpec.describe ErrorDetail do
   it { is_expected.to belong_to(:owner) }
   it { is_expected.to belong_to(:organization) }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedInvoiceCustomSection, type: :model do
+RSpec.describe AppliedInvoiceCustomSection do
   subject(:applied_invoice_custom_section) { build(:applied_invoice_custom_section) }
 
   it { is_expected.to belong_to(:invoice) }

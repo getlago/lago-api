@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::OktaIntegration, type: :model do
+RSpec.describe Integrations::OktaIntegration do
   subject(:okta_integration) { build(:okta_integration) }
 
   it { is_expected.to validate_presence_of(:domain) }

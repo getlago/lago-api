@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe RecurringTransactionRule, type: :model do
+RSpec.describe RecurringTransactionRule do
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:organization) }

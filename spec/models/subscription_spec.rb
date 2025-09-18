@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscription, type: :model do
+RSpec.describe Subscription do
   subject(:subscription) { create(:subscription, plan:) }
 
   let(:plan) { create(:plan) }

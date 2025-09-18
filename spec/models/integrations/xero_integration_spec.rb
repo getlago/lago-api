@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::XeroIntegration, type: :model do
+RSpec.describe Integrations::XeroIntegration do
   subject(:xero_integration) { build(:xero_integration) }
 
   it { is_expected.to validate_presence_of(:name) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Deprecation, type: :model, cache: :redis do
+RSpec.describe Deprecation, cache: :redis do
   let(:organization) { create(:organization) }
   let(:feature_name) { "event_legacy" }
 

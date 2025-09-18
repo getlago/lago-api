@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Metadata::CustomerMetadata, type: :model do
+RSpec.describe Metadata::CustomerMetadata do
   subject(:metadata) { described_class.new(attributes) }
 
   let(:customer) { create(:customer) }

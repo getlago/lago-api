@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::BillableMetricCurrentUsageAmountAlert, type: :model do
+RSpec.describe UsageMonitoring::BillableMetricCurrentUsageAmountAlert do
   subject { alert.find_value(current_usage) }
 
   let(:alert) { create(:billable_metric_current_usage_amount_alert, subscription_external_id: "test") }

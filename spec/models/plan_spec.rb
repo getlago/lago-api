@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plan, type: :model do
+RSpec.describe Plan do
   subject(:plan) { build(:plan, trial_period: 3) }
 
   it { expect(described_class).to be_soft_deletable }

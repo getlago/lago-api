@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationItem, type: :model do
+RSpec.describe IntegrationItem do
   subject(:integration_item) { build(:integration_item) }
 
   it_behaves_like "paper_trail traceable"
