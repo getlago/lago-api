@@ -49,6 +49,9 @@ module Invoices
       end
 
       result.invoice = regenerated_invoice
+
+      call_invoice_finalization_jobs(regenerated_invoice)
+
       result
     end
 
@@ -56,6 +59,8 @@ module Invoices
 
     attr_accessor :regenerated_invoice
     attr_reader :voided_invoice, :fees_params
+
+    delegate :customer, to: :voided_invoice
 
     def should_create_credit_note_credit?
       return false unless regenerated_invoice.total_amount_cents&.positive?
@@ -216,6 +221,22 @@ module Invoices
       ).invoice.tap do |invoice|
         invoice.update!(voided_invoice_id: voided_invoice.id)
       end
+    end
+
+    def call_invoice_finalization_jobs(invoice)
+      return if invoice.closed?
+
+      Utils::SegmentTrack.invoice_created(invoice)
+      SendWebhookJob.perform_later("invoice.created", invoice)
+      Utils::ActivityLog.produce(invoice, "invoice.created")
+      GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+      Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+      Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+      Invoices::Payments::CreateService.call_async(invoice:)
+    end
+
+    def should_deliver_email?
+      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
     end
   end
 end
