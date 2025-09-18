@@ -31,13 +31,7 @@ module Fees
       init_fee
       return result if current_usage
 
-      ActiveRecord::Base.transaction do
-        # result.fee.reject! unless should_persist_fee?
-        next if context == :invoice_preview || !should_persist_fee?
-
-        result.fee.save!
-      end
-
+      result.fee.save! if context != :invoice_preview && should_persist_fee?
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -60,6 +54,7 @@ module Fees
         amount_result.full_units_number = amount_result.units = amount_result.total_aggregated_units = BigDecimal(0)
       end
 
+      # TODO: add pricing units
       pricing_unit_usage = nil
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
@@ -104,8 +99,7 @@ module Fees
 
     def apply_aggregation_and_charge_model
       aggregation_result = aggregator.call
-            
-      # todo: fix it with the correct service!
+
       Charges::ChargeModelFactory.new_instance(
         charge: fixed_charge,
         aggregation_result:,
@@ -117,7 +111,7 @@ module Fees
 
     def aggregator
       if fixed_charge.prorated?
-        return FixedChargeEvents::Aggregations::ProratedAggregationService.new(fixed_charge:, subscription:, boundaries:) 
+        return FixedChargeEvents::Aggregations::ProratedAggregationService.new(fixed_charge:, subscription:, boundaries:)
       end
 
       FixedChargeEvents::Aggregations::SimpleAggregationService.new(fixed_charge:, subscription:, boundaries:)
@@ -148,6 +142,5 @@ module Fees
 
       false
     end
-
   end
 end

@@ -66,8 +66,9 @@ module Fees
       return customer.organization.taxes.where(code: tax_codes) if tax_codes
       return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
+      return fee.fixed_charge.taxes if fee.fixed_charge? && fee.fixed_charge.taxes.any?
       return fee.invoiceable.taxes if fee.commitment? && fee.invoiceable.taxes.any?
-      if (fee.charge? || fee.subscription? || fee.commitment?) && fee.subscription.plan.taxes.any?
+      if (fee.charge? || fee.subscription? || fee.commitment? || fee.fixed_charge?) && fee.subscription.plan.taxes.any?
         return fee.subscription.plan.taxes
       end
       return customer.taxes if customer.taxes.any?
