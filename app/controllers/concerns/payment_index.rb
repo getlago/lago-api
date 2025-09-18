@@ -19,8 +19,11 @@ module PaymentIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          # TODO: EAGER LOAD STUFF
-          result.payments,
+          result.payments.includes(
+            :payment_provider_customer,
+            :payment_provider,
+            payable: :customer
+          ),
           ::V1::PaymentSerializer,
           collection_name: resource_name.pluralize,
           meta: pagination_metadata(result.payments)
