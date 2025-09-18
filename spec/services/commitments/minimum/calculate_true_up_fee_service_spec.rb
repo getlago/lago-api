@@ -509,8 +509,397 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
               let(:to_datetime) { DateTime.parse("2024-06-30T23:59:59.999") }
               let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
               let(:charges_to_datetime) { DateTime.parse("2024-06-30T23:59:59.999") }
+              let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+              let(:fixed_charges_to_datetime) { DateTime.parse("2024-06-30T23:59:59.999") }
+              let(:timestamp) { DateTime.parse("2024-07-01T10:00:00") }
 
-              xit "test da thingy"
+              context "when fees total amount is greater or equal than the commitment amount" do
+                it "returns result with zero amount cents" do
+                  expect(service_call.amount_cents).to eq(0)
+                end
+              end
+
+              context "when fees total amount is smaller than the commitment amount" do
+                let(:commitment_amount_cents) { 10_000 }
+
+                context "with an in-advance charge for the next period" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime: charges_from_datetime + 6.months,
+                        charges_to_datetime: charges_to_datetime + 6.months
+                      }
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(9_350)
+                  end
+                end
+
+                context "with an in-advance charge for current period" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500,
+                      properties: {
+                        charges_from_datetime:,
+                        charges_to_datetime:
+                      }
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(8_850)
+                  end
+                end
+
+                context "with an in-advance charge from another period" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 500
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(9_350)
+                  end
+                end
+
+                context "with an in-advance fixed charge for the next period" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 500,
+                      properties: {
+                        fixed_charges_from_datetime: fixed_charges_from_datetime + 6.months,
+                        fixed_charges_to_datetime: fixed_charges_to_datetime + 6.months
+                      }
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(9_350)
+                  end
+                end
+
+                context "with an in-advance fixed charge for current period" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 500,
+                      properties: {
+                        fixed_charges_from_datetime: fixed_charges_from_datetime,
+                        fixed_charges_to_datetime: fixed_charges_to_datetime
+                      }
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(8_850)
+                  end
+                end
+
+                context "with an in-advance fixed charge from another period" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 500
+                    )
+                  end
+
+                  it "returns result with amount cents" do
+                    expect(service_call.amount_cents).to eq(9_350)
+                  end
+                end
+              end
+            end
+
+            context "when charges are billed monthly" do
+              let(:bill_charges_monthly) { true }
+              let(:commitment_amount_cents) { 10_000 }
+
+              let(:invoice_subscription_previous) do
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  from_datetime: DateTime.parse("2024-01-01T00:00:00"),
+                  to_datetime: DateTime.parse("2024-01-31T23:59:59.999"),
+                  charges_from_datetime: DateTime.parse("2024-01-01T00:00:00"),
+                  charges_to_datetime: DateTime.parse("2024-01-31T23:59:59.999"),
+                  fixed_charges_from_datetime: DateTime.parse("2024-01-01T00:00:00"),
+                  fixed_charges_to_datetime: DateTime.parse("2024-06-30T23:59:59.999"),
+                  timestamp: DateTime.parse("2024-07-01T10:00:00")
+                )
+              end
+
+              context "with an in-advance charge for the next period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime: charges_from_datetime + 6.months,
+                      charges_to_datetime: charges_to_datetime + 6.months
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance charge for current period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(8_850)
+                end
+              end
+
+              context "with an in-advance charge from another period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance fixed charge for the next period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500,
+                    properties: {
+                      fixed_charges_from_datetime: fixed_charges_from_datetime + 6.months,
+                      fixed_charges_to_datetime: fixed_charges_to_datetime + 6.months
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance fixed charge for current period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500,
+                    properties: {
+                      fixed_charges_from_datetime: fixed_charges_from_datetime,
+                      fixed_charges_to_datetime: fixed_charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(8_850)
+                end
+              end
+
+              context "with an in-advance fixed charge from another period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: invoice_subscription_previous.invoice,
+                    subscription: invoice_subscription_previous.subscription,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+            end
+
+            context "when fixed charges are billed monthly" do
+              let(:bill_fixed_charges_monthly) { true }
+              let(:commitment_amount_cents) { 10_000 }
+
+              context "with an in-advance charge for the next period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime: charges_from_datetime + 6.months,
+                      charges_to_datetime: charges_to_datetime + 6.months
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance charge for current period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500,
+                    properties: {
+                      charges_from_datetime:,
+                      charges_to_datetime:
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(8_850)
+                end
+              end
+
+              context "with an in-advance charge from another period" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 500
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance fixed charge for the next period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500,
+                    properties: {
+                      fixed_charges_from_datetime: charges_from_datetime + 6.months,
+                      fixed_charges_to_datetime: charges_to_datetime + 6.months
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
+
+              context "with an in-advance fixed charge for current period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500,
+                    properties: {
+                      fixed_charges_from_datetime: charges_from_datetime,
+                      fixed_charges_to_datetime: charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(8_850)
+                end
+              end
+
+              context "with an in-advance fixed charge from another period" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 500
+                  )
+                end
+
+                it "returns result with amount cents" do
+                  expect(service_call.amount_cents).to eq(9_350)
+                end
+              end
             end
 
             context "when plan has quarterly interval" do
