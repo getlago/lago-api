@@ -819,10 +819,12 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
           billing_configuration: {
             payment_provider:,
             payment_provider_code:,
-            provider_customer_id: "stripe_id"
+            provider_customer_id: "stripe_id",
+            sync: sync
           }
         }
       end
+      let(:sync) { false }
       let(:customer) do
         create(
           :customer,
@@ -838,7 +840,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       before { customer }
 
       context "when payment provider exists" do
-        let(:stripe_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
+        let(:stripe_provider) { create(:stripe_provider, code: "stripe_1", organization:) }
 
         before { stripe_provider }
 
@@ -851,6 +853,37 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
           expect(result.customer.stripe_customer).to be_present
           expect(result.customer.stripe_customer.id).to be_present
           expect(result.customer.stripe_customer.provider_customer_id).to eq("stripe_id")
+        end
+
+        context "when the stripe_customer exists" do
+          let(:customer) do
+            create(
+              :customer,
+              organization:,
+              billing_entity:,
+              external_id: create_args[:external_id],
+              email: "foo@bar.com",
+              payment_provider_code: stripe_provider.code,
+              payment_provider: :stripe
+            )
+          end
+          let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
+
+          before { stripe_customer }
+
+          context "when the code is invalid" do
+            let(:payment_provider_code) { "not_found" }
+
+            context "when sync is true" do
+              let(:sync) { true }
+
+              it "fails to create customer" do
+                expect(result).to be_a_failure
+                expect(result.error).to be_a(BaseService::ValidationFailure)
+                expect(result.error.messages[:base]).to eq(["payment_provider_not_found"])
+              end
+            end
+          end
         end
       end
 
