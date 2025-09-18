@@ -134,7 +134,7 @@ module Invoices
           expires_at: payment_intent.expires_at.to_i,
           payment_intent_data: {
             description:,
-            setup_future_usage: off_session? ? "off_session" : nil, # save payment method for future use
+            setup_future_usage: setup_future_usage? ? "off_session" : nil,
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
@@ -202,10 +202,9 @@ module Invoices
         result
       end
 
-      # NOTE: Due to RBI limitation, all indians payment should be off_session
-      # to permit 3D secure authentication
-      # https://docs.stripe.com/india-recurring-payments
-      def off_session?
+      # NOTE: Due to RBI limitation, all indians payment should be "on session". See: https://docs.stripe.com/india-recurring-payments
+      # crypto payments don't support 'off_session'
+      def setup_future_usage?
         return false if customer.country == "IN"
         return false if customer.stripe_customer.provider_payment_methods.include?("crypto")
 
