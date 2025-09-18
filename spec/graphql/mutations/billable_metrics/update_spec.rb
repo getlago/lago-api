@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillableMetrics::Update, type: :graphql do
+RSpec.describe Mutations::BillableMetrics::Update do
   let(:required_permission) { "billable_metrics:update" }
   let(:membership) { create(:membership) }
   let(:billable_metric) { create(:weighted_sum_billable_metric, organization: membership.organization) }

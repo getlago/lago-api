@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
+RSpec.describe Resolvers::SubscriptionsResolver do
   let(:required_permission) { "subscriptions:view" }
   let(:query) do
     <<~GQL

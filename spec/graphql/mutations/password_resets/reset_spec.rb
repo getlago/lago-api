@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PasswordResets::Reset, type: :graphql do
+RSpec.describe Mutations::PasswordResets::Reset do
   let(:membership) { create(:membership, user: create(:user, password: "HelloLago!1")) }
   let(:password_reset) { create(:password_reset, user: membership.user) }
 

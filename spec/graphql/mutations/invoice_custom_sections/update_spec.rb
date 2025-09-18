@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::InvoiceCustomSections::Update, type: :graphql do
+RSpec.describe Mutations::InvoiceCustomSections::Update do
   let(:required_permission) { "invoice_custom_sections:update" }
   let(:membership) { create(:membership) }
 

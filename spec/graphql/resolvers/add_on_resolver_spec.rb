@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::AddOnResolver, type: :graphql do
+RSpec.describe Resolvers::AddOnResolver do
   let(:required_permission) { "addons:view" }
   let(:query) do
     <<~GQL

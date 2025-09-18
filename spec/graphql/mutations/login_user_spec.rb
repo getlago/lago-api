@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::LoginUser, type: :graphql do
+RSpec.describe Mutations::LoginUser do
   let(:membership) { create(:membership) }
   let(:user) { membership.user }
   let(:mutation) do

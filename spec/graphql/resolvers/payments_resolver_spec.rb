@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
+RSpec.describe Resolvers::PaymentsResolver do
   let(:required_permission) { "payments:view" }
   let(:query) {}
 

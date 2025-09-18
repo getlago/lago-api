@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::VersionResolver, type: :graphql do
+RSpec.describe Resolvers::VersionResolver do
   let(:query) do
     <<~GQL
       query {

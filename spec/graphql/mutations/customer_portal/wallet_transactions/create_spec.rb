@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create, type: :graphql do
+RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create do
   let(:wallet) { create(:wallet, balance: 10.0, credits_balance: 10.0) }
 
   let(:mutation) do

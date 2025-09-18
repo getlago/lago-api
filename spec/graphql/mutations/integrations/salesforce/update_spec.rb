@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Salesforce::Update, type: :graphql do
+RSpec.describe Mutations::Integrations::Salesforce::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:salesforce_integration, organization:) }
   let(:organization) { membership.organization }

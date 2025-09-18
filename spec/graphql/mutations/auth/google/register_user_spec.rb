@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Auth::Google::RegisterUser, type: :graphql do
+RSpec.describe Mutations::Auth::Google::RegisterUser do
   let(:google_service) { instance_double(Auth::GoogleService) }
   let(:user) { create(:user) }
 

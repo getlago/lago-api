@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Webhooks::Retry, type: :graphql do
+RSpec.describe Mutations::Webhooks::Retry do
   let(:required_permission) { "developers:manage" }
   let(:webhook) { create(:webhook, :failed, webhook_endpoint:) }
   let(:webhook_endpoint) { create(:webhook_endpoint) }

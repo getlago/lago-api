@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
+RSpec.describe Mutations::CreditNotes::Create do
   let(:required_permission) { "credit_notes:create" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }

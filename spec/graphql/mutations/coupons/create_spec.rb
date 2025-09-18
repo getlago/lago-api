@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Coupons::Create, type: :graphql do
+RSpec.describe Mutations::Coupons::Create do
   let(:required_permission) { "coupons:create" }
   let(:membership) { create(:membership) }
   let(:expiration_at) { Time.current + 3.days }

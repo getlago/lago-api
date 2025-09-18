@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Gocardless::Update, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Gocardless::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:oauth_client) { instance_double(OAuth2::Client) }
   let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }

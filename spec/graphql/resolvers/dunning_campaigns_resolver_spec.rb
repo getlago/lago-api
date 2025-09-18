@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DunningCampaignsResolver, type: :graphql do
+RSpec.describe Resolvers::DunningCampaignsResolver do
   let(:required_permission) { "dunning_campaigns:view" }
   let(:query) do
     <<~GQL

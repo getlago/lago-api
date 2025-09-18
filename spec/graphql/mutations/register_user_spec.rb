@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::RegisterUser, type: :graphql do
+RSpec.describe Mutations::RegisterUser do
   let(:mutation) do
     <<~GQL
       mutation($input: RegisterUserInput!) {

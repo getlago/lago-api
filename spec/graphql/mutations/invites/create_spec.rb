@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Invites::Create, type: :graphql do
+RSpec.describe Mutations::Invites::Create do
   let(:required_permission) { "organization:members:create" }
   let(:membership) { create(:membership) }
   let(:revoked_membership) do

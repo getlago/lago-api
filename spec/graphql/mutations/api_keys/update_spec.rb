@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
+RSpec.describe Mutations::ApiKeys::Update do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

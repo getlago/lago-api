@@ -29,7 +29,7 @@ module AuthenticableApiUserSpec
   end
 end
 
-RSpec.describe AuthenticableApiUser, type: :graphql do
+RSpec.describe AuthenticableApiUser do
   let(:mutation) do
     <<-GQL
       mutation($input: RenameThingInput!) {

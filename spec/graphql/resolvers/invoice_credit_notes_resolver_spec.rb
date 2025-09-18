@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
+RSpec.describe Resolvers::InvoiceCreditNotesResolver do
   let(:required_permission) { "credit_notes:view" }
   let(:query) do
     <<~GQL

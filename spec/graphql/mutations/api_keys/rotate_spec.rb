@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
+RSpec.describe Mutations::ApiKeys::Rotate do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

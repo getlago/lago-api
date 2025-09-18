@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
+RSpec.describe Resolvers::InvoiceCustomSectionResolver do
   let(:query) do
     <<~GQL
       query($invoiceCustomSectionId: ID!) {

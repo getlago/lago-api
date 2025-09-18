@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillableMetrics::Destroy, type: :graphql do
+RSpec.describe Mutations::BillableMetrics::Destroy do
   let(:required_permission) { "billable_metrics:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

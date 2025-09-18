@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::IntegrationItems::FetchAccounts, type: :graphql do
+RSpec.describe Mutations::IntegrationItems::FetchAccounts do
   let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

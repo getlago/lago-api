@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PasswordResets::Create, type: :graphql do
+RSpec.describe Mutations::PasswordResets::Create do
   let(:user) { create(:user) }
   let(:email) { user.email }
 

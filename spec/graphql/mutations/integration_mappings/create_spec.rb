@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::IntegrationMappings::Create, type: :graphql do
+RSpec.describe Mutations::IntegrationMappings::Create do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mappable) { create(:add_on, organization:) }

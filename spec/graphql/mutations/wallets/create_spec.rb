@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Create, type: :graphql do
+RSpec.describe Mutations::Wallets::Create do
   let(:required_permission) { "wallets:create" }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization, currency: "EUR") }

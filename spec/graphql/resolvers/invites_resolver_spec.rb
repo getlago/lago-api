@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvitesResolver, type: :graphql do
+RSpec.describe Resolvers::InvitesResolver do
   let(:query) do
     <<~GQL
       query {

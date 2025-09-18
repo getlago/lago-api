@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql do
+RSpec.describe Mutations::IntegrationCollectionMappings::Create do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }

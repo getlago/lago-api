@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
+RSpec.describe Mutations::DataExports::Invoices::Create do
   let(:required_permission) { "invoices:export" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

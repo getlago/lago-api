@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Cashfree::Update, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Cashfree::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:cashfree_provider) { create(:cashfree_provider, organization: membership.organization) }

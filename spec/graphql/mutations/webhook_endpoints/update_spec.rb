@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
+RSpec.describe Mutations::WebhookEndpoints::Update do
   let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }

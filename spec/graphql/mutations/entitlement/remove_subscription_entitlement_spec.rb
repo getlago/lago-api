@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement, type: :graphql do
+RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }

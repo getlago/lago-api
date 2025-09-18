@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::UsagesResolver, type: :graphql do
+RSpec.describe Resolvers::DataApi::UsagesResolver do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL

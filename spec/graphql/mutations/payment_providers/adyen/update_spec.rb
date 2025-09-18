@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Adyen::Update, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Adyen::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:adyen_provider) { create(:adyen_provider, organization: membership.organization) }

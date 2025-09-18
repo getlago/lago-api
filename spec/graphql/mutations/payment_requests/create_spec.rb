@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentRequests::Create, type: :graphql do
+RSpec.describe Mutations::PaymentRequests::Create do
   let(:required_permission) { "payment_requests:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

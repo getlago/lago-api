@@ -26,7 +26,7 @@ module AuthenticableCustomerPortalUserSpec
   end
 end
 
-RSpec.describe AuthenticableCustomerPortalUser, type: :graphql do
+RSpec.describe AuthenticableCustomerPortalUser do
   let(:resolver) do
     <<~GQL
       query {

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CustomerPortal::Analytics::OverdueBalancesResolver, type: :graphql do
+RSpec.describe Resolvers::CustomerPortal::Analytics::OverdueBalancesResolver do
   let(:query) do
     <<~GQL
       query {

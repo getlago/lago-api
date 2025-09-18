@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql, cache: :memory do
+RSpec.describe Mutations::Auth::Okta::AcceptInvite, cache: :memory do
   let(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }

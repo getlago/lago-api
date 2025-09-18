@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Customers::Destroy, type: :graphql do
+RSpec.describe Mutations::Customers::Destroy do
   let(:required_permissions) { "customers:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

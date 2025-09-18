@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
+RSpec.describe Resolvers::Entitlement::FeatureResolver do
   subject { execute_query(query:, variables:) }
 
   let(:organization) { create(:organization) }

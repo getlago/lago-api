@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver, type: :graphql do
+RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
