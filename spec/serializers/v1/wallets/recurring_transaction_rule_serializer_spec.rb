@@ -25,7 +25,8 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "created_at" => recurring_transaction_rule.created_at.iso8601,
       "invoice_requires_successful_payment" => recurring_transaction_rule.invoice_requires_successful_payment,
       "transaction_metadata" => recurring_transaction_rule.transaction_metadata,
-      "transaction_name" => "Recurring Transaction Rule"
+      "transaction_name" => "Recurring Transaction Rule",
+      "ignore_paid_top_up_limits" => recurring_transaction_rule.ignore_paid_top_up_limits
     )
   end
 end
