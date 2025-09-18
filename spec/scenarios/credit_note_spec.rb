@@ -1016,7 +1016,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           }
         ]
       }, raise_on_error: false)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("higher_than_wallet_balance")
 
       # when creating a credit note with amount higher than remaining balance, it throws an error
@@ -1031,7 +1031,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           }
         ]
       }, raise_on_error: false)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("higher_than_wallet_balance")
 
       expect(wallet.reload.balance_cents).to eq(5)

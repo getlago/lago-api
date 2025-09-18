@@ -292,7 +292,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       it "returns an unprocessable_entity" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -339,7 +339,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
         it "returns an error" do
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
 
           expect(json[:error_details][:invoice_custom_sections]).to include("skip_sections_and_selected_ids_sent_together")
         end

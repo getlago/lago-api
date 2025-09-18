@@ -73,7 +73,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end
@@ -91,7 +91,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end
@@ -130,7 +130,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:"privilege.value_type"]).to eq ["value_is_invalid"]
       end
     end
@@ -152,7 +152,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end

@@ -181,7 +181,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       it "returns not found error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to eq("validation_errors")
         expect(json[:error_details][:max_privilege_value]).to eq(["value_is_invalid"])
       end
@@ -206,7 +206,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       it "returns not found error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to eq("validation_errors")
         expect(json[:error_details][:invitation_privilege_value]).to eq(["value_not_in_select_options"])
       end

@@ -216,7 +216,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
         subject
 
         aggregate_failures do
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
         end
       end

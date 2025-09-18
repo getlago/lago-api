@@ -31,7 +31,7 @@ module ApiErrors
         code: "validation_errors",
         error_details: errors
       },
-      status: :unprocessable_entity
+      status: :unprocessable_content
     )
   end
 
@@ -68,7 +68,7 @@ module ApiErrors
       error_details: V1::Errors::ErrorSerializerFactory.new_instance(error).serialize
     }
 
-    render json: response, status: :unprocessable_entity
+    render json: response, status: :unprocessable_content
   end
 
   def thirdpary_error(error:)
@@ -82,7 +82,7 @@ module ApiErrors
           thirdparty_error: error.error_message
         }
       },
-      status: :unprocessable_entity
+      status: :unprocessable_content
     )
   end
 

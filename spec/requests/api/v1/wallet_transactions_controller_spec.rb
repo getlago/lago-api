@@ -57,7 +57,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       it "returns an error" do
         wallet.update!(paid_top_up_min_amount_cents: 20_00)
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:paid_credits]).to eq(["amount_below_minimum"])
       end
     end
@@ -115,7 +115,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
 
       it "returns unprocessable_entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end
