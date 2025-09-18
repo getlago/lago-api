@@ -44,6 +44,8 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
   let(:original_fee) { original_invoice.fees.first }
 
   describe "#call" do
+    before { original_invoice }
+
     it "regenerates invoice with adjusted display name, units and unit amount" do
       result = regenerate_result
 
@@ -55,8 +57,6 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
     end
 
     it "creates a payment" do
-      original_invoice
-
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
       regenerate_result
@@ -76,10 +76,22 @@ describe "Regenerate From Voided Invoice Scenarios", :scenarios, type: :request 
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
+    it "produces segment event" do
+      allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
+
+      regenerate_result
+
+      expect(Utils::SegmentTrack).to have_received(:invoice_created)
+    end
+
     it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
         regenerate_result
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+    end
+
+    it_behaves_like "syncs invoice" do
+      let(:service_call) { regenerate_result }
     end
 
     context "with updated units" do
