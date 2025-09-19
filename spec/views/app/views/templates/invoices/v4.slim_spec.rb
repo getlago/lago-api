@@ -9,10 +9,7 @@ require "rails_helper"
 
 RSpec.describe "templates/invoices/v4.slim", type: :view do
   subject(:rendered_template) do
-    # We have to use both `pretty: true` and `HtmlBeautifier.beautify` to ensure proper formatting which eases the
-    # snapshot diff review.
-    html = Slim::Template.new(template, 1, pretty: true).render(invoice)
-    HtmlBeautifier.beautify(html, stop_on_errors: true)
+    Slim::Template.new(template, 1, pretty: true).render(invoice)
   end
 
   let(:template) { Rails.root.join("app/views/templates/invoices/v4.slim") }
@@ -120,40 +117,12 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
     I18n.locale = :en
   end
 
-  def snapshot_name(metadata)
-    description =
-      if metadata[:description].empty?
-        # we have an "it { is_expected.to be something }" block
-        metadata[:scoped_id]
-      else
-        metadata[:description]
-      end
-    example_group =
-      if metadata.key?(:example_group)
-        metadata[:example_group]
-      else
-        metadata[:parent_example_group]
-      end
-
-    description = description.tr("/", "_").tr(" ", "_")
-    if example_group
-      [snapshot_name(example_group), description].join("/")
-    else
-      description
-    end
-  end
-
-  def expect_to_match_snapshot
-    snapshot_name = self.snapshot_name(RSpec.current_example.metadata)
-    expect(rendered_template).to match_snapshot("#{snapshot_name}.html")
-  end
-
   context "when invoice_type is credit" do
     context "when wallet transaction has a name" do
       let(:wallet_transaction_name) { "Wallet Transaction Name" }
 
       it "renders correctly" do
-        expect_to_match_snapshot
+        expect(rendered_template).to match_html_snapshot
       end
     end
 
@@ -164,7 +133,7 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
         let(:wallet_name) { nil }
 
         it "renders correctly" do
-          expect_to_match_snapshot
+          expect(rendered_template).to match_html_snapshot
         end
       end
 
@@ -172,7 +141,7 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
         let(:wallet_name) { "Premium Wallet" }
 
         it "renders correctly" do
-          expect_to_match_snapshot
+          expect(rendered_template).to match_html_snapshot
         end
       end
     end
