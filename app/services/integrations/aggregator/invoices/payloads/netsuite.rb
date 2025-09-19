@@ -6,6 +6,7 @@ module Integrations
       module Payloads
         class Netsuite < BasePayload
           MAX_DECIMALS = 15
+          NS_QUANTITY_LIMIT = 10_000_000_000
 
           def body
             result = {
@@ -108,12 +109,11 @@ module Integrations
             from_property = fee.charge? ? "charges_from_datetime" : "from_datetime"
             to_property = fee.charge? ? "charges_to_datetime" : "to_datetime"
 
-            ns_quantity_limit = 10_000_000_000 # NetSuite quantity max magnitude
             quantity_value = limited_rate(fee.units)
             unit_rate_value = limited_rate(fee.precise_unit_amount)
             line_amount_value = limited_rate(amount(fee.amount_cents, resource: invoice))
 
-            if quantity_value.respond_to?(:abs) && quantity_value.abs >= ns_quantity_limit
+            if quantity_value.respond_to?(:abs) && quantity_value.abs >= NS_QUANTITY_LIMIT
               quantity_value = 1
               unit_rate_value = line_amount_value
             end
