@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::ApplyTaxesService, type: :service do
+RSpec.describe Commitments::ApplyTaxesService do
   subject(:apply_service) { described_class.new(commitment:, tax_codes:) }
 
   let(:commitment) { create(:commitment, plan:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
+RSpec.describe CreditNotes::Refunds::StripeService do
   subject(:stripe_service) { described_class.new(credit_note) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

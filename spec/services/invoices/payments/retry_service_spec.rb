@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::RetryService, type: :service do
+RSpec.describe Invoices::Payments::RetryService do
   subject(:retry_service) { described_class.new(invoice:) }
 
   let(:invoice) { create(:invoice, customer:, status: "finalized", organization: customer.organization) }

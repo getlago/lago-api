@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::FeaturesQuery, type: :service do
+RSpec.describe Entitlement::FeaturesQuery do
   let(:organization) { create(:organization) }
   let!(:feature1) { create(:feature, organization:, code: "seats", name: "Number of seats") }
   let!(:feature2) { create(:feature, organization:, code: "storage", name: "Storage") }

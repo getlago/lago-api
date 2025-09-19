@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::CreateService, type: :service do
+RSpec.describe Plans::CreateService do
   let(:plans_service) { described_class.new(create_args) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

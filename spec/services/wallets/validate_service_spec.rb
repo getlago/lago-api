@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ValidateService, type: :service do
+RSpec.describe Wallets::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }

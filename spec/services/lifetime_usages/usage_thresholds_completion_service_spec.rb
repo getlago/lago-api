@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service do
+RSpec.describe LifetimeUsages::UsageThresholdsCompletionService do
   subject(:result) { described_class.call(lifetime_usage:) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:, current_usage_amount_cents:) }

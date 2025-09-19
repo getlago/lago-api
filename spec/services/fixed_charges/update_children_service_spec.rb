@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::UpdateChildrenService, type: :service do
+RSpec.describe FixedCharges::UpdateChildrenService do
   subject(:update_service) do
     described_class.new(fixed_charge:, params:, old_parent_attrs:, child_ids:)
   end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :service do
+RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService do
   subject(:service) { described_class.new(subscription_activity:) }
 
   let(:organization) { create(:organization, premium_integrations:) }

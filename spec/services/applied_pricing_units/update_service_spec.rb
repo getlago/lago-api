@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedPricingUnits::UpdateService, type: :service do
+RSpec.describe AppliedPricingUnits::UpdateService do
   let(:update_service) { described_class.new(charge:, cascade_options:, params:) }
 
   describe ".call" do

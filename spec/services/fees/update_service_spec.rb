@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::UpdateService, type: :service do
+RSpec.describe Fees::UpdateService do
   subject(:update_service) { described_class.new(fee:, params:) }
 
   let(:charge) { create(:standard_charge, invoiceable: false) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::CreateService, type: :service do
+RSpec.describe DataExports::CreateService do
   subject(:result) do
     described_class.call(organization:, user:, format:, resource_type:, resource_query:)
   end

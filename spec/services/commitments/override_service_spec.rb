@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::OverrideService, type: :service do
+RSpec.describe Commitments::OverrideService do
   subject(:override_service) { described_class.new(commitment:, params:) }
 
   let(:membership) { create(:membership) }

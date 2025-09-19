@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
+RSpec.describe CreditNotes::Refunds::GocardlessService do
   subject(:gocardless_service) { described_class.new(credit_note) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

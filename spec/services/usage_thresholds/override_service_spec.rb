@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageThresholds::OverrideService, type: :service do
+RSpec.describe UsageThresholds::OverrideService do
   subject(:override_service) { described_class.new(usage_thresholds_params:, new_plan: plan) }
 
   let(:membership) { create(:membership) }

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
-RSpec.describe Invites::ValidateService, type: :service do
+RSpec.describe Invites::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }

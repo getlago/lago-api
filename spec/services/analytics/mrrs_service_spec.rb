@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::MrrsService, type: :service do
+RSpec.describe Analytics::MrrsService do
   let(:service) { described_class.new(organization) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

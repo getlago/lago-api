@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_failures: true do
+RSpec.describe DunningCampaigns::BulkProcessService, aggregate_failures: true do
   subject(:result) { described_class.call }
 
   let(:currency) { "EUR" }

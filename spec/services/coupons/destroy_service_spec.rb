@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Coupons::DestroyService, type: :service do
+RSpec.describe Coupons::DestroyService do
   subject(:destroy_service) { described_class.new(coupon:) }
 
   let(:membership) { create(:membership) }

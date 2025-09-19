@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ErrorDetails::CreateService, type: :service do
+RSpec.describe ErrorDetails::CreateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }

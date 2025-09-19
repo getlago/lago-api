@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
+RSpec.describe Invoices::PreviewService, cache: :memory do
   subject(:preview_service) { described_class.new(customer:, subscriptions:) }
 
   describe "#call" do

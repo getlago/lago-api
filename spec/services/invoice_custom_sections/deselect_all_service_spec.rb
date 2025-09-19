@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InvoiceCustomSections::DeselectAllService, type: :service do
+RSpec.describe InvoiceCustomSections::DeselectAllService do
   describe "#call" do
     subject(:service_result) { described_class.call(section:) }
 

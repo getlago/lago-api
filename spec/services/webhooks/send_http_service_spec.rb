@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Webhooks::SendHttpService, type: :service do
+RSpec.describe Webhooks::SendHttpService do
   subject(:service) { described_class.new(webhook:) }
 
   let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "https://wh.test.com") }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PreviewContextService, type: :service do
+RSpec.describe Invoices::PreviewContextService do
   let(:result) { described_class.call(organization:, params:, billing_entity:) }
 
   describe "#call" do

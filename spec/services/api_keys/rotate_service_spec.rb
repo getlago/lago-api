@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeys::RotateService, type: :service do
+RSpec.describe ApiKeys::RotateService do
   describe "#call" do
     subject(:service_result) { described_class.call(api_key:, params:) }
 

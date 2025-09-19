@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Moneyhash::HandleIncomingWebhookService, type: :service do
+RSpec.describe PaymentProviders::Moneyhash::HandleIncomingWebhookService do
   subject(:result) { described_class.call(inbound_webhook:) }
 
   let(:organization) { create(:organization) }

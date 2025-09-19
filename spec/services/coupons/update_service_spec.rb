@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Coupons::UpdateService, type: :service do
+RSpec.describe Coupons::UpdateService do
   subject(:update_service) { described_class.new(coupon:, params:) }
 
   let(:membership) { create(:membership) }

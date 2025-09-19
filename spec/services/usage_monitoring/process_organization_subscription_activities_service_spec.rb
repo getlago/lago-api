@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService, type: :service do
+RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService do
   describe "#call" do
     let(:organization) { create(:organization) }
     let(:service) { described_class.new(organization:) }

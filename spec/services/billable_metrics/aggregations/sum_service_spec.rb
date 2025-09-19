@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transaction: false do
+RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
   subject(:sum_service) do
     described_class.new(
       event_store_class:,

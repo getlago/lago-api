@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::CreateService, type: :service do
+RSpec.describe BillableMetrics::CreateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 

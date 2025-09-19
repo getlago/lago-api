@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::UpdateService, type: :service do
+RSpec.describe DunningCampaigns::UpdateService do
   subject(:update_service) { described_class.new(organization:, dunning_campaign:, params:) }
 
   let(:organization) { create(:organization) }

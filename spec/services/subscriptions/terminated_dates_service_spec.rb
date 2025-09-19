@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::TerminatedDatesService, type: :service do
+RSpec.describe Subscriptions::TerminatedDatesService do
   subject(:terminated_date_service) { described_class.new(subscription:, invoice:, date_service:, match_invoice_subscription:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
+RSpec.describe WalletTransactions::CreateFromParamsService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency:) }
   let(:currency) { "EUR" }

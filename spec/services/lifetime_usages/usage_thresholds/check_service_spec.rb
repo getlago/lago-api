@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::UsageThresholds::CheckService, type: :service do
+RSpec.describe LifetimeUsages::UsageThresholds::CheckService do
   subject(:service) { described_class.new(lifetime_usage:, progressive_billed_amount:) }
 
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, historical_usage_amount_cents:, recalculate_current_usage:, recalculate_invoiced_usage:) }

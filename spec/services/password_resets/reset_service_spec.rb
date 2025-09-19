@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PasswordResets::ResetService, type: :service do
+RSpec.describe PasswordResets::ResetService do
   subject(:reset_service) { described_class }
 
   describe "#call" do

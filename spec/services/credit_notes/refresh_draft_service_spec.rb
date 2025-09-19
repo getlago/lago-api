@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::RefreshDraftService, type: :service do
+RSpec.describe CreditNotes::RefreshDraftService do
   subject(:refresh_service) { described_class.new(credit_note:, fee:, old_fee_values:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::LatestService, type: :service do
+RSpec.describe BillableMetrics::Aggregations::LatestService do
   subject(:latest_service) do
     described_class.new(
       event_store_class:,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::TerminateRelationsService, type: :service do
+RSpec.describe Customers::TerminateRelationsService do
   subject(:terminate_service) { described_class.new(customer:) }
 
   let(:customer) { create(:customer, :deleted) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::UpdateService, type: :service do
+RSpec.describe PaymentProviderCustomers::UpdateService do
   let(:customer) { create(:customer, payment_provider: provider_name.downcase) }
   let(:payment_provider) { create(:stripe_provider, organization: customer.organization) }
   let(:provider_name) { "Stripe" }

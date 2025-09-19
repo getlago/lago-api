@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::FindService, type: :service do
+RSpec.describe PaymentProviders::FindService do
   let(:service) { described_class.new(organization_id:, code:, id:) }
   let(:payment_provider) { create(:adyen_provider, organization:) }
   let(:organization) { create(:organization) }

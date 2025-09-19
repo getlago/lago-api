@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
+RSpec.describe Invoices::CustomerUsageService, cache: :memory do
   subject(:usage_service) do
     described_class.with_ids(
       organization_id: membership.organization_id,

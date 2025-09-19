@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, type: :service do
+RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
   subject(:service) { described_class.new(organization_id:, event:) }
 
   let(:organization_id) { organization.id }

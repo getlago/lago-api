@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateService, type: :service do
+RSpec.describe Charges::CreateService do
   let(:create_service) { described_class.new(plan:, params:) }
 
   let(:plan) { create(:plan) }

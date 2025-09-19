@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::DestroyChildrenService, type: :service do
+RSpec.describe Charges::DestroyChildrenService do
   subject(:destroy_service) { described_class.new(charge) }
 
   let(:billable_metric) { create(:billable_metric) }

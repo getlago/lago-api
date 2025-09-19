@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::StripeService, type: :service do
+RSpec.describe PaymentProviders::StripeService do
   subject(:stripe_service) { described_class.new(membership.user) }
 
   let(:membership) { create(:membership) }

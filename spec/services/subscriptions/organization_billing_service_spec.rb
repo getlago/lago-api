@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::OrganizationBillingService, type: :service do
+RSpec.describe Subscriptions::OrganizationBillingService do
   subject(:billing_service) { described_class.new(organization:, billing_at:) }
 
   describe ".call" do

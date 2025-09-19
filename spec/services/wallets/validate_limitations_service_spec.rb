@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ValidateLimitationsService, type: :service do
+RSpec.describe Wallets::ValidateLimitationsService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }

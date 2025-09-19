@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::Validators::PercentageService, type: :service do
+RSpec.describe Charges::Validators::PercentageService do
   subject(:validation_service) { described_class.new(charge:) }
 
   let(:charge) { build(:percentage_charge, properties: percentage_properties) }

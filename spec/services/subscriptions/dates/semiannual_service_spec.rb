@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
+RSpec.describe Subscriptions::Dates::SemiannualService do
   subject(:date_service) { described_class.new(subscription, billing_at, current_usage) }
 
   let(:subscription) do

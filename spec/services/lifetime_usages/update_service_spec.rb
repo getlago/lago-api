@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::UpdateService, type: :service do
+RSpec.describe LifetimeUsages::UpdateService do
   subject(:update_service) { described_class.new(lifetime_usage:, params:) }
 
   let(:lifetime_usage) { create(:lifetime_usage) }

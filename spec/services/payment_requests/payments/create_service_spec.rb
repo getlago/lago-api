@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
+RSpec.describe PaymentRequests::Payments::CreateService do
   subject(:create_service) { described_class.new(payable: payment_request, payment_provider: provider) }
 
   let(:organization) { create(:organization) }

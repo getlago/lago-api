@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
+RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
   let(:amount_details_calculator) { described_class.new(charge:, applied_charge_model:, applied_charge_model_excluding_event:) }
 
   let(:charge) { create(:standard_charge, :pay_in_advance) }

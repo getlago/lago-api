@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::AutoGenerateService, type: :service do
+RSpec.describe Taxes::AutoGenerateService do
   subject(:auto_generate_service) { described_class.new(organization:) }
 
   let(:organization) { create(:organization) }

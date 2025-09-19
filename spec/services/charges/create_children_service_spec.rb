@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateChildrenService, type: :service do
+RSpec.describe Charges::CreateChildrenService do
   subject(:create_service) { described_class.new(child_ids:, charge:, payload:) }
 
   let(:organization) { create(:organization) }

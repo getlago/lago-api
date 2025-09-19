@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
+RSpec.describe Fees::InitFromAdjustedChargeFeeService do
   subject(:init_service) { described_class.new(adjusted_fee:, boundaries:, properties:) }
 
   let(:subscription) do

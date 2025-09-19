@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::Stores::PostgresStore, type: :service do
+RSpec.describe Events::Stores::PostgresStore do
   subject(:event_store) do
     described_class.new(
       code:,

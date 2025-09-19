@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreateOneOffService, type: :service do
+RSpec.describe Invoices::CreateOneOffService do
   let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:} }
   let(:timestamp) { Time.zone.now.beginning_of_month }
   let(:organization) { create(:organization) }

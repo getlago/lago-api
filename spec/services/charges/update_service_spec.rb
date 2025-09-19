@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::UpdateService, type: :service do
+RSpec.describe Charges::UpdateService do
   let(:update_service) { described_class.new(charge:, params:, cascade_options:) }
 
   let(:plan) { create(:plan) }

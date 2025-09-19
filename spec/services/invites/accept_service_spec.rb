@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invites::AcceptService, type: :service do
+RSpec.describe Invites::AcceptService do
   subject(:accept_service) { described_class.new }
 
   let(:membership) { create(:membership) }

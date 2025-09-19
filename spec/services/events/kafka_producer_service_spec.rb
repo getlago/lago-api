@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Events::KafkaProducerService, type: :service do
+RSpec.describe Events::KafkaProducerService do
   subject(:producer_service) { described_class.new(event: event, organization: organization) }
 
   let(:event) { create(:event, organization:) }

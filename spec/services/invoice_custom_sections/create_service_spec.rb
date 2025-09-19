@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InvoiceCustomSections::CreateService, type: :service do
+RSpec.describe InvoiceCustomSections::CreateService do
   describe "#call" do
     subject(:service_result) { described_class.call(organization:, create_params:) }
 

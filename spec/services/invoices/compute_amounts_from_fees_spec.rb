@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
+RSpec.describe Invoices::ComputeAmountsFromFees do
   subject(:compute_amounts) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization) }

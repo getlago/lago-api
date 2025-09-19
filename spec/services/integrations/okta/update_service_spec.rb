@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Okta::UpdateService, type: :service do
+RSpec.describe Integrations::Okta::UpdateService do
   let(:integration) { create(:okta_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }

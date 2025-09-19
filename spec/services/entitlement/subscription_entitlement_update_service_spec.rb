@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionEntitlementUpdateService, type: :service do
+RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
   subject(:result) do
     described_class.call(
       subscription:,

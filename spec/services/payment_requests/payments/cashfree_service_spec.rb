@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::CashfreeService, type: :service do
+RSpec.describe PaymentRequests::Payments::CashfreeService do
   subject(:cashfree_service) { described_class.new(payment_request) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

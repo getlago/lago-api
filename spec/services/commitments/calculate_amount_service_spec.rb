@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::CalculateAmountService, type: :service do
+RSpec.describe Commitments::CalculateAmountService do
   subject(:apply_service) { described_class.new(commitment:, invoice_subscription:) }
 
   let(:invoice_subscription) do

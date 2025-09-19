@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ValidateRecurringTransactionRulesService, type: :service do
+RSpec.describe Wallets::ValidateRecurringTransactionRulesService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }

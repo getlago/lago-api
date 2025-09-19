@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
+RSpec.describe Fees::CreatePayInAdvanceService do
   subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
 
   let(:billing_entity) { create(:billing_entity) }

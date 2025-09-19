@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedCoupons::TerminateService, type: :service do
+RSpec.describe AppliedCoupons::TerminateService do
   subject(:terminate_service) { described_class.new(applied_coupon:) }
 
   let(:membership) { create(:membership) }

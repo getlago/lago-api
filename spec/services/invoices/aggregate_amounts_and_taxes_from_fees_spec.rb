@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees, type: :service do
+RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, invoice_type: :advance_charges, customer:) }

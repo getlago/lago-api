@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Webhooks::BaseService, type: :service do
+RSpec.describe Webhooks::BaseService do
   subject(:webhook_service) { WebhooksSpec::DummyClass.new(object:) }
 
   let(:organization) { create(:organization) }

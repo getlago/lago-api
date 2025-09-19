@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::Stores::AggregatedClickhouseStore, type: :service, clickhouse: true do
+RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
   group_values = {
     cloud: %w[aws azure gcp],
     region: %w[eu me us]

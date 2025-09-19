@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeys::DestroyService, type: :service do
+RSpec.describe ApiKeys::DestroyService do
   describe "#call" do
     subject(:service_result) { described_class.call(api_key) }
 

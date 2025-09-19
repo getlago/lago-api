@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::FinalizeBatchService, type: :service do
+RSpec.describe Invoices::FinalizeBatchService do
   subject(:finalize_batch_service) { described_class.new(organization:) }
 
   let(:customer) { create(:customer) }

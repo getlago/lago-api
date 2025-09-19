@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::VoidService, type: :service do
+RSpec.describe Invoices::VoidService do
   subject(:void_service) { described_class.new(invoice:, params:) }
 
   let(:params) { {} }

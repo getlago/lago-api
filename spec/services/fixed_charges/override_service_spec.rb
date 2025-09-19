@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::OverrideService, type: :service do
+RSpec.describe FixedCharges::OverrideService do
   subject(:override_service) { described_class.new(fixed_charge:, params:) }
 
   let(:organization) { create(:organization) }

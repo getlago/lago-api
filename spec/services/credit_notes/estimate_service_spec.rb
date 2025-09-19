@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::EstimateService, type: :service do
+RSpec.describe CreditNotes::EstimateService do
   subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
   let(:organization) { create(:organization) }

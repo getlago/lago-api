@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
+RSpec.describe Invoices::Preview::SubscriptionsService do
   let(:result) { described_class.call(organization:, customer:, params:) }
 
   describe ".call" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ::BaseService, type: :service do
+RSpec.describe ::BaseService do
   subject(:service) { described_class.new }
 
   it { is_expected.to be_kind_of(AfterCommitEverywhere) }

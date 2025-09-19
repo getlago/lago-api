@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PaidCreditService, type: :service do
+RSpec.describe Invoices::PaidCreditService do
   subject(:invoice_service) do
     described_class.new(wallet_transaction:, timestamp:, invoice:)
   end

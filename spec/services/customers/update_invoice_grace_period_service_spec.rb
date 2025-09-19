@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::UpdateInvoiceGracePeriodService, type: :service do
+RSpec.describe Customers::UpdateInvoiceGracePeriodService do
   subject(:update_service) { described_class.new(customer:, grace_period:) }
 
   let(:membership) { create(:membership) }

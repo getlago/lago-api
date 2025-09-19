@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::FlagRefreshedService, type: :service do
+RSpec.describe Subscriptions::FlagRefreshedService do
   subject(:flag_service) { described_class.new(subscription.id) }
 
   let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }

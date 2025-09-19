@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeModels::FilterPropertiesService, type: :service do
+RSpec.describe ChargeModels::FilterPropertiesService do
   subject(:filter_service) { described_class.new(chargeable:, properties:) }
 
   let(:properties) { {"amount" => 100} }

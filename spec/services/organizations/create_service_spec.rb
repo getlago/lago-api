@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Organizations::CreateService, type: :service do
+RSpec.describe Organizations::CreateService do
   describe "#call" do
     subject(:service_result) { described_class.call(params) }
 

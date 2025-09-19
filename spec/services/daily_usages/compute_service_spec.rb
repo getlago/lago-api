@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DailyUsages::ComputeService, type: :service do
+RSpec.describe DailyUsages::ComputeService do
   subject(:compute_service) { described_class.new(subscription:, timestamp:) }
 
   let(:organization) { create(:organization) }
