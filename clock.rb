@@ -174,12 +174,6 @@ module Clockwork
       .perform_later
   end
 
-  every(1.day, "schedule:emit_fixed_charge_events", at: "01:10") do
-    Clock::EmitFixedChargeEventsJob
-      .set(sentry: {"slug" => "lago_emit_fixed_charge_events", "cron" => "10 1 * * *"})
-      .perform_later
-  end
-
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present?
     every(1.minute, "schedule:refresh_flagged_subscriptions") do
