@@ -23,7 +23,7 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
       expect(result.invoice.payment_due_date).to be_today
 
       expect(SendWebhookJob).to have_been_enqueued.with("invoice.paid_credit_added", result.invoice)
-      expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
+      expect(Invoices::GenerateFilesAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
       expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
       expect(SegmentTrackJob).to have_been_enqueued.with(membership_id: anything, event: "invoice_created", properties: {
         organization_id: result.invoice.organization.id,
@@ -42,7 +42,7 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
         expect(result.invoice.status).to eq("finalized")
 
         expect(SendWebhookJob).not_to have_been_enqueued
-        expect(Invoices::GeneratePdfAndNotifyJob).not_to have_been_enqueued
+        expect(Invoices::GenerateFilesAndNotifyJob).not_to have_been_enqueued
         expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
         expect(SegmentTrackJob).not_to have_been_enqueued
       end

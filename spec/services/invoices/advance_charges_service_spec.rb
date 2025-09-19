@@ -109,7 +109,7 @@ RSpec.describe Invoices::AdvanceChargesService do
 
         expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", result.invoice)
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(result.invoice)
-        expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
+        expect(Invoices::GenerateFilesAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
         expect(SegmentTrackJob).to have_been_enqueued.once
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
 
