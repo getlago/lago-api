@@ -12,7 +12,7 @@ module FixedCharges
     end
 
     def call
-      create_event_result = FixedChargeEvents::CreateService.call(
+      create_event_result = ::FixedChargeEvents::CreateService.call(
         subscription:,
         fixed_charge:,
         timestamp:
