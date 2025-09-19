@@ -312,25 +312,4 @@ describe Clockwork do
       expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued
     end
   end
-
-  describe "schedule:emit_fixed_charge_events" do
-    let(:job) { "schedule:emit_fixed_charge_events" }
-    let(:start_time) { Time.zone.parse("2025-08-27T01:10:00") }
-    let(:end_time) { Time.zone.parse("2025-08-28T01:09:00") }
-
-    it "enqueue a emit fixed charge events job" do
-      Clockwork::Test.run(
-        file: clock_file,
-        start_time:,
-        end_time:,
-        tick_speed: 1.minute
-      )
-
-      expect(Clockwork::Test).to be_ran_job(job)
-      expect(Clockwork::Test.times_run(job)).to eq(1)
-
-      Clockwork::Test.block_for(job).call
-      expect(Clock::EmitFixedChargeEventsJob).to have_been_enqueued
-    end
-  end
 end
