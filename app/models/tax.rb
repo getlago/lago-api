@@ -44,6 +44,25 @@ class Tax < ApplicationRecord
     %w[name code]
   end
 
+  def discard
+    return false if discarded?
+
+    ActiveRecord::Base.transaction do
+      applied_taxes.delete_all
+      billing_entities_taxes.delete_all
+      draft_fee_taxes.delete_all
+      draft_invoice_taxes.delete_all
+      credit_notes_taxes.delete_all
+      add_ons_taxes.delete_all
+      plans_taxes.delete_all
+      charges_taxes.delete_all
+      commitments_taxes.delete_all
+      fixed_charges_taxes.delete_all
+      self.deleted_at = Time.current
+      save!
+    end
+  end
+
   def customers_count
     applicable_customers.count
   end
@@ -83,8 +102,8 @@ end
 #
 # Indexes
 #
-#  index_taxes_on_code_and_organization_id  (code,organization_id) UNIQUE
-#  index_taxes_on_organization_id           (organization_id)
+#  idx_unique_tax_code_per_organization  (code,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_taxes_on_organization_id        (organization_id)
 #
 # Foreign Keys
 #

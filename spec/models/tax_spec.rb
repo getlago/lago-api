@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe Tax do
   subject(:tax) { create(:tax, applied_to_organization:) }
 
+  let(:organization) { tax.organization }
   let(:applied_to_organization) { false }
 
   it { is_expected.to belong_to(:organization) }
@@ -62,6 +63,74 @@ RSpec.describe Tax do
 
       it "returns correct number of customers" do
         expect(tax.customers_count).to eq(3)
+      end
+    end
+  end
+
+  describe "#discard" do
+    subject { tax.discard! }
+
+    let(:tax) { create(:tax) }
+
+    context "with associated AppliedTax to everything" do
+      subject { tax.discard! }
+
+      it "hard-deletes applicable join records and keeps non-draft invoice/fee taxes" do
+        # Associations that must be removed on discard
+        customer = create(:customer, organization:)
+        customer_tax = create(:customer_applied_tax, customer:, tax:)
+
+        billing_entity = tax.organization.default_billing_entity
+        billing_entity_tax = create(:billing_entity_applied_tax, billing_entity:, tax:)
+
+        add_on = create(:add_on, organization:)
+        add_on_tax = create(:add_on_applied_tax, add_on:, tax:)
+
+        plan = create(:plan, organization:)
+        plan_tax = create(:plan_applied_tax, plan:, tax:)
+
+        charge = create(:standard_charge, organization:)
+        charge_tax = create(:charge_applied_tax, charge:, tax:)
+
+        commitment = create(:commitment, organization:)
+        commitment_tax = create(:commitment_applied_tax, commitment:, tax:)
+
+        fixed_charge = create(:fixed_charge, organization:)
+        fixed_charge_tax = create(:fixed_charge_applied_tax, fixed_charge:, tax:)
+
+        credit_note = create(:credit_note, organization:)
+        credit_note_tax = create(:credit_note_applied_tax, credit_note:, tax:)
+
+        # Invoices and fees: draft should be removed, finalized should remain
+        finalized_invoice = create(:invoice, status: :finalized)
+        finalized_invoice_tax = create(:invoice_applied_tax, invoice: finalized_invoice, tax:)
+        finalized_fee = create(:fee, invoice: finalized_invoice)
+        finalized_fee_tax = create(:fee_applied_tax, fee: finalized_fee, tax:)
+
+        draft_invoice = create(:invoice, status: :draft)
+        draft_invoice_tax = create(:invoice_applied_tax, invoice: draft_invoice, tax:)
+        draft_fee = create(:fee, invoice: draft_invoice)
+        draft_fee_tax = create(:fee_applied_tax, fee: draft_fee, tax:)
+
+        expect { subject }.to change { tax.reload.discarded? }.from(false).to(true)
+
+        # join tables removed
+        expect { customer_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { billing_entity_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { add_on_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { plan_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { commitment_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { fixed_charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { credit_note_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+
+        # Draft invoice/fee taxes removed
+        expect { draft_invoice_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { draft_fee_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+
+        # Finalized invoice/fee taxes kept
+        expect(finalized_invoice.reload.applied_taxes).to include(finalized_invoice_tax)
+        expect(finalized_fee.reload.applied_taxes).to include(finalized_fee_tax)
       end
     end
   end
