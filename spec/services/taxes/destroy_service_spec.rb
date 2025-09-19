@@ -79,6 +79,9 @@ RSpec.describe Taxes::DestroyService do
       expect { charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { commitment_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { fixed_charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+
+      # TODO: confirm that this is expected to remove the applied taxes for the credit note :/
+      #
       expect { credit_note_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
 
       # Draft invoice/fee taxes removed
