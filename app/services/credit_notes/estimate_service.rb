@@ -85,12 +85,10 @@ module CreditNotes
       credit_note.taxes_rate = taxes_result.taxes_rate
 
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
-      credit_note.credit_amount_cents = (
-        credit_note.items.sum(&:amount_cents) -
-        taxes_result.coupons_adjustment_amount_cents +
-        credit_note.precise_taxes_amount_cents
-      ).round
+
+      credit_note.credit_amount_cents = compute_creditable_amount(taxes_result)
       compute_refundable_amount
+
       credit_note.credit_amount_cents = 0 if invoice.credit?
       credit_note.total_amount_cents = credit_note.credit_amount_cents
     end
@@ -105,6 +103,14 @@ module CreditNotes
 
     def all_rounding_tax_adjustments
       credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
+    end
+
+    def compute_creditable_amount(taxes_result)
+      (
+        credit_note.items.sum(&:amount_cents) -
+        taxes_result.coupons_adjustment_amount_cents +
+        credit_note.precise_taxes_amount_cents
+      ).round
     end
 
     def compute_refundable_amount
