@@ -21,6 +21,15 @@ module FixedChargeEvents
 
       private
 
+      # in this query we:
+      # 1. select event's created at, event's timestamp, event's units for all events with timestamp in this period +
+      # last event that was created before the period with timestamp before the period
+      # (so the one that was "active" before first event IN this billing_period) with fixed_charge_events_cte_sql
+      # 2. then we filter out events, that were created "for later" - Event1: created_at: 05.01, timestamp: 01.02,
+      # but can be ignored because of events, created after: Event2: created_at: 20.01, timestamp: 20.01.
+      # 3. for each event we calculate weighted_units = units * period_ratio, where period_ratio is
+      # how long this event was "effective" in this period comparing to the full duration of the period.
+      # 4. we sum up all weighted_units to get the final aggregation.
       def prorated_query
         <<-SQL
           #{fixed_charge_events_cte_sql},
@@ -41,6 +50,8 @@ module FixedChargeEvents
         SQL
       end
 
+      # this query is used to debug the prorated aggregation. instead of returning sum of weighted units for all events,
+      # it returns for each event: the weighted units, start date of this event being "effective" and end date of this period, also units.
       def debug_query
         <<-SQL
           #{fixed_charge_events_cte_sql},
