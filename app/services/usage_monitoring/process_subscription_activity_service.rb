@@ -21,12 +21,9 @@ module UsageMonitoring
       #       We believe it's a good tradeoff because they should rarely raise but this can change in the future
 
       begin
+        # Note we rely on the jobs rather than on the services to take advantage of the job's uniqueness strategy
         if organization.using_lifetime_usage?
-          LifetimeUsages::CalculateService.call!(lifetime_usage:, current_usage:)
-        end
-
-        if organization.progressive_billing_enabled?
-          LifetimeUsages::CheckThresholdsService.call(lifetime_usage:)
+          LifetimeUsages::RecalculateAndCheckJob.perform_now(lifetime_usage, current_usage:)
         end
       rescue => e
         exception_to_raise = e
