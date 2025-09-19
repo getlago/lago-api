@@ -21,6 +21,15 @@ RSpec.describe Charges::CreateService, type: :service do
       end
     end
 
+    context "when billable metric is not found" do
+      let(:params) { {billable_metric_id: "non-existing-id"} }
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("billable_metric_not_found")
+      end
+    end
+
     context "when plan exists" do
       let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 

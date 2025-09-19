@@ -11,6 +11,7 @@ module Charges
 
     def call
       return result.not_found_failure!(resource: "plan") unless plan
+      return result.not_found_failure!(resource: "billable_metric") unless billable_metric
 
       ActiveRecord::Base.transaction do
         charge = plan.charges.new(
@@ -66,5 +67,9 @@ module Charges
     private
 
     attr_reader :plan, :params
+
+    def billable_metric
+      @billable_metric ||= plan.organization.billable_metrics.find_by(id: params[:billable_metric_id])
+    end
   end
 end
