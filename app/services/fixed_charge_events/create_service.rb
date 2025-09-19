@@ -4,11 +4,10 @@ module FixedChargeEvents
   class CreateService < BaseService
     Result = BaseResult[:fixed_charge_event]
 
-    def initialize(subscription:, fixed_charge:, units: 0.0, timestamp: Time.current)
+    def initialize(subscription:, fixed_charge:, timestamp: Time.current)
       @organization = subscription&.organization
       @subscription = subscription
       @fixed_charge = fixed_charge
-      @units = units
       @timestamp = timestamp
       super
     end
@@ -18,7 +17,7 @@ module FixedChargeEvents
         organization:,
         subscription:,
         fixed_charge:,
-        units:,
+        units: fixed_charge.units,
         timestamp:
       )
 
@@ -30,6 +29,6 @@ module FixedChargeEvents
 
     private
 
-    attr_reader :organization, :subscription, :fixed_charge, :units, :timestamp
+    attr_reader :organization, :subscription, :fixed_charge, :timestamp
   end
 end
