@@ -6,9 +6,11 @@ class CreditNote
 
     include PaperTrailTraceable
 
-    belongs_to :credit_note
-    belongs_to :tax, optional: true
     belongs_to :organization
+    belongs_to :credit_note
+    # NOTE: Tax isn't really optional, but we used to hard deleted taxes,
+    #       so some AppliedTax had no tax relation
+    belongs_to :tax, -> { kept }, optional: true
 
     monetize :amount_cents
     monetize :base_amount_cents, with_model_currency: :amount_currency
