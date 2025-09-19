@@ -13,19 +13,14 @@ class SlimHelper
   end
 
   def self.format_address(address_line1, address_line2, city, state, zipcode, country_code)
-    return "" if [address_line1, city, country_code].all?(&:blank?)
-
-    road = [address_line1, address_line2].compact_blank.join("\n")
-
-    address_components = {
-      "road" => road.presence,
-      "city" => city.presence,
-      "state" => state.presence,
-      "postcode" => zipcode.presence,
-      "country" => ISO3166::Country.new(country_code)&.common_name,
-      "country_code" => country_code.presence
-    }.compact
-
-    AddressComposer.compose(address_components).gsub("\n", "<br>")
+    country = ISO3166::Country.new(country_code)
+    country.address_format.gsub("{{recipient}}", address_line1)
+      .gsub("{{street}}", address_line2)
+      .gsub("{{postalcode}}", zipcode)
+      .gsub("{{city}}", city)
+      .gsub("{{region}}", state)
+      .gsub("{{region_short}}", state)
+      .gsub("{{country}}", country.common_name)
+      .gsub("\n", "<br>")
   end
 end
