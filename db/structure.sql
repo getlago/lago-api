@@ -308,7 +308,6 @@ DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organizatio
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
-DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
@@ -641,6 +640,7 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_unique_tax_code_per_organization;
 DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
@@ -3210,7 +3210,8 @@ CREATE TABLE public.taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     applied_to_organization boolean DEFAULT false NOT NULL,
-    auto_generated boolean DEFAULT false NOT NULL
+    auto_generated boolean DEFAULT false NOT NULL,
+    deleted_at timestamp(6) without time zone
 );
 
 
@@ -5327,6 +5328,13 @@ CREATE UNIQUE INDEX idx_unique_feature_removal_per_subscription ON public.entitl
 --
 
 CREATE UNIQUE INDEX idx_unique_privilege_removal_per_subscription ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_privilege_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_unique_tax_code_per_organization; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_tax_code_per_organization ON public.taxes USING btree (code, organization_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -7654,13 +7662,6 @@ CREATE INDEX index_subscriptions_on_status ON public.subscriptions USING btree (
 
 
 --
--- Name: index_taxes_on_code_and_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_taxes_on_code_and_organization_id ON public.taxes USING btree (code, organization_id);
-
-
---
 -- Name: index_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9844,6 +9845,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250919124523'),
+('20250919124037'),
 ('20250915100607'),
 ('20250912081524'),
 ('20250911124033'),
