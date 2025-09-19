@@ -10,6 +10,7 @@ module FixedChargeEvents
             {
               from_datetime:,
               to_datetime:,
+              to_datetime_excluded: to_datetime + 1.day,
               timezone: customer.applicable_timezone
             }
           ]
@@ -122,9 +123,9 @@ module FixedChargeEvents
         <<-SQL
           DATE((
             -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
-            CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY created_at)) < :from_datetime
+            CASE WHEN (LEAD(timestamp, 1, :to_datetime_excluded) OVER (ORDER BY created_at)) < :from_datetime
             THEN :from_datetime
-            ELSE LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY created_at)
+            ELSE LEAD(timestamp, 1, :to_datetime_excluded ) OVER (ORDER BY created_at)
             END
           )::timestamptz AT TIME ZONE :timezone)
         SQL
