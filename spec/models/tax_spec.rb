@@ -12,6 +12,8 @@ RSpec.describe Tax do
   it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
 
+  it { expect(described_class).to be_soft_deletable }
+
   it_behaves_like "paper_trail traceable"
 
   describe "customers_count" do

@@ -2,6 +2,10 @@
 
 class Tax < ApplicationRecord
   include PaperTrailTraceable
+  include Discard::Model
+
+  self.discard_column = :deleted_at
+  default_scope -> { kept }
 
   ORDERS = %w[name rate].freeze
 
@@ -69,6 +73,7 @@ end
 #  applied_to_organization :boolean          default(FALSE), not null
 #  auto_generated          :boolean          default(FALSE), not null
 #  code                    :string           not null
+#  deleted_at              :datetime
 #  description             :string
 #  name                    :string           not null
 #  rate                    :float            default(0.0), not null
