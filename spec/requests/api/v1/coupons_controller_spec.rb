@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::CouponsController, type: :request do
+RSpec.describe Api::V1::CouponsController do
   let(:organization) { create(:organization) }
 
   describe "POST /api/v1/coupons" do

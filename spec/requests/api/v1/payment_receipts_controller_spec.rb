@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::PaymentReceiptsController, type: :request do
+RSpec.describe Api::V1::PaymentReceiptsController do
   let(:organization) { create(:organization) }
 
   describe "GET /api/v1/payment_receipts" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::CreditNotesController, type: :request do
+RSpec.describe Api::V1::Customers::CreditNotesController do
   describe "GET /api/v1/customers/:external_id/credit_notes" do
     it_behaves_like "a credit note index endpoint" do
       subject { get_with_token(organization, "/api/v1/customers/#{external_id}/credit_notes", params) }

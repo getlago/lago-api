@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :request do
+RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }

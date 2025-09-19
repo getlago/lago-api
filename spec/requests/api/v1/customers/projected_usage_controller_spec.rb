@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::ProjectedUsageController, type: :request do
+RSpec.describe Api::V1::Customers::ProjectedUsageController do
   around { |test| lago_premium!(&test) }
 
   let(:customer) { create(:customer, organization:) }

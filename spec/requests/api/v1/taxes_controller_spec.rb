@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::TaxesController, type: :request do
+RSpec.describe Api::V1::TaxesController do
   let(:organization) { create(:organization) }
 
   describe "POST /api/v1/taxes" do

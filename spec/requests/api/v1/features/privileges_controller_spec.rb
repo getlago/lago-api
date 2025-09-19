@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Api::V1::Features::PrivilegesController, type: :request do
+RSpec.describe Api::V1::Features::PrivilegesController do
   let(:organization) { create(:organization) }
   let(:feature1) { create(:feature, organization:, code: "seats", name: "Number of seats", description: "Number of users of the account") }
   let(:privilege1) { create(:privilege, feature: feature1, code: "max_admins", name: "", value_type: "integer") }

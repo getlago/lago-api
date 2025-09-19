@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ApiLogsController, type: :request, clickhouse: true do
+RSpec.describe Api::V1::ApiLogsController, clickhouse: true do
   subject { get_with_token(organization, path, params) }
 
   let(:organization) { api_log.organization }

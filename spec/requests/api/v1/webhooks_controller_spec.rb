@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::WebhooksController, type: :request do
+RSpec.describe Api::V1::WebhooksController do
   let(:organization) { create(:organization) }
 
   describe "GET /api/v1/webhooks/public_key" do

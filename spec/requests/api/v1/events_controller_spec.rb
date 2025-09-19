@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::EventsController, type: :request do
+RSpec.describe Api::V1::EventsController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:metric) { create(:billable_metric, organization:) }

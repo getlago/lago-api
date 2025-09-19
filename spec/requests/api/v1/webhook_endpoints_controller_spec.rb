@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::WebhookEndpointsController, type: :request do
+RSpec.describe Api::V1::WebhookEndpointsController do
   describe "POST /api/v1/webhook_endpoints" do
     subject do
       post_with_token(

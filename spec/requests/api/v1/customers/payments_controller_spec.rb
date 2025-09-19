@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::PaymentsController, type: :request do
+RSpec.describe Api::V1::Customers::PaymentsController do
   describe "GET /api/v1/customers/:external_id/payments" do
     it_behaves_like "a payment index endpoint" do
       subject { get_with_token(organization, "/api/v1/customers/#{customer.external_id}/payments", params) }

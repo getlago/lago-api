@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true do
+RSpec.describe Api::V1::ActivityLogsController, clickhouse: true do
   let(:organization) { activity_log.organization }
   let(:params) { {} }
 

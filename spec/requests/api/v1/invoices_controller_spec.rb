@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::InvoicesController, type: :request do
+RSpec.describe Api::V1::InvoicesController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }

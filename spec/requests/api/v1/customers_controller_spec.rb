@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::CustomersController, type: :request do
+RSpec.describe Api::V1::CustomersController do
   describe "POST /api/v1/customers" do
     subject { post_with_token(organization, "/api/v1/customers", {customer: create_params}) }
 

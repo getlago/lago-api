@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::BillingEntitiesController, type: :request do
+RSpec.describe Api::V1::BillingEntitiesController do
   let(:billing_entity1) { create(:billing_entity) }
   let(:organization) { billing_entity1.organization }
   let(:billing_entity2) { create(:billing_entity, organization:) }

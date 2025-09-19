@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::BillableMetricsController, type: :request do
+RSpec.describe Api::V1::BillableMetricsController do
   let(:organization) { create(:organization) }
 
   describe "POST /api/v1/billable_metrics" do

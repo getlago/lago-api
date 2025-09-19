@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::CreditNotesController, type: :request do
+RSpec.describe Api::V1::CreditNotesController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }

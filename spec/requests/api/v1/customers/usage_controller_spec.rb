@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::UsageController, type: :request do
+RSpec.describe Api::V1::Customers::UsageController do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
 
