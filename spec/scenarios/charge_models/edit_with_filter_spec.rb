@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Change charge model with filters", :scenarios, type: :request do
+describe "Change charge model with filters" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

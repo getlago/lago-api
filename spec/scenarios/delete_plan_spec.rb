@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Delete Plan Scenarios", :scenarios, type: :request do
+describe "Delete Plan Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }

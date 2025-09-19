@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Recurring fee invoice inclusion after upgrade", :scenarios, type: :request do
+describe "Recurring fee invoice inclusion after upgrade" do
   let(:organization) { create(:organization, webhook_url: "http://lago.test/wh") }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }

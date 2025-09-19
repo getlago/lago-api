@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Create and edit plans with charge filters", :scenarios, type: :request do
+RSpec.describe "Create and edit plans with charge filters" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }

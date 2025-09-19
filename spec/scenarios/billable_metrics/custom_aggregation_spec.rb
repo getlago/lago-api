@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Aggregation - Custom Aggregation Scenarios", :scenarios, type: :request, transaction: false do
+RSpec.describe "Aggregation - Custom Aggregation Scenarios", transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

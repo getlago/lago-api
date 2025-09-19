@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Create Event Scenarios", :scenarios, type: :request do
+describe "Create Event Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }

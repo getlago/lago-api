@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Adjusted Charge Fees Scenario", :scenarios, type: :request, transaction: false do
+describe "Adjusted Charge Fees Scenario", transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: "") }
 
   let(:customer) { create(:customer, organization:, invoice_grace_period: 5) }

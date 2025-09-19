@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false, clickhouse: true do
+describe "Charge Models - Prorated Graduated Scenarios", transaction: false, clickhouse: true do
   let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }

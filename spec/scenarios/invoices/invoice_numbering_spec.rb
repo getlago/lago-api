@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: false do
+describe "Invoice Numbering Scenario", transaction: false do
   let(:customer_first) { create(:customer, organization:, billing_entity: billing_entity_first) }
   let(:customer_second) { create(:customer, organization:, billing_entity: billing_entity_first) }
   let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first) }

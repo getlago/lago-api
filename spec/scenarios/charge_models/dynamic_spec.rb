@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Charge Models - Dynamic Pricing Scenarios", :scenarios, type: :request, transaction: false do
+describe "Charge Models - Dynamic Pricing Scenarios", transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Void Invoice Scenarios", :scenarios, type: :request do
+describe "Void Invoice Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }

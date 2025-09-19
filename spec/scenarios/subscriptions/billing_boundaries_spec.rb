@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Billing Boundaries Scenario", :scenarios, type: :request do
+describe "Billing Boundaries Scenario" do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   let(:timezone) { "UTC" }

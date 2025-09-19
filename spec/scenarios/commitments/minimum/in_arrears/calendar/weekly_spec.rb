@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Billing Minimum Commitments In Arrears Scenario", :scenarios, type: :request do
+describe "Billing Minimum Commitments In Arrears Scenario" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:timezone) { "UTC" }
   let(:customer) { create(:customer, organization:, timezone:) }

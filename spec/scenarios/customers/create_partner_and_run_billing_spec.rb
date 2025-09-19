@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Create partner and run billing Scenarios", :scenarios, type: :request do
+describe "Create partner and run billing Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil, document_numbering: "per_organization", premium_integrations: ["revenue_share"]) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:partner) { create(:customer, organization:, billing_entity:) }

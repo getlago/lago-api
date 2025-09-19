@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Add customer-specific taxes", :scenarios, type: :request do
+describe "Add customer-specific taxes" do
   let(:organization) { create(:organization, country: "FR", eu_tax_management: false, billing_entities: [create(:billing_entity, country: "FR")]) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 149_00) }
 

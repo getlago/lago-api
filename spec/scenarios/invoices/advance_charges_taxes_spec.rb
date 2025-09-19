@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
+describe "Advance Charges Invoices Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate_1) { 9.3 }

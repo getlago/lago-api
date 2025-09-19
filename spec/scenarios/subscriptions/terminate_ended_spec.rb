@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscriptions Termination Scenario", :scenarios, type: :request do
+describe "Subscriptions Termination Scenario" do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: "") }
 
   let(:timezone) { "Europe/Paris" }
