@@ -26,6 +26,9 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
   before do
     raise "You need to set the SPEC_STRIPE_SECRET_KEY environment variable" unless api_key
 
+    # Uncomment to print Stripe logs
+    # ::Stripe.log_level = Logger::INFO
+
     ::Stripe.api_version = ENV["STRIPE_API_VERSION"]
     ::Stripe.api_key = api_key
     WebMock.disable_net_connect!(allow: "api.stripe.com")
@@ -99,22 +102,13 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
     expect(response["error_details"]["code"]).to eq "card_declined"
     expect(response["error_details"]["http_body"]["error"]["code"]).to eq "card_declined"
 
-    # WITH 3DSecure confirmation - no webhook, payment failed if customer is not in India
-    threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
-    retry_invoice_payment(invoice.id)
-    expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
-    expect(invoice.reload.payment_status).to eq("failed")
-    expect(invoice.payment_attempts).to eq(2)
-    expect(webhooks_sent.map { it["webhook_type"] }).not_to include("payment.requires_action")
-    webhooks_sent.clear
-
     # WITH VALID CARD
     customer.update!(country: "FR")
     valid_pm_id = attach_card!(stripe_customer, :pm_card_visa)
     retry_invoice_payment(invoice.id)
     expect(stripe_customer.reload.payment_method_id).to eq valid_pm_id
     expect(invoice.reload.payment_status).to eq("succeeded")
-    expect(invoice.payment_attempts).to eq(3)
+    expect(invoice.payment_attempts).to eq(2)
 
     perform_all_enqueued_jobs
 
@@ -138,6 +132,34 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       external_id: "cust_#{external_id}",
       name: "Integration Test UPDATED #{Time.current.iso8601}"
     })
+  end
+
+  context "when invoice payment requires 3DS" do
+    it "create a pending payment and send webhook with `next_action" do
+      customer = create_customer
+      stripe_customer = customer.payment_provider_customers.sole
+      webhooks_sent.clear
+
+      threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
+      create_one_off_invoice(customer, [addon], units: 22)
+
+      invoice = customer.invoices.sole
+      expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payments.where(status: "requires_action").count).to eq 1
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice).not_to be_ready_for_payment_processing
+
+      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(wh.dig("payment", "next_action")).to match({
+        "type" => "redirect_to_url",
+        "redirect_to_url" => {
+          "url" => start_with("https://hooks.stripe.com/3d_secure_2/hosted"),
+          "return_url" => "https://app.lago.dev"
+        }
+      })
+      webhooks_sent.clear
+    end
   end
 
   context "when customer is in India and has `require_action` on 3DS" do
@@ -164,23 +186,85 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       })
       webhooks_sent.clear
     end
+  end
 
-    context "with SEPA Direct Debit" do
-      let(:provider_payment_methods) { ["sepa_debit"] }
+  context "with customer_balance" do
+    let(:provider_payment_methods) { ["customer_balance"] }
 
-      it do
-        customer = create_customer({
-          name: "SEPA Direct Debit Test (#{Time.current.iso8601})"
-        })
-        _stripe_customer = customer.payment_provider_customers.sole
+    it "create a pending payment and send webhook with `next_action" do
+      customer = create_customer
+      stripe_customer = customer.payment_provider_customers.sole
+      webhooks_sent.clear
 
-        create_one_off_invoice(customer, [addon], units: 22)
-        # Stripe should return a 400 because of `confirm: true`
-        invoice = customer.invoices.sole
-        expect(invoice.ready_for_payment_processing).to eq true
-        expect(invoice.payment_status).to eq("failed")
-        expect(invoice.payments.count).to eq(1)
-      end
+      create_one_off_invoice(customer, [addon], units: 7)
+
+      invoice = customer.invoices.sole
+      expect(stripe_customer.reload.payment_method_id).to be_nil
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice).not_to be_ready_for_payment_processing
+
+      payment = invoice.payments.where(status: "requires_action").sole
+      expect(payment.status).to eq "requires_action"
+      expect(payment.payable_payment_status).to eq "processing"
+
+      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(wh.dig("payment", "next_action", "type")).to eq "display_bank_transfer_instructions"
+      expect(wh.dig("payment", "next_action", "display_bank_transfer_instructions", "amount_remaining")).to eq 2170
+      webhooks_sent.clear
+    end
+  end
+
+  context "with SEPA Direct Debit" do
+    let(:provider_payment_methods) { ["sepa_debit"] }
+
+    it do
+      customer = create_customer({
+        name: "SEPA Direct Debit Test (#{Time.current.iso8601})"
+      })
+      stripe_customer = customer.payment_provider_customers.sole
+
+      create_one_off_invoice(customer, [addon], units: 22)
+
+      # Stripe should return a 400 because of `confirm: true` and no payment method
+      invoice = customer.invoices.sole
+      expect(invoice.ready_for_payment_processing).to eq true
+      expect(invoice.payment_status).to eq("failed")
+      expect(invoice.payments.count).to eq(1)
+      p = invoice.payments.sole
+      expect(p.provider_payment_id).to be_nil
+
+      attach_iban!(stripe_customer, "AT321904300235473204")
+      retry_invoice_payment(invoice.id)
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payment_attempts).to eq(2)
+      p2 = invoice.payments.where.not(id: p.id).sole
+      expect(p2.provider_payment_id).to start_with "pi_"
+      expect(p2.status).to eq "processing"
+      expect(p2.payable_payment_status).to eq "processing"
+    end
+  end
+
+  context "with US Bank Account (ACH)" do
+    let(:provider_payment_methods) { ["us_bank_account"] }
+    let(:currency) { "USD" }
+
+    it do
+      customer = create_customer({
+        name: "ACH Test (#{Time.current.iso8601})",
+        country: "US",
+        state: "Alaska"
+      })
+      stripe_customer = customer.payment_provider_customers.sole
+
+      attach_ach!(stripe_customer)
+
+      res = create_one_off_invoice(customer, [addon], currency:, units: 14)
+      invoice = Invoice.find res["invoice"]["lago_id"]
+
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice.payments.sole.provider_payment_id).to start_with "pi_"
     end
   end
 
@@ -202,18 +286,85 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
     Customer.find(json[:customer][:lago_id])
   end
 
-  # In Lago, we only attach payment method via checkout links
-  def attach_card!(stripe_customer, pm_id)
-    customer_id = stripe_customer.provider_customer_id
-
-    # Remove all existing methods
+  def remove_all_payment_methods!(stripe_customer)
     Stripe::PaymentMethod.list({
-      customer: customer_id,
+      customer: stripe_customer.provider_customer_id,
       type: "card"
     }).each { Stripe::PaymentMethod.detach(it.id, {}) }
+  end
 
-    # Attach new one
-    res = Stripe::PaymentMethod.attach(pm_id.to_s, {customer: customer_id})
-    res.id
+  # In Lago, we only attach payment method via checkout links
+  def attach_card!(stripe_customer, pm_id)
+    remove_all_payment_methods!(stripe_customer)
+    Stripe::PaymentMethod.attach(
+      pm_id.to_s,
+      {customer: stripe_customer.provider_customer_id}
+    ).id
+  end
+
+  def attach_iban!(stripe_customer, iban)
+    customer_id = stripe_customer.provider_customer_id
+
+    pm_id = Stripe::PaymentMethod.create({
+      type: "sepa_debit",
+      sepa_debit: {iban:},
+      billing_details: {
+        name: "My Name",
+        email: "my-email@inter.net"
+      }
+    }).id
+
+    Stripe::SetupIntent.create({
+      customer: customer_id,
+      payment_method: pm_id,
+      payment_method_types: ["sepa_debit"],
+      confirm: true,
+      usage: "off_session",
+      mandate_data: {
+        customer_acceptance: {
+          type: "online",
+          online: {
+            ip_address: "127.0.0.1",
+            user_agent: "Mozilla/5.0 (compatible; test)"
+          }
+        }
+      }
+    })
+
+    pm_id
+  end
+
+  def attach_ach!(stripe_customer, pm_id = "pm_usBankAccount_success")
+    Stripe::PaymentMethod.attach(
+      pm_id,
+      {customer: stripe_customer.provider_customer_id}
+    )
+
+    pm_id
+  end
+
+  def attach_bacs!(stripe_customer)
+    pm = Stripe::PaymentMethod.create({
+      type: "bacs_debit",
+      bacs_debit: {
+        sort_code: "108800",
+        account_number: "00012345"
+      },
+      billing_details: {
+        name: "John Doe",
+        email: "john@example.com",
+        address: {
+          line1: "123 Test Street",
+          city: "London",
+          postal_code: "SW1A 1AA",
+          country: "GB"
+        }
+      }
+    })
+
+    Stripe::PaymentMethod.attach(
+      pm.id,
+      {customer: stripe_customer.provider_customer_id}
+    ).id
   end
 end
