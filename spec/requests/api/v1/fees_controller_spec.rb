@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::FeesController, type: :request do
+RSpec.describe Api::V1::FeesController do
   let(:organization) { create(:organization) }
 
   describe "GET /api/v1/fees/:id" do

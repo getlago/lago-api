@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
+RSpec.describe Api::V1::Customers::PaymentMethodsController do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:external_id) { customer.external_id }

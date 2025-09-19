@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Invoices::FacturX::CreateService, type: :service do
+RSpec.describe EInvoices::Invoices::FacturX::CreateService do
   let(:invoice) { create(:invoice) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
   let(:xml_content) { "<xml>content</xml>" }

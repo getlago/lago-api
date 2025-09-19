@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApplicationController, type: :request do
+RSpec.describe ApplicationController do
   describe "GET /health" do
     it "returns the application health check" do
       get "/health"

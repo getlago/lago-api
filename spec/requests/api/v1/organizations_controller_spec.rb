@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::OrganizationsController, type: :request do
+RSpec.describe Api::V1::OrganizationsController do
   let(:organization) { create(:organization) }
   let(:webhook_url) { Faker::Internet.url }
 

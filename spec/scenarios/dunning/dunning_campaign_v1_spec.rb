@@ -43,7 +43,6 @@ describe "Dunning Campaign v1" do
 
   include_context "with webhook tracking"
 
-  # TODO: make it a test metadata `:scenarios, type: :request, premium: true`
   around { |test| lago_premium!(&test) }
 
   before do

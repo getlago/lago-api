@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::WalletsController, type: :request do
+RSpec.describe Api::V1::WalletsController do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, currency: "EUR") }
   let(:subscription) { create(:subscription, customer:) }

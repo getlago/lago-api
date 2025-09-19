@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::PlansController, type: :request do
+RSpec.describe Api::V1::PlansController do
   let(:tax) { create(:tax, organization:) }
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }

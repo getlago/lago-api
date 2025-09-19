@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WebhooksController, type: :request do
+RSpec.describe WebhooksController do
   describe "POST /stripe" do
     let(:organization_id) { Faker::Internet.uuid }
     let(:code) { "stripe_1" }

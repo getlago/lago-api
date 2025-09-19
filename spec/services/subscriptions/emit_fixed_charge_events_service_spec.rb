@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
+RSpec.describe Subscriptions::EmitFixedChargeEventsService do
   subject(:service) { described_class.new(subscriptions:, timestamp:) }
 
   let(:timestamp) { Time.current }

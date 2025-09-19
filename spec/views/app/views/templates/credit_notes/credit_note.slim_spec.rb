@@ -7,7 +7,7 @@ require "rails_helper"
 #
 # To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
 
-RSpec.describe "templates/credit_notes/credit_note.slim", type: :view do
+RSpec.describe "templates/credit_notes/credit_note.slim" do
   subject(:rendered_template) do
     Slim::Template.new(template, 1, pretty: true).render(credit_note)
   end

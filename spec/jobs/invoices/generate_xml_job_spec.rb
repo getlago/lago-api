@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::GenerateXmlJob, type: :job do
+RSpec.describe Invoices::GenerateXmlJob do
   let(:invoice) { create(:invoice) }
 
   let(:result) { BaseService::Result.new }

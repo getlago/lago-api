@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
+RSpec.describe Api::V1::Subscriptions::AlertsController do
   let(:external_id) { "sub+1" }
   let(:external_id_query_param) { external_id }
   let(:code) { "my-alert" }

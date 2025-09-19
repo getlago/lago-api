@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
+RSpec.describe Api::V1::Analytics::OverdueBalancesController do
   describe "GET /analytics/overdue_balance" do
     subject { get_with_token(organization, "/api/v1/analytics/overdue_balance", params) }
 

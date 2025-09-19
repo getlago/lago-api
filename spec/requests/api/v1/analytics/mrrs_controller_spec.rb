@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable RSpec/FilePath
   describe "GET /analytics/mrr" do
     subject { get_with_token(organization, "/api/v1/analytics/mrr", params) }
 
