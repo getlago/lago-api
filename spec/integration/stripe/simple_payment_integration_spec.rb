@@ -102,22 +102,13 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
     expect(response["error_details"]["code"]).to eq "card_declined"
     expect(response["error_details"]["http_body"]["error"]["code"]).to eq "card_declined"
 
-    # WITH 3DSecure confirmation - no webhook, payment failed if customer is not in India
-    threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
-    retry_invoice_payment(invoice.id)
-    expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
-    expect(invoice.reload.payment_status).to eq("failed")
-    expect(invoice.payment_attempts).to eq(2)
-    expect(webhooks_sent.map { it["webhook_type"] }).not_to include("payment.requires_action")
-    webhooks_sent.clear
-
     # WITH VALID CARD
     customer.update!(country: "FR")
     valid_pm_id = attach_card!(stripe_customer, :pm_card_visa)
     retry_invoice_payment(invoice.id)
     expect(stripe_customer.reload.payment_method_id).to eq valid_pm_id
     expect(invoice.reload.payment_status).to eq("succeeded")
-    expect(invoice.payment_attempts).to eq(3)
+    expect(invoice.payment_attempts).to eq(2)
 
     perform_all_enqueued_jobs
 
@@ -143,6 +134,34 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
     })
   end
 
+  context "when invoice payment requires 3DS" do
+    it "create a pending payment and send webhook with `next_action" do
+      customer = create_customer
+      stripe_customer = customer.payment_provider_customers.sole
+      webhooks_sent.clear
+
+      threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
+      create_one_off_invoice(customer, [addon], units: 22)
+
+      invoice = customer.invoices.sole
+      expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payments.where(status: "requires_action").count).to eq 1
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice).not_to be_ready_for_payment_processing
+
+      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(wh.dig("payment", "next_action")).to match({
+        "type" => "redirect_to_url",
+        "redirect_to_url" => {
+          "url" => start_with("https://hooks.stripe.com/3d_secure_2/hosted"),
+          "return_url" => "https://app.lago.dev"
+        }
+      })
+      webhooks_sent.clear
+    end
+  end
+
   context "when customer is in India and has `require_action` on 3DS" do
     it do
       customer = create_customer(country: "IN")
@@ -165,6 +184,33 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
           "return_url" => "https://app.lago.dev"
         }
       })
+      webhooks_sent.clear
+    end
+  end
+
+  context "with customer_balance" do
+    let(:provider_payment_methods) { ["customer_balance"] }
+
+    it "create a pending payment and send webhook with `next_action" do
+      customer = create_customer
+      stripe_customer = customer.payment_provider_customers.sole
+      webhooks_sent.clear
+
+      create_one_off_invoice(customer, [addon], units: 7)
+
+      invoice = customer.invoices.sole
+      expect(stripe_customer.reload.payment_method_id).to be_nil
+      expect(invoice.reload.payment_status).to eq("pending")
+      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice).not_to be_ready_for_payment_processing
+
+      payment = invoice.payments.where(status: "requires_action").sole
+      expect(payment.status).to eq "requires_action"
+      expect(payment.payable_payment_status).to eq "processing"
+
+      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(wh.dig("payment", "next_action", "type")).to eq "display_bank_transfer_instructions"
+      expect(wh.dig("payment", "next_action", "display_bank_transfer_instructions", "amount_remaining")).to eq 2170
       webhooks_sent.clear
     end
   end
