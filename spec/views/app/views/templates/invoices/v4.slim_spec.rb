@@ -9,10 +9,7 @@ require "rails_helper"
 
 RSpec.describe "templates/invoices/v4.slim", type: :view do
   subject(:rendered_template) do
-    # We have to use both `pretty: true` and `HtmlBeautifier.beautify` to ensure proper formatting which eases the
-    # snapshot diff review.
-    html = Slim::Template.new(template, 1, pretty: true).render(invoice)
-    HtmlBeautifier.beautify(html, stop_on_errors: true)
+    Slim::Template.new(template, 1, pretty: true).render(invoice)
   end
 
   let(:template) { Rails.root.join("app/views/templates/invoices/v4.slim") }
@@ -33,49 +30,16 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
   end
   # Static organization data for consistent rendering
   let(:organization) do
-    build_stubbed(
-      :organization,
-      name: "ACME Corporation",
-      default_currency: "USD",
-      country: "US"
-    )
+    build_stubbed(:organization, :with_static_values)
   end
 
   # Static billing entity data for consistent rendering
   let(:billing_entity) do
-    build_stubbed(
-      :billing_entity,
-      organization: organization,
-      name: "ACME Corporation",
-      email: "billing@acme.com",
-      address_line1: "123 Business St",
-      address_line2: "Suite 100",
-      city: "San Francisco",
-      state: "CA",
-      zipcode: "94105",
-      country: "US"
-    )
+    build_stubbed(:billing_entity, :with_static_values, organization: organization)
   end
   # Static customer data
   let(:customer) do
-    build_stubbed(
-      :customer,
-      organization: organization,
-      firstname: nil,
-      lastname: nil,
-      name: "John Doe",
-      legal_name: "John Doe",
-      legal_number: "1234567890",
-      external_id: "customer_123",
-      email: "john.doe@example.com",
-      address_line1: "456 Customer Ave",
-      address_line2: "Apt 202",
-      city: "New York",
-      state: "NY",
-      zipcode: "10001",
-      country: "US",
-      phone: "+1-555-123-4567"
-    )
+    build_stubbed(:customer, :with_static_values, organization: organization)
   end
 
   # Static wallet data
@@ -120,40 +84,12 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
     I18n.locale = :en
   end
 
-  def snapshot_name(metadata)
-    description =
-      if metadata[:description].empty?
-        # we have an "it { is_expected.to be something }" block
-        metadata[:scoped_id]
-      else
-        metadata[:description]
-      end
-    example_group =
-      if metadata.key?(:example_group)
-        metadata[:example_group]
-      else
-        metadata[:parent_example_group]
-      end
-
-    description = description.tr("/", "_").tr(" ", "_")
-    if example_group
-      [snapshot_name(example_group), description].join("/")
-    else
-      description
-    end
-  end
-
-  def expect_to_match_snapshot
-    snapshot_name = self.snapshot_name(RSpec.current_example.metadata)
-    expect(rendered_template).to match_snapshot("#{snapshot_name}.html")
-  end
-
   context "when invoice_type is credit" do
     context "when wallet transaction has a name" do
       let(:wallet_transaction_name) { "Wallet Transaction Name" }
 
       it "renders correctly" do
-        expect_to_match_snapshot
+        expect(rendered_template).to match_html_snapshot
       end
     end
 
@@ -164,7 +100,7 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
         let(:wallet_name) { nil }
 
         it "renders correctly" do
-          expect_to_match_snapshot
+          expect(rendered_template).to match_html_snapshot
         end
       end
 
@@ -172,7 +108,7 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
         let(:wallet_name) { "Premium Wallet" }
 
         it "renders correctly" do
-          expect_to_match_snapshot
+          expect(rendered_template).to match_html_snapshot
         end
       end
     end

@@ -17,5 +17,17 @@ FactoryBot.define do
     trait :archived do
       archived_at { Time.current }
     end
+
+    trait :with_static_values do
+      name { "ACME Corporation" }
+      email { "billing@acme.com" }
+      address_line1 { "123 Business St" }
+      address_line2 { "Suite 100" }
+      city { "San Francisco" }
+      state { "CA" }
+      zipcode { "94105" }
+      country { "US" }
+      document_number_prefix { "ACM-8924" }
+    end
   end
 end
