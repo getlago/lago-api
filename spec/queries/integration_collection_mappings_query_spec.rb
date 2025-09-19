@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
+RSpec.describe IntegrationCollectionMappingsQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:) }
 
   let(:returned_ids) { result.integration_collection_mappings.pluck(:id) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetricsQuery, type: :query do
+RSpec.describe BillableMetricsQuery do
   subject(:result) do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end

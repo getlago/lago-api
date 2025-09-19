@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::AlertsQuery, type: :query do
+RSpec.describe UsageMonitoring::AlertsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end

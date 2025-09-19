@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InvoicesQuery, type: :query do
+RSpec.describe InvoicesQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:, filters:)
   end

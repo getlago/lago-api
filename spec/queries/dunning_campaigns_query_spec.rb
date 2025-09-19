@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaignsQuery, type: :query do
+RSpec.describe DunningCampaignsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:, filters:, order:)
   end

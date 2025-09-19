@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe SubscriptionsQuery, type: :query do
+RSpec.describe SubscriptionsQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:, search_term:) }
 
   let(:returned_ids) { result.subscriptions.pluck(:id) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AddOnsQuery, type: :query do
+RSpec.describe AddOnsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:)
   end

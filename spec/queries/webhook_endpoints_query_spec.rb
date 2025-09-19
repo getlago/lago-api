@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WebhookEndpointsQuery, type: :query do
+RSpec.describe WebhookEndpointsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:)
   end
