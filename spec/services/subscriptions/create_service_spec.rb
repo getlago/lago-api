@@ -51,6 +51,38 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when plan has fixed charges" do
+      let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: false) }
+      let(:fixed_charge_2) { create(:fixed_charge, plan:, pay_in_advance: false) }
+
+      before do
+        fixed_charge_1
+        fixed_charge_2
+      end
+
+      it "creates a subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription).to be_active
+      end
+
+      it "creates fixed charge events for the subscription" do
+        freeze_time do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+            .to match_array(
+              [
+                [fixed_charge_1.id, Time.current],
+                [fixed_charge_2.id, Time.current]
+              ]
+            )
+        end
+      end
+    end
+
     context "when subscription should sync with Hubspot" do
       let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
 
