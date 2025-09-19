@@ -9,10 +9,10 @@ module FixedChargeEvents
         @fixed_charge = fixed_charge
         @subscription = subscription
         @customer = subscription.customer
-        @from_datetime = boundaries.charges_from_datetime.in_time_zone(customer.applicable_timezone).to_date
-        # NOTE: we add 1 day to the duration to include the last day of the period.
-        @to_datetime = boundaries.charges_to_datetime.in_time_zone(customer.applicable_timezone).to_date + 1.day
-        @charges_duration = to_datetime - from_datetime
+        # TODO: switch to fixed_charges_boundaries
+        @from_datetime = boundaries.charges_from_datetime
+        @to_datetime = boundaries.charges_to_datetime
+        @charges_duration = boundaries.charges_duration
 
         super(nil)
       end
