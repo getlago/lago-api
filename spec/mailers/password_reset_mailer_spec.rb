@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PasswordResetMailer, type: :mailer do
+RSpec.describe PasswordResetMailer do
   subject(:password_reset_mailer) { described_class }
 
   let(:password_reset) { create(:password_reset) }

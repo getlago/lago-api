@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeyMailer, type: :mailer do
+RSpec.describe ApiKeyMailer do
   describe "#rotated" do
     let(:mail) { described_class.with(api_key:).rotated }
     let(:api_key) { create(:api_key) }

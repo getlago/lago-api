@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InvoiceMailer, type: :mailer do
+RSpec.describe InvoiceMailer do
   subject(:invoice_mailer) { described_class }
 
   let(:invoice) { create(:invoice, organization:, billing_entity:, fees_amount_cents: 100) }
