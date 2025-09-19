@@ -117,6 +117,8 @@ module Subscriptions
         new_subscription.mark_as_active!
       end
 
+      EmitFixedChargeEventsService.call!(subscriptions: [new_subscription], timestamp: new_subscription.subscription_at)
+
       if should_be_billed_today?(new_subscription)
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
