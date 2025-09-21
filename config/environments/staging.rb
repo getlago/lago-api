@@ -24,11 +24,7 @@ Rails.application.configure do
     :local
   end
 
-  config.log_level = if ENV["LAGO_LOG_LEVEL"].present? && ENV["LAGO_LOG_LEVEL"] != ""
-    ENV["LAGO_LOG_LEVEL"].downcase.to_sym
-  else
-    :info
-  end
+  config.log_level = :info
 
   config.action_cable.disable_request_forgery_protection = true
   config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
@@ -36,12 +32,6 @@ Rails.application.configure do
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
   config.active_support.report_deprecations = false
-
-  # Allow requests from any origin
-  config.action_cable.disable_request_forgery_protection = true
-  config.action_cable.allowed_request_origins = [
-    %r{\Ahttps://[a-z0-9-]+-app\.staging\.getlago\.com\z}
-  ]
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
     logger = ActiveSupport::Logger.new($stdout)

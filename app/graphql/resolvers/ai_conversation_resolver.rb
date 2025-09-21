@@ -11,10 +11,12 @@ module Resolvers
 
     argument :id, ID, required: true, description: "Uniq ID of the ai conversation"
 
-    type Types::AiConversations::Object, null: true
+    type Types::AiConversations::Message.collection_type, null: true
 
     def resolve(id: nil)
-      current_organization.ai_conversations.find(id)
+      ai_conversation = current_organization.ai_conversations.find(id)
+      result = ::AiConversations::FetchMessagesService.call(ai_conversation:).raise_if_error!
+      result.messages
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "ai_conversation")
     end
