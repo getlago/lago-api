@@ -14,7 +14,7 @@ Rails.application.configure do
     {
       level: event.payload[:level],
       ddsource: "ruby",
-      params: event.payload[:params].reject { |k| %w[controller action].include?(k) },
+      params: (event.payload[:params] || {}).reject { |k| %w[controller action].include?(k) },
       organization_id: event.payload[:organization_id],
       trace_id: span.context.hex_trace_id,
       span_id: span.context.hex_span_id
