@@ -26,7 +26,7 @@ module AiConversations
           )
         end
 
-        Thread.pass
+        sleep 0.01
       end
 
       LagoApiSchema.subscriptions.trigger(

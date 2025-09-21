@@ -1804,26 +1804,6 @@
               "deprecationReason": null
             },
             {
-              "name": "messages",
-              "description": null,
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "AiConversationMessage",
-                    "ofType": null
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "mistralConversationId",
               "description": null,
               "args": [],
@@ -1893,12 +1873,11 @@
           "kind": "OBJECT",
           "name": "AiConversationCollection",
           "description": "AiConversationCollection type",
-          "interfaces": [],
-          "possibleTypes": null,
           "fields": [
             {
               "name": "collection",
               "description": "A collection of paginated AiConversationCollection",
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -1917,12 +1896,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "metadata",
               "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -1933,23 +1912,23 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             }
           ],
           "inputFields": null,
-          "enumValues": null
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
         },
         {
           "kind": "OBJECT",
           "name": "AiConversationMessage",
           "description": null,
-          "interfaces": [],
-          "possibleTypes": null,
           "fields": [
             {
               "name": "content",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -1960,12 +1939,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "createdAt",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -1976,12 +1955,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "type",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -1992,12 +1971,64 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             }
           ],
           "inputFields": null,
-          "enumValues": null
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "AiConversationMessageCollection",
+          "description": "AiConversationMessageCollection type",
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated AiConversationMessageCollection",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "AiConversationMessage",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
         },
         {
           "kind": "OBJECT",
@@ -43517,13 +43548,6 @@
             {
               "name": "aiConversation",
               "description": "Query a single ai conversation of an organization",
-              "type": {
-                "kind": "OBJECT",
-                "name": "AiConversation",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
               "args": [
                 {
                   "name": "id",
@@ -43541,18 +43565,18 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
-              ]
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "AiConversationMessageCollection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
             },
             {
               "name": "aiConversations",
               "description": "Query the latest AI conversations of current organization",
-              "type": {
-                "kind": "OBJECT",
-                "name": "AiConversationCollection",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
               "args": [
                 {
                   "name": "limit",
@@ -43566,7 +43590,14 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
-              ]
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "AiConversationCollection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
             },
             {
               "name": "alert",

@@ -2,7 +2,7 @@
 
 module AiConversations
   class FetchMessagesService < BaseService
-    Result = BaseResult[:ai_conversation]
+    Result = BaseResult[:messages]
     MISTRAL_CONVERSATIONS_API_URL = "https://api.mistral.ai/v1/conversations"
 
     def initialize(ai_conversation:)
@@ -12,7 +12,13 @@ module AiConversations
 
     def call
       result = @http.get(headers:)
-      result["messages"].map { |h| h.slice("content", "created_at", "type") }
+      messages = result["messages"].map { |h| h.slice("content", "created_at", "type") }
+
+      result.messages = messages
+      result
+    rescue LagoHttpClient::HttpError => e
+      Rails.logger.error("Error fetching Mistral messages: #{e.message}")
+      result
     end
 
     private

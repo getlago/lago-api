@@ -463,7 +463,6 @@ enum AggregationTypeEnum {
 type AiConversation {
   createdAt: ISO8601DateTime!
   id: ID!
-  messages: [AiConversationMessage!]
   mistralConversationId: String
   name: String!
   organization: Organization!
@@ -489,6 +488,21 @@ type AiConversationMessage {
   content: String!
   createdAt: ISO8601DateTime!
   type: String!
+}
+
+"""
+AiConversationMessageCollection type
+"""
+type AiConversationMessageCollection {
+  """
+  A collection of paginated AiConversationMessageCollection
+  """
+  collection: [AiConversationMessage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 type AiConversationStream {
@@ -8418,7 +8432,7 @@ type Query {
     Uniq ID of the ai conversation
     """
     id: ID!
-  ): AiConversation
+  ): AiConversationMessageCollection
 
   """
   Query the latest AI conversations of current organization
