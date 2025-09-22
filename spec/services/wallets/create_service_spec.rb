@@ -86,7 +86,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when invoice_requires_successful_payment is set " do
+    context "when invoice_requires_successful_payment is set" do
       let(:params) do
         {
           name: "New Wallet",
@@ -95,18 +95,30 @@ RSpec.describe Wallets::CreateService do
           currency: "EUR",
           rate_amount: "1.00",
           paid_credits:,
-          invoice_requires_successful_payment: true
+          invoice_requires_successful_payment:
         }
       end
+      let(:invoice_requires_successful_payment) { true }
 
       it "follows the value" do
-        aggregate_failures do
+        expect { service_result }.to change(Wallet, :count).by(1)
+
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.invoice_requires_successful_payment).to eq(true)
+      end
+
+      context "when invoice_requires_successful_payment is null" do
+        let(:invoice_requires_successful_payment) { nil }
+
+        it "defaults to false" do
           expect { service_result }.to change(Wallet, :count).by(1)
 
           expect(service_result).to be_success
 
           wallet = service_result.wallet
-          expect(wallet.invoice_requires_successful_payment).to eq(true)
+          expect(wallet.invoice_requires_successful_payment).to eq(false)
         end
       end
     end

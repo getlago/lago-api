@@ -41,6 +41,7 @@ class WalletTransaction < ApplicationRecord
 
   validates :priority, presence: true, inclusion: {in: 1..50}
   validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
+  validates :invoice_requires_successful_payment, exclusion: [nil]
 
   delegate :customer, to: :wallet
 

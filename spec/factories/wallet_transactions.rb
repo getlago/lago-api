@@ -10,6 +10,7 @@ FactoryBot.define do
     credit_amount { "1.00" }
     settled_at { Time.zone.now }
     name { "Custom Transaction Name" }
+    invoice_requires_successful_payment { false }
 
     trait :failed do
       status { "failed" }
