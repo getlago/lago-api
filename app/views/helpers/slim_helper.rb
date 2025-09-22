@@ -33,11 +33,11 @@ class SlimHelper
 
     formatted
       .gsub(/\{\{[^}]+\}\}/, "") # Remove any remaining placeholders
-      .gsub(/\s+/, " ") # Replace multiple spaces with single space
+      .gsub("\n", "<br>") # Convert newlines to <br> tags first
       .gsub(/\s*<br>\s*/, "<br>") # Clean up spaces around line breaks
       .gsub(/<br>(\s*<br>)+/, "<br>") # Remove multiple consecutive line breaks
       .gsub(/^<br>|<br>$/, "") # Remove line breaks at start/end
+      .gsub(/(?<!<br>)\s+/, " ") # Replace multiple spaces with single space, but not after <br>
       .strip # Trim whitespace at start/end
-      .gsub("\n", "<br>")
   end
 end
