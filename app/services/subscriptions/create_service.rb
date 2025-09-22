@@ -104,6 +104,7 @@ module Subscriptions
         !sub.in_trial_period?
     end
 
+    # TODO: Create fixed charge events for the subscription
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
@@ -164,10 +165,12 @@ module Subscriptions
       new_subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def upgrade_subscription
       PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def downgrade_subscription
       if current_subscription.starting_in_the_future?
         update_pending_subscription
@@ -179,7 +182,7 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      new_sub = current_subscription.next_subscriptions.create!(
+      next_subscription = current_subscription.next_subscriptions.create!(
         organization_id: customer.organization_id,
         customer:,
         plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
@@ -192,13 +195,14 @@ module Subscriptions
       )
 
       if params.key?(:payment_method)
-        new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
-        new_sub.save!
+        next_subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        next_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+        next_subscription.save!
       end
       EmitFixedChargeEventsService.call!(subscriptions: [new_sub], timestamp: new_sub.subscription_at)
 
-      InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
+      InvoiceCustomSections::AttachToResourceService.call(resource: next_subscription, params:)
+      EmitFixedChargeEventsService.call!(subscriptions: [next_subscription], timestamp: next_subscription.subscription_at)
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)
@@ -231,6 +235,7 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
+    # TODO: Test this.... with fixed charge events...
     def update_pending_subscription
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
@@ -249,6 +254,7 @@ module Subscriptions
         .order(started_at: :desc)
     end
 
+    # TODO: Test this.... with fixed charge events...
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
     end
