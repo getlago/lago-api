@@ -34,7 +34,7 @@ module Invoices
             fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
             charges_duration: date_service.charges_duration_in_days,
-            fixed_charges_duration: date_service.charges_duration_in_days,
+            fixed_charges_duration: date_service.charges_duration_in_days
           )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
@@ -158,7 +158,7 @@ module Invoices
           fixed_charge:,
           subscription:,
           boundaries:,
-          context:,
+          context:
         )
       end
     end
@@ -331,7 +331,7 @@ module Invoices
     end
 
     def should_create_fixed_charge_fees?(subscription)
-#  what is this????? should this also affect fixed_charges?
+      #  what is this????? should this also affect fixed_charges?
       return false if invoice.skip_charges
 
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
