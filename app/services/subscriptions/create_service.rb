@@ -99,6 +99,7 @@ module Subscriptions
         !sub.in_trial_period?
     end
 
+    # TODO: Create fixed charge events for the subscription
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
@@ -154,10 +155,12 @@ module Subscriptions
       new_subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def upgrade_subscription
       PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def downgrade_subscription
       if current_subscription.starting_in_the_future?
         update_pending_subscription
@@ -180,6 +183,8 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
+
+      EmitFixedChargeEventsService.call!(subscriptions: [next_subscription], timestamp: next_subscription.subscription_at)
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)
@@ -212,6 +217,7 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
+    # TODO: Test this.... with fixed charge events...
     def update_pending_subscription
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
@@ -230,6 +236,7 @@ module Subscriptions
         .order(started_at: :desc)
     end
 
+    # TODO: Test this.... with fixed charge events...
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
     end
