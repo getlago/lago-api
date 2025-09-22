@@ -48,7 +48,7 @@ module CreditNotes
       credit_note.balance_amount_cents = credit_note.credit_amount_cents
       credit_note.total_amount_cents = credit_note.credit_amount_cents + credit_note.refund_amount_cents
 
-      adjust_amounts_with_rouding
+      CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
       credit_note.save!
 
       result
@@ -64,21 +64,6 @@ module CreditNotes
       return 0 if old_fee_amount_cents.zero?
 
       item.precise_amount_cents.fdiv(old_fee_amount_cents) * fee.amount_cents
-    end
-
-    def adjust_amounts_with_rouding
-      subtotal = credit_note.total_amount_cents - credit_note.taxes_amount_cents
-
-      if subtotal != credit_note.sub_total_excluding_taxes_amount_cents
-        if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
-          credit_note.total_amount_cents -= 1
-        else
-          credit_note.total_amount_cents += 1
-        end
-
-        credit_note.credit_amount_cents = credit_note.total_amount_cents - credit_note.refund_amount_cents
-        credit_note.balance_amount_cents = credit_note.credit_amount_cents
-      end
     end
   end
 end

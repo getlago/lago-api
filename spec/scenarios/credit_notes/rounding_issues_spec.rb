@@ -48,8 +48,11 @@ describe "Credit note rounding issues Scenarios", :scenarios, type: :request do
 
     # Fetch the credit note
     credit_note = customer.credit_notes.last
-    expect(credit_note.sub_total_excluding_taxes_amount_cents).to eq(19333)
-    expect(credit_note.taxes_amount_cents).to eq(4833)
-    expect(credit_note.total_amount_cents).to eq(24166) # EXPECTED ?
+    expect(credit_note).to have_attributes(
+      sub_total_excluding_taxes_amount_cents: 19333,
+      taxes_amount_cents: 4833,
+      credit_amount_cents: 24166,
+      total_amount_cents: 24166
+    )
   end
 end

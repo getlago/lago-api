@@ -56,7 +56,7 @@ RSpec.describe CreditNotes::CreateService do
 
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
-    create(:fee_applied_tax, tax:, fee: fee2)
+    create(:fee_applied_tax, tax:, fee: fee2) if fee2
     create(:invoice_applied_tax, tax:, invoice:) if invoice
   end
 
@@ -422,12 +422,12 @@ RSpec.describe CreditNotes::CreateService do
           refund_status: "pending",
           reason: "other",
           sub_total_excluding_taxes_amount_cents: 8,
-          total_amount_cents: 10,
-          credit_amount_cents: 7,
+          total_amount_cents: 9,
+          credit_amount_cents: 6,
           refund_amount_cents: 3,
-          balance_amount_cents: 7,
+          balance_amount_cents: 6,
           coupons_adjustment_amount_cents: 8,
-          taxes_amount_cents: 2,
+          taxes_amount_cents: 1,
           taxes_rate: 20
         )
         expect(credit_note.applied_taxes.count).to eq(1)
@@ -690,6 +690,62 @@ RSpec.describe CreditNotes::CreateService do
         expect(CreditNote.count).to eq(0)
 
         expect(result.error.messages).to eq(reason: ["value_is_invalid"])
+      end
+    end
+
+    context "with refund only adjustements" do
+      let(:tax) { create(:tax, organization:, rate: 25) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          total_amount_cents: 25000,
+          taxes_amount_cents: 5000,
+          fees_amount_cents: 20000,
+          total_paid_amount_cents: 25000,
+          taxes_rate: 25,
+          payment_status: :succeeded
+        )
+      end
+
+      let(:fee1) do
+        create(
+          :fee,
+          invoice:,
+          amount_cents: 20000,
+          taxes_rate: 25
+        )
+      end
+
+      let(:fee2) { nil }
+
+      let(:items) do
+        [
+          {
+            fee_id: fee1.id,
+            amount_cents: 19333.33
+          }
+        ]
+      end
+
+      let(:refund_amount_cents) { 24166 }
+      let(:credit_amount_cents) { 0 }
+
+      it "estimates the credit note" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note).to have_attributes(
+          currency: invoice.currency,
+          sub_total_excluding_taxes_amount_cents: 19333,
+          credit_amount_cents: 0,
+          refund_amount_cents: 24166,
+          coupons_adjustment_amount_cents: 0,
+          taxes_amount_cents: 4833,
+          taxes_rate: 25
+        )
       end
     end
   end

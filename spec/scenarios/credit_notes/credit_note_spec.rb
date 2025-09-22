@@ -163,11 +163,13 @@ describe "Create credit note Scenarios" do
     end
 
     credit_note = invoice.credit_notes.first
-    expect(credit_note.sub_total_excluding_taxes_amount_cents).to eq(98_06)
-    expect(credit_note.taxes_amount_cents).to eq(19_61)
-    expect(credit_note.refund_amount_cents).to eq(117_67)
-    expect(credit_note.total_amount_cents).to eq(117_67)
-    expect(credit_note.coupons_adjustment_amount_cents).to eq(164_54)
+    expect(credit_note).to have_attributes(
+      sub_total_excluding_taxes_amount_cents: 98_06,
+      taxes_amount_cents: 19_61,
+      refund_amount_cents: 117_67,
+      total_amount_cents: 117_67,
+      coupons_adjustment_amount_cents: 164_54
+    )
   end
 
   context "when applying multiple time the same coupon" do
@@ -333,8 +335,8 @@ describe "Create credit note Scenarios" do
         estimate = json[:estimated_credit_note]
         expect(estimate[:coupons_adjustment_amount_cents]).to eq(2)
         expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(4_98)
-        expect(estimate[:taxes_amount_cents]).to eq(50)
-        expect(estimate[:max_creditable_amount_cents]).to eq(5_48)
+        expect(estimate[:taxes_amount_cents]).to eq(49)
+        expect(estimate[:max_creditable_amount_cents]).to eq(5_47)
         expect(estimate[:max_refundable_amount_cents]).to eq(40)
         expect(estimate[:taxes_rate]).to eq(10)
       end
@@ -649,7 +651,7 @@ describe "Create credit note Scenarios" do
             precise_taxes_amount_cents: "645.4",
             sub_total_excluding_taxes_amount_cents: 32_33,
             max_creditable_amount_cents: 38_78,
-            max_refundable_amount_cents: 10_80, # TODO invoice.total_paid_amount_cents - invoice.credit_notes.sum(:refund_amount_cents)
+            max_refundable_amount_cents: 10_80, # invoice.total_paid_amount_cents - invoice.credit_notes.sum(:refund_amount_cents)
             taxes_rate: 20.0
           )
 
@@ -870,7 +872,7 @@ describe "Create credit note Scenarios" do
         estimate = json[:estimated_credit_note]
         expect(estimate).to include(
           taxes_amount_cents: 38_68,
-          precise_taxes_amount_cents: "3867.79522",
+          precise_taxes_amount_cents: "3868.00001",
           sub_total_excluding_taxes_amount_cents: 193_39,
           max_creditable_amount_cents: 232_07,
           coupons_adjustment_amount_cents: 6_94,
@@ -894,10 +896,10 @@ describe "Create credit note Scenarios" do
           credit_amount_cents: 232_07,
           total_amount_cents: 232_07,
           taxes_amount_cents: 38_68,
-          precise_taxes_amount_cents: 3867.79522,
+          precise_taxes_amount_cents: 3868.00001,
           precise_coupons_adjustment_amount_cents: 694.0239,
-          precise_total: 23206.77132,
-          taxes_rounding_adjustment: 0.20478
+          precise_total: 23206.97611,
+          taxes_rounding_adjustment: -0.00001
         )
 
         # real remaining: 232_07 - 23_207 = 0
@@ -989,7 +991,7 @@ describe "Create credit note Scenarios" do
       estimate = json[:estimated_credit_note]
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
       expect(estimate[:max_refundable_amount_cents]).to eq(10)
-      expect(estimate[:max_creditable_amount_cents]).to eq(1) # TODO ???
+      expect(estimate[:max_creditable_amount_cents]).to eq(0)
 
       # it allows to create credit notes on credit invoices with payment status succeeded
       # and voids the corresponding amount of credits in the associated active wallet

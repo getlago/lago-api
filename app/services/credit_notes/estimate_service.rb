@@ -28,7 +28,7 @@ module CreditNotes
       return result unless result.success?
 
       compute_amounts_and_taxes
-      adjust_amounts_with_rouding
+      adjust_amounts_with_rounding
 
       result.credit_note = credit_note
       result
@@ -103,10 +103,7 @@ module CreditNotes
     end
 
     def all_rounding_tax_adjustments
-      adjustment = credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
-      return 0 if adjustment < 0
-
-      adjustment
+      credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
     end
 
     def compute_creditable_amount(taxes_result)
@@ -126,20 +123,21 @@ module CreditNotes
       credit_note.refund_amount_cents = refundable_amount_cents
     end
 
-    def adjust_amounts_with_rouding
+    # NOTE: The goal of this method is to adjust the amounts so
+    #       that sub total exluding taxes + taxes amount = total amount
+    #       taking the rounding into account
+    def adjust_amounts_with_rounding
       subtotal = credit_note.total_amount_cents - credit_note.taxes_amount_cents
 
       if subtotal != credit_note.sub_total_excluding_taxes_amount_cents
         if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
           credit_note.total_amount_cents -= 1
-        else
-          credit_note.total_amount_cents += 1
+        elsif credit_note.taxes_amount_cents > 0
+          credit_note.taxes_amount_cents -= 1
         end
 
         credit_note.credit_amount_cents = credit_note.total_amount_cents
         credit_note.balance_amount_cents = credit_note.credit_amount_cents
-
-        # TODO: adjust refundable amount
       end
     end
   end

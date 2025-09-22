@@ -59,7 +59,7 @@ module CreditNotes
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
-        adjust_amounts_with_rouding
+        CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
 
         next if context == :preview
 
@@ -251,10 +251,7 @@ module CreditNotes
     end
 
     def all_rounding_tax_adjustments
-      adjustment = credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
-      return 0 if adjustment < 0
-
-      adjustment
+      credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
     end
 
     def associated_wallet
@@ -265,23 +262,6 @@ module CreditNotes
       return nil unless invoice.credit? && associated_wallet.present?
 
       WalletCredit.from_amount_cents(wallet: associated_wallet, amount_cents: credit_note.refund_amount_cents)
-    end
-
-    def adjust_amounts_with_rouding
-      subtotal = credit_note.total_amount_cents - credit_note.taxes_amount_cents
-
-      # TODO: test with refund only
-
-      if subtotal != credit_note.sub_total_excluding_taxes_amount_cents
-        if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
-          credit_note.total_amount_cents -= 1
-        else
-          credit_note.total_amount_cents += 1
-        end
-
-        credit_note.credit_amount_cents = credit_note.total_amount_cents - credit_note.refund_amount_cents
-        credit_note.balance_amount_cents = credit_note.credit_amount_cents
-      end
     end
   end
 end
