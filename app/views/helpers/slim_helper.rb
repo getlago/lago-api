@@ -15,7 +15,7 @@ class SlimHelper
   def self.format_address(address_line1, address_line2, city, state, zipcode, country_code)
     country = ISO3166::Country.new(country_code) || ISO3166::Country.new("US")
 
-    address_format = country.address_format.presence || "{{recipient}}<br>{{street}}<br>{{city}} {{region}} {{postalcode}}<br>{{country}}"
+    address_format = country.address_format.presence || "{{recipient}}\n{{street}}\n{{city}} {{region}} {{postalcode}}\n{{country}}"
 
     field_values = {}
     field_values["{{recipient}}"] = address_line1 if address_line1.present?
@@ -33,11 +33,9 @@ class SlimHelper
 
     formatted
       .gsub(/\{\{[^}]+\}\}/, "") # Remove any remaining placeholders
-      .gsub("\n", "<br>") # Convert newlines to <br> tags first
-      .gsub(/\s*<br>\s*/, "<br>") # Clean up spaces around line breaks
-      .gsub(/<br>(\s*<br>)+/, "<br>") # Remove multiple consecutive line breaks
-      .gsub(/^<br>|<br>$/, "") # Remove line breaks at start/end
-      .gsub(/(?<!<br>)\s+/, " ") # Replace multiple spaces with single space, but not after <br>
-      .strip # Trim whitespace at start/end
+      .split("\n") # Split into lines first
+      .map(&:strip) # Trim each line
+      .map { |line| line.gsub(/\s+/, " ") } # Replace multiple spaces with single space within each line
+      .reject(&:blank?) # Remove empty lines
   end
 end

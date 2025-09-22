@@ -395,12 +395,14 @@ html
               | #{billing_entity.legal_name}
             - else
               | #{billing_entity.name}
-          .body-2 == SlimHelper.format_address(billing_entity.address_line1, billing_entity.address_line2, billing_entity.city, billing_entity.state, billing_entity.zipcode, billing_entity.country)
+          - SlimHelper.format_address(billing_entity.address_line1, billing_entity.address_line2, billing_entity.city, billing_entity.state, billing_entity.zipcode, billing_entity.country).each do |line|
+            .body-2 = line
           .body-2 = billing_entity.email
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
           .body-2 = customer.display_name
-          .body-2 == SlimHelper.format_address(customer.address_line1, customer.address_line2, customer.city, customer.state, customer.zipcode, customer.country)
+          - SlimHelper.format_address(customer.address_line1, customer.address_line2, customer.city, customer.state, customer.zipcode, customer.country).each do |line|
+            .body-2 = line
           .body-2 = customer.email
 
       .mb-24
