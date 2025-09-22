@@ -130,19 +130,6 @@ module Invoices
         end
     end
 
-    def create_fixed_charge_fees(subscription, boundaries)
-      return unless fixed_charge_boundaries_valid?(boundaries)
-
-      subscription.fixed_charges.find_each do |fixed_charge|
-        Fees::FixedChargeService.call!(
-          invoice:,
-          fixed_charge:,
-          subscription:,
-          boundaries:,
-          context:,
-        )
-    end
-
     def should_not_create_charge_fee?(charge, subscription)
       if charge.pay_in_advance?
         condition = charge.billable_metric.recurring? &&
@@ -158,6 +145,36 @@ module Invoices
         subscription.terminated? &&
         subscription.upgraded? &&
         charge.included_in_next_subscription?(subscription)
+    end
+
+    def create_fixed_charge_fees(subscription, boundaries)
+      return unless fixed_charge_boundaries_valid?(boundaries)
+
+      subscription.fixed_charges.find_each do |fixed_charge|
+        next if should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+
+        Fees::FixedChargeService.call!(
+          invoice:,
+          fixed_charge:,
+          subscription:,
+          boundaries:,
+          context:,
+        )
+      end
+    end
+
+    def should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+      if fixed_charge.pay_in_advance?
+        condition = subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
+
+        return condition
+      end
+
+      return false if fixed_charge.prorated?
+
+      subscription.terminated? && subscription.upgraded? &&
+        fixed_charge.included_in_next_subscription?(subscription)
     end
 
     def should_create_recurring_non_invoiceable_fees?(subscription)
