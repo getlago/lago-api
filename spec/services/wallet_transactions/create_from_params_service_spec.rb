@@ -184,6 +184,18 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         expect(result.wallet_transactions).to all(have_attributes(invoice_requires_successful_payment:))
       end
 
+      context "when invoice_requires_successful_payment parameter is false" do
+        let(:invoice_requires_successful_payment) { false }
+
+        context "when wallet's invoice_requires_successful_payment is true" do
+          let(:wallet_invoice_requires_successful_payment) { true }
+
+          it "creates wallet transactions with specified invoice_requires_successful_payment" do
+            expect(result.wallet_transactions).to all(have_attributes(invoice_requires_successful_payment: false))
+          end
+        end
+      end
+
       context "when invoice_requires_successful_payment parameter is null" do
         let(:invoice_requires_successful_payment) { nil }
 
