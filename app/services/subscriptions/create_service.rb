@@ -102,6 +102,7 @@ module Subscriptions
       sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
     end
 
+    # TODO: Create fixed charge events for the subscription
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
@@ -162,10 +163,12 @@ module Subscriptions
       new_subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def upgrade_subscription
       PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription
     end
 
+    # TODO: Create fixed charge events for the subscription
     def downgrade_subscription
       if current_subscription.starting_in_the_future?
         update_pending_subscription
@@ -194,6 +197,7 @@ module Subscriptions
         new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         new_sub.save!
       end
+      EmitFixedChargeEventsService.call!(subscriptions: [new_sub], timestamp: new_sub.subscription_at)
 
       InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
@@ -228,6 +232,7 @@ module Subscriptions
       old_plan.amount_currency != new_plan.amount_currency
     end
 
+    # TODO: Test this.... with fixed charge events...
     def update_pending_subscription
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
@@ -246,6 +251,7 @@ module Subscriptions
         .order(started_at: :desc)
     end
 
+    # TODO: Test this.... with fixed charge events...
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
     end
