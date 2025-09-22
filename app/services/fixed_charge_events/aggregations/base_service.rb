@@ -3,7 +3,8 @@
 module FixedChargeEvents
   module Aggregations
     class BaseService < BaseService
-      Result = BaseResult[:count, :aggregation, :current_usage_units, :full_units_number, :total_aggregated_units]
+      Result = BaseResult[:count, :aggregation, :current_usage_units, :full_units_number, :total_aggregated_units, :aggregator, :grouped_by]
+      PerEventAggregationResult = BaseResult[:event_aggregation]
 
       def initialize(fixed_charge:, subscription:, boundaries:)
         @fixed_charge = fixed_charge
@@ -14,10 +15,17 @@ module FixedChargeEvents
         @charges_duration = boundaries.fixed_charges_duration
 
         super(nil)
+        result.aggregator = self
       end
 
       def call
         raise NotImplementedError
+      end
+
+      def per_event_aggregation
+        PerEventAggregationResult.new.tap do |result|
+          result.event_aggregation = compute_per_event_aggregation
+        end
       end
 
       private

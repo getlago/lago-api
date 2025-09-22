@@ -342,5 +342,32 @@ RSpec.describe Fees::ApplyTaxesService do
         end.not_to change { fee.applied_taxes.count }
       end
     end
+
+    context "when fee is a fixed charge type with taxes" do
+      let(:fixed_charge) { create(:fixed_charge, organization:) }
+      let(:fee) { create(:fixed_charge_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, fixed_charge:) }
+      let(:applied_tax) { create(:fixed_charge_applied_tax, fixed_charge:, tax: tax1) }
+
+      before { applied_tax }
+
+      it "creates applied_taxes based on the fixed charge taxes" do
+        result = apply_service.call
+        expect(result).to be_success
+        applied_taxes = result.applied_taxes
+        expect(applied_taxes.count).to eq(1)
+
+        expect(applied_taxes[0]).to have_attributes(
+          fee:,
+          tax: tax1,
+          tax_description: tax1.description,
+          tax_code: tax1.code,
+          tax_name: tax1.name,
+          tax_rate: 10,
+          amount_currency: fee.currency,
+          amount_cents: 100,
+          precise_amount_cents: 100.0
+        )
+      end
+    end
   end
 end
