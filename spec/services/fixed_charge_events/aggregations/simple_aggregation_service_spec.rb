@@ -7,11 +7,12 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
 
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
-  let(:charges_from_datetime) { 9.days.ago }
-  let(:charges_to_datetime) { Time.current }
+  let(:fixed_charges_from_datetime) { 9.days.ago }
+  let(:fixed_charges_to_datetime) { Time.current }
   let(:events) { [] }
   let(:boundaries) do
-    Struct.new(:charges_from_datetime, :charges_to_datetime, :charges_duration).new(charges_from_datetime, charges_to_datetime, 10)
+    Struct.new(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)
+      .new(fixed_charges_from_datetime, fixed_charges_to_datetime, 10)
   end
 
   before { events }
@@ -83,8 +84,8 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     end
 
     context "when aggregating for the next billing period" do
-      let(:charges_from_datetime) { 1.day.from_now } # total duration is 10 days
-      let(:charges_to_datetime) { 10.days.from_now }
+      let(:fixed_charges_from_datetime) { 1.day.from_now } # total duration is 10 days
+      let(:fixed_charges_to_datetime) { 10.days.from_now }
 
       it "returns the simple aggregation erasing the event for the next billing period created before last event of this billing period" do
         result = subject.call
@@ -113,8 +114,8 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     end
 
     context "when billing period is January" do
-      let(:charges_from_datetime) { Date.new(2025, 1, 1) }
-      let(:charges_to_datetime) { Date.new(2025, 1, 31) }
+      let(:fixed_charges_from_datetime) { Date.new(2025, 1, 1) }
+      let(:fixed_charges_to_datetime) { Date.new(2025, 1, 31) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
         result = subject.call
@@ -124,8 +125,8 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     end
 
     context "when billing period is February" do
-      let(:charges_from_datetime) { Date.new(2025, 2, 1) }
-      let(:charges_to_datetime) { Date.new(2025, 2, 28) }
+      let(:fixed_charges_from_datetime) { Date.new(2025, 2, 1) }
+      let(:fixed_charges_to_datetime) { Date.new(2025, 2, 28) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
         result = subject.call
@@ -135,8 +136,8 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     end
 
     context "when billing period is March" do
-      let(:charges_from_datetime) { Date.new(2025, 3, 1) }
-      let(:charges_to_datetime) { Date.new(2025, 3, 31) }
+      let(:fixed_charges_from_datetime) { Date.new(2025, 3, 1) }
+      let(:fixed_charges_to_datetime) { Date.new(2025, 3, 31) }
 
       it "returns the simple aggregation with latest created at and timestamp" do
         result = subject.call

@@ -7,12 +7,13 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
 
   let(:fixed_charge) { create(:fixed_charge) }
   let(:subscription) { create(:subscription) }
-  let(:charges_from_datetime) { 9.days.ago } # total duration is 10 days
-  let(:charges_to_datetime) { Time.current }
-  let(:charges_duration) { 10 }
+  let(:fixed_charges_from_datetime) { 9.days.ago } # total duration is 10 days
+  let(:fixed_charges_to_datetime) { Time.current }
+  let(:fixed_charges_duration) { 10 }
   let(:boundaries) do
     # TODO: switch to fixed_charges_boundaries
-    Struct.new(:charges_from_datetime, :charges_to_datetime, :charges_duration).new(charges_from_datetime, charges_to_datetime, charges_duration)
+    Struct.new(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)
+      .new(fixed_charges_from_datetime, fixed_charges_to_datetime, fixed_charges_duration)
   end
 
   context "when there are no events" do
@@ -88,8 +89,8 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
     end
 
     context "when aggregating for the next billing period" do
-      let(:charges_from_datetime) { 1.day.from_now } # total duration is 10 days
-      let(:charges_to_datetime) { 10.days.from_now }
+      let(:fixed_charges_from_datetime) { 1.day.from_now } # total duration is 10 days
+      let(:fixed_charges_to_datetime) { 10.days.from_now }
 
       it "returns the prorated aggregation" do
         # 10 * 10/10 = 10
@@ -116,8 +117,8 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
       end
 
       context "when aggregating for the next billing period" do
-        let(:charges_from_datetime) { 1.day.from_now } # total duration is 10 days
-        let(:charges_to_datetime) { 10.days.from_now }
+        let(:fixed_charges_from_datetime) { 1.day.from_now } # total duration is 10 days
+        let(:fixed_charges_to_datetime) { 10.days.from_now }
 
         it "returns the prorated aggregation erasing the event for the next billing period created before last event of this billing period" do
           # 100 * 10/10 = 100
@@ -147,9 +148,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
       end
 
       context "when billing period is January" do
-        let(:charges_from_datetime) { Date.new(2025, 1, 1) }
-        let(:charges_to_datetime) { Date.new(2025, 1, 31) }
-        let(:charges_duration) { 31 }
+        let(:fixed_charges_from_datetime) { Date.new(2025, 1, 1) }
+        let(:fixed_charges_to_datetime) { Date.new(2025, 1, 31) }
+        let(:fixed_charges_duration) { 31 }
 
         it "returns the prorated aggregation" do
           # 10 * 19/31 + 7 * 12/31 = 8.8387
@@ -160,9 +161,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
       end
 
       context "when billing period is February" do
-        let(:charges_from_datetime) { Date.new(2025, 2, 1) }
-        let(:charges_to_datetime) { Date.new(2025, 2, 28) }
-        let(:charges_duration) { 28 }
+        let(:fixed_charges_from_datetime) { Date.new(2025, 2, 1) }
+        let(:fixed_charges_to_datetime) { Date.new(2025, 2, 28) }
+        let(:fixed_charges_duration) { 28 }
 
         it "returns the prorated aggregation" do
           # 7 * 9/28 + 70 * 19/28 = 49.75
@@ -173,9 +174,9 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
       end
 
       context "when billing period is March" do
-        let(:charges_from_datetime) { Date.new(2025, 3, 1) }
-        let(:charges_to_datetime) { Date.new(2025, 3, 31) }
-        let(:charges_duration) { 31 }
+        let(:fixed_charges_from_datetime) { Date.new(2025, 3, 1) }
+        let(:fixed_charges_to_datetime) { Date.new(2025, 3, 31) }
+        let(:fixed_charges_duration) { 31 }
 
         it "returns the prorated aggregation" do
           # 70 * 31/31 = 70
