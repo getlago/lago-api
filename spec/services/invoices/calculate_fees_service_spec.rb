@@ -59,7 +59,9 @@ RSpec.describe Invoices::CalculateFeesService do
       from_datetime: date_service.from_datetime,
       to_datetime: date_service.to_datetime,
       charges_from_datetime: date_service.charges_from_datetime,
-      charges_to_datetime: date_service.charges_to_datetime
+      charges_to_datetime: date_service.charges_to_datetime,
+      fixed_charges_from_datetime: date_service.charges_from_datetime,
+      fixed_charges_to_datetime: date_service.charges_to_datetime
     )
   end
 
@@ -100,11 +102,20 @@ RSpec.describe Invoices::CalculateFeesService do
 
   let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
+  let(:fixed_charge) do
+    create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "10"})
+  end
+
+  let(:fixed_charge_event) do
+    create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 10)
+  end
+
   before do
     tax
     charge
     invoice_subscriptions
     event
+    fixed_charge_event
 
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
