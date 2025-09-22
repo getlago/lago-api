@@ -28,9 +28,8 @@ module WalletTransactions
       @priority = params[:priority] || 50
       invoice_requires_successful_payment = if params.key?(:invoice_requires_successful_payment)
         ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
-      else
-        result.current_wallet.invoice_requires_successful_payment
       end
+      invoice_requires_successful_payment ||= result.current_wallet.invoice_requires_successful_payment
       wallet = result.current_wallet
 
       ActiveRecord::Base.transaction do

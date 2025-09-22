@@ -13,6 +13,8 @@ RSpec.describe Wallet do
 
   describe "validations" do
     it { is_expected.to validate_numericality_of(:rate_amount).is_greater_than(0) }
+    it { is_expected.to validate_inclusion_of(:currency).in_array(described_class.currency_list) }
+    it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
     it { is_expected.to validate_numericality_of(:paid_top_up_min_amount_cents).is_greater_than(0).allow_nil }
     it { is_expected.to validate_numericality_of(:paid_top_up_max_amount_cents).is_greater_than(0).allow_nil }
 

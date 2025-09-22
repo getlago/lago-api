@@ -16,9 +16,11 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
-      credits_ongoing_balance: 10.0
+      credits_ongoing_balance: 10.0,
+      invoice_requires_successful_payment: wallet_invoice_requires_successful_payment
     )
   end
+  let(:wallet_invoice_requires_successful_payment) { false }
   let(:rate_amount) { 1 }
 
   before do
@@ -163,6 +165,40 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
 
         it "creates wallet transactions with nil name" do
           expect(result.wallet_transactions).to all(have_attributes(name: nil))
+        end
+      end
+    end
+
+    context "with invoice_requires_successful_payment parameter" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          invoice_requires_successful_payment:
+        }
+      end
+
+      let(:invoice_requires_successful_payment) { true }
+
+      it "creates wallet transactions with specified invoice_requires_successful_payment" do
+        expect(result.wallet_transactions).to all(have_attributes(invoice_requires_successful_payment:))
+      end
+
+      context "when invoice_requires_successful_payment parameter is null" do
+        let(:invoice_requires_successful_payment) { nil }
+
+        context "when wallet's invoice_requires_successful_payment is true" do
+          let(:wallet_invoice_requires_successful_payment) { true }
+
+          it "creates wallet transactions with specified invoice_requires_successful_payment" do
+            expect(result.wallet_transactions).to all(have_attributes(invoice_requires_successful_payment: true))
+          end
+        end
+
+        context "when wallet's invoice_requires_successful_payment is false" do
+          it "creates wallet transactions with specified invoice_requires_successful_payment" do
+            expect(result.wallet_transactions).to all(have_attributes(invoice_requires_successful_payment: false))
+          end
         end
       end
     end

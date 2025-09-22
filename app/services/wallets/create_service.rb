@@ -30,7 +30,7 @@ module Wallets
       }
 
       if params.key?(:invoice_requires_successful_payment)
-        attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
+        attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
       end
 
       if params.key?(:applies_to)
