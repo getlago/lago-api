@@ -69,10 +69,12 @@ RSpec.describe CreditNotes::EstimateService do
         invoice:,
         customer:,
         currency: invoice.currency,
-        credit_amount_cents: 9,
+        sub_total_excluding_taxes_amount_cents: 8,
+        credit_amount_cents: 10,
         refund_amount_cents: 9,
         coupons_adjustment_amount_cents: 8,
         taxes_amount_cents: 2,
+        total_amount_cents: 10,
         taxes_rate: 20
       )
 
@@ -227,7 +229,7 @@ RSpec.describe CreditNotes::EstimateService do
           credit_note = result.credit_note
           expect(credit_note).to have_attributes(
             currency: invoice.currency,
-            credit_amount_cents: 0,
+            credit_amount_cents: 1,
             refund_amount_cents: 3,
             coupons_adjustment_amount_cents: 0,
             taxes_amount_cents: 0,

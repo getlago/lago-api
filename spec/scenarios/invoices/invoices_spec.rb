@@ -43,7 +43,13 @@ describe "Invoices Scenarios" do
       expect(term_invoice.total_amount_cents).to eq(0)
 
       expect(invoice.reload.credit_notes.count).to eq(1)
-      expect(invoice.credit_notes.first.total_amount_cents).to eq(2371)
+
+      credit_note = invoice.credit_notes.first
+      expect(credit_note).to have_attributes(
+        sub_total_excluding_taxes_amount_cents: 23_71,
+        taxes_amount_cents: 0,
+        total_amount_cents: 23_71
+      )
 
       travel_to(Time.zone.parse("2024-03-11T23:05:00")) do
         create_subscription(
@@ -1584,6 +1590,7 @@ describe "Invoices Scenarios" do
         credit_note = subscription_invoice.reload.credit_notes.first
         expect(credit_note.credit_amount_cents).to eq(426)
         expect(credit_note.balance_amount_cents).to eq(426)
+        expect(credit_note.total_amount_cents).to eq(426)
 
         # Invoice for termination is created
         termination_invoice = subscription.invoices.order(created_at: :desc).first

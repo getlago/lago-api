@@ -643,8 +643,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result).to be_success
                 expect(result.invoice.subscriptions.size).to eq(2)
                 expect(result.invoice.credits.length).to eq(1)
-                # precise_amount 6.45161 + precise_taxes_amount_cents 3.225805 = 9.677415 round(10)
-                expect(result.invoice.credits.first.amount_cents).to eq(10)
+                # precise_amount 6.45161 + precise_taxes_amount_cents 3.225805 = 9.677415 ajusted(9)
+                expect(result.invoice.credits.first.amount_cents).to eq(9)
                 expect(result.invoice.fees.length).to eq(1)
                 expect(result.invoice.invoice_type).to eq("subscription")
                 expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
@@ -652,7 +652,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(19)
                 expect(result.invoice.taxes_amount_cents).to eq(10)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(29)
-                expect(result.invoice.total_amount_cents).to eq(19)
+                expect(result.invoice.total_amount_cents).to eq(20)
               end
             end
           end

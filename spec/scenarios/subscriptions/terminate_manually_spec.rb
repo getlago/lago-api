@@ -234,8 +234,8 @@ describe "Subscription manual termination" do
 
         # (20 unused days = 20 / 28 * 100 = 71.43 euro) + 20% tax = 85.71 euro
         credit_note = subscription_invoice.credit_notes.sole
-        expect(credit_note.credit_amount_cents).to eq(85_71)
-        expect(credit_note.balance_amount_cents).to eq(85_71)
+        expect(credit_note.credit_amount_cents).to eq(85_72)
+        expect(credit_note.balance_amount_cents).to eq(85_72)
 
         perform_termination_jobs
 
@@ -249,7 +249,7 @@ describe "Subscription manual termination" do
         expect(billed_invoice.total_amount_cents).to eq(0)
 
         expect_charge_fees_to_be_billed
-        expect(credit_note.reload.balance_amount_cents).to eq(25_71)
+        expect(credit_note.reload.balance_amount_cents).to eq(25_72)
       end
     end
 

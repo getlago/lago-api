@@ -42,7 +42,7 @@ module CreditNotes
       credited_invoice_amount_cents + refunded_invoice_amount_cents
     end
 
-    def total_items_amount_cents
+    def precise_total_items_amount_cents
       (
         credit_note.items.sum(&:precise_amount_cents) -
         credit_note.precise_coupons_adjustment_amount_cents +
@@ -73,8 +73,9 @@ module CreditNotes
     end
 
     # NOTE: Check if total amount matched the items amount
+    #       The comparison takes care of the rounding precision
     def valid_items_amount?
-      return true if total_amount_cents == total_items_amount_cents
+      return true if (total_amount_cents - precise_total_items_amount_cents).abs <= 1
 
       add_error(field: :base, error_code: "does_not_match_item_amounts")
     end
