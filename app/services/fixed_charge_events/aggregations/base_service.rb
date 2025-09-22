@@ -9,7 +9,6 @@ module FixedChargeEvents
         @fixed_charge = fixed_charge
         @subscription = subscription
         @customer = subscription.customer
-        # TODO: switch to fixed_charges_boundaries
         @from_datetime = boundaries.fixed_charges_from_datetime
         @to_datetime = boundaries.fixed_charges_to_datetime
         @charges_duration = boundaries.fixed_charges_duration
