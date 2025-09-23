@@ -45,11 +45,11 @@ module Fees
       aggregation_result = run_aggregation
       return result.fail_with_error!(aggregation_result.error) unless aggregation_result.success?
 
-      charge_model_result = Charges::ChargeModelFactory.new_instance(
-        charge: charge,
-        aggregation_result: aggregation_result,
+      charge_model_result = ChargeModels::Factory.new_instance(
+        chargeable: charge,
+        aggregation_result:,
         properties: properties_for_charge_model,
-        period_ratio: period_ratio,
+        period_ratio:,
         calculate_projected_usage: true
       ).apply
 

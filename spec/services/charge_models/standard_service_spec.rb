@@ -53,4 +53,13 @@ RSpec.describe ChargeModels::StandardService do
       expect(apply_standard_service.unit_amount).to eq(0.512345)
     end
   end
+
+  context "when charge is a fixed charge" do
+    let(:charge) { build(:fixed_charge, charge_model: :standard, properties: {amount: "10"}) }
+
+    it "applies the charge model to the value" do
+      expect(apply_standard_service.amount).to eq(100)
+      expect(apply_standard_service.unit_amount).to eq(10)
+    end
+  end
 end
