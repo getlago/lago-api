@@ -5,12 +5,15 @@ require "rails_helper"
 RSpec.describe Tax do
   subject(:tax) { create(:tax, applied_to_organization:) }
 
+  let(:organization) { tax.organization }
   let(:applied_to_organization) { false }
 
   it { is_expected.to belong_to(:organization) }
 
   it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
+
+  it { expect(described_class).to be_soft_deletable }
 
   it_behaves_like "paper_trail traceable"
 
