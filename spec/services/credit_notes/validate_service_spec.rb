@@ -11,6 +11,7 @@ RSpec.describe CreditNotes::ValidateService do
   let(:refund_amount_cents) { 0 }
   let(:precise_taxes_amount_cents) { 2 }
   let(:precise_coupons_adjustment_amount_cents) { 0 }
+
   let(:credit_note) do
     create(
       :credit_note,
@@ -22,6 +23,7 @@ RSpec.describe CreditNotes::ValidateService do
       precise_taxes_amount_cents:
     )
   end
+
   let(:item) do
     create(
       :credit_note_item,
@@ -218,6 +220,36 @@ RSpec.describe CreditNotes::ValidateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:base]).to eq(["total_amount_must_be_positive"])
         end
+      end
+    end
+
+    context "with rounding adjustment" do
+      let(:invoice) do
+        create(
+          :invoice,
+          total_amount_cents: 25000,
+          taxes_amount_cents: 5000,
+          fees_amount_cents: 20000,
+          total_paid_amount_cents: 25000,
+          taxes_rate: 25
+        )
+      end
+
+      let(:fee) do
+        create(
+          :fee,
+          invoice:,
+          amount_cents: 20000,
+          taxes_rate: 25
+        )
+      end
+
+      let(:amount_cents) { 19333 }
+      let(:credit_amount_cents) { 24166 }
+      let(:precise_taxes_amount_cents) { 4833.3333 }
+
+      it "passes the validation" do
+        expect(validator).to be_valid
       end
     end
   end

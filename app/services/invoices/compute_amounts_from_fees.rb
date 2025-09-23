@@ -12,12 +12,12 @@ module Invoices
     def call
       if should_apply_fee_taxes?
         invoice.fees.each do |fee|
-          taxes_result = if provider_taxes && customer_provider_taxation? && invoice.should_apply_provider_tax?
-            Fees::ApplyProviderTaxesService.call(fee:, fee_taxes: fee_taxes(fee))
+          if provider_taxes && customer_provider_taxation? && invoice.should_apply_provider_tax?
+            Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes: fee_taxes(fee))
           else
-            Fees::ApplyTaxesService.call(fee:)
+            Fees::ApplyTaxesService.call!(fee:)
           end
-          taxes_result.raise_if_error!
+
           fee.save!
         end
       end
@@ -29,12 +29,11 @@ module Invoices
         invoice.fees_amount_cents - invoice.progressive_billing_credit_amount_cents - invoice.coupons_amount_cents
       )
 
-      taxes_result = if customer_provider_taxation? && invoice.should_apply_provider_tax?
-        Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes:)
+      if customer_provider_taxation? && invoice.should_apply_provider_tax?
+        Invoices::ApplyProviderTaxesService.call!(invoice:, provider_taxes:)
       else
-        Invoices::ApplyTaxesService.call(invoice:)
+        Invoices::ApplyTaxesService.call!(invoice:)
       end
-      taxes_result.raise_if_error!
 
       invoice.sub_total_including_taxes_amount_cents = (
         invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents

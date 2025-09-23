@@ -8,7 +8,7 @@ FactoryBot.define do
     tax_code { tax&.code.presence || "vat-#{SecureRandom.uuid}" }
     tax_description { "French Standard VAT" }
     tax_name { "VAT" }
-    tax_rate { 20.0 }
+    tax_rate { tax&.rate || 20.0 }
     amount_cents { 200 }
     amount_currency { "EUR" }
 

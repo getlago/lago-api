@@ -35,9 +35,9 @@ class CreditNote < ApplicationRecord
   monetize :balance_amount_cents
   monetize :refund_amount_cents
   monetize :total_amount_cents
-  monetize :sub_total_excluding_taxes_amount_cents
   monetize :taxes_amount_cents,
     :coupons_adjustment_amount_cents,
+    :sub_total_excluding_taxes_amount_cents,
     with_model_currency: :total_amount_currency
 
   # NOTE: Status of the credit part
@@ -137,7 +137,6 @@ class CreditNote < ApplicationRecord
   def sub_total_excluding_taxes_amount_cents
     (items.sum(&:precise_amount_cents) - precise_coupons_adjustment_amount_cents).round
   end
-  alias_method :sub_total_excluding_taxes_amount_currency, :currency
 
   def precise_total
     items.sum(&:precise_amount_cents) - precise_coupons_adjustment_amount_cents + precise_taxes_amount_cents

@@ -59,6 +59,7 @@ module CreditNotes
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
+        CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
 
         next if context == :preview
 
