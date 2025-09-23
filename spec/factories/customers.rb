@@ -77,5 +77,24 @@ FactoryBot.define do
         create(:stripe_customer, customer:, payment_provider:)
       end
     end
+
+    trait :with_static_values do
+      with_same_billing_and_shipping_address
+
+      firstname { "John" }
+      lastname { "Doe" }
+      name { "John Doe" }
+      legal_name { "Doe Corp" }
+      legal_number { "1234567890" }
+      external_id { "customer_123" }
+      email { "john.doe@example.com" }
+      address_line1 { "456 Customer Ave" }
+      address_line2 { "Apt 202" }
+      city { "New York" }
+      state { "NY" }
+      zipcode { "10001" }
+      country { "US" }
+      phone { "+1-555-123-4567" }
+    end
   end
 end

@@ -30,49 +30,16 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
   end
   # Static organization data for consistent rendering
   let(:organization) do
-    build_stubbed(
-      :organization,
-      name: "ACME Corporation",
-      default_currency: "USD",
-      country: "US"
-    )
+    build_stubbed(:organization, :with_static_values)
   end
 
   # Static billing entity data for consistent rendering
   let(:billing_entity) do
-    build_stubbed(
-      :billing_entity,
-      organization: organization,
-      name: "ACME Corporation",
-      email: "billing@acme.com",
-      address_line1: "123 Business St",
-      address_line2: "Suite 100",
-      city: "San Francisco",
-      state: "CA",
-      zipcode: "94105",
-      country: "US"
-    )
+    build_stubbed(:billing_entity, :with_static_values, organization: organization)
   end
   # Static customer data
   let(:customer) do
-    build_stubbed(
-      :customer,
-      organization: organization,
-      firstname: nil,
-      lastname: nil,
-      name: "John Doe",
-      legal_name: "John Doe",
-      legal_number: "1234567890",
-      external_id: "customer_123",
-      email: "john.doe@example.com",
-      address_line1: "456 Customer Ave",
-      address_line2: "Apt 202",
-      city: "New York",
-      state: "NY",
-      zipcode: "10001",
-      country: "US",
-      phone: "+1-555-123-4567"
-    )
+    build_stubbed(:customer, :with_static_values, organization: organization)
   end
 
   # Static wallet data
