@@ -7,7 +7,29 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   let(:includes) { %i[metadata error_details] }
 
-  let(:invoice) { create(:invoice) }
+  let(:invoice) do
+    create(
+      :invoice,
+      customer_name: "John Doe",
+      customer_firstname: "John",
+      customer_lastname: "Doe",
+      customer_email: "john.doe@example.com",
+      customer_phone: "+1234567890",
+      customer_url: "https://john.doe.com",
+      customer_tax_identification_number: "1234567890",
+      customer_timezone: "UTC",
+      customer_address_line1: "123 Main St",
+      customer_address_line2: "Apt 1",
+      customer_city: "New York",
+      customer_state: "NY",
+      customer_zipcode: "10001",
+      customer_country: "US",
+      customer_legal_name: "John Doe",
+      customer_legal_number: "1234567890",
+      customer_metadata: [{key: "key", value: "value"}]
+    )
+  end
+
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
   let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
@@ -57,7 +79,24 @@ RSpec.describe ::V1::InvoiceSerializer do
         "version_number" => 4,
         "self_billed" => invoice.self_billed,
         "created_at" => invoice.created_at.iso8601,
-        "updated_at" => invoice.updated_at.iso8601
+        "updated_at" => invoice.updated_at.iso8601,
+        "customer_name" => invoice.customer_name,
+        "customer_firstname" => invoice.customer_firstname,
+        "customer_lastname" => invoice.customer_lastname,
+        "customer_email" => invoice.customer_email,
+        "customer_phone" => invoice.customer_phone,
+        "customer_url" => invoice.customer_url,
+        "customer_tax_identification_number" => invoice.customer_tax_identification_number,
+        "customer_timezone" => invoice.customer_timezone,
+        "customer_address_line1" => invoice.customer_address_line1,
+        "customer_address_line2" => invoice.customer_address_line2,
+        "customer_city" => invoice.customer_city,
+        "customer_state" => invoice.customer_state,
+        "customer_zipcode" => invoice.customer_zipcode,
+        "customer_country" => invoice.customer_country,
+        "customer_legal_name" => invoice.customer_legal_name,
+        "customer_legal_number" => invoice.customer_legal_number,
+        "customer_metadata" => invoice.customer_metadata
       )
 
       expect(result["invoice"]["metadata"].first).to include(
