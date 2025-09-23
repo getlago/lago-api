@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::Entitlement::FeatureSerializer, type: :serializer do
+RSpec.describe V1::Entitlement::FeatureSerializer do
   subject { described_class.new(feature) }
 
   let(:organization) { create(:organization) }

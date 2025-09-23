@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Validators::WalletTransactionAmountLimitsValidator, type: :validator do
+RSpec.describe Validators::WalletTransactionAmountLimitsValidator do
   let(:result) { BaseService::LegacyResult.new }
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents:, paid_top_up_max_amount_cents:) }
   let(:paid_top_up_min_amount_cents) { 5_00 }

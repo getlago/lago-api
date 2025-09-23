@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::Entitlement::SubscriptionEntitlementSerializer, type: :serializer do
+RSpec.describe V1::Entitlement::SubscriptionEntitlementSerializer do
   subject(:serializer) do
     ::CollectionSerializer.new(
       collection,

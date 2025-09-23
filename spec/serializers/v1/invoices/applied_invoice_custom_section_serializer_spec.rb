@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::Invoices::AppliedInvoiceCustomSectionSerializer, type: :serializer do
+RSpec.describe V1::Invoices::AppliedInvoiceCustomSectionSerializer do
   subject(:serializer) { described_class.new(applied_invoice_custom_section) }
 
   let(:invoice) { create(:invoice) }
