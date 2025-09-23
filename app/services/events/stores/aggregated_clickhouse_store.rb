@@ -126,23 +126,13 @@ module Events
           )
 
           sql = <<-SQL
-            WITH events AS (#{cte_sql}),
-
-            ranked_events AS (
-              SELECT
-                grouped_by,
-                timestamp,
-                property,
-                ROW_NUMBER() OVER (PARTITION BY grouped_by ORDER BY timestamp DESC) AS row_num
-              FROM events
-            )
+            WITH events AS (#{cte_sql})
 
             SELECT
-              grouped_by,
+              DISTINCT ON (grouped_by) grouped_by,
               timestamp,
               property
-            FROM ranked_events
-            WHERE row_num = 1
+            FROM events
             ORDER BY timestamp DESC
           SQL
 
@@ -175,27 +165,109 @@ module Events
       end
 
       def unique_count
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {decimal_scale: DECIMAL_SCALE}
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def unique_count_breakdown
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {decimal_scale: DECIMAL_SCALE}
+              ]
+            )
+          ).rows
+        end
       end
 
       def prorated_unique_count
-        # TODO(pre-aggregation): Implement
+        result = connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_breakdown_query(with_remove:)),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+
+          connection.select_all(sql).to_a
+        end
       end
 
       def grouped_unique_count
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query),
+              {
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       def grouped_prorated_unique_count
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_scale: DECIMAL_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql).rows)
+        end
       end
 
       def max

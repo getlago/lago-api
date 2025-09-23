@@ -2,7 +2,7 @@
 
 module Events
   module Stores
-    module Clickhouse
+    module AggregatedClickhouse
       class UniqueCountQuery
         def initialize(store:)
           @store = store
@@ -23,7 +23,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
@@ -47,19 +47,20 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
+            ),
+            cumulated_ratios AS (
+              SELECT (#{period_ratio_sql(partition_by: %w[property])}) AS period_ratio
+              FROM event_values
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
-            FROM (
-              SELECT (#{period_ratio_sql}) AS period_ratio
-              FROM event_values
-            ) cumulated_ratios
+            FROM cumulated_ratios
           SQL
         end
 
@@ -69,7 +70,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                grouped_by,
                 property,
                 SUM(adjusted_value) AS sum_adjusted_value
               FROM (
@@ -77,19 +78,19 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
-                  #{grouped_operation_value_sql} AS adjusted_value
+                  grouped_by,
+                  #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names}, property
+              GROUP BY grouped_by, property
             )
 
             SELECT
-              #{group_names},
+              grouped_by::JSON,
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names}
+            GROUP BY grouped_by
           SQL
         end
 
@@ -99,7 +100,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                grouped_by,
                 property,
                 operation_type,
                 timestamp
@@ -108,25 +109,26 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
-                  #{grouped_operation_value_sql} AS adjusted_value
+                  grouped_by,
+                  #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
+              GROUP BY grouped_by, property, operation_type, timestamp
+            ),
+            cumulated_ratios AS (
+              SELECT
+                (#{period_ratio_sql(partition_by: %w[grouped_by property])}) AS period_ratio,
+                grouped_by
+              FROM event_values
             )
 
             SELECT
-              #{group_names},
+              grouped_by::JSON,
               coalesce(SUM(period_ratio), 0) as aggregation
-            FROM (
-              SELECT
-                (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
-              FROM event_values
-            ) cumulated_ratios
-            GROUP BY #{group_names}
+            FROM cumulated_ratios
+            GROUP BY grouped_by
           SQL
         end
 
@@ -148,7 +150,7 @@ module Events
               timestamp,
               property,
               operation_type,
-              #{operation_value_sql},
+              #{operation_value_sql(partition_by: %w[property])},
               lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
             ORDER BY timestamp ASC
@@ -168,7 +170,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{operation_value_sql} AS adjusted_value
+                  #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
@@ -183,7 +185,7 @@ module Events
               operation_type
             FROM (
               SELECT
-                (#{period_ratio_sql}) AS prorated_value,
+                (#{period_ratio_sql(partition_by: %w[property])}) AS prorated_value,
                 timestamp,
                 property,
                 operation_type
@@ -198,7 +200,7 @@ module Events
 
         attr_reader :store
 
-        delegate :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
+        delegate :charges_duration, :events_sql, :arel_enriched_table, :grouped_arel_columns, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -208,13 +210,13 @@ module Events
                 events_sql(
                   ordered: true,
                   select: [
-                    arel_table[:timestamp].as("timestamp"),
-                    arel_table[:value].as("property"),
+                    arel_enriched_table[:timestamp].as("timestamp"),
+                    arel_enriched_table[:value].as("property"),
                     Arel::Nodes::NamedFunction.new(
                       "coalesce",
                       [
                         Arel::Nodes::NamedFunction.new("NULLIF", [
-                          Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                          Arel::Nodes::SqlLiteral.new("events_enriched_expanded.sorted_properties['operation_type']"),
                           Arel::Nodes::SqlLiteral.new("''")
                         ]),
                         Arel::Nodes::SqlLiteral.new("'add'")
@@ -228,20 +230,22 @@ module Events
         end
 
         def grouped_events_cte_sql
-          groups, _ = grouped_arel_columns
-
           <<-SQL
             WITH events_data AS (#{
               events_sql(
                 ordered: true,
-                select: groups + [
-                  arel_table[:timestamp].as("timestamp"),
-                  arel_table[:value].as("property"),
+                select: [
+                  Arel::Nodes::NamedFunction.new(
+                    "toJSONString",
+                    [arel_enriched_table[:sorted_grouped_by]]
+                  ).as("grouped_by"),
+                  arel_enriched_table[:timestamp].as("timestamp"),
+                  arel_enriched_table[:value].as("property"),
                   Arel::Nodes::NamedFunction.new(
                     "coalesce",
                     [
                       Arel::Nodes::NamedFunction.new("NULLIF", [
-                        Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                        Arel::Nodes::SqlLiteral.new("events_enriched_expanded.sorted_properties['operation_type']"),
                         Arel::Nodes::SqlLiteral.new("''")
                       ]),
                       Arel::Nodes::SqlLiteral.new("'add'")
@@ -253,28 +257,9 @@ module Events
           SQL
         end
 
-        def operation_value_sql
-          # NOTE: Returns 1 for relevant addition, -1 for relevant removal
-          # If property already added, another addition returns 0 ; it returns 1 otherwise
-          # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
-          <<-SQL
-            if (
-              operation_type = 'add',
-              (if(
-                (lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(1, :decimal_scale)
-              )),
-              (if(
-                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(-1, :decimal_scale)
-              ))
-            )
-          SQL
-        end
+        def operation_value_sql(partition_by:)
+          partition = partition_by.join(", ")
 
-        def grouped_operation_value_sql
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
@@ -282,13 +267,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -296,7 +281,9 @@ module Events
           SQL
         end
 
-        def period_ratio_sql
+        def period_ratio_sql(partition_by:)
+          partition = partition_by.join(", ")
+
           <<-SQL
             toDecimal128(
               if(
@@ -321,14 +308,14 @@ module Events
                           -- if next event is before the period start, clamp to :from_datetime (no +1 day),
                           -- else add 1 day to make the range inclusive, just like PG does.
                           (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                             OVER (PARTITION BY property ORDER BY timestamp ASC
-                                   ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                            OVER (PARTITION BY #{partition} ORDER BY timestamp ASC
+                              ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                           ) < toDateTime64(:from_datetime, 3, 'UTC'),
                           toDateTime64(:from_datetime, 3, 'UTC'),
                           addDays(
                             (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                               OVER (PARTITION BY property ORDER BY timestamp ASC
-                                     ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                              OVER (PARTITION BY #{partition} ORDER BY timestamp ASC
+                                ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                             ),
                             1
                           )
@@ -343,56 +330,6 @@ module Events
               :decimal_scale
             )
           SQL
-        end
-
-        def grouped_period_ratio_sql
-          <<-SQL
-            toDecimal128(
-              if(
-                operation_type = 'add',
-                (
-                  date_diff(
-                    'days',
-                    toDate(
-                      toTimezone(
-                        if(
-                          timestamp < toDateTime64(:from_datetime, 3, 'UTC'),
-                          toDateTime64(:from_datetime, 3, 'UTC'),
-                          timestamp
-                        ),
-                        :timezone
-                      )
-                    ),
-                    toDate(
-                      toTimezone(
-                        if(
-                          (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                             OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
-                                   ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                          ) < toDateTime64(:from_datetime, 3, 'UTC'),
-                          toDateTime64(:from_datetime, 3, 'UTC'),
-                          addDays(
-                            (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                               OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
-                                     ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                            ),
-                            1
-                          )
-                        ),
-                        :timezone
-                      )
-                    )
-                  ) / #{charges_duration || 1}
-                ),
-                0
-              ),
-              :decimal_scale
-            )
-          SQL
-        end
-
-        def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end
