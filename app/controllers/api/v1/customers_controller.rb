@@ -35,7 +35,14 @@ module Api
       end
 
       def index
-        filter_params = params.permit(:search_term, billing_entity_codes: [], account_type: [])
+        filter_params = params.permit(
+          :search_term,
+          countries: [],
+          states: [],
+          zipcodes: [],
+          billing_entity_codes: [],
+          account_type: []
+        )
         search_term = filter_params.delete(:search_term)
         billing_entity_codes = filter_params.delete(:billing_entity_codes)
         if billing_entity_codes.present?
