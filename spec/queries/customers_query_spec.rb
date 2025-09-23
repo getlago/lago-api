@@ -30,7 +30,8 @@ RSpec.describe CustomersQuery, type: :query do
       zipcode: "90001",
       billing_entity: billing_entity1,
       currency: "USD",
-      tax_identification_number: "US123456789"
+      tax_identification_number: "US123456789",
+      customer_type: "company"
     )
   end
   let(:customer_second) do
@@ -47,7 +48,8 @@ RSpec.describe CustomersQuery, type: :query do
       state: "Paris",
       zipcode: "75001",
       billing_entity: billing_entity1,
-      currency: "EUR"
+      currency: "EUR",
+      customer_type: "individual"
     )
   end
   let(:customer_third) do
@@ -65,7 +67,8 @@ RSpec.describe CustomersQuery, type: :query do
       state: "Berlin",
       zipcode: "10115",
       billing_entity: billing_entity2,
-      currency: "EUR"
+      currency: "EUR",
+      customer_type: nil
     )
   end
 
@@ -85,6 +88,51 @@ RSpec.describe CustomersQuery, type: :query do
     expect(returned_ids).to include(customer_first.id)
     expect(returned_ids).to include(customer_second.id)
     expect(returned_ids).to include(customer_third.id)
+  end
+
+  context "when filtering by customer_type" do
+    context "when filtering by company" do
+      let(:filters) { {customer_type: "company"} }
+
+      it "returns company customers" do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to eq [customer_first.id]
+      end
+    end
+
+    context "when filtering by individual" do
+      let(:filters) { {customer_type: "individual"} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids).to eq([customer_second.id])
+      end
+    end
+
+    context "when filtering with invalid customer_type" do
+      let(:filters) { {customer_types: %w[invalid]} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids.count).to eq(3)
+      end
+    end
+  end
+
+  context "when filtering by has_customer_type" do
+    context "when filtering by true" do
+      let(:filters) { {has_customer_type: true} }
+
+      it "returns the customers with customer_type" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+      end
+    end
+
+    context "when filtering by false" do
+      let(:filters) { {has_customer_type: false} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
+    end
   end
 
   context "when filtering by partner account_type" do

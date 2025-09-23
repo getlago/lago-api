@@ -427,6 +427,55 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by customer_type" do
+      let(:params) { {customer_type: "company"} }
+      let!(:company) { create(:customer, organization:, customer_type: "company") }
+      let(:individual) { create(:customer, organization:, customer_type: "individual") }
+
+      before { individual }
+
+      context "when filtering by company" do
+        it "returns company customers" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(1)
+          expect(json[:customers].first[:lago_id]).to eq(company.id)
+        end
+      end
+    end
+
+    context "when filtering by has_customer_type" do
+      let(:params) { {has_customer_type: true} }
+      let!(:company) { create(:customer, organization:, customer_type: "company") }
+      let!(:individual) { create(:customer, organization:, customer_type: "individual") }
+
+      context "when filtering by true" do
+        it "returns customers with customer_type" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+          expect(json[:customers].pluck(:lago_id)).to match_array([company.id, individual.id])
+        end
+      end
+
+      context "when filtering by false and customer_type is provided" do
+        let(:params) { {has_customer_type: false, customer_type: "company"} }
+
+        it "returns an error" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {customer_type: ["must be nil when has_customer_type is false"]}},
+            status: 422
+          })
+        end
+      end
+    end
+
     context "when filtering by billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:customer) { create(:customer, organization:, billing_entity:) }

@@ -96,6 +96,49 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     end
   end
 
+  context "when filtering by customer_type" do
+    let(:filters) { {customer_type: "company"} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
+  context "when filtering by has_customer_type" do
+    context "when filtering by true" do
+      let(:filters) { {has_customer_type: true} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+
+      context "when customer_type is provided" do
+        let(:filters) { {has_customer_type: true, customer_type: "company"} }
+
+        it "is valid" do
+          expect(result.success?).to be(true)
+        end
+      end
+    end
+
+    context "when filtering by false" do
+      let(:filters) { {has_customer_type: false} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+
+      context "when customer_type is provided" do
+        let(:filters) { {has_customer_type: false, customer_type: "company"} }
+
+        it "is invalid" do
+          expect(result.success?).to be(false)
+          expect(result.errors.to_h).to include(filters: {customer_type: ["must be nil when has_customer_type is false"]})
+        end
+      end
+    end
+  end
+
   context "when filters are invalid" do
     shared_examples "an invalid filter" do |filter, value, error_message|
       let(:filters) { {filter => value} }
@@ -122,5 +165,11 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     it_behaves_like "an invalid filter", :metadata, SecureRandom.uuid, ["must be a hash"]
     it_behaves_like "an invalid filter", :metadata, {0 => "integer key"}, ["keys must be string"]
     it_behaves_like "an invalid filter", :metadata, {"key" => ["must be a string"]}, {"key" => ["must be a string"]}
+    it_behaves_like "an invalid filter", :customer_type, "random", ["must be one of: company, individual"]
+    it_behaves_like "an invalid filter", :has_customer_type, SecureRandom.uuid, ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_customer_type, "t", ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_customer_type, "f", ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_customer_type, 1, ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_customer_type, 0, ["must be one of: true, false"]
   end
 end

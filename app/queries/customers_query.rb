@@ -14,7 +14,9 @@ class CustomersQuery < BaseQuery
     :zipcodes,
     :currencies,
     :has_tax_identification_number,
-    :metadata
+    :metadata,
+    :customer_type,
+    :has_customer_type
   ]
 
   def call
@@ -24,6 +26,7 @@ class CustomersQuery < BaseQuery
     customers = paginate(customers)
     customers = apply_consistent_ordering(customers)
 
+    customers = with_customer_type(customers) if filters.customer_type.present? || filters.key?(:has_customer_type)
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
     customers = with_active_subscriptions_range(customers) if filters.active_subscriptions_count_from.present? || filters.active_subscriptions_count_to.present?
@@ -101,10 +104,22 @@ class CustomersQuery < BaseQuery
   end
 
   def with_has_tax_identification_number(scope)
-    if ActiveModel::Type::Boolean.new.cast(filters.has_tax_identification_number)
+    if has_tax_identification_number?
       scope.where.not(tax_identification_number: nil)
     else
       scope.where(tax_identification_number: nil)
+    end
+  end
+
+  def with_customer_type(scope)
+    if filters.customer_type.present?
+      return scope.where(customer_type: filters.customer_type)
+    end
+
+    if has_customer_type?
+      scope.where.not(customer_type: nil)
+    else
+      scope.where(customer_type: nil)
     end
   end
 
@@ -131,5 +146,13 @@ class CustomersQuery < BaseQuery
     end
 
     scope.where(id: count_scope.pluck(:id))
+  end
+
+  def has_tax_identification_number?
+    ActiveModel::Type::Boolean.new.cast(filters.has_tax_identification_number)
+  end
+
+  def has_customer_type?
+    ActiveModel::Type::Boolean.new.cast(filters.has_customer_type)
   end
 end

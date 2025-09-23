@@ -38,6 +38,8 @@ module Api
         filter_params = params.permit(
           :search_term,
           :has_tax_identification_number,
+          :has_customer_type,
+          :customer_type,
           currencies: [],
           countries: [],
           states: [],
