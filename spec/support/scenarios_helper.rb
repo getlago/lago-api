@@ -259,6 +259,25 @@ module ScenariosHelper
     end
   end
 
+  def create_clickhouse_event(params, in_advance: false)
+    event = Clickhouse::EventsEnriched.create!(params)
+    common_event = Events::Common.new(
+      id: nil,
+      organization_id: event.organization_id,
+      transaction_id: event.transaction_id,
+      external_subscription_id: event.external_subscription_id,
+      timestamp: event.timestamp,
+      code: event.code,
+      properties: event.properties,
+      precise_total_amount_cents: event.precise_total_amount_cents
+    )
+
+    if in_advance
+      Events::PayInAdvanceJob.perform_later(common_event.as_json)
+      perform_all_enqueued_jobs
+    end
+  end
+
   ### Credit notes
 
   def create_credit_note(params, **kwargs)

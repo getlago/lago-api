@@ -151,7 +151,7 @@ module Events
               property,
               operation_type,
               #{operation_value_sql(partition_by: %w[property])},
-              anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
+              lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
             ORDER BY timestamp ASC
           SQL
@@ -267,13 +267,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
