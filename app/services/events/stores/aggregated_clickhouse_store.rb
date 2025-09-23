@@ -126,13 +126,23 @@ module Events
           )
 
           sql = <<-SQL
-            WITH events AS (#{cte_sql})
+            WITH events AS (#{cte_sql}),
+
+            ranked_events AS (
+              SELECT
+                grouped_by,
+                timestamp,
+                property,
+                ROW_NUMBER() OVER (PARTITION BY grouped_by ORDER BY timestamp DESC) AS row_num
+              FROM events
+            )
 
             SELECT
-              DISTINCT ON(grouped_by) grouped_by,
+              grouped_by,
               timestamp,
               property
-            FROM events
+            FROM ranked_events
+            WHERE row_num = 1
             ORDER BY timestamp DESC
           SQL
 
