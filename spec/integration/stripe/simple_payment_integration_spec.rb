@@ -135,23 +135,23 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
   end
 
   context "when invoice payment requires 3DS" do
-    it "create a pending payment and send webhook with `next_action" do
+    it "create a pending payment and send webhook with `next_action`" do
       customer = create_customer
       stripe_customer = customer.payment_provider_customers.sole
       webhooks_sent.clear
 
-      threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
+      three_ds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
       create_one_off_invoice(customer, [addon], units: 22)
 
       invoice = customer.invoices.sole
-      expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
+      expect(stripe_customer.reload.payment_method_id).to eq three_ds_pm_id
       expect(invoice.reload.payment_status).to eq("pending")
       expect(invoice.payments.where(status: "requires_action").count).to eq 1
       expect(invoice.payment_attempts).to eq(1)
       expect(invoice).not_to be_ready_for_payment_processing
 
-      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
-      expect(wh.dig("payment", "next_action")).to match({
+      webhook = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(webhook.dig("payment", "next_action")).to match({
         "type" => "redirect_to_url",
         "redirect_to_url" => {
           "url" => start_with("https://hooks.stripe.com/3d_secure_2/hosted"),
@@ -168,16 +168,16 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       stripe_customer = customer.payment_provider_customers.sole
       webhooks_sent.clear
 
-      threeds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
+      three_ds_pm_id = attach_card!(stripe_customer, :pm_card_authenticationRequired)
       create_one_off_invoice(customer, [addon], units: 22)
       invoice = customer.invoices.sole
-      expect(stripe_customer.reload.payment_method_id).to eq threeds_pm_id
+      expect(stripe_customer.reload.payment_method_id).to eq three_ds_pm_id
       expect(invoice.reload.payment_status).to eq("pending")
       expect(invoice.payments.where(status: "requires_action").count).to eq 1
       expect(invoice.payment_attempts).to eq(1)
       expect(invoice).not_to be_ready_for_payment_processing
-      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
-      expect(wh.dig("payment", "next_action")).to match({
+      webhook = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(webhook.dig("payment", "next_action")).to match({
         "type" => "redirect_to_url",
         "redirect_to_url" => {
           "url" => start_with("https://hooks.stripe.com/3d_secure_2/hosted"),
@@ -208,9 +208,9 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       expect(payment.status).to eq "requires_action"
       expect(payment.payable_payment_status).to eq "processing"
 
-      wh = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
-      expect(wh.dig("payment", "next_action", "type")).to eq "display_bank_transfer_instructions"
-      expect(wh.dig("payment", "next_action", "display_bank_transfer_instructions", "amount_remaining")).to eq 2170
+      webhook = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
+      expect(webhook.dig("payment", "next_action", "type")).to eq "display_bank_transfer_instructions"
+      expect(webhook.dig("payment", "next_action", "display_bank_transfer_instructions", "amount_remaining")).to eq 2170
       webhooks_sent.clear
     end
   end
@@ -231,17 +231,17 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       expect(invoice.ready_for_payment_processing).to eq true
       expect(invoice.payment_status).to eq("failed")
       expect(invoice.payments.count).to eq(1)
-      p = invoice.payments.sole
-      expect(p.provider_payment_id).to be_nil
+      payment = invoice.payments.sole
+      expect(payment.provider_payment_id).to be_nil
 
       attach_iban!(stripe_customer, "AT321904300235473204")
       retry_invoice_payment(invoice.id)
       expect(invoice.reload.payment_status).to eq("pending")
       expect(invoice.payment_attempts).to eq(2)
-      p2 = invoice.payments.where.not(id: p.id).sole
-      expect(p2.provider_payment_id).to start_with "pi_"
-      expect(p2.status).to eq "processing"
-      expect(p2.payable_payment_status).to eq "processing"
+      processing_payment = invoice.payments.where.not(id: payment.id).sole
+      expect(processing_payment.provider_payment_id).to start_with "pi_"
+      expect(processing_payment.status).to eq "processing"
+      expect(processing_payment.payable_payment_status).to eq "processing"
     end
   end
 
