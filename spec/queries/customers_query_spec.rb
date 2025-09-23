@@ -118,47 +118,53 @@ RSpec.describe CustomersQuery, type: :query do
     end
   end
 
-  context "when searching for /de/ term" do
-    let(:search_term) { "de" }
+  context "with search_term" do
+    context "when searching for name 'de'" do
+      let(:search_term) { "de" }
 
-    it "returns only two customers" do
-      expect(returned_ids.count).to eq(2)
-      expect(returned_ids).to include(customer_first.id)
-      expect(returned_ids).to include(customer_second.id)
-      expect(returned_ids).not_to include(customer_third.id)
+      it "returns only two customers" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+      end
     end
-  end
 
-  context "when searching for firstname 'Jane'" do
-    let(:search_term) { "Jane" }
+    context "when searching for firstname 'Jane'" do
+      let(:search_term) { "Jane" }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).to include(customer_second.id)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_third.id)
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_second.id])
+      end
     end
-  end
 
-  context "when searching for lastname 'Johnson'" do
-    let(:search_term) { "Johnson" }
+    context "when searching for lastname 'Johnson'" do
+      let(:search_term) { "Johnson" }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_second.id)
-      expect(returned_ids).to include(customer_third.id)
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
     end
-  end
 
-  context "when searching for legalname 'Company'" do
-    let(:search_term) { "Company" }
+    context "when searching for legalname 'Company'" do
+      let(:search_term) { "Company" }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_second.id)
-      expect(returned_ids).to include(customer_third.id)
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
+    end
+
+    context "when searching for external_id '11'" do
+      let(:search_term) { "11" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_first.id])
+      end
+    end
+
+    context "when searching for email '1@e'" do
+      let(:search_term) { "1@e" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_first.id])
+      end
     end
   end
 

@@ -477,6 +477,20 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
     end
+
+    context "when filtering by search_term" do
+      let(:params) { {search_term: "oo b"} }
+      let!(:customer) { create(:customer, organization:, name: "Foo Bar") }
+
+      it "returns customers for the specified search_term" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].first[:lago_id]).to eq(customer.id)
+      end
+    end
   end
 
   describe "GET /api/v1/customers/:customer_id" do
