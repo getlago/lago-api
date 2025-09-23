@@ -8,7 +8,10 @@ class CustomersQuery < BaseQuery
     :billing_entity_ids,
     :with_deleted,
     :active_subscriptions_count_from,
-    :active_subscriptions_count_to
+    :active_subscriptions_count_to,
+    :countries,
+    :states,
+    :zipcodes
   ]
 
   def call
@@ -21,6 +24,8 @@ class CustomersQuery < BaseQuery
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
     customers = with_active_subscriptions_range(customers) if filters.active_subscriptions_count_from.present? || filters.active_subscriptions_count_to.present?
+
+    customers = with_billing_address_filter(customers) if billing_address_filter?
     customers = customers.with_discarded if filters.with_deleted
 
     result.customers = customers
@@ -29,12 +34,23 @@ class CustomersQuery < BaseQuery
 
   private
 
+  def billing_address_filter?
+    filters.countries.present? || filters.states.present? || filters.zipcodes.present?
+  end
+
   def filters_contract
     @filters_contract ||= Queries::CustomersQueryFiltersContract.new
   end
 
   def base_scope
     Customer.where(organization:).ransack(search_params)
+  end
+
+  def with_billing_address_filter(scope)
+    scope = scope.where(country: filters.countries) if filters.countries.present?
+    scope = scope.where(state: filters.states) if filters.states.present?
+    scope = scope.where(zipcode: filters.zipcodes) if filters.zipcodes.present?
+    scope
   end
 
   def search_params

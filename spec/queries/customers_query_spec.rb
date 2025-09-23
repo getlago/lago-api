@@ -16,10 +16,36 @@ RSpec.describe CustomersQuery, type: :query do
   let(:billing_entity2) { create(:billing_entity, organization:) }
 
   let(:customer_first) do
-    create(:customer, organization:, name: "defgh", firstname: "John", lastname: "Doe", legal_name: "Legalname", external_id: "11", email: "1@example.com", billing_entity: billing_entity1)
+    create(
+      :customer,
+      organization:,
+      name: "defgh",
+      firstname: "John",
+      lastname: "Doe",
+      legal_name: "Legalname",
+      external_id: "11",
+      email: "1@example.com",
+      country: "US",
+      state: "CA",
+      zipcode: "90001",
+      billing_entity: billing_entity1
+    )
   end
   let(:customer_second) do
-    create(:customer, organization:, name: "abcde", firstname: "Jane", lastname: "Smith", legal_name: "other name", external_id: "22", email: "2@example.com", billing_entity: billing_entity1)
+    create(
+      :customer,
+      organization:,
+      name: "abcde",
+      firstname: "Jane",
+      lastname: "Smith",
+      legal_name: "other name",
+      external_id: "22",
+      email: "2@example.com",
+      country: "FR",
+      state: "Paris",
+      zipcode: "75001",
+      billing_entity: billing_entity1
+    )
   end
   let(:customer_third) do
     create(
@@ -32,6 +58,9 @@ RSpec.describe CustomersQuery, type: :query do
       lastname: "Johnson",
       legal_name: "Company name",
       name: "presuv",
+      country: "DE",
+      state: "Berlin",
+      zipcode: "10115",
       billing_entity: billing_entity2
     )
   end
@@ -165,6 +194,30 @@ RSpec.describe CustomersQuery, type: :query do
       it "returns only one customer" do
         expect(returned_ids).to eq([customer_first.id])
       end
+    end
+  end
+
+  context "when filtering by countries" do
+    let(:filters) { {countries: ["US", "FR"]} }
+
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+    end
+  end
+
+  context "when filtering by states" do
+    let(:filters) { {states: ["CA", "Paris"]} }
+
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+    end
+  end
+
+  context "when filtering by zipcodes" do
+    let(:filters) { {zipcodes: ["10115", "75001"]} }
+
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_third.id, customer_second.id])
     end
   end
 

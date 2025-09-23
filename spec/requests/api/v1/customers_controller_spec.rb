@@ -478,6 +478,46 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by countries" do
+      let(:params) { {countries: ["US", "FR"]} }
+
+      let!(:customer) { create(:customer, organization:, country: "US") }
+      let!(:customer2) { create(:customer, organization:, country: "FR") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
+    context "when filtering by states" do
+      let(:params) { {states: ["CA", "Paris"]} }
+      let!(:customer) { create(:customer, organization:, state: "CA") }
+      let!(:customer2) { create(:customer, organization:, state: "Paris") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
+    context "when filtering by zipcodes" do
+      let(:params) { {zipcodes: ["10115", "75001"]} }
+      let!(:customer) { create(:customer, organization:, zipcode: "10115") }
+      let!(:customer2) { create(:customer, organization:, zipcode: "75001") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
     context "when filtering by search_term" do
       let(:params) { {search_term: "oo b"} }
       let!(:customer) { create(:customer, organization:, name: "Foo Bar") }
