@@ -83,6 +83,37 @@ module Types
         "Invoice"
       end
 
+      # rubocop:disable GraphQL/ResolverMethodLength
+      def customer
+        object.customer.tap do |c|
+          c.name = object.customer_name
+          c.firstname = object.customer_firstname
+          c.lastname = object.customer_lastname
+          c.email = object.customer_email
+          c.phone = object.customer_phone
+          c.url = object.customer_url
+          c.tax_identification_number = object.customer_tax_identification_number
+          c.timezone = object.customer_timezone
+          c.address_line1 = object.customer_address_line1
+          c.address_line2 = object.customer_address_line2
+          c.city = object.customer_city
+          c.state = object.customer_state
+          c.zipcode = object.customer_zipcode
+          c.country = object.customer_country
+          c.legal_name = object.customer_legal_name
+          c.legal_number = object.customer_legal_number
+
+          snapshotted_metadata = object.customer_metadata || []
+
+          c.define_singleton_method(:metadata) do
+            snapshotted_metadata.map do |m|
+              ::Metadata::CustomerMetadata.new(key: m["key"], value: m["value"], display_in_invoice: true)
+            end
+          end
+        end
+      end
+      # rubocop:enable GraphQL/ResolverMethodLength
+
       def regenerated_invoice_id
         object.regenerated_invoice&.id
       end
