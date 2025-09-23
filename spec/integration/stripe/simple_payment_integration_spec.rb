@@ -159,6 +159,31 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
         }
       })
       webhooks_sent.clear
+
+      # CREATING SUBSCRIPTION WITH PRE-AUTH
+      # A 3DS challenge on authorization will not result in an error. The auth is canceled and the subscription is created.
+      # The subscription invoice will be finalized with a pending payment because the card requests 3DS again.
+      plan = create(:plan, organization:, code: "std_plan", pay_in_advance: true, amount_cents: 31_000_00, amount_currency: "EUR")
+      json = create_subscription({
+        plan_code: plan.code,
+        external_id: "sub_#{external_id}",
+        external_customer_id: customer.external_id
+      }, {
+        amount_cents: 1_99,
+        amount_currency: "EUR"
+      })
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:authorization][:id]).to start_with "pi_"
+      expect(json[:authorization][:status]).to eq "requires_action"
+
+      invoice = customer.invoices.subscription.sole
+      expect(invoice.total_amount_cents).to be > 1_000_00 # Ensure this is the subscription invoice
+      expect(invoice.status).to eq "finalized"
+      expect(invoice.payment_status).to eq "pending"
+
+      payment_webhook = webhooks_sent.select { it["webhook_type"] == "payment.requires_action" }.sole
+      expect(payment_webhook.dig("payment", "invoice_ids")).to contain_exactly(invoice.id)
     end
   end
 
