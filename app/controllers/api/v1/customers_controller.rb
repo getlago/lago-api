@@ -35,7 +35,11 @@ module Api
       end
 
       def index
-        filter_params = params.permit(billing_entity_codes: [], account_type: [])
+        filter_params = params.permit(
+          billing_entity_codes: [],
+          account_type: [],
+          customer_types: []
+        )
         billing_entity_codes = filter_params.delete(:billing_entity_codes)
         if billing_entity_codes.present?
           billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)

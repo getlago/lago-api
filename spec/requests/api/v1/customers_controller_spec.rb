@@ -427,6 +427,45 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by customer_types" do
+      let(:params) { {customer_types: %w[company]} }
+      let!(:company) { create(:customer, organization:, customer_type: "company") }
+      let!(:individual) { create(:customer, organization:, customer_type: "individual") }
+
+      context "when filtering by company" do
+        it "returns company customers" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(1)
+          expect(json[:customers].first[:lago_id]).to eq(company.id)
+        end
+      end
+
+      context "when filtering by ''" do
+        let(:params) { {customer_types: ["null"]} }
+
+        it "returns the customers with nil customer_type" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+        end
+      end
+
+      context "when filtering by multiple customer_types" do
+        let(:params) { {customer_types: %w[company individual]} }
+
+        it "returns the customers with nil customer_type" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+          expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([company.id, individual.id])
+        end
+      end
+    end
+
     context "when filtering by billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:customer) { create(:customer, organization:, billing_entity:) }

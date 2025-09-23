@@ -8,7 +8,8 @@ class CustomersQuery < BaseQuery
     :billing_entity_ids,
     :with_deleted,
     :active_subscriptions_count_from,
-    :active_subscriptions_count_to
+    :active_subscriptions_count_to,
+    :customer_types
   ]
 
   def call
@@ -18,6 +19,7 @@ class CustomersQuery < BaseQuery
     customers = paginate(customers)
     customers = apply_consistent_ordering(customers)
 
+    customers = with_customer_types(customers) if filters.customer_types.present?
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
     customers = with_active_subscriptions_range(customers) if filters.active_subscriptions_count_from.present? || filters.active_subscriptions_count_to.present?
@@ -49,6 +51,16 @@ class CustomersQuery < BaseQuery
       external_id_cont: search_term,
       email_cont: search_term
     }
+  end
+
+  def with_customer_types(scope)
+    customer_types = filters.customer_types
+      .map { |customer_type| (customer_type == "null") ? nil : customer_type.presence }
+      .filter { |customer_type| customer_type.nil? || Customer.customer_types.include?(customer_type) }
+
+    return scope if customer_types.empty?
+
+    scope.where(customer_type: customer_types)
   end
 
   def with_account_type(scope)
