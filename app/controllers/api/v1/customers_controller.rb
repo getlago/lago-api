@@ -35,7 +35,8 @@ module Api
       end
 
       def index
-        filter_params = params.permit(billing_entity_codes: [], account_type: [])
+        filter_params = params.permit(:search_term, billing_entity_codes: [], account_type: [])
+        search_term = filter_params.delete(:search_term)
         billing_entity_codes = filter_params.delete(:billing_entity_codes)
         if billing_entity_codes.present?
           billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
@@ -48,6 +49,7 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
+          search_term:,
           filters: filter_params.merge(billing_entity_ids: billing_entities&.ids)
         )
 
