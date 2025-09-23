@@ -28,7 +28,8 @@ RSpec.describe CustomersQuery, type: :query do
       country: "US",
       state: "CA",
       zipcode: "90001",
-      billing_entity: billing_entity1
+      billing_entity: billing_entity1,
+      currency: "USD"
     )
   end
   let(:customer_second) do
@@ -44,7 +45,8 @@ RSpec.describe CustomersQuery, type: :query do
       country: "FR",
       state: "Paris",
       zipcode: "75001",
-      billing_entity: billing_entity1
+      billing_entity: billing_entity1,
+      currency: "EUR"
     )
   end
   let(:customer_third) do
@@ -61,7 +63,8 @@ RSpec.describe CustomersQuery, type: :query do
       country: "DE",
       state: "Berlin",
       zipcode: "10115",
-      billing_entity: billing_entity2
+      billing_entity: billing_entity2,
+      currency: "EUR"
     )
   end
 
@@ -203,6 +206,15 @@ RSpec.describe CustomersQuery, type: :query do
     it "returns only two customers" do
       expect(returned_ids).to match_array([customer_first.id, customer_second.id])
     end
+
+    context "when filtering by invalid country" do
+      let(:filters) { {countries: ["INVALID"]} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:countries]).to match({0 => [/^must be one of: AD, AE.*XK$/]})
+      end
+    end
   end
 
   context "when filtering by states" do
@@ -211,6 +223,15 @@ RSpec.describe CustomersQuery, type: :query do
     it "returns only two customers" do
       expect(returned_ids).to match_array([customer_first.id, customer_second.id])
     end
+
+    context "when filtering by invalid state" do
+      let(:filters) { {states: "INVALID"} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:states]).to eq(["must be an array"])
+      end
+    end
   end
 
   context "when filtering by zipcodes" do
@@ -218,6 +239,15 @@ RSpec.describe CustomersQuery, type: :query do
 
     it "returns only two customers" do
       expect(returned_ids).to match_array([customer_third.id, customer_second.id])
+    end
+
+    context "when filtering by invalid zipcode" do
+      let(:filters) { {zipcodes: "INVALID"} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:zipcodes]).to eq(["must be an array"])
+      end
     end
   end
 
@@ -290,6 +320,23 @@ RSpec.describe CustomersQuery, type: :query do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).to include(customer_first.id)
         expect(returned_ids).to include(subscriptionless_customer.id)
+      end
+    end
+  end
+
+  context "when filtering by currencies" do
+    let(:filters) { {currencies: ["USD"]} }
+
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_first.id])
+    end
+
+    context "when filtering by invalid currency" do
+      let(:filters) { {currencies: ["INVALID"]} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:currencies]).to match({0 => [/^must be one of: AED, AFN.*ZMW$/]})
       end
     end
   end

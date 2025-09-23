@@ -490,6 +490,21 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customers].count).to eq(2)
         expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
       end
+
+      context "when filtering by invalid country" do
+        let(:params) { {countries: ["INVALID"]} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {countries: {"0": [/must be one of: AD, .*XK$/]}}},
+            status: 422
+          })
+        end
+      end
     end
 
     context "when filtering by states" do
@@ -515,6 +530,34 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:customers].count).to eq(2)
         expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
+    context "when filtering by currencies" do
+      let(:params) { {currencies: ["AED", "CAD"]} }
+      let!(:customer) { create(:customer, organization:, currency: "AED") }
+      let!(:customer2) { create(:customer, organization:, currency: "CAD") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+
+      context "when filtering by invalid currency" do
+        let(:params) { {currencies: ["INVALID"]} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {currencies: {"0": [/must be one of: AED, AFN.*ZMW$/]}}},
+            status: 422
+          })
+        end
       end
     end
 

@@ -37,6 +37,7 @@ module Api
       def index
         filter_params = params.permit(
           :search_term,
+          currencies: [],
           countries: [],
           states: [],
           zipcodes: [],
