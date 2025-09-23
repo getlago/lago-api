@@ -112,11 +112,42 @@ module Events
       end
 
       def last_event
-        # TODO(pre-aggregation): Implement
+        with_retry { events(ordered: true).last }
       end
 
       def grouped_last_event
-        # TODO(pre-aggregation): Implement
+        connection_with_retry do |connection|
+          cte_sql = events_sql(
+            select: [
+              arel_enriched_table[:grouped_by],
+              arel_enriched_table[:decimal_value].as("property"),
+              arel_enriched_table[:timestamp]
+            ]
+          )
+
+          sql = <<-SQL
+            WITH events AS (#{cte_sql}),
+
+            ranked_events AS (
+              SELECT
+                grouped_by,
+                timestamp,
+                property,
+                ROW_NUMBER() OVER (PARTITION BY grouped_by ORDER BY timestamp DESC) AS row_num
+              FROM events
+            )
+
+            SELECT
+              grouped_by,
+              timestamp,
+              property
+            FROM ranked_events
+            WHERE row_num = 1
+            ORDER BY timestamp DESC
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql).rows, timestamp: true)
+        end
       end
 
       def count
@@ -322,7 +353,13 @@ module Events
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
       def prepare_grouped_result(rows, timestamp: false)
         rows.map do |row|
-          group_by_string, value = row
+          event_timestamp = nil
+
+          if timestamp
+            group_by_string, event_timestamp, value = row
+          else
+            group_by_string, value = row
+          end
 
           groups = group_by_string.transform_values! { |v| (v == NIL_GROUP_VALUE) ? nil : v }
           next unless groups.keys.sort == grouped_by.sort
@@ -331,6 +368,8 @@ module Events
             groups: groups,
             value: value
           }
+
+          result[:timestamp] = event_timestamp if timestamp
 
           result
         end
