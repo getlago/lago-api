@@ -100,8 +100,8 @@ module Fees
     def apply_aggregation_and_charge_model
       aggregation_result = aggregator.call
 
-      Charges::ChargeModelFactory.new_instance(
-        charge: fixed_charge,
+      ChargeModels::Factory.new_instance(
+        chargeable: fixed_charge,
         aggregation_result:,
         properties: fixed_charge.properties,
         period_ratio: calculate_period_ratio,
