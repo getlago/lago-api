@@ -33,6 +33,8 @@ module Wallets
         end
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
+        else
+          wallet.allowed_fee_types = []
         end
 
         process_billable_metrics

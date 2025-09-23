@@ -484,5 +484,17 @@ RSpec.describe Wallets::UpdateService do
         end
       end
     end
+
+    context "when wallet has existing allowed_fee_types and applies_to is not provided" do
+      let(:wallet) { create(:wallet, customer:, allowed_fee_types: %w[charge]) }
+
+      it "clears the allowed_fee_types" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.wallet.reload.allowed_fee_types).to eq([])
+        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
   end
 end
