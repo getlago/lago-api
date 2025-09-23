@@ -1920,4 +1920,524 @@ RSpec.describe Invoice do
       it { expect(subject).to be false }
     end
   end
+
+  describe "#customer_display_name" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        name: "Original Name"
+      )
+    end
+
+    it "returns customer display name" do
+      expect(invoice.customer_display_name).to eq(customer.display_name)
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(name: "Updated Name")
+      end
+
+      it "returns snapshotted customer display name" do
+        expect(invoice.customer_display_name).to eq("Original Name")
+      end
+    end
+  end
+
+  describe "#customer_email" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        email: "original@example.com"
+      )
+    end
+
+    it "returns customer email" do
+      expect(invoice.customer_email).to eq("original@example.com")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(email: "updated@example.com")
+      end
+
+      it "returns snapshotted customer email" do
+        expect(invoice.customer_email).to eq("original@example.com")
+      end
+    end
+  end
+
+  describe "#customer_legal_name" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        legal_name: "Original Legal Name"
+      )
+    end
+
+    it "returns customer legal name" do
+      expect(invoice.customer_legal_name).to eq("Original Legal Name")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(legal_name: "Updated Legal Name")
+      end
+
+      it "returns snapshotted customer legal name" do
+        expect(invoice.customer_legal_name).to eq("Original Legal Name")
+      end
+    end
+  end
+
+  describe "#customer_legal_number" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        legal_number: "123456789"
+      )
+    end
+
+    it "returns customer legal number" do
+      expect(invoice.customer_legal_number).to eq("123456789")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(legal_number: "987654321")
+      end
+
+      it "returns snapshotted customer legal number" do
+        expect(invoice.customer_legal_number).to eq("123456789")
+      end
+    end
+  end
+
+  describe "#customer_tax_identification_number" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        tax_identification_number: "FR123456789"
+      )
+    end
+
+    it "returns customer tax identification number" do
+      expect(invoice.customer_tax_identification_number).to eq("FR123456789")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(tax_identification_number: "FR987654321")
+      end
+
+      it "returns snapshotted customer tax identification number" do
+        expect(invoice.customer_tax_identification_number).to eq("FR123456789")
+      end
+    end
+  end
+
+  describe "#customer_phone" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        phone: "+33123456789"
+      )
+    end
+
+    it "returns customer phone" do
+      expect(invoice.customer_phone).to eq("+33123456789")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(phone: "+33987654321")
+      end
+
+      it "returns snapshotted customer phone" do
+        expect(invoice.customer_phone).to eq("+33123456789")
+      end
+    end
+  end
+
+  describe "#customer_url" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        url: "https://original.example.com"
+      )
+    end
+
+    it "returns customer url" do
+      expect(invoice.customer_url).to eq("https://original.example.com")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(url: "https://updated.example.com")
+      end
+
+      it "returns snapshotted customer url" do
+        expect(invoice.customer_url).to eq("https://original.example.com")
+      end
+    end
+  end
+
+  describe "#customer_timezone" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        timezone: "Europe/Paris"
+      )
+    end
+
+    it "returns customer timezone" do
+      expect(invoice.customer_timezone).to eq("Europe/Paris")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(timezone: "America/New_York")
+      end
+
+      it "returns snapshotted customer timezone" do
+        expect(invoice.customer_timezone).to eq("Europe/Paris")
+      end
+    end
+  end
+
+  describe "#customer_firstname" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        firstname: "Original"
+      )
+    end
+
+    it "returns customer firstname" do
+      expect(invoice.customer_firstname).to eq("Original")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(firstname: "Updated")
+      end
+
+      it "returns snapshotted customer firstname" do
+        expect(invoice.customer_firstname).to eq("Original")
+      end
+    end
+  end
+
+  describe "#customer_lastname" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        lastname: "Customer"
+      )
+    end
+
+    it "returns customer lastname" do
+      expect(invoice.customer_lastname).to eq("Customer")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(lastname: "Updated")
+      end
+
+      it "returns snapshotted customer lastname" do
+        expect(invoice.customer_lastname).to eq("Customer")
+      end
+    end
+  end
+
+  describe "#customer_address_line1" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        address_line1: "77 rue du Chemin Vert"
+      )
+    end
+
+    it "returns customer billing address line1" do
+      expect(invoice.customer_address_line1).to eq("77 rue du Chemin Vert")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(address_line1: "99 St Green Way")
+      end
+
+      it "returns snapshotted billing address" do
+        expect(invoice.customer_address_line1).to eq("77 rue du Chemin Vert")
+      end
+    end
+  end
+
+  describe "#customer_address_line2" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        address_line2: "Apt 5B"
+      )
+    end
+
+    it "returns customer billing address line2" do
+      expect(invoice.customer_address_line2).to eq("Apt 5B")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(address_line2: "Apt 195W")
+      end
+
+      it "returns snapshotted customer billing address line2" do
+        expect(invoice.customer_address_line2).to eq("Apt 5B")
+      end
+    end
+  end
+
+  describe "#customer_city" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        city: "Paris"
+      )
+    end
+
+    it "returns customer billing city" do
+      expect(invoice.customer_city).to eq("Paris")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(city: "Lyon")
+      end
+
+      it "returns snapshotted billing city" do
+        expect(invoice.customer_city).to eq("Paris")
+      end
+    end
+  end
+
+  describe "#customer_zipcode" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        zipcode: "75011"
+      )
+    end
+
+    it "returns customer billing zipcode" do
+      expect(invoice.customer_zipcode).to eq("75011")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(zipcode: "69001")
+      end
+
+      it "returns snapshotted billing zipcode" do
+        expect(invoice.customer_zipcode).to eq("75011")
+      end
+    end
+  end
+
+  describe "#customer_state" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        state: "Ile-de-France"
+      )
+    end
+
+    it "returns customer billing state" do
+      expect(invoice.customer_state).to eq("Ile-de-France")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(state: "Auvergne-Rhône-Alpes")
+      end
+
+      it "returns snapshotted billing state" do
+        expect(invoice.customer_state).to eq("Ile-de-France")
+      end
+    end
+  end
+
+  describe "#customer_country" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        country: "FR"
+      )
+    end
+
+    it "returns customer billing country" do
+      expect(invoice.customer_country).to eq("FR")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(country: "DE")
+      end
+
+      it "returns snapshotted billing country" do
+        expect(invoice.customer_country).to eq("FR")
+      end
+    end
+  end
+
+  describe "#customer_metadata" do
+    let(:customer) { create(:customer) }
+    let(:metadata_1) { create(:customer_metadata, customer:, key: "Department", value: "Engineering", display_in_invoice: true) }
+    let(:metadata_2) { create(:customer_metadata, customer:, key: "Project", value: "Alpha", display_in_invoice: true) }
+    let(:metadata_3) { create(:customer_metadata, customer:, key: "Internal", value: "Secret", display_in_invoice: false) }
+    let(:invoice) { create(:invoice, :draft, customer:) }
+
+    before do
+      metadata_1
+      metadata_2
+      metadata_3
+    end
+
+    it "returns only customer metadata with display_in_invoice true" do
+      expect(invoice.customer_metadata).to contain_exactly(
+        {"key" => "Department", "value" => "Engineering"},
+        {"key" => "Project", "value" => "Alpha"}
+      )
+    end
+
+    context "when invoice is finalized and metadata changes" do
+      before do
+        invoice.finalized!
+        metadata_1.update!(value: "Sales")
+        metadata_2.update!(display_in_invoice: false)
+      end
+
+      it "returns the snapshotted metadata at the time of finalization" do
+        expect(invoice.customer_metadata).to contain_exactly(
+          {"key" => "Department", "value" => "Engineering"},
+          {"key" => "Project", "value" => "Alpha"}
+        )
+      end
+    end
+  end
+
+  describe "on invoice finalization" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+
+    let(:customer) do
+      create(
+        :customer,
+        name: "Original Name",
+        email: "original@example.com",
+        legal_name: "Original Legal Name",
+        legal_number: "123456789",
+        tax_identification_number: "FR123456789",
+        phone: "+33123456789",
+        url: "https://original.example.com",
+        timezone: "Europe/Paris",
+        firstname: "Original",
+        lastname: "Customer",
+        address_line1: "77 rue du Chemin Vert",
+        address_line2: "Apt 5B",
+        city: "Paris",
+        zipcode: "75011",
+        state: "Île-de-France",
+        country: "FR"
+      )
+    end
+
+    it "populates all customer snapshot fields when finalized" do
+      invoice.finalized!
+      invoice.reload
+
+      expect(invoice[:customer_name]).to eq("Original Name")
+      expect(invoice[:customer_email]).to eq("original@example.com")
+      expect(invoice[:customer_legal_name]).to eq("Original Legal Name")
+      expect(invoice[:customer_legal_number]).to eq("123456789")
+      expect(invoice[:customer_tax_identification_number]).to eq("FR123456789")
+      expect(invoice[:customer_phone]).to eq("+33123456789")
+      expect(invoice[:customer_url]).to eq("https://original.example.com")
+      expect(invoice[:customer_timezone]).to eq("Europe/Paris")
+      expect(invoice[:customer_firstname]).to eq("Original")
+      expect(invoice[:customer_lastname]).to eq("Customer")
+      expect(invoice[:customer_address_line1]).to eq("77 rue du Chemin Vert")
+      expect(invoice[:customer_address_line2]).to eq("Apt 5B")
+      expect(invoice[:customer_city]).to eq("Paris")
+      expect(invoice[:customer_zipcode]).to eq("75011")
+      expect(invoice[:customer_state]).to eq("Île-de-France")
+      expect(invoice[:customer_country]).to eq("FR")
+      expect(invoice[:customer_metadata]).to eq([])
+    end
+
+    context "when customer has metadata" do
+      let(:customer) do
+        create(:customer).tap do |customer|
+          create(:customer_metadata, customer:, key: "Department", value: "Engineering", display_in_invoice: true)
+          create(:customer_metadata, customer:, key: "Project", value: "Alpha", display_in_invoice: true)
+          create(:customer_metadata, customer:, key: "Internal", value: "Secret", display_in_invoice: false)
+        end
+      end
+
+      it "snapshots customer metadata" do
+        invoice.finalized!
+        invoice.reload
+
+        expect(invoice[:customer_metadata]).to contain_exactly(
+          {"key" => "Department", "value" => "Engineering"},
+          {"key" => "Project", "value" => "Alpha"}
+        )
+      end
+
+      context "when invoice is already finalized" do
+        before do
+          invoice.update_columns(status: :finalized) # rubocop:disable Rails/SkipsModelValidations
+          invoice.finalized!
+          invoice.reload
+        end
+
+        it "does not snapshot customer data" do
+          expect(invoice[:customer_name]).to be_nil
+          expect(invoice[:customer_email]).to be_nil
+          expect(invoice[:customer_address_line1]).to be_nil
+          expect(invoice[:customer_metadata]).to be_nil
+        end
+      end
+    end
+  end
 end

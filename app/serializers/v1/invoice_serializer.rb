@@ -54,12 +54,99 @@ module V1
     private
 
     def customer
-      {
-        customer: ::V1::CustomerSerializer.new(
+      { customer: customer_data }
+
+    end
+
+    def customer_data
+      if model.finalized? && model.customer_name.present?
+        build_snapshotted_customer_data
+      else
+        ::V1::CustomerSerializer.new(
           model.customer,
           includes: include?(:integration_customers) ? [:integration_customers] : []
         ).serialize
+      end
+    end
+
+    def build_snapshotted_customer_data
+      billing_address = model.billing_address
+
+      {
+        lago_id: model.customer.id,
+        billing_entity_code: model.customer.billing_entity.code,
+        external_id: model.customer.external_id,
+        account_type: model.customer.account_type,
+        name: model.customer_name,
+        firstname: model.customer_firstname,
+        lastname: model.customer_lastname,
+        customer_type: model.customer.customer_type,
+        sequential_id: model.customer.sequential_id,
+        slug: model.customer.slug,
+        created_at: model.customer.created_at.iso8601,
+        updated_at: model.customer.updated_at.iso8601,
+        country: billing_address[:country],
+        address_line1: billing_address[:address_line1],
+        address_line2: billing_address[:address_line2],
+        state: billing_address[:state],
+        zipcode: billing_address[:zipcode],
+        email: model.customer_email,
+        city: billing_address[:city],
+        url: model.customer_url,
+        phone: model.customer_phone,
+        logo_url: model.customer.logo_url,
+        legal_name: model.customer_legal_name,
+        legal_number: model.customer_legal_number,
+        currency: model.customer.currency,
+        tax_identification_number: model.customer_tax_identification_number,
+        timezone: model.customer_timezone,
+        applicable_timezone: model.customer.applicable_timezone,
+        net_payment_term: model.customer.net_payment_term,
+        external_salesforce_id: model.customer.external_salesforce_id,
+        finalize_zero_amount_invoice: model.customer.finalize_zero_amount_invoice,
+        billing_configuration: build_billing_configuration,
+        shipping_address: model.customer.shipping_address_ancor,
+        skip_invoice_custom_sections: model.customer.skip_invoice_custom_sections,
+        metadata: build_customer_metadata
       }
+    end
+
+    def build_billing_configuration
+      configuration = {
+        invoice_grace_period: model.customer.invoice_grace_period,
+        payment_provider: model.customer.payment_provider,
+        payment_provider_code: model.customer.payment_provider_code,
+        document_locale: model.customer.document_locale
+      }
+
+      case model.customer.payment_provider&.to_sym
+      when :stripe
+        configuration[:provider_customer_id] = model.customer.stripe_customer&.provider_customer_id
+        configuration[:provider_payment_methods] = model.customer.stripe_customer&.provider_payment_methods
+        configuration.merge!(model.customer.stripe_customer&.settings&.symbolize_keys || {})
+      when :gocardless
+        configuration[:provider_customer_id] = model.customer.gocardless_customer&.provider_customer_id
+        configuration.merge!(model.customer.gocardless_customer&.settings&.symbolize_keys || {})
+      when :cashfree
+        configuration[:provider_customer_id] = model.customer.cashfree_customer&.provider_customer_id
+        configuration.merge!(model.customer.cashfree_customer&.settings&.symbolize_keys || {})
+      when :adyen
+        configuration[:provider_customer_id] = model.customer.adyen_customer&.provider_customer_id
+        configuration.merge!(model.customer.adyen_customer&.settings&.symbolize_keys || {})
+      when :moneyhash
+        configuration[:provider_customer_id] = model.customer.moneyhash_customer&.provider_customer_id
+        configuration.merge!(model.customer.moneyhash_customer&.settings&.symbolize_keys || {})
+      end
+
+      configuration
+    end
+
+    def build_customer_metadata
+      ::CollectionSerializer.new(
+        model.customer.metadata,
+        ::V1::Customers::MetadataSerializer,
+        collection_name: "metadata"
+      ).serialize[:metadata]
     end
 
     def subscriptions

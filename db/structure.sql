@@ -2877,6 +2877,23 @@ CREATE TABLE public.invoices (
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
+    customer_name character varying,
+    customer_legal_name character varying,
+    customer_legal_number character varying,
+    customer_email character varying,
+    customer_address_line1 character varying,
+    customer_address_line2 character varying,
+    customer_city character varying,
+    customer_zipcode character varying,
+    customer_state character varying,
+    customer_country character varying,
+    customer_phone character varying,
+    customer_url character varying,
+    customer_tax_identification_number character varying,
+    customer_timezone character varying,
+    customer_firstname character varying,
+    customer_lastname character varying,
+    customer_metadata jsonb,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -9845,6 +9862,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250922113902'),
+('20250922113901'),
 ('20250919124523'),
 ('20250919124037'),
 ('20250915100607'),
@@ -10673,3 +10692,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

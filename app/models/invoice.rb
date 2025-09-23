@@ -16,6 +16,7 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
+  before_save :snapshot_customer_data, if: -> { status_changed_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -411,6 +412,74 @@ class Invoice < ApplicationRecord
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
   end
 
+  def customer_display_name
+    self[:customer_name] || customer.display_name
+  end
+
+  def customer_address_line1
+    self[:customer_address_line1] || customer.address_line1
+  end
+
+  def customer_address_line2
+    self[:customer_address_line2] || customer.address_line2
+  end
+
+  def customer_city
+    self[:customer_city] || customer.city
+  end
+
+  def customer_zipcode
+    self[:customer_zipcode] || customer.zipcode
+  end
+
+  def customer_state
+    self[:customer_state] || customer.state
+  end
+
+  def customer_country
+    self[:customer_country] || customer.country
+  end
+
+  def customer_email
+    self[:customer_email] || customer.email
+  end
+
+  def customer_legal_name
+    self[:customer_legal_name] || customer.legal_name
+  end
+
+  def customer_legal_number
+    self[:customer_legal_number] || customer.legal_number
+  end
+
+  def customer_tax_identification_number
+    self[:customer_tax_identification_number] || customer.tax_identification_number
+  end
+
+  def customer_phone
+    self[:customer_phone] || customer.phone
+  end
+
+  def customer_url
+    self[:customer_url] || customer.url
+  end
+
+  def customer_timezone
+    self[:customer_timezone] || customer.timezone
+  end
+
+  def customer_firstname
+    self[:customer_firstname] || customer.firstname
+  end
+
+  def customer_lastname
+    self[:customer_lastname] || customer.lastname
+  end
+
+  def customer_metadata
+    self[:customer_metadata] || customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
+  end
+
   private
 
   def should_assign_sequential_id?
@@ -530,6 +599,30 @@ class Invoice < ApplicationRecord
 
     self.finalized_at ||= Time.current
   end
+
+  def snapshot_customer_data
+    return unless status_changed_to_finalized?
+
+    self.customer_name = customer.name
+    self.customer_legal_name = customer.legal_name
+    self.customer_legal_number = customer.legal_number
+    self.customer_email = customer.email
+    self.customer_phone = customer.phone
+    self.customer_url = customer.url
+    self.customer_tax_identification_number = customer.tax_identification_number
+    self.customer_timezone = customer.timezone
+    self.customer_firstname = customer.firstname
+    self.customer_lastname = customer.lastname
+
+    self.customer_address_line1 = customer.address_line1
+    self.customer_address_line2 = customer.address_line2
+    self.customer_city = customer.city
+    self.customer_zipcode = customer.zipcode
+    self.customer_state = customer.state
+    self.customer_country = customer.country
+
+    self.customer_metadata = customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
+  end
 end
 
 # == Schema Information
@@ -541,6 +634,23 @@ end
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
+#  customer_address_line1                  :string
+#  customer_address_line2                  :string
+#  customer_city                           :string
+#  customer_country                        :string
+#  customer_email                          :string
+#  customer_firstname                      :string
+#  customer_lastname                       :string
+#  customer_legal_name                     :string
+#  customer_legal_number                   :string
+#  customer_metadata                       :jsonb
+#  customer_name                           :string
+#  customer_phone                          :string
+#  customer_state                          :string
+#  customer_tax_identification_number      :string
+#  customer_timezone                       :string
+#  customer_url                            :string
+#  customer_zipcode                        :string
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  finalized_at                            :datetime
