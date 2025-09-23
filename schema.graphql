@@ -2662,6 +2662,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -4208,6 +4209,7 @@ type CustomerPortalWallet {
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
+  priority: Int!
   rateAmount: Float!
   status: WalletStatusEnum!
 }
@@ -10811,6 +10813,7 @@ input UpdateCustomerWalletInput {
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11351,6 +11354,7 @@ type Wallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
