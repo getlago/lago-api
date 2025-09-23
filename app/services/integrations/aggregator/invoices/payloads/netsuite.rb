@@ -6,6 +6,7 @@ module Integrations
       module Payloads
         class Netsuite < BasePayload
           MAX_DECIMALS = 15
+          NS_QUANTITY_LIMIT = 10_000_000_000
 
           def body
             result = {
@@ -108,12 +109,21 @@ module Integrations
             from_property = fee.charge? ? "charges_from_datetime" : "from_datetime"
             to_property = fee.charge? ? "charges_to_datetime" : "to_datetime"
 
+            quantity_value = limited_rate(fee.units)
+            unit_rate_value = limited_rate(fee.precise_unit_amount)
+            line_amount_value = limited_rate(amount(fee.amount_cents, resource: invoice))
+
+            if quantity_value.respond_to?(:abs) && quantity_value.abs >= NS_QUANTITY_LIMIT
+              quantity_value = 1
+              unit_rate_value = line_amount_value
+            end
+
             {
               "item" => mapped_item.external_id,
               "account" => mapped_item.external_account_code,
-              "quantity" => limited_rate(fee.units),
-              "rate" => limited_rate(fee.precise_unit_amount),
-              "amount" => limited_rate(amount(fee.amount_cents, resource: invoice)),
+              "quantity" => quantity_value,
+              "rate" => unit_rate_value,
+              "amount" => line_amount_value,
               "taxdetailsreference" => fee.id,
               "custcol_service_period_date_from" => fee.properties[from_property]&.to_date&.strftime("%-m/%-d/%Y"),
               "custcol_service_period_date_to" => fee.properties[to_property]&.to_date&.strftime("%-m/%-d/%Y"),
