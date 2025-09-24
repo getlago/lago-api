@@ -17,6 +17,7 @@ RSpec.describe Wallet do
     it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
     it { is_expected.to validate_numericality_of(:paid_top_up_min_amount_cents).is_greater_than(0).allow_nil }
     it { is_expected.to validate_numericality_of(:paid_top_up_max_amount_cents).is_greater_than(0).allow_nil }
+    it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
 
     it "validates than max is greater than min" do
       subject.paid_top_up_min_amount_cents = 100
