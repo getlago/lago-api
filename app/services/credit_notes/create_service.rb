@@ -79,7 +79,7 @@ module CreditNotes
           track_credit_note_created
           deliver_webhook
           Utils::ActivityLog.produce(credit_note, "credit_note.created")
-          CreditNotes::GeneratePdfJob.perform_later(credit_note)
+          CreditNotes::GenerateFilesJob.perform_later(credit_note)
           deliver_email
           handle_refund if should_handle_refund?
           report_to_tax_provider

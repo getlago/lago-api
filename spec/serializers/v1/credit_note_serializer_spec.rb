@@ -45,6 +45,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
       "created_at" => credit_note.created_at.iso8601,
       "updated_at" => credit_note.updated_at.iso8601,
       "file_url" => credit_note.file_url,
+      "xml_url" => credit_note.xml_file_url,
       "error_details" => [{
         "lago_id" => error_detail.id,
         "error_code" => error_detail.error_code,

@@ -226,10 +226,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         expect(Utils::ActivityLog).to have_produced("credit_note.created").with(result.invoice.credit_notes.first)
       end
 
-      it "enqueues CreditNotes::GeneratePdfJob" do
+      it "enqueues CreditNotes::GenerateFilesJob" do
         expect do
           finalize_service.call
-        end.to have_enqueued_job(CreditNotes::GeneratePdfJob)
+        end.to have_enqueued_job(CreditNotes::GenerateFilesJob)
       end
     end
 
