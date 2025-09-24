@@ -64,5 +64,23 @@ RSpec.describe AiConversations::StreamService do
         {chunk: nil, done: true}
       )
     end
+
+    it "sends the agent id if the conversation id is blank" do
+      allow(http_client).to receive(:post_with_stream)
+
+      service.call
+
+      expect(http_client).to have_received(:post_with_stream).with(
+        {
+          inputs: "Hello world",
+          stream: true,
+          store: true,
+          agent_id: ENV["MISTRAL_AGENT_ID"]
+        },
+        {
+          "Authorization" => "Bearer #{ENV["MISTRAL_API_KEY"]}"
+        }
+      )
+    end
   end
 end

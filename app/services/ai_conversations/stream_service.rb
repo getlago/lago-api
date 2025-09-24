@@ -4,7 +4,6 @@ module AiConversations
   class StreamService < BaseService
     Result = BaseResult[:ai_conversation]
 
-    MISTRAL_AGENT_ID = "ag:60070909:20250806:lago-billing-assistant:56aead9d"
     MISTRAL_CONVERSATIONS_API_URL = "https://api.mistral.ai/v1/conversations"
 
     def initialize(ai_conversation:, message:)
@@ -59,7 +58,7 @@ module AiConversations
         stream: true,
         store: true
       }.tap do |body|
-        body[:agent_id] = MISTRAL_AGENT_ID if ai_conversation.mistral_conversation_id.blank?
+        body[:agent_id] = ENV["MISTRAL_AGENT_ID"] if ai_conversation.mistral_conversation_id.blank?
       end
     end
   end
