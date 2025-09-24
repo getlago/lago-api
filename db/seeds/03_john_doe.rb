@@ -66,7 +66,8 @@ unless john_doe.wallets.active.exists?
         expiration_at: 1.year.from_now,
         trigger: :interval,
         transaction_metadata: [{key: :origin, value: :seeder}],
-        transaction_name: "10 credits for free 🎁"
+        transaction_name: "10 credits for free 🎁",
+        started_at: 1.week.ago
       }
     ]
   end
