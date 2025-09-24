@@ -1,51 +1,16 @@
 # frozen_string_literal: true
 
+# NOTE: If hooli is not found, run 01_base.rb first
+organization = Organization.find_by!(name: "Hooli")
+plan = Plan.find_by!(code: "premium_plan")
+sub = Subscription.find_by!(external_id: "sub_john-doe-main")
+
 def clean_up_feature!(feature)
   Entitlement::SubscriptionFeatureRemoval.where(feature: feature).with_discarded.delete_all
   Entitlement::SubscriptionFeatureRemoval.where(privilege: feature.privileges.with_discarded).with_discarded.delete_all
   Entitlement::EntitlementValue.where(privilege: feature.privileges.with_discarded).with_discarded.delete_all
   Entitlement::Entitlement.where(feature: feature).with_discarded.delete_all
   feature.privileges.with_discarded.delete_all
-end
-
-# Created in 01_base.rb
-organization ||= Organization.find_by!(name: "Hooli")
-plan = Plan.find_by!(code: "standard_plan")
-
-sub = Subscription.find_by(external_id: "sub_entitlement_80554965")
-if sub.nil?
-  customer = Customer.create!(
-    organization:,
-    billing_entity: organization.billing_entities.first,
-    external_id: "cust_#{SecureRandom.hex}",
-    name: Faker::TvShows::SiliconValley.character,
-    country: Faker::Address.country_code,
-    email: Faker::Internet.email,
-    currency: "EUR"
-  )
-  sub = Subscription.create!(
-    organization:,
-    external_id: "sub_entitlement_80554965",
-    started_at: Time.current,
-    subscription_at: Time.current,
-    status: :active,
-    billing_time: :calendar,
-    plan:,
-    customer:
-  )
-
-  unless Subscription.where(external_id: "sub_entitlement_NO_OVERRIDE", customer:).exists?
-    Subscription.create!(
-      organization:,
-      external_id: "sub_entitlement_NO_OVERRIDE",
-      started_at: Time.current,
-      subscription_at: Time.current,
-      status: :active,
-      billing_time: :calendar,
-      plan:,
-      customer:
-    )
-  end
 end
 
 # == seats - feature with privilege and subscription overrides
