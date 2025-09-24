@@ -24,6 +24,38 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     end
   end
 
+  context "when filtering by currencies" do
+    let(:filters) { {currencies: ["USD"]} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
+  context "when filtering by countries" do
+    let(:filters) { {countries: ["US"]} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
+  context "when filtering by states" do
+    let(:filters) { {states: ["CA"]} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
+  context "when filtering by zipcodes" do
+    let(:filters) { {zipcodes: ["10115"]} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
   context "when search_term is provided and valid" do
     let(:search_term) { "valid_search_term" }
 
@@ -47,7 +79,7 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
 
       it "is invalid when #{filter} is set to #{value.inspect}" do
         expect(result.success?).to be(false)
-        expect(result.errors.to_h).to include(filters: {filter => error_message})
+        expect(result.errors.to_h).to match(filters: {filter => error_message})
       end
     end
 
@@ -55,5 +87,9 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     it_behaves_like "an invalid filter", :account_type, %w[random], {0 => ["must be one of: customer, partner"]}
     it_behaves_like "an invalid filter", :billing_entity_ids, SecureRandom.uuid, ["must be an array"]
     it_behaves_like "an invalid filter", :billing_entity_ids, %w[random], {0 => ["is in invalid format"]}
+    it_behaves_like "an invalid filter", :currencies, %w[random], {0 => [/^must be one of: AED,.*ZMW$/]}
+    it_behaves_like "an invalid filter", :countries, %w[random], {0 => [/^must be one of: AD, .*XK$/]}
+    it_behaves_like "an invalid filter", :states, SecureRandom.uuid, ["must be an array"]
+    it_behaves_like "an invalid filter", :zipcodes, SecureRandom.uuid, ["must be an array"]
   end
 end

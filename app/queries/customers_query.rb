@@ -11,7 +11,8 @@ class CustomersQuery < BaseQuery
     :active_subscriptions_count_to,
     :countries,
     :states,
-    :zipcodes
+    :zipcodes,
+    :currencies
   ]
 
   def call
@@ -24,8 +25,9 @@ class CustomersQuery < BaseQuery
     customers = with_account_type(customers) if filters.account_type.present?
     customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
     customers = with_active_subscriptions_range(customers) if filters.active_subscriptions_count_from.present? || filters.active_subscriptions_count_to.present?
-
     customers = with_billing_address_filter(customers) if billing_address_filter?
+    customers = with_currencies(customers) if filters.currencies.present?
+
     customers = customers.with_discarded if filters.with_deleted
 
     result.customers = customers
@@ -44,6 +46,10 @@ class CustomersQuery < BaseQuery
 
   def base_scope
     Customer.where(organization:).ransack(search_params)
+  end
+
+  def with_currencies(scope)
+    scope.where(currency: filters.currencies)
   end
 
   def with_billing_address_filter(scope)
