@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+return unless License.premium?
+
 # NOTE: If hooli is not found, run 01_base.rb first
 organization = Organization.find_by!(name: "Hooli")
 plan = Plan.find_by!(code: "premium_plan")
