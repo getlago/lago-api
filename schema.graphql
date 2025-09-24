@@ -2662,7 +2662,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
-  priority: Int!
+  priority: Int
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String

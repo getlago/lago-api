@@ -101,17 +101,17 @@ module Wallets
 
         wallets_data = wallets.map do |w|
           {
-            id:            w.id,
-            bm_limited:    w.limited_to_billable_metrics?,
-            type_limited:  w.limited_fee_types?,
-            bm_ids:        (w.wallet_targets.map(&:billable_metric_id).to_set if w.limited_to_billable_metrics?),
+            id: w.id,
+            bm_limited: w.limited_to_billable_metrics?,
+            type_limited: w.limited_fee_types?,
+            bm_ids: (w.wallet_targets.map(&:billable_metric_id).to_set if w.limited_to_billable_metrics?),
             allowed_types: (Array(w.allowed_fee_types).to_set if w.limited_fee_types?),
-            unrestricted:  (!w.limited_to_billable_metrics? && !w.limited_fee_types?)
+            unrestricted: !w.limited_to_billable_metrics? && !w.limited_fee_types?
           }
         end
 
         fees.each do |fee|
-          key   = fee.id || fee.object_id
+          key = fee.id || fee.object_id
           bm_id = fee.respond_to?(:charge) ? fee.charge&.billable_metric_id : nil
 
           next if fee_wallet.key?(key)
@@ -144,7 +144,7 @@ module Wallets
         owners = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
 
         all_fees.sum do |f|
-          owners[(f.id || f.object_id)] == wallet.id ? (f.amount_cents + f.taxes_amount_cents) : 0
+          (owners[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
         end
       end
     end
