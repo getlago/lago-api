@@ -29,7 +29,8 @@ RSpec.describe CustomersQuery, type: :query do
       state: "CA",
       zipcode: "90001",
       billing_entity: billing_entity1,
-      currency: "USD"
+      currency: "USD",
+      tax_identification_number: "US123456789"
     )
   end
   let(:customer_second) do
@@ -337,6 +338,24 @@ RSpec.describe CustomersQuery, type: :query do
       it "returns no customers" do
         expect(result).not_to be_success
         expect(result.error.messages[:filters][:currencies]).to match({0 => [/^must be one of: AED, AFN.*ZMW$/]})
+      end
+    end
+  end
+
+  context "when filtering by has_tax_identification_number" do
+    context "when filtering by true" do
+      let(:filters) { {has_tax_identification_number: true} }
+
+      it "returns only the customer with a tax identification number" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when filtering by false" do
+      let(:filters) { {has_tax_identification_number: false} }
+
+      it "returns only the customers without a tax identification number" do
+        expect(returned_ids).to match_array([customer_second.id, customer_third.id])
       end
     end
   end

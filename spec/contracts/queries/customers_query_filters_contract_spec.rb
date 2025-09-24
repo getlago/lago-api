@@ -56,6 +56,21 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     end
   end
 
+  context "when filtering by has_tax_identification_number" do
+    [
+      "true",
+      "false",
+      true,
+      false
+    ].each do |value|
+      let(:filters) { {has_tax_identification_number: value} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
+  end
+
   context "when search_term is provided and valid" do
     let(:search_term) { "valid_search_term" }
 
@@ -91,5 +106,10 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     it_behaves_like "an invalid filter", :countries, %w[random], {0 => [/^must be one of: AD, .*XK$/]}
     it_behaves_like "an invalid filter", :states, SecureRandom.uuid, ["must be an array"]
     it_behaves_like "an invalid filter", :zipcodes, SecureRandom.uuid, ["must be an array"]
+    it_behaves_like "an invalid filter", :has_tax_identification_number, SecureRandom.uuid, ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_tax_identification_number, "t", ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_tax_identification_number, "f", ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_tax_identification_number, 1, ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :has_tax_identification_number, 0, ["must be one of: true, false"]
   end
 end

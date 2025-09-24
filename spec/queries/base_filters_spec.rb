@@ -26,6 +26,15 @@ RSpec.describe BaseFilters do
     end
   end
 
+  describe "key?" do
+    it "returns whether the filter exists" do
+      expect(filters.key?(:value)).to be(true)
+      expect(filters.key?(:name)).to be(true)
+      expect(filters.key?(:unexpected)).to be(false)
+      expect(filters.key?(:not_defined)).to be(false)
+    end
+  end
+
   describe "[]" do
     it "returns the value of the filter" do
       expect(filters[:value]).to eq("test")

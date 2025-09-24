@@ -561,6 +561,44 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by has_tax_identification_number" do
+      let(:params) { {has_tax_identification_number: true} }
+      let!(:customer) { create(:customer, organization:, tax_identification_number: "1234567890") }
+
+      it "returns only the customer with a tax identification number" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id])
+      end
+
+      context "when filtering by false" do
+        let(:params) { {has_tax_identification_number: false} }
+
+        it "returns only the customer without a tax identification number" do
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+          expect(json[:customers].map { |customer| customer[:lago_id] }).not_to include(customer.id)
+        end
+      end
+
+      context "when filtering by invalid value" do
+        let(:params) { {has_tax_identification_number: "invalid"} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {has_tax_identification_number: ["must be one of: true, false"]}},
+            status: 422
+          })
+        end
+      end
+    end
+
     context "when filtering by search_term" do
       let(:params) { {search_term: "oo b"} }
       let!(:customer) { create(:customer, organization:, name: "Foo Bar") }

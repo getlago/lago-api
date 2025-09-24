@@ -12,7 +12,8 @@ class CustomersQuery < BaseQuery
     :countries,
     :states,
     :zipcodes,
-    :currencies
+    :currencies,
+    :has_tax_identification_number
   ]
 
   def call
@@ -27,6 +28,7 @@ class CustomersQuery < BaseQuery
     customers = with_active_subscriptions_range(customers) if filters.active_subscriptions_count_from.present? || filters.active_subscriptions_count_to.present?
     customers = with_billing_address_filter(customers) if billing_address_filter?
     customers = with_currencies(customers) if filters.currencies.present?
+    customers = with_has_tax_identification_number(customers) if filters.key?(:has_tax_identification_number)
 
     customers = customers.with_discarded if filters.with_deleted
 
@@ -71,6 +73,14 @@ class CustomersQuery < BaseQuery
       external_id_cont: search_term,
       email_cont: search_term
     }
+  end
+
+  def with_has_tax_identification_number(scope)
+    if ActiveModel::Type::Boolean.new.cast(filters.has_tax_identification_number)
+      scope.where.not(tax_identification_number: nil)
+    else
+      scope.where(tax_identification_number: nil)
+    end
   end
 
   def with_account_type(scope)
