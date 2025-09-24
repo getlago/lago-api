@@ -43,7 +43,8 @@ module Api
           states: [],
           zipcodes: [],
           billing_entity_codes: [],
-          account_type: []
+          account_type: [],
+          metadata: {}
         )
         search_term = filter_params.delete(:search_term)
         billing_entity_codes = filter_params.delete(:billing_entity_codes)

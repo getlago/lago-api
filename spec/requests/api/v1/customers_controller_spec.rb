@@ -599,6 +599,39 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by metadata" do
+      let(:params) { {metadata: {is_synced: "true", last_synced_at: "2025-01-01", first_synced_at: ""}} }
+      let!(:customer) { create(:customer, organization:) }
+
+      before do
+        create(:customer_metadata, customer:, key: "is_synced", value: "true")
+        create(:customer_metadata, customer:, key: "last_synced_at", value: "2025-01-01")
+      end
+
+      it "returns only the customer with the specified metadata" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id])
+      end
+
+      context "when filtering by invalid metadata" do
+        let(:params) { {metadata: {nested: {deeply: true}, is_synced: ["true"]}} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {metadata: {is_synced: ["must be a string"], nested: ["must be a string"]}}},
+            status: 422
+          })
+        end
+      end
+    end
+
     context "when filtering by search_term" do
       let(:params) { {search_term: "oo b"} }
       let!(:customer) { create(:customer, organization:, name: "Foo Bar") }
