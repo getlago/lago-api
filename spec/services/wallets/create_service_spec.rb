@@ -18,6 +18,7 @@ RSpec.describe Wallets::CreateService do
     let(:params) do
       {
         name: "New Wallet",
+        priority: 5,
         customer:,
         organization_id: organization.id,
         currency: "EUR",
@@ -41,6 +42,7 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.customer_id).to eq(customer.id)
         expect(wallet.name).to eq("New Wallet")
+        expect(wallet.priority).to eq(5)
         expect(wallet.currency).to eq("EUR")
         expect(wallet.rate_amount).to eq(5.0)
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
@@ -83,6 +85,25 @@ RSpec.describe Wallets::CreateService do
         expect { service_result }.not_to change(organization.wallets, :count)
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:paid_credits]).to eq(["amount_above_maximum"])
+      end
+    end
+
+    context "when priority is not set" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00"
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.priority).to eq(50)
       end
     end
 
