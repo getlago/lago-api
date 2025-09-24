@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Queries::PaymentReceiptsQueryFiltersContract, type: :contract do
+RSpec.describe Queries::PaymentReceiptsQueryFiltersContract do
   subject(:result) { described_class.new.call(filters:) }
 
   let(:filters) { {} }

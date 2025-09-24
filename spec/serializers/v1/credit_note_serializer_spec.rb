@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::CreditNoteSerializer, type: :serializer do
+RSpec.describe V1::CreditNoteSerializer do
   subject(:serializer) do
     described_class.new(credit_note, root_name: "credit_note", includes: %i[customer items error_details])
   end

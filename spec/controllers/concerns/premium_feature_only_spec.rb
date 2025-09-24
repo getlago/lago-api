@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PremiumFeatureOnly, type: :controller do
+RSpec.describe PremiumFeatureOnly do
   include ApiHelper
 
   # rubocop:disable RSpec/DescribedClass
