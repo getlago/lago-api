@@ -411,19 +411,19 @@ html
           .body-2 = billing_entity.email
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
-          .body-2 = display_name
-          .body-2 = billing_address[:address_line1]
-          .body-2 = billing_address[:address_line2]
+          .body-2 = customer_display_name
+          .body-2 = customer_address_line1
+          .body-2 = customer_address_line2
           .body-2
             span
-              = billing_address[:zipcode]
-            - if billing_address[:zipcode].present? && billing_address[:city].present?
+              = customer_zipcode
+            - if customer_zipcode.present? && customer_city.present?
               span
                 | , &nbsp;
             span
-              = billing_address[:city]
-          .body-2 = billing_address[:state]
-          .body-2 = ISO3166::Country.new(billing_address[:country])&.common_name
+              = customer_city
+          .body-2 = customer_state
+          .body-2 = ISO3166::Country.new(customer_country)&.common_name
           .body-2 = customer_email
 
       .mb-24

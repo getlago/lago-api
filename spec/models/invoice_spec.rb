@@ -1941,7 +1941,7 @@ RSpec.describe Invoice do
       end
 
       it "returns snapshotted customer name even after customer changes" do
-        expect(invoice.display_name).to eq("Original Name")
+        expect(invoice.customer_display_name).to eq("Original Name")
         expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
       end
     end
@@ -1955,7 +1955,7 @@ RSpec.describe Invoice do
       end
 
       it "preserves nil value from finalization instead of using updated value" do
-        expect(invoice.display_name).to be_nil
+        expect(invoice.customer_display_name).to be_nil
         expect(customer.reload.name).to eq("Name Added Later")
       end
     end
