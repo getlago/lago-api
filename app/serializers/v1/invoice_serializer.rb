@@ -33,6 +33,7 @@ module V1
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         voided_at: model.voided_at&.iso8601,
+        customer_data_snapshotted_at: model.customer_data_snapshotted_at&.iso8601,
         customer_name: model.customer_name,
         customer_firstname: model.customer_firstname,
         customer_lastname: model.customer_lastname,
@@ -76,7 +77,7 @@ module V1
           model.customer,
           includes: include?(:integration_customers) ? [:integration_customers] : []
         ).serialize
-     }
+      }
     end
 
     def subscriptions

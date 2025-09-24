@@ -2877,6 +2877,7 @@ CREATE TABLE public.invoices (
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
+    customer_data_snapshotted_at timestamp(6) without time zone,
     customer_name character varying,
     customer_legal_name character varying,
     customer_legal_number character varying,
@@ -9857,12 +9858,11 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+\unrestrict EAZtGY9nJ5eliBbatKj8t8adnouLcyoDmwxXEd62xxHNOCTrLFfcwoqXqLjiyus
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20250922113902'),
 ('20250922113901'),
 ('20250919124523'),
 ('20250919124037'),

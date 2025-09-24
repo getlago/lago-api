@@ -413,71 +413,71 @@ class Invoice < ApplicationRecord
   end
 
   def customer_display_name
-    self[:customer_name] || customer.display_name
+    customer_data_snapshotted? ? self[:customer_name] : customer.display_name
   end
 
   def customer_address_line1
-    self[:customer_address_line1] || customer.address_line1
+    customer_data_snapshotted? ? self[:customer_address_line1] : customer.address_line1
   end
 
   def customer_address_line2
-    self[:customer_address_line2] || customer.address_line2
+    customer_data_snapshotted? ? self[:customer_address_line2] : customer.address_line2
   end
 
   def customer_city
-    self[:customer_city] || customer.city
+    customer_data_snapshotted? ? self[:customer_city] : customer.city
   end
 
   def customer_zipcode
-    self[:customer_zipcode] || customer.zipcode
+    customer_data_snapshotted? ? self[:customer_zipcode] : customer.zipcode
   end
 
   def customer_state
-    self[:customer_state] || customer.state
+    customer_data_snapshotted? ? self[:customer_state] : customer.state
   end
 
   def customer_country
-    self[:customer_country] || customer.country
+    customer_data_snapshotted? ? self[:customer_country] : customer.country
   end
 
   def customer_email
-    self[:customer_email] || customer.email
+    customer_data_snapshotted? ? self[:customer_email] : customer.email
   end
 
   def customer_legal_name
-    self[:customer_legal_name] || customer.legal_name
+    customer_data_snapshotted? ? self[:customer_legal_name] : customer.legal_name
   end
 
   def customer_legal_number
-    self[:customer_legal_number] || customer.legal_number
+    customer_data_snapshotted? ? self[:customer_legal_number] : customer.legal_number
   end
 
   def customer_tax_identification_number
-    self[:customer_tax_identification_number] || customer.tax_identification_number
+    customer_data_snapshotted? ? self[:customer_tax_identification_number] : customer.tax_identification_number
   end
 
   def customer_phone
-    self[:customer_phone] || customer.phone
+    customer_data_snapshotted? ? self[:customer_phone] : customer.phone
   end
 
   def customer_url
-    self[:customer_url] || customer.url
+    customer_data_snapshotted? ? self[:customer_url] : customer.url
   end
 
   def customer_timezone
-    self[:customer_timezone] || customer.timezone
+    customer_data_snapshotted? ? self[:customer_timezone] : customer.timezone
   end
 
   def customer_firstname
-    self[:customer_firstname] || customer.firstname
+    customer_data_snapshotted? ? self[:customer_firstname] : customer.firstname
   end
 
   def customer_lastname
-    self[:customer_lastname] || customer.lastname
+    customer_data_snapshotted? ? self[:customer_lastname] : customer.lastname
   end
 
   def customer_metadata
-    self[:customer_metadata] || customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
+    customer_data_snapshotted? ? (self[:customer_metadata] || []) : customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
   end
 
   private
@@ -603,6 +603,8 @@ class Invoice < ApplicationRecord
   def snapshot_customer_data
     return unless status_changed_to_finalized?
 
+    self.customer_data_snapshotted_at = Time.current
+
     self.customer_name = customer.name
     self.customer_legal_name = customer.legal_name
     self.customer_legal_number = customer.legal_number
@@ -638,6 +640,7 @@ end
 #  customer_address_line2                  :string
 #  customer_city                           :string
 #  customer_country                        :string
+#  customer_data_snapshotted_at            :datetime
 #  customer_email                          :string
 #  customer_firstname                      :string
 #  customer_lastname                       :string

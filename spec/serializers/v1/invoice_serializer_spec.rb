@@ -10,6 +10,7 @@ RSpec.describe ::V1::InvoiceSerializer do
   let(:invoice) do
     create(
       :invoice,
+      customer_data_snapshotted_at: Time.current,
       customer_name: "John Doe",
       customer_firstname: "John",
       customer_lastname: "Doe",
@@ -80,6 +81,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         "self_billed" => invoice.self_billed,
         "created_at" => invoice.created_at.iso8601,
         "updated_at" => invoice.updated_at.iso8601,
+        "customer_data_snapshotted_at" => invoice.customer_data_snapshotted_at.iso8601,
         "customer_name" => invoice.customer_name,
         "customer_firstname" => invoice.customer_firstname,
         "customer_lastname" => invoice.customer_lastname,

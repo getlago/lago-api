@@ -1940,8 +1940,23 @@ RSpec.describe Invoice do
         customer.update!(name: "Updated Name")
       end
 
-      it "returns snapshotted customer display name" do
-        expect(invoice.customer_display_name).to eq("Original Name")
+      it "returns snapshotted customer name even after customer changes" do
+        expect(invoice.display_name).to eq("Original Name")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer name was nil at finalization time" do
+      let(:customer) { create(:customer, name: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(name: "Name Added Later")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.display_name).to be_nil
+        expect(customer.reload.name).to eq("Name Added Later")
       end
     end
   end
@@ -1965,8 +1980,23 @@ RSpec.describe Invoice do
         customer.update!(email: "updated@example.com")
       end
 
-      it "returns snapshotted customer email" do
+      it "returns snapshotted customer email even after customer changes" do
         expect(invoice.customer_email).to eq("original@example.com")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer email was nil at finalization time" do
+      let(:customer) { create(:customer, email: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(email: "email@added-later.com")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_email).to be_nil
+        expect(customer.reload.email).to eq("email@added-later.com")
       end
     end
   end
@@ -1992,6 +2022,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer legal name" do
         expect(invoice.customer_legal_name).to eq("Original Legal Name")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer legal name was nil at finalization time" do
+      let(:customer) { create(:customer, legal_name: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(legal_name: "Legal Name Added Later")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_legal_name).to be_nil
+        expect(customer.reload.legal_name).to eq("Legal Name Added Later")
       end
     end
   end
@@ -2017,6 +2062,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer legal number" do
         expect(invoice.customer_legal_number).to eq("123456789")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer legal number was nil at finalization time" do
+      let(:customer) { create(:customer, legal_number: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(legal_number: "987654321")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_legal_number).to be_nil
+        expect(customer.reload.legal_number).to eq("987654321")
       end
     end
   end
@@ -2042,6 +2102,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer tax identification number" do
         expect(invoice.customer_tax_identification_number).to eq("FR123456789")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer tax identification number was nil at finalization time" do
+      let(:customer) { create(:customer, tax_identification_number: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(tax_identification_number: "FR987654321")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_tax_identification_number).to be_nil
+        expect(customer.reload.tax_identification_number).to eq("FR987654321")
       end
     end
   end
@@ -2067,6 +2142,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer phone" do
         expect(invoice.customer_phone).to eq("+33123456789")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer phone was nil at finalization time" do
+      let(:customer) { create(:customer, phone: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(phone: "+33987654321")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_phone).to be_nil
+        expect(customer.reload.phone).to eq("+33987654321")
       end
     end
   end
@@ -2092,6 +2182,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer url" do
         expect(invoice.customer_url).to eq("https://original.example.com")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer url was nil at finalization time" do
+      let(:customer) { create(:customer, url: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(url: "https://updated.example.com")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_url).to be_nil
+        expect(customer.reload.url).to eq("https://updated.example.com")
       end
     end
   end
@@ -2117,6 +2222,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer timezone" do
         expect(invoice.customer_timezone).to eq("Europe/Paris")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer timezone was nil at finalization time" do
+      let(:customer) { create(:customer, timezone: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(timezone: "America/New_York")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_timezone).to be_nil
+        expect(customer.reload.timezone).to eq("America/New_York")
       end
     end
   end
@@ -2142,6 +2262,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer firstname" do
         expect(invoice.customer_firstname).to eq("Original")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer firstname was nil at finalization time" do
+      let(:customer) { create(:customer, firstname: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(firstname: "Updated")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_firstname).to be_nil
+        expect(customer.reload.firstname).to eq("Updated")
       end
     end
   end
@@ -2167,6 +2302,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer lastname" do
         expect(invoice.customer_lastname).to eq("Customer")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer lastname was nil at finalization time" do
+      let(:customer) { create(:customer, lastname: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(lastname: "Updated")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_lastname).to be_nil
+        expect(customer.reload.lastname).to eq("Updated")
       end
     end
   end
@@ -2192,6 +2342,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted billing address" do
         expect(invoice.customer_address_line1).to eq("77 rue du Chemin Vert")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer address was nil at finalization time" do
+      let(:customer) { create(:customer, address_line1: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(address_line1: "Address Added Later")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_address_line1).to be_nil
+        expect(customer.reload.address_line1).to eq("Address Added Later")
       end
     end
   end
@@ -2217,6 +2382,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted customer billing address line2" do
         expect(invoice.customer_address_line2).to eq("Apt 5B")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer address line2 was nil at finalization time" do
+      let(:customer) { create(:customer, address_line2: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(address_line2: "Apt 195W")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_address_line2).to be_nil
+        expect(customer.reload.address_line2).to eq("Apt 195W")
       end
     end
   end
@@ -2242,6 +2422,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted billing city" do
         expect(invoice.customer_city).to eq("Paris")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer city was nil at finalization time" do
+      let(:customer) { create(:customer, city: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(city: "Lyon")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_city).to be_nil
+        expect(customer.reload.city).to eq("Lyon")
       end
     end
   end
@@ -2267,6 +2462,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted billing zipcode" do
         expect(invoice.customer_zipcode).to eq("75011")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer zipcode was nil at finalization time" do
+      let(:customer) { create(:customer, zipcode: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(zipcode: "69001")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_zipcode).to be_nil
+        expect(customer.reload.zipcode).to eq("69001")
       end
     end
   end
@@ -2292,6 +2502,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted billing state" do
         expect(invoice.customer_state).to eq("Ile-de-France")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer state was nil at finalization time" do
+      let(:customer) { create(:customer, state: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(state: "Auvergne-Rhône-Alpes")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_state).to be_nil
+        expect(customer.reload.state).to eq("Auvergne-Rhône-Alpes")
       end
     end
   end
@@ -2317,6 +2542,21 @@ RSpec.describe Invoice do
 
       it "returns snapshotted billing country" do
         expect(invoice.customer_country).to eq("FR")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer country was nil at finalization time" do
+      let(:customer) { create(:customer, country: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(country: "DE")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_country).to be_nil
+        expect(customer.reload.country).to eq("DE")
       end
     end
   end
@@ -2385,6 +2625,8 @@ RSpec.describe Invoice do
     it "populates all customer snapshot fields when finalized" do
       invoice.finalized!
       invoice.reload
+
+      expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
 
       expect(invoice[:customer_name]).to eq("Original Name")
       expect(invoice[:customer_email]).to eq("original@example.com")

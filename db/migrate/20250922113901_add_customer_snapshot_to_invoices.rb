@@ -4,6 +4,7 @@ class AddCustomerSnapshotToInvoices < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def change
+    add_column :invoices, :customer_data_snapshotted_at, :datetime
     add_column :invoices, :customer_name, :string
     add_column :invoices, :customer_legal_name, :string
     add_column :invoices, :customer_legal_number, :string
