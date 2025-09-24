@@ -13,7 +13,8 @@ module Wallets
 
       def call
         @total_usage_amount_cents = calculate_total_usage_with_limitation
-        @total_billed_usage_amount_cents = usage_amount_cents.sum { |e| e[:billed_usage_amount_cents] }
+        @total_billed_usage_amount_cents = calculate_total_billed_usage_amount_cents
+
         # Before this service is called, the wallet is already loaded in the memory. If while calculating current usage we received
         # a pay_in_advance_fee, wallet will be updated by Wallets::Balance::DecreaseService and current wallet version will throw an
         # `Attempted to update a stale object` error. To avoid this, we reload the wallet before updating it.
@@ -31,6 +32,61 @@ module Wallets
       attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents, :allocation_rules
 
       delegate :customer, to: :wallet
+
+      def calculate_total_billed_usage_amount_cents
+        usage_amount_cents.sum do |e|
+          billed_progressive_invoices_amount_cents(e[:billed_progressive_invoice_subscriptions]) +
+            billed_pay_in_advance_amount_cents(e[:invoice])
+        end
+      end
+
+      def billed_progressive_invoices_amount_cents(invoice_subscriptions)
+        fees = progressive_billing_fees(invoice_subscriptions)
+
+        fees.sum do |fee|
+          fee.taxes_amount_cents + fee.sub_total_excluding_taxes_amount_cents
+        end
+      end
+
+      def progressive_billing_fees(invoice_subscriptions)
+        fees = invoice_subscriptions.flat_map { it.invoice.fees }
+        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
+
+        applicable_fees(fees, wallets_applicable_on_fees)
+      end
+
+      def applicable_fees(fees, fee_map)
+        fees.select { |fee| fee_map[(fee.id || fee.object_id)] == wallet.id }
+      end
+
+      def invoice_pay_in_advance_fees(invoice)
+        fees = invoice.fees.select { |f| f.charge.pay_in_advance? }
+        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
+
+        applicable_fees(fees, wallets_applicable_on_fees)
+      end
+
+      def draft_invoices_fees
+        fees = wallet.customer.invoices.draft.where.not(total_amount_cents: [0, nil]).flat_map(&:fees)
+        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
+
+        applicable_fees(fees, wallets_applicable_on_fees)
+      end
+
+      def draft_invoices_total_amount_cents
+        fees = draft_invoices_fees
+
+        fees.sum do |fee|
+          fee.amount_cents + fee.taxes_amount_cents
+        end
+      end
+
+      def billed_pay_in_advance_amount_cents(invoice)
+        paid_in_advance_fees = invoice_pay_in_advance_fees(invoice)
+        # Invoice that is returned from CustomerUsageService includes the taxes in total_usage
+        # so if the fees ae already paid, we should exclude fees AND their taxes
+        paid_in_advance_fees.sum(&:amount_cents) + paid_in_advance_fees.sum(&:taxes_amount_cents)
+      end
 
       def wallet_update_params
         params = {
@@ -56,7 +112,7 @@ module Wallets
 
       def ongoing_usage_balance_cents
         @ongoing_usage_balance_cents ||= total_usage_amount_cents +
-          wallet.customer.invoices.draft.sum(:total_amount_cents) -
+          draft_invoices_total_amount_cents -
           total_billed_usage_amount_cents
       end
 
@@ -90,12 +146,11 @@ module Wallets
 
       def calculate_total_usage_with_limitation
         all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
-        return 0 if all_fees.empty?
-
         wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
+        fees = applicable_fees(all_fees, wallets_applicable_on_fees)
 
-        all_fees.sum do |f|
-          (wallets_applicable_on_fees[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
+        fees.sum do |fee|
+          fee.amount_cents + fee.taxes_amount_cents
         end
       end
     end
