@@ -50,9 +50,8 @@ RSpec.describe Wallets::ValidateService do
     context "when customer already has a wallet" do
       before { create(:wallet, customer:) }
 
-      it "returns false and result has errors" do
-        expect(validate_service).not_to be_valid
-        expect(result.error.messages[:customer]).to eq(["wallet_already_exists"])
+      it "returns true without errors" do
+        expect(validate_service).to be_valid
       end
     end
 

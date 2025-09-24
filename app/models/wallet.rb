@@ -27,6 +27,7 @@ class Wallet < ApplicationRecord
   validates :invoice_requires_successful_payment, exclusion: [nil]
   validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
+  validates :priority, inclusion: {in: 1..50}
   validate :paid_top_up_max_greater_than_or_equal_min
 
   STATUSES = [
@@ -112,6 +113,7 @@ end
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint
 #  payment_method_type                 :enum             default("provider"), not null
+#  priority                            :integer          default(50), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null

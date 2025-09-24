@@ -29,6 +29,8 @@ module Wallets
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents]
       }
 
+      attributes[:priority] = params[:priority] if params.key?(:priority)
+
       if params.key?(:invoice_requires_successful_payment)
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
       end
