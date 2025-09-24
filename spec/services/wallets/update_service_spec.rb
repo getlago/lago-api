@@ -292,6 +292,106 @@ RSpec.describe Wallets::UpdateService do
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
+
+      describe "paid credits validation" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule&.id,
+              method:,
+              paid_credits:,
+              trigger: "interval",
+              interval: "weekly",
+              granted_credits: "105",
+              ignore_paid_top_up_limits:,
+              target_ongoing_balance: "5"
+
+            }
+          ]
+        end
+
+        let(:method) { "fixed" }
+        let(:paid_credits) { "10" }
+        let(:ignore_paid_top_up_limits) { false }
+        let(:recurring_transaction_rule) { nil }
+
+        context "when method is not fixed" do
+          let(:method) { "target" }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits is 0" do
+          let(:paid_credits) { "0.000005" }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits exceeds wallet limits" do
+          let(:paid_credits) { "1000" }
+
+          before { wallet.update!(paid_top_up_max_amount_cents: 1_00) }
+
+          it "fails with generic error when amount violates wallet limits" do
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
+        end
+
+        context "when paid credits exceeds wallet limits but ignore limits flag is passed" do
+          let(:paid_credits) { "1000" }
+          let(:ignore_paid_top_up_limits) { true }
+
+          before { wallet.update!(paid_top_up_max_amount_cents: 1_00) }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits is within wallet limits" do
+          let(:paid_credits) { "105" }
+          let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+
+          before { wallet.update!(paid_top_up_min_amount_cents: 1_00) }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { recurring_transaction_rule.reload.attributes }
+            expect(result).to be_success
+          end
+        end
+
+        context "when rule exists and listed in params" do
+          let(:params) do
+            {
+              id: wallet.id,
+              name: "new name",
+              expiration_at:,
+              paid_top_up_min_amount_cents: 1000
+            }
+          end
+
+          before do
+            create(:recurring_transaction_rule, wallet:, paid_credits: 1)
+          end
+
+          it "fails with generic error when amount violates wallet limits" do
+            rule = wallet.reload.recurring_transaction_rules.sole
+            expect { result }.not_to change { rule.reload.attributes }
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
+        end
+      end
     end
 
     context "when recurring rule paid credits exceeds wallet limits" do
