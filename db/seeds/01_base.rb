@@ -19,9 +19,13 @@ organization.update!({
   invoice_footer: "Hooli is a fictional company."
 })
 BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
-ApiKey.find_or_create_by!(organization:, value: "lago_key-hooli-1234567890")
 Membership.find_or_create_by!(user:, organization:, role: :admin)
 WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook/#{organization.id}")
+
+organization.api_keys.destroy_all
+organization.api_keys.create!(name: "Expired Key", expires_at: 1.day.ago, last_used_at: 36.hours.ago, permissions: {"customer" => ["read", "write"]})
+k = organization.api_keys.create!(name: "Hooli Key", permissions: ApiKey.default_permissions)
+k.update_columns(value: "lago_key-hooli-1234567890") # rubocop:disable Rails/SkipsModelValidations
 
 # == BillableMetrics
 

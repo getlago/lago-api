@@ -30,8 +30,6 @@ if License.premium?
     ]
   }).alert
 
-  pp alert.inspect
-
   triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
     current_value: 51,
     previous_value: 8,
