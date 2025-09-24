@@ -461,6 +461,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached
       travel_to time_0 + 10.days do
         ingest_event(subscription, 10)
+        # ingest_event(subscription, 10, another_billable_metric.code)
         perform_usage_update
         expect(customer.invoices.count).to eq(1)
         expect(subscription.invoices.count).to eq(1)
