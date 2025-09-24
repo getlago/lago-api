@@ -5,7 +5,7 @@ class AddCustomerSnapshotToInvoices < ActiveRecord::Migration[8.0]
 
   def change
     add_column :invoices, :customer_data_snapshotted_at, :datetime
-    add_column :invoices, :customer_name, :string
+    add_column :invoices, :customer_display_name, :string
     add_column :invoices, :customer_legal_name, :string
     add_column :invoices, :customer_legal_number, :string
     add_column :invoices, :customer_email, :string
@@ -18,7 +18,7 @@ class AddCustomerSnapshotToInvoices < ActiveRecord::Migration[8.0]
     add_column :invoices, :customer_phone, :string
     add_column :invoices, :customer_url, :string
     add_column :invoices, :customer_tax_identification_number, :string
-    add_column :invoices, :customer_timezone, :string
+    add_column :invoices, :customer_applicable_timezone, :string
     add_column :invoices, :customer_firstname, :string
     add_column :invoices, :customer_lastname, :string
   end

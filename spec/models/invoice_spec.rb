@@ -1935,19 +1935,19 @@ RSpec.describe Invoice do
     end
 
     context "when invoice is finalized" do
-      before do
-        invoice.finalized!
-        customer.update!(name: "Updated Name")
-      end
+      before { invoice.finalized! }
 
       it "returns snapshotted customer name even after customer changes" do
-        expect(invoice.customer_display_name).to eq("Original Name")
+        snapshotted_customer_display_name = customer.display_name
+        customer.update!(name: "Updated Name")
+
+        expect(invoice.reload.customer_display_name).to eq(snapshotted_customer_display_name)
         expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
       end
     end
 
     context "when customer name was nil at finalization time" do
-      let(:customer) { create(:customer, name: nil) }
+      let(:customer) { create(:customer, name: nil, firstname: nil, lastname: nil, legal_name: nil) }
 
       before do
         invoice.finalized!
@@ -1955,8 +1955,8 @@ RSpec.describe Invoice do
       end
 
       it "preserves nil value from finalization instead of using updated value" do
-        expect(invoice.customer_display_name).to be_nil
-        expect(customer.reload.name).to eq("Name Added Later")
+        expect(invoice.customer_display_name).to eq("")
+        expect(customer.reload.display_name).to eq("Name Added Later")
       end
     end
   end
@@ -2201,7 +2201,7 @@ RSpec.describe Invoice do
     end
   end
 
-  describe "#customer_timezone" do
+  describe "#customer_applicable_timezone" do
     let(:invoice) { create(:invoice, :draft, customer:) }
     let(:customer) do
       create(
@@ -2210,8 +2210,8 @@ RSpec.describe Invoice do
       )
     end
 
-    it "returns customer timezone" do
-      expect(invoice.customer_timezone).to eq("Europe/Paris")
+    it "returns customer applicable timezone" do
+      expect(invoice.customer_applicable_timezone).to eq("Europe/Paris")
     end
 
     context "when invoice is finalized" do
@@ -2220,13 +2220,13 @@ RSpec.describe Invoice do
         customer.update!(timezone: "America/New_York")
       end
 
-      it "returns snapshotted customer timezone" do
-        expect(invoice.customer_timezone).to eq("Europe/Paris")
+      it "returns snapshotted customer applicable timezone" do
+        expect(invoice.customer_applicable_timezone).to eq("Europe/Paris")
         expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
       end
     end
 
-    context "when customer timezone was nil at finalization time" do
+    context "when customer applicable timezone was nil at finalization time" do
       let(:customer) { create(:customer, timezone: nil) }
 
       before do
@@ -2235,8 +2235,8 @@ RSpec.describe Invoice do
       end
 
       it "preserves nil value from finalization instead of using updated value" do
-        expect(invoice.customer_timezone).to be_nil
-        expect(customer.reload.timezone).to eq("America/New_York")
+        expect(invoice.customer_applicable_timezone).to eq("UTC")
+        expect(customer.reload.applicable_timezone).to eq("America/New_York")
       end
     end
   end
@@ -2592,14 +2592,14 @@ RSpec.describe Invoice do
 
       expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
 
-      expect(invoice[:customer_name]).to eq("Original Name")
+      expect(invoice[:customer_display_name]).to eq(customer.display_name)
       expect(invoice[:customer_email]).to eq("original@example.com")
       expect(invoice[:customer_legal_name]).to eq("Original Legal Name")
       expect(invoice[:customer_legal_number]).to eq("123456789")
       expect(invoice[:customer_tax_identification_number]).to eq("FR123456789")
       expect(invoice[:customer_phone]).to eq("+33123456789")
       expect(invoice[:customer_url]).to eq("https://original.example.com")
-      expect(invoice[:customer_timezone]).to eq("Europe/Paris")
+      expect(invoice[:customer_applicable_timezone]).to eq("Europe/Paris")
       expect(invoice[:customer_firstname]).to eq("Original")
       expect(invoice[:customer_lastname]).to eq("Customer")
       expect(invoice[:customer_address_line1]).to eq("77 rue du Chemin Vert")

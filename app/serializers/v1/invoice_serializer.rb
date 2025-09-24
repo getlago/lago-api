@@ -34,14 +34,14 @@ module V1
         updated_at: model.updated_at.iso8601,
         voided_at: model.voided_at&.iso8601,
         customer_data_snapshotted_at: model.customer_data_snapshotted_at&.iso8601,
-        customer_name: model.customer_name,
+        customer_display_name: model.customer_display_name,
         customer_firstname: model.customer_firstname,
         customer_lastname: model.customer_lastname,
         customer_email: model.customer_email,
         customer_phone: model.customer_phone,
         customer_url: model.customer_url,
         customer_tax_identification_number: model.customer_tax_identification_number,
-        customer_timezone: model.customer_timezone,
+        customer_applicable_timezone: model.customer_applicable_timezone,
         customer_address_line1: model.customer_address_line1,
         customer_address_line2: model.customer_address_line2,
         customer_city: model.customer_city,
@@ -49,7 +49,7 @@ module V1
         customer_zipcode: model.customer_zipcode,
         customer_country: model.customer_country,
         customer_legal_name: model.customer_legal_name,
-        customer_legal_number: model.customer_legal_number,
+        customer_legal_number: model.customer_legal_number
       }
 
       payload.merge!(customer) if include?(:customer)

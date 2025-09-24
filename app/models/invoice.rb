@@ -413,67 +413,67 @@ class Invoice < ApplicationRecord
   end
 
   def customer_display_name
-    customer_data_snapshotted? ? self[:customer_name] : customer.display_name
+    customer_data_snapshotted_at? ? self[:customer_display_name] : customer.display_name
   end
 
   def customer_address_line1
-    customer_data_snapshotted? ? self[:customer_address_line1] : customer.address_line1
+    customer_data_snapshotted_at? ? self[:customer_address_line1] : customer.address_line1
   end
 
   def customer_address_line2
-    customer_data_snapshotted? ? self[:customer_address_line2] : customer.address_line2
+    customer_data_snapshotted_at? ? self[:customer_address_line2] : customer.address_line2
   end
 
   def customer_city
-    customer_data_snapshotted? ? self[:customer_city] : customer.city
+    customer_data_snapshotted_at? ? self[:customer_city] : customer.city
   end
 
   def customer_zipcode
-    customer_data_snapshotted? ? self[:customer_zipcode] : customer.zipcode
+    customer_data_snapshotted_at? ? self[:customer_zipcode] : customer.zipcode
   end
 
   def customer_state
-    customer_data_snapshotted? ? self[:customer_state] : customer.state
+    customer_data_snapshotted_at? ? self[:customer_state] : customer.state
   end
 
   def customer_country
-    customer_data_snapshotted? ? self[:customer_country] : customer.country
+    customer_data_snapshotted_at? ? self[:customer_country] : customer.country
   end
 
   def customer_email
-    customer_data_snapshotted? ? self[:customer_email] : customer.email
+    customer_data_snapshotted_at? ? self[:customer_email] : customer.email
   end
 
   def customer_legal_name
-    customer_data_snapshotted? ? self[:customer_legal_name] : customer.legal_name
+    customer_data_snapshotted_at? ? self[:customer_legal_name] : customer.legal_name
   end
 
   def customer_legal_number
-    customer_data_snapshotted? ? self[:customer_legal_number] : customer.legal_number
+    customer_data_snapshotted_at? ? self[:customer_legal_number] : customer.legal_number
   end
 
   def customer_tax_identification_number
-    customer_data_snapshotted? ? self[:customer_tax_identification_number] : customer.tax_identification_number
+    customer_data_snapshotted_at? ? self[:customer_tax_identification_number] : customer.tax_identification_number
   end
 
   def customer_phone
-    customer_data_snapshotted? ? self[:customer_phone] : customer.phone
+    customer_data_snapshotted_at? ? self[:customer_phone] : customer.phone
   end
 
   def customer_url
-    customer_data_snapshotted? ? self[:customer_url] : customer.url
+    customer_data_snapshotted_at? ? self[:customer_url] : customer.url
   end
 
-  def customer_timezone
-    customer_data_snapshotted? ? self[:customer_timezone] : customer.timezone
+  def customer_applicable_timezone
+    customer_data_snapshotted_at? ? self[:customer_applicable_timezone] : customer.applicable_timezone
   end
 
   def customer_firstname
-    customer_data_snapshotted? ? self[:customer_firstname] : customer.firstname
+    customer_data_snapshotted_at? ? self[:customer_firstname] : customer.firstname
   end
 
   def customer_lastname
-    customer_data_snapshotted? ? self[:customer_lastname] : customer.lastname
+    customer_data_snapshotted_at? ? self[:customer_lastname] : customer.lastname
   end
 
   private
@@ -601,14 +601,14 @@ class Invoice < ApplicationRecord
 
     self.customer_data_snapshotted_at = Time.current
 
-    self.customer_name = customer.name
+    self.customer_display_name = customer.display_name
     self.customer_legal_name = customer.legal_name
     self.customer_legal_number = customer.legal_number
     self.customer_email = customer.email
     self.customer_phone = customer.phone
     self.customer_url = customer.url
     self.customer_tax_identification_number = customer.tax_identification_number
-    self.customer_timezone = customer.timezone
+    self.customer_applicable_timezone = customer.applicable_timezone
     self.customer_firstname = customer.firstname
     self.customer_lastname = customer.lastname
 
@@ -632,19 +632,19 @@ end
 #  currency                                :string
 #  customer_address_line1                  :string
 #  customer_address_line2                  :string
+#  customer_applicable_timezone            :string
 #  customer_city                           :string
 #  customer_country                        :string
 #  customer_data_snapshotted_at            :datetime
+#  customer_display_name                   :string
 #  customer_email                          :string
 #  customer_firstname                      :string
 #  customer_lastname                       :string
 #  customer_legal_name                     :string
 #  customer_legal_number                   :string
-#  customer_name                           :string
 #  customer_phone                          :string
 #  customer_state                          :string
 #  customer_tax_identification_number      :string
-#  customer_timezone                       :string
 #  customer_url                            :string
 #  customer_zipcode                        :string
 #  fees_amount_cents                       :bigint           default(0), not null

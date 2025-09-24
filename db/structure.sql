@@ -2878,7 +2878,7 @@ CREATE TABLE public.invoices (
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
     customer_data_snapshotted_at timestamp(6) without time zone,
-    customer_name character varying,
+    customer_display_name character varying,
     customer_legal_name character varying,
     customer_legal_number character varying,
     customer_email character varying,
@@ -2891,7 +2891,7 @@ CREATE TABLE public.invoices (
     customer_phone character varying,
     customer_url character varying,
     customer_tax_identification_number character varying,
-    customer_timezone character varying,
+    customer_applicable_timezone character varying,
     customer_firstname character varying,
     customer_lastname character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))

@@ -126,7 +126,11 @@ class Customer < ApplicationRecord
     []
   end
 
+  attr_writer :display_name
+
   def display_name(prefer_legal_name: true)
+    return @display_name if defined?(@display_name)
+
     names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
 
     if firstname.present? || lastname.present?

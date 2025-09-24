@@ -385,14 +385,14 @@ RSpec.describe Resolvers::InvoiceResolver do
         :invoice,
         customer:,
         organization:,
-        customer_name: "John Doe",
+        customer_display_name: "John Doe",
         customer_firstname: "John",
         customer_lastname: "Doe",
         customer_email: "john.doe@example.com",
         customer_phone: "+1234567890",
         customer_url: "https://john.doe.com",
         customer_tax_identification_number: "1234567890",
-        customer_timezone: "Europe/Paris",
+        customer_applicable_timezone: "Europe/Paris",
         customer_address_line1: "123 Main St",
         customer_address_line2: "Apt 1",
         customer_city: "New York",
@@ -400,7 +400,8 @@ RSpec.describe Resolvers::InvoiceResolver do
         customer_zipcode: "10001",
         customer_country: "US",
         customer_legal_name: "John Doe",
-        customer_legal_number: "1234567890"
+        customer_legal_number: "1234567890",
+        customer_data_snapshotted_at: Time.current
       )
     end
 
@@ -413,14 +414,14 @@ RSpec.describe Resolvers::InvoiceResolver do
             status
             customer {
               id
-              name
+              displayName
               firstname
               lastname
               email
               phone
               url
               taxIdentificationNumber
-              timezone
+              applicableTimezone
               addressLine1
               addressLine2
               city
@@ -445,14 +446,14 @@ RSpec.describe Resolvers::InvoiceResolver do
       )
 
       data = result["data"]["invoice"]
-      expect(data["customer"]["name"]).to eq(invoice.customer_name)
+      expect(data["customer"]["displayName"]).to eq(invoice.customer_display_name)
       expect(data["customer"]["firstname"]).to eq(invoice.customer_firstname)
       expect(data["customer"]["lastname"]).to eq(invoice.customer_lastname)
       expect(data["customer"]["email"]).to eq(invoice.customer_email)
       expect(data["customer"]["phone"]).to eq(invoice.customer_phone)
       expect(data["customer"]["url"]).to eq(invoice.customer_url)
       expect(data["customer"]["taxIdentificationNumber"]).to eq(invoice.customer_tax_identification_number)
-      expect(data["customer"]["timezone"]).to eq("TZ_EUROPE_PARIS")
+      expect(data["customer"]["applicableTimezone"]).to eq("TZ_EUROPE_PARIS")
       expect(data["customer"]["addressLine1"]).to eq(invoice.customer_address_line1)
       expect(data["customer"]["addressLine2"]).to eq(invoice.customer_address_line2)
       expect(data["customer"]["city"]).to eq(invoice.customer_city)
