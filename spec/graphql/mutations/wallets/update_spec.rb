@@ -19,6 +19,7 @@ RSpec.describe Mutations::Wallets::Update do
         updateCustomerWallet(input: $input) {
           id
           name
+          priority
           status
           expirationAt
           invoiceRequiresSuccessfulPayment
@@ -74,6 +75,7 @@ RSpec.describe Mutations::Wallets::Update do
         input: {
           id: wallet.id,
           name: "New name",
+          priority: 22,
           expirationAt: expiration_at.iso8601,
           invoiceRequiresSuccessfulPayment: true,
           paidTopUpMinAmountCents: 1_00,
@@ -110,6 +112,7 @@ RSpec.describe Mutations::Wallets::Update do
     expect(result_data).to include(
       "id" => wallet.id,
       "name" => "New name",
+      "priority" => 22,
       "status" => "active",
       "invoiceRequiresSuccessfulPayment" => true,
       "expirationAt" => expiration_at.iso8601,
