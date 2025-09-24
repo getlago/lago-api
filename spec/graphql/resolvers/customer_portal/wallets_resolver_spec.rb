@@ -10,6 +10,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
           collection {
             id
             name
+            priority
             currency
           }
         }
@@ -41,6 +42,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
     expect(wallets_response["collection"].count).to eq(customer.wallets.active.count)
     expect(wallets_response["collection"].first["id"]).to eq(wallet.id)
     expect(wallets_response["collection"].first["name"]).to eq(wallet.name)
+    expect(wallets_response["collection"].first["priority"]).to eq(wallet.priority)
     expect(wallets_response["collection"].first["currency"]).to eq(wallet.currency)
   end
 
