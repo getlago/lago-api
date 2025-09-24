@@ -2894,7 +2894,6 @@ CREATE TABLE public.invoices (
     customer_timezone character varying,
     customer_firstname character varying,
     customer_lastname character varying,
-    customer_metadata jsonb,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 

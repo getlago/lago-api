@@ -21,6 +21,5 @@ class AddCustomerSnapshotToInvoices < ActiveRecord::Migration[8.0]
     add_column :invoices, :customer_timezone, :string
     add_column :invoices, :customer_firstname, :string
     add_column :invoices, :customer_lastname, :string
-    add_column :invoices, :customer_metadata, :jsonb
   end
 end

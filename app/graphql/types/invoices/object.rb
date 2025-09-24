@@ -102,14 +102,6 @@ module Types
           c.country = object.customer_country
           c.legal_name = object.customer_legal_name
           c.legal_number = object.customer_legal_number
-
-          snapshotted_metadata = object.customer_metadata || []
-
-          c.define_singleton_method(:metadata) do
-            snapshotted_metadata.map do |m|
-              ::Metadata::CustomerMetadata.new(key: m["key"], value: m["value"], display_in_invoice: true)
-            end
-          end
         end
       end
       # rubocop:enable GraphQL/ResolverMethodLength

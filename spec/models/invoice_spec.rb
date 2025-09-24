@@ -2561,42 +2561,6 @@ RSpec.describe Invoice do
     end
   end
 
-  describe "#customer_metadata" do
-    let(:customer) { create(:customer) }
-    let(:metadata_1) { create(:customer_metadata, customer:, key: "Department", value: "Engineering", display_in_invoice: true) }
-    let(:metadata_2) { create(:customer_metadata, customer:, key: "Project", value: "Alpha", display_in_invoice: true) }
-    let(:metadata_3) { create(:customer_metadata, customer:, key: "Internal", value: "Secret", display_in_invoice: false) }
-    let(:invoice) { create(:invoice, :draft, customer:) }
-
-    before do
-      metadata_1
-      metadata_2
-      metadata_3
-    end
-
-    it "returns only customer metadata with display_in_invoice true" do
-      expect(invoice.customer_metadata).to contain_exactly(
-        {"key" => "Department", "value" => "Engineering"},
-        {"key" => "Project", "value" => "Alpha"}
-      )
-    end
-
-    context "when invoice is finalized and metadata changes" do
-      before do
-        invoice.finalized!
-        metadata_1.update!(value: "Sales")
-        metadata_2.update!(display_in_invoice: false)
-      end
-
-      it "returns the snapshotted metadata at the time of finalization" do
-        expect(invoice.customer_metadata).to contain_exactly(
-          {"key" => "Department", "value" => "Engineering"},
-          {"key" => "Project", "value" => "Alpha"}
-        )
-      end
-    end
-  end
-
   describe "on invoice finalization" do
     let(:invoice) { create(:invoice, :draft, customer:) }
 
@@ -2644,42 +2608,6 @@ RSpec.describe Invoice do
       expect(invoice[:customer_zipcode]).to eq("75011")
       expect(invoice[:customer_state]).to eq("Île-de-France")
       expect(invoice[:customer_country]).to eq("FR")
-      expect(invoice[:customer_metadata]).to eq([])
-    end
-
-    context "when customer has metadata" do
-      let(:customer) do
-        create(:customer).tap do |customer|
-          create(:customer_metadata, customer:, key: "Department", value: "Engineering", display_in_invoice: true)
-          create(:customer_metadata, customer:, key: "Project", value: "Alpha", display_in_invoice: true)
-          create(:customer_metadata, customer:, key: "Internal", value: "Secret", display_in_invoice: false)
-        end
-      end
-
-      it "snapshots customer metadata" do
-        invoice.finalized!
-        invoice.reload
-
-        expect(invoice[:customer_metadata]).to contain_exactly(
-          {"key" => "Department", "value" => "Engineering"},
-          {"key" => "Project", "value" => "Alpha"}
-        )
-      end
-
-      context "when invoice is already finalized" do
-        before do
-          invoice.update_columns(status: :finalized) # rubocop:disable Rails/SkipsModelValidations
-          invoice.finalized!
-          invoice.reload
-        end
-
-        it "does not snapshot customer data" do
-          expect(invoice[:customer_name]).to be_nil
-          expect(invoice[:customer_email]).to be_nil
-          expect(invoice[:customer_address_line1]).to be_nil
-          expect(invoice[:customer_metadata]).to be_nil
-        end
-      end
     end
   end
 end

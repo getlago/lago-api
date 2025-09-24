@@ -400,8 +400,7 @@ RSpec.describe Resolvers::InvoiceResolver do
         customer_zipcode: "10001",
         customer_country: "US",
         customer_legal_name: "John Doe",
-        customer_legal_number: "1234567890",
-        customer_metadata: [{key: "key", value: "value"}]
+        customer_legal_number: "1234567890"
       )
     end
 
@@ -430,7 +429,6 @@ RSpec.describe Resolvers::InvoiceResolver do
               country
               legalName
               legalNumber
-              metadata{ key value displayInInvoice }
             }
           }
         }
@@ -463,13 +461,6 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data["customer"]["country"]).to eq(invoice.customer_country)
       expect(data["customer"]["legalName"]).to eq(invoice.customer_legal_name)
       expect(data["customer"]["legalNumber"]).to eq(invoice.customer_legal_number)
-      expect(data["customer"]["metadata"]).to contain_exactly(
-        {
-          "key" => "key",
-          "value" => "value",
-          "displayInInvoice" => true
-        }
-      )
     end
   end
 end

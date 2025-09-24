@@ -26,8 +26,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       customer_zipcode: "10001",
       customer_country: "US",
       customer_legal_name: "John Doe",
-      customer_legal_number: "1234567890",
-      customer_metadata: [{key: "key", value: "value"}]
+      customer_legal_number: "1234567890"
     )
   end
 
@@ -97,8 +96,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         "customer_zipcode" => invoice.customer_zipcode,
         "customer_country" => invoice.customer_country,
         "customer_legal_name" => invoice.customer_legal_name,
-        "customer_legal_number" => invoice.customer_legal_number,
-        "customer_metadata" => invoice.customer_metadata
+        "customer_legal_number" => invoice.customer_legal_number
       )
 
       expect(result["invoice"]["metadata"].first).to include(

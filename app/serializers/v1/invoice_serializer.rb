@@ -50,7 +50,6 @@ module V1
         customer_country: model.customer_country,
         customer_legal_name: model.customer_legal_name,
         customer_legal_number: model.customer_legal_number,
-        customer_metadata: model.customer_metadata
       }
 
       payload.merge!(customer) if include?(:customer)

@@ -476,10 +476,6 @@ class Invoice < ApplicationRecord
     customer_data_snapshotted? ? self[:customer_lastname] : customer.lastname
   end
 
-  def customer_metadata
-    customer_data_snapshotted? ? (self[:customer_metadata] || []) : customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
-  end
-
   private
 
   def should_assign_sequential_id?
@@ -622,8 +618,6 @@ class Invoice < ApplicationRecord
     self.customer_zipcode = customer.zipcode
     self.customer_state = customer.state
     self.customer_country = customer.country
-
-    self.customer_metadata = customer.metadata.displayable.map { |m| m.serializable_hash(only: [:key, :value]) }
   end
 end
 
@@ -646,7 +640,6 @@ end
 #  customer_lastname                       :string
 #  customer_legal_name                     :string
 #  customer_legal_number                   :string
-#  customer_metadata                       :jsonb
 #  customer_name                           :string
 #  customer_phone                          :string
 #  customer_state                          :string
