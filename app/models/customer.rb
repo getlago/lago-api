@@ -259,6 +259,7 @@ class Customer < ApplicationRecord
     wallets.active.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # Returns the customer's active wallets in application order
   def active_wallets_in_application_order
     wallets.active.order(:priority, :created_at)
   end
