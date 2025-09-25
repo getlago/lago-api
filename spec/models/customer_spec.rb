@@ -998,4 +998,20 @@ RSpec.describe Customer do
       end
     end
   end
+
+  describe "#active_wallets_in_application_order" do
+    let(:customer) { create(:customer) }
+
+    # Active wallets
+    let!(:wallet_1)  { create(:wallet, customer:, priority: 5,  created_at: 3.days.ago) }
+    let!(:wallet_2)  { create(:wallet, customer:, priority: 5,  created_at: 1.day.ago) }
+    let!(:wallet_3)     { create(:wallet, customer:, priority: 10, created_at: 2.days.ago) }
+
+    # Inactive wallet should be excluded
+    let!(:wallet_inactive) { create(:wallet, :terminated, customer:, priority: 1, created_at: Time.current) }
+
+    it "returns only active wallets ordered by priority then created_at" do
+      expect(customer.active_wallets_in_application_order).to eq([wallet_1, wallet_2, wallet_3])
+    end
+  end
 end
