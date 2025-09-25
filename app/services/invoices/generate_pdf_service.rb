@@ -55,7 +55,7 @@ module Invoices
 
     def attach_facturx(pdf_file)
       xml_file = Tempfile.new([invoice.number, ".xml"])
-      xml_file.write(EInvoices::FacturX::CreateService.call(invoice:).xml)
+      xml_file.write(EInvoices::Invoices::FacturX::CreateService.call(invoice:).xml)
       xml_file.flush
 
       Invoices::AddAttachmentToPdfService.call(file: pdf_file, attachment: xml_file)

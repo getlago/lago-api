@@ -77,6 +77,7 @@ Rails.application.routes.draw do
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
+        post :download_xml, on: :member
         put :void, on: :member
         post :estimate, on: :collection
       end

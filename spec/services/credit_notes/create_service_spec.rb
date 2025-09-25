@@ -127,8 +127,8 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
-    it "enqueues a CreditNotes::GeneratePdfJob after commit" do
-      expect { subject }.to have_enqueued_job_after_commit(CreditNotes::GeneratePdfJob).with do |job_credit_note|
+    it "enqueues a CreditNotes::GenerateFilesJob after commit" do
+      expect { subject }.to have_enqueued_job_after_commit(CreditNotes::GenerateFilesJob).with do |job_credit_note|
         expect(job_credit_note).to eq(credit_note)
       end
     end

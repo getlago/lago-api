@@ -13,7 +13,7 @@ RSpec.describe Invoices::GenerateXmlService, type: :service do
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
   let(:fake_xml) { "<xml>content</xml>" }
   let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
-  let(:xml_service) { EInvoices::Ubl::CreateService }
+  let(:xml_service) { EInvoices::Invoices::Ubl::CreateService }
 
   before do
     invoice

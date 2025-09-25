@@ -30,6 +30,7 @@ class CreditNote < ApplicationRecord
     as: :resource
 
   has_one_attached :file
+  has_one_attached :xml_file
 
   monetize :credit_amount_cents
   monetize :balance_amount_cents
@@ -79,6 +80,12 @@ class CreditNote < ApplicationRecord
     return if file.blank?
 
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
+  end
+
+  def xml_file_url
+    return if xml_file.blank?
+
+    Rails.application.routes.url_helpers.rails_blob_url(xml_file, host: ENV["LAGO_API_URL"])
   end
 
   def currency
@@ -132,6 +139,10 @@ class CreditNote < ApplicationRecord
       voided_at: timestamp,
       balance_amount_cents: 0
     )
+  end
+
+  def sub_total_including_taxes_amount_cents
+    sub_total_excluding_taxes_amount_cents + precise_taxes_amount_cents
   end
 
   def sub_total_excluding_taxes_amount_cents
@@ -193,6 +204,7 @@ end
 #  total_amount_cents                      :bigint           default(0), not null
 #  total_amount_currency                   :string           not null
 #  voided_at                               :datetime
+#  xml_file                                :string
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
 #  customer_id                             :uuid             not null
