@@ -5,7 +5,6 @@ require "rails_helper"
 RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
   let(:premium_integration_types) do
     %w[
-      beta_payment_authorization
       api_permissions
       auto_dunning
       hubspot
