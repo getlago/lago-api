@@ -34,38 +34,9 @@ module Events
           SQL
         end
 
-        # NOTE: current implementation of clickhouse's query is different from postgres's one:
-        # IN POSTGRES we do not ignore Add events at all (they will be handled by adjusted value)
-        # remove events are ignored if there is an Add event later on the save day. This query is done using
-        # next_event.operation_type != event.operation_type, which is not supported in current verison of
-        # Clickhouse we have on production, while this approach is more effective as it only queries one row and does not use
-        # window function.
-        # IN CLICKHOUSE we do not ignore Add events at all (they will be handled by adjusted value)
-        # remove events are not ignored only if they are the last event of the day
-        # this way we're not using not supported by clickhouse join on !=, but we use window function, which is less
-        # performant than the postgres approach.
-        # TODO: we should use the postgres approach in clickhouse as well, but it requires update CLickhouse
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            same_day_ignored AS (
-              SELECT
-                property,
-                operation_type,
-                timestamp,
-                #{ignore_remove_events_sql} AS is_ignored
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) as e
-            ),
-            -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
               SELECT
                 property,
@@ -77,12 +48,11 @@ module Events
                   property,
                   operation_type,
                   #{operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
+                FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
+              GROUP BY property, timestamp, operation_type
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
@@ -126,27 +96,7 @@ module Events
         def grouped_prorated_query
           <<-SQL
             #{grouped_events_cte_sql},
-            -- Only ignore remove events if they are NOT the last event of the day
-            same_day_ignored AS (
-              SELECT
-                #{group_names},
-                property,
-                operation_type,
-                timestamp,
-                #{ignore_remove_events_sql} AS is_ignored
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{group_names},
-                  -- Check if this is the last event of the day for this property and group
-                  timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) as e
-            ),
-            -- Check if the operation type is the same as previous, so it nullifies this one
+
             event_values AS (
               SELECT
                 #{group_names},
@@ -160,8 +110,7 @@ module Events
                   operation_type,
                   #{group_names},
                   #{grouped_operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
+                FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
@@ -209,24 +158,6 @@ module Events
         def prorated_breakdown_query(with_remove: false)
           <<-SQL
             #{events_cte_sql},
-            -- Only ignore remove events if they are NOT the last event of the day
-            same_day_ignored AS (
-              SELECT
-                property,
-                operation_type,
-                timestamp,
-                #{ignore_remove_events_sql} AS is_ignored
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) as e
-            ),
             event_values AS (
               SELECT
                 property,
@@ -238,12 +169,11 @@ module Events
                   property,
                   operation_type,
                   #{operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
+                FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, timestamp, operation_type
+              GROUP BY property, operation_type, timestamp
             )
 
             SELECT
@@ -458,19 +388,6 @@ module Events
               ),
               :decimal_scale
             )
-          SQL
-        end
-
-        def ignore_remove_events_sql
-          # NOTE: Only NOT ignore remove events if they are the last event of the day
-          <<-SQL
-            CASE
-              -- Never ignore add events
-              WHEN operation_type = 'add' THEN false
-              -- Only ignore remove events if they are NOT the last event of the day
-              WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
-              ELSE false
-            END
           SQL
         end
 
