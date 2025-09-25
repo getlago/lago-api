@@ -119,7 +119,8 @@ module Invoices
     end
 
     def wallets
-      @wallets ||= customer.wallets.active.with_positive_balance
+      @wallets ||= customer.wallets.active.includes(:wallet_targets)
+        .with_positive_balance.in_application_order
     end
 
     def should_create_applied_prepaid_credit?
