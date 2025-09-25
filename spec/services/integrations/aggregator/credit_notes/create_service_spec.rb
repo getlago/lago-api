@@ -416,6 +416,10 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
         expect { service_call }.to have_enqueued_job(SendWebhookJob)
       end
 
+      it "returns result" do
+        expect(service_call).to be_a(BaseService::Result)
+      end
+
       it_behaves_like "throttles!", :anrok, :netsuite, :xero
     end
   end
