@@ -21,8 +21,8 @@ RSpec.describe Invoices::ApplyTaxesService do
   let(:fees_amount_cents) { 3000 }
   let(:coupons_amount_cents) { 0 }
 
-  let(:tax1) { create(:tax, organization:, rate: 10) }
-  let(:tax2) { create(:tax, organization:, rate: 12) }
+  let(:tax1) { create(:tax, organization:, rate: 10, code: "tax1") }
+  let(:tax2) { create(:tax, organization:, rate: 12, code: "tax2") }
 
   describe "call" do
     context "with non zero fees amount" do
@@ -41,7 +41,7 @@ RSpec.describe Invoices::ApplyTaxesService do
         aggregate_failures do
           expect(result).to be_success
 
-          applied_taxes = result.applied_taxes
+          applied_taxes = result.applied_taxes.sort_by(&:tax_code)
           expect(applied_taxes.count).to eq(2)
 
           expect(applied_taxes[0]).to have_attributes(
@@ -95,7 +95,7 @@ RSpec.describe Invoices::ApplyTaxesService do
         aggregate_failures do
           expect(result).to be_success
 
-          applied_taxes = result.applied_taxes
+          applied_taxes = result.applied_taxes.sort_by(&:tax_code)
           expect(applied_taxes.count).to eq(2)
 
           expect(applied_taxes[0]).to have_attributes(
@@ -149,7 +149,7 @@ RSpec.describe Invoices::ApplyTaxesService do
         aggregate_failures do
           expect(result).to be_success
 
-          applied_taxes = result.applied_taxes
+          applied_taxes = result.applied_taxes.sort_by(&:tax_code)
           expect(applied_taxes.count).to eq(2)
 
           expect(applied_taxes[0]).to have_attributes(
