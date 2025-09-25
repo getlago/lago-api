@@ -30,7 +30,7 @@ module Types
 
       SNAPSHOTTED_CUSTOMER_ATTRIBUTES.each do |attribute|
         define_method(attribute) do
-          invoice.send("customer_#{attribute}")
+          invoice.public_send("customer_#{attribute}")
         end
       end
 
