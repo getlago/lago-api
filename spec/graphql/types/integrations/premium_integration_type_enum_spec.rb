@@ -28,6 +28,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       multi_entities_enterprise
       analytics_dashboards
       projected_usage
+      clickhouse_live_aggregation
     ]
   end
 
