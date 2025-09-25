@@ -2894,6 +2894,12 @@ CREATE TABLE public.invoices (
     customer_applicable_timezone character varying,
     customer_firstname character varying,
     customer_lastname character varying,
+    customer_shipping_address_line1 character varying,
+    customer_shipping_address_line2 character varying,
+    customer_shipping_city character varying,
+    customer_shipping_state character varying,
+    customer_shipping_zipcode character varying,
+    customer_shipping_country character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -9857,11 +9863,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+\unrestrict HoXN9Mstrx6STIQcVxvdjN7lVc1SCnlz4eiEUpMZ7YIGkpkdg5JZFTzrszREAKO
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250925120821'),
 ('20250922113901'),
 ('20250919124523'),
 ('20250919124037'),

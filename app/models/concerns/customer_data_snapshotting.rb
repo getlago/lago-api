@@ -20,6 +20,12 @@ module CustomerDataSnapshotting
     country
     legal_name
     legal_number
+    shipping_address_line1
+    shipping_address_line2
+    shipping_city
+    shipping_state
+    shipping_zipcode
+    shipping_country
   ].freeze
 
   included do
@@ -29,6 +35,17 @@ module CustomerDataSnapshotting
       define_method("customer_#{attribute}") do
         customer_data_snapshotted_at? ? self[:"customer_#{attribute}"] : customer.public_send(attribute)
       end
+    end
+
+    def customer_shipping_address
+      {
+        address_line1: customer_shipping_address_line1,
+        address_line2: customer_shipping_address_line2,
+        city: customer_shipping_city,
+        state: customer_shipping_state,
+        zipcode: customer_shipping_zipcode,
+        country: customer_shipping_country
+      }
     end
   end
 

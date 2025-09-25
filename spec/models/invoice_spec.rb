@@ -2561,6 +2561,344 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#customer_shipping_address_line1" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_address_line1: "77 rue du Chemin Vert"
+      )
+    end
+
+    it "returns customer shipping address line1" do
+      expect(invoice.customer_shipping_address_line1).to eq("77 rue du Chemin Vert")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_address_line1: "99 St Green Way")
+      end
+
+      it "returns snapshotted shipping address" do
+        expect(invoice.customer_shipping_address_line1).to eq("77 rue du Chemin Vert")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping address was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_address_line1: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_address_line1: "Address Added Later")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_address_line1).to be_nil
+        expect(customer.reload.shipping_address_line1).to eq("Address Added Later")
+      end
+    end
+  end
+
+  describe "#customer_shipping_address_line2" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_address_line2: "Apt 5B"
+      )
+    end
+
+    it "returns customer shipping address line2" do
+      expect(invoice.customer_shipping_address_line2).to eq("Apt 5B")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_address_line2: "Apt 195W")
+      end
+
+      it "returns snapshotted customer shipping address line2" do
+        expect(invoice.customer_shipping_address_line2).to eq("Apt 5B")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping address line2 was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_address_line2: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_address_line2: "Apt 195W")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_address_line2).to be_nil
+        expect(customer.reload.shipping_address_line2).to eq("Apt 195W")
+      end
+    end
+  end
+
+  describe "#customer_shipping_city" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_city: "Paris"
+      )
+    end
+
+    it "returns customer shipping city" do
+      expect(invoice.customer_shipping_city).to eq("Paris")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_city: "Lyon")
+      end
+
+      it "returns snapshotted shipping city" do
+        expect(invoice.customer_shipping_city).to eq("Paris")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping city was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_city: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_city: "Lyon")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_city).to be_nil
+        expect(customer.reload.shipping_city).to eq("Lyon")
+      end
+    end
+  end
+
+  describe "#customer_shipping_zipcode" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_zipcode: "75011"
+      )
+    end
+
+    it "returns customer shipping zipcode" do
+      expect(invoice.customer_shipping_zipcode).to eq("75011")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_zipcode: "69001")
+      end
+
+      it "returns snapshotted shipping zipcode" do
+        expect(invoice.customer_shipping_zipcode).to eq("75011")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping zipcode was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_zipcode: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_zipcode: "69001")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_zipcode).to be_nil
+        expect(customer.reload.shipping_zipcode).to eq("69001")
+      end
+    end
+  end
+
+  describe "#customer_shipping_state" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_state: "Ile-de-France"
+      )
+    end
+
+    it "returns customer shipping state" do
+      expect(invoice.customer_shipping_state).to eq("Ile-de-France")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_state: "Auvergne-Rhône-Alpes")
+      end
+
+      it "returns snapshotted shipping state" do
+        expect(invoice.customer_shipping_state).to eq("Ile-de-France")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping state was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_state: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_state: "Auvergne-Rhône-Alpes")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_state).to be_nil
+        expect(customer.reload.shipping_state).to eq("Auvergne-Rhône-Alpes")
+      end
+    end
+  end
+
+  describe "#customer_shipping_country" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_country: "FR"
+      )
+    end
+
+    it "returns customer shipping country" do
+      expect(invoice.customer_shipping_country).to eq("FR")
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_country: "DE")
+      end
+
+      it "returns snapshotted shipping country" do
+        expect(invoice.customer_shipping_country).to eq("FR")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping country was nil at finalization time" do
+      let(:customer) { create(:customer, shipping_country: nil) }
+
+      before do
+        invoice.finalized!
+        customer.update!(shipping_country: "DE")
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_country).to be_nil
+        expect(customer.reload.shipping_country).to eq("DE")
+      end
+    end
+  end
+
+  describe "#customer_shipping_address" do
+    let(:invoice) { create(:invoice, :draft, customer:) }
+    let(:customer) do
+      create(
+        :customer,
+        shipping_address_line1: "77 rue du Chemin Vert",
+        shipping_address_line2: "Apt 5B",
+        shipping_city: "Paris",
+        shipping_zipcode: "75011",
+        shipping_state: "Ile-de-France",
+        shipping_country: "FR"
+      )
+    end
+
+    it "returns customer shipping address" do
+      expect(invoice.customer_shipping_address).to eq(
+        {
+          address_line1: "77 rue du Chemin Vert",
+          address_line2: "Apt 5B",
+          city: "Paris",
+          state: "Ile-de-France",
+          zipcode: "75011",
+          country: "FR"
+        }
+      )
+    end
+
+    context "when invoice is finalized" do
+      before do
+        invoice.finalized!
+        customer.update!(shipping_country: "DE")
+      end
+
+      it "returns snapshotted shipping address" do
+        expect(invoice.customer_shipping_address).to eq(
+          {
+            address_line1: "77 rue du Chemin Vert",
+            address_line2: "Apt 5B",
+            city: "Paris",
+            state: "Ile-de-France",
+            zipcode: "75011",
+            country: "FR"
+          }
+        )
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(Time.current)
+      end
+    end
+
+    context "when customer shipping address was nil at finalization time" do
+      let(:customer) do
+        create(
+          :customer,
+          shipping_address_line1: nil,
+          shipping_address_line2: nil,
+          shipping_city: nil,
+          shipping_zipcode: nil,
+          shipping_state: nil,
+          shipping_country: nil
+        )
+      end
+
+      before do
+        invoice.finalized!
+        customer.update!(
+          shipping_address_line1: "15 rue de la Poste",
+          shipping_address_line2: "Suite 200",
+          shipping_city: "Lyon",
+          shipping_zipcode: "69001",
+          shipping_state: "Auvergne-Rhône-Alpes",
+          shipping_country: "FR"
+        )
+      end
+
+      it "preserves nil value from finalization instead of using updated value" do
+        expect(invoice.customer_shipping_address).to eq(
+          {
+            address_line1: nil,
+            address_line2: nil,
+            city: nil,
+            state: nil,
+            zipcode: nil,
+            country: nil
+          }
+        )
+        expect(customer.reload.shipping_address).to eq(
+          {
+            address_line1: "15 rue de la Poste",
+            address_line2: "Suite 200",
+            city: "Lyon",
+            state: "Auvergne-Rhône-Alpes",
+            zipcode: "69001",
+            country: "FR"
+          }
+        )
+      end
+    end
+  end
+
   describe "on invoice finalization" do
     let(:invoice) { create(:invoice, :draft, customer:) }
 
@@ -2582,7 +2920,13 @@ RSpec.describe Invoice do
         city: "Paris",
         zipcode: "75011",
         state: "Île-de-France",
-        country: "FR"
+        country: "FR",
+        shipping_address_line1: "15 rue de la Poste",
+        shipping_address_line2: "Suite 200",
+        shipping_city: "Lyon",
+        shipping_zipcode: "69001",
+        shipping_state: "Auvergne-Rhône-Alpes",
+        shipping_country: "FR"
       )
     end
 
@@ -2608,6 +2952,12 @@ RSpec.describe Invoice do
       expect(invoice[:customer_zipcode]).to eq("75011")
       expect(invoice[:customer_state]).to eq("Île-de-France")
       expect(invoice[:customer_country]).to eq("FR")
+      expect(invoice[:customer_shipping_address_line1]).to eq("15 rue de la Poste")
+      expect(invoice[:customer_shipping_address_line2]).to eq("Suite 200")
+      expect(invoice[:customer_shipping_city]).to eq("Lyon")
+      expect(invoice[:customer_shipping_zipcode]).to eq("69001")
+      expect(invoice[:customer_shipping_state]).to eq("Auvergne-Rhône-Alpes")
+      expect(invoice[:customer_shipping_country]).to eq("FR")
     end
 
     context "when #snapshot_customer_data is called with force: true" do

@@ -385,6 +385,7 @@ RSpec.describe Resolvers::InvoiceResolver do
         :invoice,
         customer:,
         organization:,
+        customer_data_snapshotted_at: Time.current,
         customer_display_name: "John Doe",
         customer_firstname: "John",
         customer_lastname: "Doe",
@@ -393,15 +394,20 @@ RSpec.describe Resolvers::InvoiceResolver do
         customer_url: "https://john.doe.com",
         customer_tax_identification_number: "1234567890",
         customer_applicable_timezone: "Europe/Paris",
+        customer_legal_name: "John Doe",
+        customer_legal_number: "1234567890",
         customer_address_line1: "123 Main St",
         customer_address_line2: "Apt 1",
         customer_city: "New York",
         customer_state: "NY",
         customer_zipcode: "10001",
         customer_country: "US",
-        customer_legal_name: "John Doe",
-        customer_legal_number: "1234567890",
-        customer_data_snapshotted_at: Time.current
+        customer_shipping_address_line1: "Rue de la Paix",
+        customer_shipping_address_line2: "Apt 5B",
+        customer_shipping_city: "Paris",
+        customer_shipping_state: "Ile-de-France",
+        customer_shipping_zipcode: "75000",
+        customer_shipping_country: "FR"
       )
     end
 
@@ -430,6 +436,14 @@ RSpec.describe Resolvers::InvoiceResolver do
               country
               legalName
               legalNumber
+              shippingAddress {
+                addressLine1
+                addressLine2
+                city
+                state
+                zipcode
+                country
+              }
             }
           }
         }
@@ -462,6 +476,12 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data["customer"]["country"]).to eq(invoice.customer_country)
       expect(data["customer"]["legalName"]).to eq(invoice.customer_legal_name)
       expect(data["customer"]["legalNumber"]).to eq(invoice.customer_legal_number)
+      expect(data["customer"]["shippingAddress"]["addressLine1"]).to eq(invoice.customer_shipping_address_line1)
+      expect(data["customer"]["shippingAddress"]["addressLine2"]).to eq(invoice.customer_shipping_address_line2)
+      expect(data["customer"]["shippingAddress"]["city"]).to eq(invoice.customer_shipping_city)
+      expect(data["customer"]["shippingAddress"]["state"]).to eq(invoice.customer_shipping_state)
+      expect(data["customer"]["shippingAddress"]["zipcode"]).to eq(invoice.customer_shipping_zipcode)
+      expect(data["customer"]["shippingAddress"]["country"]).to eq(invoice.customer_shipping_country)
     end
   end
 end

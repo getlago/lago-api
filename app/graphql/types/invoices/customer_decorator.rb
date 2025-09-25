@@ -3,10 +3,14 @@
 module Types
   module Invoices
     class CustomerDecorator < SimpleDelegator
+      extend Forwardable
+
       def initialize(customer, invoice)
         @invoice = invoice
         super(customer)
       end
+
+      def_delegator :invoice, :customer_shipping_address, :shipping_address
 
       CustomerDataSnapshotting::SNAPSHOTTED_ATTRIBUTES.each do |attribute|
         define_method(attribute) do

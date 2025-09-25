@@ -26,7 +26,13 @@ RSpec.describe ::V1::InvoiceSerializer do
       customer_zipcode: "10001",
       customer_country: "US",
       customer_legal_name: "John Doe",
-      customer_legal_number: "1234567890"
+      customer_legal_number: "1234567890",
+      customer_shipping_address_line1: "Rue de la Paix",
+      customer_shipping_address_line2: "Apt 5B",
+      customer_shipping_city: "Paris",
+      customer_shipping_state: "Ile-de-France",
+      customer_shipping_zipcode: "75000",
+      customer_shipping_country: "FR"
     )
   end
 
@@ -96,7 +102,15 @@ RSpec.describe ::V1::InvoiceSerializer do
         "customer_zipcode" => invoice.customer_zipcode,
         "customer_country" => invoice.customer_country,
         "customer_legal_name" => invoice.customer_legal_name,
-        "customer_legal_number" => invoice.customer_legal_number
+        "customer_legal_number" => invoice.customer_legal_number,
+        "customer_shipping_address" => {
+          "address_line1" => invoice.customer_shipping_address_line1,
+          "address_line2" => invoice.customer_shipping_address_line2,
+          "city" => invoice.customer_shipping_city,
+          "state" => invoice.customer_shipping_state,
+          "zipcode" => invoice.customer_shipping_zipcode,
+          "country" => invoice.customer_shipping_country
+        }
       )
 
       expect(result["invoice"]["metadata"].first).to include(

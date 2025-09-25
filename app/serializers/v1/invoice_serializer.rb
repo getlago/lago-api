@@ -48,6 +48,7 @@ module V1
         customer_state: model.customer_state,
         customer_zipcode: model.customer_zipcode,
         customer_country: model.customer_country,
+        customer_shipping_address: model.customer_shipping_address,
         customer_legal_name: model.customer_legal_name,
         customer_legal_number: model.customer_legal_number
       }

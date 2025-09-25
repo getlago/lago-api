@@ -555,6 +555,12 @@ end
 #  customer_legal_name                     :string
 #  customer_legal_number                   :string
 #  customer_phone                          :string
+#  customer_shipping_address_line1         :string
+#  customer_shipping_address_line2         :string
+#  customer_shipping_city                  :string
+#  customer_shipping_country               :string
+#  customer_shipping_state                 :string
+#  customer_shipping_zipcode               :string
 #  customer_state                          :string
 #  customer_tax_identification_number      :string
 #  customer_url                            :string
