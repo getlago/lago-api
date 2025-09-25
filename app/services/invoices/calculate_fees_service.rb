@@ -30,11 +30,12 @@ module Invoices
             to_datetime: invoice_subscription.to_datetime,
             charges_from_datetime: invoice_subscription.charges_from_datetime,
             charges_to_datetime: invoice_subscription.charges_to_datetime,
+            # this value will be different for the fee if the fixed_charge is pay_in_advance or not...
             fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
             fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
             charges_duration: date_service.charges_duration_in_days,
-            fixed_charges_duration: date_service.charges_duration_in_days
+            fixed_charges_duration: date_service.fixed_charges_duration_in_days
           )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
