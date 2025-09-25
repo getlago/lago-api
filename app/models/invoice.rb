@@ -7,6 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include CustomerDataSnapshotting
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -16,7 +17,6 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
-  before_save :snapshot_customer_data, if: -> { status_changed_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -412,70 +412,6 @@ class Invoice < ApplicationRecord
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
   end
 
-  def customer_display_name
-    customer_data_snapshotted_at? ? self[:customer_display_name] : customer.display_name
-  end
-
-  def customer_address_line1
-    customer_data_snapshotted_at? ? self[:customer_address_line1] : customer.address_line1
-  end
-
-  def customer_address_line2
-    customer_data_snapshotted_at? ? self[:customer_address_line2] : customer.address_line2
-  end
-
-  def customer_city
-    customer_data_snapshotted_at? ? self[:customer_city] : customer.city
-  end
-
-  def customer_zipcode
-    customer_data_snapshotted_at? ? self[:customer_zipcode] : customer.zipcode
-  end
-
-  def customer_state
-    customer_data_snapshotted_at? ? self[:customer_state] : customer.state
-  end
-
-  def customer_country
-    customer_data_snapshotted_at? ? self[:customer_country] : customer.country
-  end
-
-  def customer_email
-    customer_data_snapshotted_at? ? self[:customer_email] : customer.email
-  end
-
-  def customer_legal_name
-    customer_data_snapshotted_at? ? self[:customer_legal_name] : customer.legal_name
-  end
-
-  def customer_legal_number
-    customer_data_snapshotted_at? ? self[:customer_legal_number] : customer.legal_number
-  end
-
-  def customer_tax_identification_number
-    customer_data_snapshotted_at? ? self[:customer_tax_identification_number] : customer.tax_identification_number
-  end
-
-  def customer_phone
-    customer_data_snapshotted_at? ? self[:customer_phone] : customer.phone
-  end
-
-  def customer_url
-    customer_data_snapshotted_at? ? self[:customer_url] : customer.url
-  end
-
-  def customer_applicable_timezone
-    customer_data_snapshotted_at? ? self[:customer_applicable_timezone] : customer.applicable_timezone
-  end
-
-  def customer_firstname
-    customer_data_snapshotted_at? ? self[:customer_firstname] : customer.firstname
-  end
-
-  def customer_lastname
-    customer_data_snapshotted_at? ? self[:customer_lastname] : customer.lastname
-  end
-
   private
 
   def should_assign_sequential_id?
@@ -594,30 +530,6 @@ class Invoice < ApplicationRecord
     return unless status_changed_to_finalized?
 
     self.finalized_at ||= Time.current
-  end
-
-  def snapshot_customer_data(force: false)
-    return unless status_changed_to_finalized? || force
-
-    self.customer_data_snapshotted_at = Time.current
-
-    self.customer_display_name = customer.display_name
-    self.customer_legal_name = customer.legal_name
-    self.customer_legal_number = customer.legal_number
-    self.customer_email = customer.email
-    self.customer_phone = customer.phone
-    self.customer_url = customer.url
-    self.customer_tax_identification_number = customer.tax_identification_number
-    self.customer_applicable_timezone = customer.applicable_timezone
-    self.customer_firstname = customer.firstname
-    self.customer_lastname = customer.lastname
-
-    self.customer_address_line1 = customer.address_line1
-    self.customer_address_line2 = customer.address_line2
-    self.customer_city = customer.city
-    self.customer_zipcode = customer.zipcode
-    self.customer_state = customer.state
-    self.customer_country = customer.country
   end
 end
 
