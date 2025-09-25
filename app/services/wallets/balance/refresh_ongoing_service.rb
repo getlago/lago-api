@@ -93,18 +93,59 @@ module Wallets
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
+      def assign_wallet_per_fee(fees)
+        fee_wallet = {}
+        return fee_wallet if fees.blank?
+
+        wallets = customer.active_wallets_in_application_order.includes(:wallet_targets)
+
+        wallets_data = wallets.map do |w|
+          {
+            id: w.id,
+            bm_limited: w.limited_to_billable_metrics?,
+            type_limited: w.limited_fee_types?,
+            bm_ids: (w.wallet_targets.map(&:billable_metric_id).to_set if w.limited_to_billable_metrics?),
+            allowed_types: (Array(w.allowed_fee_types).to_set if w.limited_fee_types?),
+            unrestricted: !w.limited_to_billable_metrics? && !w.limited_fee_types?
+          }
+        end
+
+        fees.each do |fee|
+          key = fee.id || fee.object_id
+          bm_id = fee.respond_to?(:charge) ? fee.charge&.billable_metric_id : nil
+
+          next if fee_wallet.key?(key)
+
+          wallets_data.each do |wd|
+            if wd[:bm_limited] && bm_id && wd[:bm_ids]&.include?(bm_id)
+              fee_wallet[key] ||= wd[:id]
+              break
+            end
+
+            if wd[:type_limited] && fee.fee_type && wd[:allowed_types]&.include?(fee.fee_type)
+              fee_wallet[key] ||= wd[:id]
+              break
+            end
+
+            if wd[:unrestricted]
+              fee_wallet[key] ||= wd[:id]
+              break
+            end
+          end
+        end
+
+        fee_wallet
+      end
+
       def calculate_total_usage_with_limitation(usage_amount_cents)
-        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } unless wallet.limited_to_billable_metrics?
-
-        # current usage fees are not persisted so we can't use join
         all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
-        charge_ids = Charge.where(id: all_fees.map(&:charge_id)).where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
+        return 0 if all_fees.empty?
 
-        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } if charge_ids.empty?
+        owners = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
 
-        all_fees
-          .select { |f| charge_ids.include?(f.charge_id) }
-          .sum { |f| f.amount_cents + f.taxes_amount_cents }
+        all_fees.sum do |f|
+          (owners[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
+        end
       end
     end
   end

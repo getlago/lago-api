@@ -66,6 +66,7 @@ module Api
         params.require(:wallet).permit(
           :rate_amount,
           :name,
+          :priority,
           :currency,
           :paid_credits,
           :granted_credits,
@@ -111,6 +112,7 @@ module Api
       def update_params
         params.require(:wallet).permit(
           :name,
+          :priority,
           :expiration_at,
           :invoice_requires_successful_payment,
           :paid_top_up_min_amount_cents,
