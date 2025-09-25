@@ -2,7 +2,10 @@
 
 module EInvoices
   class BaseService < ::BaseService
+    # More document types defined on UNCL 1001 here
+    # https://service.unece.org/trade/untdid/d99a/uncl/uncl1001.htm
     COMMERCIAL_INVOICE = 380
+    CREDIT_NOTE = 381
     PREPAID_INVOICE = 386
     SELF_BILLED_INVOICE = 389
 
@@ -16,12 +19,12 @@ module EInvoices
 
     # You can see more payments codes UNTDID 4461 here
     # https://service.unece.org/trade/untdid/d21b/tred/tred4461.htm
-    STANDARD = 1
-    PREPAID = 57
-    CREDIT_NOTE = 97
+    STANDARD_PAYMENT = 1
+    PREPAID_PAYMENT = 57
+    CREDIT_NOTE_PAYMENT = 97
 
     INVOICE_DISCOUNT = false
-    INVOICE_ADDITIONAL_CHARGE = true
+    INVOICE_CHARGE = true
 
     # More categories for UNTDID 5305 here
     # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
@@ -33,12 +36,6 @@ module EInvoices
     # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
     UNIT_CODE = "C62"
 
-    def initialize(invoice:)
-      super
-
-      @invoice = invoice
-    end
-
     private
 
     attr_accessor :invoice
@@ -47,70 +44,24 @@ module EInvoices
       date.strftime(self.class::DATEFORMAT)
     end
 
-    def invoice_type_code
-      if invoice.credit?
-        PREPAID_INVOICE
-      elsif invoice.self_billed?
-        SELF_BILLED_INVOICE
-      else
-        COMMERCIAL_INVOICE
-      end
-    end
-
-    def oldest_charges_from_datetime
-      case invoice.invoice_type
-      when "one_off", "credit"
-        invoice.created_at
-      when "subscription"
-        invoice.subscriptions.map do |subscription|
-          ::Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
-            .charges_from_datetime
-        end.min
-      end
-    end
-
     def payment_information(type, amount)
       case type
-      when STANDARD
+      when STANDARD_PAYMENT
         payment_label(type)
-      when PREPAID, CREDIT_NOTE
-        I18n.t("invoice.e_invoicing.payment_information", payment_label: payment_label(type), currency: invoice.currency, amount:)
+      when PREPAID_PAYMENT, CREDIT_NOTE_PAYMENT
+        I18n.t("invoice.e_invoicing.payment_information", payment_label: payment_label(type), currency: resource.currency, amount:)
       end
     end
 
     def payment_label(type)
       case type
-      when STANDARD
+      when STANDARD_PAYMENT
         I18n.t("invoice.e_invoicing.standard_payment")
-      when PREPAID
+      when PREPAID_PAYMENT
         I18n.t("invoice.prepaid_credits")
-      when CREDIT_NOTE
+      when CREDIT_NOTE_PAYMENT
         I18n.t("invoice.credit_notes")
       end
-    end
-
-    def credits_and_payments(&block)
-      {
-        STANDARD => invoice.total_due_amount,
-        PREPAID => invoice.prepaid_credit_amount,
-        CREDIT_NOTE => invoice.credit_notes_amount
-      }.each do |type, amount|
-        yield(type, amount) if amount.positive?
-      end
-    end
-
-    def payment_terms_description
-      "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.net_payment_term)}"
-    end
-
-    def line_item_description
-      return fee.invoice_name if fee.invoice_name.present?
-
-      I18n.t(
-        "invoice.subscription_interval",
-        plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
-        plan_name: fee.subscription.plan.invoice_name
-      )
     end
 
     def discount_reason
@@ -123,11 +74,11 @@ module EInvoices
       tax_rate.zero? ? Z_CATEGORY : S_CATEGORY
     end
 
-    def allowances
+    def allowances(invoice)
       invoice.coupons_amount_cents + invoice.progressive_billing_credit_amount_cents
     end
 
-    def allowances_per_tax_rate
+    def allowances_per_tax_rate(invoice)
       invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
         total_amount = fees.sum(&:precise_amount_cents)
 
@@ -137,46 +88,48 @@ module EInvoices
 
           [tax_rate, total_amount - charged_amount]
         else
-          [tax_rate, total_amount / invoice.fee_total_amount_cents * allowances]
+          [tax_rate, total_amount.fdiv(invoice.fees.sum(:precise_amount_cents)) * allowances(invoice)]
         end
       end.to_h
     end
 
-    def allowance_charges(&block)
-      return unless allowances.positive?
+    def allowance_charges(invoice, &block)
+      allowances_per_tax_rate(invoice).each_pair do |tax_rate, amount|
+        next if amount.zero?
 
-      allowances_per_tax_rate.each_pair do |tax_rate, amount|
         yield tax_rate, Money.new(amount)
       end
     end
 
-    def taxes(&block)
+    def taxes(invoice, &block)
       invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
         total_taxes = fees.sum(&:taxes_precise_amount_cents)
         charged_amount = if tax_rate > 0
           (total_taxes * 100).fdiv(tax_rate)
         else
-          fees.sum(&:precise_amount_cents)
+          fees.sum(&:precise_amount_cents) - allowances_per_tax_rate(invoice)[tax_rate]
         end
 
-        charged_amount -= allowances_per_tax_rate[tax_rate]
+        tax_category = tax_category_code(type: invoice.invoice_type, tax_rate: tax_rate)
 
-        yield tax_rate, Money.new(charged_amount), Money.new(total_taxes)
+        yield tax_category, tax_rate, Money.new(charged_amount), Money.new(total_taxes)
       end
     end
 
-    def line_items(&block)
-      invoice.fees.each_with_index do |fee, index|
-        yield fee, index + 1
+    def line_items(items, &block)
+      resource.send(items).order(amount_cents: :asc).each_with_index do |item, index|
+        yield item, index + 1
       end
     end
 
-    def total_prepaid_amount
-      invoice.prepaid_credit_amount + invoice.credit_notes_amount
-    end
+    def fee_description(fee)
+      return fee.invoice_name if fee.invoice_name.present?
 
-    def due_payable_amount
-      invoice.total_amount
+      I18n.t(
+        "invoice.subscription_interval",
+        plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
+        plan_name: fee.subscription.plan.invoice_name
+      )
     end
 
     def percent(value)
