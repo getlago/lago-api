@@ -83,28 +83,9 @@ module Types
         "Invoice"
       end
 
-      # rubocop:disable GraphQL/ResolverMethodLength
       def customer
-        object.customer.tap do |c|
-          c.display_name = object.customer_display_name
-          c.firstname = object.customer_firstname
-          c.lastname = object.customer_lastname
-          c.email = object.customer_email
-          c.phone = object.customer_phone
-          c.url = object.customer_url
-          c.tax_identification_number = object.customer_tax_identification_number
-          c.timezone = object.customer_applicable_timezone
-          c.address_line1 = object.customer_address_line1
-          c.address_line2 = object.customer_address_line2
-          c.city = object.customer_city
-          c.state = object.customer_state
-          c.zipcode = object.customer_zipcode
-          c.country = object.customer_country
-          c.legal_name = object.customer_legal_name
-          c.legal_number = object.customer_legal_number
-        end
+        CustomerDecorator.new(object.customer, object)
       end
-      # rubocop:enable GraphQL/ResolverMethodLength
 
       def regenerated_invoice_id
         object.regenerated_invoice&.id
