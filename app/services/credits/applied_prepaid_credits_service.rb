@@ -10,6 +10,7 @@ module Credits
 
       super(nil)
     end
+
     def call
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
@@ -29,7 +30,7 @@ module Credits
           result.wallet_transactions << wallet_transaction
 
           invoice.prepaid_credit_amount_cents += amount
-          result.prepaid_credit_amount_cents  += amount
+          result.prepaid_credit_amount_cents += amount
         end
 
         invoice.save! if invoice.changed?
@@ -47,8 +48,8 @@ module Credits
 
       invoice.fees.each do |f|
         cap = f.sub_total_excluding_taxes_amount_cents +
-              f.taxes_precise_amount_cents -
-              f.precise_credit_notes_amount_cents
+          f.taxes_precise_amount_cents -
+          f.precise_credit_notes_amount_cents
 
         key = [f.fee_type, f.charge&.billable_metric_id]
         remaining[key] += cap
@@ -59,7 +60,7 @@ module Credits
 
     def applicable_wallet_amount(wallet, remaining_amounts_by_fee_type_and_bm)
       amount_left = wallet.balance_cents
-      applied     = 0
+      applied = 0
 
       eligible_fee_keys_for_wallet(wallet).each do |key|
         break if amount_left <= 0
@@ -67,8 +68,8 @@ module Credits
 
         take = [remaining_amounts_by_fee_type_and_bm[key], amount_left].min
         remaining_amounts_by_fee_type_and_bm[key] -= take
-        amount_left       -= take
-        applied           += take
+        amount_left -= take
+        applied += take
       end
 
       applied
@@ -77,12 +78,12 @@ module Credits
     def eligible_fee_keys_for_wallet(wallet)
       all_fees = invoice.fees
 
-      if wallet.limited_to_billable_metrics?
-        chosen = fees_for_wallet_limited_to_bm(wallet, all_fees)
+      chosen = if wallet.limited_to_billable_metrics?
+        fees_for_wallet_limited_to_bm(wallet, all_fees)
       elsif wallet.limited_fee_types?
-        chosen = all_fees.select { |f| wallet.allowed_fee_types.include?(f.fee_type) }
+        all_fees.select { |f| wallet.allowed_fee_types.include?(f.fee_type) }
       else
-        chosen = all_fees
+        all_fees
       end
 
       chosen.map { |f| [f.fee_type, f.charge&.billable_metric_id] }.uniq
