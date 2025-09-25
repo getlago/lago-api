@@ -2609,5 +2609,21 @@ RSpec.describe Invoice do
       expect(invoice[:customer_state]).to eq("Île-de-France")
       expect(invoice[:customer_country]).to eq("FR")
     end
+
+    context "when #snapshot_customer_data is called with force: true" do
+      it "updates the customer data snapshot" do
+        invoice.finalized!
+        customer.update!(email: "updated@example.com")
+
+        travel 1.day do
+          invoice.send(:snapshot_customer_data, force: true)
+          invoice.save!
+        end
+
+        invoice.reload
+        expect(invoice.customer_email).to eq("updated@example.com")
+        expect(invoice.customer_data_snapshotted_at).to be_within(1.second).of(1.day.from_now)
+      end
+    end
   end
 end

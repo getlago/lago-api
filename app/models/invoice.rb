@@ -596,8 +596,8 @@ class Invoice < ApplicationRecord
     self.finalized_at ||= Time.current
   end
 
-  def snapshot_customer_data
-    return unless status_changed_to_finalized?
+  def snapshot_customer_data(force: false)
+    return unless status_changed_to_finalized? || force
 
     self.customer_data_snapshotted_at = Time.current
 
