@@ -71,6 +71,14 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     end
   end
 
+  context "when filtering by metadata" do
+    let(:filters) { {metadata: {"key" => "value"}} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
   context "when search_term is provided and valid" do
     let(:search_term) { "valid_search_term" }
 
@@ -111,5 +119,8 @@ RSpec.describe Queries::CustomersQueryFiltersContract do
     it_behaves_like "an invalid filter", :has_tax_identification_number, "f", ["must be one of: true, false"]
     it_behaves_like "an invalid filter", :has_tax_identification_number, 1, ["must be one of: true, false"]
     it_behaves_like "an invalid filter", :has_tax_identification_number, 0, ["must be one of: true, false"]
+    it_behaves_like "an invalid filter", :metadata, SecureRandom.uuid, ["must be a hash"]
+    it_behaves_like "an invalid filter", :metadata, {0 => "integer key"}, ["keys must be string"]
+    it_behaves_like "an invalid filter", :metadata, {"key" => ["must be a string"]}, {"key" => ["must be a string"]}
   end
 end

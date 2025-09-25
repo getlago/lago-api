@@ -73,6 +73,10 @@ RSpec.describe CustomersQuery, type: :query do
     customer_first
     customer_second
     customer_third
+
+    create(:customer_metadata, customer: customer_first, key: "id", value: "1")
+    create(:customer_metadata, customer: customer_first, key: "name", value: "John Doe")
+    create(:customer_metadata, customer: customer_second, key: "id", value: "2")
   end
 
   it "returns all customers" do
@@ -356,6 +360,48 @@ RSpec.describe CustomersQuery, type: :query do
 
       it "returns only the customers without a tax identification number" do
         expect(returned_ids).to match_array([customer_second.id, customer_third.id])
+      end
+    end
+  end
+
+  context "when filtering by metadata" do
+    context "when filtering by presence" do
+      let(:filters) { {metadata: {id: "1"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when filtering by absence" do
+      let(:filters) { {metadata: {name: ""}} }
+
+      it "returns only the customers without the metadata" do
+        expect(returned_ids).to match_array([customer_second.id, customer_third.id])
+      end
+    end
+
+    context "when matching multiple metadata" do
+      let(:filters) { {metadata: {id: "1", name: "John Doe"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when matching one but not the other" do
+      let(:filters) { {metadata: {id: "1", name: "Jane Smith"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([])
+      end
+    end
+
+    context "when filtering by presence and absence" do
+      let(:filters) { {metadata: {id: "2", name: ""}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_second.id])
       end
     end
   end

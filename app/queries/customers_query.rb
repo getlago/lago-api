@@ -13,7 +13,8 @@ class CustomersQuery < BaseQuery
     :states,
     :zipcodes,
     :currencies,
-    :has_tax_identification_number
+    :has_tax_identification_number,
+    :metadata
   ]
 
   def call
@@ -29,6 +30,7 @@ class CustomersQuery < BaseQuery
     customers = with_billing_address_filter(customers) if billing_address_filter?
     customers = with_currencies(customers) if filters.currencies.present?
     customers = with_has_tax_identification_number(customers) if filters.key?(:has_tax_identification_number)
+    customers = with_metadata(customers) if filters.metadata.present?
 
     customers = customers.with_discarded if filters.with_deleted
 
@@ -58,6 +60,29 @@ class CustomersQuery < BaseQuery
     scope = scope.where(country: filters.countries) if filters.countries.present?
     scope = scope.where(state: filters.states) if filters.states.present?
     scope = scope.where(zipcode: filters.zipcodes) if filters.zipcodes.present?
+    scope
+  end
+
+  def with_metadata(scope)
+    presence_filters, absence_filters = filters.metadata.partition { |_k, v| v.present? }
+
+    if presence_filters.any?
+      tuples = presence_filters.map { "(?, ?)" }.join(", ")
+      subquery = Metadata::CustomerMetadata
+        .where("(key, value) IN (#{tuples})", *presence_filters.flatten)
+        .group("customer_id")
+        .having("COUNT(DISTINCT key) = ?", presence_filters.size)
+        .select(:customer_id)
+
+      scope = scope.where(id: subquery)
+    end
+
+    if absence_filters.any?
+      keys = absence_filters.map { |k, _v| k }
+      subquery = Metadata::CustomerMetadata.where(key: keys).select(:customer_id)
+      scope = scope.where.not(id: subquery)
+    end
+
     scope
   end
 
