@@ -2,8 +2,8 @@
 
 module XMLHelper
   NAMESPACES = {
-    factur_x: EInvoices::FacturX::Create::Builder::ROOT_NAMESPACES,
-    ubl: EInvoices::Ubl::Create::Builder::ROOT_NAMESPACES
+    factur_x: EInvoices::FacturX::BaseService::ROOT_NAMESPACES,
+    ubl: EInvoices::Ubl::BaseService::COMMON_NAMESPACES
   }
 
   def xml_document(ns)
