@@ -163,6 +163,10 @@ class Organization < ApplicationRecord
     end
   end
 
+  def premium_integrations
+    super & INTEGRATIONS
+  end
+
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
   end
@@ -250,7 +254,7 @@ class Organization < ApplicationRecord
   end
 
   def validate_premium_integrations
-    return if (premium_integrations - REMOVED_INTEGRATIONS).all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
+    return if (self[:premium_integrations] - REMOVED_INTEGRATIONS).all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
   end

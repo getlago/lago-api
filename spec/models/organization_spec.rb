@@ -293,6 +293,13 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#premium_integrations" do
+    it "returns the premium integrations without removed integration or invalid integrations" do
+      organization.update!(premium_integrations: %w[okta invalid_integration beta_payment_authorization progressive_billing])
+      expect(organization.premium_integrations).to eq(%w[okta progressive_billing])
+    end
+  end
+
   describe "#can_create_billing_entity?" do
     subject { organization.can_create_billing_entity? }
 
