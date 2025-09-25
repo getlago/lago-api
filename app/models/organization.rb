@@ -164,7 +164,9 @@ class Organization < ApplicationRecord
   end
 
   def premium_integrations
-    super & INTEGRATIONS
+    integrations = super
+    integrations.reject! { !PREMIUM_INTEGRATIONS.include?(it) }
+    integrations
   end
 
   def using_lifetime_usage?
