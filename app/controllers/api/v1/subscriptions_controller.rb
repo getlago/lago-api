@@ -20,6 +20,18 @@ module Api
         )
         customer.billing_entity ||= billing_entity
 
+        if params[:authorization] && !current_organization.beta_payment_authorization_enabled?
+          return render(
+            json: {
+              status: 403,
+              error: "Forbidden",
+              code: "feature_not_available",
+              message: "Payment authorization (beta_payment_authorization) is not available for this organization"
+            },
+            status: :forbidden
+          )
+        end
+
         if params[:authorization]
           unless customer.payment_provider&.to_sym == :stripe
             return render(
