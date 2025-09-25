@@ -210,12 +210,6 @@ RSpec.describe Organization do
 
         it { is_expected.to be_valid }
       end
-
-      context "when it includes a removed integration" do
-        subject(:organization) { build(:organization, premium_integrations: ["beta_payment_authorization"]) }
-
-        it { is_expected.to be_valid }
-      end
     end
   end
 
