@@ -16,7 +16,7 @@ class BaseFilters
 
   attr_reader :filters
 
-  delegate :[], to: :filters
+  delegate :[], :key?, to: :filters
 
   def to_h
     filters

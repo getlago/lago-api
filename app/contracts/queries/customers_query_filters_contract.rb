@@ -10,6 +10,7 @@ module Queries
         optional(:states).array(:string)
         optional(:zipcodes).array(:string)
         optional(:currencies).array(:string, included_in?: Customer.currency_list)
+        optional(:has_tax_identification_number).value(:"coercible.string", included_in?: %w[true false])
       end
 
       optional(:search_term).maybe(:string)
