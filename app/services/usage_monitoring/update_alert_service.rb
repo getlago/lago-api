@@ -19,6 +19,13 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
       end
 
+      if params[:thresholds].present?
+        threshold_values = params[:thresholds].map { |t| t[:value] }.compact
+        if threshold_values.size != threshold_values.uniq.size
+          return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
+        end
+      end
+
       result.alert = alert
 
       billable_metric = find_billable_metric_from_params!
