@@ -52,22 +52,6 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url(payment_intent)
-        res = ::Stripe::Checkout::Session.create(
-          payment_url_payload(payment_intent),
-          {
-            api_key: stripe_api_key,
-            idempotency_key: "payment-intent-#{payment_intent.id}"
-          }
-        )
-
-        result.payment_url = res["url"]
-
-        result
-      rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
-        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
-      end
-
       private
 
       attr_accessor :invoice
@@ -104,52 +88,6 @@ module Invoices
         payment
       end
 
-      def success_redirect_url
-        stripe_payment_provider.success_redirect_url.presence ||
-          ::PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
-      end
-
-      def stripe_api_key
-        stripe_payment_provider.secret_key
-      end
-
-      def payment_url_payload(payment_intent)
-        {
-          line_items: [
-            {
-              quantity: 1,
-              price_data: {
-                currency: invoice.currency.downcase,
-                unit_amount: invoice.total_due_amount_cents,
-                product_data: {
-                  name: invoice.number
-                }
-              }
-            }
-          ],
-          mode: "payment",
-          success_url: success_redirect_url,
-          customer: customer.stripe_customer.provider_customer_id,
-          payment_method_types: customer.stripe_customer.provider_payment_methods,
-          expires_at: payment_intent.expires_at.to_i,
-          payment_intent_data: {
-            description:,
-            setup_future_usage: setup_future_usage? ? "off_session" : nil,
-            metadata: {
-              lago_customer_id: customer.id,
-              lago_invoice_id: invoice.id,
-              invoice_issuing_date: invoice.issuing_date.iso8601,
-              invoice_type: invoice.invoice_type,
-              payment_type: "one-time"
-            }
-          }
-        }
-      end
-
-      def description
-        "#{organization.name} - Invoice #{invoice.number}"
-      end
-
       def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
         params = {
           payment_status:,
@@ -174,16 +112,6 @@ module Invoices
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
       end
 
-      def deliver_error_webhook(stripe_error)
-        DeliverErrorWebhookService.call_async(invoice, {
-          provider_customer_id: customer.stripe_customer.provider_customer_id,
-          provider_error: {
-            message: stripe_error.message,
-            error_code: stripe_error.code
-          }
-        })
-      end
-
       def handle_missing_payment(organization_id, stripe_payment)
         # NOTE: Payment was not initiated by lago
         return result unless stripe_payment.metadata&.key?(:lago_invoice_id)
@@ -200,15 +128,6 @@ module Invoices
         #       We have to recreate it from the received data
         result.payment = create_payment(stripe_payment, invoice:)
         result
-      end
-
-      # NOTE: Due to RBI limitation, all indians payment should be "on session". See: https://docs.stripe.com/india-recurring-payments
-      # crypto payments don't support 'off_session'
-      def setup_future_usage?
-        return false if customer.country == "IN"
-        return false if customer.stripe_customer.provider_payment_methods.include?("crypto")
-
-        true
       end
 
       def stripe_payment_provider
