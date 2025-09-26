@@ -16,19 +16,17 @@ module EInvoices
       end
 
       def taxes(&block)
-        if resource.items.joins(:fee).where(fee: {taxes_rate: 0}).exists?
-          basis_amount = resource.items.joins(:fee).where(fee: {taxes_rate: 0}).sum(:precise_amount_cents)
-          yield EInvoices::BaseService::Z_CATEGORY, 0, Money.new(basis_amount), 0
-        end
-
-        resource.applied_taxes.each do |applied_tax|
-          tax_rate = applied_tax.tax_rate
-          tax_amount = applied_tax.amount_cents
-          basis_amount = applied_tax.base_amount_cents
-          tax_category = tax_category_code(tax_rate: tax_rate)
+        resource.fees.group_by(&:taxes_rate).each do |tax_rate, fees|
+          basis_amount = fees.flat_map(&:credit_note_items).sum(&:precise_amount_cents) - (discounts[tax_rate] || 0)
+          tax_amount = basis_amount * tax_rate.fdiv(100)
+          tax_category = tax_category_code(type: fees.first.fee_type, tax_rate: tax_rate)
 
           yield tax_category, tax_rate, Money.new(basis_amount), Money.new(tax_amount)
         end
+      end
+
+      def discounts
+        @_discounts ||= allowances_per_tax_rate(resource.invoice)
       end
     end
   end

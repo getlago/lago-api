@@ -76,6 +76,14 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
       it "contains the tax registration" do
         expect(subject).to contains_xml_node("//cac:AccountingSupplierParty//cac:PartyTaxScheme")
       end
+
+      context "when credit invoice" do
+        let(:invoice) { create(:invoice, invoice_type: :credit, number: "LAGO-TEST-123") }
+
+        it "does not contains PartyTaxScheme tag" do
+          expect(subject).not_to contains_xml_node("//cac:AccountingSupplierParty//cac:PartyTaxScheme")
+        end
+      end
     end
 
     context "when AccountingCustomerParty tag" do
@@ -166,55 +174,81 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
     context "when TaxSubtotal tag" do
       let(:root) { "//cac:TaxTotal/cac:TaxSubtotal" }
 
-      let(:invoice) { create(:invoice) }
-      let(:credit_note) { create(:credit_note, invoice:) }
-      let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
-      let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
-      let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 100) }
-      let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: fee3, precise_amount_cents: 300) }
-      let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: fee4, precise_amount_cents: 600) }
-      let(:fee0) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
-      let(:fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
-      let(:fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 5) }
-      let(:fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 15) }
-      let(:fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
-      let(:credit_note_applied_tax1) { create(:credit_note_applied_tax, credit_note:, tax_rate: 5.0, amount_cents: 20, base_amount_cents: 400) }
-      let(:credit_note_applied_tax2) { create(:credit_note_applied_tax, credit_note:, tax_rate: 10.0, amount_cents: 60, base_amount_cents: 600) }
+      context "with multiple taxes" do
+        let(:invoice) { create(:invoice) }
+        let(:credit_note) { create(:credit_note, invoice:) }
+        let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
+        let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: fee1, precise_amount_cents: 500) }
+        let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: fee2, precise_amount_cents: 100) }
+        let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: fee3, precise_amount_cents: 300) }
+        let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: fee4, precise_amount_cents: 600) }
+        let(:fee0) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
+        let(:fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
+        let(:fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 5) }
+        let(:fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 15) }
+        let(:fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 60) }
+        let(:credit_note_applied_tax1) { create(:credit_note_applied_tax, credit_note:, tax_rate: 5.0, amount_cents: 20, base_amount_cents: 400) }
+        let(:credit_note_applied_tax2) { create(:credit_note_applied_tax, credit_note:, tax_rate: 10.0, amount_cents: 60, base_amount_cents: 600) }
 
-      before do
-        credit_note_item0
-        credit_note_item1
-        credit_note_item2
-        credit_note_item3
-        credit_note_item4
-        credit_note_applied_tax1
-        credit_note_applied_tax2
+        before do
+          credit_note_item0
+          credit_note_item1
+          credit_note_item2
+          credit_note_item3
+          credit_note_item4
+          credit_note_applied_tax1
+          credit_note_applied_tax2
+        end
+
+        it "contains TaxSubtotal tags" do
+          expect(subject.xpath(root).length).to eq(3)
+        end
+
+        context "with one tag per tax rate" do
+          it "contains 0.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxableAmount").with_value("-10.00")
+            expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxAmount").with_value("0.00")
+            expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:ID").with_value(described_class::Z_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:Percent").with_value("0.00")
+          end
+
+          it "contains 5.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxableAmount").with_value("-4.00")
+            expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxAmount").with_value("-0.20")
+            expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:Percent").with_value("5.00")
+          end
+
+          it "contains 10.00% rate" do
+            expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxableAmount").with_value("-6.00")
+            expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxAmount").with_value("-0.60")
+            expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
+            expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:Percent").with_value("10.00")
+          end
+        end
       end
 
-      it "contains TaxSubtotal tags" do
-        expect(subject.xpath(root).length).to eq(3)
-      end
+      context "when credit invoice" do
+        let(:invoice) { create(:invoice, invoice_type: :credit) }
+        let(:credit_note) { create(:credit_note, invoice:) }
+        let(:fee0) { create(:fee, invoice:, fee_type: :credit, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
+        let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
 
-      context "with one tag per tax rate" do
+        before do
+          credit_note_item0
+        end
+
+        it "contains TaxSubtotal tags" do
+          expect(subject.xpath(root).length).to eq(1)
+        end
+
         it "contains 0.00% rate" do
-          expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxableAmount").with_value("-10.00")
+          expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxableAmount").with_value("-5.00")
           expect(subject).to contains_xml_node("#{root}[1]/cbc:TaxAmount").with_value("0.00")
-          expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:ID").with_value(described_class::Z_CATEGORY)
-          expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:Percent").with_value("0.00")
-        end
-
-        it "contains 5.00% rate" do
-          expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxableAmount").with_value("-4.00")
-          expect(subject).to contains_xml_node("#{root}[2]/cbc:TaxAmount").with_value("-0.20")
-          expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
-          expect(subject).to contains_xml_node("#{root}[2]/cac:TaxCategory/cbc:Percent").with_value("5.00")
-        end
-
-        it "contains 10.00% rate" do
-          expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxableAmount").with_value("-6.00")
-          expect(subject).to contains_xml_node("#{root}[3]/cbc:TaxAmount").with_value("-0.60")
-          expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:ID").with_value(described_class::S_CATEGORY)
-          expect(subject).to contains_xml_node("#{root}[3]/cac:TaxCategory/cbc:Percent").with_value("10.00")
+          expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:ID").with_value(described_class::O_CATEGORY)
+          expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:TaxExemptionReasonCode").with_value(described_class::O_VAT_EXEMPTION)
+          expect(subject).to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:TaxExemptionReason").with_value("Not subject to VAT")
+          expect(subject).not_to contains_xml_node("#{root}[1]/cac:TaxCategory/cbc:Percent")
         end
       end
     end
