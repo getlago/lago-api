@@ -91,7 +91,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when code is blank" do
-      let(:params) { {alert_type: "current_usage_amount", code: nil, thresholds: [1]} }
+      let(:params) { {alert_type: "current_usage_amount", code: nil, thresholds: [{value: nil}]} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
@@ -100,7 +100,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when alert_type is blank" do
-      let(:params) { {alert_type: nil, code: "ok", thresholds: [1]} }
+      let(:params) { {alert_type: nil, code: "ok", thresholds: [{value: nil}]} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
@@ -114,6 +114,15 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "returns a validation failure result" do
         expect(result).to be_failure
         expect(result.error.messages[:thresholds]).to include("value_is_mandatory")
+      end
+    end
+
+    context "when thresholds have duplicate values" do
+      let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: [{value: 1}, {value: 1}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
       end
     end
 
