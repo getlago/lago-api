@@ -69,6 +69,7 @@ RSpec.describe CreditNotes::GenerateService do
 
       before do
         allow(pdf_tempfile).to receive(:path).and_return(blank_pdf_path)
+        allow(Tempfile).to receive(:new).and_call_original
         allow(Tempfile).to receive(:new).with([credit_note.number, ".pdf"]).and_return(pdf_tempfile)
       end
 

@@ -20,7 +20,7 @@ module EInvoices
           Ubl::Header.call(xml:, resource:, type_code: CREDIT_NOTE, notes:)
           Ubl::BillingReference.call(xml:, resource: invoice)
 
-          Ubl::SupplierParty.call(xml:, resource:)
+          Ubl::SupplierParty.call(xml:, resource:, options: supplier_party_options)
           Ubl::CustomerParty.call(xml:, resource:)
 
           Ubl::PaymentMeans.call(xml:, type: STANDARD_PAYMENT)
@@ -53,6 +53,12 @@ module EInvoices
 
       def invoice
         credit_note.invoice
+      end
+
+      def supplier_party_options
+        Ubl::SupplierParty::Options.new(
+          tax_registration: !invoice.credit?
+        )
       end
 
       def monetary_summation_amounts
