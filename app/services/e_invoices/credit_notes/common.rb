@@ -16,9 +16,16 @@ module EInvoices
       end
 
       def taxes(&block)
-        if resource.items.joins(:fee).where(fee: {taxes_rate: 0}).exists?
-          basis_amount = resource.items.joins(:fee).where(fee: {taxes_rate: 0}).sum(:precise_amount_cents)
-          yield EInvoices::BaseService::Z_CATEGORY, 0, Money.new(basis_amount), 0
+        zero_rated_taxes = resource.items.joins(:fee).where(fee: {taxes_rate: 0})
+        if zero_rated_taxes.exists?
+          amount_categories = zero_rated_taxes.each_with_object(Hash.new(0)) do |item, hash|
+            category = tax_category_code(type: item.fee.fee_type, tax_rate: item.fee.taxes_rate)
+            hash[category] += item.precise_amount_cents
+          end
+
+          amount_categories.each do |category, basis_amount|
+            yield category, 0, Money.new(basis_amount), 0
+          end
         end
 
         resource.applied_taxes.each do |applied_tax|
