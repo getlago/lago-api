@@ -76,7 +76,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         thresholds: [
           {code: :notice, value: 1000},
           {code: :warn, value: 5000},
-          {code: :alert, value: 1000, recurring: true}
+          {code: :alert, value: 2000, recurring: true}
         ]
       }
     end
