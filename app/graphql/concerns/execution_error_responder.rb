@@ -6,15 +6,22 @@ module ExecutionErrorResponder
 
   private
 
-  def execution_error(error: "Internal Error", status: 422, code: "internal_error", details: nil)
+  def execution_error(error: "Internal Error", status: 422, code: "internal_error", details: nil, metadata: nil)
     payload = {
       status:,
       code:
     }
 
     if details.is_a?(Hash)
-      payload[:details] = details&.transform_keys do |key|
+      payload[:details] = details.transform_keys do |key|
         key.to_s.camelize(:lower)
+      end
+    end
+
+    if metadata
+      payload[:metadata] = metadata.map do |item|
+        item[:field] = item[:field].to_s.camelize(:lower)
+        item
       end
     end
 
@@ -48,12 +55,13 @@ module ExecutionErrorResponder
     )
   end
 
-  def validation_error(messages:)
+  def validation_error(error:)
     execution_error(
       error: "Unprocessable Entity",
       status: 422,
       code: "unprocessable_entity",
-      details: messages
+      details: error.messages,
+      metadata: error.metadata
     )
   end
 
@@ -73,7 +81,7 @@ module ExecutionErrorResponder
     when BaseService::MethodNotAllowedFailure
       not_allowed_error(code: service_result.error.code)
     when BaseService::ValidationFailure
-      validation_error(messages: service_result.error.messages)
+      validation_error(error: service_result.error)
     when BaseService::ForbiddenFailure
       forbidden_error(code: service_result.error.code)
     when BaseService::ThirdPartyFailure
