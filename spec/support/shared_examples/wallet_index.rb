@@ -2,7 +2,6 @@
 
 RSpec.shared_examples "a wallet index endpoint" do
   let!(:wallet) { create(:wallet, customer:) }
-  let(:external_id) { customer.external_id }
   let(:params) { {page: 1, per_page: 1} }
 
   include_examples "requires API permission", "wallet", "read"
