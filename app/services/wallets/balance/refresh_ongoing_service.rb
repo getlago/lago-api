@@ -93,6 +93,9 @@ module Wallets
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
+      # Assigns each fee to a wallet based on the wallet's limitations
+      # the ongoing balance should only affect the wallet
+      # with the highest priority with the corresponding limitations ( can go negative )
       def assign_wallet_per_fee(fees)
         fee_wallet = {}
         return fee_wallet if fees.blank?
