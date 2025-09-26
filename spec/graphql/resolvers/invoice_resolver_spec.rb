@@ -378,4 +378,110 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(graphql_wallet_transaction["walletName"]).to eq("wallet name")
     end
   end
+
+  context "when invoice has customer data snapshot" do
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        customer_data_snapshotted_at: Time.current,
+        customer_display_name: "John Doe",
+        customer_firstname: "John",
+        customer_lastname: "Doe",
+        customer_email: "john.doe@example.com",
+        customer_phone: "+1234567890",
+        customer_url: "https://john.doe.com",
+        customer_tax_identification_number: "1234567890",
+        customer_applicable_timezone: "Europe/Paris",
+        customer_legal_name: "John Doe",
+        customer_legal_number: "1234567890",
+        customer_address_line1: "123 Main St",
+        customer_address_line2: "Apt 1",
+        customer_city: "New York",
+        customer_state: "NY",
+        customer_zipcode: "10001",
+        customer_country: "US",
+        customer_shipping_address_line1: "Rue de la Paix",
+        customer_shipping_address_line2: "Apt 5B",
+        customer_shipping_city: "Paris",
+        customer_shipping_state: "Ile-de-France",
+        customer_shipping_zipcode: "75000",
+        customer_shipping_country: "FR"
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            id
+            number
+            status
+            customer {
+              id
+              displayName
+              firstname
+              lastname
+              email
+              phone
+              url
+              taxIdentificationNumber
+              applicableTimezone
+              addressLine1
+              addressLine2
+              city
+              state
+              zipcode
+              country
+              legalName
+              legalNumber
+              shippingAddress {
+                addressLine1
+                addressLine2
+                city
+                state
+                zipcode
+                country
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    it "returns the invoice with the customer data snapshot" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {id: invoice.id}
+      )
+
+      data = result["data"]["invoice"]
+      expect(data["customer"]["displayName"]).to eq(invoice.customer_display_name)
+      expect(data["customer"]["firstname"]).to eq(invoice.customer_firstname)
+      expect(data["customer"]["lastname"]).to eq(invoice.customer_lastname)
+      expect(data["customer"]["email"]).to eq(invoice.customer_email)
+      expect(data["customer"]["phone"]).to eq(invoice.customer_phone)
+      expect(data["customer"]["url"]).to eq(invoice.customer_url)
+      expect(data["customer"]["taxIdentificationNumber"]).to eq(invoice.customer_tax_identification_number)
+      expect(data["customer"]["applicableTimezone"]).to eq("TZ_EUROPE_PARIS")
+      expect(data["customer"]["addressLine1"]).to eq(invoice.customer_address_line1)
+      expect(data["customer"]["addressLine2"]).to eq(invoice.customer_address_line2)
+      expect(data["customer"]["city"]).to eq(invoice.customer_city)
+      expect(data["customer"]["state"]).to eq(invoice.customer_state)
+      expect(data["customer"]["zipcode"]).to eq(invoice.customer_zipcode)
+      expect(data["customer"]["country"]).to eq(invoice.customer_country)
+      expect(data["customer"]["legalName"]).to eq(invoice.customer_legal_name)
+      expect(data["customer"]["legalNumber"]).to eq(invoice.customer_legal_number)
+      expect(data["customer"]["shippingAddress"]["addressLine1"]).to eq(invoice.customer_shipping_address_line1)
+      expect(data["customer"]["shippingAddress"]["addressLine2"]).to eq(invoice.customer_shipping_address_line2)
+      expect(data["customer"]["shippingAddress"]["city"]).to eq(invoice.customer_shipping_city)
+      expect(data["customer"]["shippingAddress"]["state"]).to eq(invoice.customer_shipping_state)
+      expect(data["customer"]["shippingAddress"]["zipcode"]).to eq(invoice.customer_shipping_zipcode)
+      expect(data["customer"]["shippingAddress"]["country"]).to eq(invoice.customer_shipping_country)
+    end
+  end
 end

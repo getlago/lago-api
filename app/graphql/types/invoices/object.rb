@@ -83,6 +83,10 @@ module Types
         "Invoice"
       end
 
+      def customer
+        CustomerDecorator.new(object.customer, object)
+      end
+
       def regenerated_invoice_id
         object.regenerated_invoice&.id
       end

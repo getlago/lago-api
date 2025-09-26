@@ -7,6 +7,7 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include CustomerDataSnapshotting
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -541,6 +542,29 @@ end
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
+#  customer_address_line1                  :string
+#  customer_address_line2                  :string
+#  customer_applicable_timezone            :string
+#  customer_city                           :string
+#  customer_country                        :string
+#  customer_data_snapshotted_at            :datetime
+#  customer_display_name                   :string
+#  customer_email                          :string
+#  customer_firstname                      :string
+#  customer_lastname                       :string
+#  customer_legal_name                     :string
+#  customer_legal_number                   :string
+#  customer_phone                          :string
+#  customer_shipping_address_line1         :string
+#  customer_shipping_address_line2         :string
+#  customer_shipping_city                  :string
+#  customer_shipping_country               :string
+#  customer_shipping_state                 :string
+#  customer_shipping_zipcode               :string
+#  customer_state                          :string
+#  customer_tax_identification_number      :string
+#  customer_url                            :string
+#  customer_zipcode                        :string
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  finalized_at                            :datetime

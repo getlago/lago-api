@@ -1,4 +1,4 @@
-\restrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+\restrict R89vBfIzRbx2ArQoAY0qb791XrWQcjM6brp2rDTPLLQ64j1PTgCJF72BKcVA9Eo
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -2877,6 +2877,29 @@ CREATE TABLE public.invoices (
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
+    customer_data_snapshotted_at timestamp(6) without time zone,
+    customer_display_name character varying,
+    customer_legal_name character varying,
+    customer_legal_number character varying,
+    customer_email character varying,
+    customer_address_line1 character varying,
+    customer_address_line2 character varying,
+    customer_city character varying,
+    customer_zipcode character varying,
+    customer_state character varying,
+    customer_country character varying,
+    customer_phone character varying,
+    customer_url character varying,
+    customer_tax_identification_number character varying,
+    customer_applicable_timezone character varying,
+    customer_firstname character varying,
+    customer_lastname character varying,
+    customer_shipping_address_line1 character varying,
+    customer_shipping_address_line2 character varying,
+    customer_shipping_city character varying,
+    customer_shipping_state character varying,
+    customer_shipping_zipcode character varying,
+    customer_shipping_country character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -9840,11 +9863,13 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
+\unrestrict R89vBfIzRbx2ArQoAY0qb791XrWQcjM6brp2rDTPLLQ64j1PTgCJF72BKcVA9Eo
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250925120821'),
+('20250922113901'),
 ('20250919124523'),
 ('20250919124037'),
 ('20250915100607'),
@@ -10673,3 +10698,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
