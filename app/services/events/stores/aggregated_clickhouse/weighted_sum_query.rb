@@ -145,7 +145,7 @@ module Events
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
             [
-              "'#{formated_groups_values(initial_value)}'",
+              sanitized_values(formated_groups_values(initial_value)),
               "toDateTime64(:from_datetime, 5, 'UTC')",
               "toDecimal128(#{initial_value[:value]}, :decimal_scale)"
             ].join(", ")
@@ -157,7 +157,7 @@ module Events
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
             [
-              "'#{formated_groups_values(initial_value)}'",
+              sanitized_values(formated_groups_values(initial_value)),
               "toDateTime64(:to_datetime, 5, 'UTC')",
               "toDecimal128(0, :decimal_scale)"
             ].join(", ")
@@ -203,6 +203,12 @@ module Events
               tuple.3 AS difference
             FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
+        end
+
+        def sanitized_values(value)
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            ["?", value]
+          )
         end
       end
     end

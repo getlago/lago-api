@@ -1305,13 +1305,13 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
 
     let(:events_values) do
       [
-        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10, agent_name: "frodo'"},
+        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10, agent_name: "frodo'"},
 
         {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2, agent_name: "aragorn"},
         {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3, agent_name: "aragorn"},
