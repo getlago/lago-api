@@ -92,12 +92,15 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
+  REMOVED_INTEGRATIONS = %w[
+    beta_payment_authorization
+  ]
+
   NON_PREMIUM_INTEGRATIONS = %w[
     anrok
   ].freeze
 
   PREMIUM_INTEGRATIONS = %w[
-    beta_payment_authorization
     netsuite
     okta
     avalara
@@ -158,6 +161,12 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  def premium_integrations
+    integrations = super
+    integrations.reject! { !PREMIUM_INTEGRATIONS.include?(it) }
+    integrations
   end
 
   def using_lifetime_usage?
@@ -247,7 +256,7 @@ class Organization < ApplicationRecord
   end
 
   def validate_premium_integrations
-    return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
+    return if (self[:premium_integrations] - REMOVED_INTEGRATIONS).all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
   end
