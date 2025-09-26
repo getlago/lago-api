@@ -1508,7 +1508,8 @@ CREATE TABLE public.billing_entities (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    applied_dunning_campaign_id uuid
+    applied_dunning_campaign_id uuid,
+    einvoicing boolean DEFAULT false NOT NULL
 );
 
 
@@ -1761,7 +1762,8 @@ CREATE TABLE public.credit_notes (
     precise_coupons_adjustment_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    xml_file character varying
 );
 
 
@@ -2877,6 +2879,7 @@ CREATE TABLE public.invoices (
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
+    xml_file character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -9845,6 +9848,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250924173833'),
 ('20250919124523'),
 ('20250919124037'),
 ('20250915100607'),
@@ -9863,9 +9867,11 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250822100111'),
 ('20250821094638'),
 ('20250820200921'),
+('20250819163434'),
 ('20250818154000'),
 ('20250812132802'),
 ('20250812082721'),
+('20250808170148'),
 ('20250806174150'),
 ('20250806173900'),
 ('20250801072722'),
@@ -10673,3 +10679,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
