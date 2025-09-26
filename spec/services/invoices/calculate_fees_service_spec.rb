@@ -389,20 +389,6 @@ RSpec.describe Invoices::CalculateFeesService do
 
       # when pay_in_advance is true, the fixed charge fee is created, but with period of the next month
       context "when fixed charge is pay_in_advance" do
-        let(:invoice_subscription) do
-          create(
-            :invoice_subscription,
-            subscription:,
-            invoice:,
-            timestamp:,
-            from_datetime: date_service.from_datetime,
-            to_datetime: date_service.to_datetime,
-            charges_from_datetime: date_service.charges_from_datetime,
-            charges_to_datetime: date_service.charges_to_datetime,
-            fixed_charges_from_datetime: date_service.charges_from_datetime + 1.month,
-            fixed_charges_to_datetime: date_service.charges_to_datetime + 1.month
-          )
-        end
 
         let(:fixed_charge) do
           create(
@@ -552,7 +538,7 @@ RSpec.describe Invoices::CalculateFeesService do
           fixed_charge_fee = invoice.fees.fixed_charge.first
           expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
           expect(fixed_charge_fee.units).to eq(15)
-          expect(fixed_charge_fee.amount_cents).to eq(20000 + 30000 + 10 * 500 + 5 * 100 )
+          expect(fixed_charge_fee.amount_cents).to eq(20000 + 30000 + 10 * 500 + 5 * 100)
         end
       end
 
@@ -1182,7 +1168,7 @@ RSpec.describe Invoices::CalculateFeesService do
             result = invoice_service.call
 
             expect(result).to be_success
-            expect(invoice.fees.commitment.count).to eq(0)  
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
       end
@@ -1341,7 +1327,6 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         it "creates subscription and fixed charge fees with correct boundaries" do
-          byebug
           result = invoice_service.call
 
           expect(result).to be_success
@@ -1352,16 +1337,16 @@ RSpec.describe Invoices::CalculateFeesService do
           expect(invoice.fees.charge.count).to eq(1)
 
           invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription[:to_datetime].to_date).to eq(Date.today.end_of_month)
-          expect(invoice_subscription[:from_datetime].to_date).to eq(Date.today.beginning_of_month)
+          expect(invoice_subscription[:to_datetime].to_date).to eq(Time.zone.today.end_of_month)
+          expect(invoice_subscription[:from_datetime].to_date).to eq(Time.zone.today.beginning_of_month)
 
           fixed_charge_fee_properties = invoice.fees.fixed_charge.first.properties
-          expect(Date.parse(fixed_charge_fee_properties["fixed_charges_from_datetime"])).to eq(Date.today.beginning_of_month)
-          expect(Date.parse(fixed_charge_fee_properties["fixed_charges_to_datetime"])).to eq(Date.today.end_of_month)
+          expect(Date.parse(fixed_charge_fee_properties["fixed_charges_from_datetime"])).to eq(Time.zone.today.beginning_of_month)
+          expect(Date.parse(fixed_charge_fee_properties["fixed_charges_to_datetime"])).to eq(Time.zone.today.end_of_month)
 
           charge_fee_properties = invoice.fees.charge.first.properties
-          expect(Date.parse(charge_fee_properties["charges_from_datetime"])).to eq((Date.today - 1.month).beginning_of_month)
-          expect(Date.parse(charge_fee_properties["charges_to_datetime"])).to eq((Date.today - 1.month).end_of_month)
+          expect(Date.parse(charge_fee_properties["charges_from_datetime"])).to eq((Time.zone.today - 1.month).beginning_of_month)
+          expect(Date.parse(charge_fee_properties["charges_to_datetime"])).to eq((Time.zone.today - 1.month).end_of_month)
         end
       end
 
@@ -2168,7 +2153,7 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(255_00)
         expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(280_50)
         expect(result.invoice.progressive_billing_credit_amount_cents).to eq(30_00)
-        # Check this test thorously! (I'm not fully getting all the sums) 
+        # Check this test thorously! (I'm not fully getting all the sums)
         # expect(result.invoice.total_amount_cents).to eq(212_27) # 280_50 - 10_00 (credit note) - 63_23 (wallet)
         expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 10_00 (credit note) - 63_23 (wallet)
       end

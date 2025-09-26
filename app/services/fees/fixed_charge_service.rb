@@ -65,7 +65,7 @@ module Fees
       units = amount_result.units
       # TODO: add tests for this!
       # boundaries are taken from the subscription, but actual fixed charge can be shifted because it's pay_in_advance
-      properties = readjust_boundaries if fixed_charge.pay_in_advance?
+      properties = readjust_boundaries
 
       new_fee = Fee.new(
         invoice:,
@@ -149,20 +149,19 @@ module Fees
     def readjust_boundaries
       return boundaries.to_h if !fixed_charge.pay_in_advance?
       shift = case subscription.plan.interval.to_s
-        when "weekly"
-          1.week
-        when "monthly"
-          1.month
-        when "yearly"
-          1.year
-        when "quarterly"
-          1.quarter
-        when "semiannual"
-          1.year / 2
-        else
-          raise(NotImplementedError)
-        end
-
+      when "weekly"
+        1.week
+      when "monthly"
+        1.month
+      when "yearly"
+        1.year
+      when "quarterly"
+        1.quarter
+      when "semiannual"
+        1.year / 2
+      else
+        raise(NotImplementedError)
+      end
 
       properties = boundaries.to_h
       properties["fixed_charges_from_datetime"] = boundaries.fixed_charges_from_datetime + shift
