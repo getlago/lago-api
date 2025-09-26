@@ -63,6 +63,9 @@ module Fees
       precise_unit_amount = amount_result.unit_amount
 
       units = amount_result.units
+      # TODO: add tests for this!
+      # boundaries are taken from the subscription, but actual fixed charge can be shifted because it's pay_in_advance
+      properties = readjust_boundaries
 
       new_fee = Fee.new(
         invoice:,
@@ -78,7 +81,7 @@ module Fees
         invoiceable: fixed_charge,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
-        properties: boundaries.to_h,
+        properties:,
         payment_status: :pending,
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
@@ -118,13 +121,13 @@ module Fees
     end
 
     def calculate_period_ratio
-      from_date = boundaries.charges_from_datetime.to_date
-      to_date = boundaries.charges_to_datetime.to_date
+      from_date = boundaries.fixed_charges_from_datetime.to_date
+      to_date = boundaries.fixed_charges_to_datetime.to_date
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
 
-      charges_duration = boundaries.charges_duration || total_days
+      charges_duration = boundaries.fixed_charges_duration || total_days
 
       return 1.0 if current_date >= to_date
       return 0.0 if current_date < from_date
@@ -141,6 +144,29 @@ module Fees
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
 
       false
+    end
+
+    def readjust_boundaries
+      return boundaries.to_h if !fixed_charge.pay_in_advance?
+      shift = case subscription.plan.interval.to_s
+      when "weekly"
+        1.week
+      when "monthly"
+        1.month
+      when "yearly"
+        1.year
+      when "quarterly"
+        1.quarter
+      when "semiannual"
+        1.year / 2
+      else
+        raise(NotImplementedError)
+      end
+
+      properties = boundaries.to_h
+      properties["fixed_charges_from_datetime"] = boundaries.fixed_charges_from_datetime + shift
+      properties["fixed_charges_to_datetime"] = boundaries.fixed_charges_to_datetime + shift
+      properties
     end
   end
 end

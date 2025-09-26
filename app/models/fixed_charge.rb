@@ -32,12 +32,22 @@ class FixedCharge < ApplicationRecord
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, presence: true
-  validates :pay_in_advance, inclusion: {in: [true, false]}
-  validates :prorated, inclusion: {in: [true, false]}
+  validates :pay_in_advance, exclusion: [nil]
+  validates :prorated, exclusion: [nil]
   validates :properties, presence: true
 
   def equal_properties?(fixed_charge)
     charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
+  end
+
+  def included_in_next_subscription?(subscription)
+    return false if subscription.next_subscription.nil?
+
+    next_subscription_charges = subscription.next_subscription.plan.fixed_charges
+
+    return false if next_subscription_charges.blank?
+
+    next_subscription_charges.pluck(:add_on_id).include?(add_on_id)
   end
 end
 

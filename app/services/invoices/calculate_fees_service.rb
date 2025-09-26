@@ -30,12 +30,17 @@ module Invoices
             to_datetime: invoice_subscription.to_datetime,
             charges_from_datetime: invoice_subscription.charges_from_datetime,
             charges_to_datetime: invoice_subscription.charges_to_datetime,
+            # this value will be different for the fee if the fixed_charge is pay_in_advance or not...
+            fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+            fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
-            charges_duration: date_service.charges_duration_in_days
+            charges_duration: date_service.charges_duration_in_days,
+            fixed_charges_duration: date_service.fixed_charges_duration_in_days
           )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
+          create_fixed_charge_fees(subscription, boundaries) if should_create_fixed_charge_fees?(subscription)
           create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
           create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
         end
@@ -100,6 +105,11 @@ module Invoices
       boundaries.charges_from_datetime < boundaries.charges_to_datetime
     end
 
+    def fixed_charge_boundaries_valid?(boundaries)
+      # TODO: Investigate why invalid boundaries are even possible
+      boundaries.fixed_charges_from_datetime < boundaries.fixed_charges_to_datetime
+    end
+
     def create_charges_fees(subscription, boundaries)
       return unless charge_boundaries_valid?(boundaries)
 
@@ -136,6 +146,36 @@ module Invoices
         subscription.terminated? &&
         subscription.upgraded? &&
         charge.included_in_next_subscription?(subscription)
+    end
+
+    def create_fixed_charge_fees(subscription, boundaries)
+      return unless fixed_charge_boundaries_valid?(boundaries)
+
+      subscription.fixed_charges.find_each do |fixed_charge|
+        next if should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+
+        Fees::FixedChargeService.call!(
+          invoice:,
+          fixed_charge:,
+          subscription:,
+          boundaries:,
+          context:
+        )
+      end
+    end
+
+    def should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+      if fixed_charge.pay_in_advance?
+        condition = subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
+
+        return condition
+      end
+
+      return false if fixed_charge.prorated?
+
+      subscription.terminated? && subscription.upgraded? &&
+        fixed_charge.included_in_next_subscription?(subscription)
     end
 
     def should_create_recurring_non_invoiceable_fees?(subscription)
@@ -281,6 +321,18 @@ module Invoices
     end
 
     def should_create_charge_fees?(subscription)
+      return false if invoice.skip_charges
+
+      # We should take a look at charges if subscription is created in the past and if it is not upgrade
+      return true if subscription.plan.pay_in_advance? &&
+        subscription.started_in_past? &&
+        subscription.previous_subscription.nil?
+
+      true
+    end
+
+    def should_create_fixed_charge_fees?(subscription)
+      #  what is this????? should this also affect fixed_charges?
       return false if invoice.skip_charges
 
       # We should take a look at charges if subscription is created in the past and if it is not upgrade
