@@ -469,6 +469,42 @@ type AiConversation {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+AiConversationCollection type
+"""
+type AiConversationCollection {
+  """
+  A collection of paginated AiConversationCollection
+  """
+  collection: [AiConversation!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type AiConversationMessage {
+  content: String!
+  createdAt: ISO8601DateTime!
+  type: String!
+}
+
+"""
+AiConversationMessageCollection type
+"""
+type AiConversationMessageCollection {
+  """
+  A collection of paginated AiConversationMessageCollection
+  """
+  collection: [AiConversationMessage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type AiConversationStream {
   chunk: String
   done: Boolean!
@@ -8352,6 +8388,21 @@ type Query {
   Query add-ons of an organization
   """
   addOns(limit: Int, page: Int, searchTerm: String): AddOnCollection!
+
+  """
+  Query a single ai conversation of an organization
+  """
+  aiConversation(
+    """
+    Uniq ID of the ai conversation
+    """
+    id: ID!
+  ): AiConversationMessageCollection
+
+  """
+  Query the latest AI conversations of current organization
+  """
+  aiConversations(limit: Int): AiConversationCollection
 
   """
   Query a single alert
