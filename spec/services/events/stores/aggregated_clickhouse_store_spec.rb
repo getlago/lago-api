@@ -1392,9 +1392,9 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
     context "with initial values" do
       let(:initial_values) do
         [
-          {groups: {"agent_name" => "frodo", "other" => nil}, value: 1000},
-          {groups: {"agent_name" => "aragorn", "other" => nil}, value: 1000},
-          {groups: {"agent_name" => nil, "other" => nil}, value: 1000}
+          {groups: {"agent_name" => "frodo'", "other" => nil}, value: 1000},
+          {groups: {"agent_name" => "aragorn", "other" => nil}, value: 2000},
+          {groups: {"agent_name" => nil, "other" => nil}, value: 3000}
         ]
       end
 
@@ -1406,13 +1406,15 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
         null_group = result.find { |v| v[:groups]["agent_name"].nil? }
         expect(null_group[:groups]["agent_name"]).to be_nil
         expect(null_group[:groups]["other"]).to be_nil
-        expect(null_group[:value].round(5)).to eq(1000.02218)
+        expect(null_group[:value].round(5)).to eq(3000.02218)
 
-        (result - [null_group]).each do |row|
-          expect(row[:groups]["agent_name"]).not_to be_nil
-          expect(row[:groups]["other"]).to be_nil
-          expect(row[:value].round(5)).to eq(1000.02218)
-        end
+        frodo_group = result.find { |v| v[:groups]["agent_name"] == "frodo'" }
+        expect(frodo_group[:groups]["other"]).to be_nil
+        expect(frodo_group[:value].round(5)).to eq(1000.02218)
+
+        aragorn_group = result.find { |v| v[:groups]["agent_name"] == "aragorn" }
+        expect(aragorn_group[:groups]["other"]).to be_nil
+        expect(aragorn_group[:value].round(5)).to eq(2000.02218)
       end
 
       context "without events" do
@@ -1426,13 +1428,15 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
           null_group = result.find { |v| v[:groups]["agent_name"].nil? }
           expect(null_group[:groups]["agent_name"]).to be_nil
           expect(null_group[:groups]["other"]).to be_nil
-          expect(null_group[:value].round(5)).to eq(1000)
+          expect(null_group[:value].round(5)).to eq(3000)
 
-          (result - [null_group]).each do |row|
-            expect(row[:groups]["agent_name"]).not_to be_nil
-            expect(row[:groups]["other"]).to be_nil
-            expect(row[:value].round(5)).to eq(1000)
-          end
+          frodo_group = result.find { |v| v[:groups]["agent_name"] == "frodo'" }
+          expect(frodo_group[:groups]["other"]).to be_nil
+          expect(frodo_group[:value].round(5)).to eq(1000)
+
+          aragorn_group = result.find { |v| v[:groups]["agent_name"] == "aragorn" }
+          expect(aragorn_group[:groups]["other"]).to be_nil
+          expect(aragorn_group[:value].round(5)).to eq(2000)
         end
       end
     end
