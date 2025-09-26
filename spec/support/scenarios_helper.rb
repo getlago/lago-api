@@ -97,12 +97,13 @@ module ScenariosHelper
 
   ### Subscriptions
 
-  def create_subscription(params, authorization = nil, **kwargs)
+  def create_subscription(params, authorization = nil, as: :json, **kwargs)
     payload = {subscription: params}
     payload[:authorization] = authorization if authorization
     api_call(**kwargs) do
       post_with_token(organization, "/api/v1/subscriptions", payload)
     end
+    parse_result(as, Subscription, :subscription)
   end
 
   def terminate_subscription(subscription, params: {}, **kwargs)
@@ -343,6 +344,12 @@ module ScenariosHelper
       Clock::ComputeAllDailyUsagesJob.perform_later
       Clock::RefreshLifetimeUsagesJob.perform_later
       Clock::ProcessAllSubscriptionActivitiesJob.perform_later
+    end
+  end
+
+  def perform_wallet_refresh
+    clock_job do
+      Clock::RefreshWalletsOngoingBalanceJob.perform_later
     end
   end
 

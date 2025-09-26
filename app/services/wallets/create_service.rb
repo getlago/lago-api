@@ -70,7 +70,8 @@ module Wallets
           granted_credits: params[:granted_credits],
           source: :manual,
           metadata: params[:transaction_metadata],
-          name: params[:transaction_name]
+          name: params[:transaction_name],
+          ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
         }
       )
 

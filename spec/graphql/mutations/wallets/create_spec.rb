@@ -127,7 +127,7 @@ RSpec.describe Mutations::Wallets::Create do
 
     expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
       organization_id: membership.organization.id,
-      params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: "Initial Credits Purchase"}
+      params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: "Initial Credits Purchase", ignore_paid_top_up_limits: nil}
     )
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.created", Wallet)
   end
@@ -196,7 +196,7 @@ RSpec.describe Mutations::Wallets::Create do
 
       expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
         organization_id: membership.organization.id,
-        params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: nil}
+        params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: nil, ignore_paid_top_up_limits: nil}
       )
     end
   end

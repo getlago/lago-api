@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Wallets::UpdateService do
-  subject(:update_service) { described_class.new(wallet:, params:) }
+  subject(:result) { described_class.call(wallet:, params:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -30,24 +30,22 @@ RSpec.describe Wallets::UpdateService do
     end
 
     it "updates the wallet" do
-      result = described_class.call(wallet:, params:)
       expect(result).to be_success
 
-      aggregate_failures do
-        expect(result.wallet.name).to eq("new name")
-        expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
-        expect(result.wallet.invoice_requires_successful_payment).to eq(true)
-        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
-        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
+      expect(result.wallet.name).to eq("new name")
+      expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
+      expect(result.wallet.invoice_requires_successful_payment).to eq(true)
+      expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+      expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
 
-        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-        expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
-      end
+      expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+      expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
     it "calls Wallets::Balance::RefreshOngoingService" do
       allow(Wallets::Balance::RefreshOngoingService).to receive(:call)
-      update_service.call
+      subject
+
       expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet:)
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
     end
@@ -56,8 +54,6 @@ RSpec.describe Wallets::UpdateService do
       let(:wallet) { nil }
 
       it "returns an error" do
-        result = update_service.call
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("wallet_not_found")
 
@@ -70,8 +66,6 @@ RSpec.describe Wallets::UpdateService do
         let(:expiration_at) { "invalid" }
 
         it "returns false and result has errors" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
 
@@ -83,8 +77,6 @@ RSpec.describe Wallets::UpdateService do
         let(:expiration_at) { 123 }
 
         it "returns false and result has errors" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
 
@@ -96,8 +88,6 @@ RSpec.describe Wallets::UpdateService do
         let(:expiration_at) { (Time.current - 1.year).iso8601 }
 
         it "returns false and result has errors" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
 
@@ -134,24 +124,20 @@ RSpec.describe Wallets::UpdateService do
       before { recurring_transaction_rule }
 
       it "creates a new rule and terminates the old one" do
-        result = update_service.call
+        expect(result).to be_success
 
-        aggregate_failures do
-          expect(result).to be_success
+        rule = result.wallet.reload.recurring_transaction_rules.active.first
 
-          rule = result.wallet.reload.recurring_transaction_rules.active.first
+        expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+        expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
+        expect(rule.id).not_to eq(recurring_transaction_rule.id)
+        expect(rule.trigger).to eq("interval")
+        expect(rule.interval).to eq("weekly")
+        expect(rule.threshold_credits).to eq(0.0)
+        expect(rule.paid_credits).to eq(105.0)
+        expect(rule.granted_credits).to eq(105.0)
 
-          expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
-          expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
-          expect(rule.id).not_to eq(recurring_transaction_rule.id)
-          expect(rule.trigger).to eq("interval")
-          expect(rule.interval).to eq("weekly")
-          expect(rule.threshold_credits).to eq(0.0)
-          expect(rule.paid_credits).to eq(105.0)
-          expect(rule.granted_credits).to eq(105.0)
-
-          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-        end
+        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end
 
       context "when editing existing interval rule" do
@@ -168,25 +154,21 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "updates the rule" do
-          result = update_service.call
+          expect(result).to be_success
 
-          aggregate_failures do
-            expect(result).to be_success
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
 
-            rule = result.wallet.reload.recurring_transaction_rules.active.first
+          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.trigger).to eq("interval")
+          expect(rule.interval).to eq("weekly")
+          expect(rule.threshold_credits).to eq(0.0)
+          expect(rule.paid_credits).to eq(105.0)
+          expect(rule.granted_credits).to eq(105.0)
 
-            expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
-            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
-            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
-            expect(rule.id).to eq(recurring_transaction_rule.id)
-            expect(rule.trigger).to eq("interval")
-            expect(rule.interval).to eq("weekly")
-            expect(rule.threshold_credits).to eq(0.0)
-            expect(rule.paid_credits).to eq(105.0)
-            expect(rule.granted_credits).to eq(105.0)
-
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
@@ -204,24 +186,20 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "updates the rule" do
-          result = update_service.call
-
           expect(result).to be_success
 
           rule = result.wallet.reload.recurring_transaction_rules.active.first
 
-          aggregate_failures do
-            expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
-            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
-            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
-            expect(rule.id).to eq(recurring_transaction_rule.id)
-            expect(rule.trigger).to eq("threshold")
-            expect(rule.threshold_credits).to eq(205.0)
-            expect(rule.paid_credits).to eq(105.0)
-            expect(rule.granted_credits).to eq(105.0)
+          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
+          expect(rule.id).to eq(recurring_transaction_rule.id)
+          expect(rule.trigger).to eq("threshold")
+          expect(rule.threshold_credits).to eq(205.0)
+          expect(rule.paid_credits).to eq(105.0)
+          expect(rule.granted_credits).to eq(105.0)
 
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
@@ -229,16 +207,12 @@ RSpec.describe Wallets::UpdateService do
         let(:rules) { [] }
 
         it "terminates all existing recurring transaction rules" do
-          result = update_service.call
+          expect(result).to be_success
+          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(0)
+          expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
-            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(0)
-            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
-
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
@@ -261,8 +235,6 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_number_of_recurring_rules"])
 
@@ -283,8 +255,6 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
 
@@ -305,8 +275,6 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
 
@@ -318,12 +286,110 @@ RSpec.describe Wallets::UpdateService do
         let(:transaction_metadata) { {} }
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
 
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+
+      describe "paid credits validation" do
+        let(:rules) do
+          [
+            {
+              lago_id: recurring_transaction_rule&.id,
+              method:,
+              paid_credits:,
+              trigger: "interval",
+              interval: "weekly",
+              granted_credits: "105",
+              ignore_paid_top_up_limits:,
+              target_ongoing_balance: "5"
+
+            }
+          ]
+        end
+
+        let(:method) { "fixed" }
+        let(:paid_credits) { "10" }
+        let(:ignore_paid_top_up_limits) { false }
+        let(:recurring_transaction_rule) { nil }
+
+        context "when method is not fixed" do
+          let(:method) { "target" }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits is 0" do
+          let(:paid_credits) { "0.000005" }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits exceeds wallet limits" do
+          let(:paid_credits) { "1000" }
+
+          before { wallet.update!(paid_top_up_max_amount_cents: 1_00) }
+
+          it "fails with generic error when amount violates wallet limits" do
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
+        end
+
+        context "when paid credits exceeds wallet limits but ignore limits flag is passed" do
+          let(:paid_credits) { "1000" }
+          let(:ignore_paid_top_up_limits) { true }
+
+          before { wallet.update!(paid_top_up_max_amount_cents: 1_00) }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(result).to be_success
+          end
+        end
+
+        context "when paid credits is within wallet limits" do
+          let(:paid_credits) { "105" }
+          let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+
+          before { wallet.update!(paid_top_up_min_amount_cents: 1_00) }
+
+          it "creates recurring transaction rule" do
+            expect { result }.to change { recurring_transaction_rule.reload.attributes }
+            expect(result).to be_success
+          end
+        end
+
+        context "when rule exists and listed in params" do
+          let(:params) do
+            {
+              id: wallet.id,
+              name: "new name",
+              expiration_at:,
+              paid_top_up_min_amount_cents: 1000
+            }
+          end
+
+          before do
+            create(:recurring_transaction_rule, wallet:, paid_credits: 1)
+          end
+
+          it "fails with generic error when amount violates wallet limits" do
+            rule = wallet.reload.recurring_transaction_rules.sole
+            expect { result }.not_to change { rule.reload.attributes }
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
         end
       end
     end
@@ -349,8 +415,6 @@ RSpec.describe Wallets::UpdateService do
       before { wallet.update!(paid_top_up_max_amount_cents: 1) }
 
       it "returns an error from nested service and does not enqueue webhook" do
-        result = update_service.call
-
         expect(result).to be_failure
         expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
@@ -372,8 +436,6 @@ RSpec.describe Wallets::UpdateService do
       end
 
       it "creates fee limitation" do
-        result = update_service.call
-
         expect(result).to be_success
         expect(result.wallet.reload.name).to eq(params[:name])
         expect(result.wallet.reload.allowed_fee_types).to eq(limitations[:fee_types])
@@ -388,8 +450,6 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "removes fee limitations" do
-          result = update_service.call
-
           expect(result).to be_success
           expect(result.wallet.reload.name).to eq(params[:name])
           expect(result.wallet.reload.allowed_fee_types).to eq(limitations[:fee_types])
@@ -405,8 +465,6 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages[:allowed_fee_types]).to eq(["invalid_fee_types"])
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
@@ -431,7 +489,7 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "creates new wallet target" do
-          expect { update_service.call }.to change(WalletTarget, :count).by(1)
+          expect { subject }.to change(WalletTarget, :count).by(1)
         end
 
         context "with API context" do
@@ -444,7 +502,7 @@ RSpec.describe Wallets::UpdateService do
           before { CurrentContext.source = "api" }
 
           it "creates new wallet target" do
-            expect { update_service.call }.to change(WalletTarget, :count).by(1)
+            expect { subject }.to change(WalletTarget, :count).by(1)
           end
         end
 
@@ -456,8 +514,6 @@ RSpec.describe Wallets::UpdateService do
           end
 
           it "returns an error" do
-            result = update_service.call
-
             expect(result).not_to be_success
             expect(result.error.messages[:billable_metrics]).to eq(["invalid_identifier"])
           end
@@ -480,7 +536,7 @@ RSpec.describe Wallets::UpdateService do
         end
 
         it "deletes a wallet target" do
-          expect { update_service.call }.to change(WalletTarget, :count).by(-1)
+          expect { subject }.to change(WalletTarget, :count).by(-1)
         end
       end
     end

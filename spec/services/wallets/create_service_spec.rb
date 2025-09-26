@@ -14,6 +14,7 @@ RSpec.describe Wallets::CreateService do
     let(:paid_credits) { "1.00" }
     let(:granted_credits) { "0.00" }
     let(:expiration_at) { (Time.current + 1.year).iso8601 }
+    let(:ignore_paid_top_up_limits_on_creation) { nil }
 
     let(:params) do
       {
@@ -26,7 +27,8 @@ RSpec.describe Wallets::CreateService do
         paid_credits:,
         granted_credits:,
         paid_top_up_min_amount_cents: 1_00,
-        paid_top_up_max_amount_cents: 1_000_00
+        paid_top_up_max_amount_cents: 1_000_00,
+        ignore_paid_top_up_limits_on_creation:
       }
     end
 
@@ -52,8 +54,7 @@ RSpec.describe Wallets::CreateService do
     end
 
     it "sends `wallet.created` webhook" do
-      expect { service_result }
-        .to have_enqueued_job(SendWebhookJob).with("wallet.created", Wallet)
+      expect { service_result }.to have_enqueued_job(SendWebhookJob).with("wallet.created", Wallet)
     end
 
     it "produces an activity log" do
@@ -63,8 +64,7 @@ RSpec.describe Wallets::CreateService do
     end
 
     it "enqueues the WalletTransaction::CreateJob" do
-      expect { service_result }
-        .to have_enqueued_job(WalletTransactions::CreateJob)
+      expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob)
     end
 
     context "with validation error" do
@@ -83,6 +83,20 @@ RSpec.describe Wallets::CreateService do
         expect { service_result }.not_to change(organization.wallets, :count)
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:paid_credits]).to eq(["amount_above_maximum"])
+      end
+    end
+
+    context "when paid_credits is above the maximum and ignore validation flag passed" do
+      let(:paid_credits) { "1002.0" }
+      let(:ignore_paid_top_up_limits_on_creation) { "true" }
+
+      it "returns an error" do
+        perform_enqueued_jobs(only: WalletTransactions::CreateJob) do
+          expect { service_result }.to change(organization.wallets, :count)
+          expect(service_result).to be_success
+          transaction = service_result.wallet.wallet_transactions.first
+          expect(transaction).to have_attributes(credit_amount: 1002.00)
+        end
       end
     end
 

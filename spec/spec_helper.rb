@@ -60,6 +60,7 @@ end
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
 
 RSpec.configure do |config|
+  config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods
   config.include GraphQLHelper, type: :graphql
   config.include AdminHelper, type: :request
