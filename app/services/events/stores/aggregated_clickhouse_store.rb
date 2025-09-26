@@ -3,13 +3,11 @@
 module Events
   module Stores
     class AggregatedClickhouseStore < BaseStore
-      include Concerns::ClickhouseSqlHelpers
-
       NIL_GROUP_VALUE = "<nil>"
       DECIMAL_SCALE = 26
 
       def events(force_from: false, ordered: false)
-        Events::Stores::ClickhouseConnection.with_retry do
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnrichedExpanded
             .where(subscription_id: subscription.id)
             .where(organization_id: subscription.organization_id)
@@ -95,7 +93,7 @@ module Events
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
-        Events::Stores::ClickhouseConnection.with_retry do
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = events(force_from:, ordered: true)
 
           if exclude_event && filters[:event].present?
@@ -109,19 +107,21 @@ module Events
       end
 
       def prorated_events_values(total_duration)
-        ratio_sql = duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, total_duration)
+        ratio_sql = Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          "events_enriched_expanded.timestamp", to_datetime, total_duration, timezone
+        )
 
-        Events::Stores::ClickhouseConnection.with_retry do
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
           events(ordered: true).pluck(Arel.sql("events_enriched_expanded.decimal_value * (#{ratio_sql})"))
         end
       end
 
       def last_event
-        Events::Stores::ClickhouseConnection.with_retry { events(ordered: true).last }
+        Events::Stores::Utils::ClickhouseConnection.with_retry { events(ordered: true).last }
       end
 
       def grouped_last_event
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           cte_sql = events_sql(
             select: [
               arel_enriched_table[:grouped_by],
@@ -156,7 +156,7 @@ module Events
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
-        previous_event = Events::Stores::ClickhouseConnection.with_retry do
+        previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
           events.where(value: event.properties[aggregation_property])
             .where(timestamp: ...event.timestamp)
             .order(timestamp: :desc)
@@ -170,7 +170,7 @@ module Events
       end
 
       def unique_count
-        result = Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -186,7 +186,7 @@ module Events
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def unique_count_breakdown
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
 
           connection.select_all(
@@ -201,7 +201,7 @@ module Events
       end
 
       def prorated_unique_count
-        result = Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -221,7 +221,7 @@ module Events
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -240,7 +240,7 @@ module Events
       end
 
       def grouped_unique_count
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -257,7 +257,7 @@ module Events
       end
 
       def grouped_prorated_unique_count
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::UniqueCountQuery.new(store: self)
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -311,10 +311,12 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, period_duration)
+          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+            "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
+          )
         end
 
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           cte_sql = events_sql(
             select: [
               Arel::Nodes::InfixOperation.new(
@@ -340,10 +342,12 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          duration_ratio_sql("events_enriched_expanded.timestamp", to_datetime, period_duration)
+          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+            "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
+          )
         end
 
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           cte_sql = events_sql(
             select: [
               arel_enriched_table[:grouped_by],
@@ -370,9 +374,11 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = date_in_customer_timezone_sql("events_aggregated.started_at")
+        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql(
+          "events_aggregated.started_at", timezone
+        )
 
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = aggregated_events_sql(
             select: [
               Arel::Nodes::NamedFunction.new(
@@ -395,7 +401,7 @@ module Events
       end
 
       def weighted_sum(initial_value: 0)
-        result = Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
@@ -417,7 +423,7 @@ module Events
       end
 
       def grouped_weighted_sum(initial_values: [])
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = AggregatedClickhouse::WeightedSumQuery.new(store: self)
 
           # NOTE: build the list of initial values for each groups
@@ -454,7 +460,7 @@ module Events
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::AggregatedClickhouse::WeightedSumQuery.new(store: self)
 
           connection.select_all(
@@ -533,7 +539,7 @@ module Events
       end
 
       def merge_aggregation(aggregation_type, column, as)
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = aggregated_events_sql(select: [
             to_decimal128(Arel::Nodes::NamedFunction.new(
               aggregation_type,
@@ -546,7 +552,7 @@ module Events
       end
 
       def grouped_merge_aggregation(aggregation_type, column, as)
-        Events::Stores::ClickhouseConnection.connection_with_retry do |connection|
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = aggregated_events_sql(select: [
             cast_to_json(aggregated_arel_table[:grouped_by]),
             to_decimal128(Arel::Nodes::NamedFunction.new(
