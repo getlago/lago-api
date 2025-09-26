@@ -426,26 +426,27 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = AggregatedClickhouse::WeightedSumQuery.new(store: self)
 
-          # NOTE: build the list of initial values for each groups
-          #       from the events in the period
-          formated_initial_values = grouped_count.map do |group|
-            value = 0
-            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
-            value = previous_group[:value] if previous_group
-            {groups: group[:groups], value:}
+          # NOTE: build the list from each group
+          #       found in the events in the period
+          formatted_initial_values = grouped_count.map do |group|
+            {groups: group[:groups], value: 0}
           end
 
-          # NOTE: add the initial values for groups that are not in the events
-          initial_values.each do |intial_value|
-            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+          # NOTE: fill the initial values for groups from previous period
+          initial_values.each do |initial_value|
+            group = formatted_initial_values.find { |g| g[:groups] == initial_value[:groups] }
 
-            formated_initial_values << intial_value
+            if group.present?
+              group[:value] = initial_value[:value]
+            else
+              formatted_initial_values << initial_value
+            end
           end
-          return [] if formated_initial_values.empty?
+          return [] if formatted_initial_values.empty?
 
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
