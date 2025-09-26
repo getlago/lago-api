@@ -1346,15 +1346,15 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
 
       expect(breakdown.count).to eq(9) # 7 events + initial and final states
       # Fiels: Timestamp, Event value, Continuous sum, duration in second, prorated values on the period
-      expect(breakdown[0]).to eq(["2023-03-01 00:00:00.00000", 0, 0, "0", 0])
-      expect(breakdown[1]).to eq(["2023-03-01 00:00:00.00000", 2, 2, "3600", BigDecimal("0.00268817204301075268817204")])
-      expect(breakdown[2]).to eq(["2023-03-01 01:00:00.00000", 3, 5, "1800", BigDecimal("0.00336021505376344086021505")])
-      expect(breakdown[3]).to eq(["2023-03-01 01:30:00.00000", 1, 6, "1800", BigDecimal("0.00403225806451612903225806")])
-      expect(breakdown[4]).to eq(["2023-03-01 02:00:00.00000", -4, 2, "7200", BigDecimal("0.00537634408602150537634408")])
-      expect(breakdown[5]).to eq(["2023-03-01 04:00:00.00000", -2, 0, "3600", 0])
-      expect(breakdown[6]).to eq(["2023-03-01 05:00:00.00000", 10, 10, "1800", BigDecimal("0.0067204301075268817204301")])
-      expect(breakdown[7]).to eq(["2023-03-01 05:30:00.00000", -10, 0, "2658600", 0])
-      expect(breakdown[8]).to eq(["2023-04-01 00:00:00.00000", 0, 0, "0", 0])
+      expect(breakdown[0]).to eq(["2023-03-01 00:00:00.00000", 0, 0, 0, 0])
+      expect(breakdown[1]).to eq(["2023-03-01 00:00:00.00000", 2, 2, 3600, BigDecimal("0.00268817204301075268817204")])
+      expect(breakdown[2]).to eq(["2023-03-01 01:00:00.00000", 3, 5, 1800, BigDecimal("0.00336021505376344086021505")])
+      expect(breakdown[3]).to eq(["2023-03-01 01:30:00.00000", 1, 6, 1800, BigDecimal("0.00403225806451612903225806")])
+      expect(breakdown[4]).to eq(["2023-03-01 02:00:00.00000", -4, 2, 7200, BigDecimal("0.00537634408602150537634408")])
+      expect(breakdown[5]).to eq(["2023-03-01 04:00:00.00000", -2, 0, 3600, 0])
+      expect(breakdown[6]).to eq(["2023-03-01 05:00:00.00000", 10, 10, 1800, BigDecimal("0.0067204301075268817204301")])
+      expect(breakdown[7]).to eq(["2023-03-01 05:30:00.00000", -10, 0, 2658600, 0])
+      expect(breakdown[8]).to eq(["2023-04-01 00:00:00.00000", 0, 0, 0, 0])
     end
   end
 
