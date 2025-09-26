@@ -4147,6 +4147,11 @@ type CustomerMetadata {
   value: String!
 }
 
+input CustomerMetadataFilter {
+  key: String!
+  value: String!
+}
+
 input CustomerMetadataInput {
   displayInInvoice: Boolean!
   id: ID
@@ -8600,7 +8605,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(accountType: [CustomerAccountTypeEnum!], activeSubscriptionsCountFrom: Int, activeSubscriptionsCountTo: Int, billingEntityIds: [ID!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
+  customers(accountType: [CustomerAccountTypeEnum!], activeSubscriptionsCountFrom: Int, activeSubscriptionsCountTo: Int, billingEntityIds: [ID!], countries: [CountryCode!], currencies: [CurrencyEnum!], customerType: CustomerTypeEnum, hasCustomerType: Boolean, hasTaxIdentificationNumber: Boolean, limit: Int, metadata: [CustomerMetadataFilter!], page: Int, searchTerm: String, states: [String!], withDeleted: Boolean, zipcodes: [String!]): CustomerCollection!
 
   """
   Query monthly recurring revenues of an organization
