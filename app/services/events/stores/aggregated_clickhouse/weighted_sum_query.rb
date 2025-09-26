@@ -145,7 +145,7 @@ module Events
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
             [
-              "'#{formated_groupes_values(initial_value)}'",
+              "'#{formated_groups_values(initial_value)}'",
               "toDateTime64(:from_datetime, 5, 'UTC')",
               "toDecimal128(#{initial_value[:value]}, :decimal_scale)"
             ].join(", ")
@@ -157,7 +157,7 @@ module Events
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
             [
-              "'#{formated_groupes_values(initial_value)}'",
+              "'#{formated_groups_values(initial_value)}'",
               "toDateTime64(:to_datetime, 5, 'UTC')",
               "toDecimal128(0, :decimal_scale)"
             ].join(", ")
@@ -187,7 +187,7 @@ module Events
           SQL
         end
 
-        def formated_groupes_values(initial_value)
+        def formated_groups_values(initial_value)
           store.grouped_by
             .index_with { initial_value[:groups][it] || store.class::NIL_GROUP_VALUE }
             .sort_by { |key, _| key }
