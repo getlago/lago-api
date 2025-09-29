@@ -333,7 +333,7 @@ GEM
       base64
       fiber-storage
       logger
-    graphql-pagination (2.4.1)
+    graphql-pagination (2.4.0)
       graphql (>= 2.4.7)
     guard (2.18.1)
       formatador (>= 0.2.4)
