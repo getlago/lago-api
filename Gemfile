@@ -93,8 +93,8 @@ gem "slim"
 gem "slim-rails"
 
 # Kafka
-gem "karafka", "~> 2.4.17"
-gem "karafka-web", "~> 0.10.4"
+gem "karafka", "~> 2.5.0"
+gem "karafka-web", "~> 0.11.3"
 
 # Taxes
 gem "valvat"
