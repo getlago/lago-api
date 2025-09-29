@@ -269,7 +269,7 @@ GEM
     ffi (1.17.2-x64-mingw-ucrt)
     ffi (1.17.2-x86_64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
-    fiber-storage (1.0.1)
+    fiber-storage (1.0.0)
     formatador (1.1.0)
     fuubar (2.5.1)
       rspec-core (~> 3.0)
@@ -329,12 +329,11 @@ GEM
       multi_json (~> 1.11)
       os (>= 0.9, < 2.0)
       signet (>= 0.16, < 2.a)
-    graphql (2.5.13)
+    graphql (2.3.21)
       base64
       fiber-storage
-      logger
-    graphql-pagination (2.4.0)
-      graphql (>= 2.4.7)
+    graphql-pagination (2.2.0)
+      graphql (~> 2.0)
     guard (2.18.1)
       formatador (>= 0.2.4)
       listen (>= 2.7, < 4.0)
