@@ -22,12 +22,14 @@ class Wallet < ApplicationRecord
   monetize :consumed_amount_cents
   monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
 
+  LOWEST_PRIORITY = 50
+
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :invoice_requires_successful_payment, exclusion: [nil]
   validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
-  validates :priority, inclusion: {in: 1..50}
+  validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
   validate :paid_top_up_max_greater_than_or_equal_min
 
   STATUSES = [
