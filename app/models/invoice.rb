@@ -7,7 +7,6 @@ class Invoice < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
-  include CustomerDataSnapshotting
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -17,10 +16,13 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
+  before_save :create_customer_snapshot, if: -> { status_changed_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
   belongs_to :billing_entity, optional: true
+
+  has_one :customer_snapshot, dependent: :destroy
 
   has_many :fees
   has_many :credits
@@ -531,6 +533,17 @@ class Invoice < ApplicationRecord
 
     self.finalized_at ||= Time.current
   end
+
+  def create_customer_snapshot
+    return unless status_changed_to_finalized?
+    return if customer_snapshot.present?
+
+    snapshot_attributes = CustomerSnapshot::SNAPSHOTTED_ATTRIBUTES.each_with_object({}) do |attribute, hash|
+      hash[attribute] = customer.public_send(attribute)
+    end
+
+    build_customer_snapshot(snapshot_attributes.merge(organization: organization))
+  end
 end
 
 # == Schema Information
@@ -542,29 +555,6 @@ end
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
-#  customer_address_line1                  :string
-#  customer_address_line2                  :string
-#  customer_applicable_timezone            :string
-#  customer_city                           :string
-#  customer_country                        :string
-#  customer_data_snapshotted_at            :datetime
-#  customer_display_name                   :string
-#  customer_email                          :string
-#  customer_firstname                      :string
-#  customer_lastname                       :string
-#  customer_legal_name                     :string
-#  customer_legal_number                   :string
-#  customer_phone                          :string
-#  customer_shipping_address_line1         :string
-#  customer_shipping_address_line2         :string
-#  customer_shipping_city                  :string
-#  customer_shipping_country               :string
-#  customer_shipping_state                 :string
-#  customer_shipping_zipcode               :string
-#  customer_state                          :string
-#  customer_tax_identification_number      :string
-#  customer_url                            :string
-#  customer_zipcode                        :string
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  finalized_at                            :datetime

@@ -79,13 +79,12 @@ module Types
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
       field :voided_invoice_id, String, null: true
 
+      field :customer_snapshot, Types::CustomerSnapshots::Object, null: true
+
       def payable_type
         "Invoice"
       end
 
-      def customer
-        CustomerDecorator.new(object.customer, object)
-      end
 
       def regenerated_invoice_id
         object.regenerated_invoice&.id
