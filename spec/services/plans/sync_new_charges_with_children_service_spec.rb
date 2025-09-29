@@ -171,5 +171,26 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
           .with(child_ids: match_array(expected_child_ids), charge:)
       end
     end
+
+    context "when plan has charges for the same billable metric and charge model" do
+      let(:charge1) { create(:standard_charge, plan:, billable_metric:) }
+      let(:charge2) { create(:standard_charge, plan:, billable_metric:) }
+
+      before do
+        charge1
+        charge2
+      end
+
+      it "returns forbidden failure with undistinguishable charges code" do
+        result = sync_service.call
+
+        expect(result).not_to be_success
+        expect(result.error_code).to eq("plan_has_undistinguishable_charges")
+      end
+
+      it "does not enqueue any jobs" do
+        expect { sync_service.call }.not_to have_enqueued_job(Charges::SyncChildrenBatchJob)
+      end
+    end
   end
 end

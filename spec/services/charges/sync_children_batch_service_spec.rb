@@ -140,6 +140,43 @@ RSpec.describe Charges::SyncChildrenBatchService do
       end
     end
 
+    context "when child plans have charges with deleted parents" do
+      let(:deleted_parent_charge) do
+        create(:standard_charge, organization:, plan: parent_plan, billable_metric:)
+      end
+      let(:orphaned_child_charge) do
+        create(:standard_charge, organization:, plan: child_plan1, billable_metric:, parent_id: deleted_parent_charge.id)
+      end
+
+      before do
+        deleted_parent_charge.discard
+        orphaned_child_charge
+      end
+
+      it "updates the orphaned child charge to point to the new parent instead of creating a new one and only creates children for other plans" do
+        expect { sync_service.call }.to change(Charge, :count).by(2)
+
+        orphaned_child_charge.reload
+        expect(orphaned_child_charge.parent_id).to eq(charge.id)
+        expect(orphaned_child_charge.parent).to eq(charge)
+      end
+
+      it "returns a successful result" do
+        result = sync_service.call
+        expect(result).to be_success
+      end
+
+      it "creates charges for other child plans that don't have orphaned charges" do
+        sync_service.call
+
+        child_plan2_charge = child_plan2.charges.find_by(parent_id: charge.id)
+        child_plan3_charge = child_plan3.charges.find_by(parent_id: charge.id)
+
+        expect(child_plan2_charge).to be_present
+        expect(child_plan3_charge).to be_present
+      end
+    end
+
     context "when child plans have other charges" do
       let!(:existing_child_charge1) do
         create(:standard_charge, organization:, plan: child_plan1, billable_metric:)
