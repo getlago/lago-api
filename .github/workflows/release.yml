@@ -150,7 +150,7 @@ jobs:
       - name: Trigger lago-embedded repository
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           repository: getlago/lago-embedded
           event-type: lago-private-release
           client-payload: '{"version": "${{ steps.version.outputs.version }}"}'
