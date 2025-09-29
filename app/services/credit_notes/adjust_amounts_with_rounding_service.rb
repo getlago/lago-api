@@ -11,7 +11,7 @@ module CreditNotes
     end
 
     # NOTE: The goal of this service is to adjust the amounts so
-    #       that sub total exluding taxes + taxes amount = total amount
+    #       that sub total excluding taxes + taxes amount = total amount
     #       taking the rounding into account
     def call
       subtotal = credit_note.total_amount_cents - credit_note.taxes_amount_cents
@@ -19,8 +19,9 @@ module CreditNotes
       if subtotal != credit_note.sub_total_excluding_taxes_amount_cents
         if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
           credit_note.total_amount_cents -= 1
-        elsif credit_note.taxes_amount_cents > 0
-          credit_note.taxes_amount_cents -= 1
+        else
+          credit_note.items.first.amount_cents -= 1
+          credit_note.items.first.save
         end
 
         if credit_note.credit_amount_cents > 0
