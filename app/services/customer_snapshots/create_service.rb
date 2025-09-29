@@ -9,16 +9,33 @@ module CustomerSnapshots
     end
 
     def call
-      return result if invoice.customer_snapshot.present?
+      return result if invoice.customer_snapshot
 
-      snapshot_attributes = CustomerSnapshot::SNAPSHOTTED_ATTRIBUTES.each_with_object({}) do |attribute, hash|
-        hash[attribute] = invoice.customer.public_send(attribute)
-      end
-
-      customer_snapshot = invoice.build_customer_snapshot(
-        snapshot_attributes.merge(organization: invoice.organization)
+      customer_snapshot = invoice.customer_snapshots.create!(
+        organization: invoice.organization
+        display_name: customer.display_name,
+        firstname: customer.firstname,
+        lastname: customer.lastname,
+        email: customer.email,
+        phone: customer.phone,
+        url: customer.url,
+        tax_identification_number: customer.tax_identification_number,
+        applicable_timezone: customer.applicable_timezone,
+        address_line1: customer.address_line1,
+        address_line2: customer.address_line2,
+        city: customer.city,
+        state: customer.state,
+        zipcode: customer.zipcode,
+        country: customer.country,
+        legal_name: customer.legal_name,
+        legal_number: customer.legal_number,
+        shipping_address_line1: customer.shipping_address_line1,
+        shipping_address_line2: customer.shipping_address_line2,
+        shipping_city: customer.shipping_city,
+        shipping_state: customer.shipping_state,
+        shipping_zipcode: customer.shipping_zipcode,
+        shipping_country: customer.shipping_country
       )
-      customer_snapshot.save!
 
       result.customer_snapshot = customer_snapshot
       result
@@ -29,5 +46,6 @@ module CustomerSnapshots
     private
 
     attr_reader :invoice
+    delegate :customer, to: :invoice
   end
 end

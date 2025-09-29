@@ -1,31 +1,6 @@
 # frozen_string_literal: true
 
 class CustomerSnapshot < ApplicationRecord
-  SNAPSHOTTED_ATTRIBUTES = %i[
-    display_name
-    firstname
-    lastname
-    email
-    phone
-    url
-    tax_identification_number
-    applicable_timezone
-    address_line1
-    address_line2
-    city
-    state
-    zipcode
-    country
-    legal_name
-    legal_number
-    shipping_address_line1
-    shipping_address_line2
-    shipping_city
-    shipping_state
-    shipping_zipcode
-    shipping_country
-  ].freeze
-
   belongs_to :invoice
   belongs_to :organization
 
