@@ -16,7 +16,6 @@ class Invoice < ApplicationRecord
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
-  before_save :create_customer_snapshot, if: -> { status_changed_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -532,17 +531,6 @@ class Invoice < ApplicationRecord
     return unless status_changed_to_finalized?
 
     self.finalized_at ||= Time.current
-  end
-
-  def create_customer_snapshot
-    return unless status_changed_to_finalized?
-    return if customer_snapshot.present?
-
-    snapshot_attributes = CustomerSnapshot::SNAPSHOTTED_ATTRIBUTES.each_with_object({}) do |attribute, hash|
-      hash[attribute] = customer.public_send(attribute)
-    end
-
-    build_customer_snapshot(snapshot_attributes.merge(organization: organization))
   end
 end
 

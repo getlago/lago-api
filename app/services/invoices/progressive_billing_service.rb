@@ -44,7 +44,7 @@ module Invoices
         create_applied_prepaid_credit
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        invoice.finalized!
+        Invoices::FinalizeService.call!(invoice: invoice)
       end
 
       if invoice.finalized?
