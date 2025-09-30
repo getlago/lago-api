@@ -7,34 +7,7 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   let(:includes) { %i[metadata error_details] }
 
-  let(:invoice) do
-    create(
-      :invoice,
-      customer_data_snapshotted_at: Time.current,
-      customer_display_name: "John Doe",
-      customer_firstname: "John",
-      customer_lastname: "Doe",
-      customer_email: "john.doe@example.com",
-      customer_phone: "+1234567890",
-      customer_url: "https://john.doe.com",
-      customer_tax_identification_number: "1234567890",
-      customer_applicable_timezone: "UTC",
-      customer_address_line1: "123 Main St",
-      customer_address_line2: "Apt 1",
-      customer_city: "New York",
-      customer_state: "NY",
-      customer_zipcode: "10001",
-      customer_country: "US",
-      customer_legal_name: "John Doe",
-      customer_legal_number: "1234567890",
-      customer_shipping_address_line1: "Rue de la Paix",
-      customer_shipping_address_line2: "Apt 5B",
-      customer_shipping_city: "Paris",
-      customer_shipping_state: "Ile-de-France",
-      customer_shipping_zipcode: "75000",
-      customer_shipping_country: "FR"
-    )
-  end
+  let(:invoice) { create(:invoice) }
 
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
@@ -85,32 +58,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         "version_number" => 4,
         "self_billed" => invoice.self_billed,
         "created_at" => invoice.created_at.iso8601,
-        "updated_at" => invoice.updated_at.iso8601,
-        "customer_data_snapshotted_at" => invoice.customer_data_snapshotted_at.iso8601,
-        "customer_display_name" => invoice.customer_display_name,
-        "customer_firstname" => invoice.customer_firstname,
-        "customer_lastname" => invoice.customer_lastname,
-        "customer_email" => invoice.customer_email,
-        "customer_phone" => invoice.customer_phone,
-        "customer_url" => invoice.customer_url,
-        "customer_tax_identification_number" => invoice.customer_tax_identification_number,
-        "customer_applicable_timezone" => invoice.customer_applicable_timezone,
-        "customer_address_line1" => invoice.customer_address_line1,
-        "customer_address_line2" => invoice.customer_address_line2,
-        "customer_city" => invoice.customer_city,
-        "customer_state" => invoice.customer_state,
-        "customer_zipcode" => invoice.customer_zipcode,
-        "customer_country" => invoice.customer_country,
-        "customer_legal_name" => invoice.customer_legal_name,
-        "customer_legal_number" => invoice.customer_legal_number,
-        "customer_shipping_address" => {
-          "address_line1" => invoice.customer_shipping_address_line1,
-          "address_line2" => invoice.customer_shipping_address_line2,
-          "city" => invoice.customer_shipping_city,
-          "state" => invoice.customer_shipping_state,
-          "zipcode" => invoice.customer_shipping_zipcode,
-          "country" => invoice.customer_shipping_country
-        }
+        "updated_at" => invoice.updated_at.iso8601
       )
 
       expect(result["invoice"]["metadata"].first).to include(
@@ -118,6 +66,8 @@ RSpec.describe ::V1::InvoiceSerializer do
         "key" => metadata.key,
         "value" => metadata.value
       )
+
+      expect(result["invoice"]["customer_snapshot"]).to be_nil
     end
   end
 
@@ -160,6 +110,43 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
+    end
+  end
+
+  context "when invoice has a customer snapshot" do
+    let(:customer_snapshot) { create(:customer_snapshot, invoice:) }
+
+    before { customer_snapshot }
+ 
+    it "serializes the customer snapshot" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["customer_snapshot"]).to eq(
+        "display_name" => customer_snapshot.display_name,
+        "firstname" => customer_snapshot.firstname,
+        "lastname" => customer_snapshot.lastname,
+        "email" => customer_snapshot.email,
+        "phone" => customer_snapshot.phone,
+        "url" => customer_snapshot.url,
+        "tax_identification_number" => customer_snapshot.tax_identification_number,
+        "applicable_timezone" => customer_snapshot.applicable_timezone,
+        "address_line1" => customer_snapshot.address_line1,
+        "address_line2" => customer_snapshot.address_line2,
+        "city" => customer_snapshot.city,
+        "state" => customer_snapshot.state,
+        "zipcode" => customer_snapshot.zipcode,
+        "country" => customer_snapshot.country,
+        "legal_name" => customer_snapshot.legal_name,
+        "legal_number" => customer_snapshot.legal_number,
+        "shipping_address" => {
+          "address_line1" => customer_snapshot.shipping_address_line1,
+          "address_line2" => customer_snapshot.shipping_address_line2,
+          "city" => customer_snapshot.shipping_city,
+          "state" => customer_snapshot.shipping_state,
+          "zipcode" => customer_snapshot.shipping_zipcode,
+          "country" => customer_snapshot.shipping_country
+        }
+      )
     end
   end
 end
