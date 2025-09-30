@@ -15,7 +15,7 @@ end
 #  id                           :uuid             not null, primary key
 #  details                      :jsonb            not null
 #  is_default                   :boolean          default(FALSE), not null
-#  method_type                  :string
+#  provider_method_type         :string
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  customer_id                  :uuid             not null
@@ -26,9 +26,9 @@ end
 # Indexes
 #
 #  index_payment_methods_on_customer_id                   (customer_id)
-#  index_payment_methods_on_method_type                   (method_type)
 #  index_payment_methods_on_organization_id               (organization_id)
 #  index_payment_methods_on_payment_provider_customer_id  (payment_provider_customer_id)
+#  index_payment_methods_on_provider_method_type          (provider_method_type)
 #  unique_default_payment_method_per_customer             (customer_id) UNIQUE WHERE (is_default = true)
 #
 # Foreign Keys

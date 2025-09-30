@@ -8,7 +8,7 @@ class CreatePaymentMethods < ActiveRecord::Migration[8.0]
       t.references :payment_provider_customer, type: :uuid, null: false, foreign_key: true
 
       t.string :provider_method_id
-      t.string :method_type, index: true
+      t.string :provider_method_type, index: true
       t.boolean :is_default, default: false, null: false
       t.jsonb :details, null: false, default: {}
 

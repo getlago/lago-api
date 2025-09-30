@@ -375,9 +375,9 @@ DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_custome
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_payment_methods_on_provider_method_type;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_organization_id;
-DROP INDEX IF EXISTS public.index_payment_methods_on_method_type;
 DROP INDEX IF EXISTS public.index_payment_methods_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
@@ -3827,7 +3827,7 @@ CREATE TABLE public.payment_methods (
     customer_id uuid NOT NULL,
     payment_provider_customer_id uuid NOT NULL,
     provider_method_id character varying,
-    method_type character varying,
+    provider_method_type character varying,
     is_default boolean DEFAULT false NOT NULL,
     details jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
@@ -7350,13 +7350,6 @@ CREATE INDEX index_payment_methods_on_customer_id ON public.payment_methods USIN
 
 
 --
--- Name: index_payment_methods_on_method_type; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_payment_methods_on_method_type ON public.payment_methods USING btree (method_type);
-
-
---
 -- Name: index_payment_methods_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7368,6 +7361,13 @@ CREATE INDEX index_payment_methods_on_organization_id ON public.payment_methods 
 --
 
 CREATE INDEX index_payment_methods_on_payment_provider_customer_id ON public.payment_methods USING btree (payment_provider_customer_id);
+
+
+--
+-- Name: index_payment_methods_on_provider_method_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_provider_method_type ON public.payment_methods USING btree (provider_method_type);
 
 
 --
