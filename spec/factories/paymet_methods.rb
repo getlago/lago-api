@@ -6,7 +6,7 @@ FactoryBot.define do
     organization { payment_provider_customer&.organization || association(:organization) }
     customer { payment_provider_customer&.customer || association(:customer) }
     provider_method_id { "ext_123" }
-    method_type { "card"}
+    method_type { "card" }
     is_default { true }
 
     details do
