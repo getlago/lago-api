@@ -381,38 +381,6 @@ RSpec.describe Resolvers::InvoiceResolver do
 
   context "when invoice has customer data snapshot" do
     let(:invoice) { create(:invoice, :finalized, customer:, organization:) }
-    let(:customer_snapshot) do
-      create(
-        :customer_snapshot,
-        invoice:,
-        organization:,
-        display_name: "John Doe",
-        firstname: "John",
-        lastname: "Doe",
-        email: "john.doe@example.com",
-        phone: "+1234567890",
-        url: "https://john.doe.com",
-        tax_identification_number: "1234567890",
-        applicable_timezone: "Europe/Paris",
-        legal_name: "John Doe",
-        legal_number: "1234567890",
-        address_line1: "123 Main St",
-        address_line2: "Apt 1",
-        city: "New York",
-        state: "NY",
-        zipcode: "10001",
-        country: "US",
-        shipping_address_line1: "Rue de la Paix",
-        shipping_address_line2: "Apt 5B",
-        shipping_city: "Paris",
-        shipping_state: "Ile-de-France",
-        shipping_zipcode: "75000",
-        shipping_country: "FR"
-      )
-    end
-
-    before { customer_snapshot }
-
     let(:query) do
       <<~GQL
         query($id: ID!) {
@@ -453,6 +421,37 @@ RSpec.describe Resolvers::InvoiceResolver do
         }
       GQL
     end
+    let(:customer_snapshot) do
+      create(
+        :customer_snapshot,
+        invoice:,
+        organization:,
+        display_name: "John Doe",
+        firstname: "John",
+        lastname: "Doe",
+        email: "john.doe@example.com",
+        phone: "+1234567890",
+        url: "https://john.doe.com",
+        tax_identification_number: "1234567890",
+        applicable_timezone: "Europe/Paris",
+        legal_name: "John Doe",
+        legal_number: "1234567890",
+        address_line1: "123 Main St",
+        address_line2: "Apt 1",
+        city: "New York",
+        state: "NY",
+        zipcode: "10001",
+        country: "US",
+        shipping_address_line1: "Rue de la Paix",
+        shipping_address_line2: "Apt 5B",
+        shipping_city: "Paris",
+        shipping_state: "Ile-de-France",
+        shipping_zipcode: "75000",
+        shipping_country: "FR"
+      )
+    end
+
+    before { customer_snapshot }
 
     it "returns the invoice with the customer data snapshot" do
       result = execute_graphql(

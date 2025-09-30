@@ -117,7 +117,7 @@ RSpec.describe ::V1::InvoiceSerializer do
     let(:customer_snapshot) { create(:customer_snapshot, invoice:) }
 
     before { customer_snapshot }
- 
+
     it "serializes the customer snapshot" do
       result = JSON.parse(serializer.to_json)
 

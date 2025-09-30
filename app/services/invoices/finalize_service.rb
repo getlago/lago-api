@@ -9,7 +9,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
-      
+
       if invoice.finalized?
         result.invoice = invoice
         return result
