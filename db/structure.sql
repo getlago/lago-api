@@ -1,4 +1,4 @@
-\restrict kCNEadPoHB6wo5WRIpvA5WAoMoJIhjKItF9eNhbtSlKdpg4YNAGngmrRNFpagAh
+\restrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -536,6 +536,7 @@ DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_customer_
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_customer_snapshots_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_snapshots_on_invoice_id;
+DROP INDEX IF EXISTS public.index_customer_snapshots_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
@@ -1857,6 +1858,7 @@ CREATE TABLE public.customer_snapshots (
     shipping_state character varying,
     shipping_zipcode character varying,
     shipping_country character varying,
+    deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -6143,10 +6145,17 @@ CREATE INDEX index_customer_metadata_on_organization_id ON public.customer_metad
 
 
 --
+-- Name: index_customer_snapshots_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customer_snapshots_on_deleted_at ON public.customer_snapshots USING btree (deleted_at);
+
+
+--
 -- Name: index_customer_snapshots_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_customer_snapshots_on_invoice_id ON public.customer_snapshots USING btree (invoice_id);
+CREATE UNIQUE INDEX index_customer_snapshots_on_invoice_id ON public.customer_snapshots USING btree (invoice_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -9919,7 +9928,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict kCNEadPoHB6wo5WRIpvA5WAoMoJIhjKItF9eNhbtSlKdpg4YNAGngmrRNFpagAh
+\unrestrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
 
 SET search_path TO "$user", public;
 

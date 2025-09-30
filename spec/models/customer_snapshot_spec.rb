@@ -10,6 +10,10 @@ RSpec.describe CustomerSnapshot, type: :model do
 
   it { is_expected.to validate_uniqueness_of(:invoice_id).ignoring_case_sensitivity }
 
+  it_behaves_like "paper_trail traceable"
+
+  it { expect(described_class).to be_soft_deletable }
+
   describe "#shipping_address" do
     let(:customer_snapshot) do
       build(

@@ -3,7 +3,7 @@
 class CreateCustomerSnapshots < ActiveRecord::Migration[8.0]
   def change
     create_table :customer_snapshots, id: :uuid do |t|
-      t.references :invoice, null: false, foreign_key: true, type: :uuid
+      t.references :invoice, null: false, foreign_key: true, type: :uuid, index: false
       t.references :organization, null: false, foreign_key: true, type: :uuid
 
       t.string :display_name
@@ -29,9 +29,14 @@ class CreateCustomerSnapshots < ActiveRecord::Migration[8.0]
       t.string :shipping_zipcode
       t.string :shipping_country
 
-      t.timestamps
-    end
+      t.datetime :deleted_at, index: true
 
-    add_index :customer_snapshots, [:invoice_id], unique: true, if_not_exists: true
+      t.timestamps
+
+      t.index :invoice_id,
+        unique: true,
+        where: "deleted_at IS NULL"
+    end
+    #add_index :customer_snapshots, [:invoice_id], unique:true, if_not_exists: true
   end
 end

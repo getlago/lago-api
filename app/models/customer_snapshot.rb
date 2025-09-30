@@ -1,10 +1,27 @@
 # frozen_string_literal: true
 
 class CustomerSnapshot < ApplicationRecord
+  include PaperTrailTraceable
+  include Discard::Model
+  self.discard_column = :deleted_at
+
   belongs_to :invoice
   belongs_to :organization
 
-  validates :invoice_id, uniqueness: true
+  validates :invoice_id, uniqueness: {conditions: -> { where(deleted_at: nil) }}
+
+  default_scope -> { kept }
+
+  def billing_address
+    {
+      address_line1: address_line1,
+      address_line2: address_line2,
+      city: city,
+      state: state,
+      zipcode: zipcode,
+      country: country
+    }
+  end
 
   def shipping_address
     {
@@ -28,6 +45,7 @@ end
 #  applicable_timezone       :string
 #  city                      :string
 #  country                   :string
+#  deleted_at                :datetime
 #  display_name              :string
 #  email                     :string
 #  firstname                 :string
@@ -52,7 +70,8 @@ end
 #
 # Indexes
 #
-#  index_customer_snapshots_on_invoice_id       (invoice_id)
+#  index_customer_snapshots_on_deleted_at       (deleted_at)
+#  index_customer_snapshots_on_invoice_id       (invoice_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customer_snapshots_on_organization_id  (organization_id)
 #
 # Foreign Keys
