@@ -11,13 +11,14 @@ RSpec.describe Resolvers::OrganizationResolver do
           name
           email
           city
+          premiumIntegrations
         }
       }
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:membership) { create(:membership, organization:) }
+  let(:organization) { create(:organization) }
 
   it "returns the current organization" do
     result = execute_graphql(
@@ -34,6 +35,21 @@ RSpec.describe Resolvers::OrganizationResolver do
       expect(data["name"]).to eq(organization.name)
       expect(data["email"]).to eq(organization.email)
       expect(data["city"]).to eq(organization.city)
+    end
+  end
+
+  context "when organization has removed premium integrations" do
+    let(:organization) { create(:organization, premium_integrations: %w[netsuite okta beta_payment_authorization]) }
+
+    it "does not try to return removed integration" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {}
+      )
+      data = result["data"]["organization"]
+      expect(data["premiumIntegrations"]).to eq %w[netsuite okta]
     end
   end
 
