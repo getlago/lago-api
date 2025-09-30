@@ -85,7 +85,6 @@ module Types
         "Invoice"
       end
 
-
       def regenerated_invoice_id
         object.regenerated_invoice&.id
       end
