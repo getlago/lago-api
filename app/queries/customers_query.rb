@@ -72,6 +72,7 @@ class CustomersQuery < BaseQuery
     if presence_filters.any?
       tuples = presence_filters.map { "(?, ?)" }.join(", ")
       subquery = Metadata::CustomerMetadata
+        .where(organization_id: organization.id)
         .where("(key, value) IN (#{tuples})", *presence_filters.flatten)
         .group("customer_id")
         .having("COUNT(DISTINCT key) = ?", presence_filters.size)
@@ -82,7 +83,7 @@ class CustomersQuery < BaseQuery
 
     if absence_filters.any?
       keys = absence_filters.map { |k, _v| k }
-      subquery = Metadata::CustomerMetadata.where(key: keys).select(:customer_id)
+      subquery = Metadata::CustomerMetadata.where(organization_id: organization.id).where(key: keys).select(:customer_id)
       scope = scope.where.not(id: subquery)
     end
 
