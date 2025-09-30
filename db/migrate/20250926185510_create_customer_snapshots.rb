@@ -37,6 +37,5 @@ class CreateCustomerSnapshots < ActiveRecord::Migration[8.0]
         unique: true,
         where: "deleted_at IS NULL"
     end
-    #add_index :customer_snapshots, [:invoice_id], unique:true, if_not_exists: true
   end
 end
