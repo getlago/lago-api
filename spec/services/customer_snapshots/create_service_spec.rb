@@ -27,7 +27,7 @@ RSpec.describe CustomerSnapshots::CreateService do
         customer.update!(
           name: "Test Customer",
           firstname: "John",
-          lastname: "Doe", 
+          lastname: "Doe",
           email: "john@example.com",
           phone: "+1234567890",
           url: "https://example.com",
@@ -71,7 +71,9 @@ RSpec.describe CustomerSnapshots::CreateService do
     end
 
     context "when invoice already has a customer snapshot" do
-      let!(:existing_snapshot) { create(:customer_snapshot, invoice:, organization:) }
+      let(:existing_snapshot) { create(:customer_snapshot, invoice:, organization:, display_name: "Old Name") }
+
+      before { existing_snapshot }
 
       it "returns success without creating a new snapshot" do
         result = service.call
@@ -79,6 +81,25 @@ RSpec.describe CustomerSnapshots::CreateService do
         expect(result).to be_success
         expect(CustomerSnapshot.count).to eq(1)
         expect(result.customer_snapshot).to be_nil
+      end
+
+      context "when force is true" do
+        subject(:service) { described_class.new(invoice:, force: true) }
+
+        before do
+          customer.update!(name: "Updated Name")
+        end
+
+        it "destroys the existing snapshot and creates a new one" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(CustomerSnapshot.count).to eq(1)
+          expect(result.customer_snapshot).to be_present
+          expect(result.customer_snapshot.id).not_to eq(existing_snapshot.id)
+          expect(result.customer_snapshot.display_name).to eq(customer.display_name)
+          expect(result.customer_snapshot.display_name).not_to eq("Old Name")
+        end
       end
     end
   end

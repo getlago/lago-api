@@ -15,7 +15,8 @@ RSpec.describe Invoices::FinalizeService do
         result = service.call
 
         expect(result).to be_success
-        expect(result.invoice.status).to eq("finalized")
+        expect(result.invoice).to be_persisted
+        expect(result.invoice.reload).to be_finalized
       end
 
       it "creates a customer snapshot" do
@@ -26,13 +27,6 @@ RSpec.describe Invoices::FinalizeService do
         expect(snapshot.organization).to eq(organization)
         expect(snapshot.display_name).to eq(customer.display_name)
       end
-
-      it "saves the invoice" do
-        result = service.call
-
-        expect(result.invoice).to be_persisted
-        expect(result.invoice.reload.status).to eq("finalized")
-      end
     end
 
     context "when invoice is already finalized" do
@@ -42,11 +36,10 @@ RSpec.describe Invoices::FinalizeService do
         result = service.call
 
         expect(result).to be_success
-        expect(result.invoice.status).to eq("finalized")
+        expect(result.invoice).to be_finalized
       end
 
       it "does not create additional customer snapshots" do
-        # Create existing snapshot
         create(:customer_snapshot, invoice:, organization:)
 
         expect { service.call }.not_to change(CustomerSnapshot, :count)
@@ -85,7 +78,7 @@ RSpec.describe Invoices::FinalizeService do
 
       it "rolls back the transaction" do
         expect { service.call }.to raise_error(StandardError, "Snapshot failed")
-        expect(invoice.reload.status).not_to eq("finalized")
+        expect(invoice.reload).not_to be_finalized
       end
     end
   end

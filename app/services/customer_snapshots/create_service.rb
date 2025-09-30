@@ -3,16 +3,21 @@
 module CustomerSnapshots
   class CreateService < BaseService
     Result = BaseResult[:customer_snapshot]
-    def initialize(invoice:)
+    def initialize(invoice:, force: false)
       @invoice = invoice
+      @force = force
       super
     end
 
     def call
-      return result if invoice.customer_snapshot
+      return result if invoice.customer_snapshot && !force
 
-      customer_snapshot = invoice.customer_snapshots.create!(
-        organization: invoice.organization
+      if force && invoice.customer_snapshot
+        invoice.customer_snapshot.destroy!
+      end
+
+      customer_snapshot = invoice.create_customer_snapshot!(
+        organization: invoice.organization,
         display_name: customer.display_name,
         firstname: customer.firstname,
         lastname: customer.lastname,
@@ -45,7 +50,7 @@ module CustomerSnapshots
 
     private
 
-    attr_reader :invoice
+    attr_reader :invoice, :force
     delegate :customer, to: :invoice
   end
 end
