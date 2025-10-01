@@ -15,13 +15,13 @@ end
 #  id                           :uuid             not null, primary key
 #  details                      :jsonb            not null
 #  is_default                   :boolean          default(FALSE), not null
-#  provider_method_type         :string
+#  provider_method_type         :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  customer_id                  :uuid             not null
 #  organization_id              :uuid             not null
 #  payment_provider_customer_id :uuid             not null
-#  provider_method_id           :string
+#  provider_method_id           :string           not null
 #
 # Indexes
 #
