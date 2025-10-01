@@ -4272,6 +4272,26 @@ type CustomerProjectedUsage {
   totalAmountCents: BigInt!
 }
 
+type CustomerSnapshot {
+  addressLine1: String
+  addressLine2: String
+  applicableTimezone: String
+  city: String
+  country: String
+  displayName: String
+  email: String
+  firstname: String
+  lastname: String
+  legalName: String
+  legalNumber: String
+  phone: String
+  shippingAddress: CustomerAddress
+  state: String
+  taxIdentificationNumber: String
+  url: String
+  zipcode: String
+}
+
 enum CustomerTypeEnum {
   company
   individual
@@ -5751,6 +5771,7 @@ type Invoice {
   creditableAmountCents: BigInt!
   currency: CurrencyEnum
   customer: Customer!
+  customerSnapshot: CustomerSnapshot
   errorDetails: [ErrorDetail!]
   externalHubspotIntegrationId: String
   externalIntegrationId: String
