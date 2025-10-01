@@ -128,7 +128,6 @@ RSpec.describe Charges::SyncChildrenBatchService do
         existing_child_charge3
       end
 
-
       it "does not create any new charges" do
         expect { sync_service.call }.not_to change(Charge, :count)
       end
@@ -249,6 +248,79 @@ RSpec.describe Charges::SyncChildrenBatchService do
             {"from_value" => 11, "to_value" => nil, "per_unit_amount" => "0", "flat_amount" => "300"}
           ]
         )
+      end
+    end
+
+    context "when charge has filters" do
+      let(:billable_metric_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
+      end
+
+      let(:charge) do
+        create(:standard_charge, organization:, plan: parent_plan, billable_metric:)
+      end
+
+      let(:charge_filter) do
+        create(
+          :charge_filter,
+          charge:,
+          properties: {amount: "20"},
+          invoice_display_name: "Europe Filter"
+        )
+      end
+
+      let(:charge_filter_value) do
+        create(
+          :charge_filter_value,
+          charge_filter:,
+          billable_metric_filter:,
+          values: ["europe"]
+        )
+      end
+
+      before do
+        billable_metric_filter
+        charge_filter_value
+      end
+
+      it "creates child charges with the correct filters" do
+        result = sync_service.call
+        expect(result).to be_success
+
+        child_charges = Charge.where(parent_id: charge.id)
+        expect(child_charges.count).to eq(3)
+
+        child_charges.each do |child_charge|
+          expect(child_charge.filters.count).to eq(1)
+
+          child_filter = child_charge.filters.first
+          expect(child_filter).to have_attributes(
+            invoice_display_name: "Europe Filter",
+            properties: {"amount" => "20"}
+          )
+
+          expect(child_filter.values.count).to eq(1)
+          child_filter_value = child_filter.values.first
+          expect(child_filter_value).to have_attributes(
+            billable_metric_filter_id: billable_metric_filter.id,
+            values: ["europe"]
+          )
+        end
+      end
+
+      it "creates charges for the correct child plans with filters" do
+        sync_service.call
+
+        child_plan1_charge = child_plan1.charges.find_by(parent_id: charge.id)
+        child_plan2_charge = child_plan2.charges.find_by(parent_id: charge.id)
+        child_plan3_charge = child_plan3.charges.find_by(parent_id: charge.id)
+
+        expect(child_plan1_charge).to be_present
+        expect(child_plan1_charge.filters.count).to eq(1)
+        expect(child_plan2_charge).to be_present
+        expect(child_plan2_charge.filters.count).to eq(1)
+        expect(child_plan3_charge).to be_present
+        expect(child_plan3_charge.filters.count).to eq(1)
       end
     end
   end

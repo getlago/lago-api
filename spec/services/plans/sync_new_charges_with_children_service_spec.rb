@@ -27,7 +27,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
     context "when plan has charges and child plans with subscriptions" do
       let(:charge1) { create(:standard_charge, plan:, billable_metric:) }
       let(:charge2) { create(:graduated_charge, plan:, billable_metric:) }
-      
+
       let(:child_plan1) { create(:plan, organization:, parent: plan) }
       let(:child_plan2) { create(:plan, organization:, parent: plan) }
       let(:child_plan3) { create(:plan, organization:, parent: plan) }
@@ -65,7 +65,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
     context "when child plans have multiple subscriptions" do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
       let(:child_plan) { create(:plan, organization:, parent: plan) }
-      
+
       let(:active_subscription) { create(:subscription, plan: child_plan, status: :active) }
       let(:pending_subscription) { create(:subscription, plan: child_plan, status: :pending) }
       let(:terminated_subscription) { create(:subscription, plan: child_plan, status: :terminated) }
@@ -110,7 +110,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
 
         enqueued_jobs = Charges::SyncChildrenBatchJob.queue_adapter.enqueued_jobs
         expect(enqueued_jobs.length).to eq(2)
-        
+
         # Check that we have one batch of 20 and one batch of 5
         # The exact order doesn't matter, just that we have these two sizes
         batch_sizes = enqueued_jobs.map do |job|
@@ -144,7 +144,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
 
     context "when child plans have mixed subscription statuses" do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
-      
+
       let(:child_plan_active) { create(:plan, organization:, parent: plan) }
       let(:child_plan_pending) { create(:plan, organization:, parent: plan) }
       let(:child_plan_terminated) { create(:plan, organization:, parent: plan) }
@@ -185,7 +185,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
         result = sync_service.call
 
         expect(result).not_to be_success
-        expect(result.error_code).to eq("plan_has_undistinguishable_charges")
+        expect(result.error.code).to eq("plan_has_undistinguishable_charges")
       end
 
       it "does not enqueue any jobs" do
