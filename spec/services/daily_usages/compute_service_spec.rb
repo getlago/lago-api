@@ -12,7 +12,7 @@ RSpec.describe DailyUsages::ComputeService do
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) do
-    create(:subscription, :calendar, customer:, plan:, started_at: 1.year.ago, subscription_at: 1.year.ago)
+    create(:subscription, :calendar, customer:, plan:, started_at: timestamp - 1.year, subscription_at: timestamp - 1.year)
   end
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
