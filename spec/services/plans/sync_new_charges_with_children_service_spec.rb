@@ -47,18 +47,18 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
       it "enqueues jobs for each charge with child plans that have active or pending subscriptions" do
         expect { sync_service.call }
           .to have_enqueued_job(Charges::SyncChildrenBatchJob)
-          .with(child_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge1)
+          .with(children_plans_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge1)
           .and have_enqueued_job(Charges::SyncChildrenBatchJob)
-          .with(child_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge2)
+          .with(children_plans_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge2)
       end
 
       it "does not include child plans with terminated subscriptions" do
         sync_service.call
 
         expect(Charges::SyncChildrenBatchJob).to have_been_enqueued
-          .with(child_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge1)
+          .with(children_plans_ids: match_array([child_plan1.id, child_plan2.id]), charge: charge1)
         expect(Charges::SyncChildrenBatchJob).not_to have_been_enqueued
-          .with(child_ids: include(child_plan3.id), charge: charge1)
+          .with(children_plans_ids: include(child_plan3.id), charge: charge1)
       end
     end
 
@@ -81,7 +81,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
       it "includes the child plan only once" do
         expect { sync_service.call }
           .to have_enqueued_job(Charges::SyncChildrenBatchJob)
-          .with(child_ids: [child_plan.id], charge:)
+          .with(children_plans_ids: [child_plan.id], charge:)
       end
     end
 
@@ -115,8 +115,8 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
         # The exact order doesn't matter, just that we have these two sizes
         batch_sizes = enqueued_jobs.map do |job|
           args = job[:args] || job["args"]
-          child_ids = args[0][:child_ids] || args[0]["child_ids"]
-          child_ids.length
+          children_plans_ids = args[0][:children_plans_ids] || args[0]["children_plans_ids"]
+          children_plans_ids.length
         end
         expect(batch_sizes).to contain_exactly(20, 5)
       end
@@ -168,7 +168,7 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
 
         expect { sync_service.call }
           .to have_enqueued_job(Charges::SyncChildrenBatchJob)
-          .with(child_ids: match_array(expected_child_ids), charge:)
+          .with(children_plans_ids: match_array(expected_child_ids), charge:)
       end
     end
 

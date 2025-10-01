@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Charges::SyncChildrenBatchService do
-  subject(:sync_service) { described_class.new(child_ids:, charge:) }
+  subject(:sync_service) { described_class.new(children_plans_ids:, charge:) }
 
   let(:organization) { create(:organization) }
   let(:parent_plan) { create(:plan, organization:) }
@@ -13,7 +13,7 @@ RSpec.describe Charges::SyncChildrenBatchService do
   let(:child_plan1) { create(:plan, organization:, parent: parent_plan) }
   let(:child_plan2) { create(:plan, organization:, parent: parent_plan) }
   let(:child_plan3) { create(:plan, organization:, parent: parent_plan) }
-  let(:child_ids) { [child_plan1.id, child_plan2.id, child_plan3.id] }
+  let(:children_plans_ids) { [child_plan1.id, child_plan2.id, child_plan3.id] }
 
   before do
     charge
@@ -35,8 +35,8 @@ RSpec.describe Charges::SyncChildrenBatchService do
       end
     end
 
-    context "when child_ids is empty" do
-      let(:child_ids) { [] }
+    context "when children_plans_ids is empty" do
+      let(:children_plans_ids) { [] }
 
       it "returns a successful result" do
         result = sync_service.call
@@ -190,9 +190,9 @@ RSpec.describe Charges::SyncChildrenBatchService do
       end
     end
 
-    context "when some child_ids do not match existing child plans" do
+    context "when some children_plans_ids do not match existing child plans" do
       let(:non_existent_id) { SecureRandom.uuid }
-      let(:child_ids) { [child_plan1.id, non_existent_id, child_plan2.id] }
+      let(:children_plans_ids) { [child_plan1.id, non_existent_id, child_plan2.id] }
 
       it "creates charges only for existing child plans" do
         expect { sync_service.call }.to change(Charge, :count).by(2)

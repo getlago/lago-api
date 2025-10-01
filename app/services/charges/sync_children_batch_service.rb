@@ -21,7 +21,7 @@ module Charges
 
     private
 
-    attr_reader :child_ids, :charge
+    attr_reader :children_plans_ids, :charge
 
     def create_child_charge_if_needed(child_plan, charge)
       return if child_plan.charges.where(parent_id: charge.id).exists?
