@@ -6,6 +6,25 @@ class PaymentMethod < ApplicationRecord
   belongs_to :organization
   belongs_to :customer
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
+
+  validates :provider_method_id, presence: true
+  validates :provider_method_type, presence: true
+  validate :only_one_default_method
+
+  private
+
+  def only_one_default_method
+    return unless is_default?
+
+    existing_default = PaymentMethod
+      .where(customer_id: customer_id, is_default: true)
+      .where.not(id: id)
+      .exists?
+
+    if existing_default
+      errors.add(:is_default, :only_one_default_payment_method)
+    end
+  end
 end
 
 # == Schema Information
