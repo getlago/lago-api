@@ -3,8 +3,8 @@
 module Charges
   class SyncChildrenBatchService < BaseService
     Result = BaseResult
-    def initialize(child_ids:, charge:)
-      @child_ids = child_ids
+    def initialize(children_plans_ids:, charge:)
+      @children_plans_ids = children_plans_ids
       @charge = charge
       super
     end
@@ -13,7 +13,7 @@ module Charges
       return result.not_found_failure!(resource: "charge") unless charge
       return result.not_found_failure!(resource: "plan") unless charge.plan
 
-      charge.plan.children.where(id: child_ids).each do |child_plan|
+      charge.plan.children.where(id: children_plans_ids).each do |child_plan|
         create_child_charge_if_needed(child_plan, charge)
       end
       result
@@ -31,8 +31,17 @@ module Charges
         possible_child_charges.first.update(parent_id: charge.id)
         return
       end
+     
+      filters_params = charge.filters.map do |filter|
+        {
+          invoice_display_name: filter.invoice_display_name,
+          properties: filter.properties,
+          values: filter.to_h
+        }
+     end
+     params = charge.attributes.symbolize_keys.compact.merge(parent_id: charge.id, filters: filters_params)
 
-      Charges::CreateService.call!(plan: child_plan, params: charge.attributes.symbolize_keys.compact.merge(parent_id: charge.id))
+      Charges::CreateService.call!(plan: child_plan, params: params)
     end
   end
 end

@@ -25,7 +25,7 @@ module Plans
     def sync_charge_for_children(charge)
       plan.children.joins(:subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.pluck(:id).each_slice(20) do |child_ids|
         Charges::SyncChildrenBatchJob.perform_later(
-          child_ids:,
+          children_plans_ids: child_ids,
           charge:
         )
       end
