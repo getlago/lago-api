@@ -8764,16 +8764,6 @@ type Query {
   integrationItems(integrationId: ID!, itemType: IntegrationItemTypeEnum, limit: Int, page: Int, searchTerm: String): IntegrationItemCollection!
 
   """
-  Query a single integration mapping
-  """
-  integrationMapping(
-    """
-    Unique ID of the integration mappings
-    """
-    id: ID!
-  ): Mapping
-
-  """
   Query netsuite integration mappings
   """
   integrationMappings(integrationId: ID, limit: Int, mappableType: MappableTypeEnum, page: Int): MappingCollection

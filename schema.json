@@ -46982,35 +46982,6 @@
               ]
             },
             {
-              "name": "integrationMapping",
-              "description": "Query a single integration mapping",
-              "type": {
-                "kind": "OBJECT",
-                "name": "Mapping",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-                {
-                  "name": "id",
-                  "description": "Unique ID of the integration mappings",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ]
-            },
-            {
               "name": "integrationMappings",
               "description": "Query netsuite integration mappings",
               "type": {
