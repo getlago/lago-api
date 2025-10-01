@@ -99,8 +99,8 @@ module Invoices
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .find_each do |charge|
-        bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
-        fees += charge_usage(charge, bypass_aggregation)
+          bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+          fees += charge_usage(charge, bypass_aggregation)
       end
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -133,16 +133,16 @@ module Invoices
         .fees
     end
 
-    def boundaries
-      return @boundaries if @boundaries.present?
-
-      date_service = Subscriptions::DatesService.new_instance(
+    def date_service
+      @date_service ||= Subscriptions::DatesService.new_instance(
         subscription,
         timestamp,
         current_usage: true
       )
+    end
 
-      @boundaries = BillingPeriodBoundaries.new(
+    def boundaries
+      @boundaries ||= BillingPeriodBoundaries.new(
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
