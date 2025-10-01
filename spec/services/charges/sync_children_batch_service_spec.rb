@@ -57,17 +57,15 @@ RSpec.describe Charges::SyncChildrenBatchService do
         child_charges = Charge.where(parent_id: charge.id)
         expect(child_charges.count).to eq(3)
 
-        child_charges.each do |child_charge|
-          expect(child_charge).to have_attributes(
-            organization_id: organization.id,
-            billable_metric_id: billable_metric.id,
-            parent_id: charge.id,
-            charge_model: charge.charge_model,
-            pay_in_advance: charge.pay_in_advance,
-            prorated: charge.prorated,
-            properties: charge.properties
-          )
-        end
+        expect(child_charges).to all(have_attributes(
+          organization_id: organization.id,
+          billable_metric_id: billable_metric.id,
+          parent_id: charge.id,
+          charge_model: charge.charge_model,
+          pay_in_advance: charge.pay_in_advance,
+          prorated: charge.prorated,
+          properties: charge.properties
+        ))
       end
 
       it "creates charges for the correct child plans" do
@@ -177,8 +175,12 @@ RSpec.describe Charges::SyncChildrenBatchService do
     end
 
     context "when child plans have other charges" do
-      let!(:existing_child_charge1) do
+      let(:existing_child_charge1) do
         create(:standard_charge, organization:, plan: child_plan1, billable_metric:)
+      end
+
+      before do
+        existing_child_charge1
       end
 
       it "creates charges for all child plans" do

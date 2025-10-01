@@ -120,11 +120,6 @@ RSpec.describe Plans::SyncNewChargesWithChildrenService do
         end
         expect(batch_sizes).to contain_exactly(20, 5)
       end
-
-      it "enqueues the correct number of jobs" do
-        expect { sync_service.call }
-          .to have_enqueued_job(Charges::SyncChildrenBatchJob).exactly(2).times
-      end
     end
 
     context "when child plans have only terminated subscriptions" do

@@ -9,7 +9,7 @@ module Plans
     end
 
     def call
-      # Note: this check is only needed if child charges "lost" their parents: 
+      # Note: this check is only needed if child charges "lost" their parents:
       # when a parent plan was updated without sending charges_ids, so the "original" parents were deleted
       return result.forbidden_failure!(code: "plan_has_undistinguishable_charges") if plan_has_undistinguishable_charges?
 
@@ -32,8 +32,8 @@ module Plans
     end
 
     def plan_has_undistinguishable_charges?
-       # we can also add a check by filters as well
-      all_charges_summary = plan.charges.map {|ch| {metric: ch.billable_metric_id, charge_model: ch.charge_model}}
+      # we can also add a check by filters as well
+      all_charges_summary = plan.charges.map { |ch| {metric: ch.billable_metric_id, charge_model: ch.charge_model} }
       all_charges_summary.uniq.count != all_charges_summary.count
     end
   end

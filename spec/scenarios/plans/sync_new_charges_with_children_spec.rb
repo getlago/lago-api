@@ -13,14 +13,14 @@ describe "Sync New Charges With Children Scenario" do
     20.times do |i|
       aggregation_types = %w[count_agg sum_agg latest_agg max_agg unique_count_agg]
       aggregation_type = aggregation_types[i % aggregation_types.length]
-      
+
       billable_metrics << create(
         :billable_metric,
         organization:,
         name: "Metric #{i + 1}",
         code: "metric_#{i + 1}",
         aggregation_type:,
-        field_name: aggregation_type == "count_agg" ? nil : "field_#{i + 1}"
+        field_name: (aggregation_type == "count_agg") ? nil : "field_#{i + 1}"
       )
     end
 
@@ -30,7 +30,7 @@ describe "Sync New Charges With Children Scenario" do
         billable_metric_id: bm.id,
         charge_model: "standard",
         invoice_display_name: "Charge #{i + 1}",
-        properties: { amount: "#{100 + i * 10}" }
+        properties: {amount: (100 + i * 10).to_s}
       }
     end
 
@@ -52,12 +52,12 @@ describe "Sync New Charges With Children Scenario" do
     # Step 3: Create 10 customers with subscriptions
     customers = []
     child_plans = []
-    
+
     # 5 customers with insignificant overrides (display names only)
     5.times do |i|
       customer = create(:customer, organization:, external_id: "customer_#{i + 1}")
       customers << customer
-      
+
       # Override only display names for some charges
       charge_overrides = parent_plan.charges.first(3).map do |charge|
         {
@@ -65,7 +65,7 @@ describe "Sync New Charges With Children Scenario" do
           invoice_display_name: "Custom Display #{i + 1} - #{charge.invoice_display_name}"
         }
       end
-      
+
       create_subscription(
         {
           external_customer_id: customer.external_id,
@@ -76,7 +76,7 @@ describe "Sync New Charges With Children Scenario" do
           }
         }
       )
-      
+
       child_plans << customer.subscriptions.first.plan
     end
 
@@ -84,15 +84,15 @@ describe "Sync New Charges With Children Scenario" do
     5.times do |i|
       customer = create(:customer, organization:, external_id: "customer_#{i + 6}")
       customers << customer
-      
+
       # Override prices for some charges
       charge_overrides = parent_plan.charges.first(2).map do |charge|
         {
           id: charge.id,
-          properties: { amount: "#{200 + i * 50}" }
+          properties: {amount: (200 + i * 50).to_s}
         }
       end
-      
+
       create_subscription(
         {
           external_customer_id: customer.external_id,
@@ -103,7 +103,7 @@ describe "Sync New Charges With Children Scenario" do
           }
         }
       )
-      
+
       child_plans << customer.subscriptions.first.plan
     end
 
@@ -123,7 +123,7 @@ describe "Sync New Charges With Children Scenario" do
     new_billable_metric_2 = create(
       :billable_metric,
       organization:,
-      name: "New Metric 2", 
+      name: "New Metric 2",
       code: "new_metric_2",
       aggregation_type: "count_agg"
     )
@@ -144,7 +144,7 @@ describe "Sync New Charges With Children Scenario" do
       billable_metric_id: new_billable_metric_1.id,
       charge_model: "standard",
       invoice_display_name: "New Charge 1",
-      properties: { amount: "500" }
+      properties: {amount: "500"}
     }
 
     update_plan(
@@ -180,7 +180,7 @@ describe "Sync New Charges With Children Scenario" do
       billable_metric_id: new_billable_metric_2.id,
       charge_model: "standard",
       invoice_display_name: "New Charge 2",
-      properties: { amount: "600" }
+      properties: {amount: "600"}
     }
 
     update_plan(
@@ -211,14 +211,14 @@ describe "Sync New Charges With Children Scenario" do
 
     # Step 7: Run SyncNewChargesWithChildren service and execute all jobs
     Plans::SyncNewChargesWithChildrenService.call(plan: parent_plan)
-    
+
     # Execute all enqueued jobs
     perform_all_enqueued_jobs
 
     # Step 8: Verify results
     child_plans.each do |child_plan|
       child_plan.reload
-      
+
       # Should have only 2 new charges added (the ones from the plan updates)
       new_charges = child_plan.charges.where(
         billable_metric_id: [new_billable_metric_1.id, new_billable_metric_2.id]
@@ -229,13 +229,13 @@ describe "Sync New Charges With Children Scenario" do
       new_charge_1 = new_charges.find_by(billable_metric_id: new_billable_metric_1.id)
       expect(new_charge_1).to have_attributes(
         invoice_display_name: "New Charge 1",
-        properties: { "amount" => "500" }
+        properties: {"amount" => "500"}
       )
 
       new_charge_2 = new_charges.find_by(billable_metric_id: new_billable_metric_2.id)
       expect(new_charge_2).to have_attributes(
         invoice_display_name: "New Charge 2",
-        properties: { "amount" => "600" }
+        properties: {"amount" => "600"}
       )
 
       # Verify that existing charges have correct parent_ids
@@ -249,7 +249,7 @@ describe "Sync New Charges With Children Scenario" do
         parent_charge = parent_plan.charges.find_by(
           billable_metric_id: child_charge.billable_metric_id
         )
-        
+
         expect(parent_charge).to be_present
         expect(child_charge.parent_id).to eq(parent_charge.id)
       end
