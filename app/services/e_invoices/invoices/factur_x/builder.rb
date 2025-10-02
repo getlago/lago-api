@@ -29,11 +29,11 @@ module EInvoices
                 FacturX::TradeSettlementPayment.call(xml:, resource:, type:, amount:)
               end
 
-              taxes(invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
+              taxes do |tax_category, tax_rate, basis_amount, tax_amount|
                 FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
               end
 
-              allowance_charges(invoice) do |tax_rate, amount|
+              allowance_charges do |tax_rate, amount|
                 FacturX::TradeAllowanceCharge.call(xml:, resource:, indicator: INVOICE_DISCOUNT, tax_rate:, amount:)
               end
 
@@ -57,7 +57,7 @@ module EInvoices
       def monetary_summation_amounts
         FacturX::MonetarySummation::Amounts.new(
           line_total_amount: invoice.fees_amount,
-          allowances_amount: Money.new(allowances(invoice)),
+          allowances_amount: Money.new(allowances),
           tax_basis_amount: invoice.sub_total_excluding_taxes_amount,
           tax_amount: invoice.taxes_amount,
           grand_total_amount: invoice.sub_total_including_taxes_amount,
