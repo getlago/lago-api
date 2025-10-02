@@ -2,9 +2,9 @@
 
 class BackfillInvoiceCustomerSnapshots < ActiveRecord::Migration[8.0]
   def change
-    Invoice.where(status: ['finalized', 'voided'])
-           .includes(:customer)
-           .find_in_batches(batch_size: 1_000) do |batch|
+    Invoice.where(status: ["finalized", "voided"])
+      .includes(:customer)
+      .find_in_batches(batch_size: 1_000) do |batch|
       batch.each do |invoice|
         next if CustomerSnapshot.exists?(invoice_id: invoice.id)
 
