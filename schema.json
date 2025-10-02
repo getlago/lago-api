@@ -31401,57 +31401,6 @@
           "enumValues": null
         },
         {
-          "kind": "OBJECT",
-          "name": "MappingCollection",
-          "description": "MappingCollection type",
-          "interfaces": [],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "collection",
-              "description": "A collection of paginated MappingCollection",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "Mapping",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
           "kind": "ENUM",
           "name": "MappingTypeEnum",
           "description": null,
@@ -46973,67 +46922,6 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ]
-            },
-            {
-              "name": "integrationMappings",
-              "description": "Query netsuite integration mappings",
-              "type": {
-                "kind": "OBJECT",
-                "name": "MappingCollection",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-                {
-                  "name": "integrationId",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "ID",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "limit",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "mappableType",
-                  "description": null,
-                  "type": {
-                    "kind": "ENUM",
-                    "name": "MappableTypeEnum",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "page",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,

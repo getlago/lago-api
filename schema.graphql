@@ -6048,21 +6048,6 @@ type Mapping {
   mappableType: MappableTypeEnum!
 }
 
-"""
-MappingCollection type
-"""
-type MappingCollection {
-  """
-  A collection of paginated MappingCollection
-  """
-  collection: [Mapping!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
-}
-
 enum MappingTypeEnum {
   account
   coupon
@@ -8762,11 +8747,6 @@ type Query {
   Query integration items of an integration
   """
   integrationItems(integrationId: ID!, itemType: IntegrationItemTypeEnum, limit: Int, page: Int, searchTerm: String): IntegrationItemCollection!
-
-  """
-  Query netsuite integration mappings
-  """
-  integrationMappings(integrationId: ID, limit: Int, mappableType: MappableTypeEnum, page: Int): MappingCollection
 
   """
   Query integration subsidiaries
