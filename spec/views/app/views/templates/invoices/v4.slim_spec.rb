@@ -28,6 +28,9 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
       fees: [fee]
     )
   end
+  let(:customer_snapshot) do
+    build_stubbed(:customer_snapshot, :with_static_values, invoice:)
+  end
   # Static organization data for consistent rendering
   let(:organization) do
     build_stubbed(:organization, :with_static_values)
@@ -80,6 +83,7 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
   let(:wallet_name) { "Premium Wallet" }
 
   before do
+    customer_snapshot
     # Set locale to ensure consistent translations
     I18n.locale = :en
   end

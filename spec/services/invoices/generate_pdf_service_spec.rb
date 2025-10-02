@@ -8,11 +8,13 @@ RSpec.describe Invoices::GeneratePdfService do
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
+  let(:customer_snapshot) { create(:customer_snapshot, invoice:) }
   let(:credit) { create(:credit, invoice:) }
   let(:fees) { create_list(:fee, 3, invoice:) }
   let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription:) }
 
   before do
+    customer_snapshot
     invoice_subscription
     stub_pdf_generation
   end
@@ -37,6 +39,7 @@ RSpec.describe Invoices::GeneratePdfService do
     context "with not found invoice" do
       let(:invoice_subscription) { nil }
       let(:invoice) { nil }
+      let(:customer_snapshot) { nil }
 
       it "returns a result with error" do
         result = described_class.call(invoice:, context:)

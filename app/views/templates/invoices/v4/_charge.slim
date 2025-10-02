@@ -42,7 +42,7 @@ table.invoice-resume-table width="100%"
               = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
               - if fee.charge_filter_id?
                 = ' • ' + fee.filter_display_name(separator: ' • ')
-            - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
+            - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer_snapshot.applicable_timezone)&.to_date
             - if succeeded_at_date
               .body-3 = I18n.l(succeeded_at_date, format: :default)
         - elsif fee.charge.prorated?

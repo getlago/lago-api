@@ -74,30 +74,33 @@
             Bill to
           </div>
           <div class="body-2">
-            Doe Corp - John Doe
+            Jane Smith Tech Corp US
           </div>
           <div class="body-2">
-            1234567890
+            9876543210
           </div>
           <div class="body-2">
-            456 Customer Ave
+            987 Elm St
           </div>
           <div class="body-2">
-            Apt 202
+            Apt 99B
           </div>
           <div class="body-2">
-            <span>10001</span>
+            <span>90210</span>
             <span>, &nbsp;</span>
-            <span>New York</span>
+            <span>Beverly Hills</span>
           </div>
           <div class="body-2">
-            NY
+            CA
           </div>
           <div class="body-2">
             United States
           </div>
           <div class="body-2">
-            john.doe@example.com
+            ceo@janesmith.com
+          </div>
+          <div class="body-2">
+            Tax ID: TAX-9876543210
           </div>
         </div>
       </div>
