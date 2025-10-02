@@ -27,33 +27,15 @@ RSpec.describe IntegrationMappings::UpdateService do
 
         integration_mapping = IntegrationMappings::NetsuiteMapping.order(:updated_at).last
 
-        aggregate_failures do
-          expect(integration_mapping.external_id).to eq("456")
-          expect(integration_mapping.external_name).to eq("Name1")
-          expect(integration_mapping.external_account_code).to eq("code-2")
-        end
+        expect(integration_mapping.external_id).to eq("456")
+        expect(integration_mapping.external_name).to eq("Name1")
+        expect(integration_mapping.external_account_code).to eq("code-2")
       end
 
       it "returns an integration mapping in result object" do
         result = service_call
 
         expect(result.integration_mapping).to be_a(IntegrationMappings::NetsuiteMapping)
-      end
-    end
-
-    context "with validation error" do
-      let(:update_args) do
-        {integration_id: nil}
-      end
-
-      it "returns an error" do
-        result = service_call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:integration]).to eq(["relation_must_exist"])
-        end
       end
     end
   end

@@ -7,9 +7,6 @@ RSpec.describe Types::IntegrationMappings::UpdateInput do
 
   it do
     expect(subject).to accept_argument(:id).of_type("ID!")
-    expect(subject).to accept_argument(:integration_id).of_type("ID")
-    expect(subject).to accept_argument(:mappable_id).of_type("ID")
-    expect(subject).to accept_argument(:mappable_type).of_type("MappableTypeEnum")
     expect(subject).to accept_argument(:external_account_code).of_type("String")
     expect(subject).to accept_argument(:external_id).of_type("String")
     expect(subject).to accept_argument(:external_name).of_type("String")
