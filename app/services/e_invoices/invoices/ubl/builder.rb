@@ -25,7 +25,7 @@ module EInvoices
           Ubl::PaymentMeans.call(xml:, type: STANDARD_PAYMENT, amount: invoice.total_due_amount)
           Ubl::PaymentTerms.call(xml:, note: payment_terms_note)
 
-          allowance_charges(invoice) do |tax_rate, amount|
+          allowance_charges do |tax_rate, amount|
             Ubl::AllowanceCharge.call(xml:, resource:, indicator: INVOICE_DISCOUNT, tax_rate:, amount:)
           end
 
@@ -33,7 +33,7 @@ module EInvoices
           xml["cac"].TaxTotal do
             xml["cbc"].TaxAmount format_number(Money.new(invoice.taxes_amount_cents)), currencyID: invoice.currency
 
-            taxes(invoice) do |tax_category, tax_rate, basis_amount, tax_amount|
+            taxes do |tax_category, tax_rate, basis_amount, tax_amount|
               Ubl::TaxSubtotal.call(xml:, resource:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
             end
           end
@@ -76,7 +76,7 @@ module EInvoices
           line_extension_amount: invoice.fees_amount,
           tax_exclusive_amount: invoice.sub_total_excluding_taxes_amount,
           tax_inclusive_amount: invoice.sub_total_including_taxes_amount,
-          allowance_total_amount: Money.new(allowances(invoice)),
+          allowance_total_amount: Money.new(allowances),
           prepaid_amount: invoice.prepaid_credit_amount + invoice.credit_notes_amount,
           payable_amount: invoice.total_amount
         )

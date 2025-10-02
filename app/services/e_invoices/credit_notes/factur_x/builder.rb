@@ -33,7 +33,7 @@ module EInvoices
                 FacturX::ApplicableTradeTax.call(xml:, tax_category:, tax_rate:, basis_amount: -basis_amount, tax_amount: -tax_amount)
               end
 
-              allowance_charges(credit_note.invoice) do |tax_rate, amount|
+              allowance_charges do |tax_rate, amount|
                 FacturX::TradeAllowanceCharge.call(xml:, resource:, indicator: INVOICE_CHARGE, tax_rate:, amount: amount)
               end
 
@@ -51,7 +51,7 @@ module EInvoices
       def monetary_summation_amounts
         FacturX::MonetarySummation::Amounts.new(
           line_total_amount: -Money.new(credit_note.items.sum(:precise_amount_cents)),
-          charges_amount: Money.new(allowances(credit_note.invoice)),
+          charges_amount: Money.new(allowances),
           tax_basis_amount: -Money.new(credit_note.sub_total_excluding_taxes_amount),
           tax_amount: -Money.new(credit_note.taxes_amount),
           grand_total_amount: -Money.new(credit_note.total_amount),

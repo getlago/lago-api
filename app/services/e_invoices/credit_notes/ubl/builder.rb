@@ -26,7 +26,7 @@ module EInvoices
           Ubl::PaymentMeans.call(xml:, type: STANDARD_PAYMENT)
           Ubl::PaymentTerms.call(xml:, note: "Credit note - immediate settlement")
 
-          allowance_charges(invoice) do |tax_rate, amount|
+          allowance_charges do |tax_rate, amount|
             Ubl::AllowanceCharge.call(xml:, resource:, indicator: INVOICE_CHARGE, tax_rate:, amount:)
           end
 

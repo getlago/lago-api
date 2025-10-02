@@ -38,8 +38,6 @@ module EInvoices
 
     private
 
-    attr_accessor :invoice
-
     def formatted_date(date)
       date.strftime(self.class::DATEFORMAT)
     end
@@ -74,45 +72,11 @@ module EInvoices
       tax_rate.zero? ? Z_CATEGORY : S_CATEGORY
     end
 
-    def allowances(invoice)
-      invoice.coupons_amount_cents + invoice.progressive_billing_credit_amount_cents
-    end
-
-    def allowances_per_tax_rate(invoice)
-      invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
-        total_amount = fees.sum(&:precise_amount_cents)
-
-        if tax_rate > 0
-          total_taxes = fees.sum(&:taxes_precise_amount_cents)
-          charged_amount = (total_taxes * 100).fdiv(tax_rate)
-
-          [tax_rate, total_amount - charged_amount]
-        else
-          [tax_rate, total_amount.fdiv(invoice.fees.sum(:precise_amount_cents)) * allowances(invoice)]
-        end
-      end.to_h
-    end
-
-    def allowance_charges(invoice, &block)
-      allowances_per_tax_rate(invoice).each_pair do |tax_rate, amount|
+    def allowance_charges(&block)
+      allowances_per_tax_rate.each_pair do |tax_rate, amount|
         next if amount.zero?
 
         yield tax_rate, Money.new(amount)
-      end
-    end
-
-    def taxes(invoice, &block)
-      invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
-        total_taxes = fees.sum(&:taxes_precise_amount_cents)
-        charged_amount = if tax_rate > 0
-          (total_taxes * 100).fdiv(tax_rate)
-        else
-          fees.sum(&:precise_amount_cents) - allowances_per_tax_rate(invoice)[tax_rate]
-        end
-
-        tax_category = tax_category_code(type: invoice.invoice_type, tax_rate: tax_rate)
-
-        yield tax_category, tax_rate, Money.new(charged_amount), Money.new(total_taxes)
       end
     end
 
