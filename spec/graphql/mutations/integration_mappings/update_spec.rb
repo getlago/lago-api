@@ -6,7 +6,7 @@ RSpec.describe Mutations::IntegrationMappings::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration_mapping) { create(:netsuite_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mappable) { create(:add_on, organization:) }
+  let(:mappable) { integration_mapping.mappable }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
