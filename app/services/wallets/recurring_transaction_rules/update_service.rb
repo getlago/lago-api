@@ -24,8 +24,6 @@ module Wallets
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
-          validate_paid_credits!(attributes: rule_attributes)
-
           if recurring_rule
             recurring_rule.update!(rule_attributes)
           else
@@ -62,31 +60,6 @@ module Wallets
         wallet.recurring_transaction_rules.where(id: not_needed_ids).find_each do |recurring_transaction_rule|
           Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule:)
         end
-      end
-
-      def validate_paid_credits!(attributes:)
-        return if attributes[:method] != "fixed"
-
-        credit_amount = parsed_credits_amount(attributes[:paid_credits])
-        return if credit_amount.nil? || credit_amount.floor(5).zero?
-
-        validator = Validators::WalletTransactionAmountLimitsValidator.new(
-          result,
-          wallet:,
-          credits_amount: attributes[:paid_credits],
-          ignore_validation: attributes[:ignore_paid_top_up_limits]
-        )
-
-        unless validator.valid?
-          result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
-          result.raise_if_error!
-        end
-      end
-
-      def parsed_credits_amount(value)
-        BigDecimal(value)
-      rescue ArgumentError, TypeError
-        nil
       end
     end
   end
