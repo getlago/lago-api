@@ -69,6 +69,7 @@ module Credits
         next unless fee
 
         fee.precise_coupons_amount_cents += progressive_fee.amount_cents
+        fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
         fee.save!
       end
     end
