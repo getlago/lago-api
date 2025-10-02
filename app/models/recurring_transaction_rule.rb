@@ -2,6 +2,7 @@
 
 class RecurringTransactionRule < ApplicationRecord
   include PaperTrailTraceable
+  include PaymentMethodable
 
   belongs_to :wallet
   belongs_to :organization
@@ -96,6 +97,7 @@ end
 #  ignore_paid_top_up_limits           :boolean          default(FALSE), not null
 #  interval                            :integer          default("weekly")
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
+#  manual_payment_method               :boolean          default(FALSE), not null
 #  method                              :integer          default("fixed"), not null
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  started_at                          :datetime
@@ -109,17 +111,20 @@ end
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
 #  organization_id                     :uuid             not null
+#  payment_method_id                   :uuid
 #  wallet_id                           :uuid             not null
 #
 # Indexes
 #
-#  index_recurring_transaction_rules_on_expiration_at    (expiration_at)
-#  index_recurring_transaction_rules_on_organization_id  (organization_id)
-#  index_recurring_transaction_rules_on_started_at       (started_at)
-#  index_recurring_transaction_rules_on_wallet_id        (wallet_id)
+#  index_recurring_transaction_rules_on_expiration_at      (expiration_at)
+#  index_recurring_transaction_rules_on_organization_id    (organization_id)
+#  index_recurring_transaction_rules_on_payment_method_id  (payment_method_id)
+#  index_recurring_transaction_rules_on_started_at         (started_at)
+#  index_recurring_transaction_rules_on_wallet_id          (wallet_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #  fk_rails_...  (wallet_id => wallets.id)
 #

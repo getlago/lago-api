@@ -1,4 +1,4 @@
-\restrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\restrict a40nOUy2sKWxyVQBKwdMu5wFMPFJeZFJAiyY8f5haVuXG45PXuftDTn1TqLTNpB
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -35,6 +35,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
@@ -47,6 +48,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_d9ea200904;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d9342a8ca7;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_d72a9877be;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
@@ -158,6 +160,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
+ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
@@ -288,6 +291,7 @@ DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
+DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
@@ -319,6 +323,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
@@ -331,6 +336,7 @@ DROP INDEX IF EXISTS public.index_refunds_on_organization_id;
 DROP INDEX IF EXISTS public.index_refunds_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_wallet_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
+DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
 DROP INDEX IF EXISTS public.index_quantified_events_on_organization_id;
@@ -2671,7 +2677,9 @@ CREATE TABLE public.subscriptions (
     trial_ended_at timestamp(6) without time zone,
     organization_id uuid NOT NULL,
     on_termination_credit_note public.subscription_on_termination_credit_note,
-    on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL
+    on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL,
+    payment_method_id uuid,
+    manual_payment_method boolean DEFAULT false NOT NULL
 );
 
 
@@ -3390,7 +3398,9 @@ CREATE TABLE public.wallets (
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
     paid_top_up_min_amount_cents bigint,
-    paid_top_up_max_amount_cents bigint
+    paid_top_up_max_amount_cents bigint,
+    payment_method_id uuid,
+    manual_payment_method boolean DEFAULT false NOT NULL
 );
 
 
@@ -3950,7 +3960,9 @@ CREATE TABLE public.recurring_transaction_rules (
     status integer DEFAULT 0,
     organization_id uuid NOT NULL,
     ignore_paid_top_up_limits boolean DEFAULT false NOT NULL,
-    transaction_name character varying(255)
+    transaction_name character varying(255),
+    payment_method_id uuid,
+    manual_payment_method boolean DEFAULT false NOT NULL
 );
 
 
@@ -7679,6 +7691,13 @@ CREATE INDEX index_recurring_transaction_rules_on_organization_id ON public.recu
 
 
 --
+-- Name: index_recurring_transaction_rules_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_transaction_rules_on_payment_method_id ON public.recurring_transaction_rules USING btree (payment_method_id);
+
+
+--
 -- Name: index_recurring_transaction_rules_on_started_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7760,6 +7779,13 @@ CREATE INDEX index_subscriptions_on_external_id ON public.subscriptions USING bt
 --
 
 CREATE INDEX index_subscriptions_on_organization_id ON public.subscriptions USING btree (organization_id);
+
+
+--
+-- Name: index_subscriptions_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_payment_method_id ON public.subscriptions USING btree (payment_method_id);
 
 
 --
@@ -7977,6 +8003,13 @@ CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (custome
 --
 
 CREATE INDEX index_wallets_on_organization_id ON public.wallets USING btree (organization_id);
+
+
+--
+-- Name: index_wallets_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_payment_method_id ON public.wallets USING btree (payment_method_id);
 
 
 --
@@ -8868,6 +8901,14 @@ ALTER TABLE ONLY public.fixed_charges
 
 
 --
+-- Name: recurring_transaction_rules fk_rails_5efea6fe31; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_transaction_rules
+    ADD CONSTRAINT fk_rails_5efea6fe31 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
+
+
+--
 -- Name: fees fk_rails_6023b3f2dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9756,6 +9797,14 @@ ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
 
 
 --
+-- Name: wallets fk_rails_d9342a8ca7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallets
+    ADD CONSTRAINT fk_rails_d9342a8ca7 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
+
+
+--
 -- Name: integration_resources fk_rails_d9448a540b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9849,6 +9898,14 @@ ALTER TABLE ONLY public.usage_monitoring_triggered_alerts
 
 ALTER TABLE ONLY public.charge_filters
     ADD CONSTRAINT fk_rails_e711e8089e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: subscriptions fk_rails_e744efbe51; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT fk_rails_e744efbe51 FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id);
 
 
 --
@@ -10023,11 +10080,15 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\unrestrict a40nOUy2sKWxyVQBKwdMu5wFMPFJeZFJAiyY8f5haVuXG45PXuftDTn1TqLTNpB
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251002180925'),
+('20251002125144'),
+('20251002125117'),
+('20251002124231'),
 ('20250930111323'),
 ('20250926185510'),
 ('20250919124523'),
