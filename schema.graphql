@@ -8733,16 +8733,6 @@ type Query {
   ): Integration
 
   """
-  Query a single integration collection mapping
-  """
-  integrationCollectionMapping(
-    """
-    Unique ID of the integration collection mappings
-    """
-    id: ID!
-  ): CollectionMapping
-
-  """
   Query integration collection mappings
   """
   integrationCollectionMappings(integrationId: ID, limit: Int, mappingType: MappingTypeEnum, page: Int): CollectionMappingCollection

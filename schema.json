@@ -46808,35 +46808,6 @@
               ]
             },
             {
-              "name": "integrationCollectionMapping",
-              "description": "Query a single integration collection mapping",
-              "type": {
-                "kind": "OBJECT",
-                "name": "CollectionMapping",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-                {
-                  "name": "id",
-                  "description": "Unique ID of the integration collection mappings",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ]
-            },
-            {
               "name": "integrationCollectionMappings",
               "description": "Query integration collection mappings",
               "type": {
