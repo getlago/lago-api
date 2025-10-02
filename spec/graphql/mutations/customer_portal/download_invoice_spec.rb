@@ -7,6 +7,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:customer_snapshot) { create(:customer_snapshot, invoice:) }
 
   let(:mutation) do
     <<~GQL
@@ -18,7 +19,10 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice do
     GQL
   end
 
-  before { stub_pdf_generation }
+  before do
+    customer_snapshot
+    stub_pdf_generation
+  end
 
   it_behaves_like "requires a customer portal user"
 
