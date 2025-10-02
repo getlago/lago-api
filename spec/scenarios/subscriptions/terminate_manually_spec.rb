@@ -234,13 +234,17 @@ describe "Subscription manual termination" do
 
         # (20 unused days = 20 / 28 * 100 = 71.43 euro) + 20% tax = 85.71 euro
         credit_note = subscription_invoice.credit_notes.sole
+
+        # 7142.85714 rounded to 7143, then AdjustAmountsWithRoundingService subtracts 1
+        expect(credit_note.items.sum(&:amount_cents)).to eq 71_42
         expect(credit_note).to have_attributes(
           sub_total_excluding_taxes_amount_cents: 71_43,
-          taxes_amount_cents: 14_28,
+          taxes_amount_cents: 14_29,
           credit_amount_cents: 85_71,
           balance_amount_cents: 85_71,
           total_amount_cents: 85_71
         )
+        expect(credit_note.items.sum(&:amount_cents) + credit_note.applied_taxes.sum(:amount_cents)).to eq(credit_note.total_amount_cents)
 
         perform_termination_jobs
 

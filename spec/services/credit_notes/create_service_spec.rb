@@ -427,9 +427,10 @@ RSpec.describe CreditNotes::CreateService do
           refund_amount_cents: 3,
           balance_amount_cents: 6,
           coupons_adjustment_amount_cents: 8,
-          taxes_amount_cents: 1,
+          taxes_amount_cents: 2,
           taxes_rate: 20
         )
+        expect(credit_note.items.sum(:amount_cents)).to eq(credit_note.items.sum(:precise_amount_cents) - 1)
         expect(credit_note.applied_taxes.count).to eq(1)
 
         expect(credit_note.items.count).to eq(2)
@@ -437,8 +438,9 @@ RSpec.describe CreditNotes::CreateService do
         item1 = credit_note.items.order(created_at: :asc).first
         expect(item1).to have_attributes(
           fee: fee1,
-          amount_cents: 10,
-          amount_currency: invoice.currency
+          amount_cents: 9,
+          amount_currency: invoice.currency,
+          precise_amount_cents: 10
         )
 
         item2 = credit_note.items.order(created_at: :asc).last

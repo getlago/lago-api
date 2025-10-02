@@ -90,12 +90,16 @@ RSpec.describe CreditNotes::AdjustAmountsWithRoundingService do
         expect(result).to be_success
 
         credit_note = result.credit_note
+        expect(credit_note.items.first.amount_cents).to eq(7)
         expect(credit_note).to have_attributes(
-          taxes_amount_cents: 1,
+          taxes_amount_cents: 2,
           sub_total_excluding_taxes_amount_cents: 8,
           credit_amount_cents: 9,
           total_amount_cents: 9
         )
+        # the sume of precise_amounts is not the same as the sum of amounts
+        expect(credit_note.items.sum(&:amount_cents).round).to eq(7)
+        expect(credit_note.items.sum(&:precise_amount_cents).round).to eq(8)
       end
     end
   end
