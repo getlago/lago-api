@@ -7,6 +7,19 @@ RSpec.describe LagoHttpClient::Client do
 
   let(:url) { "http://example.com/api/v1/example" }
 
+  describe "#initialize" do
+    it "use default timeouts from Net::HTTP" do
+      expect(client.send(:http_client).write_timeout).to eq 60
+      expect(client.send(:http_client).read_timeout).to eq 60
+    end
+
+    it "can override timeouts" do
+      client = described_class.new(url, read_timeout: 8, write_timeout: 12)
+      expect(client.send(:http_client).write_timeout).to eq 12
+      expect(client.send(:http_client).read_timeout).to eq 8
+    end
+  end
+
   describe "#post" do
     context "when response status code is 2xx" do
       let(:response) do

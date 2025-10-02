@@ -10,10 +10,11 @@ module LagoHttpClient
 
     attr_reader :uri, :retries_on
 
-    def initialize(url, read_timeout: nil, retries_on: [])
+    def initialize(url, read_timeout: nil, write_timeout: nil, retries_on: [])
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.read_timeout = read_timeout if read_timeout.present?
+      @http_client.write_timeout = write_timeout if write_timeout.present?
       @http_client.use_ssl = true if uri.scheme == "https"
       @retries_on = retries_on
     end
