@@ -388,24 +388,24 @@ html
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: billing_entity.tax_identification_number)
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
-          .body-2 = customer.display_name
-          - if customer.legal_number.present?
-            .body-2 #{customer.legal_number}
-          .body-2 = customer.address_line1
-          .body-2 = customer.address_line2
+          .body-2 = customer_snapshot.display_name
+          - if customer_snapshot.legal_number.present?
+            .body-2 #{customer_snapshot.legal_number}
+          .body-2 = customer_snapshot.address_line1
+          .body-2 = customer_snapshot.address_line2
           .body-2
             span
-              = customer.zipcode
-            - if customer.zipcode.present? && customer.city.present?
+              = customer_snapshot.zipcode
+            - if customer_snapshot.zipcode.present? && customer_snapshot.city.present?
               span
                 | , &nbsp;
             span
-              = customer.city
-          .body-2 = customer.state
-          .body-2 = ISO3166::Country.new(customer.country)&.common_name
-          .body-2 = customer.email
-          - if customer.tax_identification_number.present?
-            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
+              = customer_snapshot.city
+          .body-2 = customer_snapshot.state
+          .body-2 = ISO3166::Country.new(customer_snapshot.country)&.common_name
+          .body-2 = customer_snapshot.email
+          - if customer_snapshot.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer_snapshot.tax_identification_number)
 
       .mb-24
         h2.title-2.mb-4 = MoneyHelper.format(total_amount)
