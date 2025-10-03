@@ -123,6 +123,21 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
         expect(event_store.count).to eq(2) # 1st event is ignored
       end
     end
+
+    context "with max timestamp" do
+      let(:boundaries) do
+        {
+          from_datetime: subscription.started_at.beginning_of_day,
+          to_datetime: subscription.started_at.end_of_month.end_of_day,
+          max_timestamp: subscription.started_at.beginning_of_day.end_of_day + 2.days,
+          charges_duration: 31
+        }
+      end
+
+      it "returns a list of events" do
+        expect(event_store.count).to eq(2)
+      end
+    end
   end
 
   describe "#with_grouped_by_values" do

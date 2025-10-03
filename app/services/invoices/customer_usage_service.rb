@@ -8,7 +8,7 @@ module Invoices
       timestamp: Time.current,
       apply_taxes: true,
       with_cache: true,
-      max_to_datetime: nil,
+      max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true
     )
@@ -23,7 +23,7 @@ module Invoices
       @with_zero_units_filters = with_zero_units_filters
 
       # NOTE: used to force charges_to_datetime boundary
-      @max_to_datetime = max_to_datetime
+      @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true, calculate_projected_usage: false)
@@ -55,7 +55,7 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :calculate_projected_usage, :with_zero_units_filters
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -115,7 +115,7 @@ module Invoices
       )
 
       applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.charges_to_datetime = max_to_datetime } if max_to_datetime
+      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
 
       Fees::ChargeService
         .call(

@@ -10,7 +10,9 @@ class BillingPeriodBoundaries
     :fixed_charges_from_datetime,
     :fixed_charges_to_datetime,
     :fixed_charges_duration
-  attr_accessor :charges_to_datetime
+
+  attr_accessor :charges_to_datetime,
+    :max_timestamp # Used to limit event timestamp when filling the daily usage
 
   def self.from_fee(fee)
     props = fee&.properties || {}
@@ -39,7 +41,8 @@ class BillingPeriodBoundaries
     fixed_charges_from_datetime: nil,
     fixed_charges_to_datetime: nil,
     fixed_charges_duration: nil,
-    issuing_date: nil
+    issuing_date: nil,
+    max_timestamp: nil
   )
     @from_datetime = from_datetime
     @to_datetime = to_datetime
@@ -51,6 +54,7 @@ class BillingPeriodBoundaries
     @fixed_charges_from_datetime = fixed_charges_from_datetime
     @fixed_charges_to_datetime = fixed_charges_to_datetime
     @fixed_charges_duration = fixed_charges_duration
+    @max_timestamp = max_timestamp
   end
 
   def to_h
@@ -66,6 +70,7 @@ class BillingPeriodBoundaries
       "fixed_charges_duration" => fixed_charges_duration
     }.with_indifferent_access
     h["issuing_date"] = issuing_date if issuing_date.present?
+    h["max_timestamp"] = max_timestamp if max_timestamp.present?
     h
   end
 end

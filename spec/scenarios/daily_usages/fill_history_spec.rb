@@ -150,11 +150,7 @@ describe "Daily Usages: Fill History", :time_travel, transaction: false do
 
       usages = DailyUsage.where(usage_date: from.to_date..to.to_date)
       expect(usages.count).to eq(31)
-
-      # NOTE: The last usage of the month should be 100 and the usage diff should not be 0.
-      last_daily_usage = DailyUsage.find_by(usage_date: to.to_date)
-      expect(last_daily_usage.usage["amount_cents"]).to eq(100)
-      expect(last_daily_usage.usage_diff["amount_cents"]).not_to eq(0)
+      expect(usages.pluck(Arel.sql("usage['amount_cents']")).uniq).to eq([100])
     end
   end
 

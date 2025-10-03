@@ -126,6 +126,10 @@ module Events
         boundaries[:charges_duration]
       end
 
+      def applicable_to_datetime
+        boundaries[:max_timestamp] || to_datetime
+      end
+
       def sanitize_colon(query)
         # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
         query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
