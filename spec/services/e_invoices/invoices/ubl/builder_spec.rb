@@ -360,13 +360,13 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder, type: :service do
       context "with one tag per fee" do
         it "contains the first fee info" do
           expect(subject).to contains_xml_node("#{root}[1]/cbc:ID").with_value("1")
-          expect(subject).to contains_xml_node("#{root}[1]/cbc:InvoicedQuantity").with_value("5.0").with_attribute("unitCode", described_class::UNIT_CODE)
+          expect(subject).to contains_xml_node("#{root}[1]/cbc:InvoicedQuantity").with_value("5.00").with_attribute("unitCode", described_class::UNIT_CODE)
           expect(subject).to contains_xml_node("#{root}[1]/cbc:LineExtensionAmount").with_value("10.00").with_attribute("currencyID", "EUR")
         end
 
         it "contains the second fee info" do
           expect(subject).to contains_xml_node("#{root}[2]/cbc:ID").with_value("2")
-          expect(subject).to contains_xml_node("#{root}[2]/cbc:InvoicedQuantity").with_value("1.0").with_attribute("unitCode", described_class::UNIT_CODE)
+          expect(subject).to contains_xml_node("#{root}[2]/cbc:InvoicedQuantity").with_value("1.00").with_attribute("unitCode", described_class::UNIT_CODE)
           expect(subject).to contains_xml_node("#{root}[2]/cbc:LineExtensionAmount").with_value("25.00").with_attribute("currencyID", "EUR")
         end
       end
