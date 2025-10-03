@@ -27,4 +27,39 @@ RSpec.describe CreditNoteItem do
       end
     end
   end
+
+  describe "#fee_rate" do
+    let(:item_precise_amount) { 100 }
+    let(:fee_precise_amount) { 1000 }
+    let(:credit_note_item) { build(:credit_note_item, precise_amount_cents: item_precise_amount, fee: fee) }
+    let(:fee) { build(:fee, precise_amount_cents: fee_precise_amount) }
+
+    it "returns the proportion of the item and fee amounts" do
+      expect(credit_note_item.fee_rate).to eq(0.1)
+    end
+
+    context "when amounts are the same" do
+      let(:item_precise_amount) { fee_precise_amount }
+
+      it "returns the proportion of the item and fee amounts" do
+        expect(credit_note_item.fee_rate).to eq(1.0)
+      end
+    end
+
+    context "when fee amount is zero" do
+      let(:fee_precise_amount) { 0 }
+
+      it "is the item amount" do
+        expect(credit_note_item.fee_rate).to eq(item_precise_amount)
+      end
+    end
+
+    context "when item amount is zero" do
+      let(:item_precise_amount) { 0 }
+
+      it "is zero" do
+        expect(credit_note_item.fee_rate).to eq(0.0)
+      end
+    end
+  end
 end

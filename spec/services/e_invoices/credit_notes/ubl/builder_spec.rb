@@ -12,6 +12,10 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
   let(:credit_note) { create(:credit_note, invoice:, total_amount_currency: "EUR", credit_amount: 1) }
   let(:invoice) { create(:invoice, number: "LAGO-TEST-123") }
 
+  before do
+    credit_note.reload
+  end
+
   describe ".call" do
     context "when CreditNote tag" do
       it "contains the tag" do
@@ -109,16 +113,16 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
     context "when AllowanceCharge tags" do
       let(:root) { "//cac:AllowanceCharge" }
 
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
-      let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100) }
-      let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
-      let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
-      let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
-      let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
+      let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_coupons_amount_cents: 100, precise_amount_cents: 2000, taxes_precise_amount_cents: 0) }
+      let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_coupons_amount_cents: 10, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
+      let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_coupons_amount_cents: 10, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }
+      let(:invoice_fee4) { create(:fee, invoice:, taxes_rate: 10.0, precise_coupons_amount_cents: 30, precise_amount_cents: 600, taxes_precise_amount_cents: 57) }
       let(:credit_note_item1) { create(:credit_note_item, credit_note:, fee: invoice_fee1, precise_amount_cents: 1000) }
       let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: invoice_fee2, precise_amount_cents: 100) }
       let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: invoice_fee3, precise_amount_cents: 300) }
       let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: invoice_fee4, precise_amount_cents: 600) }
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
+      let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100) }
 
       before do
         credit_note_item1
@@ -326,10 +330,10 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
     context "when CreditNoteLine tags" do
       let(:root) { "//cac:CreditNoteLine" }
 
-      let(:credit_note_item1) { create(:credit_note_item, credit_note:, amount: 10, fee: item_fee1) }
-      let(:credit_note_item2) { create(:credit_note_item, credit_note:, amount: 25, fee: item_fee2) }
-      let(:item_fee1) { create(:fee, units: 5, amount: 10, precise_unit_amount: 2, amount_currency: "EUR") }
-      let(:item_fee2) { create(:fee, units: 1, amount: 25, precise_unit_amount: 25, amount_currency: "EUR") }
+      let(:credit_note_item1) { create(:credit_note_item, credit_note:, precise_amount_cents: 100, amount: 10, fee: item_fee1) }
+      let(:credit_note_item2) { create(:credit_note_item, credit_note:, precise_amount_cents: 250, amount: 25, fee: item_fee2) }
+      let(:item_fee1) { create(:fee, units: 5, precise_amount_cents: 100, precise_unit_amount: 2, amount_currency: "EUR") }
+      let(:item_fee2) { create(:fee, units: 1, precise_amount_cents: 250, precise_unit_amount: 25, amount_currency: "EUR") }
 
       before do
         credit_note_item1
@@ -343,13 +347,13 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder, type: :service do
       context "with one tag per fee" do
         it "contains the first fee info" do
           expect(subject).to contains_xml_node("#{root}[1]/cbc:ID").with_value("1")
-          expect(subject).to contains_xml_node("#{root}[1]/cbc:CreditedQuantity").with_value("-5.0").with_attribute("unitCode", described_class::UNIT_CODE)
+          expect(subject).to contains_xml_node("#{root}[1]/cbc:CreditedQuantity").with_value("-5.00").with_attribute("unitCode", described_class::UNIT_CODE)
           expect(subject).to contains_xml_node("#{root}[1]/cbc:LineExtensionAmount").with_value("-10.00").with_attribute("currencyID", "EUR")
         end
 
         it "contains the second fee info" do
           expect(subject).to contains_xml_node("#{root}[2]/cbc:ID").with_value("2")
-          expect(subject).to contains_xml_node("#{root}[2]/cbc:CreditedQuantity").with_value("-1.0").with_attribute("unitCode", described_class::UNIT_CODE)
+          expect(subject).to contains_xml_node("#{root}[2]/cbc:CreditedQuantity").with_value("-1.00").with_attribute("unitCode", described_class::UNIT_CODE)
           expect(subject).to contains_xml_node("#{root}[2]/cbc:LineExtensionAmount").with_value("-25.00").with_attribute("currencyID", "EUR")
         end
       end

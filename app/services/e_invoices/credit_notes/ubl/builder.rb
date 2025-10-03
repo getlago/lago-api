@@ -77,7 +77,7 @@ module EInvoices
         Ubl::LineItem::Data.new(
           type: :credit_note,
           line_id: index,
-          quantity: -item.fee.units,
+          quantity: -(item.fee_rate * item.fee.units),
           line_extension_amount: -item.amount,
           currency: item.amount_currency,
           item_name: item.fee.item_name,

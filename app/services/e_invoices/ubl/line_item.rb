@@ -26,7 +26,7 @@ module EInvoices
         xml.comment "Line Item #{data.line_id}: #{data.item_description}"
         xml["cac"].send(line_tag) do
           xml["cbc"].ID data.line_id
-          xml["cbc"].send(quantity_tag, data.quantity, unitCode: UNIT_CODE)
+          xml["cbc"].send(quantity_tag, format_number(data.quantity), unitCode: UNIT_CODE)
           xml["cbc"].LineExtensionAmount format_number(data.line_extension_amount), currencyID: data.currency
           xml["cac"].Item do
             xml["cbc"].Name data.item_name
