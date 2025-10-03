@@ -68,8 +68,6 @@ RSpec.describe Wallets::UpdateService do
       let(:priority) { 55 }
 
       it "returns false and result has errors" do
-        result = update_service.call
-
         expect(result).not_to be_success
         expect(result.error.messages[:priority]).to eq(["value_is_invalid"])
       end
