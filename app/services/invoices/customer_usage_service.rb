@@ -93,13 +93,16 @@ module Invoices
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .order(Arel.sql("lower(unaccent(billable_metrics.name)) ASC"))
 
+      received_event_codes = distinct_event_codes(subscription, boundaries)
+
       # we're capturing the context here so we can re-use inside the threads. This will correctly propagate spans to this current span
       context = OpenTelemetry::Context.current
 
       fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
         OpenTelemetry::Context.with_current(context) do
           ActiveRecord::Base.connection_pool.with_connection do
-            charge_usage(charge, false)
+            bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+            charge_usage(charge, bypass_aggregation)
           end
         end
       end
@@ -214,6 +217,19 @@ module Invoices
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer
+    end
+
+    def distinct_event_codes(subscription, boundaries)
+      Events::Stores::StoreFactory
+        .store_class(organization: subscription.organization)
+        .new(
+          subscription:,
+          boundaries: {
+            from_datetime: boundaries.charges_from_datetime,
+            to_datetime: boundaries.charges_to_datetime
+          }
+        )
+        .distinct_codes
     end
   end
 end
