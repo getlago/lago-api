@@ -18978,6 +18978,7 @@
             {
               "name": "priority",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -18988,8 +18989,7 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "rateAmount",
@@ -45520,13 +45520,6 @@
             {
               "name": "customerPortalWallet",
               "description": "Query a single wallet from the customer portal",
-              "type": {
-                "kind": "OBJECT",
-                "name": "CustomerPortalWallet",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
               "args": [
                 {
                   "name": "id",
@@ -45544,7 +45537,14 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
-              ]
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "CustomerPortalWallet",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
             },
             {
               "name": "customerPortalWallets",
@@ -60786,6 +60786,7 @@
             {
               "name": "priority",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -60796,8 +60797,7 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "rateAmount",

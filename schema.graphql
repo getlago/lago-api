@@ -2700,6 +2700,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -4255,6 +4256,7 @@ type CustomerPortalWallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   status: WalletStatusEnum!
 }
@@ -8741,9 +8743,19 @@ type Query {
   customerPortalUser: CustomerPortalCustomer
 
   """
+  Query a single wallet from the customer portal
+  """
+  customerPortalWallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): CustomerPortalWallet
+
+  """
   Query wallets
   """
-  customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+  customerPortalWallets(limit: Int, page: Int, status: WalletStatusEnum): CustomerPortalWalletCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -10958,6 +10970,7 @@ input UpdateCustomerWalletInput {
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11498,6 +11511,7 @@ type Wallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
