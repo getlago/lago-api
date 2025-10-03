@@ -32,6 +32,7 @@ module DataExports
           payment_status
           status
           file_url
+          xml_url
           currency
           fees_amount_cents
           coupons_amount_cents
@@ -77,6 +78,7 @@ module DataExports
           serialized_invoice[:payment_status],
           serialized_invoice[:status],
           serialized_invoice[:file_url],
+          serialized_invoice[:xml_url],
           serialized_invoice[:currency],
           serialized_invoice[:fees_amount_cents],
           serialized_invoice[:coupons_amount_cents],
