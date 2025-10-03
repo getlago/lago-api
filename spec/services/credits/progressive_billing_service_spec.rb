@@ -475,8 +475,7 @@ Rspec.describe Credits::ProgressiveBillingService do
     let(:progressive_billing_fee) do
       create(:charge_fee,
         amount_cents: 20,
-        invoice: progressive_billing_invoice
-      )
+        invoice: progressive_billing_invoice)
     end
 
     before do
