@@ -120,6 +120,7 @@ class Organization < ApplicationRecord
     multi_entities_enterprise
     analytics_dashboards
     projected_usage
+    clickhouse_live_aggregation
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze

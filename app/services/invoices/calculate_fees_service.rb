@@ -352,13 +352,11 @@ module Invoices
     end
 
     def distinct_event_codes(subscription, boundaries)
-      Events::Stores::StoreFactory
-        .store_class(organization: invoice.organization)
-        .new(
-          subscription:,
-          boundaries: {from_datetime: boundaries.charges_from_datetime, to_datetime: boundaries.charges_to_datetime}
-        )
-        .distinct_codes
+      Events::Stores::StoreFactory.new_instance(
+        organization: invoice.organization,
+        subscription:,
+        boundaries: {from_datetime: boundaries.charges_from_datetime, to_datetime: boundaries.charges_to_datetime}
+      ).distinct_codes
     end
   end
 end
