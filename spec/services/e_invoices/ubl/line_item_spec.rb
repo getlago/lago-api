@@ -44,7 +44,7 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
     context "with item units" do
       context "when InvoicedQuantity" do
         it "have the item units" do
-          expect(subject).to contains_xml_node("#{root}/cbc:InvoicedQuantity").with_value(2).with_attribute("unitCode", "C62")
+          expect(subject).to contains_xml_node("#{root}/cbc:InvoicedQuantity").with_value("2.00").with_attribute("unitCode", "C62")
         end
       end
 
@@ -53,7 +53,7 @@ RSpec.describe EInvoices::Ubl::LineItem, type: :service do
         let(:root) { "//cac:CreditNoteLine" }
 
         it "have the item units" do
-          expect(subject).to contains_xml_node("#{root}/cbc:CreditedQuantity").with_value(2).with_attribute("unitCode", "C62")
+          expect(subject).to contains_xml_node("#{root}/cbc:CreditedQuantity").with_value("2.00").with_attribute("unitCode", "C62")
         end
       end
     end

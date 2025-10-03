@@ -30,13 +30,10 @@ module EInvoices
       end
 
       def allowances_per_tax_rate
-        total_amount = credit_note.items.sum(:precise_amount_cents)
-        credit_note.items.includes(:fee).group_by { |item| item.fee.taxes_rate }.map do |tax_rate, items|
-          items_total = items.sum(&:precise_amount_cents)
-          discount = items_total.fdiv(total_amount) * allowances
-
-          [tax_rate, discount]
-        end.to_h
+        credit_note.items.each_with_object(Hash.new(0)) do |item, rates|
+          item_fee_rate = item.fee.amount_cents.zero? ? 0 : item.precise_amount_cents.fdiv(item.fee.precise_amount_cents)
+          rates[item.fee.taxes_rate] += item.fee.precise_coupons_amount_cents * item_fee_rate
+        end
       end
     end
   end
