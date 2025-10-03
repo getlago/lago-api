@@ -11,7 +11,7 @@ module Events
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
-        scope = scope.to_datetime(to_datetime) if to_datetime
+        scope = scope.to_datetime(applicable_to_datetime) if applicable_to_datetime
 
         if numeric_property
           scope = scope.where(presence_condition)
@@ -26,7 +26,7 @@ module Events
         Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization.id)
           .from_datetime(from_datetime)
-          .to_datetime(to_datetime)
+          .to_datetime(applicable_to_datetime)
           .pluck("DISTINCT(code)")
       end
 
@@ -283,6 +283,7 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
+              applicable_to_datetime: applicable_to_datetime.ceil,
               initial_value: initial_value || 0
             }
           ]
@@ -317,7 +318,8 @@ module Events
             sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil
+              to_datetime: to_datetime.ceil,
+              applicable_to_datetime: applicable_to_datetime.ceil
             }
           ]
         )
@@ -335,6 +337,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
+                applicable_to_datetime: applicable_to_datetime.ceil,
                 initial_value: initial_value || 0
               }
             ]

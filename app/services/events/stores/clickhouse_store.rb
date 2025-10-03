@@ -14,7 +14,7 @@ module Events
           scope = scope.order(timestamp: :asc) if ordered
 
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-          scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
+          scope = scope.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
           scope = scope.limit_by(1, "events_enriched.transaction_id")
 
           scope = apply_grouped_by_values(scope) if grouped_by_values?
@@ -32,7 +32,7 @@ module Events
         query = query.order(arel_table[:timestamp].desc) if ordered
 
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query = query.where(arel_table[:timestamp].lteq(applicable_to_datetime)) if applicable_to_datetime
         query = query.limit_by(1, "events_enriched.transaction_id")
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
@@ -47,7 +47,7 @@ module Events
             .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization.id)
             .where("events_enriched.timestamp >= ?", from_datetime)
-            .where("events_enriched.timestamp <= ?", to_datetime)
+            .where("events_enriched.timestamp <= ?", applicable_to_datetime)
             .pluck("DISTINCT(code)")
         end
       end
@@ -500,6 +500,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
+                applicable_to_datetime: applicable_to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
                 initial_value: initial_value || 0
               }
@@ -538,6 +539,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
+                applicable_to_datetime: applicable_to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE
               }
             ]
@@ -559,6 +561,7 @@ module Events
                 {
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
+                  applicable_to_datetime: applicable_to_datetime.ceil,
                   decimal_scale: DECIMAL_SCALE,
                   initial_value: initial_value || 0
                 }
