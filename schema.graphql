@@ -8735,7 +8735,7 @@ type Query {
   """
   Query integration collection mappings
   """
-  integrationCollectionMappings(integrationId: ID, limit: Int, mappingType: MappingTypeEnum, page: Int): CollectionMappingCollection
+  integrationCollectionMappings(integrationId: ID!): CollectionMappingCollection
 
   """
   Query integration items of an integration

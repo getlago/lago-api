@@ -9,18 +9,14 @@ module Resolvers
 
     description "Query integration collection mappings"
 
-    argument :integration_id, ID, required: false
-    argument :limit, Integer, required: false
-    argument :mapping_type, Types::IntegrationCollectionMappings::MappingTypeEnum, required: false
-    argument :page, Integer, required: false
+    argument :integration_id, ID, required: true
 
     type Types::IntegrationCollectionMappings::Object.collection_type, null: true
 
-    def resolve(page: nil, limit: nil, integration_id: nil, mapping_type: nil)
+    def resolve(integration_id:)
       result = ::IntegrationCollectionMappingsQuery.call(
         organization: current_organization,
-        pagination: {page:, limit:},
-        filters: {integration_id:, mapping_type:}
+        filters: {integration_id:}
       )
 
       result.integration_collection_mappings

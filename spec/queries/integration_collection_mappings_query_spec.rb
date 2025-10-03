@@ -77,16 +77,4 @@ RSpec.describe IntegrationCollectionMappingsQuery, type: :query do
       expect(returned_ids).not_to include(netsuite_collection_mapping_fourth.id)
     end
   end
-
-  context "when filtering by mapping type" do
-    let(:filters) { {mapping_type: "fallback_item"} }
-
-    it "returns one netsuite mappings" do
-      expect(result.integration_collection_mappings.count).to eq(1)
-      expect(returned_ids).to include(netsuite_collection_mapping_first.id)
-      expect(returned_ids).not_to include(netsuite_collection_mapping_second.id)
-      expect(returned_ids).not_to include(netsuite_collection_mapping_third.id)
-      expect(returned_ids).not_to include(netsuite_collection_mapping_fourth.id)
-    end
-  end
 end
