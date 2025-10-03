@@ -1,4 +1,4 @@
-\restrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\restrict yRc7AY1pmqxjbciUBMcP7TrDWsNR5EVIpxNcrYXei7fmSRt5eDtt8x1Ad67Isz2
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -3379,6 +3379,7 @@ CREATE TABLE public.wallets (
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
+    priority integer DEFAULT 50 NOT NULL,
     paid_top_up_min_amount_cents bigint,
     paid_top_up_max_amount_cents bigint
 );
@@ -9928,7 +9929,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\unrestrict yRc7AY1pmqxjbciUBMcP7TrDWsNR5EVIpxNcrYXei7fmSRt5eDtt8x1Ad67Isz2
 
 SET search_path TO "$user", public;
 
@@ -9953,6 +9954,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250821094638'),
 ('20250820200921'),
 ('20250818154000'),
+('20250813174100'),
+('20250813172434'),
 ('20250812132802'),
 ('20250812082721'),
 ('20250806174150'),
