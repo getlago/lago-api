@@ -21,6 +21,26 @@ RSpec.describe RecurringTransactionRule do
 
   describe "validations" do
     it { is_expected.to validate_length_of(:transaction_name).is_at_least(1).is_at_most(255).allow_nil }
+
+    describe "of payment method absence" do
+      let(:recurring_transaction_rule) { build(:recurring_transaction_rule, manual_payment_method:) }
+
+      context "when manual payment method is false" do
+        let(:manual_payment_method) { false }
+
+        specify do
+          expect(recurring_transaction_rule).not_to validate_absence_of(:payment_method_id)
+        end
+      end
+
+      context "when manual payment method is true" do
+        let(:manual_payment_method) { true }
+
+        specify do
+          expect(recurring_transaction_rule).to validate_absence_of(:payment_method_id)
+        end
+      end
+    end
   end
 
   describe "scopes" do

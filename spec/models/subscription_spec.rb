@@ -138,6 +138,26 @@ RSpec.describe Subscription do
         end
       end
     end
+
+    describe "of payment method absence" do
+      let(:subscription) { build(:subscription, manual_payment_method:) }
+
+      context "when manual payment method is false" do
+        let(:manual_payment_method) { false }
+
+        specify do
+          expect(subscription).not_to validate_absence_of(:payment_method_id)
+        end
+      end
+
+      context "when manual payment method is true" do
+        let(:manual_payment_method) { true }
+
+        specify do
+          expect(subscription).to validate_absence_of(:payment_method_id)
+        end
+      end
+    end
   end
 
   describe "#upgraded?" do

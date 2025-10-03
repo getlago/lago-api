@@ -29,6 +29,26 @@ RSpec.describe Wallet do
       expect(subject).to be_valid
       expect(subject.errors).to be_empty
     end
+
+    describe "of payment method absence" do
+      let(:wallet) { build(:wallet, manual_payment_method:) }
+
+      context "when manual payment method is false" do
+        let(:manual_payment_method) { false }
+
+        specify do
+          expect(wallet).not_to validate_absence_of(:payment_method_id)
+        end
+      end
+
+      context "when manual payment method is true" do
+        let(:manual_payment_method) { true }
+
+        specify do
+          expect(wallet).to validate_absence_of(:payment_method_id)
+        end
+      end
+    end
   end
 
   describe "currency=" do

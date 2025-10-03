@@ -3,6 +3,7 @@
 class Subscription < ApplicationRecord
   include PaperTrailTraceable
   include RansackUuidSearch
+  include PaymentMethodable
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
@@ -253,6 +254,7 @@ end
 #  billing_time               :integer          default("calendar"), not null
 #  canceled_at                :datetime
 #  ending_at                  :datetime
+#  manual_payment_method      :boolean          default(FALSE), not null
 #  name                       :string
 #  on_termination_credit_note :enum
 #  on_termination_invoice     :enum             default("generate"), not null
@@ -266,6 +268,7 @@ end
 #  customer_id                :uuid             not null
 #  external_id                :string           not null
 #  organization_id            :uuid             not null
+#  payment_method_id          :uuid
 #  plan_id                    :uuid             not null
 #  previous_subscription_id   :uuid
 #
@@ -274,6 +277,7 @@ end
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_organization_id                      (organization_id)
+#  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
 #  index_subscriptions_on_started_at                           (started_at)
@@ -284,5 +288,6 @@ end
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
