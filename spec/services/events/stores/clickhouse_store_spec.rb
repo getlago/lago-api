@@ -173,6 +173,56 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
     it "returns the number of unique events" do
       expect(event_store.count).to eq(5)
     end
+
+    context "with duplicated transaction_id" do
+      before do
+        event = events.first
+
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: event.transaction_id,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 5.days,
+          properties: {},
+          value: 1.to_s,
+          decimal_value: 1.0,
+          precise_total_amount_cents: 1.0
+        )
+
+        # Force clickhouse deduplication
+        Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
+      end
+
+      it "takes the event into account" do
+        expect(event_store.count).to eq(6)
+      end
+    end
+
+    context "with duplicated transaction_id and timestamp" do
+      before do
+        event = events.first
+
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: event.transaction_id,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: event.timestamp,
+          properties: {},
+          value: 1.to_s,
+          decimal_value: 1.0,
+          precise_total_amount_cents: 1.0
+        )
+
+        # Force clickhouse deduplication
+        Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
+      end
+
+      it "deduplicates the events" do
+        expect(event_store.count).to eq(5)
+      end
+    end
   end
 
   describe ".grouped_count" do
@@ -918,11 +968,63 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
   end
 
   describe ".sum" do
-    it "returns the sum of event properties" do
+    before do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
+    end
 
+    it "returns the sum of event properties" do
       expect(event_store.sum).to eq(15)
+    end
+
+    context "with duplicated transaction_id" do
+      before do
+        event = events.first
+
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: event.transaction_id,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 5.days,
+          properties: {billable_metric.field_name => 100},
+          value: 100.to_s,
+          decimal_value: 100.0,
+          precise_total_amount_cents: 100.0
+        )
+
+        # Force clickhouse deduplication
+        Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
+      end
+
+      it "takes the event into account" do
+        expect(event_store.sum).to eq(115) # New event value was added
+      end
+    end
+
+    context "with duplicated transaction_id and timestamp" do
+      before do
+        event = events.first
+
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: event.transaction_id,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: event.timestamp,
+          properties: {billable_metric.field_name => 100},
+          value: 100.to_s,
+          decimal_value: 100.0,
+          precise_total_amount_cents: 100.0
+        )
+
+        # Force clickhouse deduplication
+        Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
+      end
+
+      it "deduplicates the events" do
+        expect(event_store.sum).to eq(114) # First event value was changed from 1 to 100
+      end
     end
   end
 
