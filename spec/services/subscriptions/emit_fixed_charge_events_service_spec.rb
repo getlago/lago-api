@@ -17,12 +17,12 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
   let(:subscription_2) { create(:subscription, :active, plan:) }
   let(:subscriptions) { [subscription_1, subscription_2] }
 
-  let(:fixed_charge_emit_service) { FixedCharges::EmitFixedChargeEventService }
+  let(:fixed_charge_event_create_service) { FixedChargeEvents::CreateService }
 
   before do
     fixed_charge_1
     fixed_charge_2
-    allow(fixed_charge_emit_service).to receive(:call!)
+    allow(fixed_charge_event_create_service).to receive(:call!)
   end
 
   describe "#call" do
@@ -31,27 +31,27 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
     it "calls FixedCharges::EmitFixedChargeEventService for each subscription and fixed charge" do
       expect(result).to be_success
 
-      expect(fixed_charge_emit_service).to have_received(:call!).exactly(4).times
+      expect(fixed_charge_event_create_service).to have_received(:call!).exactly(4).times
 
-      expect(fixed_charge_emit_service).to have_received(:call!).with(
+      expect(fixed_charge_event_create_service).to have_received(:call!).with(
         subscription: subscription_1,
         fixed_charge: fixed_charge_1,
         timestamp:
       ).once
 
-      expect(fixed_charge_emit_service).to have_received(:call!).with(
+      expect(fixed_charge_event_create_service).to have_received(:call!).with(
         subscription: subscription_1,
         fixed_charge: fixed_charge_2,
         timestamp:
       ).once
 
-      expect(fixed_charge_emit_service).to have_received(:call!).with(
+      expect(fixed_charge_event_create_service).to have_received(:call!).with(
         subscription: subscription_2,
         fixed_charge: fixed_charge_1,
         timestamp:
       ).once
 
-      expect(fixed_charge_emit_service).to have_received(:call!).with(
+      expect(fixed_charge_event_create_service).to have_received(:call!).with(
         subscription: subscription_2,
         fixed_charge: fixed_charge_2,
         timestamp:
@@ -65,7 +65,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
 
       it "does not call the emit service" do
         expect(result).to be_success
-        expect(fixed_charge_emit_service).not_to have_received(:call!)
+        expect(fixed_charge_event_create_service).not_to have_received(:call!)
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
       it "skips fixed charges that already have events and processes others" do
         expect(result).to be_success
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .not_to have_received(:call!)
           .with(
             subscription: subscription_1,
@@ -90,7 +90,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
             timestamp:
           )
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription: subscription_1,
@@ -99,7 +99,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
           )
           .once
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription: subscription_2,
@@ -108,7 +108,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
           )
           .once
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription: subscription_2,
@@ -132,7 +132,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
       it "processes fixed charges that have events on different dates" do
         expect(result).to be_success
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription: subscription_1,
@@ -141,7 +141,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
           )
           .once
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!).with(
             subscription: subscription_1,
             fixed_charge: fixed_charge_2,
@@ -170,7 +170,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
       it "handles timezone when checking for existing events" do
         expect(result).to be_success
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .not_to have_received(:call!)
           .with(
             subscription:,
@@ -178,7 +178,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
             timestamp:
           )
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription:,
@@ -209,7 +209,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
       it "handles timezone when checking for existing events" do
         expect(result).to be_success
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .not_to have_received(:call!)
           .with(
             subscription:,
@@ -217,7 +217,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
             timestamp:
           )
 
-        expect(fixed_charge_emit_service)
+        expect(fixed_charge_event_create_service)
           .to have_received(:call!)
           .with(
             subscription:,
