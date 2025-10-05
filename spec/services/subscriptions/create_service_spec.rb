@@ -1065,7 +1065,7 @@ RSpec.describe Subscriptions::CreateService do
 
               current_subs = result.subscription
               next_subs = current_subs.next_subscription
-              binding.break
+              # binding.break
 
               expect(result.subscription.next_subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                 .to match_array(
