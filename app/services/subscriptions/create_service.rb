@@ -150,9 +150,12 @@ module Subscriptions
 
     # TODO: Create fixed charge events for the subscription
     def upgrade_subscription
-      PlanUpgradeService.call(current_subscription:, plan:, params:).tap do |result|
-        result.raise_if_error!
-      end.subscription
+      PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription.tap do |upgrade_subscription|
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [upgrade_subscription],
+          timestamp: upgrade_subscription.subscription_at
+        )
+      end
     end
 
     # TODO: Create fixed charge events for the subscription

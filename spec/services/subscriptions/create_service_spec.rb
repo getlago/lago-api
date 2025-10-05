@@ -544,11 +544,11 @@ RSpec.describe Subscriptions::CreateService do
 
                 expect(result).to be_success
                 expect(result.subscription).to be_active
-                expect(result.subscription.next_subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+                expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                   .to match_array(
                     [
-                      [fixed_charge_1.id, Time.current],
-                      [fixed_charge_2.id, Time.current]
+                      [fixed_charge_1.id, be_within(1.second).of(Time.current)],
+                      [fixed_charge_2.id, be_within(1.second).of(Time.current)],
                     ]
                   )
               end
@@ -773,7 +773,7 @@ RSpec.describe Subscriptions::CreateService do
 
               current_subs = result.subscription
               next_subs = current_subs.next_subscription
-              binding.break
+              # binding.break
 
               expect(result.subscription.next_subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                 .to match_array(
