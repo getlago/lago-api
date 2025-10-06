@@ -12,14 +12,14 @@ module FixedCharges
       if subscription
         # When a specific subscription is provided, emit event for that subscription only
         # This handles cases like plan overrides where the subscription hasn't been updated yet
-        FixedCharges::EmitFixedChargeEventService.call!(
+        FixedChargeEvents::CreateService.call!(
           subscription:,
           fixed_charge:
         )
       else
         # Default behavior: emit events for all active subscriptions on the plan
         fixed_charge.plan.subscriptions.active.find_each do |subscription|
-          FixedCharges::EmitFixedChargeEventService.call!(
+          FixedChargeEvents::CreateService.call!(
             subscription:,
             fixed_charge:
           )

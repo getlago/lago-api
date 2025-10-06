@@ -28,7 +28,7 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService, type: :service do
   describe "#call" do
     subject(:result) { service.call }
 
-    it "calls FixedCharges::EmitFixedChargeEventService for each subscription and fixed charge" do
+    it "calls FixedChargeEvents::CreateService for each subscription and fixed charge" do
       expect(result).to be_success
 
       expect(fixed_charge_event_create_service).to have_received(:call!).exactly(4).times

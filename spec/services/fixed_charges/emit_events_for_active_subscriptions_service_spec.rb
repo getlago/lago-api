@@ -25,7 +25,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
       active_subscription_1
       active_subscription_2
       terminated_subscription
-      allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+      allow(FixedChargeEvents::CreateService).to receive(:call!)
     end
 
     it "returns success result" do
@@ -35,12 +35,12 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
     it "emits fixed charge events for all active subscriptions" do
       result
 
-      expect(FixedCharges::EmitFixedChargeEventService)
+      expect(FixedChargeEvents::CreateService)
         .to have_received(:call!)
         .with(subscription: active_subscription_1, fixed_charge:)
         .once
 
-      expect(FixedCharges::EmitFixedChargeEventService)
+      expect(FixedChargeEvents::CreateService)
         .to have_received(:call!)
         .with(subscription: active_subscription_2, fixed_charge:)
         .once
@@ -49,7 +49,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
     it "does not emit events for terminated subscriptions" do
       result
 
-      expect(FixedCharges::EmitFixedChargeEventService)
+      expect(FixedChargeEvents::CreateService)
         .not_to have_received(:call!)
         .with(subscription: terminated_subscription, fixed_charge:)
     end
@@ -61,7 +61,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
       it "does not emit any events" do
         result
 
-        expect(FixedCharges::EmitFixedChargeEventService).not_to have_received(:call!)
+        expect(FixedChargeEvents::CreateService).not_to have_received(:call!)
       end
 
       it "returns success result" do
@@ -76,7 +76,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
       before do
         subscription
         other_subscription
-        allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+        allow(FixedChargeEvents::CreateService).to receive(:call!)
       end
 
       it "returns success result" do
@@ -86,7 +86,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
       it "emits fixed charge event only for the subscription" do
         result
 
-        expect(FixedCharges::EmitFixedChargeEventService)
+        expect(FixedChargeEvents::CreateService)
           .to have_received(:call!)
           .with(subscription:, fixed_charge:)
           .once
@@ -95,7 +95,7 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService, type: :ser
       it "does not emit events for other subscriptions on the same plan" do
         result
 
-        expect(FixedCharges::EmitFixedChargeEventService)
+        expect(FixedChargeEvents::CreateService)
           .not_to have_received(:call!)
           .with(subscription: other_subscription, fixed_charge:)
       end
