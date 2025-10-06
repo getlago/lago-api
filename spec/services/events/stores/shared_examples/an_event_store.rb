@@ -176,6 +176,36 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         # - europe, united kingdom, manchester
         expect(event_store.count).to eq(4)
       end
+
+      # We faced an issue where Arel caused a Stack Level Too Deep error due to how the request `OR` conditons are build.
+      # This test is used to ensure that we can handle this situation.
+      # This test fails when using the Arel version.
+      context "when there are many filters" do
+        let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"], "city" => ["paris", "london", "cambridge", "caen", "manchester"]} }
+        let(:ignored_filters) do
+          Array.new(200) do |i|
+            {"region" => [Faker::Alphanumeric.alphanumeric(number: 10)], "city" => [Faker::Alphanumeric.alphanumeric(number: 10)]}
+          end
+        end
+
+        # This function is used to simulate a nested stack. Otherwise we'll reach the Clickhouse query size limits
+        # before reaching a stack error.
+        def within_nested_stack(stack_number, &block)
+          if stack_number > 0
+            within_nested_stack(stack_number - 1, &block)
+          else
+            yield
+          end
+        end
+
+        it "does not raise an error" do
+          within_nested_stack(8200) do
+            expect do
+              event_store.count
+            end.not_to raise_error
+          end
+        end
+      end
     end
 
     context "with max timestamp" do
