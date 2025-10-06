@@ -53,6 +53,12 @@ class InvoiceSubscription < ApplicationRecord
         .where(charges_to_datetime: boundaries.charges_to_datetime)
     end
 
+    if subscription.plan.fixed_charges_billed_in_monthly_split_intervals?
+      base_query = base_query
+        .where(fixed_charges_from_datetime: boundaries.fixed_charges_from_datetime)
+        .where(fixed_charges_to_datetime: boundaries.fixed_charges_to_datetime)
+    end
+
     base_query.exists?
   end
 
