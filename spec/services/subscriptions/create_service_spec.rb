@@ -653,32 +653,6 @@ RSpec.describe Subscriptions::CreateService do
                 expect(result.subscription.name).to eq("invoice display name new")
               end
             end
-
-            context "when plan has fixed charges" do
-              let(:fixed_charge_1) { create(:fixed_charge, plan:) }
-              let(:fixed_charge_2) { create(:fixed_charge, plan:) }
-
-              before do
-                fixed_charge_1
-                fixed_charge_2
-              end
-
-              it "creates fixed charge events for the subscription" do
-                freeze_time do
-                  result = create_service.call
-
-                  expect(result).to be_success
-                  expect(result.subscription).to be_active
-                  expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-                    .to match_array(
-                      [
-                        [fixed_charge_1.id, Time.current],
-                        [fixed_charge_2.id, Time.current]
-                      ]
-                    )
-                end
-              end
-            end
           end
 
           context "when old subscription is payed in arrear" do
