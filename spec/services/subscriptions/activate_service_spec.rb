@@ -37,7 +37,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         expect { activate_service.activate_all_pending }.to change(FixedChargeEvent, :count).by(1)
         expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp)).to match_array(
           [
-            [fixed_charge_1.id, be_within(5.second).of(Time.current)]
+            [fixed_charge_1.id, be_within(5.seconds).of(Time.current)]
           ]
         )
       end

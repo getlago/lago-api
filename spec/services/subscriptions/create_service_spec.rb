@@ -521,7 +521,7 @@ RSpec.describe Subscriptions::CreateService do
                   .to match_array(
                     [
                       [fixed_charge_1.id, be_within(1.second).of(Time.current)],
-                      [fixed_charge_2.id, be_within(1.second).of(Time.current)],
+                      [fixed_charge_2.id, be_within(1.second).of(Time.current)]
                     ]
                   )
               end

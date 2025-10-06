@@ -371,7 +371,7 @@ RSpec.describe Subscriptions::TerminateService do
       it "creates fixed charge events for the new subscription" do
         result = terminate_service.terminate_and_start_next(timestamp:)
         expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-          .to match_array([[fixed_charge.id, be_within(5.second).of(Time.zone.at(timestamp))]])
+          .to match_array([[fixed_charge.id, be_within(5.seconds).of(Time.zone.at(timestamp))]])
       end
     end
 
