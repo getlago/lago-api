@@ -23,6 +23,26 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         .with(an_instance_of(Subscription), "subscription.started").exactly(3).times
     end
 
+    context "when plan has fixed charges" do
+      let(:plan) { create(:plan) }
+      let(:fixed_charge_1) { create(:fixed_charge, plan:) }
+      let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
+
+      before do
+        fixed_charge_1
+        subscription
+      end
+
+      it "creates fixed charge events for the new subscription" do
+        expect { activate_service.activate_all_pending }.to change(FixedChargeEvent, :count).by(1)
+        expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp)).to match_array(
+          [
+            [fixed_charge_1.id, be_within(5.second).of(Time.current)]
+          ]
+        )
+      end
+    end
+
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2023-08-24 00:07:00") }
       let(:customer) { create(:customer, :with_hubspot_integration, timezone: "America/Bogota") }
