@@ -326,7 +326,7 @@ RSpec.describe FixedCharges::CreateService do
             active_subscription_1
             active_subscription_2
             terminated_subscription
-            allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+            allow(FixedChargeEvents::CreateService).to receive(:call!)
           end
 
           it "creates new fixed charge" do
@@ -336,12 +336,12 @@ RSpec.describe FixedCharges::CreateService do
           it "emits fixed charge events for all active subscriptions" do
             result
 
-            expect(FixedCharges::EmitFixedChargeEventService)
+            expect(FixedChargeEvents::CreateService)
               .to have_received(:call!)
               .with(subscription: active_subscription_1, fixed_charge: result.fixed_charge)
               .once
 
-            expect(FixedCharges::EmitFixedChargeEventService)
+            expect(FixedChargeEvents::CreateService)
               .to have_received(:call!)
               .with(subscription: active_subscription_2, fixed_charge: result.fixed_charge)
               .once
@@ -350,7 +350,7 @@ RSpec.describe FixedCharges::CreateService do
           it "does not emit events for terminated subscriptions" do
             result
 
-            expect(FixedCharges::EmitFixedChargeEventService)
+            expect(FixedChargeEvents::CreateService)
               .not_to have_received(:call!)
               .with(subscription: terminated_subscription, fixed_charge: result.fixed_charge)
           end
@@ -375,7 +375,7 @@ RSpec.describe FixedCharges::CreateService do
 
           before do
             subscription
-            allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+            allow(FixedChargeEvents::CreateService).to receive(:call!)
           end
 
           it "creates new fixed charge" do
@@ -385,7 +385,7 @@ RSpec.describe FixedCharges::CreateService do
           it "does not emit any fixed charge events" do
             result
 
-            expect(FixedCharges::EmitFixedChargeEventService).not_to have_received(:call!)
+            expect(FixedChargeEvents::CreateService).not_to have_received(:call!)
           end
         end
       end
