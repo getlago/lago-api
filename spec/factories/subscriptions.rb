@@ -12,6 +12,7 @@ FactoryBot.define do
 
     trait :pending do
       status { :pending }
+      started_at { nil }
     end
 
     trait :canceled do
