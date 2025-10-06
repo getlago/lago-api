@@ -80,6 +80,11 @@ module Subscriptions
     def process_subscription_at_change(subscription)
       if subscription.subscription_at <= Time.current
         subscription.mark_as_active!(subscription.subscription_at)
+
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [subscription],
+          timestamp: subscription.started_at
+        )
       else
         subscription.save!
       end
