@@ -13,7 +13,6 @@ module Subscriptions
         subscription.fixed_charges.find_each do |fixed_charge|
           next if fixed_charge_already_emitted?(subscription, fixed_charge)
 
-
           ::FixedChargeEvents::CreateService.call!(
             subscription:,
             fixed_charge:,
