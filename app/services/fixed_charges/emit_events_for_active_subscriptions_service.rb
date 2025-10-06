@@ -20,7 +20,7 @@ module FixedCharges
       else
         # Default behavior: emit events for all active subscriptions on the plan
         fixed_charge.plan.subscriptions.active.find_each do |subscription|
-          FixedCharges::EmitFixedChargeEventService.call!(
+          FixedChargeEvents::CreateService.call!(
             subscription:,
             fixed_charge:
           )
