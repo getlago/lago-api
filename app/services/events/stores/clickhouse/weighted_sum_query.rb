@@ -46,7 +46,7 @@ module Events
               timestamp,
               difference,
               SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul,
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:applicable_to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) AS second_duration,
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) AS second_duration,
               (#{period_ratio_sql}) AS period_ratio
             FROM events_data
             ORDER BY timestamp ASC
@@ -98,14 +98,14 @@ module Events
         def period_ratio_sql
           <<-SQL
             if(
-              -- NOTE: duration in seconds between current event and next one
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:applicable_to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
 
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:applicable_to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
@@ -186,14 +186,14 @@ module Events
         def grouped_period_ratio_sql
           <<-SQL
             if(
-              -- NOTE: duration in seconds between current event and next one
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:applicable_to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
 
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:applicable_to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}

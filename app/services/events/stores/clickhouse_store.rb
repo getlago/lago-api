@@ -500,7 +500,6 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                applicable_to_datetime: applicable_to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE,
                 initial_value: initial_value || 0
               }
@@ -539,7 +538,6 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                applicable_to_datetime: applicable_to_datetime.ceil,
                 decimal_scale: DECIMAL_SCALE
               }
             ]
@@ -561,7 +559,6 @@ module Events
                 {
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
-                  applicable_to_datetime: applicable_to_datetime.ceil,
                   decimal_scale: DECIMAL_SCALE,
                   initial_value: initial_value || 0
                 }
