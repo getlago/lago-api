@@ -79,23 +79,15 @@
           <div class="body-2">
             1234567890
           </div>
-          <div class="body-2">
-            456 Customer Ave
-          </div>
-          <div class="body-2">
-            Apt 202
-          </div>
+          <div class="body-2">456 Customer Ave</div>
+          <div class="body-2">Apt 202</div>
           <div class="body-2">
             <span>10001</span>
-            <span>, &nbsp;</span>
+            <span>,&nbsp;</span>
             <span>New York</span>
           </div>
-          <div class="body-2">
-            NY
-          </div>
-          <div class="body-2">
-            United States
-          </div>
+          <div class="body-2">NY</div>
+          <div class="body-2">United States</div>
           <div class="body-2">
             john.doe@example.com
           </div>
