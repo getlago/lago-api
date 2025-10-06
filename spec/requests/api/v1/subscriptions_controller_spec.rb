@@ -266,110 +266,97 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     context "with payment pre-authorization" do
-      context "when the feature isn't enabled" do
-        let(:body) { {authorization: {}, subscription: params} }
-
-        it "returns a forbidden error" do
-          subject
-
-          expect(response).to have_http_status(:forbidden)
-          expect(json[:message]).to match(/beta_payment_authorization/)
-        end
+      let(:organization) { create(:organization, premium_integrations: ["beta_payment_authorization"]) }
+      let(:body) do
+        {
+          authorization: {amount_cents: "100", amount_currency: "USD"},
+          subscription: params
+        }
+      end
+      let(:customer) { create(:customer, organization:, payment_provider: :stripe, external_id: "cust_12345") }
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: create(:stripe_provider, organization:), payment_method_id: "pm_12345") }
+      let(:stripe_pi) do
+        {
+          id: "pi_12345",
+          amount: "100",
+          amount_capturable: "100",
+          status: "requires_capture"
+        }
       end
 
-      context "when the feature is enabled" do
-        let(:organization) { create(:organization, premium_integrations: ["beta_payment_authorization"]) }
+      before do
+        stripe_customer
+        stub_request(:post, "https://api.stripe.com/v1/payment_intents").and_return(status: 200, body: stripe_pi.to_json)
+      end
+
+      it "returns a success" do
+        allow(PaymentProviders::CancelPaymentAuthorizationJob).to receive(:perform_later)
+
+        subject
+        expect(json[:authorization]).to include(stripe_pi)
+        expect(json[:subscription]).to include(status: "active")
+
+        expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
+          payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
+        )
+      end
+
+      context "when parameters are incorrect" do
         let(:body) do
           {
-            authorization: {amount_cents: "100", amount_currency: "USD"},
+            authorization: {amount_cents: "100"},
             subscription: params
           }
         end
-        let(:customer) { create(:customer, organization:, payment_provider: :stripe, external_id: "cust_12345") }
-        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: create(:stripe_provider, organization:), payment_method_id: "pm_12345") }
-        let(:stripe_pi) do
-          {
-            id: "pi_12345",
-            amount: "100",
-            amount_capturable: "100",
-            status: "requires_capture"
-          }
-        end
 
-        before do
-          stripe_customer
-          stub_request(:post, "https://api.stripe.com/v1/payment_intents").and_return(status: 200, body: stripe_pi.to_json)
-        end
-
-        it "returns a success" do
-          allow(PaymentProviders::CancelPaymentAuthorizationJob).to receive(:perform_later)
-
+        it "returns an error" do
           subject
-          expect(json[:authorization]).to include(stripe_pi)
-          expect(json[:subscription]).to include(status: "active")
 
-          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
-            payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
-          )
+          expect(response).to have_http_status(:bad_request)
+          expect(json[:error]).to eq "BadRequest: param is missing or the value is empty or invalid: amount_currency"
         end
+      end
 
-        context "when parameters are incorrect" do
-          let(:body) do
-            {
-              authorization: {amount_cents: "100"},
-              subscription: params
-            }
-          end
+      context "when customer has no payment method" do
+        let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
+        let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
 
-          it "returns an error" do
-            subject
-
-            expect(response).to have_http_status(:bad_request)
-            expect(json[:error]).to eq "BadRequest: param is missing or the value is empty or invalid: amount_currency"
-          end
-        end
-
-        context "when customer has no payment method" do
-          let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
-          let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
-
-          context "when customer has a default payment method on Stripe" do
-            it do
-              stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-                status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
-              )
-              stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-                status: 200, body: get_stripe_fixtures("customer_list_payment_methods_empty_response.json")
-              )
-
-              subject
-
-              expect(response).to have_http_status(:unprocessable_content)
-              expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
-            end
-          end
-        end
-
-        context "when the authorization failed (card declined)" do
+        context "when customer has a default payment method on Stripe" do
           it do
-            stripe_card_declined = get_stripe_fixtures("payment_intent_authorization_failed_response.json")
-            stub_request(:post, %r{/v1/payment_intents}).and_return(
-              status: 402,
-              body: stripe_card_declined,
-              headers: {"request-id" => "req_R6dwJQCrHDQkZr"}
+            stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
+              status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
             )
+            stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
+              status: 200, body: get_stripe_fixtures("customer_list_payment_methods_empty_response.json")
+            )
+
             subject
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:code]).to eq "provider_error"
-            expect(json[:provider][:code]).to start_with "stripe_account_"
-            expect(json[:error_details]).to include({
-              code: "card_declined",
-              message: "Your card was declined.",
-              request_id: "req_R6dwJQCrHDQkZr",
-              http_status: 402
-            })
+            expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
           end
+        end
+      end
+
+      context "when the authorization failed (card declined)" do
+        it do
+          stripe_card_declined = get_stripe_fixtures("payment_intent_authorization_failed_response.json")
+          stub_request(:post, %r{/v1/payment_intents}).and_return(
+            status: 402,
+            body: stripe_card_declined,
+            headers: {"request-id" => "req_R6dwJQCrHDQkZr"}
+          )
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq "provider_error"
+          expect(json[:provider][:code]).to start_with "stripe_account_"
+          expect(json[:error_details]).to include({
+            code: "card_declined",
+            message: "Your card was declined.",
+            request_id: "req_R6dwJQCrHDQkZr",
+            http_status: 402
+          })
         end
       end
     end

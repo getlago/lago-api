@@ -210,6 +210,12 @@ RSpec.describe Organization do
 
         it { is_expected.to be_valid }
       end
+
+      context "when it includes a removed integration" do
+        subject(:organization) { build(:organization, premium_integrations: ["beta_payment_authorization"]) }
+
+        it { is_expected.to be_valid }
+      end
     end
   end
 
@@ -284,6 +290,14 @@ RSpec.describe Organization do
   describe "#premium_integrations_enabled?" do
     described_class::PREMIUM_INTEGRATIONS.each do |integration|
       it_behaves_like "organization premium feature", integration
+    end
+  end
+
+  describe "#premium_integrations" do
+    it "returns the premium integrations without removed integration or invalid integrations" do
+      organization.save!
+      organization.update_columns(premium_integrations: %w[okta invalid_integration beta_payment_authorization progressive_billing]) # rubocop:disable Rails/SkipsModelValidations
+      expect(organization.premium_integrations).to eq(%w[okta progressive_billing])
     end
   end
 

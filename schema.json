@@ -28488,12 +28488,6 @@
               "deprecationReason": null
             },
             {
-              "name": "beta_payment_authorization",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "netsuite",
               "description": null,
               "isDeprecated": false,
@@ -41003,12 +40997,6 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
-            {
-              "name": "beta_payment_authorization",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
             {
               "name": "netsuite",
               "description": null,

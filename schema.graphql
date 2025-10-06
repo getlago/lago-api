@@ -5703,7 +5703,6 @@ enum IntegrationTypeEnum {
   api_permissions
   auto_dunning
   avalara
-  beta_payment_authorization
   from_email
   hubspot
   issue_receipts
@@ -8115,7 +8114,6 @@ enum PremiumIntegrationTypeEnum {
   api_permissions
   auto_dunning
   avalara
-  beta_payment_authorization
   from_email
   hubspot
   issue_receipts
