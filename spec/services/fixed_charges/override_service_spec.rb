@@ -332,7 +332,7 @@ RSpec.describe FixedCharges::OverrideService do
         end
 
         before do
-          allow(FixedCharges::EmitFixedChargeEventService).to receive(:call!)
+          allow(FixedChargeEvents::CreateService).to receive(:call!)
         end
 
         it "creates a fixed charge for the new plan" do
@@ -348,7 +348,7 @@ RSpec.describe FixedCharges::OverrideService do
         it "emits fixed charge events for the specific subscription" do
           result = override_service.call
 
-          expect(FixedCharges::EmitFixedChargeEventService)
+          expect(FixedChargeEvents::CreateService)
             .to have_received(:call!)
             .with(subscription:, fixed_charge: result.fixed_charge)
             .once
