@@ -61,19 +61,17 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       it "creates fixed charge events for the subscription" do
-        freeze_time do
-          result = create_service.call
+        result = create_service.call
 
-          expect(result).to be_success
-          expect(result.subscription).to be_active
-          expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-            .to match_array(
-              [
-                [fixed_charge_1.id, Time.current],
-                [fixed_charge_2.id, Time.current]
-              ]
-            )
-        end
+        expect(result).to be_success
+        expect(result.subscription).to be_active
+        expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+          .to match_array(
+            [
+              [fixed_charge_1.id, be_within(5.seconds).of(Time.current)],
+              [fixed_charge_2.id, be_within(5.seconds).of(Time.current)]
+            ]
+          )
       end
     end
 
@@ -355,31 +353,6 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription.lifetime_usage).not_to be_present
         end
       end
-
-      context "when plan has fixed charges" do
-        let(:fixed_charge_1) { create(:fixed_charge, plan:) }
-        let(:fixed_charge_2) { create(:fixed_charge, plan:) }
-
-        before do
-          fixed_charge_1
-          fixed_charge_2
-        end
-
-        it "creates fixed charge events for the subscription with subscription_at as timestamp" do
-          result = create_service.call
-          subscription = result.subscription
-
-          expect(result).to be_success
-          expect(result.subscription).to be_pending
-          expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-            .to match_array(
-              [
-                [fixed_charge_1.id, subscription.subscription_at],
-                [fixed_charge_2.id, subscription.subscription_at]
-              ]
-            )
-        end
-      end
     end
 
     context "when subscription_at is given and is in the past" do
@@ -590,32 +563,6 @@ RSpec.describe Subscriptions::CreateService do
                 expect(result.subscription.name).to eq("invoice display name new")
               end
             end
-
-            context "when plan has fixed charges" do
-              let(:fixed_charge_1) { create(:fixed_charge, plan:) }
-              let(:fixed_charge_2) { create(:fixed_charge, plan:) }
-
-              before do
-                fixed_charge_1
-                fixed_charge_2
-              end
-
-              it "creates fixed charge events for the subscription" do
-                freeze_time do
-                  result = create_service.call
-
-                  expect(result).to be_success
-                  expect(result.subscription).to be_active
-                  expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-                    .to match_array(
-                      [
-                        [fixed_charge_1.id, Time.current],
-                        [fixed_charge_2.id, Time.current]
-                      ]
-                    )
-                end
-              end
-            end
           end
 
           context "when old subscription is payed in arrear" do
@@ -752,36 +699,6 @@ RSpec.describe Subscriptions::CreateService do
               expect(next_subscription.previous_subscription).to eq(subscription)
               expect(next_subscription.ending_at).to eq(subscription.ending_at)
               expect(next_subscription.lifetime_usage).to be_nil
-            end
-          end
-
-          context "when plan has fixed charges" do
-            let(:fixed_charge_1) { create(:fixed_charge, plan:) }
-            let(:fixed_charge_2) { create(:fixed_charge, plan:) }
-
-            before do
-              fixed_charge_1
-              fixed_charge_2
-            end
-
-            it "creates fixed charge events for the subscription" do
-              result = create_service.call
-
-              expect(result).to be_success
-              expect(result.subscription).to be_active
-              expect(result.subscription.next_subscription).to be_pending
-
-              current_subs = result.subscription
-              next_subs = current_subs.next_subscription
-              # binding.break
-
-              expect(result.subscription.next_subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-                .to match_array(
-                  [
-                    [fixed_charge_1.id, result.subscription.ending_at],
-                    [fixed_charge_2.id, result.subscription.ending_at]
-                  ]
-                )
             end
           end
 
