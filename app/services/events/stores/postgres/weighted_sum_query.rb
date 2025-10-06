@@ -46,7 +46,7 @@ module Events
               timestamp,
               difference,
               SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumul,
-              EXTRACT(epoch FROM lead(timestamp, 1, :applicable_to_datetime) OVER (ORDER BY timestamp) - timestamp) AS second_duration,
+              EXTRACT(epoch FROM lead(timestamp, 1, :to_datetime) OVER (ORDER BY timestamp) - timestamp) AS second_duration,
               (#{period_ratio_sql}) AS period_ratio
             FROM events_data
             ORDER BY timestamp ASC
@@ -95,16 +95,16 @@ module Events
 
         def period_ratio_sql
           <<-SQL
-            -- NOTE: duration in seconds between current event and next one
-            CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :applicable_to_datetime) OVER (ORDER BY timestamp) - timestamp) = 0
+            -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+            CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY timestamp) - timestamp) = 0
             THEN
               0 -- NOTE: duration was null so usage is null
             ELSE
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :applicable_to_datetime) OVER (ORDER BY timestamp) - timestamp)
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY timestamp) - timestamp)
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
@@ -186,16 +186,16 @@ module Events
 
         def grouped_period_ratio_sql
           <<-SQL
-            -- NOTE: duration in seconds between current event and next one
-            CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :applicable_to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp) = 0
+            -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+            CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp) = 0
             THEN
               0 -- NOTE: duration was null so usage is null
             ELSE
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
-              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :applicable_to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp)
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
+              EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp)
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}

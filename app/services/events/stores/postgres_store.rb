@@ -283,7 +283,6 @@ module Events
             {
               from_datetime:,
               to_datetime: to_datetime.ceil,
-              applicable_to_datetime: applicable_to_datetime.ceil,
               initial_value: initial_value || 0
             }
           ]
@@ -318,8 +317,7 @@ module Events
             sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
             {
               from_datetime:,
-              to_datetime: to_datetime.ceil,
-              applicable_to_datetime: applicable_to_datetime.ceil
+              to_datetime: to_datetime.ceil
             }
           ]
         )
@@ -337,7 +335,6 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                applicable_to_datetime: applicable_to_datetime.ceil,
                 initial_value: initial_value || 0
               }
             ]
