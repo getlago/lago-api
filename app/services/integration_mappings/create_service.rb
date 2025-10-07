@@ -7,11 +7,17 @@ module IntegrationMappings
 
       return result.not_found_failure!(resource: "integration") unless integration
 
+      if (billing_entity_id = args[:billing_entity_id])
+        billing_entity = integration.organization.billing_entities.find_by(id: billing_entity_id)
+        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+      end
+
       integration_mapping = IntegrationMappings::Factory.new_instance(integration:).new(
         organization_id: integration.organization_id,
         integration_id: args[:integration_id],
         mappable_id: args[:mappable_id],
-        mappable_type: args[:mappable_type]
+        mappable_type: args[:mappable_type],
+        billing_entity_id: billing_entity_id
       )
 
       integration_mapping.external_id = args[:external_id] if args.key?(:external_id)
