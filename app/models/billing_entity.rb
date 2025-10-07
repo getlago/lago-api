@@ -30,6 +30,9 @@ class BillingEntity < ApplicationRecord
   has_many :integration_collection_mappings,
     class_name: "IntegrationCollectionMappings::BaseCollectionMapping",
     dependent: :destroy
+  has_many :integration_mappings,
+    class_name: "IntegrationMappings::BaseMapping",
+    dependent: :destroy
 
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
