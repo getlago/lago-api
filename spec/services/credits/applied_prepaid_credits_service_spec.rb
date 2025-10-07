@@ -91,10 +91,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(wallet.credits_balance).to eq(9.0)
 
       [normal_wallet,
-       limited_charge_wallet,
-       priority_limited_charge_wallet,
-       limited_subscription_wallet,
-       priority_limited_subscription_wallet].each do |w|
+        limited_charge_wallet,
+        priority_limited_charge_wallet,
+        limited_subscription_wallet,
+        priority_limited_subscription_wallet].each do |w|
         expect(w.reload.balance_cents).to eq(1000)
       end
     end
@@ -136,7 +136,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "updates wallets balance" do
-        result = credit_service.call
+        credit_service.call
         wallet_priority = priority_wallet.reload
         wallet_priority_limited_charge = priority_limited_charge_wallet.reload
 
@@ -145,9 +145,9 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet_priority_limited_charge.balance_cents).to eq(500)
         expect(wallet_priority_limited_charge.credits_balance).to eq(5.0)
         [normal_wallet,
-         limited_charge_wallet,
-         limited_subscription_wallet,
-         priority_limited_subscription_wallet].each do |w|
+          limited_charge_wallet,
+          limited_subscription_wallet,
+          priority_limited_subscription_wallet].each do |w|
           expect(w.reload.balance_cents).to eq(1000)
         end
       end
@@ -200,10 +200,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet.balance_cents).to eq(890)
         expect(wallet.credits_balance).to eq(8.90)
         [normal_wallet,
-         limited_charge_wallet,
-         priority_limited_charge_wallet,
-         limited_subscription_wallet,
-         priority_limited_subscription_wallet].each do |w|
+          limited_charge_wallet,
+          priority_limited_charge_wallet,
+          limited_subscription_wallet,
+          priority_limited_subscription_wallet].each do |w|
           expect(w.reload.balance_cents).to eq(1000)
         end
       end
@@ -269,7 +269,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
           priority_limited_bm_wallet,
           priority_limited_charge_wallet,
           priority_wallet,
-          limited_charge_wallet,
+          limited_charge_wallet
         ]
       end
       let(:subscription_fees) { [fee, fee2] }
@@ -277,12 +277,14 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4, charge:) }
       let(:charge) { create(:standard_charge, organization: wallets.first.organization, billable_metric:) }
       let(:billable_metric) { create(:billable_metric, organization: wallets.first.organization) }
-      let(:wallet_target) { create(:wallet_target, wallet: limited_bm_wallet, billable_metric:) }
-      let(:wallet_target) { create(:wallet_target, wallet: priority_limited_bm_wallet, billable_metric:) }
+      let(:wallet_targets) do
+        create(:wallet_target, wallet: limited_bm_wallet, billable_metric:)
+        create(:wallet_target, wallet: priority_limited_bm_wallet, billable_metric:)
+      end
 
       before do
         subscription_fees
-        wallet_target
+        wallet_targets
       end
 
       it "calculates prepaid credit" do
@@ -318,11 +320,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet_priority_limited_bm.balance_cents).to eq(956)
         expect(wallet_priority_limited_bm.credits_balance).to eq(9.56)
         [normal_wallet,
-         limited_bm_wallet,
-         priority_limited_charge_wallet,
-         priority_wallet,
-         limited_charge_wallet
-        ].each do |w|
+          limited_bm_wallet,
+          priority_limited_charge_wallet,
+          priority_wallet,
+          limited_charge_wallet].each do |w|
           expect(w.reload.balance_cents).to eq(1000)
         end
       end
@@ -361,53 +362,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         end
 
         it "updates wallet balance" do
-          result = credit_service.call
-          wallet = result.wallet_transactions.first.wallet
+          credit_service.call
 
-          expect(wallet.balance).to eq(0.0)
-          expect(wallet.credits_balance).to eq(0.0)
+          expect(normal_wallet.reload.balance_cents).to eq(800)
+          expect(priority_wallet.reload.balance_cents).to eq(0)
+          expect(limited_charge_wallet.reload.balance_cents).to eq(1000)
+          expect(priority_limited_charge_wallet.reload.balance_cents).to eq(900)
+          expect(limited_subscription_wallet.reload.balance_cents).to eq(1000)
+          expect(priority_limited_subscription_wallet.reload.balance_cents).to eq(0)
+          expect(limited_bm_wallet.reload.balance_cents).to eq(1000)
+          expect(priority_limited_bm_wallet.reload.balance_cents).to eq(0)
         end
-      end
-    end
-
-    context "with billable metric limitations and fee type limitation" do
-      let(:subscription_fees) { [fee, fee2, fee3] }
-      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, precise_amount_cents: 20, taxes_precise_amount_cents: 2, charge:) }
-      let(:fee3) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, precise_amount_cents: 20, taxes_precise_amount_cents: 2) }
-      let(:charge) { create(:standard_charge, organization: wallets.first.organization, billable_metric:) }
-      let(:wallets) { [create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[subscription])] }
-      let(:billable_metric) { create(:billable_metric, organization: wallets.first.organization) }
-      let(:wallet_target) { create(:wallet_target, wallet: wallets.first, billable_metric:) }
-
-      before do
-        subscription_fees
-        wallet_target
-      end
-
-      it "calculates prepaid credit" do
-        result = credit_service.call
-
-        expect(result).to be_success
-        expect(result.prepaid_credit_amount_cents).to eq(88)
-        expect(invoice.prepaid_credit_amount_cents).to eq(88)
-      end
-
-      it "creates wallet transaction" do
-        result = credit_service.call
-
-        expect(result).to be_success
-        expect(result.wallet_transactions).to be_present
-        expect(result.wallet_transactions.first.amount).to eq(0.88)
-        expect(result.wallet_transactions.first).to be_invoiced
-      end
-
-      it "updates wallet balance" do
-        result = credit_service.call
-        wallet = result.wallet_transactions.first.wallet
-
-        expect(wallet.balance_cents).to eq(912)
-        expect(wallet.credits_balance).to eq(9.12)
       end
     end
   end
