@@ -17,32 +17,22 @@ RSpec.describe Invoices::FinalizeService do
         expect(result).to be_success
         expect(result.invoice).to be_persisted
         expect(result.invoice.reload).to be_finalized
-      end
-
-      it "creates a customer snapshot" do
-        expect { service.call }.to change(CustomerSnapshot, :count).by(1)
-
-        snapshot = CustomerSnapshot.last
-        expect(snapshot.invoice).to eq(invoice)
-        expect(snapshot.organization).to eq(organization)
-        expect(snapshot.display_name).to eq(customer.display_name)
+        expect(result.invoice.finalized_at).to be_within(1.second).of(Time.current)
       end
     end
 
     context "when invoice is already finalized" do
-      let(:invoice) { create(:invoice, :finalized, customer:, organization:) }
+      let(:invoice) do
+        create(:invoice, :finalized, customer:, organization:, finalized_at:)
+      end
+      let(:finalized_at) { 2.days.ago }
 
       it "returns success without changes" do
         result = service.call
 
         expect(result).to be_success
         expect(result.invoice).to be_finalized
-      end
-
-      it "does not create additional customer snapshots" do
-        create(:customer_snapshot, invoice:, organization:)
-
-        expect { service.call }.not_to change(CustomerSnapshot, :count)
+        expect(result.invoice.finalized_at).to eq(finalized_at)
       end
     end
 
@@ -68,17 +58,6 @@ RSpec.describe Invoices::FinalizeService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-      end
-    end
-
-    context "when customer snapshot creation fails" do
-      before do
-        allow(CustomerSnapshots::CreateService).to receive(:call!).and_raise(StandardError.new("Snapshot failed"))
-      end
-
-      it "rolls back the transaction" do
-        expect { service.call }.to raise_error(StandardError, "Snapshot failed")
-        expect(invoice.reload).not_to be_finalized
       end
     end
   end

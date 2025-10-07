@@ -18,8 +18,6 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.status = :finalized
         invoice.save!
-
-        CustomerSnapshots::CreateService.call!(invoice: invoice)
       end
 
       result.invoice = invoice
