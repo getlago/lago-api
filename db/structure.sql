@@ -24,7 +24,6 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d3
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
-ALTER TABLE IF EXISTS ONLY public.customer_snapshots DROP CONSTRAINT IF EXISTS fk_rails_f0bbf2291d;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_eeb6a32be1;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_ecb466254b;
@@ -146,7 +145,6 @@ ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778360c382;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
-ALTER TABLE IF EXISTS ONLY public.customer_snapshots DROP CONSTRAINT IF EXISTS fk_rails_76131aeb0a;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_752665cc51;
@@ -612,9 +610,6 @@ DROP INDEX IF EXISTS public.index_customers_on_account_type;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_billing_entity_id;
-DROP INDEX IF EXISTS public.index_customer_snapshots_on_organization_id;
-DROP INDEX IF EXISTS public.index_customer_snapshots_on_invoice_id;
-DROP INDEX IF EXISTS public.index_customer_snapshots_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
@@ -872,7 +867,6 @@ ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS daily_u
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS customers_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS customers_pkey;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS customers_invoice_custom_sections_pkey;
-ALTER TABLE IF EXISTS ONLY public.customer_snapshots DROP CONSTRAINT IF EXISTS customer_snapshots_pkey;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS customer_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS credits_pkey;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS credit_notes_taxes_pkey;
@@ -1025,7 +1019,6 @@ DROP TABLE IF EXISTS public.daily_usages;
 DROP TABLE IF EXISTS public.customers_taxes;
 DROP TABLE IF EXISTS public.customers_invoice_custom_sections;
 DROP TABLE IF EXISTS public.customers;
-DROP TABLE IF EXISTS public.customer_snapshots;
 DROP TABLE IF EXISTS public.customer_metadata;
 DROP TABLE IF EXISTS public.credits;
 DROP TABLE IF EXISTS public.credit_notes_taxes;
@@ -2056,42 +2049,6 @@ CREATE TABLE public.customer_metadata (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL
-);
-
-
---
--- Name: customer_snapshots; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.customer_snapshots (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
-    display_name character varying,
-    firstname character varying,
-    lastname character varying,
-    email character varying,
-    phone character varying,
-    url character varying,
-    tax_identification_number character varying,
-    applicable_timezone character varying,
-    address_line1 character varying,
-    address_line2 character varying,
-    city character varying,
-    state character varying,
-    zipcode character varying,
-    country character varying,
-    legal_name character varying,
-    legal_number character varying,
-    shipping_address_line1 character varying,
-    shipping_address_line2 character varying,
-    shipping_city character varying,
-    shipping_state character varying,
-    shipping_zipcode character varying,
-    shipping_country character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -5129,14 +5086,6 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
--- Name: customer_snapshots customer_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customer_snapshots
-    ADD CONSTRAINT customer_snapshots_pkey PRIMARY KEY (id);
-
-
---
 -- Name: customers_invoice_custom_sections customers_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7048,27 +6997,6 @@ CREATE UNIQUE INDEX index_customer_metadata_on_customer_id_and_key ON public.cus
 --
 
 CREATE INDEX index_customer_metadata_on_organization_id ON public.customer_metadata USING btree (organization_id);
-
-
---
--- Name: index_customer_snapshots_on_deleted_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_customer_snapshots_on_deleted_at ON public.customer_snapshots USING btree (deleted_at);
-
-
---
--- Name: index_customer_snapshots_on_invoice_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_customer_snapshots_on_invoice_id ON public.customer_snapshots USING btree (invoice_id) WHERE (deleted_at IS NULL);
-
-
---
--- Name: index_customer_snapshots_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_customer_snapshots_on_organization_id ON public.customer_snapshots USING btree (organization_id);
 
 
 --
@@ -10367,14 +10295,6 @@ ALTER TABLE ONLY public.integrations
 
 
 --
--- Name: customer_snapshots fk_rails_76131aeb0a; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customer_snapshots
-    ADD CONSTRAINT fk_rails_76131aeb0a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
 -- Name: commitments fk_rails_76ceb88c74; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11343,14 +11263,6 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 
 --
--- Name: customer_snapshots fk_rails_f0bbf2291d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customer_snapshots
-    ADD CONSTRAINT fk_rails_f0bbf2291d FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
-
-
---
 -- Name: usage_monitoring_alert_thresholds fk_rails_f18cd04d51; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11589,6 +11501,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251010092830'),
 ('20251010073504'),
 ('20251007160309'),
+('20251007103421'),
 ('20251007082822'),
 ('20251007082809'),
 ('20251003171658'),
