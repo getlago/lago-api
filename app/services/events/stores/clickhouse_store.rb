@@ -4,6 +4,7 @@ module Events
   module Stores
     class ClickhouseStore < BaseStore
       DECIMAL_SCALE = 26
+      DECIMAL_DATE_SCALE = 10
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -160,7 +161,7 @@ module Events
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
               sanitize_colon(query.query),
-              {decimal_scale: DECIMAL_SCALE}
+              {decimal_date_scale: DECIMAL_DATE_SCALE}
             ]
           )
           connection.select_one(sql)
@@ -178,7 +179,7 @@ module Events
             ActiveRecord::Base.sanitize_sql_for_conditions(
               [
                 sanitize_colon(query.breakdown_query),
-                {decimal_scale: DECIMAL_SCALE}
+                {decimal_date_scale: DECIMAL_DATE_SCALE}
               ]
             )
           ).rows
@@ -194,7 +195,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime:,
-                decimal_scale: DECIMAL_SCALE,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
                 timezone: customer.applicable_timezone
               }
             ]
@@ -214,7 +215,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime:,
-                decimal_scale: DECIMAL_SCALE,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
                 timezone: customer.applicable_timezone
               }
             ]
@@ -232,7 +233,7 @@ module Events
               sanitize_colon(query.grouped_query),
               {
                 to_datetime:,
-                decimal_scale: DECIMAL_SCALE
+                decimal_date_scale: DECIMAL_DATE_SCALE
               }
             ]
           )
@@ -250,7 +251,7 @@ module Events
               {
                 from_datetime:,
                 to_datetime:,
-                decimal_scale: DECIMAL_SCALE,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
                 timezone: customer.applicable_timezone
               }
             ]
