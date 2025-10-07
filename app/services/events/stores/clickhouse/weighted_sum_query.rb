@@ -110,9 +110,8 @@ module Events
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
               ,
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end
@@ -170,7 +169,7 @@ module Events
             [
               groups,
               "toDateTime64(:to_datetime, 5, 'UTC')",
-              "toDecimal128(0, :decimal_scale)"
+              "toDecimal32(0, 0)"
             ].flatten.join(", ")
           end
 
@@ -198,9 +197,8 @@ module Events
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
               ,
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end

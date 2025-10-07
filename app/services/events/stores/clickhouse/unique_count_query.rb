@@ -332,13 +332,13 @@ module Events
               operation_type = 'add',
               (if(
                 (lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(1, 0)
               )),
               (if(
                 (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(-1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(-1, 0)
               ))
             )
           SQL
@@ -353,14 +353,14 @@ module Events
               operation_type = 'add',
               (if(
                 (lagInFrame(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(1, 0)
               ))
               ,
               (if(
                 (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(-1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(-1, 0)
               ))
             )
           SQL
@@ -368,10 +368,10 @@ module Events
 
         def period_ratio_sql
           <<-SQL
-            toDecimal128(
-              if(
-                operation_type = 'add',
-                (
+            if(
+              operation_type = 'add',
+              (
+                toDecimal64(
                   -- inclusive day count in customer TZ, same as PG
                   date_diff(
                     'days',
@@ -406,21 +406,21 @@ module Events
                         :timezone
                       )
                     )
-                  ) / #{charges_duration || 1}
-                ),
-                0
+                  ),
+                :decimal_date_scale)
+                / #{charges_duration || 1}
               ),
-              :decimal_scale
+              0
             )
           SQL
         end
 
         def grouped_period_ratio_sql
           <<-SQL
-            toDecimal128(
-              if(
-                operation_type = 'add',
-                (
+            if(
+              operation_type = 'add',
+              (
+                toDecimal64(
                   date_diff(
                     'days',
                     toDate(
@@ -452,11 +452,11 @@ module Events
                         :timezone
                       )
                     )
-                  ) / #{charges_duration || 1}
-                ),
-                0
+                  ),
+                :decimal_date_scale)
+                / #{charges_duration || 1}
               ),
-              :decimal_scale
+              0
             )
           SQL
         end

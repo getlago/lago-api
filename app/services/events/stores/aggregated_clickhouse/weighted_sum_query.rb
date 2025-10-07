@@ -111,9 +111,8 @@ module Events
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i},
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end
@@ -159,7 +158,7 @@ module Events
             [
               sanitized_values(formated_groups_values(initial_value)),
               "toDateTime64(:to_datetime, 5, 'UTC')",
-              "toDecimal128(0, :decimal_scale)"
+              "toDecimal32(0, 0)"
             ].join(", ")
           end
 
@@ -180,9 +179,8 @@ module Events
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i},
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end
