@@ -35,7 +35,6 @@ module V1
         voided_at: model.voided_at&.iso8601
       }
 
-      payload.merge!(customer_snapshot)
       payload.merge!(customer) if include?(:customer)
       payload.merge!(subscriptions) if include?(:subscriptions)
       payload.merge!(billing_periods) if include?(:billing_periods)
@@ -53,12 +52,6 @@ module V1
     end
 
     private
-
-    def customer_snapshot
-      {
-        customer_snapshot: model.customer_snapshot ? ::V1::CustomerSnapshotSerializer.new(model.customer_snapshot).serialize : nil
-      }
-    end
 
     def customer
       {
