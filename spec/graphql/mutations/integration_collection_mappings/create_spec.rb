@@ -26,37 +26,65 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
       }
     GQL
   end
+  let(:input) do
+    {
+      integrationId: integration.id,
+      mappingType: mapping_type,
+      externalAccountCode: external_account_code,
+      externalId: external_id,
+      externalName: external_name,
+      **(billing_entity_id ? {billingEntityId: billing_entity_id} : {})
+    }
+  end
+  let(:billing_entity_id) { nil }
+
+  def create_integration_collection_mapping(input:, raw: false)
+    result = execute_query(query: mutation, input:)
+    raw ? result : result["data"]["createIntegrationCollectionMapping"]
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "creates an integration collection mapping" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          integrationId: integration.id,
-          mappingType: mapping_type,
-          externalAccountCode: external_account_code,
-          externalId: external_id,
-          externalName: external_name
-        }
-      }
+    result = create_integration_collection_mapping(input:)
+
+    expect(result).to match(
+      "id" => be_present,
+      "integrationId" => integration.id,
+      "mappingType" => mapping_type,
+      "externalAccountCode" => external_account_code,
+      "externalId" => external_id,
+      "externalName" => external_name
     )
+  end
 
-    result_data = result["data"]["createIntegrationCollectionMapping"]
+  context "with billing entity" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:billing_entity_id) { billing_entity.id }
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["integrationId"]).to eq(integration.id)
-      expect(result_data["mappingType"]).to eq(mapping_type)
-      expect(result_data["externalAccountCode"]).to eq(external_account_code)
-      expect(result_data["externalId"]).to eq(external_id)
-      expect(result_data["externalName"]).to eq(external_name)
+    it "creates an integration collection mapping with billing entity" do
+      result = create_integration_collection_mapping(input:)
+
+      expect(result).to match(
+        "id" => be_present,
+        "integrationId" => integration.id,
+        "mappingType" => mapping_type,
+        "externalAccountCode" => external_account_code,
+        "externalId" => external_id,
+        "externalName" => external_name
+      )
+    end
+
+    context "when billing entity belongs to different organization" do
+      let(:billing_entity) { create(:billing_entity, organization: create(:organization)) }
+
+      it "returns an error when billing entity belongs to different organization" do
+        result = create_integration_collection_mapping(input:, raw: true)
+
+        expect_graphql_error(result:, message: "Resource not found")
+      end
     end
   end
 end
