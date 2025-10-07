@@ -20,7 +20,9 @@ module Credits
 
       ApplicationRecord.transaction do
         wallets.each do |wallet|
-          next if wallet_already_applied_on_invoice?(wallet)
+          if wallet_already_applied_on_invoice?(wallet)
+            return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
+          end
 
           # returns applied amount on the fees_by_type_and_bm
           amount = applicable_wallet_amount(wallet, remaining_amounts)
@@ -28,6 +30,9 @@ module Credits
 
           wallet_transaction = create_and_decrease!(wallet: wallet, amount_cents: amount, invoice:)
           result.wallet_transactions << wallet_transaction
+
+          Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.created", after_commit: true)
+          after_commit { SendWebhookJob.perform_later("wallet_transaction.created", wallet_transaction) }
 
           invoice.prepaid_credit_amount_cents += amount
           result.prepaid_credit_amount_cents += amount
@@ -115,8 +120,7 @@ module Credits
         transaction_type: :outbound,
         status: :settled,
         settled_at: Time.current,
-        transaction_status: :invoiced,
-        activity_logable: true
+        transaction_status: :invoiced
       ).wallet_transaction
 
       # Decrease balance with retry (optimistic locking)
