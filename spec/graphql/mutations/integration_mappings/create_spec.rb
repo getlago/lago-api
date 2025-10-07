@@ -11,7 +11,6 @@ RSpec.describe Mutations::IntegrationMappings::Create do
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateIntegrationMappingInput!) {
@@ -20,6 +19,7 @@ RSpec.describe Mutations::IntegrationMappings::Create do
           integrationId,
           mappableId,
           mappableType,
+          billingEntityId,
           externalAccountCode,
           externalId,
           externalName
@@ -27,39 +27,70 @@ RSpec.describe Mutations::IntegrationMappings::Create do
       }
     GQL
   end
+  let(:input) do
+    {
+      integrationId: integration.id,
+      mappableId: mappable.id,
+      mappableType: "AddOn",
+      externalAccountCode: external_account_code,
+      externalId: external_id,
+      externalName: external_name,
+      **(billing_entity_id ? {billingEntityId: billing_entity_id} : {})
+    }
+  end
+  let(:billing_entity_id) { nil }
+
+  def create_integration_mapping(input:, raw: false)
+    result = execute_query(query: mutation, input:)
+    raw ? result : result["data"]["createIntegrationMapping"]
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "creates an integration mapping" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          integrationId: integration.id,
-          mappableId: mappable.id,
-          mappableType: "AddOn",
-          externalAccountCode: external_account_code,
-          externalId: external_id,
-          externalName: external_name
-        }
-      }
+    result = create_integration_mapping(input:)
+
+    expect(result).to match(
+      "id" => be_present,
+      "integrationId" => integration.id,
+      "mappableId" => mappable.id,
+      "mappableType" => "AddOn",
+      "billingEntityId" => nil,
+      "externalAccountCode" => external_account_code,
+      "externalId" => external_id,
+      "externalName" => external_name
     )
+  end
 
-    result_data = result["data"]["createIntegrationMapping"]
+  context "with billing entity" do
+    let(:billing_entity) { create(:billing_entity, organization: organization) }
+    let(:billing_entity_id) { billing_entity.id }
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["integrationId"]).to eq(integration.id)
-      expect(result_data["mappableId"]).to eq(mappable.id)
-      expect(result_data["mappableType"]).to eq("AddOn")
-      expect(result_data["externalAccountCode"]).to eq(external_account_code)
-      expect(result_data["externalId"]).to eq(external_id)
-      expect(result_data["externalName"]).to eq(external_name)
+    it "creates an integration mapping with billing entity" do
+      result = create_integration_mapping(input:)
+
+      expect(result).to match(
+        "id" => be_present,
+        "integrationId" => integration.id,
+        "mappableId" => mappable.id,
+        "mappableType" => "AddOn",
+        "billingEntityId" => billing_entity.id,
+        "externalAccountCode" => external_account_code,
+        "externalId" => external_id,
+        "externalName" => external_name
+      )
+    end
+
+    context "when billing entity belongs to different organization" do
+      let(:billing_entity) { create(:billing_entity, organization: create(:organization)) }
+
+      it "returns an error when billing entity belongs to different organization" do
+        result = create_integration_mapping(input:, raw: true)
+
+        expect_graphql_error(result:, message: "Resource not found")
+      end
     end
   end
 end
