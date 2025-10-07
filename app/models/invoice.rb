@@ -21,8 +21,6 @@ class Invoice < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity, optional: true
 
-  has_one :customer_snapshot, dependent: :destroy
-
   has_many :fees
   has_many :credits
   has_many :wallet_transactions
