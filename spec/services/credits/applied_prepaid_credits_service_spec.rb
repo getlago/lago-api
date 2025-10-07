@@ -13,9 +13,11 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       total_amount_cents: amount_cents
     )
   end
-  let(:fee) { create(:charge_fee, invoice:, subscription:,
-                     amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
-                     taxes_precise_amount_cents: 0)}
+  let(:fee) {
+    create(:charge_fee, invoice:, subscription:,
+      amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+      taxes_precise_amount_cents: 0)
+  }
   let(:amount_cents) { 100 }
   let(:fee_amount_cents) { 100 }
   let(:wallets) { [create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0)] }
@@ -56,7 +58,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
     it "enqueues a SendWebhookJob" do
       expect { credit_service.call }.to have_enqueued_job(SendWebhookJob)
-                                          .with("wallet_transaction.created", WalletTransaction)
+        .with("wallet_transaction.created", WalletTransaction)
     end
 
     it "produces an activity log" do
@@ -111,9 +113,10 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
     context "with fee type limitations" do
       let(:subscription_fees) { [fee, fee2] }
-      let(:fee) { create(:fee, invoice:, subscription:, amount_cents:60,  precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
-      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents:40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
+      let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
+      let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
       let(:wallets) { [create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, allowed_fee_types: %w[charge])] }
+
       before { subscription_fees }
 
       it "calculates prepaid credit" do
@@ -142,9 +145,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       context "when wallet credits are less than invoice amount" do
-        #let(:amount_cents) { 10_000 }
-        let(:fee) { create(:fee, invoice:, subscription:, amount_cents:6_000, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:,amount_cents:4_000, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400) }
+        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 6_000, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 4_000, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400) }
 
         it "calculates prepaid credit" do
           result = credit_service.call

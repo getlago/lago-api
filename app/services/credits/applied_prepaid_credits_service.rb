@@ -15,15 +15,15 @@ module Credits
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
 
+      if wallets_already_applied?
+        return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
+      end
+
       # build a hash of remaining_amounts for each (fee_type and billable_metric_id) pair
       remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
 
       ApplicationRecord.transaction do
         wallets.each do |wallet|
-          if wallet_already_applied_on_invoice?(wallet)
-            return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
-          end
-
           # returns applied amount on the fees_by_type_and_bm
           amount = applicable_wallet_amount(wallet, remaining_amounts)
           next if amount <= 0
@@ -46,6 +46,12 @@ module Credits
     private
 
     attr_accessor :invoice, :wallets
+
+    def wallets_already_applied?
+      return false unless invoice
+      wallet_ids = wallets.map { |w| w.id }
+      invoice.wallet_transactions.exists?(wallet_id: wallet_ids)
+    end
 
     # build a hash of [fee_type, billable_metric_id] => remaining_amount
     def calculate_amounts_for_fees_by_type_and_bm
@@ -138,10 +144,6 @@ module Credits
       end
 
       wallet_transaction
-    end
-
-    def wallet_already_applied_on_invoice?(wallet)
-      invoice&.wallet_transactions&.where(wallet_id: wallet.id)&.exists?
     end
   end
 end
