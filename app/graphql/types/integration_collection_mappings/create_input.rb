@@ -5,6 +5,7 @@ module Types
     class CreateInput < Types::BaseInputObject
       graphql_name "CreateIntegrationCollectionMappingInput"
 
+      argument :billing_entity_id, ID, required: false
       argument :external_account_code, String, required: false
       argument :external_id, String, required: true
       argument :external_name, String, required: false
