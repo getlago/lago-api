@@ -30,7 +30,7 @@ module Events
           .and(arel_table[:code].eq(code)))
         )
 
-        query = query.order(arel_table[:timestamp].desc) if ordered
+        query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
 
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
         query = query.where(arel_table[:timestamp].lteq(applicable_to_datetime)) if applicable_to_datetime

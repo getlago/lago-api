@@ -25,7 +25,7 @@ module Events
                   operation_type,
                   #{operation_value_sql} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               GROUP BY property
             )
@@ -62,7 +62,7 @@ module Events
                   -- Check if this is the last event of the day for this property
                   timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) as e
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
@@ -79,7 +79,7 @@ module Events
                   #{operation_value_sql} AS adjusted_value
                 FROM same_day_ignored
                 WHERE is_ignored = false
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, operation_type, timestamp
@@ -110,7 +110,7 @@ module Events
                   #{group_names},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               GROUP BY #{group_names}, property
             )
@@ -143,7 +143,7 @@ module Events
                   -- Check if this is the last event of the day for this property and group
                   timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) as e
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
@@ -162,7 +162,7 @@ module Events
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM same_day_ignored
                 WHERE is_ignored = false
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY #{group_names}, property, operation_type, timestamp
@@ -202,7 +202,7 @@ module Events
               #{operation_value_sql},
               lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
-            ORDER BY timestamp ASC
+            ORDER BY timestamp ASC, property ASC
           SQL
         end
 
@@ -224,7 +224,7 @@ module Events
                   -- Check if this is the last event of the day for this property
                   timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) as e
             ),
             event_values AS (
@@ -240,7 +240,7 @@ module Events
                   #{operation_value_sql} AS adjusted_value
                 FROM same_day_ignored
                 WHERE is_ignored = false
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
@@ -260,7 +260,7 @@ module Events
               FROM event_values
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
-            ORDER BY timestamp ASC
+            ORDER BY timestamp ASC, property ASC
           SQL
         end
 

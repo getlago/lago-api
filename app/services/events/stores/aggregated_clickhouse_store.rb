@@ -38,7 +38,7 @@ module Events
             .and(arel_enriched_table[:charge_filter_id].eq(charge_filter_id || ""))))
         )
 
-        query = query.order(arel_enriched_table[:timestamp].desc) if ordered
+        query = query.order(arel_enriched_table[:timestamp].desc, arel_enriched_table[:value].asc) if ordered
 
         query = query.where(arel_enriched_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
         query = query.where(arel_enriched_table[:timestamp].lteq(to_datetime)) if to_datetime

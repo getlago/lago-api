@@ -25,7 +25,7 @@ module Events
                   operation_type,
                   #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               GROUP BY property
             )
@@ -49,7 +49,7 @@ module Events
                   operation_type,
                   #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
@@ -81,7 +81,7 @@ module Events
                   grouped_by,
                   #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               GROUP BY grouped_by, property
             )
@@ -112,7 +112,7 @@ module Events
                   grouped_by,
                   #{operation_value_sql(partition_by: %w[grouped_by property])} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY grouped_by, property, operation_type, timestamp
@@ -153,7 +153,7 @@ module Events
               #{operation_value_sql(partition_by: %w[property])},
               lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
             FROM events_data
-            ORDER BY timestamp ASC
+            ORDER BY timestamp ASC, property ASC
           SQL
         end
 
@@ -172,7 +172,7 @@ module Events
                   operation_type,
                   #{operation_value_sql(partition_by: %w[property])} AS adjusted_value
                 FROM events_data
-                ORDER BY timestamp ASC
+                ORDER BY timestamp ASC, property ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, operation_type, timestamp
@@ -192,7 +192,7 @@ module Events
               FROM event_values
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
-            ORDER BY timestamp ASC
+            ORDER BY timestamp ASC, property ASC
           SQL
         end
 
