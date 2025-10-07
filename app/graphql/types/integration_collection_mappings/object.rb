@@ -5,6 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name "CollectionMapping"
 
+      field :billing_entity_id, ID, null: true
       field :external_account_code, String, null: true
       field :external_id, String, null: false
       field :external_name, String, null: true
