@@ -95,7 +95,7 @@ module Events
       def unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
-        result = ActiveRecord::Base.connection.select_one(sql)
+        result = Event.connection.select_one(sql)
 
         result["aggregation"]
       end
