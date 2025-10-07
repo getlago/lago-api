@@ -66,8 +66,6 @@ RSpec.describe ::V1::InvoiceSerializer do
         "key" => metadata.key,
         "value" => metadata.value
       )
-
-      expect(result["invoice"]["customer_snapshot"]).to be_nil
     end
   end
 
@@ -110,43 +108,6 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
-    end
-  end
-
-  context "when invoice has a customer snapshot" do
-    let(:customer_snapshot) { create(:customer_snapshot, invoice:) }
-
-    before { customer_snapshot }
-
-    it "serializes the customer snapshot" do
-      result = JSON.parse(serializer.to_json)
-
-      expect(result["invoice"]["customer_snapshot"]).to eq(
-        "display_name" => customer_snapshot.display_name,
-        "firstname" => customer_snapshot.firstname,
-        "lastname" => customer_snapshot.lastname,
-        "email" => customer_snapshot.email,
-        "phone" => customer_snapshot.phone,
-        "url" => customer_snapshot.url,
-        "tax_identification_number" => customer_snapshot.tax_identification_number,
-        "applicable_timezone" => customer_snapshot.applicable_timezone,
-        "address_line1" => customer_snapshot.address_line1,
-        "address_line2" => customer_snapshot.address_line2,
-        "city" => customer_snapshot.city,
-        "state" => customer_snapshot.state,
-        "zipcode" => customer_snapshot.zipcode,
-        "country" => customer_snapshot.country,
-        "legal_name" => customer_snapshot.legal_name,
-        "legal_number" => customer_snapshot.legal_number,
-        "shipping_address" => {
-          "address_line1" => customer_snapshot.shipping_address_line1,
-          "address_line2" => customer_snapshot.shipping_address_line2,
-          "city" => customer_snapshot.shipping_city,
-          "state" => customer_snapshot.shipping_state,
-          "zipcode" => customer_snapshot.shipping_zipcode,
-          "country" => customer_snapshot.shipping_country
-        }
-      )
     end
   end
 end
