@@ -10,7 +10,7 @@ class PaymentMethod < ApplicationRecord
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
 
   validates :provider_method_id, presence: true
-  validates :is_default, inclusion: { in: [true, false] }
+  validates :is_default, inclusion: {in: [true, false]}
 end
 
 # == Schema Information
