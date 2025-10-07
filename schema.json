@@ -56428,30 +56428,6 @@
               "deprecationReason": null
             },
             {
-              "name": "integrationId",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "ID",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "mappingType",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "MappingTypeEnum",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "taxCode",
               "description": null,
               "type": {
@@ -56481,6 +56457,30 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integrationId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "mappingType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "MappingTypeEnum",
                 "ofType": null
               },
               "defaultValue": null,

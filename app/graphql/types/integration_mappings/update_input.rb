@@ -10,10 +10,11 @@ module Types
       argument :external_name, String, required: false
       argument :id, ID, required: true
 
-      # DEPRECATED: These fields are not used anymore and will be removed in a future release once the frontend is
-      #             updated to not use them anymore.
+      # @deprecated This field is deprecated and will be ignored. Integration ID cannot be updated.
       argument :integration_id, ID, required: false
+      # @deprecated This field is deprecated and will be ignored. Mappable ID cannot be updated.
       argument :mappable_id, ID, required: false
+      # @deprecated This field is deprecated and will be ignored. Mappable type cannot be updated.
       argument :mappable_type, Types::IntegrationMappings::MappableTypeEnum, required: false
     end
   end
