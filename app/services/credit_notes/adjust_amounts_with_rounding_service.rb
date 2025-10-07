@@ -20,8 +20,7 @@ module CreditNotes
         if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
           credit_note.total_amount_cents -= 1
         else
-          credit_note.items.first.amount_cents -= 1
-          credit_note.items.first.save
+          credit_note.total_amount_cents += 1
         end
 
         if credit_note.credit_amount_cents > 0
