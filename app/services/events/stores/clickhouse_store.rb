@@ -129,7 +129,7 @@ module Events
 
           SELECT
             #{group_names},
-            toDecimal128(count(), #{DECIMAL_SCALE})
+            toDecimal32(count(), 0)
           FROM events
           GROUP BY #{group_names}
           SQL
