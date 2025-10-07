@@ -24,6 +24,8 @@ module Credits
 
       ApplicationRecord.transaction do
         wallets.each do |wallet|
+          break if remaining_amounts.values.all? { |v| BigDecimal(v.to_s) <= 0 }
+
           # returns applied amount on the fees_by_type_and_bm
           amount = applicable_wallet_amount(wallet, remaining_amounts)
           next if amount <= 0
