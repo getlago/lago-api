@@ -330,14 +330,14 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       context "when wallet credits are less than invoice amount" do
         let(:subscription_fees) { [fee, fee2] }
         let(:amount_cents) { 10_000 }
-        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 6_000, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 4_000, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400, charge:) }
+        let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 2_000, precise_amount_cents: 2_000, taxes_precise_amount_cents: 200) }
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1_000, precise_amount_cents: 1_000, taxes_precise_amount_cents: 100, charge:) }
 
         it "calculates prepaid credit" do
           result = credit_service.call
 
           expect(result).to be_success
-          expect(result.prepaid_credit_amount_cents).to eq(1000)
+          expect(result.prepaid_credit_amount_cents).to eq(3300)
         end
 
         it "creates wallet transaction" do
@@ -345,7 +345,19 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
           expect(result).to be_success
           expect(result.wallet_transactions).to be_present
-          expect(result.wallet_transactions.first.amount).to eq(10.0)
+          expect(result.wallet_transactions.count).to eq(5)
+
+          wallet_transaction_1 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_subscription_wallet.id }
+          wallet_transaction_2 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_bm_wallet.id }
+          wallet_transaction_3 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_limited_charge_wallet.id }
+          wallet_transaction_4 = result.wallet_transactions.detect { |tx| tx.wallet_id == priority_wallet.id }
+          wallet_transaction_5 = result.wallet_transactions.detect { |tx| tx.wallet_id == normal_wallet.id }
+
+          expect(wallet_transaction_1.amount).to eq(10)
+          expect(wallet_transaction_2.amount).to eq(10)
+          expect(wallet_transaction_3.amount).to eq(1)
+          expect(wallet_transaction_4.amount).to eq(10)
+          expect(wallet_transaction_5.amount).to eq(2)
         end
 
         it "updates wallet balance" do
