@@ -268,14 +268,14 @@ module Events
               operation_type = 'add',
               (if(
                 (lagInFrame(operation_type, 1) OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(1, 0)
               ))
               ,
               (if(
                 (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{partition} ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
-                toDecimal128(0, :decimal_scale),
-                toDecimal128(-1, :decimal_scale)
+                toDecimal32(0, 0),
+                toDecimal32(-1, 0)
               ))
             )
           SQL
@@ -285,10 +285,10 @@ module Events
           partition = partition_by.join(", ")
 
           <<-SQL
-            toDecimal128(
-              if(
-                operation_type = 'add',
-                (
+            if(
+              operation_type = 'add',
+              (
+                toDecimal64(
                   -- inclusive day count in customer TZ, same as PG
                   date_diff(
                     'days',
@@ -323,11 +323,11 @@ module Events
                         :timezone
                       )
                     )
-                  ) / #{charges_duration || 1}
-                ),
-                0
+                  ),
+                :decimal_date_scale)
+                / #{charges_duration || 1}
               ),
-              :decimal_scale
+              0
             )
           SQL
         end
