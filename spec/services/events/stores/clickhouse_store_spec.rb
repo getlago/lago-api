@@ -691,6 +691,19 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
         code:,
+        timestamp: boundaries[:from_datetime] + 1.day,
+        properties: {
+          billable_metric.field_name => 3
+        },
+        value: "30",
+        decimal_value: 30
+      )
+
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code:,
         timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
@@ -703,7 +716,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
       event_store.aggregation_property = billable_metric.field_name
 
       result = event_store.prorated_unique_count_breakdown
-      expect(result.count).to eq(6)
+      expect(result.count).to eq(7)
+
+      # Ensure consistent ordering with 2 events with the same timestamp
+      expect(result.map { it["property"] }).to eq(%w[1 2 30 2 3 4 5])
 
       grouped_result = result.group_by { |r| r["property"] }
 
