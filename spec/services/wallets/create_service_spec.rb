@@ -102,6 +102,24 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when priority is out of bounds" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          priority: 55
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:priority]).to eq(["value_is_invalid"])
+      end
+    end
+
     context "when priority is not set" do
       let(:params) do
         {
