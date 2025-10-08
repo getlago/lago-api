@@ -8,6 +8,7 @@ FactoryBot.define do
 
     name { Faker::Company.name }
     default_currency { "USD" }
+    audit_logs_period { nil }
 
     email { Faker::Internet.email }
     email_settings { ["invoice.finalized", "credit_note.created"] }
