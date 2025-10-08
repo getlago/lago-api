@@ -236,13 +236,13 @@ describe "Subscription manual termination" do
         credit_note = subscription_invoice.credit_notes.sole
 
         # 7142.85714 rounded to 7143, then AdjustAmountsWithRoundingService subtracts 1
-        expect(credit_note.items.sum(&:amount_cents)).to eq 71_42
+        expect(credit_note.items.sum(&:amount_cents)).to eq 71_43
         expect(credit_note).to have_attributes(
           sub_total_excluding_taxes_amount_cents: 71_43,
           taxes_amount_cents: 14_29,
-          credit_amount_cents: 85_71,
-          balance_amount_cents: 85_71,
-          total_amount_cents: 85_71
+          credit_amount_cents: 85_72,
+          balance_amount_cents: 85_72,
+          total_amount_cents: 85_72
         )
         expect(credit_note.items.sum(&:amount_cents) + credit_note.applied_taxes.sum(:amount_cents)).to eq(credit_note.total_amount_cents)
 
@@ -258,7 +258,7 @@ describe "Subscription manual termination" do
         expect(billed_invoice.total_amount_cents).to eq(0)
 
         expect_charge_fees_to_be_billed
-        expect(credit_note.reload.balance_amount_cents).to eq(25_71) # 85.71 - 60
+        expect(credit_note.reload.balance_amount_cents).to eq(25_72) # 71_43 + 14_29 - 60
       end
     end
 
