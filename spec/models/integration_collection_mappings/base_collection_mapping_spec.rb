@@ -15,7 +15,7 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:billing_entity).optional }
 
-  it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
+  it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types).validating }
 
   describe "validations" do
     describe "of mapping type uniqueness" do
@@ -108,7 +108,7 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
 
         it "is not valid" do
           expect(mapping).not_to be_valid
-          expect(mapping.errors[:billing_entity]).to include("must belong to the same organization")
+          expect(mapping.errors[:billing_entity]).to include("is invalid")
         end
       end
 

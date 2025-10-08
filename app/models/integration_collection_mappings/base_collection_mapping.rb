@@ -36,8 +36,8 @@ module IntegrationCollectionMappings
     def validate_billing_entity_organization
       return unless billing_entity
 
-      if billing_entity.organization != organization
-        errors.add(:billing_entity, "must belong to the same organization")
+      if billing_entity.organization_id != organization_id
+        errors.add(:billing_entity, :invalid)
       end
     end
   end
