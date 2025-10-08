@@ -3,6 +3,8 @@
 module FixedChargeEvents
   module Aggregations
     class ProratedAggregationService < BaseService
+      PerEventAggregationResult = BaseResult[:event_aggregation, :event_prorated_aggregation]
+
       def call
         sql = ActiveRecord::Base.sanitize_sql_for_conditions(
           [
@@ -18,6 +20,15 @@ module FixedChargeEvents
         sql_result = ActiveRecord::Base.connection.select_one(sql)
         result.aggregation = sql_result["aggregation"]
         result
+      end
+
+      # we need this for prorated charge_model to be correctly applied
+      def per_event_aggregation(grouped_by_values: nil)
+        units_count = result.aggregation
+        PerEventAggregationResult.new.tap do |result|
+          result.event_aggregation = [units_count]
+          result.event_prorated_aggregation = [units_count]
+        end
       end
 
       private
@@ -45,7 +56,7 @@ module FixedChargeEvents
 
           SELECT COALESCE(SUM(weighted_units), 0) AS aggregation
           FROM (
-            SELECT CASE WHEN (#{period_ratio_sql} * units) < 0 THEN 0 ELSE (#{period_ratio_sql} * units) END AS weighted_units
+            SELECT CASE WHEN (#{period_ratio_sql} * units) < 0 THEN 0 ELSE ROUND(#{period_ratio_sql} * units, 6) END AS weighted_units
             FROM fixed_charge_events_ignored
           ) cumulated_ratios
         SQL
