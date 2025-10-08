@@ -91,6 +91,7 @@ gem "google-cloud-storage", require: false
 # Templating
 gem "slim"
 gem "slim-rails"
+gem "addressing"
 
 # Kafka
 gem "karafka", "~> 2.5.0"
