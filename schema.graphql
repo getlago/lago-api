@@ -7801,6 +7801,32 @@ type PaymentCollection {
   metadata: CollectionMetadata!
 }
 
+type PaymentMethod {
+  createdAt: ISO8601DateTime!
+  customer: Customer!
+  id: ID!
+  isDefault: Boolean!
+  paymentProvider: ProviderTypeEnum
+  paymentProviderCode: String
+  providerCustomerId: ID
+  updatedAt: ISO8601DateTime
+}
+
+"""
+PaymentMethodCollection type
+"""
+type PaymentMethodCollection {
+  """
+  A collection of paginated PaymentMethodCollection
+  """
+  collection: [PaymentMethod!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
@@ -8862,6 +8888,18 @@ type Query {
     """
     id: ID!
   ): Payment
+
+  """
+  Query payment methods of a customer
+  """
+  paymentMethods(
+    """
+    External ID of the customer
+    """
+    externalCustomerId: ID!
+    limit: Int
+    page: Int
+  ): PaymentMethodCollection!
 
   """
   Query a single payment provider
