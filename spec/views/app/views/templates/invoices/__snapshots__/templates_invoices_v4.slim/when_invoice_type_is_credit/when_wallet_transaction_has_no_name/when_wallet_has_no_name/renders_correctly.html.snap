@@ -79,15 +79,17 @@
           <div class="body-2">
             1234567890
           </div>
-          <div class="body-2">456 Customer Ave</div>
-          <div class="body-2">Apt 202</div>
           <div class="body-2">
-            <span>10001</span>
-            <span>,&nbsp;</span>
-            <span>New York</span>
+            <span class="address-line1">456 Customer Ave</span>
+            <br>
+            <span class="address-line2">Apt 202</span>
+            <br>
+            <span class="locality">New York</span>
+            , <span class="administrative-area">NY</span>
+            <span class="postal-code">10001</span>
+            <br>
+            <span class="country">United States</span>
           </div>
-          <div class="body-2">NY</div>
-          <div class="body-2">United States</div>
           <div class="body-2">
             john.doe@example.com
           </div>
