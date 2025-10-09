@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::CreateService, type: :service do
+RSpec.describe BillingEntities::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
   let(:organization) { create :organization }

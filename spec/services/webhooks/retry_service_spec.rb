@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Webhooks::RetryService, type: :service do
+RSpec.describe Webhooks::RetryService do
   subject(:retry_service) { described_class.new(webhook:) }
 
   let(:webhook) { create(:webhook, :failed) }

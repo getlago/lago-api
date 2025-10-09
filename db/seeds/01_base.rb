@@ -47,9 +47,9 @@ if !Tax.exists?(organization:, code: "lago_eu_fr_standard")
   Taxes::CreateService.call!(
     organization:,
     params: {
-      name: "Lago EU FR Standard",
+      name: "FR Standard",
       code: "lago_eu_fr_standard",
-      description: "Lago EU FR Standard",
+      description: "FR Standard",
       rate: 20
     }
   )

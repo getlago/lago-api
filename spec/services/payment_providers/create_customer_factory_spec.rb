@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::CreateCustomerFactory, type: :service do
+RSpec.describe PaymentProviders::CreateCustomerFactory do
   subject(:new_instance) { described_class.new_instance(provider:, customer:, payment_provider_id:, params:, async:) }
 
   let(:customer) { create(:customer) }

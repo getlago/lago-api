@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::BaseProvider, type: :model do
+RSpec.describe PaymentProviders::BaseProvider do
   subject(:provider) { described_class.new(attributes) }
 
   let(:secrets) { {"api_key" => api_key, "api_secret" => api_secret} }

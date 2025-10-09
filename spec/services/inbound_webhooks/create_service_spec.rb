@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InboundWebhooks::CreateService, type: :service do
+RSpec.describe InboundWebhooks::CreateService do
   subject(:result) do
     described_class.call(
       organization_id: organization.id,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
+RSpec.describe Resolvers::OrganizationResolver do
   let(:query) do
     <<~GQL
       query {

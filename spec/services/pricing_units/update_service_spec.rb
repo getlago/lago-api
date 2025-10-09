@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PricingUnits::UpdateService, type: :service do
+RSpec.describe PricingUnits::UpdateService do
   describe "#call" do
     subject(:result) { described_class.call(pricing_unit:, params:) }
 

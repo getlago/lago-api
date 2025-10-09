@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
+describe "Recurring Non Invoiceable Fees" do
   let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }

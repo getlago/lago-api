@@ -58,6 +58,9 @@ gem "stripe"
 # Analytics
 gem "analytics-ruby", "~> 2.4.0", require: "segment/analytics"
 
+# SSE
+gem "event_stream_parser"
+
 # Logging
 gem "lograge"
 gem "logstash-event"
@@ -71,6 +74,10 @@ gem "newrelic_rpm"
 gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
+gem "yabeda"
+gem "yabeda-rails", github: "getlago/yabeda-rails", glob: "yabeda-rails.gemspec", ref: "6dd4d74"
+gem "yabeda-puma-plugin"
+gem "yabeda-prometheus"
 
 gem "stackprof", require: false, platforms: [:ruby, :mri]
 gem "sentry-rails"
@@ -86,8 +93,8 @@ gem "slim"
 gem "slim-rails"
 
 # Kafka
-gem "karafka", "~> 2.4.17"
-gem "karafka-web", "~> 0.10.4"
+gem "karafka", "~> 2.5.0"
+gem "karafka-web", "~> 0.11.3"
 
 # Taxes
 gem "valvat"
@@ -132,6 +139,10 @@ end
 group :test do
   gem "guard-rspec", require: false
   gem "karafka-testing"
+
+  # HTML testing (invoice rendering)
+  gem "rspec-snapshot", "~> 2.0"
+  gem "htmlbeautifier", "~> 1.4"
 end
 
 group :development do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
+RSpec.describe BillableMetrics::Aggregations::MaxService do
   subject(:max_service) do
     described_class.new(
       event_store_class:,

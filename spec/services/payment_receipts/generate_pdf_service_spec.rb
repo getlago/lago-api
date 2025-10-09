@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
+RSpec.describe PaymentReceipts::GeneratePdfService do
   subject(:payment_receipt_generate_service) { described_class.new(payment_receipt:, context:) }
 
   let(:context) { "graphql" }

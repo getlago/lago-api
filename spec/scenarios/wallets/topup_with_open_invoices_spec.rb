@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Wallet Transaction with invoice after payment", :scenarios, type: :request do
+describe "Wallet Transaction with invoice after payment" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
@@ -10,25 +10,22 @@ describe "Wallet Transaction with invoice after payment", :scenarios, type: :req
 
   context "when the wallet does not require successful payment before invoicing" do
     it "allows wallet transaction to require successful payment" do
-      create_wallet({
+      wallet = create_wallet({
         external_customer_id: customer.external_id,
         rate_amount: "1",
         name: "Wallet1",
         currency: "EUR",
         granted_credits: "10",
         invoice_requires_successful_payment: false # default
-      })
-
-      wallet = customer.wallets.sole
+      }, as: :model)
 
       expect(wallet.credits_balance).to eq 10
 
-      create_wallet_transaction({
+      wt = create_wallet_transaction({
         wallet_id: wallet.id,
         paid_credits: "15",
         invoice_requires_successful_payment: true
-      })
-      wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
+      }, as: :model).first
 
       expect(wt.status).to eq "pending"
       expect(wt.transaction_status).to eq "purchased"
@@ -83,22 +80,20 @@ describe "Wallet Transaction with invoice after payment", :scenarios, type: :req
             )
           )
 
-        create_wallet({
+        wallet = create_wallet({
           external_customer_id: customer.external_id,
           rate_amount: "1",
           name: "Wallet1",
           currency: "EUR",
           granted_credits: "10",
           invoice_requires_successful_payment: false # default
-        })
-        wallet = customer.wallets.sole
+        }, as: :model)
 
-        create_wallet_transaction({
+        wt = create_wallet_transaction({
           wallet_id: wallet.id,
           paid_credits: "15",
           invoice_requires_successful_payment: true
-        })
-        wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
+        }, as: :model).first
 
         # Customer does not have a payment_provider set yet
         invoice = customer.invoices.credit.sole

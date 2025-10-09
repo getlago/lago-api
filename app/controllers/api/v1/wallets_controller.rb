@@ -3,6 +3,8 @@
 module Api
   module V1
     class WalletsController < Api::BaseController
+      include WalletIndex
+
       def create
         result = Wallets::CreateService.call(
           params: input_params
@@ -52,28 +54,10 @@ module Api
       end
 
       def index
-        result = WalletsQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: {external_customer_id: params[:external_customer_id]}
-        )
+        permitted_params = params.permit(:external_customer_id)
+        external_customer_id = permitted_params[:external_customer_id]
 
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.wallets.includes(:recurring_transaction_rules),
-              ::V1::WalletSerializer,
-              collection_name: "wallets",
-              meta: pagination_metadata(result.wallets),
-              includes: %i[recurring_transaction_rules limitations]
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        wallet_index(external_customer_id:)
       end
 
       private
@@ -87,6 +71,10 @@ module Api
           :granted_credits,
           :expiration_at,
           :invoice_requires_successful_payment,
+          :paid_top_up_min_amount_cents,
+          :paid_top_up_max_amount_cents,
+          :ignore_paid_top_up_limits_on_creation,
+          :transaction_name,
           transaction_metadata: [
             :key,
             :value
@@ -102,6 +90,8 @@ module Api
             :threshold_credits,
             :trigger,
             :invoice_requires_successful_payment,
+            :ignore_paid_top_up_limits,
+            :transaction_name,
             transaction_metadata: [
               :key,
               :value
@@ -123,6 +113,8 @@ module Api
           :name,
           :expiration_at,
           :invoice_requires_successful_payment,
+          :paid_top_up_min_amount_cents,
+          :paid_top_up_max_amount_cents,
           recurring_transaction_rules: [
             :lago_id,
             :interval,
@@ -135,6 +127,8 @@ module Api
             :paid_credits,
             :granted_credits,
             :invoice_requires_successful_payment,
+            :ignore_paid_top_up_limits,
+            :transaction_name,
             transaction_metadata: [
               :key,
               :value

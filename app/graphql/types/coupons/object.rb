@@ -43,6 +43,10 @@ module Types
       def applied_coupons_count
         object.applied_coupons.count
       end
+
+      def plans
+        object.plans.parents
+      end
     end
   end
 end

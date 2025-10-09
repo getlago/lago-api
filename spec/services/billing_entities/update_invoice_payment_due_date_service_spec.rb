@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::UpdateInvoicePaymentDueDateService, type: :service do
+RSpec.describe BillingEntities::UpdateInvoicePaymentDueDateService do
   subject(:update_service) { described_class.new(billing_entity:, net_payment_term:) }
 
   let(:billing_entity) { create(:billing_entity) }

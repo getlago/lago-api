@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
+RSpec.describe Resolvers::CreditNotesResolver do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

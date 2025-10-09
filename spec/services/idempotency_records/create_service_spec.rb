@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IdempotencyRecords::CreateService, type: :service do
+RSpec.describe IdempotencyRecords::CreateService do
   subject(:result) { described_class.call(idempotency_key:, resource:) }
 
   let(:idempotency_key) { SecureRandom.uuid }

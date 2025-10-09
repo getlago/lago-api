@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::CreateJob, type: :job do
+RSpec.describe IntegrationCustomers::CreateJob do
   subject(:create_job) { described_class }
 
   let(:create_service) { instance_double(IntegrationCustomers::CreateService) }

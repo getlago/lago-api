@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CouponsResolver, type: :graphql do
+RSpec.describe Resolvers::CouponsResolver do
   let(:required_permission) { "coupons:view" }
   let(:query) do
     <<~GQL

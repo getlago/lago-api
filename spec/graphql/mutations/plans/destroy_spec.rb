@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Plans::Destroy, type: :graphql do
+RSpec.describe Mutations::Plans::Destroy do
   subject(:graphql_request) do
     execute_graphql(
       current_user: membership.user,

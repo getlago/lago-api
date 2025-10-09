@@ -2,15 +2,18 @@
 
 require "rails_helper"
 
-RSpec.describe Tax, type: :model do
+RSpec.describe Tax do
   subject(:tax) { create(:tax, applied_to_organization:) }
 
+  let(:organization) { tax.organization }
   let(:applied_to_organization) { false }
 
   it { is_expected.to belong_to(:organization) }
 
   it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
+
+  it { expect(described_class).to be_soft_deletable }
 
   it_behaves_like "paper_trail traceable"
 
@@ -60,6 +63,53 @@ RSpec.describe Tax, type: :model do
 
       it "returns correct number of customers" do
         expect(tax.customers_count).to eq(3)
+      end
+    end
+  end
+
+  describe "#destroy" do
+    subject { tax.destroy! }
+
+    let(:tax) { create(:tax) }
+
+    context "when associated to applied_taxes" do
+      context "with invoices and fees" do
+        let(:invoice_status) { :finalized }
+        let(:invoice) { create(:invoice, status: invoice_status) }
+        let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax:) }
+        let(:fee) { create(:fee, invoice:) }
+        let(:fee_applied_tax) { create(:fee_applied_tax, fee:, tax:) }
+
+        before do
+          invoice_applied_tax
+          fee_applied_tax
+        end
+
+        context "when invoice finalized" do
+          it "does not remove applied taxes" do
+            subject
+
+            expect(invoice.applied_taxes).to eq([invoice_applied_tax])
+            expect(invoice_applied_tax.reload.tax).to be_nil
+
+            expect(fee.applied_taxes).to eq([fee_applied_tax])
+            expect(fee_applied_tax.reload.tax).to be_nil
+          end
+        end
+
+        context "when invoice draft" do
+          let(:invoice_status) { :draft }
+
+          it "does remove applied taxes" do
+            subject
+
+            expect(invoice.applied_taxes).to be_empty
+            expect { invoice_applied_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+
+            expect(fee.applied_taxes).to be_empty
+            expect { fee_applied_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+          end
+        end
       end
     end
   end

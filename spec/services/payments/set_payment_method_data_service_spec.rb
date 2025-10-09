@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payments::SetPaymentMethodDataService, type: :service do
+RSpec.describe Payments::SetPaymentMethodDataService do
   subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
   let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }

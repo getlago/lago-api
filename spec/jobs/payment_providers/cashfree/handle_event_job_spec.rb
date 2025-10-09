@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Cashfree::HandleEventJob, type: :job do
+RSpec.describe PaymentProviders::Cashfree::HandleEventJob do
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
 

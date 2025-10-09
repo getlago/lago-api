@@ -2,12 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
+RSpec.describe Resolvers::InvoiceCustomSectionResolver do
   let(:query) do
     <<~GQL
       query($invoiceCustomSectionId: ID!) {
         invoiceCustomSection(id: $invoiceCustomSectionId) {
-          id code name description details displayName selected
+          id code name description details displayName
         }
       }
     GQL
@@ -33,8 +33,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
       "name" => invoice_custom_section.name,
       "description" => invoice_custom_section.description,
       "details" => invoice_custom_section.details,
-      "displayName" => invoice_custom_section.display_name,
-      "selected" => false
+      "displayName" => invoice_custom_section.display_name
     )
   end
 

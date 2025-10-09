@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::WebhookResolver, type: :graphql do
+RSpec.describe Resolvers::WebhookResolver do
   let(:required_permission) { "developers:manage" }
   let(:query) do
     <<~GQL

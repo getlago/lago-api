@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::DestroyFeature, type: :graphql do
+RSpec.describe Mutations::Entitlement::DestroyFeature do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:delete" }

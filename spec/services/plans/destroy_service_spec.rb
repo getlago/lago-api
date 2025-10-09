@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::DestroyService, type: :service do
+RSpec.describe Plans::DestroyService do
   subject(:destroy_service) { described_class.new(plan:) }
 
   let(:membership) { create(:membership) }

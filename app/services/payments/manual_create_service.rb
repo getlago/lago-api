@@ -71,11 +71,12 @@ module Payments
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result if invoice.invoice_type == "advance_charges"
       return result.forbidden_failure! if !License.premium?
+      return result.forbidden_failure! unless invoice.allow_manual_payment?
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
     end
 
     def valid_paid_at?
-      params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at])
+      params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at], format: :any)
     end
   end
 end

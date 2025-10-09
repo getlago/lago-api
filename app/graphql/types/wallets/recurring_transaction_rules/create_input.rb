@@ -8,6 +8,7 @@ module Types
 
         argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
         argument :granted_credits, String, required: false
+        argument :ignore_paid_top_up_limits, Boolean, required: false
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false
         argument :invoice_requires_successful_payment, Boolean, required: false
         argument :method, Types::Wallets::RecurringTransactionRules::MethodEnum, required: false
@@ -16,6 +17,7 @@ module Types
         argument :target_ongoing_balance, String, required: false
         argument :threshold_credits, String, required: false
         argument :transaction_metadata, [Types::Wallets::RecurringTransactionRules::TransactionMetadataInput], required: false
+        argument :transaction_name, String, required: false
         argument :trigger, Types::Wallets::RecurringTransactionRules::TriggerEnum, required: true
       end
     end

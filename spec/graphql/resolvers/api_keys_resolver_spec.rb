@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
+RSpec.describe Resolvers::ApiKeysResolver do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
+RSpec.describe Invoices::PreviewService, cache: :memory do
   subject(:preview_service) { described_class.new(customer:, subscriptions:) }
 
   describe "#call" do
@@ -643,6 +643,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 expect(result).to be_success
                 expect(result.invoice.subscriptions.size).to eq(2)
                 expect(result.invoice.credits.length).to eq(1)
+                # precise_amount 6.45161 + precise_taxes_amount_cents 3.225805 = 9.677415 ajusted(9)
                 expect(result.invoice.credits.first.amount_cents).to eq(9)
                 expect(result.invoice.fees.length).to eq(1)
                 expect(result.invoice.invoice_type).to eq("subscription")

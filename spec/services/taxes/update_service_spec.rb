@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::UpdateService, type: :service do
+RSpec.describe Taxes::UpdateService do
   subject(:update_service) { described_class.new(tax:, params:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::CreateService, type: :service do
+RSpec.describe WalletTransactions::CreateService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency:) }
   let(:currency) { "EUR" }
@@ -71,7 +71,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
           settled_at: Date.yesterday,
           credit_note_id: credit_note.id,
           invoice_id: invoice.id,
-          priority: 25
+          priority: 25,
+          name: "Custom Transaction Name"
         }
       end
 
@@ -93,6 +94,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         expect(wallet_transaction.invoice_id).to eq(invoice.id)
         expect(wallet_transaction.credit_amount).to eq(credit_amount)
         expect(wallet_transaction.priority).to eq 25
+        expect(wallet_transaction.name).to eq("Custom Transaction Name")
       end
     end
   end

@@ -11,8 +11,10 @@ Rails.application.configure do
     "Cache-Control" => "public, max-age=#{1.hour.to_i}"
   }
 
-  config.logger = Logger.new(nil)
-  config.log_level = :fatal
+  if ENV["CI"].present?
+    config.logger = Logger.new(nil)
+    config.log_level = :fatal
+  end
 
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
@@ -55,4 +57,9 @@ Rails.application.configure do
 
   # Set default API URL for test environment
   ENV["LAGO_API_URL"] ||= "http://localhost:3000"
+
+  config.after_initialize do
+    Bullet.bullet_logger = true
+    Bullet.raise = true # raise an error if n+1 query occurs
+  end
 end

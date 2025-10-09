@@ -46,62 +46,49 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
   end
 
   describe "GET /api/v1/payments" do
-    subject { get_with_token(organization, "/api/v1/payments", params) }
+    it_behaves_like "a payment index endpoint" do
+      subject { get_with_token(organization, "/api/v1/payments", params) }
 
-    let(:params) { {} }
+      context "with external customer id" do
+        let(:params) { {external_customer_id: customer.external_id} }
 
-    include_examples "requires API permission", "payment", "read"
+        let(:invoice_1) { create(:invoice, organization:, customer:) }
+        let(:invoice_2) { create(:invoice, organization:, customer: create(:customer, organization:)) }
+        let(:payment_1) { create(:payment, organization:, payable: invoice_1) }
+        let(:payment_2) { create(:payment, organization:, payable: invoice_2) }
 
-    it "returns organization's payments", :aggregate_failures do
-      invoice = create(:invoice, organization:)
-      invoice2 = create(:invoice, organization:)
-      payment_request = create(:payment_request, organization:)
-      first_payment = create(:payment, payable: invoice)
-      second_payment = create(:payment, payable: invoice2)
-      third_payment = create(:payment, payable: payment_request)
+        before do
+          payment_1
+          payment_2
+        end
 
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(json[:payments].count).to eq(3)
-      expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(
-        first_payment.id,
-        second_payment.id,
-        third_payment.id
-      )
-    end
-
-    context "with a not found invoice", :aggregate_failures do
-      let(:params) { {invoice_id: SecureRandom.uuid} }
-
-      before do
-        invoice = create(:invoice, organization:)
-        create(:payment, payable: invoice)
-      end
-
-      it "returns an empty result" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:payments]).to be_empty
-      end
-    end
-
-    context "with invoice" do
-      let(:invoice) { create(:invoice, organization:) }
-      let(:params) { {invoice_id: invoice.id} }
-      let(:first_payment) { create(:payment, payable: invoice) }
-
-      before do
-        first_payment
-        create(:payment)
-      end
-
-      it "returns invoices's payments", :aggregate_failures do
-        subject
-        expect(response).to have_http_status(:success)
-        expect(json[:payments].map { |r| r[:lago_id] }).to contain_exactly(first_payment.id)
-        expect(json[:payments].first[:invoice_ids].first).to eq(invoice.id)
+        it "returns the payments of the customer" do
+          subject
+          expect(response).to have_http_status(:ok)
+          expect(json[:payments].count).to eq(1)
+          expect(json[:payments].first[:lago_id]).to eq(payment_1.id)
+          expect(json[:payments].first.keys).to eq(%i[
+            lago_id
+            lago_customer_id
+            external_customer_id
+            invoice_ids
+            lago_payable_id
+            payable_type
+            amount_cents
+            amount_currency
+            status
+            payment_status
+            type
+            reference
+            payment_provider_code
+            payment_provider_type
+            external_payment_id
+            provider_payment_id
+            provider_customer_id
+            next_action
+            created_at
+          ])
+        end
       end
     end
   end
@@ -123,6 +110,27 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
         expect(json[:payment][:invoice_ids].first).to eq(invoice.id)
+        expect(json[:payment].keys).to eq(%i[
+          lago_id
+          lago_customer_id
+          external_customer_id
+          invoice_ids
+          lago_payable_id
+          payable_type
+          amount_cents
+          amount_currency
+          status
+          payment_status
+          type
+          reference
+          payment_provider_code
+          payment_provider_type
+          external_payment_id
+          provider_payment_id
+          provider_customer_id
+          next_action
+          created_at
+        ])
       end
     end
 

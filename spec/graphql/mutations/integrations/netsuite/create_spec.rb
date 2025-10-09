@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
+RSpec.describe Mutations::Integrations::Netsuite::Create do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "netsuite1" }

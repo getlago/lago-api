@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscription Downgrade Scenario", :scenarios, type: :request, transaction: false do
+describe "Subscription Downgrade Scenario", transaction: false do
   let(:organization) { create(:organization, webhook_url: false) }
 
   let(:customer) { create(:customer, organization:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
+RSpec.describe Mutations::Invoices::RegenerateFromVoided do
   let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

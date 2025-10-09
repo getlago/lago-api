@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntity::AppliedInvoiceCustomSection, type: :model do
+RSpec.describe BillingEntity::AppliedInvoiceCustomSection do
   subject(:applied_invoice_custom_section) do
     create(:billing_entity_applied_invoice_custom_section)
   end

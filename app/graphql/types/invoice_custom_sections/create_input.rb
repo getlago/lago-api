@@ -10,8 +10,6 @@ module Types
       argument :details, String, required: false
       argument :display_name, String, required: false
       argument :name, String, required: true
-
-      argument :selected, Boolean, required: false
     end
   end
 end

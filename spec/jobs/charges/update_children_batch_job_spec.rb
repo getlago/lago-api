@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::UpdateChildrenBatchJob, type: :job do
+RSpec.describe Charges::UpdateChildrenBatchJob do
   let(:charge) { create(:standard_charge) }
   let(:child_charge) { create(:standard_charge, parent_id: charge.id) }
   let(:child_charge2) { create(:standard_charge, parent_id: charge.id) }

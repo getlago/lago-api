@@ -44,7 +44,7 @@ module Credits
             before_taxes: true
           )
 
-          apply_credit_to_fees(credit, total_charges_amount)
+          apply_credit_to_fees(progressive_billing_invoice)
 
           invoice.sub_total_excluding_taxes_amount_cents -= credit.amount_cents
           invoice.progressive_billing_credit_amount_cents += credit.amount_cents
@@ -58,16 +58,17 @@ module Credits
 
     attr_reader :invoice
 
-    def apply_credit_to_fees(credit, total_charges_amount)
-      base_amount = total_charges_amount - invoice.progressive_billing_credit_amount_cents
+    def apply_credit_to_fees(progressive_billing_invoice)
+      invoice_fees = invoice.fees.charge.to_a
+      progressive_billing_invoice.fees.charge.each do |progressive_fee|
+        fee = invoice_fees.find { |f|
+          f.charge_id == progressive_fee.charge_id &&
+            f.charge_filter_id == progressive_fee.charge_filter_id &&
+            f.grouped_by == progressive_fee.grouped_by
+        }
+        next unless fee
 
-      invoice.fees.charge.reload.each do |fee|
-        if base_amount.positive?
-          fee.precise_coupons_amount_cents += (
-            credit.amount_cents * (fee.amount_cents - fee.precise_coupons_amount_cents)
-          ).fdiv(base_amount)
-        end
-
+        fee.precise_coupons_amount_cents += progressive_fee.amount_cents
         fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
         fee.save!
       end

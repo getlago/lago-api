@@ -151,9 +151,7 @@ module Fees
 
     def from_datetime(fee)
       if fee[:from_datetime].is_a?(String)
-        fee[:from_datetime].include?(".") ?
-          DateTime.strptime(fee[:from_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
-          DateTime.strptime(fee[:from_datetime])
+        DateTime.iso8601(fee[:from_datetime])
       else
         fee[:from_datetime] || Time.current
       end
@@ -161,9 +159,7 @@ module Fees
 
     def to_datetime(fee)
       if fee[:to_datetime].is_a?(String)
-        fee[:to_datetime].include?(".") ?
-          DateTime.strptime(fee[:to_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
-          DateTime.strptime(fee[:to_datetime])
+        DateTime.iso8601(fee[:to_datetime])
       else
         fee[:to_datetime] || Time.current
       end

@@ -16,8 +16,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.issuing_date = today_in_tz
         invoice.payment_due_date = today_in_tz
-        invoice.status = :finalized
-        invoice.save!
+        Invoices::FinalizeService.call!(invoice: invoice)
       end
 
       SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice)

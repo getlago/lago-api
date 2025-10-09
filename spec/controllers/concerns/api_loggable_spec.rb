@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiLoggable, type: :controller do
+RSpec.describe ApiLoggable do
   # rubocop:disable RSpec/DescribedClass
   controller(ApplicationController) do
     include ApiLoggable

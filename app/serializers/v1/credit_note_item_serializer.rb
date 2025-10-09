@@ -6,6 +6,7 @@ module V1
       {
         lago_id: model.id,
         amount_cents: model.amount_cents,
+        precise_amount_cents: model.precise_amount_cents&.to_s,
         amount_currency: model.amount_currency,
         fee:
       }

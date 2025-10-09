@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
+RSpec.describe Mutations::UsageMonitoring::Alerts::Create do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

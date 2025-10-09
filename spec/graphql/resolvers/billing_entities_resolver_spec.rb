@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::BillingEntitiesResolver, type: :graphql do
+RSpec.describe Resolvers::BillingEntitiesResolver do
   let(:required_permission) { "billing_entities:view" }
   let(:query) do
     <<~GQL

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Spending Minimum Scenarios", :scenarios, type: :request do
+describe "Spending Minimum Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
@@ -93,7 +93,12 @@ describe "Spending Minimum Scenarios", :scenarios, type: :request do
 
         credit_note = last_invoice.credit_notes.first
         expect(credit_note).to be_draft
-        expect(credit_note.reload.total_amount_cents).to eq(643)
+        expect(credit_note.reload).to have_attributes(
+          sub_total_excluding_taxes_amount_cents: 536,
+          credit_amount_cents: 643,
+          taxes_amount_cents: 107,
+          total_amount_cents: 643
+        )
 
         # Refresh termination invoice
         expect {

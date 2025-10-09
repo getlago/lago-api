@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Recurring Fees Subscription Downgrade", :scenarios, type: :request do
+describe "Recurring Fees Subscription Downgrade" do
   let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: "seats") }

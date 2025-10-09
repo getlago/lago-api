@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AddOns::CreateService, type: :service do
+RSpec.describe AddOns::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
   let(:membership) { create(:membership) }

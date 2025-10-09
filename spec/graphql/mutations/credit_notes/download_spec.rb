@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CreditNotes::Download, type: :graphql do
+RSpec.describe Mutations::CreditNotes::Download do
   let(:required_permission) { "credit_notes:view" }
   let(:credit_note) { create(:credit_note) }
   let(:organization) { credit_note.organization }

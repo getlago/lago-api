@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
+RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
   let(:charge) { create(:standard_charge, :pay_in_advance, invoiceable: true) }
   let(:event) { create(:event) }
   let(:timestamp) { Time.current.to_i }

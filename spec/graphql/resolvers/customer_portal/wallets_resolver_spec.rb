@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CustomerPortal::WalletsResolver, type: :graphql do
+RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
   let(:query) do
     <<~GQL
       query {
@@ -11,6 +11,8 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver, type: :graphql do
             id
             name
             currency
+            paidTopUpMinAmountCents
+            paidTopUpMinCredits
           }
         }
       }
@@ -20,7 +22,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:wallet) { create(:wallet, organization:, customer:) }
+  let(:wallet) { create(:wallet, organization:, customer:, paid_top_up_min_amount_cents: 10_00) }
 
   before do
     wallet
@@ -37,11 +39,14 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver, type: :graphql do
     )
 
     wallets_response = result["data"]["customerPortalWallets"]
-
     expect(wallets_response["collection"].count).to eq(customer.wallets.active.count)
-    expect(wallets_response["collection"].first["id"]).to eq(wallet.id)
-    expect(wallets_response["collection"].first["name"]).to eq(wallet.name)
-    expect(wallets_response["collection"].first["currency"]).to eq(wallet.currency)
+
+    wallet_item = wallets_response["collection"].sole
+    expect(wallet_item["id"]).to eq(wallet.id)
+    expect(wallet_item["name"]).to eq(wallet.name)
+    expect(wallet_item["currency"]).to eq(wallet.currency)
+    expect(wallet_item["paidTopUpMinAmountCents"]).to eq("1000")
+    expect(wallet_item["paidTopUpMinCredits"]).to eq("10")
   end
 
   context "without customer portal user" do

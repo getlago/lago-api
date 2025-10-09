@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceipt, type: :model do
+RSpec.describe PaymentReceipt do
   subject(:payment_receipt) { build(:payment_receipt) }
 
   it do

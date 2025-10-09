@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plan, type: :model do
+RSpec.describe Plan do
   subject(:plan) { build(:plan, trial_period: 3) }
 
   it { expect(described_class).to be_soft_deletable }
@@ -27,8 +27,7 @@ RSpec.describe Plan, type: :model do
     expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
     expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
 
-    expect(subject).to validate_presence_of(:interval)
-    expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS)
+    expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS).validating
   end
 
   describe "Clickhouse associations", clickhouse: true do
@@ -61,29 +60,311 @@ RSpec.describe Plan, type: :model do
     end
   end
 
-  describe "#yearly_amount_cents" do
-    let(:plan) do
-      build(:plan, interval: :yearly, amount_cents: 100)
+  describe "#charges_billed_in_monthly_split_intervals?" do
+    subject(:method_call) { plan.charges_billed_in_monthly_split_intervals? }
+
+    let(:plan) { build_stubbed(:plan, interval:, bill_charges_monthly:) }
+
+    context "when interval is yearly" do
+      let(:interval) { :yearly }
+
+      context "when bill charges monthly is true" do
+        let(:bill_charges_monthly) { true }
+
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+
+      context "when bill charges monthly is false" do
+        let(:bill_charges_monthly) { false }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is nil" do
+        let(:bill_charges_monthly) { nil }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
     end
 
-    it { expect(plan.yearly_amount_cents).to eq(100) }
+    context "when interval is semiannual" do
+      let(:interval) { :semiannual }
+
+      context "when bill charges monthly is true" do
+        let(:bill_charges_monthly) { true }
+
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+
+      context "when bill charges monthly is false" do
+        let(:bill_charges_monthly) { false }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is nil" do
+        let(:bill_charges_monthly) { nil }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when interval is quarterly" do
+      let(:interval) { :quarterly }
+
+      context "when bill charges monthly is true" do
+        let(:bill_charges_monthly) { true }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is false" do
+        let(:bill_charges_monthly) { false }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is nil" do
+        let(:bill_charges_monthly) { nil }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when interval is monthly" do
+      let(:interval) { :monthly }
+
+      context "when bill charges monthly is true" do
+        let(:bill_charges_monthly) { true }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is false" do
+        let(:bill_charges_monthly) { false }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is nil" do
+        let(:bill_charges_monthly) { nil }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when interval is weekly" do
+      let(:interval) { :weekly }
+
+      context "when bill charges monthly is true" do
+        let(:bill_charges_monthly) { true }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is false" do
+        let(:bill_charges_monthly) { false }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when bill charges monthly is nil" do
+        let(:bill_charges_monthly) { nil }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+  end
+
+  describe "#fixed_charges_billed_in_monthly_split_intervals?" do
+    subject(:method_call) { plan.fixed_charges_billed_in_monthly_split_intervals? }
+
+    let(:plan) { build_stubbed(:plan, interval:, bill_fixed_charges_monthly:) }
+
+    context "when interval is yearly" do
+      let(:interval) { :yearly }
+
+      context "when bill fixed charges monthly is true" do
+        let(:bill_fixed_charges_monthly) { true }
+
+        it { is_expected.to be true }
+      end
+
+      context "when bill fixed charges monthly is false" do
+        let(:bill_fixed_charges_monthly) { false }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is nil" do
+        let(:bill_fixed_charges_monthly) { nil }
+
+        it { is_expected.to be false }
+      end
+    end
+
+    context "when interval is semiannual" do
+      let(:interval) { :semiannual }
+
+      context "when bill fixed charges monthly is true" do
+        let(:bill_fixed_charges_monthly) { true }
+
+        it { is_expected.to be true }
+      end
+
+      context "when bill fixed charges monthly is false" do
+        let(:bill_fixed_charges_monthly) { false }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is nil" do
+        let(:bill_fixed_charges_monthly) { nil }
+
+        it { is_expected.to be false }
+      end
+    end
+
+    context "when interval is quarterly" do
+      let(:interval) { :quarterly }
+
+      context "when bill fixed charges monthly is true" do
+        let(:bill_fixed_charges_monthly) { true }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is false" do
+        let(:bill_fixed_charges_monthly) { false }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is nil" do
+        let(:bill_fixed_charges_monthly) { nil }
+
+        it { is_expected.to be false }
+      end
+    end
+
+    context "when interval is monthly" do
+      let(:interval) { :monthly }
+
+      context "when bill fixed charges monthly is true" do
+        let(:bill_fixed_charges_monthly) { true }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is false" do
+        let(:bill_fixed_charges_monthly) { false }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is nil" do
+        let(:bill_fixed_charges_monthly) { nil }
+
+        it { is_expected.to be false }
+      end
+    end
+
+    context "when interval is weekly" do
+      let(:interval) { :weekly }
+
+      context "when bill fixed charges monthly is true" do
+        let(:bill_fixed_charges_monthly) { true }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is false" do
+        let(:bill_fixed_charges_monthly) { false }
+
+        it { is_expected.to be false }
+      end
+
+      context "when bill fixed charges monthly is nil" do
+        let(:bill_fixed_charges_monthly) { nil }
+
+        it { is_expected.to be false }
+      end
+    end
+  end
+
+  describe "#yearly_amount_cents" do
+    subject(:method_call) { plan.yearly_amount_cents }
+
+    let(:plan) { build_stubbed(:plan, interval:, amount_cents: 100) }
+
+    context "when plan is yearly" do
+      let(:interval) { :yearly }
+
+      it "returns the correct amount" do
+        expect(subject).to eq(100)
+      end
+    end
 
     context "when plan is monthly" do
-      before { plan.interval = "monthly" }
+      let(:interval) { :monthly }
 
-      it { expect(plan.yearly_amount_cents).to eq(1200) }
+      it "returns the correct amount" do
+        expect(subject).to eq(1200)
+      end
     end
 
     context "when plan is weekly" do
-      before { plan.interval = "weekly" }
+      let(:interval) { :weekly }
 
-      it { expect(plan.yearly_amount_cents).to eq(5200) }
+      it "returns the correct amount" do
+        expect(subject).to eq(5200)
+      end
     end
 
     context "when plan is quarterly" do
-      before { plan.interval = "quarterly" }
+      let(:interval) { :quarterly }
 
-      it { expect(plan.yearly_amount_cents).to eq(400) }
+      it "returns the correct amount" do
+        expect(subject).to eq(400)
+      end
+    end
+
+    context "when plan is semiannual" do
+      let(:interval) { :semiannual }
+
+      it "returns the correct amount" do
+        expect(subject).to eq(200)
+      end
     end
   end
 

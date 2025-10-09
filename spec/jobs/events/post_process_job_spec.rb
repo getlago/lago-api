@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::PostProcessJob, type: :job do
+RSpec.describe Events::PostProcessJob do
   let(:process_service) { instance_double(Events::PostProcessService) }
   let(:result) { BaseService::Result.new }
 

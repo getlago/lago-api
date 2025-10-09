@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::MoneyhashService, type: :service do
+RSpec.describe PaymentProviders::MoneyhashService do
   let(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
   let(:customer) { create(:customer, organization:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::ValidateIncomingWebhookService, type: :service do
+RSpec.describe PaymentProviders::Stripe::ValidateIncomingWebhookService do
   subject(:result) do
     described_class.call(payload:, signature:, payment_provider:)
   end

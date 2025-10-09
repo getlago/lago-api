@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Validators::MetadataValidator, type: :validator do
+RSpec.describe Validators::MetadataValidator do
   subject(:metadata_validator) { described_class.new(metadata) }
 
   let(:max_keys) { Validators::MetadataValidator::DEFAULT_CONFIG[:max_keys] }

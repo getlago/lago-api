@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::AdyenProvider, type: :model do
+RSpec.describe PaymentProviders::AdyenProvider do
   subject(:provider) { build(:adyen_provider) }
 
   it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }

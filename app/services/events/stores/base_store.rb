@@ -13,6 +13,8 @@ module Events
         @grouped_by = filters[:grouped_by]
         @grouped_by_values = filters[:grouped_by_values]
 
+        @charge_id = filters[:charge_id]
+        @charge_filter_id = filters[:charge_filter]&.id
         @matching_filters = filters[:matching_filters] || {}
         @ignored_filters = filters[:ignored_filters] || []
 
@@ -124,12 +126,20 @@ module Events
         boundaries[:charges_duration]
       end
 
+      def applicable_to_datetime
+        boundaries[:max_timestamp] || to_datetime
+      end
+
       def sanitize_colon(query)
         # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
         query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
       end
 
-      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by
+      def timezone
+        @timezone ||= customer.applicable_timezone
+      end
+
+      attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
       protected
 

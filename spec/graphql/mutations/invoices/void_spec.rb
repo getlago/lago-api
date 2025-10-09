@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Invoices::Void, type: :graphql do
+RSpec.describe Mutations::Invoices::Void do
   let(:required_permission) { "invoices:void" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false, clickhouse: true do
+RSpec.describe Resolvers::EventsResolver, transaction: false, clickhouse: true do
   let(:query) do
     <<~GQL
       query($page: Int) {
@@ -179,48 +179,6 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false, cl
       expect(events_response["collection"].first["billableMetricName"]).to eq(billable_metric.name)
       expect(events_response["collection"].first["matchBillableMetric"]).to be_truthy
       expect(events_response["collection"].first["matchCustomField"]).to be_truthy
-    end
-
-    context "with duplicated transaction_id" do
-      let(:event2) do
-        Clickhouse::EventsRaw.create!(
-          transaction_id: event.transaction_id,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: billable_metric.code,
-          timestamp: event.timestamp,
-          properties: {},
-          precise_total_amount_cents: 10,
-          ingested_at: 1.day.ago
-        )
-      end
-
-      before { event2 }
-
-      it "returns a list of events" do
-        result = execute_graphql(
-          current_user: user,
-          current_organization: organization,
-          query:
-        )
-
-        events_response = result["data"]["events"]
-
-        expect(events_response["collection"].count).to eq(Clickhouse::EventsRaw.where(organization_id: organization.id).count - 1)
-        expect(events_response["collection"].first["id"]).to eq(event2.id)
-        expect(events_response["collection"].first["code"]).to eq(event.code)
-        expect(events_response["collection"].first["externalSubscriptionId"]).to eq(subscription.external_id)
-        expect(events_response["collection"].first["transactionId"]).to eq(event.transaction_id)
-        expect(events_response["collection"].first["timestamp"]).to eq(event.timestamp.iso8601)
-        expect(events_response["collection"].first["receivedAt"]).to eq(event2.created_at.iso8601)
-        expect(events_response["collection"].first["customerTimezone"]).to eq("TZ_UTC")
-        expect(events_response["collection"].first["ipAddress"]).to be_nil
-        expect(events_response["collection"].first["apiClient"]).to be_nil
-        expect(events_response["collection"].first["payload"]).to be_present
-        expect(events_response["collection"].first["billableMetricName"]).to eq(billable_metric.name)
-        expect(events_response["collection"].first["matchBillableMetric"]).to be_truthy
-        expect(events_response["collection"].first["matchCustomField"]).to be_truthy
-      end
     end
 
     context "when querying an empty page" do

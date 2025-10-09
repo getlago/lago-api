@@ -32,8 +32,10 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
           name: "New Feature",
           description: "A new feature",
           privileges: [
-            {code: "priv1", value_type: "boolean"},
-            {code: "priv2", name: "Maximum", value_type: "boolean"}
+            {code: "priv1", value_type: "string"},
+            {code: "priv2", name: "Maximum", value_type: "integer"},
+            {code: "priv3", value_type: "boolean"},
+            {code: "priv4", name: "SELECT", value_type: "select", config: {select_options: %w[a b c]}}
           ]
         }
       }
@@ -43,15 +45,17 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
 
     it "creates a new feature with privileges" do
       expect { subject }.to change(organization.features, :count).by(1)
-        .and change(organization.privileges, :count).by(2)
+        .and change(organization.privileges, :count).by(4)
 
       expect(response).to have_http_status(:success)
       expect(json[:feature][:code]).to eq("new_feature")
       expect(json[:feature][:name]).to eq("New Feature")
       expect(json[:feature][:description]).to eq("A new feature")
       expect(json[:feature][:privileges]).to contain_exactly(
-        {code: "priv1", name: nil, value_type: "boolean", config: {}},
-        {code: "priv2", name: "Maximum", value_type: "boolean", config: {}}
+        {code: "priv1", name: nil, value_type: "string", config: {}},
+        {code: "priv2", name: "Maximum", value_type: "integer", config: {}},
+        {code: "priv3", name: nil, value_type: "boolean", config: {}},
+        {code: "priv4", name: "SELECT", value_type: "select", config: {select_options: %w[a b c]}}
       )
     end
 
@@ -69,7 +73,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end
@@ -87,7 +91,26 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to include("validation_errors")
+      end
+    end
+
+    context "when feature code is empty string" do
+      let(:params) do
+        {
+          feature: {
+            code: "",
+            name: "New Feature",
+            description: "A new feature"
+          }
+        }
+      end
+
+      it "returns validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to include("validation_errors")
       end
     end
@@ -107,8 +130,30 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       it "returns validation error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:"privilege.value_type"]).to eq ["value_is_invalid"]
+      end
+    end
+
+    context "when privilege code is empty string" do
+      let(:params) do
+        {
+          feature: {
+            code: "test",
+            name: "New Feature",
+            description: "A new feature",
+            privileges: [{
+              code: " "
+            }]
+          }
+        }
+      end
+
+      it "returns validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to include("validation_errors")
       end
     end
 

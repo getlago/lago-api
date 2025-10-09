@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeModels::GraduatedService, type: :service do
+RSpec.describe ChargeModels::GraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
       charge:,
@@ -223,6 +223,25 @@ RSpec.describe ChargeModels::GraduatedService, type: :service do
           ]
         }
       )
+    end
+  end
+
+  context "when charge is a fixed charge" do
+    let(:aggregation) { 21 }
+    let(:charge) do
+      build(:fixed_charge, charge_model: :graduated, properties: {
+        graduated_ranges: [
+          {from_value: 0, to_value: 10, per_unit_amount: "10", flat_amount: "2"},
+          {from_value: 11, to_value: 20, per_unit_amount: "5", flat_amount: "3"},
+          {from_value: 21, to_value: nil, per_unit_amount: "5", flat_amount: "3"}
+        ]
+      })
+    end
+
+    it "applies the charge model to the value" do
+      # 2 + 100 + 3 + 50 + 3 + 5 = 163
+      expect(apply_graduated_service.amount).to eq(163)
+      expect(apply_graduated_service.unit_amount.round(2)).to eq((163 / 21.0).round(2))
     end
   end
 end

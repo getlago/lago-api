@@ -102,7 +102,7 @@ RSpec.describe Fees::OneOffService do
             units: 2,
             description: "desc-123",
             from_datetime: "2022-01-01T00:00:00Z",
-            to_datetime: "2022-01-31T23:59:59Z",
+            to_datetime: "2022-01-31T23:59:59.123Z",
             tax_codes: [tax2.code]
           }
         ]
@@ -132,8 +132,8 @@ RSpec.describe Fees::OneOffService do
             fee_type: "add_on",
             payment_status: "pending",
             properties: {
-              "from_datetime" => DateTime.strptime("2022-01-01T00:00:00Z").iso8601(3),
-              "to_datetime" => DateTime.strptime("2022-01-31T23:59:59Z").iso8601(3),
+              "from_datetime" => "2022-01-01T00:00:00.000+00:00",
+              "to_datetime" => "2022-01-31T23:59:59.123+00:00",
               "timestamp" => current_time
             }
           )

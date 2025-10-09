@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Memberships::UpdateService, type: :service do
+RSpec.describe Memberships::UpdateService do
   let(:membership) { create(:membership, role: "admin") }
   let(:organization) { membership.organization }
   let(:params) { {role: "manager"} }

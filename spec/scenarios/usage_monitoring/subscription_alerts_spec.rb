@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :redis do
+describe "Subscriptions Alerting Scenario", cache: :redis do
   let(:organization) { create(:organization, premium_integrations:) }
   let(:premium_integrations) { [] }
   let(:plan) { create(:plan, organization:, name: "Premium Plan", code: "premium_plan", amount_cents: 49_00) }

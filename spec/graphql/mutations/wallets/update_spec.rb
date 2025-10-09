@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Update, type: :graphql do
+RSpec.describe Mutations::Wallets::Update do
   let(:required_permission) { "wallets:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -22,6 +22,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           status
           expirationAt
           invoiceRequiresSuccessfulPayment
+          paidTopUpMinAmountCents
+          paidTopUpMaxAmountCents
           recurringTransactionRules {
             lagoId
             method
@@ -32,11 +34,13 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
             grantedCredits
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
+            ignorePaidTopUpLimits
             expirationAt
             transactionMetadata {
               key
               value
             }
+            transactionName
           }
           appliesTo {
             feeTypes
@@ -72,6 +76,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           name: "New name",
           expirationAt: expiration_at.iso8601,
           invoiceRequiresSuccessfulPayment: true,
+          paidTopUpMinAmountCents: 1_00,
+          paidTopUpMaxAmountCents: 100_00,
           recurringTransactionRules: [
             {
               lagoId: recurring_transaction_rule.id,
@@ -82,11 +88,13 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               grantedCredits: "22.2",
               targetOngoingBalance: "300",
               invoiceRequiresSuccessfulPayment: true,
+              ignorePaidTopUpLimits: true,
               expirationAt: expiration_at.iso8601,
               transactionMetadata: [
                 {key: "example_key", value: "example_value"},
                 {key: "another_key", value: "another_value"}
-              ]
+              ],
+              transactionName: "Updated Credits Transaction"
             }
           ],
           appliesTo: {
@@ -104,7 +112,9 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "name" => "New name",
       "status" => "active",
       "invoiceRequiresSuccessfulPayment" => true,
-      "expirationAt" => expiration_at.iso8601
+      "expirationAt" => expiration_at.iso8601,
+      "paidTopUpMinAmountCents" => "100",
+      "paidTopUpMaxAmountCents" => "10000"
     )
 
     expect(result_data["recurringTransactionRules"].count).to eq(1)
@@ -112,6 +122,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       {"key" => "example_key", "value" => "example_value"},
       {"key" => "another_key", "value" => "another_value"}
     )
+    expect(result_data["recurringTransactionRules"][0]["transactionName"]).to eq("Updated Credits Transaction")
     expect(result_data["recurringTransactionRules"][0]).to include(
       "lagoId" => recurring_transaction_rule.id,
       "method" => "target",
@@ -120,7 +131,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "paidCredits" => "22.2",
       "grantedCredits" => "22.2",
       "targetOngoingBalance" => "300.0",
-      "invoiceRequiresSuccessfulPayment" => true
+      "invoiceRequiresSuccessfulPayment" => true,
+      "ignorePaidTopUpLimits" => true
     )
     expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)

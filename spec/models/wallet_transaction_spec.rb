@@ -2,9 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransaction, type: :model do
-  it { is_expected.to validate_presence_of(:priority) }
-  it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
+RSpec.describe WalletTransaction do
+  describe "validations" do
+    it { is_expected.to validate_presence_of(:priority) }
+    it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
+    it { is_expected.to validate_length_of(:name).is_at_most(255).is_at_least(1).allow_nil }
+    it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
+  end
 
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }

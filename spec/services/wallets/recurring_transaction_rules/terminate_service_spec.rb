@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::RecurringTransactionRules::TerminateService, type: :service do
+RSpec.describe Wallets::RecurringTransactionRules::TerminateService do
   subject(:terminate_service) { described_class.new(recurring_transaction_rule:) }
 
   let(:membership) { create(:membership) }

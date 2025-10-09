@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :model do
+RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
   subject(:mapping) { build(:netsuite_collection_mapping, settings: {}) }
 
   let(:mapping_types) do

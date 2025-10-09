@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customer::AppliedTax, type: :model do
+RSpec.describe Customer::AppliedTax do
   subject(:applied_tax) { create(:customer_applied_tax) }
 
   it_behaves_like "paper_trail traceable"

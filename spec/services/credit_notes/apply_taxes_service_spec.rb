@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
+RSpec.describe CreditNotes::ApplyTaxesService do
   subject(:apply_service) { described_class.new(invoice:, items:) }
 
   let(:customer) { create(:customer) }
@@ -68,8 +68,8 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
   end
 
   context "when local taxes are applied" do
-    let(:tax1) { create(:tax, organization:, rate: 12) }
-    let(:tax2) { create(:tax, organization:, rate: 8) }
+    let(:tax1) { create(:tax, organization:, code: "tax1", rate: 12) }
+    let(:tax2) { create(:tax, organization:, code: "tax2", rate: 8) }
 
     let(:fee_applied_tax11) do
       create(
@@ -119,40 +119,36 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       it "creates applied taxes" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          aggregate_failures do
-            applied_taxes = result.applied_taxes
-            expect(applied_taxes.count).to eq(2)
+        applied_taxes = result.applied_taxes.sort_by(&:tax_code)
+        expect(applied_taxes.count).to eq(2)
 
-            expect(applied_taxes[0]).to have_attributes(
-              credit_note: nil,
-              tax: tax1,
-              tax_description: tax1.description,
-              tax_code: tax1.code,
-              tax_name: tax1.name,
-              tax_rate: 12,
-              amount_currency: invoice.currency,
-              amount_cents: 7
-            )
+        expect(applied_taxes[0]).to have_attributes(
+          credit_note: nil,
+          tax: tax1,
+          tax_description: tax1.description,
+          tax_code: tax1.code,
+          tax_name: tax1.name,
+          tax_rate: 12,
+          amount_currency: invoice.currency,
+          amount_cents: 7
+        )
 
-            expect(applied_taxes[1]).to have_attributes(
-              credit_note: nil,
-              tax: tax2,
-              tax_description: tax2.description,
-              tax_code: tax2.code,
-              tax_name: tax2.name,
-              tax_rate: 8,
-              amount_currency: invoice.currency,
-              amount_cents: 3
-            )
+        expect(applied_taxes[1]).to have_attributes(
+          credit_note: nil,
+          tax: tax2,
+          tax_description: tax2.description,
+          tax_code: tax2.code,
+          tax_name: tax2.name,
+          tax_rate: 8,
+          amount_currency: invoice.currency,
+          amount_cents: 3
+        )
 
-            expect(result.taxes_amount_cents.round).to eq(10)
-            expect(result.taxes_rate).to eq(17.71429)
-            expect(result.coupons_adjustment_amount_cents.round).to eq(12)
-          end
-        end
+        expect(result.taxes_amount_cents.round).to eq(10)
+        expect(result.taxes_rate).to eq(17.71429)
+        expect(result.coupons_adjustment_amount_cents.round).to eq(12)
       end
     end
   end
@@ -210,40 +206,36 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         it "creates applied taxes" do
           result = apply_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            aggregate_failures do
-              applied_taxes = result.applied_taxes
-              expect(applied_taxes.count).to eq(2)
+          applied_taxes = result.applied_taxes.sort_by(&:tax_code)
+          expect(applied_taxes.count).to eq(2)
 
-              expect(applied_taxes[0]).to have_attributes(
-                credit_note: nil,
-                tax: nil,
-                tax_description: provider_tax_1.type,
-                tax_code: provider_tax_1.code,
-                tax_name: provider_tax_1.name,
-                tax_rate: provider_tax_1.rate,
-                amount_currency: invoice.currency,
-                amount_cents: 7
-              )
+          expect(applied_taxes[0]).to have_attributes(
+            credit_note: nil,
+            tax: nil,
+            tax_description: provider_tax_1.type,
+            tax_code: provider_tax_1.code,
+            tax_name: provider_tax_1.name,
+            tax_rate: provider_tax_1.rate,
+            amount_currency: invoice.currency,
+            amount_cents: 7
+          )
 
-              expect(applied_taxes[1]).to have_attributes(
-                credit_note: nil,
-                tax: nil,
-                tax_description: provider_tax_2.type,
-                tax_code: provider_tax_2.code,
-                tax_name: provider_tax_2.name,
-                tax_rate: provider_tax_2.rate,
-                amount_currency: invoice.currency,
-                amount_cents: 3
-              )
+          expect(applied_taxes[1]).to have_attributes(
+            credit_note: nil,
+            tax: nil,
+            tax_description: provider_tax_2.type,
+            tax_code: provider_tax_2.code,
+            tax_name: provider_tax_2.name,
+            tax_rate: provider_tax_2.rate,
+            amount_currency: invoice.currency,
+            amount_cents: 3
+          )
 
-              expect(result.taxes_amount_cents.round).to eq(10)
-              expect(result.taxes_rate).to eq(17.71429)
-              expect(result.coupons_adjustment_amount_cents.round).to eq(12)
-            end
-          end
+          expect(result.taxes_amount_cents.round).to eq(10)
+          expect(result.taxes_rate).to eq(17.71429)
+          expect(result.coupons_adjustment_amount_cents.round).to eq(12)
         end
       end
     end
@@ -278,40 +270,36 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         it "creates applied taxes" do
           result = apply_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            aggregate_failures do
-              applied_taxes = result.applied_taxes
-              expect(applied_taxes.count).to eq(2)
+          applied_taxes = result.applied_taxes.sort_by(&:tax_code)
+          expect(applied_taxes.count).to eq(2)
 
-              expect(applied_taxes[0]).to have_attributes(
-                credit_note: nil,
-                tax: nil,
-                tax_description: provider_tax_1.type,
-                tax_code: provider_tax_1.code,
-                tax_name: provider_tax_1.name,
-                tax_rate: provider_tax_1.rate,
-                amount_currency: invoice.currency,
-                amount_cents: 14
-              )
+          expect(applied_taxes[0]).to have_attributes(
+            credit_note: nil,
+            tax: nil,
+            tax_description: provider_tax_1.type,
+            tax_code: provider_tax_1.code,
+            tax_name: provider_tax_1.name,
+            tax_rate: provider_tax_1.rate,
+            amount_currency: invoice.currency,
+            amount_cents: 14
+          )
 
-              expect(applied_taxes[1]).to have_attributes(
-                credit_note: nil,
-                tax: nil,
-                tax_description: provider_tax_2.type,
-                tax_code: provider_tax_2.code,
-                tax_name: provider_tax_2.name,
-                tax_rate: provider_tax_2.rate,
-                amount_currency: invoice.currency,
-                amount_cents: 5
-              )
+          expect(applied_taxes[1]).to have_attributes(
+            credit_note: nil,
+            tax: nil,
+            tax_description: provider_tax_2.type,
+            tax_code: provider_tax_2.code,
+            tax_name: provider_tax_2.name,
+            tax_rate: provider_tax_2.rate,
+            amount_currency: invoice.currency,
+            amount_cents: 5
+          )
 
-              expect(result.taxes_amount_cents.round).to eq(19)
-              expect(result.taxes_rate).to eq(27.14286)
-              expect(result.coupons_adjustment_amount_cents.round).to eq(0)
-            end
-          end
+          expect(result.taxes_amount_cents.round).to eq(19)
+          expect(result.taxes_rate).to eq(27.14286)
+          expect(result.coupons_adjustment_amount_cents.round).to eq(0)
         end
       end
     end
@@ -322,13 +310,11 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       it "succeeds" do
         result = apply_service.call
         expect(result).to be_success
-        aggregate_failures do
-          applied_taxes = result.applied_taxes
-          expect(applied_taxes.count).to eq(0)
-          expect(result.taxes_amount_cents.round).to eq(0)
-          expect(result.taxes_rate).to eq(0)
-          expect(result.coupons_adjustment_amount_cents.round).to eq(12)
-        end
+        applied_taxes = result.applied_taxes
+        expect(applied_taxes.count).to eq(0)
+        expect(result.taxes_amount_cents.round).to eq(0)
+        expect(result.taxes_rate).to eq(0)
+        expect(result.coupons_adjustment_amount_cents.round).to eq(12)
       end
     end
   end

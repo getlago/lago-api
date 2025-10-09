@@ -17,22 +17,19 @@ RUN bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3 --without development test
 
 FROM ruby:3.4.5-slim
-
-WORKDIR /app
-
-COPY . /app
+RUN apt update && apt upgrade -y
+RUN apt install git libpq-dev curl postgresql-client -y
 
 ARG SEGMENT_WRITE_KEY
 ARG GOCARDLESS_CLIENT_ID
 ARG GOCARDLESS_CLIENT_SECRET
-
-RUN apt update && apt upgrade -y
-RUN apt install git libpq-dev curl postgresql-client -y
 
 ENV SEGMENT_WRITE_KEY=$SEGMENT_WRITE_KEY
 ENV GOCARDLESS_CLIENT_ID=$GOCARDLESS_CLIENT_ID
 ENV GOCARDLESS_CLIENT_SECRET=$GOCARDLESS_CLIENT_SECRET
 
 COPY --from=build /usr/local/bundle/ /usr/local/bundle
+WORKDIR /app
+COPY . .
 
 CMD ["./scripts/start.sh"]

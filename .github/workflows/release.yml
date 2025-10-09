@@ -132,3 +132,25 @@ jobs:
         run: |
           [ -e ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests ] && \
           rm -rf ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests
+
+  notify:
+    name: Notify Private Release
+    runs-on: ubuntu-latest
+    needs: [merge]
+    steps:
+      - name: Set version for dispatch
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger lago-embedded repository
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: getlago/lago-embedded
+          event-type: lago-private-release
+          client-payload: '{"version": "${{ steps.version.outputs.version }}"}'

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::TerminateService, type: :service do
+RSpec.describe Wallets::TerminateService do
   subject(:terminate_service) { described_class.new(wallet:) }
 
   let(:membership) { create(:membership) }

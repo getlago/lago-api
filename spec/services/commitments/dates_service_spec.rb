@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Commitments::DatesService, type: :service do
+RSpec.describe Commitments::DatesService do
   let(:commitment) { create(:commitment) }
   let(:invoice_subscription) { create(:invoice_subscription, subscription:) }
   let(:subscription) { create(:subscription, customer:, plan:) }

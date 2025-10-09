@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql do
+RSpec.describe Mutations::IntegrationCollectionMappings::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -33,6 +33,11 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql 
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "updates a netsuite integration" do
+    original_integration_id = integration_collection_mapping.integration_id
+    original_mapping_type = integration_collection_mapping.mapping_type
+    different_integration = create(:netsuite_integration, organization:)
+    different_mapping_type = %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].reject { |type| type.to_s == original_mapping_type }.sample.to_s
+
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -41,8 +46,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql 
       variables: {
         input: {
           id: integration_collection_mapping.id,
-          integrationId: integration.id,
-          mappingType: mapping_type,
+          integrationId: different_integration.id,
+          mappingType: different_mapping_type,
           externalAccountCode: external_account_code,
           externalId: external_id,
           externalName: external_name
@@ -52,12 +57,12 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update, type: :graphql 
 
     result_data = result["data"]["updateIntegrationCollectionMapping"]
 
-    aggregate_failures do
-      expect(result_data["integrationId"]).to eq(integration.id)
-      expect(result_data["mappingType"]).to eq(mapping_type)
-      expect(result_data["externalAccountCode"]).to eq(external_account_code)
-      expect(result_data["externalId"]).to eq(external_id)
-      expect(result_data["externalName"]).to eq(external_name)
-    end
+    # Deprecated fields should be ignored - original values should remain
+    expect(result_data["integrationId"]).to eq(original_integration_id)
+    expect(result_data["mappingType"]).to eq(original_mapping_type)
+    # Other fields should be updated normally
+    expect(result_data["externalAccountCode"]).to eq(external_account_code)
+    expect(result_data["externalId"]).to eq(external_id)
+    expect(result_data["externalName"]).to eq(external_name)
   end
 end

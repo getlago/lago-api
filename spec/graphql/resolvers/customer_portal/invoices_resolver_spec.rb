@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
+RSpec.describe Resolvers::CustomerPortal::InvoicesResolver do
   let(:query) do
     <<~GQL
       query {

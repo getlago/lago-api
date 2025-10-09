@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::RetryService, type: :service do
+RSpec.describe Invoices::RetryService do
   subject(:retry_service) { described_class.new(invoice:) }
 
   describe "#call" do

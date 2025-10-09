@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request, transaction: false do
+describe "Daily Usages: Fill History", :time_travel, transaction: false do
   around { |test| lago_premium!(&test) }
 
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["revenue_analytics"]) }
@@ -27,10 +27,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
     travel_to(mar_18) do
       create_subscription(
-        external_customer_id: customer.external_id,
-        external_id: customer.external_id,
-        plan_code: plan.code,
-        billing_time: "anniversary"
+        {external_customer_id: customer.external_id,
+         external_id: customer.external_id,
+         plan_code: plan.code,
+         billing_time: "anniversary"}
       )
     end
 
@@ -122,10 +122,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
       travel_to(started_at) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time: "calendar"
+          {external_customer_id: customer.external_id,
+           external_id: customer.external_id,
+           plan_code: plan.code,
+           billing_time: "calendar"}
         )
       end
 
@@ -150,11 +150,7 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
       usages = DailyUsage.where(usage_date: from.to_date..to.to_date)
       expect(usages.count).to eq(31)
-
-      # NOTE: The last usage of the month should be 100 and the usage diff should not be 0.
-      last_daily_usage = DailyUsage.find_by(usage_date: to.to_date)
-      expect(last_daily_usage.usage["amount_cents"]).to eq(100)
-      expect(last_daily_usage.usage_diff["amount_cents"]).not_to eq(0)
+      expect(usages.pluck(Arel.sql("usage['amount_cents']")).uniq).to eq([100])
     end
   end
 
@@ -170,10 +166,10 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
 
       travel_to(started_at) do
         create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time: "calendar"
+          {external_customer_id: customer.external_id,
+           external_id: customer.external_id,
+           plan_code: plan.code,
+           billing_time: "calendar"}
         )
       end
 

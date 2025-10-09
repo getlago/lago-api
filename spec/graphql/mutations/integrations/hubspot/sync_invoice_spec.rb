@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice, type: :graphql do
+RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
   subject(:execute_graphql_call) do
     execute_graphql(
       current_user: membership.user,

@@ -2,1237 +2,555 @@
 
 require "rails_helper"
 
-RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true do
-  subject(:event_store) do
-    described_class.new(
-      code:,
-      subscription:,
-      boundaries:,
-      filters: {
-        grouped_by:,
-        grouped_by_values:,
-        matching_filters:,
-        ignored_filters:
-      }
-    )
-  end
+require_relative "shared_examples/an_event_store"
 
-  let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
-  let(:organization) { billable_metric.organization }
+RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true} do
+  it_behaves_like "an event store" do
+    def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: transaction_id,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code:,
+        timestamp: timestamp,
+        properties: properties.merge(billable_metric.field_name => value).compact,
+        value: value,
+        decimal_value: value&.to_i&.to_d,
+        precise_total_amount_cents: value
+      )
+    end
 
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, started_at:) }
+    def format_timestamp(timestamp)
+      Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%L")
+    end
 
-  let(:started_at) { DateTime.parse("2023-03-15") }
-  let(:code) { billable_metric.code }
+    def force_deduplication
+      Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
+    end
 
-  let(:boundaries) do
-    {
-      from_datetime: subscription.started_at.beginning_of_day,
-      to_datetime: subscription.started_at.end_of_month.end_of_day,
-      charges_duration: 31
-    }
-  end
+    describe "#prorated_unique_count" do
+      it "returns the number of unique active event properties" do
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 0.days,
+          properties: {
+            billable_metric.field_name => 2
+          },
+          value: "2",
+          decimal_value: 2
+        )
 
-  let(:grouped_by) { nil }
-  let(:grouped_by_values) { nil }
-  let(:with_grouped_by_values) { nil }
-  let(:matching_filters) { {} }
-  let(:ignored_filters) { [] }
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 0.days).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+            :operation_type => "remove"
+          },
+          value: "2",
+          decimal_value: 2
+        )
+        event_store.aggregation_property = billable_metric.field_name
 
-  let(:events) do
-    events = []
+        # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
+        # Events:
+        # 1 => added on 0 day, never removed => 16/31
+        # 2 => added on 0 day, removed on 0 day => 1/31
+        # 2 => added on 1 day, never removed => 15/31
+        # 3 => added on 2 day, never removed => 14/31
+        # 4 => added on 3 day, never removed => 13/31
+        # 5 => added on 4 day, never removed => 12/31
+        expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
+      end
 
-    5.times do |i|
-      properties = {billable_metric.field_name => i + 1}
+      context "with multiple events at the same day" do
+        it "returns the number of unique active event properties merged within one day" do
+          event_params = [
+            {timestamp: boundaries[:from_datetime], operation_type: "remove"},
+            {timestamp: boundaries[:from_datetime] + 1.hour, operation_type: "add"},
+            {timestamp: boundaries[:from_datetime] + 2.hours, operation_type: "remove"},
+            {timestamp: boundaries[:from_datetime] + 3.hours, operation_type: "add"},
+            {timestamp: boundaries[:from_datetime] + 1.day, operation_type: "remove"},
+            {timestamp: boundaries[:from_datetime] + 1.day + 1.hour, operation_type: "add"},
+            {timestamp: boundaries[:from_datetime] + 2.days + 1.hour, operation_type: "remove"}
+          ]
 
-      if i.even?
-        matching_filters.each { |key, values| properties[key] = values.first }
-
-        applied_grouped_by_values = grouped_by_values || with_grouped_by_values
-
-        if applied_grouped_by_values.present?
-          applied_grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
-        elsif grouped_by.present?
-          grouped_by.each do |group|
-            properties[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
+          event_params.each do |params|
+            Clickhouse::EventsEnriched.create!(
+              transaction_id: SecureRandom.uuid,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code:,
+              timestamp: params[:timestamp],
+              properties: {
+                billable_metric.field_name => 2,
+                :operation_type => params[:operation_type]
+              },
+              value: "2",
+              decimal_value: 2
+            )
           end
-        end
-      end
 
-      (ignored_filters.first || {}).each { |key, values| properties[key] = values.first } if i.zero?
-
-      events << Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: boundaries[:from_datetime] + (i + 1).days,
-        properties:,
-        value: (i + 1).to_s,
-        decimal_value: (i + 1).to_d,
-        precise_total_amount_cents: i + 1
-      )
-    end
-
-    events
-  end
-
-  # NOTE: this does not include test with real values yet as we have to figure out
-  #       how to add factories of fixtures in spec env and to setup clickhouse on the CI
-  before do
-    if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
-      skip
-    else
-      events
-    end
-  end
-
-  after do
-    next if ENV["LAGO_CLICKHOUSE_ENABLED"].blank?
-
-    Clickhouse::EventsEnriched.connection.execute("TRUNCATE TABLE events_enriched")
-  end
-
-  describe ".events" do
-    it "returns a list of events" do
-      expect(event_store.count).to eq(5)
-    end
-
-    context "with grouped_by_values" do
-      let(:grouped_by_values) { {"region" => "europe"} }
-
-      it "returns a list of events" do
-        expect(event_store.count).to eq(3)
-      end
-
-      context "when grouped_by_values value is nil" do
-        let(:grouped_by_values) { {"region" => nil} }
-
-        it "returns a list of events" do
-          expect(event_store.count).to eq(5)
+          # NOTE: Events calculation: 3/31
+          # Events:
+          # 1 => added on 0 day, never removed => 16/31
+          # 2 => added on 0 day, removed on 2 day => 3/31
+          # 3 => added on 2 day, never removed => 14/31
+          # 4 => added on 3 day, never removed => 13/31
+          # 5 => added on 4 day, never removed => 12/31
+          expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
         end
       end
     end
 
-    context "with filters" do
-      let(:matching_filters) { {"region" => ["europe"], "country" => ["france"]} }
-      let(:ignored_filters) { [{"city" => ["paris"]}, {"city" => ["londons"], "country" => ["united kingdom"]}] }
+    describe "#grouped_prorated_unique_count" do
+      let(:grouped_by) { %w[agent_name other] }
+      let(:started_at) { Time.zone.parse("2023-03-01") }
 
-      it "returns a list of events" do
-        expect(event_store.count).to eq(2) # 1st event is ignored
+      let(:events) do
+        [
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            transaction_id: SecureRandom.uuid,
+            timestamp: boundaries[:from_datetime] + 1.day,
+            properties: {
+              billable_metric.field_name => 2,
+              :agent_name => "frodo"
+            },
+            value: "2",
+            decimal_value: 2
+          ),
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            transaction_id: SecureRandom.uuid,
+            timestamp: boundaries[:from_datetime] + 1.day,
+            properties: {
+              billable_metric.field_name => 2,
+              :agent_name => "aragorn"
+            },
+            value: "2",
+            decimal_value: 2
+          ),
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            transaction_id: SecureRandom.uuid,
+            timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
+            properties: {
+              billable_metric.field_name => 2,
+              :agent_name => "aragorn",
+              :operation_type => "remove"
+            },
+            value: "2",
+            decimal_value: 2
+          ),
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            transaction_id: SecureRandom.uuid,
+            timestamp: boundaries[:from_datetime] + 2.days,
+            properties: {billable_metric.field_name => 2},
+            value: "2",
+            decimal_value: 2
+          )
+        ]
       end
-    end
-  end
 
-  describe "#with_grouped_by_values" do
-    let(:with_grouped_by_values) { {"region" => "europe"} }
-
-    it "applies the grouped_by_values in the block" do
-      event_store.with_grouped_by_values(with_grouped_by_values) do
-        expect(event_store.count).to eq(3)
+      before do
+        event_store.aggregation_property = billable_metric.field_name
       end
-    end
-  end
-
-  describe "#distinct_codes" do
-    before do
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code: "other_code",
-        timestamp: boundaries[:from_datetime] + (1..10).to_a.sample.days,
-        value: "value",
-        decimal_value: 0,
-        precise_total_amount_cents: 0
-      )
-    end
-
-    it "returns the distinct event codes" do
-      expect(event_store.distinct_codes).to match_array([code, "other_code"])
-    end
-  end
-
-  describe ".count" do
-    it "returns the number of unique events" do
-      expect(event_store.count).to eq(5)
-    end
-  end
-
-  describe ".grouped_count" do
-    let(:grouped_by) { %w[cloud] }
-
-    it "returns the number of unique events grouped by the provided group" do
-      result = event_store.grouped_count
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:value]).to eq(2)
-
-      result.each do |row|
-        next if row[:groups]["cloud"].nil?
-
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).to eq(1)
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the number of unique events grouped by the provided groups" do
-        result = event_store.grouped_count
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(2)
-
-        result[...-1].each do |row|
-          next if row[:groups]["cloud"].nil?
-
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).to eq(1)
-        end
-      end
-    end
-  end
-
-  describe "#sum_precise_total_amount_cents" do
-    it "returns the sum of precise_total_amount_cent values" do
-      expect(event_store.sum_precise_total_amount_cents).to eq(15)
-    end
-  end
-
-  describe "#grouped_sum_precise_total_amount_cents" do
-    let(:grouped_by) { %w[cloud] }
-
-    it "returns the sum of values grouped by the provided group" do
-      result = event_store.grouped_sum_precise_total_amount_cents
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:value]).to eq(6)
-
-      result[...-1].each do |row|
-        next if row[:groups]["cloud"].nil?
-
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the sum of values grouped by the provided groups" do
-        result = event_store.grouped_sum_precise_total_amount_cents
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(6)
-
-        result[...-1].each do |row|
-          next if row[:groups]["cloud"].nil?
-
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
-        end
-      end
-    end
-  end
-
-  describe "#active_unique_property?" do
-    before { event_store.aggregation_property = billable_metric.field_name }
-
-    it "returns false when no previous events exist" do
-      bm_value = SecureRandom.uuid
-
-      event = ::Clickhouse::EventsEnriched.create!(
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
-        properties: {
-          billable_metric.field_name => bm_value
-        },
-        value: bm_value
-      )
-
-      expect(event_store).not_to be_active_unique_property(event)
-    end
-
-    context "when event is already active" do
-      it "returns true if the event property is active" do
-        ::Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
-          properties: {
-            billable_metric.field_name => 2
-          },
-          value: "2",
-          decimal_value: 2
-        )
-
-        event = ::Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
-          properties: {
-            billable_metric.field_name => 2
-          },
-          value: "2",
-          decimal_value: 2
-        )
-
-        expect(event_store).to be_active_unique_property(event)
-      end
-    end
-
-    context "with a previous removed event" do
-      it "returns false" do
-        ::Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: (boundaries[:from_datetime] + 2.days).end_of_day,
-          properties: {
-            billable_metric.field_name => 2,
-            :operation_type => "remove"
-          },
-          value: "2",
-          decimal_value: 2
-        )
-
-        event = ::Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: (boundaries[:from_datetime] + 3.days).end_of_day,
-          properties: {
-            billable_metric.field_name => 2
-          },
-          value: "2",
-          decimal_value: 2
-        )
-
-        expect(event_store).not_to be_active_unique_property(event)
-      end
-    end
-  end
-
-  describe "#unique_count" do
-    it "returns the number of unique active event properties" do
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: boundaries[:from_datetime] + 3.days,
-        properties: {
-          billable_metric.field_name => 2,
-          :operation_type => "remove"
-        },
-        value: "2",
-        decimal_value: 2
-      )
-
-      event_store.aggregation_property = billable_metric.field_name
-
-      expect(event_store.unique_count).to eq(4) # 5 events added / 1 removed
-    end
-  end
-
-  describe "#prorated_unique_count" do
-    it "returns the number of unique active event properties" do
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: boundaries[:from_datetime] + 1.day,
-        properties: {
-          billable_metric.field_name => 2
-        },
-        value: "2",
-        decimal_value: 2
-      )
-
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
-        properties: {
-          billable_metric.field_name => 2,
-          :operation_type => "remove"
-        },
-        value: "2",
-        decimal_value: 2
-      )
-
-      event_store.aggregation_property = billable_metric.field_name
-
-      # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
-      expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
-    end
-  end
-
-  describe "#grouped_unique_count" do
-    let(:grouped_by) { %w[agent_name other] }
-    let(:started_at) { Time.zone.parse("2023-03-01") }
-
-    let(:events) do
-      [
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 1.hour,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "frodo"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 1.day,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "aragorn"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 2.days,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "aragorn",
-            :operation_type => "remove"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 2.days,
-          properties: {billable_metric.field_name => 2},
-          value: "2",
-          decimal_value: 2
-        )
-      ]
-    end
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-    end
-
-    it "returns the unique count of event properties" do
-      result = event_store.grouped_unique_count
-
-      expect(result.count).to eq(3)
-
-      null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-      expect(null_group[:groups]["other"]).to be_nil
-      expect(null_group[:value]).to eq(1)
-
-      expect((result - [null_group]).map { |r| r[:value] }).to contain_exactly(1, 0)
-    end
-
-    context "with no events" do
-      let(:events) { [] }
-
-      it "returns the unique count of event properties" do
-        result = event_store.grouped_unique_count
-        expect(result.count).to eq(0)
-      end
-    end
-  end
-
-  describe "#grouped_prorated_unique_count" do
-    let(:grouped_by) { %w[agent_name other] }
-    let(:started_at) { Time.zone.parse("2023-03-01") }
-
-    let(:events) do
-      [
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 1.day,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "frodo"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 1.day,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "aragorn"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
-          properties: {
-            billable_metric.field_name => 2,
-            :agent_name => "aragorn",
-            :operation_type => "remove"
-          },
-          value: "2",
-          decimal_value: 2
-        ),
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          transaction_id: SecureRandom.uuid,
-          timestamp: boundaries[:from_datetime] + 2.days,
-          properties: {billable_metric.field_name => 2},
-          value: "2",
-          decimal_value: 2
-        )
-      ]
-    end
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-    end
-
-    it "returns the unique count of event properties" do
-      result = event_store.grouped_prorated_unique_count
-
-      expect(result.count).to eq(3)
-
-      null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-      expect(null_group[:groups]["other"]).to be_nil
-      expect(null_group[:value].round(3)).to eq(0.935) # 29/31
-
-      # NOTE: Events calculation: [1/31, 30/31]
-      expect((result - [null_group]).map { |r| r[:value].round(3) }).to contain_exactly(0.032, 0.968)
-    end
-
-    context "with no events" do
-      let(:events) { [] }
 
       it "returns the unique count of event properties" do
         result = event_store.grouped_prorated_unique_count
-        expect(result.count).to eq(0)
-      end
-    end
-  end
 
-  describe "#prorated_unique_count_breakdown" do
-    it "returns the breakdown of add and remove of unique event properties" do
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: boundaries[:from_datetime] + 1.day,
-        properties: {
-          billable_metric.field_name => 2
-        },
-        value: "2",
-        decimal_value: 2
-      )
+        expect(result.count).to eq(3)
 
-      Clickhouse::EventsEnriched.create!(
-        transaction_id: SecureRandom.uuid,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        code:,
-        timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
-        properties: {
-          billable_metric.field_name => 2,
-          :operation_type => "remove"
-        },
-        value: "2",
-        decimal_value: 2
-      )
+        null_group = result.find { |v| v[:groups]["agent_name"].nil? }
+        expect(null_group[:groups]["other"]).to be_nil
+        expect(null_group[:value].round(3)).to eq(0.935) # 29/31
 
-      event_store.aggregation_property = billable_metric.field_name
-
-      result = event_store.prorated_unique_count_breakdown
-      expect(result.count).to eq(6)
-
-      grouped_result = result.group_by { |r| r["property"] }
-
-      # NOTE: group with property 1
-      group = grouped_result["1"]
-      expect(group.count).to eq(1)
-      expect(group.first["prorated_value"].round(3)).to eq(0.516) # 16/31
-      expect(group.first["operation_type"]).to eq("add")
-
-      # NOTE: group with property 2 (added and removed)
-      group = grouped_result["2"]
-      expect(group.first["prorated_value"].round(3)).to eq(0.032) # 1/31
-      expect(group.last["prorated_value"].round(3)).to eq(0.484) # 15/31
-      expect(group.count).to eq(2)
-
-      # NOTE: group with property 3
-      group = grouped_result["3"]
-      expect(group.count).to eq(1)
-      expect(group.first["prorated_value"].round(3)).to eq(0.452) # 14/31
-      expect(group.first["operation_type"]).to eq("add")
-
-      # NOTE: group with property 4
-      group = grouped_result["4"]
-      expect(group.count).to eq(1)
-      expect(group.first["prorated_value"].round(3)).to eq(0.419) # 13/31
-      expect(group.first["operation_type"]).to eq("add")
-
-      # NOTE: group with property 5
-      group = grouped_result["5"]
-      expect(group.count).to eq(1)
-      expect(group.first["prorated_value"].round(3)).to eq(0.387) # 12/31
-      expect(group.first["operation_type"]).to eq("add")
-    end
-  end
-
-  describe ".events_values" do
-    it "returns the value attached to each event" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.events_values).to eq([1, 2, 3, 4, 5])
-    end
-
-    context "when exclude_event is true" do
-      subject(:event_store) do
-        described_class.new(
-          code:,
-          subscription:,
-          boundaries:,
-          filters: {
-            grouped_by:,
-            grouped_by_values:,
-            matching_filters:,
-            ignored_filters:,
-            event:
-          }
-        )
+        # NOTE: Events calculation: [1/31, 30/31]
+        expect((result - [null_group]).map { |r| r[:value].round(3) }).to contain_exactly(0.032, 0.968)
       end
 
-      let(:event) do
+      context "with no events" do
+        let(:events) { [] }
+
+        it "returns the unique count of event properties" do
+          result = event_store.grouped_prorated_unique_count
+          expect(result.count).to eq(0)
+        end
+      end
+    end
+
+    describe "#prorated_unique_count_breakdown" do
+      it "returns the breakdown of add and remove of unique event properties" do
         Clickhouse::EventsEnriched.create!(
           transaction_id: SecureRandom.uuid,
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code:,
           timestamp: boundaries[:from_datetime] + 1.day,
-          properties: {billable_metric.field_name => 6},
-          value: "6",
-          decimal_value: 6
+          properties: {
+            billable_metric.field_name => 2
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code:,
+          timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
+          properties: {
+            billable_metric.field_name => 2,
+            :operation_type => "remove"
+          },
+          value: "2",
+          decimal_value: 2
+        )
+
+        event_store.aggregation_property = billable_metric.field_name
+
+        result = event_store.prorated_unique_count_breakdown
+        expect(result.count).to eq(6)
+
+        grouped_result = result.group_by { |r| r["property"] }
+
+        # NOTE: group with property 1
+        group = grouped_result["1"]
+        expect(group.count).to eq(1)
+        expect(group.first["prorated_value"].round(3)).to eq(0.516) # 16/31
+        expect(group.first["operation_type"]).to eq("add")
+
+        # NOTE: group with property 2 (added and removed)
+        group = grouped_result["2"]
+        expect(group.first["prorated_value"].round(3)).to eq(0.032) # 1/31
+        expect(group.last["prorated_value"].round(3)).to eq(0.484) # 15/31
+        expect(group.count).to eq(2)
+
+        # NOTE: group with property 3
+        group = grouped_result["3"]
+        expect(group.count).to eq(1)
+        expect(group.first["prorated_value"].round(3)).to eq(0.452) # 14/31
+        expect(group.first["operation_type"]).to eq("add")
+
+        # NOTE: group with property 4
+        group = grouped_result["4"]
+        expect(group.count).to eq(1)
+        expect(group.first["prorated_value"].round(3)).to eq(0.419) # 13/31
+        expect(group.first["operation_type"]).to eq("add")
+
+        # NOTE: group with property 5
+        group = grouped_result["5"]
+        expect(group.count).to eq(1)
+        expect(group.first["prorated_value"].round(3)).to eq(0.387) # 12/31
+        expect(group.first["operation_type"]).to eq("add")
+      end
+    end
+
+    describe "#prorated_events_values" do
+      it "returns the values attached to each event with prorata on period duration" do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
+          [0.516, 0.968, 1.355, 1.677, 1.935]
         )
       end
-
-      it "excludes current event but returns the value attached to other events" do
-        event
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
-
-        expect(event_store.events_values(exclude_event: true)).to eq([1, 2, 3, 4, 5])
-      end
-    end
-  end
-
-  describe ".last_event" do
-    it "returns the last event" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.last_event.transaction_id).to eq(events.last.transaction_id)
-    end
-  end
-
-  describe ".grouped_last_event" do
-    let(:grouped_by) { %w[cloud] }
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
     end
 
-    it "returns the last events grouped by the provided group" do
-      result = event_store.grouped_last_event
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:groups]["cloud"]).to be_nil
-      expect(null_group[:value]).to eq(4)
-      expect(null_group[:timestamp]).not_to be_nil
-
-      (result - [null_group]).each do |row|
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-        expect(row[:timestamp]).not_to be_nil
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the last events grouped by the provided groups" do
-        result = event_store.grouped_last_event
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["cloud"]).to be_nil
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(4)
-        expect(null_group[:timestamp]).not_to be_nil
-
-        (result - [null_group]).each do |row|
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
-          expect(row[:timestamp]).not_to be_nil
-        end
-      end
-    end
-  end
-
-  describe ".prorated_events_values" do
-    it "returns the values attached to each event with prorata on period duration" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
-        [0.516, 0.968, 1.355, 1.677, 1.935]
-      )
-    end
-  end
-
-  describe ".max" do
-    it "returns the max value" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.max).to eq(5)
-    end
-  end
-
-  describe ".grouped_max" do
-    let(:grouped_by) { %w[cloud] }
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
-
-    it "returns the max values grouped by the provided group" do
-      result = event_store.grouped_max
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:value]).to eq(4)
-
-      result[...-1].each do |row|
-        next if row[:groups]["cloud"].nil?
-
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the max values grouped by the provided groups" do
-        result = event_store.grouped_max
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(4)
-
-        result[...-1].each do |row|
-          next if row[:groups]["cloud"].nil?
-
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
-        end
-      end
-    end
-  end
-
-  describe ".last" do
-    it "returns the last event" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.last).to eq(5)
-    end
-  end
-
-  describe ".grouped_last" do
-    let(:grouped_by) { %w[cloud] }
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
-
-    it "returns the value attached to each event prorated on the provided duration" do
-      result = event_store.grouped_last
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:value]).to eq(4)
-
-      result[...-1].each do |row|
-        next if row[:groups]["cloud"].nil?
-
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the last value for each provided groups" do
-        result = event_store.grouped_last
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(4)
-
-        result[...-1].each do |row|
-          next if row[:groups]["cloud"].nil?
-
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
-        end
-      end
-    end
-  end
-
-  describe ".sum" do
-    it "returns the sum of event properties" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.sum).to eq(15)
-    end
-  end
-
-  describe ".grouped_sum" do
-    let(:grouped_by) { %w[cloud] }
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
-
-    it "returns the sum of values grouped by the provided group" do
-      result = event_store.grouped_sum
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:value]).to eq(6)
-
-      result[...-1].each do |row|
-        next if row[:groups]["cloud"].nil?
-
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-      end
-    end
-
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
-
-      it "returns the sum of values grouped by the provided groups" do
-        result = event_store.grouped_sum
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value]).to eq(6)
-
-        result[...-1].each do |row|
-          next if row[:groups]["cloud"].nil?
-
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
-        end
-      end
-    end
-  end
-
-  describe ".prorated_sum" do
-    it "returns the prorated sum of event properties" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
-    end
-
-    context "with persisted_duration" do
+    describe "#prorated_sum" do
       it "returns the prorated sum of event properties" do
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
-        expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
+        expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
       end
-    end
-  end
 
-  describe ".grouped_prorated_sum" do
-    let(:grouped_by) { %w[cloud] }
+      context "with persisted_duration" do
+        it "returns the prorated sum of event properties" do
+          event_store.aggregation_property = billable_metric.field_name
+          event_store.numeric_property = true
 
-    it "returns the prorated sum of event properties" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-
-      result = event_store.grouped_prorated_sum(period_duration: 31)
-
-      expect(result.count).to eq(4)
-
-      null_group = result.find { |v| v[:groups]["cloud"].nil? }
-      expect(null_group[:groups]["cloud"]).to be_nil
-      expect(null_group[:value].round(5)).to eq(2.64516)
-
-      (result - [null_group]).each do |row|
-        expect(row[:groups]["cloud"]).not_to be_nil
-        expect(row[:value]).not_to be_nil
-      end
-    end
-
-    context "with persisted_duration" do
-      it "returns the prorated sum of event properties" do
-        event_store.aggregation_property = billable_metric.field_name
-        event_store.numeric_property = true
-
-        result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
-
-        expect(result.count).to eq(4)
-
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["cloud"]).to be_nil
-        expect(null_group[:value].round(5)).to eq(1.93548)
-
-        (result - [null_group]).each do |row|
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
+          expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
         end
       end
     end
 
-    context "with multiple groups" do
-      let(:grouped_by) { %w[cloud region] }
+    describe "#grouped_prorated_sum" do
+      let(:grouped_by) { %w[region] }
 
-      it "returns the sum of values grouped by the provided groups" do
+      it "returns the prorated sum of event properties" do
         event_store.aggregation_property = billable_metric.field_name
         event_store.numeric_property = true
 
         result = event_store.grouped_prorated_sum(period_duration: 31)
 
-        expect(result.count).to eq(4)
+        expect(result).to match_array([
+          {groups: {"region" => nil}, value: within(0.00001).of(2.64516)},
+          {groups: {"region" => "europe"}, value: within(0.00001).of(3.80645)}
+        ])
+      end
 
-        null_group = result.find { |v| v[:groups]["cloud"].nil? }
-        expect(null_group[:groups]["cloud"]).to be_nil
-        expect(null_group[:groups]["region"]).to be_nil
-        expect(null_group[:value].round(5)).to eq(2.64516)
+      context "with persisted_duration" do
+        it "returns the prorated sum of event properties" do
+          event_store.aggregation_property = billable_metric.field_name
+          event_store.numeric_property = true
 
-        (result - [null_group]).each do |row|
-          expect(row[:groups]["cloud"]).not_to be_nil
-          expect(row[:groups]["region"]).not_to be_nil
-          expect(row[:value]).not_to be_nil
+          result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
+
+          expect(result).to match_array([
+            {groups: {"region" => nil}, value: within(0.00001).of(1.93548)},
+            {groups: {"region" => "europe"}, value: within(0.00001).of(2.90322)}
+          ])
+        end
+      end
+
+      context "with multiple groups" do
+        let(:grouped_by) { %w[region country] }
+
+        it "returns the sum of values grouped by the provided groups" do
+          event_store.aggregation_property = billable_metric.field_name
+          event_store.numeric_property = true
+
+          result = event_store.grouped_prorated_sum(period_duration: 31)
+
+          expect(result).to match_array(
+            [
+              {
+                groups: {"country" => "united kingdom", "region" => "europe"},
+                value: within(0.00001).of(1.93548)
+              },
+              {
+                groups: {"country" => nil, "region" => nil},
+                value: within(0.00001).of(2.64516)
+              },
+              {
+                groups: {"country" => "france", "region" => "europe"},
+                value: within(0.00001).of(1.87096)
+              }
+            ]
+          )
         end
       end
     end
-  end
 
-  describe ".sum_date_breakdown" do
-    it "returns the sum grouped by day" do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
+    describe "#weighted_sum" do
+      let(:started_at) { Time.zone.parse("2023-03-01") }
 
-      expect(event_store.sum_date_breakdown).to eq(
-        events.map do |e|
-          {
-            date: e.timestamp.to_date,
-            value: e.decimal_value
-          }
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2},
+          {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3},
+          {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1},
+          {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4},
+          {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2},
+          {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10},
+          {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10}
+        ]
+      end
+
+      let(:events) do
+        events_values.map do |values|
+          properties = {value: values[:value]}
+          properties[:region] = values[:region] if values[:region]
+
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: values[:timestamp],
+            properties:,
+            value: values[:value].to_s,
+            decimal_value: values[:value].to_d
+          )
         end
-      )
-    end
-  end
-
-  describe ".weighted_sum" do
-    let(:started_at) { Time.zone.parse("2023-03-01") }
-
-    let(:events_values) do
-      [
-        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2},
-        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3},
-        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1},
-        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4},
-        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2},
-        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10},
-        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10}
-      ]
-    end
-
-    let(:events) do
-      events_values.map do |values|
-        properties = {value: values[:value]}
-        properties[:region] = values[:region] if values[:region]
-
-        Clickhouse::EventsEnriched.create!(
-          transaction_id: SecureRandom.uuid,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: values[:timestamp],
-          properties:,
-          value: values[:value].to_s,
-          decimal_value: values[:value].to_d
-        )
       end
-    end
 
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
-
-    it "returns the weighted sum of event properties" do
-      expect(event_store.weighted_sum.round(5)).to eq(0.02218)
-    end
-
-    context "with a single event" do
-      let(:events_values) do
-        [
-          {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 1000}
-        ]
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
       end
 
       it "returns the weighted sum of event properties" do
-        expect(event_store.weighted_sum.round(5)).to eq(1000.0)
-      end
-    end
-
-    context "with no events" do
-      let(:events_values) { [] }
-
-      it "returns the weighted sum of event properties" do
-        expect(event_store.weighted_sum.round(5)).to eq(0.0)
-      end
-    end
-
-    context "with events with the same timestamp" do
-      let(:events_values) do
-        [
-          {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 3},
-          {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 3}
-        ]
+        expect(event_store.weighted_sum.round(5)).to eq(0.02218)
       end
 
-      it "returns the weighted sum of event properties" do
-        expect(event_store.weighted_sum.round(5)).to eq(6.0)
+      context "with a single event" do
+        let(:events_values) do
+          [
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000}
+          ]
+        end
+
+        it "returns the weighted sum of event properties" do
+          expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+        end
       end
-    end
 
-    context "with initial value" do
-      let(:initial_value) { 1000 }
-
-      it "uses the initial value in the aggregation" do
-        expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.02218)
-      end
-
-      context "without events" do
+      context "with no events" do
         let(:events_values) { [] }
 
-        it "uses only the initial value in the aggregation" do
-          expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.0)
+        it "returns the weighted sum of event properties" do
+          expect(event_store.weighted_sum.round(5)).to eq(0.0)
+        end
+      end
+
+      context "with events with the same timestamp" do
+        let(:events_values) do
+          [
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3},
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3}
+          ]
+        end
+
+        it "returns the weighted sum of event properties" do
+          expect(event_store.weighted_sum.round(5)).to eq(5.22581) # 4 / 31 * 0 + 27 / 31 * 6
+        end
+      end
+
+      context "with initial value" do
+        let(:initial_value) { 1000 }
+
+        it "uses the initial value in the aggregation" do
+          expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.02218)
+        end
+
+        context "without events" do
+          let(:events_values) { [] }
+
+          it "uses only the initial value in the aggregation" do
+            expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.0)
+          end
+        end
+      end
+
+      context "with filters" do
+        let(:matching_filters) { {region: ["europe"]} }
+
+        let(:events_values) do
+          [
+            {timestamp: Time.zone.parse("2023-03-04 00:00:00.000"), value: 1000, region: "us"},
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe"}
+          ]
+        end
+
+        it "returns the weighted sum of event properties scoped to the group" do
+          expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
         end
       end
     end
 
-    context "with filters" do
-      let(:matching_filters) { {region: ["europe"]} }
+    describe "#grouped_weighted_sum" do
+      let(:grouped_by) { %w[agent_name other] }
+
+      let(:started_at) { Time.zone.parse("2023-03-01") }
 
       let(:events_values) do
         [
-          {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 1000, region: "europe"}
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, agent_name: "frodo"},
+          {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, agent_name: "frodo"},
+
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, agent_name: "aragorn"},
+          {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, agent_name: "aragorn"},
+
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2},
+          {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3},
+          {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1},
+          {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4},
+          {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2},
+          {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10},
+          {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10}
         ]
       end
 
-      it "returns the weighted sum of event properties scoped to the group" do
-        expect(event_store.weighted_sum.round(5)).to eq(1000.0)
+      let(:events) do
+        events_values.map do |values|
+          properties = {value: values[:value]}
+          properties[:region] = values[:region] if values[:region]
+          properties[:agent_name] = values[:agent_name] if values[:agent_name]
+
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: values[:timestamp],
+            properties:,
+            value: values[:value].to_s,
+            decimal_value: values[:value].to_d
+          )
+        end
       end
-    end
-  end
 
-  describe ".grouped_weighted_sum" do
-    let(:grouped_by) { %w[agent_name other] }
-
-    let(:started_at) { Time.zone.parse("2023-03-01") }
-
-    let(:events_values) do
-      [
-        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10, agent_name: "frodo"},
-        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10, agent_name: "frodo"},
-
-        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10, agent_name: "aragorn"},
-        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10, agent_name: "aragorn"},
-
-        {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 2},
-        {timestamp: Time.zone.parse("2023-03-01 01:00:00"), value: 3},
-        {timestamp: Time.zone.parse("2023-03-01 01:30:00"), value: 1},
-        {timestamp: Time.zone.parse("2023-03-01 02:00:00"), value: -4},
-        {timestamp: Time.zone.parse("2023-03-01 04:00:00"), value: -2},
-        {timestamp: Time.zone.parse("2023-03-01 05:00:00"), value: 10},
-        {timestamp: Time.zone.parse("2023-03-01 05:30:00"), value: -10}
-      ]
-    end
-
-    let(:events) do
-      events_values.map do |values|
-        properties = {value: values[:value]}
-        properties[:region] = values[:region] if values[:region]
-        properties[:agent_name] = values[:agent_name] if values[:agent_name]
-
-        Clickhouse::EventsEnriched.create!(
-          transaction_id: SecureRandom.uuid,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: values[:timestamp],
-          properties:,
-          value: values[:value].to_s,
-          decimal_value: values[:value].to_d
-        )
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
       end
-    end
-
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
-
-    it "returns the weighted sum of event properties" do
-      result = event_store.grouped_weighted_sum
-
-      expect(result.count).to eq(3)
-
-      null_group = result.find { |v| v[:groups]["agent_name"].nil? }
-      expect(null_group[:groups]["agent_name"]).to be_nil
-      expect(null_group[:groups]["other"]).to be_nil
-      expect(null_group[:value].round(5)).to eq(0.02218)
-
-      (result - [null_group]).each do |row|
-        expect(row[:groups]["agent_name"]).not_to be_nil
-        expect(row[:groups]["other"]).to be_nil
-        expect(row[:value].round(5)).to eq(0.02218)
-      end
-    end
-
-    context "with no events" do
-      let(:events_values) { [] }
 
       it "returns the weighted sum of event properties" do
         result = event_store.grouped_weighted_sum
-
-        expect(result.count).to eq(0)
-      end
-    end
-
-    context "with initial values" do
-      let(:initial_values) do
-        [
-          {groups: {"agent_name" => "frodo", "other" => nil}, value: 1000},
-          {groups: {"agent_name" => "aragorn", "other" => nil}, value: 1000},
-          {groups: {"agent_name" => nil, "other" => nil}, value: 1000}
-        ]
-      end
-
-      it "uses the initial value in the aggregation" do
-        result = event_store.grouped_weighted_sum(initial_values:)
 
         expect(result.count).to eq(3)
 
         null_group = result.find { |v| v[:groups]["agent_name"].nil? }
         expect(null_group[:groups]["agent_name"]).to be_nil
         expect(null_group[:groups]["other"]).to be_nil
-        expect(null_group[:value].round(5)).to eq(1000.02218)
+        expect(null_group[:value].round(5)).to eq(0.02218)
 
         (result - [null_group]).each do |row|
           expect(row[:groups]["agent_name"]).not_to be_nil
           expect(row[:groups]["other"]).to be_nil
-          expect(row[:value].round(5)).to eq(1000.02218)
+          expect(row[:value].round(5)).to eq(0.02218)
         end
       end
 
-      context "without events" do
+      context "with no events" do
         let(:events_values) { [] }
 
-        it "uses only the initial value in the aggregation" do
+        it "returns the weighted sum of event properties" do
+          result = event_store.grouped_weighted_sum
+
+          expect(result.count).to eq(0)
+        end
+      end
+
+      context "with initial values" do
+        let(:initial_values) do
+          [
+            {groups: {"agent_name" => "frodo", "other" => nil}, value: 1000},
+            {groups: {"agent_name" => "aragorn", "other" => nil}, value: 1000},
+            {groups: {"agent_name" => nil, "other" => nil}, value: 1000}
+          ]
+        end
+
+        it "uses the initial value in the aggregation" do
           result = event_store.grouped_weighted_sum(initial_values:)
 
           expect(result.count).to eq(3)
@@ -1240,12 +558,33 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
           null_group = result.find { |v| v[:groups]["agent_name"].nil? }
           expect(null_group[:groups]["agent_name"]).to be_nil
           expect(null_group[:groups]["other"]).to be_nil
-          expect(null_group[:value].round(5)).to eq(1000)
+          expect(null_group[:value].round(5)).to eq(1000.02218)
 
           (result - [null_group]).each do |row|
             expect(row[:groups]["agent_name"]).not_to be_nil
             expect(row[:groups]["other"]).to be_nil
-            expect(row[:value].round(5)).to eq(1000)
+            expect(row[:value].round(5)).to eq(1000.02218)
+          end
+        end
+
+        context "without events" do
+          let(:events_values) { [] }
+
+          it "uses only the initial value in the aggregation" do
+            result = event_store.grouped_weighted_sum(initial_values:)
+
+            expect(result.count).to eq(3)
+
+            null_group = result.find { |v| v[:groups]["agent_name"].nil? }
+            expect(null_group[:groups]["agent_name"]).to be_nil
+            expect(null_group[:groups]["other"]).to be_nil
+            expect(null_group[:value].round(5)).to eq(1000)
+
+            (result - [null_group]).each do |row|
+              expect(row[:groups]["agent_name"]).not_to be_nil
+              expect(row[:groups]["other"]).to be_nil
+              expect(row[:value].round(5)).to eq(1000)
+            end
           end
         end
       end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedChargeEvent, type: :model do
+RSpec.describe FixedChargeEvent do
   subject { build(:fixed_charge_event) }
 
   it { expect(described_class).to be_soft_deletable }

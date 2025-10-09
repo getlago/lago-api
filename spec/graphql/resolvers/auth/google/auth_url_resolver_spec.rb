@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Auth::Google::AuthUrlResolver, type: :graphql do
+RSpec.describe Resolvers::Auth::Google::AuthUrlResolver do
   let(:query) do
     <<~GQL
       query {

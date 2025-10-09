@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::RefreshDraftJob, type: :job do
+RSpec.describe Invoices::RefreshDraftJob do
   let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
   let(:result) { BaseService::Result.new }
 

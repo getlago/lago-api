@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob, type: :job do
+RSpec.describe PaymentProviderCustomers::StripeCheckoutUrlJob do
   subject(:stripe_checkout_job) { described_class }
 
   let(:stripe_customer) { create(:stripe_customer) }

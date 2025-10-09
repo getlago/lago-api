@@ -59,6 +59,7 @@ module CreditNotes
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
+        CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
 
         next if context == :preview
 
@@ -93,8 +94,6 @@ module CreditNotes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue ArgumentError
-      result.single_validation_failure!(field: :reason, error_code: "value_is_invalid")
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -112,6 +111,10 @@ module CreditNotes
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
+
+    def invalid_reason?
+      CreditNote.reasons.keys.exclude?(reason.to_s)
+    end
 
     def should_create_credit_note?
       # NOTE: created from subscription termination
@@ -230,7 +233,7 @@ module CreditNotes
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
-      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.precise_taxes_amount_cents = taxes_result.precise_taxes_amount_cents
       adjust_credit_note_tax_rounding if credit_note_for_all_remaining_amount?
 
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round

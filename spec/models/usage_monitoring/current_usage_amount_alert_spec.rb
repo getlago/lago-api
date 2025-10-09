@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::CurrentUsageAmountAlert, type: :model do
+RSpec.describe UsageMonitoring::CurrentUsageAmountAlert do
   let(:alert) { create(:usage_current_amount_alert) }
   let(:subscription) { create(:subscription) }
 

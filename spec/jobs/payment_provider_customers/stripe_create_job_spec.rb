@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::StripeCreateJob, type: :job do
+RSpec.describe PaymentProviderCustomers::StripeCreateJob do
   let(:stripe_customer) { create(:stripe_customer) }
 
   let(:stripe_service) { instance_double(PaymentProviderCustomers::StripeService) }

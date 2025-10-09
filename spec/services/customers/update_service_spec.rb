@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::UpdateService, type: :service do
+RSpec.describe Customers::UpdateService do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
   let(:billing_entity) { create(:billing_entity) }

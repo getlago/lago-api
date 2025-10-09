@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::OverrideService, type: :service do
+RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:) }
 
   let(:membership) { create(:membership) }
@@ -11,6 +11,7 @@ RSpec.describe Plans::OverrideService, type: :service do
   describe "#call" do
     let(:parent_plan) { create(:plan, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:add_on) { create(:add_on, organization:) }
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
     let(:tax) { create(:tax, organization:) }
 
@@ -21,6 +22,10 @@ RSpec.describe Plans::OverrideService, type: :service do
         billable_metric:,
         properties: {amount: "300"}
       )
+    end
+
+    let(:fixed_charge) do
+      create(:fixed_charge, plan: parent_plan, add_on:, properties: {amount: "300"})
     end
 
     let(:usage_threshold) { create(:usage_threshold, plan: parent_plan) }
@@ -52,6 +57,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
+        fixed_charges: fixed_charges_params,
         usage_thresholds: usage_thresholds_args,
         minimum_commitment: minimum_commitment_params
       }
@@ -77,6 +83,15 @@ RSpec.describe Plans::OverrideService, type: :service do
       ]
     end
 
+    let(:fixed_charges_params) do
+      [
+        {
+          id: fixed_charge.id,
+          properties: {amount: "1000"}
+        }
+      ]
+    end
+
     let(:usage_thresholds_args) do
       [
         {
@@ -92,6 +107,7 @@ RSpec.describe Plans::OverrideService, type: :service do
     before do
       organization.update!(premium_integrations: ["progressive_billing"])
       charge
+      fixed_charge
       usage_threshold
       allow(SegmentTrackJob).to receive(:perform_later)
       filter_value
@@ -150,10 +166,14 @@ RSpec.describe Plans::OverrideService, type: :service do
           plan_period: "arrears",
           trial: plan.trial_period,
           nb_charges: 1,
+          nb_fixed_charges: 1,
           nb_standard_charges: 1,
           nb_percentage_charges: 0,
           nb_graduated_charges: 0,
           nb_package_charges: 0,
+          nb_standard_fixed_charges: 1,
+          nb_graduated_fixed_charges: 0,
+          nb_volume_fixed_charges: 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent.id
         }
@@ -201,6 +221,16 @@ RSpec.describe Plans::OverrideService, type: :service do
         # Overriden attributes
         plan_id: plan.id,
         min_amount_cents: 1000
+      )
+    end
+
+    it "creates fixed charges based from the parent plan" do
+      expect { override_service.call }.to change(Plan, :count).by(1)
+      plan = Plan.order(:created_at).last
+      expect(plan.fixed_charges.count).to eq(1)
+      expect(plan.fixed_charges.first).to have_attributes(
+        add_on_id: fixed_charge.add_on_id,
+        properties: {"amount" => "1000"}
       )
     end
 

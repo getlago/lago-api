@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customer::AppliedInvoiceCustomSection, type: :model do
+RSpec.describe Customer::AppliedInvoiceCustomSection do
   subject(:applied_invoice_custom_section) do
     create(:customer_applied_invoice_custom_section)
   end

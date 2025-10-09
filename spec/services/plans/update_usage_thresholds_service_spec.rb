@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::UpdateUsageThresholdsService, type: :service do
+RSpec.describe Plans::UpdateUsageThresholdsService do
   subject { described_class.call(plan:, usage_thresholds_params:) }
 
   let(:organization) { create(:organization) }

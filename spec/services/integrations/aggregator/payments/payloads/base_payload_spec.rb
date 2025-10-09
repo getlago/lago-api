@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Payments::Payloads::BasePayload, type: :service do
+RSpec.describe Integrations::Aggregator::Payments::Payloads::BasePayload do
   let(:payload) { described_class.new(integration:, payment:) }
   let(:payment) { create(:payment, payable: invoice) }
   let(:invoice) { create(:invoice, customer:, organization:) }

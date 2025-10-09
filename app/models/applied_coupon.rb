@@ -4,7 +4,7 @@ class AppliedCoupon < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
 
-  belongs_to :coupon
+  belongs_to :coupon, -> { with_discarded }
   belongs_to :customer
   belongs_to :organization
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateJob, type: :job do
+RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateJob do
   subject(:create_job) { described_class }
 
   let(:service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::UpdateService) }

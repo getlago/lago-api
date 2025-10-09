@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Organizations::Update, type: :graphql do
+RSpec.describe Mutations::Organizations::Update do
   let(:membership) { create(:membership) }
   let(:mutation) do
     <<~GQL

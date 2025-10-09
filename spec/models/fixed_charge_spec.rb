@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharge, type: :model do
+RSpec.describe FixedCharge do
   subject { build(:fixed_charge) }
 
   it_behaves_like "paper_trail traceable"
@@ -15,7 +15,6 @@ RSpec.describe FixedCharge, type: :model do
   it { is_expected.to have_many(:children).class_name("FixedCharge").dependent(:nullify) }
   it { is_expected.to have_many(:applied_taxes).class_name("FixedCharge::AppliedTax").dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
-  it { is_expected.to have_many(:subscription_fixed_charge_units_overrides).dependent(:destroy) }
   it { is_expected.to have_many(:fees) }
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }

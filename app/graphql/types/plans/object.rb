@@ -46,6 +46,7 @@ module Types
       field :charges_count, Integer, null: false, description: "Number of charges attached to a plan"
       field :customers_count, Integer, null: false, description: "Number of customers attached to a plan"
       field :draft_invoices_count, Integer, null: false
+      field :fixed_charges_count, Integer, null: false, description: "Number of fixed charges attached to a plan"
       field :is_overridden, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
@@ -67,6 +68,10 @@ module Types
 
       def charges_count
         object.charges.count
+      end
+
+      def fixed_charges_count
+        object.fixed_charges.count
       end
 
       def subscriptions_count

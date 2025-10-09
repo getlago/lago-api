@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CreditNotes::Void, type: :graphql do
+RSpec.describe Mutations::CreditNotes::Void do
   let(:required_permission) { "credit_notes:void" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

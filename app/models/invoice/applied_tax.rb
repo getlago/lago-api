@@ -6,9 +6,11 @@ class Invoice
 
     include PaperTrailTraceable
 
-    belongs_to :invoice
-    belongs_to :tax, optional: true
     belongs_to :organization
+    belongs_to :invoice
+    # NOTE: Tax isn't really optional, but we used to hard deleted taxes,
+    #       so some AppliedTax had no tax relation
+    belongs_to :tax, -> { with_discarded }, optional: true
 
     monetize :amount_cents,
       :fees_amount_cents,
@@ -64,5 +66,5 @@ end
 #
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (tax_id => taxes.id)
+#  fk_rails_...  (tax_id => taxes.id) ON DELETE => nullify
 #

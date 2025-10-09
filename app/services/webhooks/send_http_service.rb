@@ -13,7 +13,7 @@ module Webhooks
     def call
       webhook.endpoint = webhook.webhook_endpoint.webhook_url
 
-      http_client = LagoHttpClient::Client.new(webhook.webhook_endpoint.webhook_url)
+      http_client = LagoHttpClient::Client.new(webhook.webhook_endpoint.webhook_url, write_timeout: 30)
       response = http_client.post_with_response(webhook.payload, webhook.generate_headers)
 
       mark_webhook_as_succeeded(response)

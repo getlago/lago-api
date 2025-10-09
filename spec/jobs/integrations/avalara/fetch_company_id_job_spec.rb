@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Avalara::FetchCompanyIdJob, type: :job do
+RSpec.describe Integrations::Avalara::FetchCompanyIdJob do
   describe "#perform" do
     subject(:job) { described_class }
 

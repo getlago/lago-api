@@ -40,6 +40,8 @@ class WalletTransaction < ApplicationRecord
   enum :source, SOURCES
 
   validates :priority, presence: true, inclusion: {in: 1..50}
+  validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
+  validates :invoice_requires_successful_payment, exclusion: [nil]
 
   delegate :customer, to: :wallet
 
@@ -77,6 +79,7 @@ end
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  lock_version                        :integer          default(0), not null
 #  metadata                            :jsonb
+#  name                                :string(255)
 #  priority                            :integer          default(50), not null
 #  settled_at                          :datetime
 #  source                              :integer          default("manual"), not null

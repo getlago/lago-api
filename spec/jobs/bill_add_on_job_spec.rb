@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillAddOnJob, type: :job do
+RSpec.describe BillAddOnJob do
   let(:applied_add_on) { create(:applied_add_on) }
   let(:datetime) { Time.current.round }
 

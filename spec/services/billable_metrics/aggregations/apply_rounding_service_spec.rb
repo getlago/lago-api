@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::ApplyRoundingService, type: :service do
+RSpec.describe BillableMetrics::Aggregations::ApplyRoundingService do
   subject(:rounding_service) { described_class.new(billable_metric:, units:) }
 
   let(:rounding_function) { "round" }

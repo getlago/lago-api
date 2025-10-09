@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Coupons::Update, type: :graphql do
+RSpec.describe Mutations::Coupons::Update do
   let(:required_permission) { "coupons:update" }
   let(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization: membership.organization) }

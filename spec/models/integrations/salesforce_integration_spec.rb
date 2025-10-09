@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::SalesforceIntegration, type: :model do
+RSpec.describe Integrations::SalesforceIntegration do
   subject(:salesforce_integration) { build(:salesforce_integration) }
 
   it { is_expected.to validate_presence_of(:code) }

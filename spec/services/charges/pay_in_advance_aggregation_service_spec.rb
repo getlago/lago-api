@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
+RSpec.describe Charges::PayInAdvanceAggregationService do
   subject(:agg_service) do
     described_class.new(charge:, boundaries:, properties:, event:, charge_filter:)
   end
@@ -54,7 +54,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries.charges_duration
             },
             filters: {
-              event:
+              event:,
+              charge_id: charge.id
             }
           )
 
@@ -100,6 +101,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               },
               filters: {
                 event:,
+                charge_id: charge.id,
                 grouped_by_values: {"operator" => "foo"}
               }
             )
@@ -146,6 +148,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               },
               filters: {
                 event:,
+                charge_id: charge.id,
                 grouped_by_values: {"operator" => "foo"}
               }
             )
@@ -188,6 +191,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               },
               filters: {
                 event:,
+                charge_id: charge.id,
                 charge_filter:,
                 matching_filters: charge_filter.to_h,
                 ignored_filters: []
@@ -224,7 +228,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries.charges_duration
             },
             filters: {
-              event:
+              event:,
+              charge_id: charge.id
             }
           )
 
@@ -256,7 +261,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charges_duration: boundaries.charges_duration
             },
             filters: {
-              event:
+              event:,
+              charge_id: charge.id
             }
           )
 

@@ -29,7 +29,7 @@ module Invoices
         if License.premium? && wallet_transaction.invoice_requires_successful_payment?
           invoice.open!
         else
-          invoice.finalized!
+          Invoices::FinalizeService.call!(invoice: invoice)
         end
       end
 

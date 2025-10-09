@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeModels::VolumeService, type: :service do
+RSpec.describe ChargeModels::VolumeService do
   subject(:apply_volume_service) do
     described_class.apply(
       charge:,
@@ -162,6 +162,29 @@ RSpec.describe ChargeModels::VolumeService, type: :service do
           per_unit_total_amount: 99.3
         }
       )
+    end
+  end
+
+  context "when charge is a fixed charge" do
+    let(:aggregation) { 210 }
+    let(:charge) do
+      build(
+        :fixed_charge,
+        charge_model: :volume,
+        properties: {
+          volume_ranges: [
+            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "10"},
+            {from_value: 101, to_value: 200, per_unit_amount: "1", flat_amount: "0"},
+            {from_value: 201, to_value: nil, per_unit_amount: "0.5", flat_amount: "50"}
+          ]
+        }
+      )
+    end
+
+    it "applies the charge model to the value" do
+      # 50 + 210 * 0.5 = 155
+      expect(apply_volume_service.amount).to eq(155)
+      expect(apply_volume_service.unit_amount.round(2)).to eq((155 / 210.0).round(2))
     end
   end
 end

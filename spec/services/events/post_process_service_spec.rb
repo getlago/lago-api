@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::PostProcessService, type: :service do
+RSpec.describe Events::PostProcessService do
   subject(:process_service) { described_class.new(event:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fee, type: :model do
+RSpec.describe Fee do
   subject { build(:fee) }
 
   it { is_expected.to belong_to(:add_on).optional }
@@ -180,10 +180,23 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is a credit fee" do
-        let(:fee) { build(:fee, fee_type: "credit", invoice_display_name:) }
+        let(:wallet) { create(:wallet, name: "My Wallet") }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, name:) }
+        let(:name) { "Custom Transaction" }
+        let(:fee) { build(:fee, fee_type: "credit", invoice_display_name:, invoiceable: wallet_transaction) }
 
-        it "returns add on name" do
-          expect(fee_invoice_name).to eq("credit")
+        context "when wallet transaction has a name" do
+          it "returns the wallet transaction name" do
+            expect(fee_invoice_name).to eq("Custom Transaction")
+          end
+        end
+
+        context "when wallet transaction has no name" do
+          let(:name) { nil }
+
+          it "returns 'credit'" do
+            expect(fee_invoice_name).to eq("credit")
+          end
         end
       end
 
@@ -247,8 +260,23 @@ RSpec.describe Fee, type: :model do
     end
 
     context "when it is a credit fee" do
-      it "returns 'credit'" do
-        expect(described_class.new(fee_type: "credit").item_name).to eq("credit")
+      let(:wallet) { create(:wallet, name: "My Wallet") }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, name:) }
+      let(:name) { "Custom Transaction" }
+      let(:fee) { described_class.new(fee_type: "credit", invoiceable: wallet_transaction) }
+
+      context "when wallet transaction has a name" do
+        it "returns the wallet transaction name" do
+          expect(fee.item_name).to eq("Custom Transaction")
+        end
+      end
+
+      context "when wallet transaction has no name" do
+        let(:name) { nil }
+
+        it "returns 'credit'" do
+          expect(fee.item_name).to eq("credit")
+        end
       end
     end
 

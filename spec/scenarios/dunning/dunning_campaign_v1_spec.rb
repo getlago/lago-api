@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Dunning Campaign v1", :scenarios, type: :request do
+describe "Dunning Campaign v1" do
   let(:organization) do
     create(:organization, name: "JC AI", premium_integrations: %w[auto_dunning])
   end

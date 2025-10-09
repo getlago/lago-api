@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::CreatePartService, type: :service do
+RSpec.describe DataExports::CreatePartService do
   subject(:result) { described_class.call(data_export:, object_ids:, index:) }
 
   let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }

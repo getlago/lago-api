@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :service do
+RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
   subject(:update_service) { described_class.new(billing_entity:, applied_dunning_campaign_id:) }
 
   let(:billing_entity) { create(:billing_entity) }

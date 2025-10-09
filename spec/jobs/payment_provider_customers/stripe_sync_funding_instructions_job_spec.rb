@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::StripeSyncFundingInstructionsJob, type: :job do
+RSpec.describe PaymentProviderCustomers::StripeSyncFundingInstructionsJob do
   subject(:stripe_sync_funding_instructions_job) { described_class }
 
   let(:stripe_customer) { create(:stripe_customer) }

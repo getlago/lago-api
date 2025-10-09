@@ -263,8 +263,8 @@ module Fees
         persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
       end
 
-      Charges::ChargeModelFactory.new_instance(
-        charge:,
+      ChargeModels::Factory.new_instance(
+        chargeable: charge,
         aggregation_result:,
         properties:,
         period_ratio: calculate_period_ratio,
@@ -311,7 +311,8 @@ module Fees
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
-          charges_duration: boundaries.charges_duration
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
         },
         filters: aggregation_filters(charge_filter:),
         bypass_aggregation:
@@ -344,7 +345,7 @@ module Fees
     end
 
     def aggregation_filters(charge_filter: nil)
-      filters = {}
+      filters = {charge_id: charge.id}
 
       model = charge_filter.presence || charge
       filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?

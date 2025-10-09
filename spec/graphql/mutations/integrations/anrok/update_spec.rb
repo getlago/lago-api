@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
+RSpec.describe Mutations::Integrations::Anrok::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:anrok_integration, organization:) }
   let(:organization) { membership.organization }

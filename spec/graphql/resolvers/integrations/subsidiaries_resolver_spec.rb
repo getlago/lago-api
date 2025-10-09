@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Integrations::SubsidiariesResolver, type: :graphql do
+RSpec.describe Resolvers::Integrations::SubsidiariesResolver do
   let(:required_permission) { "organization:integrations:view" }
   let(:query) do
     <<~GQL

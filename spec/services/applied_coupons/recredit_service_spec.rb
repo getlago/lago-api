@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedCoupons::RecreditService, type: :service do
+RSpec.describe AppliedCoupons::RecreditService do
   subject(:recredit_service) { described_class.new(credit:) }
 
   let(:customer) { create(:customer) }

@@ -42,7 +42,7 @@ module Charges
     end
 
     def aggregation_filters
-      filters = {event:}
+      filters = {event:, charge_id: charge.id}
 
       model = charge_filter.presence || charge
       if model.pricing_group_keys.present?

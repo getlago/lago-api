@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::GocardlessCreateJob, type: :job do
+RSpec.describe PaymentRequests::Payments::GocardlessCreateJob do
   let(:payment_request) { create(:payment_request) }
 
   let(:service_result) { BaseService::Result.new }

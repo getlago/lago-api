@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::ExportResourcesService, type: :service do
+RSpec.describe DataExports::ExportResourcesService do
   subject(:result) { described_class.call(data_export:, batch_size:) }
 
   let(:organization) { data_export.organization }

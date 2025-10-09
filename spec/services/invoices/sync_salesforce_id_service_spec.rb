@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::SyncSalesforceIdService, type: :service do
+RSpec.describe Invoices::SyncSalesforceIdService do
   subject(:service_call) { sync_salesforce_id_service.call }
 
   let(:sync_salesforce_id_service) { described_class.new(invoice:, params:) }

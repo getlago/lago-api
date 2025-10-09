@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::GocardlessCreateJob, type: :job do
+RSpec.describe PaymentProviderCustomers::GocardlessCreateJob do
   let(:gocardless_customer) { create(:gocardless_customer) }
 
   let(:gocardless_service) { instance_double(PaymentProviderCustomers::GocardlessService) }

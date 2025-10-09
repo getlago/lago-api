@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::ProviderTaxes::ReportJob, type: :job do
+RSpec.describe CreditNotes::ProviderTaxes::ReportJob do
   let(:organization) { create(:organization) }
   let(:credit_note) { create(:credit_note, customer:) }
   let(:customer) { create(:customer, organization:) }

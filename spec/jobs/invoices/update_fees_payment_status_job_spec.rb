@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::UpdateFeesPaymentStatusJob, type: :job do
+RSpec.describe Invoices::UpdateFeesPaymentStatusJob do
   let(:invoice) { create(:invoice, payment_status: :succeeded) }
   let(:fee) { create(:fee, invoice:) }
 

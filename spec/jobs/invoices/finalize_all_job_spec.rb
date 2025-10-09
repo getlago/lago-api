@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::FinalizeAllJob, type: :job do
+RSpec.describe Invoices::FinalizeAllJob do
   subject(:finalize_all_job) { described_class }
 
   let(:finalize_batch_service) { instance_double(Invoices::FinalizeBatchService) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceipts::CreateService, type: :service do
+RSpec.describe PaymentReceipts::CreateService do
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }

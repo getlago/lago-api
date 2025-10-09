@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CurrentUserResolver, type: :graphql do
+RSpec.describe Resolvers::CurrentUserResolver do
   let(:query) do
     <<~GRAPHQL
       query {

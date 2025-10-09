@@ -38,8 +38,8 @@ module Charges
 
       filtered_properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
 
-      charge_model = ChargeModelFactory.new_instance(
-        charge:,
+      charge_model = ChargeModels::Factory.new_instance(
+        chargeable: charge,
         aggregation_result:,
         properties: filtered_properties
       )

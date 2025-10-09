@@ -11,7 +11,7 @@ module Events
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
-        scope = scope.to_datetime(to_datetime) if to_datetime
+        scope = scope.to_datetime(applicable_to_datetime) if applicable_to_datetime
 
         if numeric_property
           scope = scope.where(presence_condition)
@@ -26,7 +26,7 @@ module Events
         Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization.id)
           .from_datetime(from_datetime)
-          .to_datetime(to_datetime)
+          .to_datetime(applicable_to_datetime)
           .pluck("DISTINCT(code)")
       end
 
@@ -95,7 +95,7 @@ module Events
       def unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
         sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
-        result = ActiveRecord::Base.connection.select_one(sql)
+        result = Event.connection.select_one(sql)
 
         result["aggregation"]
       end
@@ -137,7 +137,6 @@ module Events
             }
           ]
         )
-
         ActiveRecord::Base.connection.select_all(sql).to_a
       end
 
@@ -265,7 +264,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Utils::Timezone.date_in_customer_timezone_sql(customer, "events.timestamp")
+        date_field = ::Utils::Timezone.date_in_customer_timezone_sql(customer, "events.timestamp")
 
         events.group(Arel.sql("DATE(#{date_field})"))
           .order(Arel.sql("DATE(#{date_field}) ASC"))
@@ -401,8 +400,8 @@ module Events
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good
       def duration_ratio_sql(from, to, duration)
-        from_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, from)
-        to_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, to)
+        from_in_timezone = ::Utils::Timezone.date_in_customer_timezone_sql(customer, from)
+        to_in_timezone = ::Utils::Timezone.date_in_customer_timezone_sql(customer, to)
 
         "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
       end

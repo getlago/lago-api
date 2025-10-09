@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe InboundWebhooks::ProcessJob, type: :job do
+RSpec.describe InboundWebhooks::ProcessJob do
   subject(:process_job) { described_class }
 
   let(:inbound_webhook) { create :inbound_webhook }

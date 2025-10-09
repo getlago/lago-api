@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: false do
+describe "Invoice Numbering Scenario", transaction: false do
   let(:customer_first) { create(:customer, organization:, billing_entity: billing_entity_first) }
   let(:customer_second) { create(:customer, organization:, billing_entity: billing_entity_first) }
   let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first) }
@@ -123,7 +123,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-      update_organization(document_numbering: "per_organization", document_number_prefix: "BENT-11")
+      update_organization({document_numbering: "per_organization", document_number_prefix: "BENT-11"})
 
       perform_billing
 
@@ -142,7 +142,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
     travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-      update_organization(document_numbering: "per_customer")
+      update_organization({document_numbering: "per_customer"})
 
       perform_billing
 
@@ -201,7 +201,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-      update_organization(document_numbering: "per_organization")
+      update_organization({document_numbering: "per_organization"})
 
       perform_billing
 
@@ -319,7 +319,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: October 1st: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 9, 30, 23, 10)) do
-        update_organization(document_numbering: "per_organization", document_number_prefix: "BENT-11")
+        update_organization({document_numbering: "per_organization", document_number_prefix: "BENT-11"})
 
         perform_billing
 
@@ -879,7 +879,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-        update_organization(document_numbering: "per_organization", document_number_prefix: "BENT-11")
+        update_organization({document_numbering: "per_organization", document_number_prefix: "BENT-11"})
 
         perform_billing
 
@@ -898,7 +898,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
       travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-        update_organization(document_numbering: "per_customer")
+        update_organization({document_numbering: "per_customer"})
 
         perform_billing
 
@@ -916,7 +916,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-        update_organization(document_numbering: "per_organization")
+        update_organization({document_numbering: "per_organization"})
 
         perform_billing
 
@@ -1057,8 +1057,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         #       updating organzation document_numbering to "per_organization"
         #       will update organization's default billing entity document_numbering
         #       to "per_billing_entity".
-        update_organization(document_numbering: "per_organization", document_number_prefix: "ORG-99")
-        update_billing_entity(billing_entity_first, document_numbering: "per_billing_entity", document_number_prefix: "BENT-11")
+        update_organization({document_numbering: "per_organization", document_number_prefix: "ORG-99"})
+        update_billing_entity(billing_entity_first, {document_numbering: "per_billing_entity", document_number_prefix: "BENT-11"})
 
         perform_billing
 
@@ -1100,8 +1100,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         #       updating organzation document_numbering to "per_customer"
         #       will update organization's default billing entity document_numbering
         #       to "per_customer".
-        update_organization(document_numbering: "per_customer")
-        update_billing_entity(billing_entity_second, document_numbering: "per_customer")
+        update_organization({document_numbering: "per_customer"})
+        update_billing_entity(billing_entity_second, {document_numbering: "per_customer"})
 
         perform_billing
 
@@ -1123,9 +1123,9 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         #       updating organzation document_numbering to "per_organization"
         #       will update organization's default billing entity document_numbering
         #       to "per_billing_entity".
-        update_organization(document_numbering: "per_organization")
-        update_billing_entity(billing_entity_first, document_numbering: "per_billing_entity")
-        update_billing_entity(billing_entity_second, document_numbering: "per_billing_entity")
+        update_organization({document_numbering: "per_organization"})
+        update_billing_entity(billing_entity_first, {document_numbering: "per_billing_entity"})
+        update_billing_entity(billing_entity_second, {document_numbering: "per_billing_entity"})
 
         perform_billing
 

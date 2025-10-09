@@ -2,14 +2,27 @@
 
 FactoryBot.define do
   factory :organization do
+    transient do
+      with_static_values { false }
+    end
+
     name { Faker::Company.name }
     default_currency { "USD" }
+    audit_logs_period { nil }
 
     email { Faker::Internet.email }
     email_settings { ["invoice.finalized", "credit_note.created"] }
 
     api_keys { [association(:api_key, organization: instance)] }
-    billing_entities { [association(:billing_entity, organization: instance)] }
+    billing_entities do
+      [
+        association(
+          :billing_entity,
+          *(with_static_values ? [:with_static_values] : []),
+          organization: instance
+        )
+      ]
+    end
 
     transient do
       webhook_url { Faker::Internet.url }
@@ -38,6 +51,14 @@ FactoryBot.define do
       after :create do |org|
         create(:dunning_campaign, organization: org, applied_to_organization: true)
       end
+    end
+
+    trait :with_static_values do
+      with_static_values { true }
+
+      name { "ACME Corporation" }
+      default_currency { "USD" }
+      country { "US" }
     end
   end
 end

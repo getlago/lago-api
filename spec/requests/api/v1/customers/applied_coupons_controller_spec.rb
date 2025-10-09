@@ -6,6 +6,36 @@ RSpec.describe Api::V1::Customers::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
 
+  let(:external_id) { customer.external_id }
+
+  describe "GET /api/v1/customers/:external_id/applied_coupons" do
+    include_examples "a applied coupon index endpoint" do
+      subject { get_with_token(organization, "/api/v1/customers/#{external_id}/applied_coupons", params) }
+
+      let(:external_id) { customer.external_id }
+
+      context "when customer external_id is unknown" do
+        let(:external_id) { "unknown" }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+
+      context "when customer belongs to another organization" do
+        let(:customer) { create(:customer) }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+    end
+  end
+
   describe "DELETE /api/v1/customers/:customer_external_id/applied_coupons/:id" do
     subject do
       delete_with_token(

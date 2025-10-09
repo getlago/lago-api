@@ -31,6 +31,23 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(json[:entitlements].length).to eq(1)
       expect(json[:entitlements].first[:privileges].sole[:value]).to eq(30)
     end
+
+    context "when plan has children (subscription plan overrides)" do
+      it "always retrieve the parent plan" do
+        # NOTE: It should be possible to create entitlements on a child plan,
+        #       but we want to tests that the controller retrieves only parents
+        override = create(:plan, organization:, code: plan.code, parent: plan)
+        override_entitlement = create(:entitlement, plan: override, feature:)
+        create(:entitlement_value, entitlement: override_entitlement, privilege:, value: 999, organization:)
+
+        plan.update! deleted_at: Time.current
+
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq "plan_not_found"
+      end
+    end
   end
 
   describe "GET /api/v1/plans/:plan_code/entitlements/:feature_code" do
@@ -164,7 +181,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       it "returns not found error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to eq("validation_errors")
         expect(json[:error_details][:max_privilege_value]).to eq(["value_is_invalid"])
       end
@@ -189,7 +206,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       it "returns not found error" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:code]).to eq("validation_errors")
         expect(json[:error_details][:invitation_privilege_value]).to eq(["value_not_in_select_options"])
       end
@@ -323,6 +340,25 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
     end
 
+    context "when privilege value is invalid" do
+      let(:params) do
+        {
+          "entitlements" => {
+            "seats" => {
+              "max" => "one thousand!!"
+            }
+          }
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:max_privilege_value]).to eq(["value_is_invalid"])
+      end
+    end
+
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
       let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
@@ -433,6 +469,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         .and change(feature.entitlement_values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
+      expect(json[:entitlement][:code]).to eq "seats"
+      expect(json[:entitlement][:privileges].sole[:code]).to eq "max"
     end
 
     it "returns not found error when plan does not exist" do

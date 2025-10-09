@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :billable_metric do
     organization
-    name { "Some metric" }
+    name { Faker::Alphanumeric.alphanumeric(number: 10) }
     description { "some description" }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
     aggregation_type { "count_agg" }

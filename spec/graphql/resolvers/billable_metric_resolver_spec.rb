@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
+RSpec.describe Resolvers::BillableMetricResolver do
   subject(:graphql_request) do
     execute_graphql(
       current_user: membership.user,

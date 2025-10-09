@@ -15,10 +15,10 @@ module Mutations
 
       type Types::IntegrationCollectionMappings::Object
 
-      def resolve(**args)
+      def resolve(id:, **args)
         integration_collection_mapping = ::IntegrationCollectionMappings::BaseCollectionMapping
           .joins(:integration)
-          .where(id: args[:id], integration: {organization: current_organization}).first
+          .find_by(id:, integration: {organization: current_organization})
 
         result = ::IntegrationCollectionMappings::UpdateService.call(
           integration_collection_mapping:,

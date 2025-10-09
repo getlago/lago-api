@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Webhooks::SendHttpService, type: :service do
+RSpec.describe Webhooks::SendHttpService do
   subject(:service) { described_class.new(webhook:) }
 
   let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "https://wh.test.com") }
@@ -35,7 +35,7 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
     end
 
     before do
-      allow(LagoHttpClient::Client).to receive(:new).with(webhook.webhook_endpoint.webhook_url).and_return(lago_client)
+      allow(LagoHttpClient::Client).to receive(:new).with(webhook.webhook_endpoint.webhook_url, write_timeout: 30).and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_raise(
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
       )

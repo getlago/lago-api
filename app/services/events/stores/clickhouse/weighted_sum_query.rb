@@ -98,21 +98,20 @@ module Events
         def period_ratio_sql
           <<-SQL
             if(
-              -- NOTE: duration in seconds between current event and next one
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
 
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
               ,
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end
@@ -170,7 +169,7 @@ module Events
             [
               groups,
               "toDateTime64(:to_datetime, 5, 'UTC')",
-              "toDecimal128(0, :decimal_scale)"
+              "toDecimal32(0, 0)"
             ].flatten.join(", ")
           end
 
@@ -186,21 +185,20 @@ module Events
         def grouped_period_ratio_sql
           <<-SQL
             if(
-              -- NOTE: duration in seconds between current event and next one
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
 
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
               ,
-
               -- NOTE: duration was null so usage is null
-              toDecimal128(0, :decimal_scale)
+              0
             )
           SQL
         end

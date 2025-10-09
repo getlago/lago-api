@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AddOns::Update, type: :graphql do
+RSpec.describe Mutations::AddOns::Update do
   let(:required_permission) { "addons:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

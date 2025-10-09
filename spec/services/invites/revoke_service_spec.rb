@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invites::RevokeService, type: :service do
+RSpec.describe Invites::RevokeService do
   subject(:revoke_service) { described_class.new(invite) }
 
   let(:membership) { create(:membership) }

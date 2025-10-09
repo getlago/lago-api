@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
+RSpec.describe Mutations::AppliedCoupons::Create do
   let(:required_permission) { "coupons:attach" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

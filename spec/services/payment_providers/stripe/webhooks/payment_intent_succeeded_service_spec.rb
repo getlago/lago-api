@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService, type: :service do
+RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService do
   subject(:event_service) { described_class.new(organization_id: organization.id, event:) }
 
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }

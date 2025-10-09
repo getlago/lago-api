@@ -3,10 +3,13 @@
 module Api
   module V1
     class SubscriptionsController < Api::BaseController
+      include SubscriptionIndex
+
       def create
         response = {}
         billing_entity_result = BillingEntities::ResolveService.call(
-          organization: current_organization, billing_entity_code: params.dig(:subscription, :billing_entity_code)
+          organization: current_organization,
+          billing_entity_code: params.dig(:subscription, :billing_entity_code)
         )
         return render_error_response(billing_entity_result) unless billing_entity_result.success?
         billing_entity = billing_entity_result.billing_entity
@@ -38,7 +41,7 @@ module Api
                 code: "stripe_required",
                 message: "Only Stripe is supported for authorization"
               },
-              status: :unprocessable_entity
+              status: :unprocessable_content
             )
           end
 
@@ -140,27 +143,9 @@ module Api
       end
 
       def index
-        result = SubscriptionsQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: index_filters
-        )
-
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.subscriptions,
-              ::V1::SubscriptionSerializer,
-              collection_name: "subscriptions",
-              meta: pagination_metadata(result.subscriptions)
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        permitted_params = params.permit(:external_customer_id)
+        external_customer_id = permitted_params[:external_customer_id]
+        subscription_index(external_customer_id:)
       end
 
       private
@@ -173,7 +158,6 @@ module Api
             :name,
             :external_id,
             :billing_time,
-            :subscription_date,
             :subscription_at,
             :ending_at,
             plan_overrides:
@@ -183,7 +167,6 @@ module Api
       def update_params
         params.require(:subscription).permit(
           :name,
-          :subscription_date,
           :subscription_at,
           :ending_at,
           :on_termination_credit_note,
@@ -200,52 +183,45 @@ module Api
           :name,
           :invoice_display_name,
           :trial_period,
-          {tax_codes: []},
-          {
-            minimum_commitment: [
-              :id,
+          tax_codes: [],
+          minimum_commitment: [
+            :invoice_display_name,
+            :amount_cents,
+            tax_codes: []
+          ],
+          charges: [
+            :id,
+            :billable_metric_id,
+            :min_amount_cents,
+            :invoice_display_name,
+            :charge_model,
+            properties: {},
+            filters: [
               :invoice_display_name,
-              :amount_cents,
-              {tax_codes: []}
+              properties: {},
+              values: {}
             ],
-            charges: [
-              :id,
-              :billable_metric_id,
-              :min_amount_cents,
-              :invoice_display_name,
-              :charge_model,
-              {properties: {}},
-              {
-                filters: [
-                  :invoice_display_name,
-                  {
-                    properties: {},
-                    values: {}
-                  }
-                ]
-              },
-              {tax_codes: []},
-              {
-                applied_pricing_unit: [
-                  :code,
-                  :conversion_rate
-                ]
-              }
-            ],
-            usage_thresholds: [
-              :id,
-              :threshold_display_name,
-              :amount_cents,
-              :recurring
+            tax_codes: [],
+            applied_pricing_unit: [
+              :code,
+              :conversion_rate
             ]
-          }
+          ],
+          fixed_charges: [
+            :id,
+            :invoice_display_name,
+            :units,
+            :apply_units_immediately,
+            properties: {},
+            tax_codes: []
+          ],
+          usage_thresholds: [
+            :id,
+            :threshold_display_name,
+            :amount_cents,
+            :recurring
+          ]
         ]
-      end
-
-      def index_filters
-        filters = params.permit(:external_customer_id, :plan_code, status: [])
-        filters[:status] = ["active"] if filters[:status].blank?
-        filters
       end
 
       def render_subscription(subscription)

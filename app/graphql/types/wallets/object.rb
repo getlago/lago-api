@@ -35,6 +35,11 @@ module Types
 
       field :invoice_requires_successful_payment, Boolean, null: false
 
+      field :paid_top_up_max_amount_cents, GraphQL::Types::BigInt, null: true
+      field :paid_top_up_max_credits, GraphQL::Types::BigInt, null: true
+      field :paid_top_up_min_amount_cents, GraphQL::Types::BigInt, null: true
+      field :paid_top_up_min_credits, GraphQL::Types::BigInt, null: true
+
       field :applies_to, Types::Wallets::AppliesTo, null: true, method: :itself
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

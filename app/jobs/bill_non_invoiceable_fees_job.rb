@@ -9,7 +9,7 @@ class BillNonInvoiceableFeesJob < ApplicationJob
     end
   end
 
-  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
+  retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
   unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
 

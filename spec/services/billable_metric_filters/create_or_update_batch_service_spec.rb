@@ -120,6 +120,38 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
 
         expect(filter_value.reload).to be_discarded
       end
+
+      context "when removing all values" do
+        let(:filters_params) do
+          []
+        end
+
+        let(:charge) { create(:standard_charge, billable_metric:) }
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
+        before do
+          create(
+            :charge_filter_value,
+            charge_filter:,
+            billable_metric_filter: filter,
+            values: ["US"]
+          )
+
+          create(
+            :charge_filter_value,
+            charge_filter:,
+            billable_metric_filter: filter,
+            values: ["Europe"]
+          )
+        end
+
+        it "discards the removed value" do
+          expect { service }.to change(BillableMetricFilter, :count).by(-1)
+
+          expect(filter.reload).to be_discarded
+          expect(filter.filter_values.with_discarded).to all(be_discarded)
+        end
+      end
     end
 
     context "when a filter is removed" do

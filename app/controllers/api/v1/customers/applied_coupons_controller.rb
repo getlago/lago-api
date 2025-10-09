@@ -3,11 +3,13 @@
 module Api
   module V1
     module Customers
-      class AppliedCouponsController < Api::BaseController
-        def destroy
-          customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
-          return not_found_error(resource: "customer") unless customer
+      class AppliedCouponsController < BaseController
+        include AppliedCouponIndex
+        def index
+          applied_coupon_index(external_customer_id: customer.external_id)
+        end
 
+        def destroy
           applied_coupon = customer.applied_coupons.find_by(id: params[:id])
           return not_found_error(resource: "applied_coupon") unless applied_coupon
 

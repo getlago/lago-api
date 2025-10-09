@@ -1,9 +1,22 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
-  def api_call
+  def api_call(perform_jobs: true, raise_on_error: true)
     yield
-    perform_all_enqueued_jobs
+
+    if raise_on_error && response.status >= 400
+      request = response.request
+      message_parts = ["API call failed:",
+        "- Method: #{request.method}",
+        "- Path: #{request.path}",
+        "- Request body: #{request.body.read}",
+        "- HTTP status: #{response.status}",
+        "- Response body: #{response.body}"]
+      message = message_parts.join("\n")
+      raise message
+    end
+
+    perform_all_enqueued_jobs if perform_jobs
     json.with_indifferent_access
   end
 
@@ -14,8 +27,8 @@ module ScenariosHelper
 
   ### Organizations
 
-  def update_organization(params)
-    api_call do
+  def update_organization(params, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/organizations", {organization: params})
     end
   end
@@ -29,34 +42,34 @@ module ScenariosHelper
 
   ### Billable metrics
 
-  def create_metric(params)
-    api_call do
+  def create_metric(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: params})
     end
   end
 
-  def update_metric(metric, params)
-    api_call do
+  def update_metric(metric, params, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", {billable_metric: params})
     end
   end
 
   ### Customers
 
-  def create_or_update_customer(params)
-    api_call do
+  def create_or_update_customer(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/customers", {customer: params})
     end
   end
 
-  def delete_customer(customer)
-    api_call do
+  def delete_customer(customer, **kwargs)
+    api_call(**kwargs) do
       delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
     end
   end
 
-  def fetch_current_usage(customer:, subscription: customer.subscriptions.first)
-    api_call do
+  def fetch_current_usage(customer:, subscription: customer.subscriptions.first, **kwargs)
+    api_call(**kwargs) do
       url = "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
       get_with_token(organization, url)
     end
@@ -64,62 +77,63 @@ module ScenariosHelper
 
   ### Plans
 
-  def create_plan(params)
-    api_call do
+  def create_plan(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/plans", {plan: params})
     end
   end
 
-  def update_plan(plan, params)
-    api_call do
+  def update_plan(plan, params, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: params})
     end
   end
 
-  def delete_plan(plan)
-    api_call do
+  def delete_plan(plan, **kwargs)
+    api_call(**kwargs) do
       delete_with_token(organization, "/api/v1/plans/#{plan.code}")
     end
   end
 
   ### Subscriptions
 
-  def create_subscription(params, authorization = nil)
+  def create_subscription(params, authorization = nil, as: :json, **kwargs)
     payload = {subscription: params}
     payload[:authorization] = authorization if authorization
-    api_call do
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/subscriptions", payload)
     end
+    parse_result(as, Subscription, :subscription)
   end
 
-  def terminate_subscription(subscription)
-    api_call do
-      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
+  def terminate_subscription(subscription, params: {}, **kwargs)
+    api_call(**kwargs) do
+      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}?#{params.to_query}")
     end
   end
 
-  def create_alert(sub_external_id, params)
-    api_call do
+  def create_alert(sub_external_id, params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/subscriptions/#{sub_external_id}/alerts", {alert: params})
     end
   end
 
   ### Invoices
 
-  def refresh_invoice(invoice)
-    api_call do
+  def refresh_invoice(invoice, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
     end
   end
 
-  def finalize_invoice(invoice)
-    api_call do
+  def finalize_invoice(invoice, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
     end
   end
 
-  def update_invoice(invoice, params)
-    api_call do
+  def update_invoice(invoice, params, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
     end
   end
@@ -130,11 +144,11 @@ module ScenariosHelper
     invoice.reload
   end
 
-  def create_one_off_invoice(customer, addons, taxes: [], units: 1)
-    api_call do
+  def create_one_off_invoice(customer, addons, taxes: [], currency: "EUR", units: 1, **kwargs)
+    api_call(**kwargs) do
       create_invoice_params = {
         external_customer_id: customer.external_id,
-        currency: "EUR",
+        currency:,
         fees: [],
         timestamp: Time.zone.now.to_i
       }
@@ -153,30 +167,44 @@ module ScenariosHelper
     end
   end
 
-  def retry_invoice_payment(invoice_id)
-    api_call do
+  def retry_invoice_payment(invoice_id, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/invoices/#{invoice_id}/retry_payment")
+    end
+  end
+
+  ### Payments
+
+  def create_payment(customer, invoice, amount_cents, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/payments", {
+        payment: {
+          invoice_id: invoice.id,
+          amount_cents:,
+          reference: SecureRandom.uuid.to_s
+        }
+      })
     end
   end
 
   ### Coupons
 
-  def create_coupon(params)
-    api_call do
+  def create_coupon(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/coupons", {coupon: params})
     end
   end
 
-  def apply_coupon(params)
-    api_call do
+  def apply_coupon(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
     end
   end
 
   ### Taxes
 
-  def create_tax(params)
-    api_call do
+  def create_tax(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/taxes", {tax: params})
     end
   end
@@ -194,16 +222,18 @@ module ScenariosHelper
 
   ### Wallets
 
-  def create_wallet(params)
-    api_call do
+  def create_wallet(params, as: :json, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/wallets", {wallet: params})
     end
+    parse_result(as, Wallet, :wallet)
   end
 
-  def create_wallet_transaction(params)
-    api_call do
+  def create_wallet_transaction(params, as: :json, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
     end
+    parse_result(as, WalletTransaction, :wallet_transactions)
   end
 
   def recalculate_wallet_balances
@@ -224,30 +254,49 @@ module ScenariosHelper
     perform_usage_update
   end
 
-  def create_event(params)
-    api_call do
+  def create_event(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/events", {event: params})
+    end
+  end
+
+  def create_clickhouse_event(params, in_advance: false)
+    event = Clickhouse::EventsEnriched.create!(params)
+    common_event = Events::Common.new(
+      id: nil,
+      organization_id: event.organization_id,
+      transaction_id: event.transaction_id,
+      external_subscription_id: event.external_subscription_id,
+      timestamp: event.timestamp,
+      code: event.code,
+      properties: event.properties,
+      precise_total_amount_cents: event.precise_total_amount_cents
+    )
+
+    if in_advance
+      Events::PayInAdvanceJob.perform_later(common_event.as_json)
+      perform_all_enqueued_jobs
     end
   end
 
   ### Credit notes
 
-  def create_credit_note(params)
-    api_call do
+  def create_credit_note(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/credit_notes", {credit_note: params})
     end
   end
 
-  def estimate_credit_note(params)
-    api_call do
+  def estimate_credit_note(params, **kwargs)
+    api_call(**kwargs) do
       post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: params})
     end
   end
 
   ### Analytics
 
-  def get_analytics(organization:, analytics_type:)
-    api_call do
+  def get_analytics(organization:, analytics_type:, **kwargs)
+    api_call(**kwargs) do
       get_with_token(organization, "/api/v1/analytics/#{analytics_type}", months: 20)
     end
   end
@@ -262,8 +311,8 @@ module ScenariosHelper
 
   ### Fees
 
-  def update_fee(fee_id, params)
-    api_call do
+  def update_fee(fee_id, params, **kwargs)
+    api_call(**kwargs) do
       put_with_token(organization, "/api/v1/fees/#{fee_id}", {fee: params})
     end
   end
@@ -298,6 +347,12 @@ module ScenariosHelper
     end
   end
 
+  def perform_wallet_refresh
+    clock_job do
+      Clock::RefreshWalletsOngoingBalanceJob.perform_later
+    end
+  end
+
   def perform_overdue_balance_update
     clock_job do
       Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
@@ -307,6 +362,22 @@ module ScenariosHelper
   def perform_dunning
     clock_job do
       Clock::ProcessDunningCampaignsJob.perform_later
+    end
+  end
+
+  def parse_result(as, model_class, key)
+    case as
+    when :json
+      json.with_indifferent_access
+    when :model
+      array = key.to_s.pluralize == key.to_s
+      if array
+        model_class.where(id: json[key].pluck(:lago_id))
+      else
+        model_class.find(json[key][:lago_id])
+      end
+    else
+      raise "Invalid as: #{as}"
     end
   end
 end

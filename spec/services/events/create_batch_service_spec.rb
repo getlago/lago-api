@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::CreateBatchService, type: :service do
+RSpec.describe Events::CreateBatchService do
   subject(:create_batch_service) do
     described_class.new(
       organization:,

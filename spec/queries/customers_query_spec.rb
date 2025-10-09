@@ -16,10 +16,41 @@ RSpec.describe CustomersQuery, type: :query do
   let(:billing_entity2) { create(:billing_entity, organization:) }
 
   let(:customer_first) do
-    create(:customer, organization:, name: "defgh", firstname: "John", lastname: "Doe", legal_name: "Legalname", external_id: "11", email: "1@example.com", billing_entity: billing_entity1)
+    create(
+      :customer,
+      organization:,
+      name: "defgh",
+      firstname: "John",
+      lastname: "Doe",
+      legal_name: "Legalname",
+      external_id: "11",
+      email: "1@example.com",
+      country: "US",
+      state: "CA",
+      zipcode: "90001",
+      billing_entity: billing_entity1,
+      currency: "USD",
+      tax_identification_number: "US123456789",
+      customer_type: "company"
+    )
   end
   let(:customer_second) do
-    create(:customer, organization:, name: "abcde", firstname: "Jane", lastname: "Smith", legal_name: "other name", external_id: "22", email: "2@example.com", billing_entity: billing_entity1)
+    create(
+      :customer,
+      organization:,
+      name: "abcde",
+      firstname: "Jane",
+      lastname: "Smith",
+      legal_name: "other name",
+      external_id: "22",
+      email: "2@example.com",
+      country: "FR",
+      state: "Paris",
+      zipcode: "75001",
+      billing_entity: billing_entity1,
+      currency: "EUR",
+      customer_type: "individual"
+    )
   end
   let(:customer_third) do
     create(
@@ -32,7 +63,12 @@ RSpec.describe CustomersQuery, type: :query do
       lastname: "Johnson",
       legal_name: "Company name",
       name: "presuv",
-      billing_entity: billing_entity2
+      country: "DE",
+      state: "Berlin",
+      zipcode: "10115",
+      billing_entity: billing_entity2,
+      currency: "EUR",
+      customer_type: nil
     )
   end
 
@@ -40,6 +76,10 @@ RSpec.describe CustomersQuery, type: :query do
     customer_first
     customer_second
     customer_third
+
+    create(:customer_metadata, customer: customer_first, key: "id", value: "1")
+    create(:customer_metadata, customer: customer_first, key: "name", value: "John Doe")
+    create(:customer_metadata, customer: customer_second, key: "id", value: "2")
   end
 
   it "returns all customers" do
@@ -48,6 +88,51 @@ RSpec.describe CustomersQuery, type: :query do
     expect(returned_ids).to include(customer_first.id)
     expect(returned_ids).to include(customer_second.id)
     expect(returned_ids).to include(customer_third.id)
+  end
+
+  context "when filtering by customer_type" do
+    context "when filtering by company" do
+      let(:filters) { {customer_type: "company"} }
+
+      it "returns company customers" do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to eq [customer_first.id]
+      end
+    end
+
+    context "when filtering by individual" do
+      let(:filters) { {customer_type: "individual"} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids).to eq([customer_second.id])
+      end
+    end
+
+    context "when filtering with invalid customer_type" do
+      let(:filters) { {customer_types: %w[invalid]} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids.count).to eq(3)
+      end
+    end
+  end
+
+  context "when filtering by has_customer_type" do
+    context "when filtering by true" do
+      let(:filters) { {has_customer_type: true} }
+
+      it "returns the customers with customer_type" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+      end
+    end
+
+    context "when filtering by false" do
+      let(:filters) { {has_customer_type: false} }
+
+      it "returns the customers with nil customer_type" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
+    end
   end
 
   context "when filtering by partner account_type" do
@@ -118,47 +203,104 @@ RSpec.describe CustomersQuery, type: :query do
     end
   end
 
-  context "when searching for /de/ term" do
-    let(:search_term) { "de" }
+  context "with search_term" do
+    context "when searching for name 'de'" do
+      let(:search_term) { "de" }
+
+      it "returns only two customers" do
+        expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+      end
+    end
+
+    context "when searching for firstname 'Jane'" do
+      let(:search_term) { "Jane" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_second.id])
+      end
+    end
+
+    context "when searching for lastname 'Johnson'" do
+      let(:search_term) { "Johnson" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
+    end
+
+    context "when searching for legalname 'Company'" do
+      let(:search_term) { "Company" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_third.id])
+      end
+    end
+
+    context "when searching for external_id '11'" do
+      let(:search_term) { "11" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_first.id])
+      end
+    end
+
+    context "when searching for email '1@e'" do
+      let(:search_term) { "1@e" }
+
+      it "returns only one customer" do
+        expect(returned_ids).to eq([customer_first.id])
+      end
+    end
+  end
+
+  context "when filtering by countries" do
+    let(:filters) { {countries: ["US", "FR"]} }
 
     it "returns only two customers" do
-      expect(returned_ids.count).to eq(2)
-      expect(returned_ids).to include(customer_first.id)
-      expect(returned_ids).to include(customer_second.id)
-      expect(returned_ids).not_to include(customer_third.id)
+      expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+    end
+
+    context "when filtering by invalid country" do
+      let(:filters) { {countries: ["INVALID"]} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:countries]).to match({0 => [/^must be one of: AD, AE.*XK$/]})
+      end
     end
   end
 
-  context "when searching for firstname 'Jane'" do
-    let(:search_term) { "Jane" }
+  context "when filtering by states" do
+    let(:filters) { {states: ["CA", "Paris"]} }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).to include(customer_second.id)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_third.id)
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_first.id, customer_second.id])
+    end
+
+    context "when filtering by invalid state" do
+      let(:filters) { {states: "INVALID"} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:states]).to eq(["must be an array"])
+      end
     end
   end
 
-  context "when searching for lastname 'Johnson'" do
-    let(:search_term) { "Johnson" }
+  context "when filtering by zipcodes" do
+    let(:filters) { {zipcodes: ["10115", "75001"]} }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_second.id)
-      expect(returned_ids).to include(customer_third.id)
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_third.id, customer_second.id])
     end
-  end
 
-  context "when searching for legalname 'Company'" do
-    let(:search_term) { "Company" }
+    context "when filtering by invalid zipcode" do
+      let(:filters) { {zipcodes: "INVALID"} }
 
-    it "returns only one customer" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).not_to include(customer_first.id)
-      expect(returned_ids).not_to include(customer_second.id)
-      expect(returned_ids).to include(customer_third.id)
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:zipcodes]).to eq(["must be an array"])
+      end
     end
   end
 
@@ -231,6 +373,83 @@ RSpec.describe CustomersQuery, type: :query do
         expect(returned_ids.count).to eq(2)
         expect(returned_ids).to include(customer_first.id)
         expect(returned_ids).to include(subscriptionless_customer.id)
+      end
+    end
+  end
+
+  context "when filtering by currencies" do
+    let(:filters) { {currencies: ["USD"]} }
+
+    it "returns only two customers" do
+      expect(returned_ids).to match_array([customer_first.id])
+    end
+
+    context "when filtering by invalid currency" do
+      let(:filters) { {currencies: ["INVALID"]} }
+
+      it "returns no customers" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters][:currencies]).to match({0 => [/^must be one of: AED, AFN.*ZMW$/]})
+      end
+    end
+  end
+
+  context "when filtering by has_tax_identification_number" do
+    context "when filtering by true" do
+      let(:filters) { {has_tax_identification_number: true} }
+
+      it "returns only the customer with a tax identification number" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when filtering by false" do
+      let(:filters) { {has_tax_identification_number: false} }
+
+      it "returns only the customers without a tax identification number" do
+        expect(returned_ids).to match_array([customer_second.id, customer_third.id])
+      end
+    end
+  end
+
+  context "when filtering by metadata" do
+    context "when filtering by presence" do
+      let(:filters) { {metadata: {id: "1"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when filtering by absence" do
+      let(:filters) { {metadata: {name: ""}} }
+
+      it "returns only the customers without the metadata" do
+        expect(returned_ids).to match_array([customer_second.id, customer_third.id])
+      end
+    end
+
+    context "when matching multiple metadata" do
+      let(:filters) { {metadata: {id: "1", name: "John Doe"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_first.id])
+      end
+    end
+
+    context "when matching one but not the other" do
+      let(:filters) { {metadata: {id: "1", name: "Jane Smith"}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([])
+      end
+    end
+
+    context "when filtering by presence and absence" do
+      let(:filters) { {metadata: {id: "2", name: ""}} }
+
+      it "returns only the customers with the metadata" do
+        expect(returned_ids).to match_array([customer_second.id])
       end
     end
   end

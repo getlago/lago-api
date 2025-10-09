@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
+RSpec.describe Entitlement::PlanEntitlementDestroyService do
   subject(:result) { described_class.call(entitlement:) }
 
   let(:organization) { create(:organization) }

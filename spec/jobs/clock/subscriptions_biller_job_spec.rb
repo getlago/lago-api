@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Clock::SubscriptionsBillerJob, type: :job do
+RSpec.describe Clock::SubscriptionsBillerJob do
   subject { described_class }
 
   describe ".perform" do

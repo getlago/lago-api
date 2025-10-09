@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, transaction: false do
+RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: false do
   subject(:service) do
     described_class.new(
       event_store_class:,
@@ -330,6 +330,36 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, t
             expect(item.action).to eq("add_and_removed")
             expect(item.amount).to eq(1)
             expect(item.duration).to eq(1)
+            expect(item.total_duration).to eq(31)
+          end
+        end
+      end
+
+      context "when added, removed and added again" do
+        let(:added_at) { from_datetime + 1.day }
+        let(:removed_at) { added_at.end_of_day }
+        let(:new_event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            timestamp: to_datetime - 1.day,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {unique_id: "111"}
+          )
+        end
+
+        before { new_event }
+
+        it "returns the detail the persisted metrics" do
+          aggregate_failures do
+            expect(result.count).to eq(1)
+
+            item = result.first
+            expect(item.date.to_s).to eq(added_at.to_date.to_s)
+            expect(item.action).to eq("add")
+            expect(item.amount).to eq(1)
+            expect(item.duration).to eq(3)
             expect(item.total_duration).to eq(31)
           end
         end

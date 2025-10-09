@@ -21,6 +21,7 @@ class Organization < ApplicationRecord
   }.freeze
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
+  has_many :ai_conversations
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
   has_many :api_keys
   has_many :billing_entities, -> { active }
@@ -124,7 +125,7 @@ class Organization < ApplicationRecord
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
-  enum :document_numbering, DOCUMENT_NUMBERINGS
+  enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}

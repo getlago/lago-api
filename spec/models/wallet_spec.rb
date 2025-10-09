@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallet, type: :model do
+RSpec.describe Wallet do
   subject(:wallet) { build(:wallet) }
 
   it_behaves_like "paper_trail traceable"
@@ -13,6 +13,22 @@ RSpec.describe Wallet, type: :model do
 
   describe "validations" do
     it { is_expected.to validate_numericality_of(:rate_amount).is_greater_than(0) }
+    it { is_expected.to validate_inclusion_of(:currency).in_array(described_class.currency_list) }
+    it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
+    it { is_expected.to validate_numericality_of(:paid_top_up_min_amount_cents).is_greater_than(0).allow_nil }
+    it { is_expected.to validate_numericality_of(:paid_top_up_max_amount_cents).is_greater_than(0).allow_nil }
+
+    it "validates than max is greater than min" do
+      subject.paid_top_up_min_amount_cents = 100
+      subject.paid_top_up_max_amount_cents = 1
+
+      expect(subject).not_to be_valid
+      expect(subject.errors["paid_top_up_max_amount_cents"]).to eq ["must_be_greater_than_or_equal_min"]
+
+      subject.paid_top_up_max_amount_cents = subject.paid_top_up_min_amount_cents
+      expect(subject).to be_valid
+      expect(subject.errors).to be_empty
+    end
   end
 
   describe "currency=" do
@@ -63,6 +79,27 @@ RSpec.describe Wallet, type: :model do
       it "returns false" do
         expect(wallet.limited_to_billable_metrics?).to be false
       end
+    end
+  end
+
+  describe "#paid_top_up_min_credits" do
+    it "converts min amount cents to credits using the wallet rate" do
+      wallet.rate_amount = 25
+      wallet.paid_top_up_min_amount_cents = 1_00
+      expect(wallet.paid_top_up_min_credits).to eq(0.04)
+
+      wallet.paid_top_up_min_amount_cents = nil
+      expect(wallet.paid_top_up_min_credits).to be_nil
+    end
+  end
+
+  describe "#paid_top_up_max_credits" do
+    it "converts max amount cents to credits using the wallet rate" do
+      wallet.paid_top_up_max_amount_cents = 5_00
+      expect(wallet.paid_top_up_max_credits).to eq(5.0)
+
+      wallet.paid_top_up_max_amount_cents = nil
+      expect(wallet.paid_top_up_max_credits).to be_nil
     end
   end
 end

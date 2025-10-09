@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::SalesforceService, type: :service do
+RSpec.describe IntegrationCustomers::SalesforceService do
   let(:integration) { create(:salesforce_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }

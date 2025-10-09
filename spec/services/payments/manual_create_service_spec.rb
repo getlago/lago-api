@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payments::ManualCreateService, type: :service do
+RSpec.describe Payments::ManualCreateService do
   subject(:service) { described_class.new(organization:, params:) }
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
@@ -18,10 +18,8 @@ RSpec.describe Payments::ManualCreateService, type: :service do
       it "returns forbidden failure" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
     end
 
@@ -34,10 +32,19 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "returns not found failure" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+        end
+      end
+
+      context "when invoice is in status that does not allow manual payment" do
+        let(:invoice) { create(:invoice, :draft, customer:, organization:) }
+
+        it "returns forbidden failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
       end
 
@@ -51,10 +58,8 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "returns validation failure" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
         end
       end
 
@@ -64,10 +69,8 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "returns validation failure" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
         end
       end
 
@@ -77,11 +80,9 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "returns a validation failure" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:paid_at]).to eq(["invalid_date"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:paid_at]).to eq(["invalid_date"])
         end
       end
 
@@ -91,11 +92,9 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "creates a payment with valid date" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.payment.payment_type).to eq("manual")
-            expect(result.payment.created_at).to eq(paid_at)
-          end
+          expect(result).to be_success
+          expect(result.payment.payment_type).to eq("manual")
+          expect(result.payment.created_at).to eq(paid_at)
         end
       end
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService, type: :service do
+RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
   subject(:check_service) { described_class.new(stripe_customer:, payment_method_id:) }
 
   let(:customer) { create(:customer, organization:) }

@@ -28,6 +28,7 @@ module CreditNotes
       return result unless result.success?
 
       compute_amounts_and_taxes
+      adjust_amounts_with_rounding
 
       result.credit_note = credit_note
       result
@@ -78,7 +79,7 @@ module CreditNotes
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
-      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.precise_taxes_amount_cents = taxes_result.precise_taxes_amount_cents
       adjust_credit_note_tax_precise_rounding if credit_note_for_all_remaining_amount?
 
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
@@ -86,12 +87,9 @@ module CreditNotes
 
       taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
 
-      credit_note.credit_amount_cents = (
-        credit_note.items.sum(&:amount_cents) -
-        taxes_result.coupons_adjustment_amount_cents +
-        credit_note.precise_taxes_amount_cents
-      ).round
+      credit_note.credit_amount_cents = compute_creditable_amount(taxes_result)
       compute_refundable_amount
+
       credit_note.credit_amount_cents = 0 if invoice.credit?
       credit_note.total_amount_cents = credit_note.credit_amount_cents
     end
@@ -108,6 +106,14 @@ module CreditNotes
       credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
     end
 
+    def compute_creditable_amount(taxes_result)
+      (
+        credit_note.items.sum(&:amount_cents) -
+        taxes_result.coupons_adjustment_amount_cents +
+        credit_note.precise_taxes_amount_cents
+      ).round
+    end
+
     def compute_refundable_amount
       credit_note.refund_amount_cents = credit_note.credit_amount_cents
 
@@ -115,6 +121,24 @@ module CreditNotes
       return unless credit_note.credit_amount_cents > refundable_amount_cents
 
       credit_note.refund_amount_cents = refundable_amount_cents
+    end
+
+    # NOTE: The goal of this method is to adjust the amounts so
+    #       that sub total exluding taxes + taxes amount = total amount
+    #       taking the rounding into account
+    def adjust_amounts_with_rounding
+      subtotal = credit_note.total_amount_cents - credit_note.taxes_amount_cents
+
+      if subtotal != credit_note.sub_total_excluding_taxes_amount_cents
+        if subtotal > credit_note.sub_total_excluding_taxes_amount_cents
+          credit_note.total_amount_cents -= 1
+        elsif credit_note.taxes_amount_cents > 0
+          credit_note.taxes_amount_cents -= 1
+        end
+
+        credit_note.credit_amount_cents = credit_note.total_amount_cents
+        credit_note.balance_amount_cents = credit_note.credit_amount_cents
+      end
     end
   end
 end

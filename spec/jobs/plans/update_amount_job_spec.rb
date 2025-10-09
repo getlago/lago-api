@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::UpdateAmountJob, type: :job do
+RSpec.describe Plans::UpdateAmountJob do
   let(:plan) { create(:plan) }
   let(:amount_cents) { 200 }
   let(:expected_amount_cents) { 100 }

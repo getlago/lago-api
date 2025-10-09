@@ -136,6 +136,18 @@ FactoryBot.define do
 
     invoice_display_name { Faker::Fantasy::Tolkien.character }
 
+    properties do
+      {
+        "timestamp" => Date.parse("2022-08-01 00:03:24"),
+        "from_datetime" => Date.parse("2022-08-01 00:00:00"),
+        "to_datetime" => Date.parse("2022-08-31 23:59:59"),
+        "charges_from_datetime" => Date.parse("2022-08-01 00:00:00"),
+        "charges_to_datetime" => Date.parse("2022-08-31 23:59:59"),
+        "fixed_charges_from_datetime" => Date.parse("2022-07-01 00:00:00"),
+        "fixed_charges_to_datetime" => Date.parse("2022-07-31 23:59:59")
+      }
+    end
+
     transient do
       fixed_charge { create(:fixed_charge) }
     end
@@ -143,5 +155,16 @@ FactoryBot.define do
     after(:build) do |fee, evaluator|
       fee.write_attribute(:fixed_charge_id, evaluator.fixed_charge.id)
     end
+  end
+
+  factory :credit_fee, parent: :fee do
+    transient do
+      wallet_transaction { association(:wallet_transaction, organization:) }
+    end
+    fee_type { "credit" }
+    invoiceable_id { wallet_transaction.id }
+    invoiceable_type { "WalletTransaction" }
+    subscription { nil }
+    charge { nil }
   end
 end

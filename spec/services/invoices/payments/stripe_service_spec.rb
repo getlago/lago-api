@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::StripeService, type: :service do
+RSpec.describe Invoices::Payments::StripeService do
   subject(:stripe_service) { described_class.new(invoice) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }
@@ -42,7 +42,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
-    context "with #payment_url_payload" do
+    describe "#payment_url_payload" do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload, payment_intent) }
 
       let(:payload) do
@@ -89,6 +89,22 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       context "when paid amount is zero" do
         it "returns the payload" do
           expect(payment_url_payload).to eq(payload)
+        end
+      end
+
+      context "when customer is from India" do
+        let(:customer) { create(:customer, payment_provider_code: code, country: "IN") }
+
+        it "does not save the card" do
+          expect(payment_url_payload[:payment_intent_data][:setup_future_usage]).to be_nil
+        end
+      end
+
+      context "when customer can use crypto" do
+        it "does not save the card" do
+          stripe_customer.provider_payment_methods << "crypto"
+          stripe_customer.save!
+          expect(payment_url_payload[:payment_intent_data][:setup_future_usage]).to be_nil
         end
       end
     end

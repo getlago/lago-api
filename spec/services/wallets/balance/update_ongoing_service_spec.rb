@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
+RSpec.describe Wallets::Balance::UpdateOngoingService do
   subject(:update_service) { described_class.new(wallet:, update_params:) }
 
   let(:organization) { create(:organization) }

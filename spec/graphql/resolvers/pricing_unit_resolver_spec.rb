@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::PricingUnitResolver, type: :graphql do
+RSpec.describe Resolvers::PricingUnitResolver do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

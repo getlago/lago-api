@@ -8,7 +8,7 @@ module Invoices
       timestamp: Time.current,
       apply_taxes: true,
       with_cache: true,
-      max_to_datetime: nil,
+      max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true
     )
@@ -23,7 +23,7 @@ module Invoices
       @with_zero_units_filters = with_zero_units_filters
 
       # NOTE: used to force charges_to_datetime boundary
-      @max_to_datetime = max_to_datetime
+      @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true, calculate_projected_usage: false)
@@ -55,7 +55,7 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :calculate_projected_usage, :with_zero_units_filters
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -75,7 +75,7 @@ module Invoices
         currency: plan.amount_currency
       )
 
-      add_charge_fees
+      invoice.fees = compute_charge_fees
 
       if apply_taxes && customer_provider_taxation?
         compute_amounts_with_provider_taxes
@@ -88,24 +88,25 @@ module Invoices
       format_usage
     end
 
-    def add_charge_fees
-      query = subscription.plan.charges.joins(:billable_metric)
+    def compute_charge_fees
+      fees = []
+
+      received_event_codes = distinct_event_codes(subscription, boundaries)
+
+      subscription
+        .plan
+        .charges
+        .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .order(Arel.sql("lower(unaccent(billable_metrics.name)) ASC"))
-
-      # we're capturing the context here so we can re-use inside the threads. This will correctly propagate spans to this current span
-      context = OpenTelemetry::Context.current
-
-      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
-        OpenTelemetry::Context.with_current(context) do
-          ActiveRecord::Base.connection_pool.with_connection do
-            charge_usage(charge)
-          end
-        end
+        .find_each do |charge|
+        bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+        fees += charge_usage(charge, bypass_aggregation)
       end
+
+      fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge)
+    def charge_usage(charge, bypass_aggregation)
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -114,7 +115,7 @@ module Invoices
       )
 
       applied_boundaries = boundaries
-      applied_boundaries = boundaries.dup.tap { it.charges_to_datetime = max_to_datetime } if max_to_datetime
+      applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
 
       Fees::ChargeService
         .call(
@@ -125,7 +126,8 @@ module Invoices
           context: :current_usage,
           cache_middleware:,
           calculate_projected_usage:,
-          with_zero_units_filters:
+          with_zero_units_filters:,
+          bypass_aggregation:
         )
         .raise_if_error!
         .fees
@@ -211,6 +213,19 @@ module Invoices
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer
+    end
+
+    def distinct_event_codes(subscription, boundaries)
+      Events::Stores::StoreFactory
+        .store_class(organization: subscription.organization)
+        .new(
+          subscription:,
+          boundaries: {
+            from_datetime: boundaries.charges_from_datetime,
+            to_datetime: boundaries.charges_to_datetime
+          }
+        )
+        .distinct_codes
     end
   end
 end

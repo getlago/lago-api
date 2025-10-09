@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::ChangeEuTaxManagementService, type: :service do
+RSpec.describe BillingEntities::ChangeEuTaxManagementService do
   subject(:service) { described_class.new(billing_entity:, eu_tax_management:) }
 
   let(:organization) { create(:organization) }

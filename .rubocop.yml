@@ -87,6 +87,10 @@ RSpec/NestedGroups:
 RSpec/NamedSubject:
   Enabled: false
 
+RSpec/DescribeClass:
+  Exclude:
+    - "spec/scenarios/**/*"
+
 # GraphQL
 
 GraphQL/ArgumentDescription:

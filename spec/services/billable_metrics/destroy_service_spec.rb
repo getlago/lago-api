@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::DestroyService, type: :service do
+RSpec.describe BillableMetrics::DestroyService do
   subject(:destroy_service) { described_class.new(metric: billable_metric) }
 
   let(:membership) { create(:membership) }
@@ -29,6 +29,13 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
     it "soft deletes all the related charges" do
       freeze_time do
         expect { destroy_service.call }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
+      end
+    end
+
+    it "soft deletes all the related alerts" do
+      alert = create(:billable_metric_current_usage_amount_alert, billable_metric:, organization:)
+      freeze_time do
+        expect { destroy_service.call }.to change { alert.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 

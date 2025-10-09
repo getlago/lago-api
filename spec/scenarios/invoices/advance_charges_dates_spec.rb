@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
+describe "Advance Charges Invoices Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate) { 20 }
@@ -88,7 +88,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, both fees are finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 
@@ -106,7 +106,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
         expect(invoice_fees.second.properties).to eq({
           "timestamp" => "2024-07-22T10:00:00.000Z",
@@ -114,7 +117,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-07-07T00:00:00.000Z",
           "charges_duration" => 31,
           "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
-          "charges_from_datetime" => "2024-07-07T10:00:00.000Z"
+          "charges_from_datetime" => "2024-07-07T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)
@@ -146,8 +152,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
       # Next year, the card_3 and card_5 fees are marked as paid
       travel_to(DateTime.new(2025, 1, 7, 10)) do
-        update_fee(fees.first, payment_status: :succeeded)
-        update_fee(fees.last, payment_status: :succeeded)
+        update_fee(fees.first, {payment_status: :succeeded})
+        update_fee(fees.last, {payment_status: :succeeded})
       end
 
       # The subscription is terminated. Customer have no other subscriptions
@@ -234,7 +240,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, both fees are finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 
@@ -252,7 +258,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
         expect(invoice_fees.second.properties).to eq({
           "timestamp" => "2024-07-22T10:00:00.000Z",
@@ -260,7 +269,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-07-01T00:00:00.000Z",
           "charges_duration" => 31,
           "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
-          "charges_from_datetime" => "2024-07-01T00:00:00.000Z"
+          "charges_from_datetime" => "2024-07-01T00:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)
@@ -320,7 +332,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       # In october, the fee from initial sub is finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
         fees.each do |fee_id|
-          update_fee(fee_id, payment_status: :succeeded)
+          update_fee(fee_id, {payment_status: :succeeded})
         end
       end
 
@@ -337,7 +349,10 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           "from_datetime" => "2024-06-05T00:00:00.000Z",
           "charges_duration" => 30,
           "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
-          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z",
+          "fixed_charges_to_datetime" => nil,
+          "fixed_charges_from_datetime" => nil,
+          "fixed_charges_duration" => nil
         })
 
         invoice_periods = billing_periods_hash(invoice)

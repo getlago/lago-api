@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Xero::Create, type: :graphql do
+RSpec.describe Mutations::Integrations::Xero::Create do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "xero1" }

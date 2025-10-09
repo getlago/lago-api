@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :service do
+RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
   subject(:result) { described_class.call(subscription:, entitlements_params:, partial: false) }
 
   let(:organization) { create(:organization) }
@@ -335,6 +335,21 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
       it "returns not found failure" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("privilege_not_found")
+      end
+    end
+
+    context "when value is invalid" do
+      let(:entitlements_params) do
+        {
+          "seats" => {
+            "max" => "invalid"
+          }
+        }
+      end
+
+      it "returns validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
       end
     end
   end

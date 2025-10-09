@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::CalculateExpressionService, type: :service do
+RSpec.describe Events::CalculateExpressionService do
   describe "#call" do
     subject(:service_call) { described_class.new(organization: organization, event: event).call }
 

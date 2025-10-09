@@ -436,7 +436,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
 
       it "returns an unprocessable entity" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 

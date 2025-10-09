@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::HubspotIntegration, type: :model do
+RSpec.describe Integrations::HubspotIntegration do
   subject(:hubspot_integration) { build(:hubspot_integration) }
 
   it { is_expected.to validate_presence_of(:name) }

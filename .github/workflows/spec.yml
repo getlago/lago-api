@@ -60,6 +60,8 @@ jobs:
       KNAPSACK_PRO_CI_NODE_INDEX: ${{ matrix.ci_node_index }}
       KNAPSACK_PRO_FIXED_QUEUE_SPLIT: true
       KNAPSACK_PRO_LOG_LEVEL: info
+      MISTRAL_API_KEY: ""
+      MISTRAL_AGENT_ID: ""
 
     steps:
       - name: Checkout code

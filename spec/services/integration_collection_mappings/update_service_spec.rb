@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
+RSpec.describe IntegrationCollectionMappings::UpdateService do
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
@@ -45,22 +45,6 @@ RSpec.describe IntegrationCollectionMappings::UpdateService, type: :service do
         result = service_call
 
         expect(result.integration_collection_mapping).to be_a(IntegrationCollectionMappings::NetsuiteCollectionMapping)
-      end
-    end
-
-    context "with validation error" do
-      let(:update_args) do
-        {integration_id: nil}
-      end
-
-      it "returns an error" do
-        result = service_call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:integration]).to eq(["relation_must_exist"])
-        end
       end
     end
   end

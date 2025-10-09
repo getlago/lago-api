@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Billing Minimum Commitments In Advance Scenario", :scenarios, type: :request do
+describe "Billing Minimum Commitments In Advance Scenario" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:timezone) { "UTC" }
   let(:customer) { create(:customer, organization:, timezone:) }
@@ -190,9 +190,9 @@ describe "Billing Minimum Commitments In Advance Scenario", :scenarios, type: :r
 
     before do
       apply_coupon(
-        external_customer_id: customer.external_id,
-        coupon_code: coupon_target.coupon.code,
-        amount_cents: 1_000_000
+        {external_customer_id: customer.external_id,
+         coupon_code: coupon_target.coupon.code,
+         amount_cents: 1_000_000}
       )
     end
 

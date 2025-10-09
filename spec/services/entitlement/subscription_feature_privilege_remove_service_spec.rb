@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService, type: :service do
+RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
   subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
 
   let(:organization) { create(:organization) }
@@ -86,6 +86,14 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService, type: :se
         removal = subscription.entitlement_removals.sole
         expect(removal.organization).to eq(organization)
         expect(removal.privilege).to eq(privilege)
+      end
+
+      context "when privilege is already removed" do
+        it "succeeds" do
+          create(:subscription_feature_removal, subscription:, privilege:)
+          expect { result }.not_to change(subscription.entitlement_removals.where(privilege:), :count)
+          expect(result).to be_success
+        end
       end
     end
 

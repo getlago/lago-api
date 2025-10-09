@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::GeneratePdfService, type: :service do
+RSpec.describe Invoices::GeneratePdfService do
   let(:context) { "graphql" }
   let(:organization) { create(:organization, name: "LAGO") }
   let(:customer) { create(:customer, organization:) }

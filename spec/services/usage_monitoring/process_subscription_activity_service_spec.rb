@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :service do
+RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService do
   subject(:service) { described_class.new(subscription_activity:) }
 
   let(:organization) { create(:organization, premium_integrations:) }
@@ -15,7 +15,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     allow(::Invoices::CustomerUsageService).to receive(:call)
       .and_return(double(usage: mocked_current_usage)) # rubocop:disable RSpec/VerifiedDoubles
     allow(LifetimeUsages::CalculateService).to receive(:call!)
-    allow(LifetimeUsages::CheckThresholdsService).to receive(:call)
+    allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
   end
 
   around { |test| lago_premium!(&test) }
@@ -30,7 +30,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call).with(
+      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call!).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage)
       )
 
@@ -46,7 +46,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
       result = service.call
 
       expect(LifetimeUsages::CalculateService).not_to have_received(:call!)
-      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call)
+      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call!)
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound) # deleted
@@ -68,7 +68,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call)
+      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call!)
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
@@ -85,7 +85,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call).with(
+      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call!).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage)
       )
 
@@ -141,7 +141,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
       let(:premium_integrations) { %w[lifetime_usage progressive_billing] }
 
       it "processes alert and then raise" do
-        allow(LifetimeUsages::CheckThresholdsService).to receive(:call).and_raise(StandardError, "boom")
+        allow(LifetimeUsages::CheckThresholdsService).to receive(:call!).and_raise(StandardError, "boom")
         expect { service.call }.to raise_error(StandardError, "boom")
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, subscription:, current_metrics: mocked_current_usage)
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)

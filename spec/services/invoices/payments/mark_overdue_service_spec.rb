@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::MarkOverdueService, type: :service do
+RSpec.describe Invoices::Payments::MarkOverdueService do
   let(:result) { described_class.call(invoice:) }
 
   let(:invoice) do

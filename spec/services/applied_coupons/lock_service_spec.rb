@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedCoupons::LockService, type: :service do
+RSpec.describe AppliedCoupons::LockService do
   subject(:lock_service) { described_class.new(customer:) }
 
   let(:organization) { create(:organization) }

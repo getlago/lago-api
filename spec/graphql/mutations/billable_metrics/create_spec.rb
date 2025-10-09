@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillableMetrics::Create, type: :graphql do
+RSpec.describe Mutations::BillableMetrics::Create do
   let(:required_permission) { "billable_metrics:create" }
   let(:membership) { create(:membership) }
   let(:mutation) do

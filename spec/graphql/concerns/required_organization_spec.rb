@@ -29,7 +29,7 @@ module RequiredOrganizationSpec
   end
 end
 
-RSpec.describe RequiredOrganization, type: :graphql do
+RSpec.describe RequiredOrganization do
   let(:mutation) do
     <<-GQL
       mutation($input: RenameThingInput!) {
@@ -47,7 +47,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: "new name"}},
-        context: {current_user: membership.user, current_organization: membership.organization}
+        context: {current_user: membership.user, current_organization: membership.organization, current_membership: membership}
       )
 
       expect(result["data"]["renameThing"]["name"]).to eq "new name"
@@ -73,6 +73,25 @@ RSpec.describe RequiredOrganization, type: :graphql do
 
   context "without a current organization but the current is not a member" do
     it "returns an error" do
+      membership = create(:membership)
+
+      result = RequiredOrganizationSpec::TestApiSchema.execute(
+        mutation,
+        variables: {input: {newName: "new name"}},
+        context: {current_user: membership.user, current_membership: membership, current_organization: create(:organization)}
+      )
+
+      partial_error = {
+        "message" => "Not in organization",
+        "extensions" => {"status" => :forbidden, "code" => "forbidden"}
+      }
+
+      expect(result["errors"]).to include hash_including(partial_error)
+    end
+  end
+
+  context "when a current membership is not set in context" do
+    it "returns an error" do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: "new name"}},
@@ -80,7 +99,7 @@ RSpec.describe RequiredOrganization, type: :graphql do
       )
 
       partial_error = {
-        "message" => "Not in organization",
+        "message" => "Missing membership",
         "extensions" => {"status" => :forbidden, "code" => "forbidden"}
       }
 

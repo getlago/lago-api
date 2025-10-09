@@ -17,22 +17,16 @@ Rails.application.configure do
     #{config.root}/dev
   ]
 
+  config.action_cable.disable_request_forgery_protection = true
+  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
+
   config.enable_reloading = true
   config.eager_load = false
   config.consider_all_requests_local = true
   config.server_timing = true
 
   config.cache_store = :redis_cache_store, {url: ENV["LAGO_REDIS_CACHE_URL"], db: 3}
-
-  if Rails.root.join("tmp/caching-dev.txt").exist?
-    config.cache_store = :memory_store
-    config.public_file_server.headers = {
-      "Cache-Control" => "public, max-age=#{2.days.to_i}"
-    }
-  else
-    config.action_controller.perform_caching = false
-    config.cache_store = :null_store
-  end
+  config.action_controller.perform_caching = false
 
   config.active_storage.service = if ENV["LAGO_USE_AWS_S3"].present? && ENV["LAGO_USE_AWS_S3"] == "true"
     if ENV["LAGO_AWS_S3_ENDPOINT"].present?

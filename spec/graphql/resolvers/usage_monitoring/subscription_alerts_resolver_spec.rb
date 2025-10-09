@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :graphql do
+RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver do
   let(:required_permission) { "subscriptions:view" }
 
   let(:membership) { create(:membership) }

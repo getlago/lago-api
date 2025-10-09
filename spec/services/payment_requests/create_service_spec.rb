@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::CreateService, type: :service do
+RSpec.describe PaymentRequests::CreateService do
   subject(:create_service) { described_class.new(organization:, params:) }
 
   let(:membership) { create(:membership) }

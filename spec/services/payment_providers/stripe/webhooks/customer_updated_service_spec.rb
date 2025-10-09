@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService, type: :service do
+RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService do
   subject(:webhook_service) { described_class.new(organization_id: organization.id, event:) }
 
   let(:organization) { create(:organization) }
@@ -81,12 +81,25 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService, type:
             end
           end
 
-          it "returns a not found error" do
-            result = webhook_service.call
+          context "when customer is linked to another stripe customer" do
+            it "returns an empty result" do
+              result = webhook_service.call
 
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("stripe_customer_not_found")
+              expect(result).to be_success
+              expect(result.stripe_customer).to be_nil
+            end
+          end
+
+          context "when customer is not linked to another stripe customer" do
+            let(:stripe_customer) { nil }
+
+            it "returns a not found error" do
+              result = webhook_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.message).to eq("stripe_customer_not_found")
+            end
           end
         end
       end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WebhookEndpoints::UpdateService, type: :service do
+RSpec.describe WebhookEndpoints::UpdateService do
   subject(:update_service) { described_class.new(id: webhook_endpoint.id, organization:, params: update_params) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CalculateFeesService, type: :service do
+RSpec.describe Invoices::CalculateFeesService do
   subject(:invoice_service) do
     described_class.new(
       invoice:,
@@ -1728,7 +1728,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         )
       end
       let(:progressive_fee) do
-        create(:charge_fee, amount_cents: 3_000, invoice: progressive_invoice)
+        create(:charge_fee, amount_cents: 3_000, charge: charge3, invoice: progressive_invoice)
       end
       let(:credit_note) do
         create(
@@ -1774,11 +1774,523 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.fees_amount_cents).to eq(20_000)
-          expect(result.invoice.taxes_amount_cents).to eq(1_565)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_650)
-          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_215)
+          expect(result.invoice.taxes_amount_cents).to eq(1_550)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500)
+          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_050)
           expect(result.invoice.progressive_billing_credit_amount_cents).to eq(3_000)
-          expect(result.invoice.total_amount_cents).to eq(9_738) # 17_215 - 1_000 (credit note) - 6_477 (wallet)
+          expect(result.invoice.total_amount_cents).to eq(9_727) # 17_050 - 1_000 (credit note) - 6_323 (wallet)
+        end
+      end
+    end
+  end
+
+  describe "#should_create_yearly_subscription_fee?" do
+    subject(:method_call) { invoice_service.send(:should_create_yearly_subscription_fee?, subscription) }
+
+    let(:timestamp) { DateTime.parse("01 Apr 2022") }
+    let(:started_at) { DateTime.parse("31 Mar 2021") }
+    let(:created_at) { started_at }
+    let(:terminated_at) { nil }
+
+    context "when plan is not yearly" do
+      let(:interval) { "monthly" }
+
+      it "returns true" do
+        expect(subject).to eq(true)
+      end
+    end
+
+    context "when plan is yearly" do
+      let(:interval) { "yearly" }
+
+      context "when plan is pay in arrears" do
+        let(:pay_in_advance) { false }
+
+        context "when billing_time is anniversary" do
+          let(:billing_time) { :anniversary }
+
+          context "when subscription is terminated" do
+            it "returns true" do
+              subscription.status = :terminated
+              subscription.terminated_at = Time.zone.now
+              expect(subject).to eq(true)
+            end
+          end
+
+          context "when subscription is not terminated" do
+            context "when it's the first month" do
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's not the first month" do
+              let(:timestamp) { DateTime.parse("01 May 2022") }
+
+              it "returns false when it's not the first month" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+        end
+
+        context "when billing_time is calendar" do
+          let(:billing_time) { :calendar }
+
+          context "when subscription is terminated" do
+            it "returns true" do
+              subscription.status = :terminated
+              subscription.terminated_at = Time.zone.now
+              expect(subject).to eq(true)
+            end
+          end
+
+          context "when subscription is not terminated" do
+            context "when it's the first month" do
+              let(:timestamp) { DateTime.parse("01 Jan 2023") }
+
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's not the first month" do
+              it "returns false when it's not the first month" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        context "when billing_time is calendar" do
+          let(:billing_time) { :calendar }
+
+          context "when subscription started in the past" do
+            let(:created_at) { started_at + 1.month }
+
+            context "when it's the first month in yearly period" do
+              context "when it is not the first month in first yearly period" do
+                let(:started_at) { DateTime.parse("01 Jan 2022") }
+                let(:timestamp) { DateTime.parse("01 Jan 2022") + 3.years }
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it is the first month in first yearly period" do
+                let(:timestamp) { DateTime.parse("01 Jan 2022") }
+                let(:started_at) { DateTime.parse("01 Jan 2022") }
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+
+            context "when it's not the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Feb 2022") + 3.years }
+
+              it "returns false" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+
+          context "when subscription did not start in the past" do
+            context "when it's the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Jan 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+            end
+
+            context "when it's not the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Feb 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+          end
+        end
+
+        context "when billing_time is anniversary" do
+          let(:billing_time) { :anniversary }
+
+          context "when subscription started in the past" do
+            let(:created_at) { started_at + 1.month }
+
+            context "when it's the first month in yearly period" do
+              context "when it is not the first month in first yearly period" do
+                let(:started_at) { DateTime.parse("01 Jun 2022") }
+                let(:timestamp) { DateTime.parse("01 Jun 2022") + 3.years }
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it is the first month in first yearly period" do
+                let(:timestamp) { DateTime.parse("01 Jun 2022") }
+                let(:started_at) { DateTime.parse("01 Jun 2022") }
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+
+            context "when it's not the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jul 2022") + 3.years }
+
+              it "returns false" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+
+          context "when subscription did not start in the past" do
+            context "when it's the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jun 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+            end
+
+            context "when it's not the first month in yearly period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jul 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  describe "#should_create_semiannual_subscription_fee?" do
+    subject(:method_call) { invoice_service.send(:should_create_semiannual_subscription_fee?, subscription) }
+
+    let(:timestamp) { DateTime.parse("01 Apr 2022") }
+    let(:started_at) { DateTime.parse("31 Mar 2021") }
+    let(:created_at) { started_at }
+    let(:terminated_at) { nil }
+
+    context "when plan is not semiannual" do
+      let(:interval) { "monthly" }
+
+      it "returns true" do
+        expect(subject).to eq(true)
+      end
+    end
+
+    context "when plan is semiannual" do
+      let(:interval) { "semiannual" }
+
+      context "when plan is pay in arrears" do
+        let(:pay_in_advance) { false }
+
+        context "when billing_time is anniversary" do
+          let(:billing_time) { :anniversary }
+
+          context "when subscription is terminated" do
+            it "returns true" do
+              subscription.status = :terminated
+              subscription.terminated_at = Time.zone.now
+              expect(subject).to eq(true)
+            end
+          end
+
+          context "when subscription is not terminated" do
+            context "when it's the first month" do
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's the seventh month" do
+              let(:timestamp) { DateTime.parse("01 Oct 2022") }
+
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's not the first month" do
+              let(:timestamp) { DateTime.parse("01 May 2022") }
+
+              it "returns false when it's not the first month" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+        end
+
+        context "when billing_time is calendar" do
+          let(:billing_time) { :calendar }
+
+          context "when subscription is terminated" do
+            it "returns true" do
+              subscription.status = :terminated
+              subscription.terminated_at = Time.zone.now
+              expect(subject).to eq(true)
+            end
+          end
+
+          context "when subscription is not terminated" do
+            context "when it's the first month" do
+              let(:timestamp) { DateTime.parse("01 Jan 2023") }
+
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's the seventh month" do
+              let(:timestamp) { DateTime.parse("01 Jul 2023") }
+
+              it "returns true " do
+                expect(subject).to eq(true)
+              end
+            end
+
+            context "when it's not the first or seventh month" do
+              let(:timestamp) { DateTime.parse("01 Aug 2023") }
+
+              it "returns false when it's not the first month" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        context "when billing_time is calendar" do
+          let(:billing_time) { :calendar }
+
+          context "when subscription started in the past" do
+            let(:created_at) { started_at + 1.month }
+
+            context "when it's the first month in semiannual period" do
+              context "when it is not the first month in first semiannual period" do
+                let(:started_at) { DateTime.parse("01 Jan 2022") }
+                let(:timestamp) { DateTime.parse("01 Jan 2022") + 3.years }
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it is the first month in first semiannual period" do
+                let(:timestamp) { DateTime.parse("01 Jan 2022") }
+                let(:started_at) { DateTime.parse("01 Jan 2022") }
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+
+            context "when it's not the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Feb 2022") + 3.years }
+
+              it "returns false" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+
+          context "when subscription did not start in the past" do
+            context "when it's the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Jan 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+            end
+
+            context "when it's not the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jan 2022") }
+              let(:timestamp) { DateTime.parse("01 Feb 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+          end
+        end
+
+        context "when billing_time is anniversary" do
+          let(:billing_time) { :anniversary }
+
+          context "when subscription started in the past" do
+            let(:created_at) { started_at + 1.month }
+
+            context "when it's the first month in semiannual period" do
+              context "when it is not the first month in first semiannual period" do
+                let(:started_at) { DateTime.parse("01 Jun 2022") }
+                let(:timestamp) { DateTime.parse("01 Jun 2022") + 3.years }
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it is the first month in first semiannual period" do
+                let(:timestamp) { DateTime.parse("01 Jun 2022") }
+                let(:started_at) { DateTime.parse("01 Jun 2022") }
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+
+            context "when it's not the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jul 2022") + 3.years }
+
+              it "returns false" do
+                expect(subject).to eq(false)
+              end
+            end
+          end
+
+          context "when subscription did not start in the past" do
+            context "when it's the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jun 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+            end
+
+            context "when it's not the first month in semiannual period" do
+              let(:started_at) { DateTime.parse("01 Jun 2022") }
+              let(:timestamp) { DateTime.parse("01 Jul 2022") + 3.years }
+
+              context "when it has not been billed yet" do
+                it "returns true" do
+                  expect(subject).to eq(true)
+                end
+              end
+
+              context "when it has been billed" do
+                before do
+                  allow(subscription).to receive(:already_billed?).and_return(true)
+                end
+
+                it "returns false" do
+                  expect(subject).to eq(false)
+                end
+              end
+            end
+          end
         end
       end
     end

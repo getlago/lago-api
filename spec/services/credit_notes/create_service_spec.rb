@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::CreateService, type: :service do
+RSpec.describe CreditNotes::CreateService do
   subject(:create_service) do
     described_class.new(
       invoice:,
@@ -11,12 +11,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       credit_amount_cents:,
       refund_amount_cents:,
       automatic:,
-      context:
+      context:,
+      **args
     )
   end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
+  let(:args) { {} }
 
   let(:invoice) do
     create(
@@ -54,7 +56,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
-    create(:fee_applied_tax, tax:, fee: fee2)
+    create(:fee_applied_tax, tax:, fee: fee2) if fee2
     create(:invoice_applied_tax, tax:, invoice:) if invoice
   end
 
@@ -66,45 +68,43 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     it "creates a credit note" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        credit_note = result.credit_note
-        expect(credit_note.invoice).to eq(invoice)
-        expect(credit_note.customer).to eq(invoice.customer)
-        expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
+      credit_note = result.credit_note
+      expect(credit_note.invoice).to eq(invoice)
+      expect(credit_note.customer).to eq(invoice.customer)
+      expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
 
-        expect(credit_note.coupons_adjustment_amount_cents).to eq(0)
-        expect(credit_note.taxes_amount_cents).to eq(3)
-        expect(credit_note.taxes_rate).to eq(20)
-        expect(credit_note.applied_taxes.count).to eq(1)
+      expect(credit_note.coupons_adjustment_amount_cents).to eq(0)
+      expect(credit_note.taxes_amount_cents).to eq(3)
+      expect(credit_note.taxes_rate).to eq(20)
+      expect(credit_note.applied_taxes.count).to eq(1)
 
-        expect(credit_note.total_amount_currency).to eq(invoice.currency)
-        expect(credit_note.total_amount_cents).to eq(18)
+      expect(credit_note.total_amount_currency).to eq(invoice.currency)
+      expect(credit_note.total_amount_cents).to eq(18)
 
-        expect(credit_note.credit_amount_currency).to eq(invoice.currency)
-        expect(credit_note.credit_amount_cents).to eq(12)
-        expect(credit_note.balance_amount_currency).to eq(invoice.currency)
-        expect(credit_note.balance_amount_cents).to eq(12)
-        expect(credit_note.credit_status).to eq("available")
+      expect(credit_note.credit_amount_currency).to eq(invoice.currency)
+      expect(credit_note.credit_amount_cents).to eq(12)
+      expect(credit_note.balance_amount_currency).to eq(invoice.currency)
+      expect(credit_note.balance_amount_cents).to eq(12)
+      expect(credit_note.credit_status).to eq("available")
 
-        expect(credit_note.refund_amount_currency).to eq(invoice.currency)
-        expect(credit_note.refund_amount_cents).to eq(6)
-        expect(credit_note.refund_status).to eq("pending")
+      expect(credit_note.refund_amount_currency).to eq(invoice.currency)
+      expect(credit_note.refund_amount_cents).to eq(6)
+      expect(credit_note.refund_status).to eq("pending")
 
-        expect(credit_note).to be_other
+      expect(credit_note).to be_other
 
-        expect(credit_note.items.count).to eq(2)
-        item1 = credit_note.items.order(created_at: :asc).first
-        expect(item1.fee).to eq(fee1)
-        expect(item1.amount_cents).to eq(10)
-        expect(item1.amount_currency).to eq(invoice.currency)
+      expect(credit_note.items.count).to eq(2)
+      item1 = credit_note.items.order(created_at: :asc).first
+      expect(item1.fee).to eq(fee1)
+      expect(item1.amount_cents).to eq(10)
+      expect(item1.amount_currency).to eq(invoice.currency)
 
-        item2 = credit_note.items.order(created_at: :asc).last
-        expect(item2.fee).to eq(fee2)
-        expect(item2.amount_cents).to eq(5)
-        expect(item2.amount_currency).to eq(invoice.currency)
-      end
+      item2 = credit_note.items.order(created_at: :asc).last
+      expect(item2.fee).to eq(fee2)
+      expect(item2.amount_cents).to eq(5)
+      expect(item2.amount_currency).to eq(invoice.currency)
     end
 
     it "enqueues SegmentTrackJob after commit" do
@@ -359,12 +359,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           it "returns a failure" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
+            expect(result).not_to be_success
 
-              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              expect(result.error.code).to eq("invalid_type_or_status")
-            end
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("invalid_type_or_status")
           end
         end
       end
@@ -413,43 +411,44 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       it "takes coupons amount into account" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to have_attributes(
-            invoice:,
-            customer: invoice.customer,
-            currency: invoice.currency,
-            credit_status: "available",
-            refund_status: "pending",
-            reason: "other",
-            total_amount_cents: 9,
-            credit_amount_cents: 6,
-            refund_amount_cents: 3,
-            balance_amount_cents: 6,
-            coupons_adjustment_amount_cents: 8,
-            taxes_amount_cents: 2,
-            taxes_rate: 20
-          )
-          expect(credit_note.applied_taxes.count).to eq(1)
+        credit_note = result.credit_note
+        expect(credit_note).to have_attributes(
+          invoice:,
+          customer: invoice.customer,
+          currency: invoice.currency,
+          credit_status: "available",
+          refund_status: "pending",
+          reason: "other",
+          sub_total_excluding_taxes_amount_cents: 8,
+          total_amount_cents: 10,
+          credit_amount_cents: 7,
+          refund_amount_cents: 3,
+          balance_amount_cents: 7,
+          coupons_adjustment_amount_cents: 8,
+          taxes_amount_cents: 2,
+          taxes_rate: 20
+        )
+        expect(credit_note.items.sum(:amount_cents)).to eq(credit_note.items.sum(:precise_amount_cents))
+        expect(credit_note.applied_taxes.count).to eq(1)
 
-          expect(credit_note.items.count).to eq(2)
+        expect(credit_note.items.count).to eq(2)
 
-          item1 = credit_note.items.order(created_at: :asc).first
-          expect(item1).to have_attributes(
-            fee: fee1,
-            amount_cents: 10,
-            amount_currency: invoice.currency
-          )
+        item1 = credit_note.items.order(created_at: :asc).first
+        expect(item1).to have_attributes(
+          fee: fee1,
+          amount_cents: 10,
+          amount_currency: invoice.currency,
+          precise_amount_cents: 10
+        )
 
-          item2 = credit_note.items.order(created_at: :asc).last
-          expect(item2).to have_attributes(
-            fee: fee2,
-            amount_cents: 5,
-            amount_currency: invoice.currency
-          )
-        end
+        item2 = credit_note.items.order(created_at: :asc).last
+        expect(item2).to have_attributes(
+          fee: fee2,
+          amount_cents: 5,
+          amount_currency: invoice.currency
+        )
       end
     end
 
@@ -492,20 +491,18 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       it "Creates credit note and voids corresponding amount of credits from the wallet" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note.refund_amount_cents).to eq(1000)
-          wallet_transaction = wallet.wallet_transactions.order(:created_at).last
-          # we're refunding 10_00 cents -> 10 euros, the rate of the wallet, 1 credit = 10 euros, so amount credits
-          # in the transaction is 1, while the "money" amount is 10
-          expect(wallet_transaction.credit_amount).to eq(1)
-          expect(wallet_transaction.amount).to eq(10)
-          expect(wallet_transaction.transaction_status).to eq("voided")
-          expect(wallet_transaction.transaction_type).to eq("outbound")
-          expect(wallet.reload.balance_cents).to eq(0)
-        end
+        credit_note = result.credit_note
+        expect(credit_note.refund_amount_cents).to eq(1000)
+        wallet_transaction = wallet.wallet_transactions.order(:created_at).last
+        # we're refunding 10_00 cents -> 10 euros, the rate of the wallet, 1 credit = 10 euros, so amount credits
+        # in the transaction is 1, while the "money" amount is 10
+        expect(wallet_transaction.credit_amount).to eq(1)
+        expect(wallet_transaction.amount).to eq(10)
+        expect(wallet_transaction.transaction_status).to eq("voided")
+        expect(wallet_transaction.transaction_type).to eq("outbound")
+        expect(wallet.reload.balance_cents).to eq(0)
       end
 
       context "with different rate amount" do
@@ -514,15 +511,13 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         it "calculates correct credits amount" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            credit_note = result.credit_note
-            expect(credit_note.refund_amount_cents).to eq(1000)
-            wallet_transaction = wallet.wallet_transactions.order(:created_at).last
-            expect(wallet_transaction.credit_amount).to eq(0.5)
-            expect(wallet_transaction.amount).to eq(10)
-          end
+          credit_note = result.credit_note
+          expect(credit_note.refund_amount_cents).to eq(1000)
+          wallet_transaction = wallet.wallet_transactions.order(:created_at).last
+          expect(wallet_transaction.credit_amount).to eq(0.5)
+          expect(wallet_transaction.amount).to eq(10)
         end
       end
 
@@ -532,12 +527,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         it "returns error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
+          expect(result).not_to be_success
 
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("invalid_type_or_status")
-          end
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
         end
       end
 
@@ -547,12 +540,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         it "returns error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
+          expect(result).not_to be_success
 
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:amount_cents)
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:amount_cents)
         end
       end
 
@@ -562,12 +553,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         it "returns error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
+          expect(result).not_to be_success
 
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:credit_amount_cents)
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:credit_amount_cents)
         end
       end
     end
@@ -664,6 +653,101 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
       it "does not send an email" do
         expect { subject }.not_to have_enqueued_job(SendEmailJob)
+      end
+    end
+
+    context "when total amount is zero" do
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 0 }
+      let(:items) do
+        [
+          {
+            fee_id: fee1.id,
+            amount_cents: 0
+          },
+          {
+            fee_id: fee2.id,
+            amount_cents: 0
+          }
+        ]
+      end
+
+      it "returns a failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(CreditNote.count).to eq(0)
+
+        expect(result.error.messages).to eq(base: ["total_amount_must_be_positive"])
+      end
+    end
+
+    context "when reason is invalid" do
+      let(:args) { {reason: "invalid"} }
+
+      it "returns a failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(CreditNote.count).to eq(0)
+
+        expect(result.error.messages).to eq(reason: ["value_is_invalid"])
+      end
+    end
+
+    context "with refund only adjustements" do
+      let(:tax) { create(:tax, organization:, rate: 25) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          total_amount_cents: 25000,
+          taxes_amount_cents: 5000,
+          fees_amount_cents: 20000,
+          total_paid_amount_cents: 25000,
+          taxes_rate: 25,
+          payment_status: :succeeded
+        )
+      end
+
+      let(:fee1) do
+        create(
+          :fee,
+          invoice:,
+          amount_cents: 20000,
+          taxes_rate: 25
+        )
+      end
+
+      let(:fee2) { nil }
+
+      let(:items) do
+        [
+          {
+            fee_id: fee1.id,
+            amount_cents: 19333.33
+          }
+        ]
+      end
+
+      let(:refund_amount_cents) { 24166 }
+      let(:credit_amount_cents) { 0 }
+
+      it "estimates the credit note" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note).to have_attributes(
+          currency: invoice.currency,
+          sub_total_excluding_taxes_amount_cents: 19333,
+          credit_amount_cents: 0,
+          refund_amount_cents: 24166,
+          coupons_adjustment_amount_cents: 0,
+          taxes_amount_cents: 4833,
+          taxes_rate: 25
+        )
       end
     end
   end

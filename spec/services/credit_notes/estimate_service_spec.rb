@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::EstimateService, type: :service do
+RSpec.describe CreditNotes::EstimateService do
   subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
   let(:organization) { create(:organization) }
@@ -53,7 +53,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
-    create(:fee_applied_tax, tax:, fee: fee2)
+    create(:fee_applied_tax, tax:, fee: fee2) if fee2
     create(:invoice_applied_tax, tax:, invoice:) if invoice
     Payments::ManualCreateService.call(organization:, params:)
   end
@@ -69,10 +69,12 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         invoice:,
         customer:,
         currency: invoice.currency,
+        sub_total_excluding_taxes_amount_cents: 8,
         credit_amount_cents: 9,
         refund_amount_cents: 9,
         coupons_adjustment_amount_cents: 8,
-        taxes_amount_cents: 2,
+        taxes_amount_cents: 1,
+        total_amount_cents: 9,
         taxes_rate: 20
       )
 
@@ -227,6 +229,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
           credit_note = result.credit_note
           expect(credit_note).to have_attributes(
             currency: invoice.currency,
+            sub_total_excluding_taxes_amount_cents: 3,
             credit_amount_cents: 0,
             refund_amount_cents: 3,
             coupons_adjustment_amount_cents: 0,
@@ -276,6 +279,61 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
           expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         end
       end
+    end
+  end
+
+  context "with rounding adjustment" do
+    let(:tax) { create(:tax, organization:, rate: 25) }
+
+    let(:invoice) do
+      create(
+        :invoice,
+        total_amount_cents: 25000,
+        taxes_amount_cents: 5000,
+        fees_amount_cents: 20000,
+        total_paid_amount_cents: 25000,
+        taxes_rate: 25,
+        payment_status: :succeeded
+      )
+    end
+
+    let(:fee1) do
+      create(
+        :fee,
+        invoice:,
+        amount_cents: 20000,
+        taxes_rate: 25
+      )
+    end
+
+    let(:fee2) { nil }
+
+    let(:items) do
+      [
+        {
+          fee_id: fee1.id,
+          amount_cents: 19333
+        }
+      ]
+    end
+
+    let(:params) { {invoice_id: invoice&.id, amount_cents: 25000, reference: "ref1"} }
+
+    it "estimates the credit note" do
+      result = estimate_service.call
+
+      expect(result).to be_success
+
+      credit_note = result.credit_note
+      expect(credit_note).to have_attributes(
+        currency: invoice.currency,
+        sub_total_excluding_taxes_amount_cents: 19333,
+        credit_amount_cents: 24166,
+        refund_amount_cents: 24166,
+        coupons_adjustment_amount_cents: 0,
+        taxes_amount_cents: 4833,
+        taxes_rate: 25
+      )
     end
   end
 end

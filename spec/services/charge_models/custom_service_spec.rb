@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-Rspec.describe ChargeModels::CustomService, type: :service do
+Rspec.describe ChargeModels::CustomService do
   subject(:apply_custom_service) do
     described_class.apply(
       charge:,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Taxes::UpdateAllEuTaxesJob, type: :job do
+RSpec.describe Taxes::UpdateAllEuTaxesJob do
   subject { described_class.perform_now }
 
   let(:organization) { create(:organization, eu_tax_management: true) }

@@ -49,7 +49,7 @@ require "sidekiq/testing"
 Sidekiq::Testing.fake!
 ActiveJob::Uniqueness.test_mode!
 
-Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
+Dir[Rails.root.join("spec/support/**/*.rb")].sort.reject { |f| f.include?("_spec.rb") }.each { |f| require f }
 
 begin
   ActiveRecord::Migration.check_all_pending!
@@ -60,6 +60,7 @@ end
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
 
 RSpec.configure do |config|
+  config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods
   config.include GraphQLHelper, type: :graphql
   config.include AdminHelper, type: :request
@@ -72,6 +73,7 @@ RSpec.configure do |config|
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
+  config.include GraphQL::Testing::Helpers.for(LagoApiSchema)
 
   # NOTE: these files make real API calls and should be excluded from build
   #       run them manually when needed
@@ -85,6 +87,12 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   config.infer_spec_type_from_file_location!
+  config.define_derived_metadata(file_path: Regexp.new("/spec/graphql/")) do |metadata|
+    metadata[:type] = :graphql
+  end
+  config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
+    metadata[:type] = :request
+  end
 
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -109,6 +117,9 @@ RSpec.configure do |config|
       meta[:aggregate_failures] = true
     end
   end
+  config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
+    metadata[:with_pdf_generation_stub] = true unless metadata.key?(:with_pdf_generation_stub)
+  end
 
   # NOTE: Database cleaner config to turn off/on transactional mode
   config.before(:suite) do |example|
@@ -127,15 +138,17 @@ RSpec.configure do |config|
 
   config.include_context "with Time travel enabled", :time_travel
 
+  config.before(:each, :with_pdf_generation_stub) do |example|
+    stub_pdf_generation
+  end
+
   config.before do |example|
+    metadata = example.metadata
+
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
-    if example.metadata[:scenarios]
-      stub_pdf_generation
-    end
-
-    if (clickhouse = example.metadata[:clickhouse])
+    if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
 
       if clickhouse.is_a?(Hash) && clickhouse[:clean_before]
@@ -143,16 +156,20 @@ RSpec.configure do |config|
       end
     end
 
-    if example.metadata[:with_bullet]
+    if metadata[:with_bullet] || metadata[:bullet]
       Bullet.enable = true
+      bullet_metadata = example.metadata[:bullet] || {}
+      Bullet.n_plus_one_query_enable = bullet_metadata.fetch(:n_plus_one_query, true)
+      Bullet.unused_eager_loading_enable = bullet_metadata.fetch(:unused_eager_loading, true)
+      Bullet.start_request
     end
 
-    if example.metadata[:cache]
+    if metadata[:cache]
       Rails.cache = if example.metadata[:cache].to_sym == :memory
         ActiveSupport::Cache.lookup_store(:memory_store)
-      elsif example.metadata[:cache].to_sym == :null
+      elsif metadata[:cache].to_sym == :null
         ActiveSupport::Cache.lookup_store(:null_store)
-      elsif example.metadata[:cache].to_sym == :redis
+      elsif metadata[:cache].to_sym == :redis
         ActiveSupport::Cache.lookup_store(:redis_cache_store)
       else
         raise "Unknown cache store: #{example.metadata[:cache]}"
@@ -161,9 +178,11 @@ RSpec.configure do |config|
   end
 
   config.after do |example|
-    if example.metadata[:with_bullet]
+    if example.metadata[:with_bullet] || example.metadata[:bullet]
+      Bullet.perform_out_of_channel_notifications if Bullet.notification?
       Bullet.end_request
     end
+    Bullet.enable = false
   end
 
   config.around do |example|
@@ -188,6 +207,14 @@ RSpec.configure do |config|
     DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].strategy = DatabaseCleaner::NullStrategy.new
 
     DatabaseCleaner.cleaning do
+      example.run
+    end
+  end
+
+  config.around do |example|
+    if example.metadata[:premium]
+      lago_premium!(&example)
+    else
       example.run
     end
   end

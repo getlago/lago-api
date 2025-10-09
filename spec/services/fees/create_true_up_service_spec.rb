@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::CreateTrueUpService, type: :service do
+RSpec.describe Fees::CreateTrueUpService do
   let(:create_service) { described_class.new(fee:, used_amount_cents:, used_precise_amount_cents:) }
 
   let(:organization) { create(:organization) }

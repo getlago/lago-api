@@ -83,6 +83,7 @@ class Invoice < ApplicationRecord
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
   INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6}.freeze
+  MANUALLY_PAYABLE_INVOICE_STATUS = %i[finalized open].freeze
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
   GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
 
@@ -230,7 +231,7 @@ class Invoice < ApplicationRecord
       raise(NotImplementedError)
     end
 
-    filters = {}
+    filters = {charge_id: fee.charge_id}
     if fee.charge_filter
       result = ChargeFilters::MatchingAndIgnoredService.call(charge: fee.charge, filter: fee.charge_filter)
       filters[:charge_filter] = fee.charge_filter if fee.charge_filter
@@ -239,7 +240,7 @@ class Invoice < ApplicationRecord
     end
 
     service.new(
-      event_store_class: Events::Stores::PostgresStore,
+      event_store_class: Events::Stores::StoreFactory.store_class(organization:),
       charge: fee.charge,
       subscription: fee.subscription,
       boundaries: {
@@ -404,6 +405,10 @@ class Invoice < ApplicationRecord
     should_finalize_invoice = Invoices::TransitionToFinalStatusService.new(invoice: self).should_finalize_invoice?
 
     fees.any? && should_finalize_invoice
+  end
+
+  def allow_manual_payment?
+    MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
   end
 
   private

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Events::PostValidationService, type: :service, transaction: false do
+RSpec.describe Events::PostValidationService, transaction: false do
   subject(:validation_service) { described_class.new(organization:) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe V1::BillingEntitySerializer, type: :serializer do
+RSpec.describe V1::BillingEntitySerializer do
   subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity", includes: includes_options) }
 
   let(:organization) { create(:organization) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
+RSpec.describe Invoices::FinalizeOpenCreditService do
   let(:service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization, email_settings: Organization::EMAIL_SETTINGS) }

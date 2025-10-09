@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::AnrokIntegration, type: :model do
+RSpec.describe Integrations::AnrokIntegration do
   subject(:anrok_integration) { build(:anrok_integration) }
 
   it { is_expected.to validate_presence_of(:name) }

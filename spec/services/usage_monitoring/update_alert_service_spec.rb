@@ -84,5 +84,14 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect(result.error.message).to include("too_many_thresholds")
       end
     end
+
+    context "when thresholds have duplicate values" do
+      let(:params) { {thresholds: [{value: 1}, {value: 1}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
+      end
+    end
   end
 end

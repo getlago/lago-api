@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   mount Sidekiq::Web, at: "/sidekiq" if ENV["LAGO_SIDEKIQ_WEB"] == "true" && defined? Sidekiq::Web
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
+  mount Yabeda::Prometheus::Exporter, at: "/metrics"
+  mount ActionCable.server, at: "/cable"
 
   post "/graphql", to: "graphql#execute"
 
@@ -46,7 +48,13 @@ Rails.application.routes.draw do
         post :checkout_url
 
         scope module: :customers do
-          resources :applied_coupons, only: %i[destroy]
+          resources :applied_coupons, only: %i[index destroy]
+          resources :credit_notes, only: %i[index]
+          resources :invoices, only: %i[index]
+          resources :payments, only: %i[index]
+          resources :payment_requests, only: %i[index]
+          resources :subscriptions, only: %i[index]
+          resources :wallets, only: %i[index]
         end
       end
 
@@ -57,6 +65,7 @@ Rails.application.routes.draw do
           resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements/privileges"
         end
         patch :entitlements, to: "subscriptions/entitlements#update"
+        resources :fixed_charges, only: %i[index], controller: "subscriptions/fixed_charges"
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 

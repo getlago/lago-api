@@ -24,6 +24,8 @@ class InvoicesQuery < BaseQuery
   ]
 
   def call
+    return result unless validate_filters.success?
+
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = paginate(invoices)
     invoices = apply_consistent_ordering(
@@ -55,6 +57,10 @@ class InvoicesQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::InvoicesQueryFiltersContract.new
+  end
 
   def base_scope
     organization.invoices.visible.ransack(search_params)
@@ -150,8 +156,8 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_amount_range(scope)
-    scope = scope.where("invoices.total_amount_cents >= ?", filters.amount_from) if filters.amount_from
-    scope = scope.where("invoices.total_amount_cents <= ?", filters.amount_to) if filters.amount_to
+    scope = scope.where("invoices.total_amount_cents >= ?::numeric", filters.amount_from) if filters.amount_from
+    scope = scope.where("invoices.total_amount_cents <= ?::numeric", filters.amount_to) if filters.amount_to
     scope
   end
 

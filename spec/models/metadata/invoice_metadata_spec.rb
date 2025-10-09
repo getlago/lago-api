@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Metadata::InvoiceMetadata, type: :model do
+RSpec.describe Metadata::InvoiceMetadata do
   subject(:metadata) { described_class.new(attributes) }
 
   let(:invoice) { create(:invoice) }

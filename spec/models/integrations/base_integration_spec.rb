@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::BaseIntegration, type: :model do
+RSpec.describe Integrations::BaseIntegration do
   subject(:integration) { described_class.new(attributes) }
 
   it_behaves_like "paper_trail traceable" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::NetsuiteIntegration, type: :model do
+RSpec.describe Integrations::NetsuiteIntegration do
   subject(:netsuite_integration) { build(:netsuite_integration) }
 
   it { is_expected.to validate_presence_of(:name) }

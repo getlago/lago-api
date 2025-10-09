@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::CreateJob, type: :job do
+RSpec.describe PaymentRequests::Payments::CreateJob do
   let(:payment_request) { create(:payment_request) }
 
   let(:service_result) { BaseService::Result.new }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::TriggeredAlert, type: :model do
+RSpec.describe UsageMonitoring::TriggeredAlert do
   let(:triggered_alert) { create(:triggered_alert) }
 
   describe "associations" do

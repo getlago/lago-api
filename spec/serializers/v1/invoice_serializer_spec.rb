@@ -8,6 +8,7 @@ RSpec.describe ::V1::InvoiceSerializer do
   let(:includes) { %i[metadata error_details] }
 
   let(:invoice) { create(:invoice) }
+
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
   let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
@@ -91,6 +92,22 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["billing_periods"]).to be_present
+    end
+  end
+
+  context "when the tax was deleted" do
+    let(:includes) { %i[applied_taxes] }
+
+    it "still return the tax_id" do
+      organization = invoice.organization
+      tax = create(:tax, organization:)
+      create(:invoice_applied_tax, invoice:, tax:)
+
+      tax.discard!
+      invoice.reload
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
     end
   end
 end

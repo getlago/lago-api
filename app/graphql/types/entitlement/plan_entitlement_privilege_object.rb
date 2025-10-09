@@ -25,6 +25,17 @@ module Types
       def value_type
         object.privilege.value_type
       end
+
+      def value
+        # NOTE: If the boolean `true`/`false` were sent to via the API, ActiveRecord will store them as `"t"`/`"f"`
+        #       We convert them to full words, as string, for the frontent
+        if object.privilege.value_type == "boolean"
+          return "false" if object.value == "f"
+          return "true" if object.value == "t"
+        end
+
+        object.value
+      end
     end
   end
 end

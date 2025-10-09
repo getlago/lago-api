@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
+RSpec.describe Wallets::Balance::RefreshOngoingService do
   subject(:refresh_service) { described_class.new(wallet:) }
 
   let(:wallet) do

@@ -49,7 +49,8 @@ module V1
       ::CollectionSerializer.new(
         model.fixed_charges,
         ::V1::FixedChargeSerializer,
-        collection_name: "fixed_charges"
+        collection_name: "fixed_charges",
+        includes: include?(:taxes) ? %i[taxes] : []
       ).serialize
     end
 

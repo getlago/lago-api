@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
+RSpec.describe PaymentRequests::Payments::AdyenService do
   subject(:adyen_service) { described_class.new(payment_request) }
 
   let(:customer) { create(:customer, payment_provider_code: code) }

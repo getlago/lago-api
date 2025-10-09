@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNoteItem, type: :model do
+RSpec.describe CreditNoteItem do
   subject(:credit_note_item) { create(:credit_note_item) }
 
   it { is_expected.to belong_to(:credit_note) }

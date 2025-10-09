@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Anrok::UpdateService, type: :service do
+RSpec.describe Integrations::Anrok::UpdateService do
   let(:integration) { create(:anrok_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }

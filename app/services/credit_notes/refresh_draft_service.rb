@@ -48,6 +48,7 @@ module CreditNotes
       credit_note.balance_amount_cents = credit_note.credit_amount_cents
       credit_note.total_amount_cents = credit_note.credit_amount_cents + credit_note.refund_amount_cents
 
+      CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
       credit_note.save!
 
       result

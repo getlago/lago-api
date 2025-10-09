@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FixedCharges::DestroyChildrenJob, type: :job do
+RSpec.describe FixedCharges::DestroyChildrenJob do
   let(:fixed_charge) { create(:fixed_charge, :deleted) }
 
   before do

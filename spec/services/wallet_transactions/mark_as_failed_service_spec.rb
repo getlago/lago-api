@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::MarkAsFailedService, type: :service do
+RSpec.describe WalletTransactions::MarkAsFailedService do
   subject(:service) { described_class.new(wallet_transaction:) }
 
   let(:wallet_transaction) { create(:wallet_transaction, status: "pending") }

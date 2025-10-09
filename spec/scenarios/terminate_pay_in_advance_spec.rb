@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
+describe "Terminate Pay in Advance Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
@@ -40,7 +40,12 @@ describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
       expect(term_invoice.total_amount_cents).to eq(0)
 
       credit_note = sub_invoice.credit_notes.first
-      expect(credit_note.total_amount_cents).to eq(4286) # 60.0 / 28 * 20
+      expect(credit_note).to have_attributes(
+        sub_total_excluding_taxes_amount_cents: 3571,
+        taxes_amount_cents: 714,
+        credit_amount_cents: 4285,
+        total_amount_cents: 4285 # 60.0 / 28 * 20
+      )
     end
   end
 
@@ -76,7 +81,12 @@ describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
         expect(term_invoice.total_amount_cents).to eq(0)
 
         credit_note = sub_invoice.credit_notes.first
-        expect(credit_note.total_amount_cents).to eq(4286) # 60.0 / 28 * 20
+        expect(credit_note).to have_attributes(
+          sub_total_excluding_taxes_amount_cents: 3571,
+          taxes_amount_cents: 714,
+          credit_amount_cents: 4285,
+          total_amount_cents: 4285 # 60.0 / 28 * 20
+        )
       end
     end
   end
@@ -149,7 +159,12 @@ describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
         expect(term_invoice.total_amount_cents).to eq(0)
 
         credit_note = sub_invoice.credit_notes.first
-        expect(credit_note.total_amount_cents).to eq(5786)
+        expect(credit_note).to have_attributes(
+          sub_total_excluding_taxes_amount_cents: 4821,
+          taxes_amount_cents: 964,
+          credit_amount_cents: 5785,
+          total_amount_cents: 5785
+        )
       end
     end
 
@@ -186,7 +201,12 @@ describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
           expect(term_invoice.total_amount_cents).to eq(0)
 
           credit_note = sub_invoice.credit_notes.first
-          expect(credit_note.total_amount_cents).to eq(5786)
+          expect(credit_note).to have_attributes(
+            sub_total_excluding_taxes_amount_cents: 4821,
+            taxes_amount_cents: 964,
+            credit_amount_cents: 5785,
+            total_amount_cents: 5785
+          )
         end
       end
     end
@@ -224,7 +244,12 @@ describe "Terminate Pay in Advance Scenarios", :scenarios, type: :request do
           expect(term_invoice.total_amount_cents).to eq(0)
 
           credit_note = sub_invoice.credit_notes.first
-          expect(credit_note.total_amount_cents).to eq(5786)
+          expect(credit_note).to have_attributes(
+            sub_total_excluding_taxes_amount_cents: 4821,
+            taxes_amount_cents: 964,
+            credit_amount_cents: 5785,
+            total_amount_cents: 5785
+          )
         end
       end
     end

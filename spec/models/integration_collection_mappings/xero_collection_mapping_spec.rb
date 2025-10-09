@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCollectionMappings::XeroCollectionMapping, type: :model do
+RSpec.describe IntegrationCollectionMappings::XeroCollectionMapping do
   subject(:mapping) { build(:xero_collection_mapping) }
 
   describe "#external_id" do

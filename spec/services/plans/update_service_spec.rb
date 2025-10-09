@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Plans::UpdateService, type: :service do
+RSpec.describe Plans::UpdateService do
   subject(:plans_service) { described_class.new(plan:, params: update_args) }
 
   let(:membership) { create(:membership) }
@@ -1187,6 +1187,86 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
+    context "with bill_charges_monthly functionality" do
+      context "when interval is yearly and bill_fixed_charges_monthly is sent" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly",
+            bill_charges_monthly: true
+          }
+        end
+
+        it "updates bill_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_charges_monthly).to eq(true)
+        end
+      end
+
+      context "when interval is yearly and bill_charges_monthly is not provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly"
+          }
+        end
+
+        it "sets bill_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result.plan.bill_charges_monthly).to eq(false)
+        end
+      end
+
+      context "when interval is semiannual and bill_charges_monthly is sent" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "semiannual",
+            bill_charges_monthly: true
+          }
+        end
+
+        it "updates bill_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_charges_monthly).to eq(true)
+        end
+      end
+
+      context "when interval is semiannual and bill_charges_monthly is not provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "semiannual"
+          }
+        end
+
+        it "sets bill_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result.plan.bill_charges_monthly).to eq(false)
+        end
+      end
+
+      context "when interval is not yearly or semiannual" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "monthly",
+            bill_charges_monthly: true
+          }
+        end
+
+        it "does not set bill_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_charges_monthly).to be_nil
+        end
+      end
+    end
+
     context "with bill_fixed_charges_monthly functionality" do
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do
@@ -1219,7 +1299,38 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when interval is not yearly" do
+      context "when interval is semiannual and bill_fixed_charges_monthly is sent" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "semiannual",
+            bill_fixed_charges_monthly: true
+          }
+        end
+
+        it "updates bill_fixed_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+        end
+      end
+
+      context "when interval is semiannual and bill_fixed_charges_monthly is not provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "semiannual"
+          }
+        end
+
+        it "sets bill_fixed_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(false)
+        end
+      end
+
+      context "when interval is not yearly or semiannual" do
         let(:update_args) do
           {
             name: plan_name,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::BillingEntityResolver, type: :graphql do
+RSpec.describe Resolvers::BillingEntityResolver do
   subject(:graphql_request) do
     execute_graphql(
       current_user: membership.user,

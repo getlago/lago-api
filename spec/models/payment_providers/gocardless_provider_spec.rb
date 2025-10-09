@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::GocardlessProvider, type: :model do
+RSpec.describe PaymentProviders::GocardlessProvider do
   subject(:gocardless_provider) { build(:gocardless_provider, attributes) }
 
   let(:attributes) {}

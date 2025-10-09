@@ -15,7 +15,7 @@ module Fees
       @to_datetime = @first_fee&.properties&.dig("to_datetime")
       @charges_duration_in_days = @first_fee&.properties&.dig("charges_duration")
       @currency = @subscription&.plan&.amount&.currency
-      @properties_for_charge_model = @charge_filter&.properties || @charge&.properties
+      @properties_for_charge_model = @charge_filter&.properties&.presence || @charge&.properties
 
       super(nil)
     end
@@ -36,20 +36,20 @@ module Fees
       end
 
       if fees.blank? || !(period_ratio > 0 && period_ratio < 1)
-        result.projected_amount_cents = BigDecimal("0")
-        result.projected_units = BigDecimal("0")
-        result.projected_pricing_unit_amount_cents = BigDecimal("0")
+        result.projected_amount_cents = BigDecimal(0)
+        result.projected_units = BigDecimal(0)
+        result.projected_pricing_unit_amount_cents = BigDecimal(0)
         return result
       end
 
       aggregation_result = run_aggregation
       return result.fail_with_error!(aggregation_result.error) unless aggregation_result.success?
 
-      charge_model_result = Charges::ChargeModelFactory.new_instance(
-        charge: charge,
-        aggregation_result: aggregation_result,
+      charge_model_result = ChargeModels::Factory.new_instance(
+        chargeable: charge,
+        aggregation_result:,
         properties: properties_for_charge_model,
-        period_ratio: period_ratio,
+        period_ratio:,
         calculate_projected_usage: true
       ).apply
 
@@ -63,7 +63,7 @@ module Fees
       end
 
       result.projected_amount_cents = calculate_projected_amount_cents(charge_model_result)
-      result.projected_units = charge_model_result.projected_units
+      result.projected_units = charge_model_result.projected_units&.negative? ? BigDecimal(0) : charge_model_result.projected_units
       result.projected_pricing_unit_amount_cents = calculate_projected_pricing_unit_amount_cents(charge_model_result)
       result
     end
@@ -117,7 +117,7 @@ module Fees
         local_charge_filter = ChargeFilter.new(charge: charge)
       end
 
-      filters = {}
+      filters = {charge_id: charge.id}
       model = local_charge_filter.presence || charge
       filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
 
@@ -133,6 +133,8 @@ module Fees
 
     def calculate_projected_amount_cents(amount_result)
       return 0 unless amount_result.projected_amount
+
+      return 0 if amount_result.projected_amount.negative?
 
       rounded_projected_amount = amount_result.projected_amount.round(currency.exponent)
       rounded_projected_amount * currency.subunit_to_unit

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
+RSpec.describe Resolvers::DunningCampaignResolver do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
+RSpec.describe BillableMetrics::Aggregations::CustomService do
   subject(:custom_service) do
     described_class.new(
       event_store_class:,

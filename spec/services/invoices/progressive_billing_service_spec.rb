@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction: false do
+RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   subject(:create_service) { described_class.new(sorted_usage_thresholds:, lifetime_usage:, timestamp:) }
 
   let(:sorted_usage_thresholds) { [create(:usage_threshold, plan:)] }
@@ -149,6 +149,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
 
         create(
           :charge_fee,
+          charge:,
           invoice:,
           amount_cents: 20
         )

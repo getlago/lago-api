@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::InvoiceCollection, type: :model do
+RSpec.describe Analytics::InvoiceCollection do
   describe ".cache_key" do
     subject(:invoice_collection_cache_key) { described_class.cache_key(organization_id, **args) }
 

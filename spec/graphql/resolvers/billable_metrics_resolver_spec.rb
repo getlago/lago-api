@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::BillableMetricsResolver, type: :graphql do
+RSpec.describe Resolvers::BillableMetricsResolver do
   let(:required_permission) { "billable_metrics:view" }
   let(:query) do
     <<~GQL

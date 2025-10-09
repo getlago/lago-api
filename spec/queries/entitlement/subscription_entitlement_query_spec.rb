@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::SubscriptionEntitlementQuery, type: :service do
+RSpec.describe Entitlement::SubscriptionEntitlementQuery do
   subject do
     described_class.call(
       organization:,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
+RSpec.describe Mutations::WebhookEndpoints::Destroy do
   let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }

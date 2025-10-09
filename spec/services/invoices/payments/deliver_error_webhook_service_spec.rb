@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Payments::DeliverErrorWebhookService, type: :service do
+RSpec.describe Invoices::Payments::DeliverErrorWebhookService do
   subject(:webhook_service) { described_class.new(invoice, params) }
 
   let(:params) do

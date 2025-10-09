@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
+RSpec.describe Mutations::CustomerPortal::DownloadInvoice do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }

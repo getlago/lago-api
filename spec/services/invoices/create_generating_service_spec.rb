@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreateGeneratingService, type: :service do
+RSpec.describe Invoices::CreateGeneratingService do
   subject(:create_service) do
     described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:)
   end

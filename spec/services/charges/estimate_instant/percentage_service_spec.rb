@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::EstimateInstant::PercentageService, type: :service do
+RSpec.describe Charges::EstimateInstant::PercentageService do
   subject { described_class.new(properties:, units:) }
 
   let(:properties) do

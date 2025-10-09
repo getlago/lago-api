@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service do
+RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code, country:) }
@@ -321,7 +321,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       end
     end
 
-    context "when customers country is IN" do
+    context "when payment requires action" do
       let(:payment_status) { "requires_action" }
 
       let(:stripe_payment_intent_data) do
@@ -334,10 +334,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
             redirect_to_url: {url: "https://foo.bar"}
           }
         }
-      end
-
-      before do
-        customer.update(country: "IN")
       end
 
       it "creates a stripe payment and payment with requires_action status" do
@@ -354,13 +350,12 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(SendWebhookJob).to have_been_enqueued
           .with(
             "payment.requires_action",
-            result.payment,
-            provider_customer_id: stripe_customer.provider_customer_id
+            result.payment
           )
       end
     end
 
-    context "with #payment_intent_payload" do
+    describe "#payment_intent_payload" do
       let(:payment_intent_payload) { create_service.__send__(:payment_intent_payload) }
       let(:payload) do
         {
@@ -370,32 +365,17 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
           payment_method: customer.stripe_customer.payment_method_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           confirm: true,
-          off_session:,
           return_url: create_service.__send__(:success_redirect_url),
-          error_on_requires_action:,
           description: reference,
           metadata: metadata
         }
       end
-      let(:off_session) { true }
-      let(:error_on_requires_action) { true }
 
       it "returns the payload" do
         expect(payment_intent_payload).to eq(payload)
       end
 
-      context "when customers country is IN" do
-        let(:off_session) { false }
-        let(:error_on_requires_action) { false }
-        let(:customer) { create(:customer, payment_provider_code: code, country: "IN") }
-
-        it "returns the payload" do
-          expect(payment_intent_payload).to eq(payload)
-        end
-      end
-
       context "when using customer balance as a payment method" do
-        let(:off_session) { false }
         let(:stripe_customer) {
           create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider, provider_payment_methods: ["customer_balance"])
         }

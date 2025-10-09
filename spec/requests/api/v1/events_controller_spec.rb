@@ -59,7 +59,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       it "returns a not found response" do
         expect { subject }.not_to change(Event, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -80,7 +80,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       it "returns a not found response" do
         expect { subject }.not_to change(Event, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq({timestamp: ["invalid_format"]})
       end
     end
@@ -122,7 +122,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
         it "fails with a 422 error" do
           expect { subject }.not_to change(Event, :count)
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include("Variable: b not found")
         end
       end
@@ -187,7 +187,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       it "returns an error indicating which event contained which error" do
         expect { subject }.not_to change(Event, :count)
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq({"1": {timestamp: ["invalid_format"]}})
       end
     end
@@ -230,7 +230,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
         it "fails with a 422 error" do
           expect { subject }.not_to change(Event, :count)
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to include("0": "expression_evaluation_failed: Variable: b not found")
         end
       end
@@ -471,7 +471,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
       it "returns a validation error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end
@@ -646,7 +646,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
 
       it "returns a validation error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end

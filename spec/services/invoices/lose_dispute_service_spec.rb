@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::LoseDisputeService, type: :service do
+RSpec.describe Invoices::LoseDisputeService do
   subject(:lose_dispute_service) { described_class.new(invoice:) }
 
   describe "#call" do

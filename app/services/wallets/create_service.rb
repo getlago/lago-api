@@ -24,11 +24,13 @@ module Wallets
         name: params[:name],
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
-        status: :active
+        status: :active,
+        paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
+        paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents]
       }
 
       if params.key?(:invoice_requires_successful_payment)
-        attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
+        attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
       end
 
       if params.key?(:applies_to)
@@ -45,8 +47,10 @@ module Wallets
         wallet.currency = wallet.customer.currency
         wallet.save!
 
+        validate_wallet_initial_amount! wallet
+
         if params[:recurring_transaction_rules].present?
-          Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
+          Wallets::RecurringTransactionRules::CreateService.call!(wallet:, wallet_params: params)
         end
 
         billable_metrics.each do |bm|
@@ -65,7 +69,9 @@ module Wallets
           paid_credits: params[:paid_credits],
           granted_credits: params[:granted_credits],
           source: :manual,
-          metadata: params[:transaction_metadata]
+          metadata: params[:transaction_metadata],
+          name: params[:transaction_name],
+          ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
         }
       )
 
@@ -82,6 +88,23 @@ module Wallets
 
     def valid?
       Wallets::ValidateService.new(result, **params).valid?
+    end
+
+    def validate_wallet_initial_amount!(wallet)
+      return unless positive_paid_credit_amount?
+
+      Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: params[:paid_credits],
+        ignore_validation: params[:ignore_paid_top_up_limits_on_creation]
+      ).raise_if_invalid!
+    end
+
+    def positive_paid_credit_amount?
+      BigDecimal(params[:paid_credits]).positive?
+    rescue ArgumentError, TypeError
+      false
     end
 
     def billable_metric_identifiers

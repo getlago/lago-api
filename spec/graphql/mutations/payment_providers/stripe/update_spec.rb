@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
+RSpec.describe Mutations::PaymentProviders::Stripe::Update do
   let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:stripe_provider) { create(:stripe_provider, organization: membership.organization) }

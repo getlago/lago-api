@@ -3,6 +3,8 @@
 module Wallets
   module RecurringTransactionRules
     class CreateService < BaseService
+      Result = BaseResult[:recurring_transaction_rule]
+
       def initialize(wallet:, wallet_params:)
         @wallet = wallet
         @wallet_params = wallet_params
@@ -29,8 +31,13 @@ module Wallets
           expiration_at: rule_params[:expiration_at],
           target_ongoing_balance: rule_params[:target_ongoing_balance],
           trigger: rule_params[:trigger].to_s,
-          transaction_metadata: rule_params[:transaction_metadata] || []
+          transaction_metadata: rule_params[:transaction_metadata] || [],
+          transaction_name: rule_params[:transaction_name].presence
         }
+
+        if rule_params.key? :ignore_paid_top_up_limits
+          attributes[:ignore_paid_top_up_limits] = ActiveModel::Type::Boolean.new.cast(rule_params[:ignore_paid_top_up_limits])
+        end
 
         attributes[:invoice_requires_successful_payment] = if rule_params.key?(:invoice_requires_successful_payment)
           ActiveModel::Type::Boolean.new.cast(rule_params[:invoice_requires_successful_payment])
@@ -38,9 +45,16 @@ module Wallets
           wallet.invoice_requires_successful_payment?
         end
 
+        validate_paid_credits!(
+          credits_amount: attributes[:paid_credits],
+          ignore_validation: attributes[:ignore_paid_top_up_limits]
+        )
+
         rule = wallet.recurring_transaction_rules.create!(attributes)
 
         result.recurring_transaction_rule = rule
+        result
+      rescue BaseService::FailedResult
         result
       end
 
@@ -54,6 +68,22 @@ module Wallets
 
       def method
         @method ||= rule_params[:method] || "fixed"
+      end
+
+      def validate_paid_credits!(credits_amount:, ignore_validation:)
+        return if method != "fixed" || BigDecimal(credits_amount).floor(5).zero?
+
+        validator = Validators::WalletTransactionAmountLimitsValidator.new(
+          result,
+          wallet:,
+          credits_amount:,
+          ignore_validation:
+        )
+
+        unless validator.valid?
+          result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
+          result.raise_if_error!
+        end
       end
     end
   end

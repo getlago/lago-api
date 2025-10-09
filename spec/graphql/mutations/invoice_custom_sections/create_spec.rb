@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
+RSpec.describe Mutations::InvoiceCustomSections::Create do
   let(:required_permission) { "invoice_custom_sections:create" }
   let(:membership) { create(:membership) }
 
@@ -15,8 +15,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
           name,
           description,
           details,
-          displayName,
-          selected
+          displayName
         }
       }
     GQL
@@ -38,8 +37,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
           name: "First Invoice Custom Section",
           description: "this invoice custom section will be added in the PDF",
           details: "This is the exact information shown in the invoice",
-          displayName: "Section name displayed in the invoice",
-          selected: true
+          displayName: "Section name displayed in the invoice"
         }
       }
     )
@@ -53,7 +51,6 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
       expect(result_data["code"]).to eq("section_code")
       expect(result_data["description"]).to eq("this invoice custom section will be added in the PDF")
       expect(result_data["details"]).to eq("This is the exact information shown in the invoice")
-      expect(result_data["selected"]).to eq(true)
     end
   end
 
@@ -70,8 +67,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Create, type: :graphql do
             name: "First Invoice Custom Section",
             description: "this invoice custom section will be added in the PDF",
             details: "This is the exact information shown in the invoice",
-            displayName: "Section name displayed in the invoice",
-            selected: true
+            displayName: "Section name displayed in the invoice"
           }
         }
       )

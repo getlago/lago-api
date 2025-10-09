@@ -3,6 +3,8 @@
 module Api
   module V1
     class InvoicesController < Api::BaseController
+      include InvoiceIndex
+
       def create
         result = Invoices::CreateOneOffService.call(
           customer:,
@@ -44,48 +46,9 @@ module Api
       end
 
       def index
-        billing_entities = current_organization.all_billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
-        return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
-
-        result = InvoicesQuery.call(
-          organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          search_term: params[:search_term],
-          filters: {
-            amount_from: params[:amount_from],
-            amount_to: params[:amount_to],
-            billing_entity_ids: billing_entities&.ids,
-            currency: params[:currency],
-            customer_external_id: params[:external_customer_id],
-            invoice_type: params[:invoice_type],
-            issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
-            issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
-            metadata: params[:metadata]&.permit!.to_h,
-            partially_paid: (params[:partially_paid] if %w[true false].include?(params[:partially_paid])),
-            payment_dispute_lost: params[:payment_dispute_lost],
-            payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
-            payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
-            self_billed: (params[:self_billed] if %w[true false].include?(params[:self_billed])),
-            status: (params[:status] if valid_status?(params[:status]))
-          }
-        )
-
-        if result.success?
-          render(
-            json: ::CollectionSerializer.new(
-              result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds),
-              ::V1::InvoiceSerializer,
-              collection_name: "invoices",
-              meta: pagination_metadata(result.invoices),
-              includes: %i[customer integration_customers metadata applied_taxes]
-            )
-          )
-        else
-          render_error_response(result)
-        end
+        permitted_params = params.permit(:external_customer_id, :customer_external_id)
+        customer_external_id = permitted_params[:external_customer_id] || permitted_params[:customer_external_id]
+        invoice_index(customer_external_id: customer_external_id)
       end
 
       def download
@@ -362,14 +325,6 @@ module Api
             includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections]
           )
         )
-      end
-
-      def valid_payment_status?(status)
-        Invoice.payment_statuses.key?(status)
-      end
-
-      def valid_status?(status)
-        Invoice.statuses.key?(status)
       end
 
       def customer

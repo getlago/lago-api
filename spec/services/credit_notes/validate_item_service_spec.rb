@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::ValidateItemService, type: :service do
+RSpec.describe CreditNotes::ValidateItemService do
   subject(:validator) { described_class.new(result, item:) }
 
   let(:result) { BaseService::Result.new }

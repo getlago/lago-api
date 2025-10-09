@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Coupons::CreateService, type: :service do
+RSpec.describe Coupons::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
   let(:membership) { create(:membership) }
@@ -70,6 +70,15 @@ RSpec.describe Coupons::CreateService, type: :service do
       end
     end
 
+    context "with non-ISO8601 expiration_at" do
+      let(:expiration_at) { "2064-12-13 12:00:00" }
+
+      it "creates a coupon" do
+        expect { create_service.call }
+          .to change(Coupon, :count).by(1)
+      end
+    end
+
     context "with validation error" do
       before do
         create(:coupon, organization:, code: coupon_code)
@@ -78,25 +87,33 @@ RSpec.describe Coupons::CreateService, type: :service do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:code]).to eq(["value_already_exist"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
       end
     end
 
-    context "with invalid expiration_at" do
+    context "with expiration_at in the past" do
       let(:expiration_at) { (Time.current - 3.days).end_of_day }
 
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
+      end
+    end
+
+    context "with invalid expiration_at" do
+      let(:expiration_at) { "invalid-date" }
+
+      it "returns an error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
       end
     end
 
@@ -164,6 +181,22 @@ RSpec.describe Coupons::CreateService, type: :service do
         expect { create_service.call }
           .to change(CouponTarget, :count).by(1)
       end
+
+      context "when a parent plan has childs" do
+        let(:child_plan) { create(:plan, organization:, parent: plan, code: plan.code) }
+
+        before { child_plan }
+
+        it "creates a coupon" do
+          expect { create_service.call }
+            .to change(Coupon, :count).by(1)
+        end
+
+        it "creates a coupon target" do
+          expect { create_service.call }
+            .to change(CouponTarget, :count).by(2)
+        end
+      end
     end
 
     context "with billable metric limitations in graphql context" do
@@ -222,11 +255,9 @@ RSpec.describe Coupons::CreateService, type: :service do
         it "returns an error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("only_one_limitation_type_per_coupon_allowed")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("only_one_limitation_type_per_coupon_allowed")
         end
       end
 
@@ -252,11 +283,9 @@ RSpec.describe Coupons::CreateService, type: :service do
         it "returns an error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("billable_metrics_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billable_metrics_not_found")
         end
       end
     end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob, type: :job do
+RSpec.describe Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob do
   describe "#perform" do
     subject(:sync_job) { described_class }
 

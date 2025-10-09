@@ -30,6 +30,9 @@ Rails.application.configure do
     :info
   end
 
+  config.action_cable.disable_request_forgery_protection = true
+  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
+
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
   config.active_support.report_deprecations = false
@@ -40,11 +43,6 @@ Rails.application.configure do
   end
 
   config.active_record.dump_schema_after_migration = false
-
-  config.hosts << /[a-z0-9-]+\.staging\.getlago\.com/
-  config.host_authorization = {
-    exclude: ->(request) { request.path == "/health" }
-  }
 
   config.license_url = "http://license-staging-web.default.svc.cluster.local"
 

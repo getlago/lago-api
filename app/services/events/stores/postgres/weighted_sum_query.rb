@@ -95,7 +95,7 @@ module Events
 
         def period_ratio_sql
           <<-SQL
-            -- NOTE: duration in seconds between current event and next one
+            -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
             CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY timestamp) - timestamp) = 0
             THEN
               0 -- NOTE: duration was null so usage is null
@@ -103,7 +103,7 @@ module Events
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (ORDER BY timestamp) - timestamp)
               /
               -- NOTE: full duration of the period
@@ -186,7 +186,7 @@ module Events
 
         def grouped_period_ratio_sql
           <<-SQL
-            -- NOTE: duration in seconds between current event and next one
+            -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
             CASE WHEN EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp) = 0
             THEN
               0 -- NOTE: duration was null so usage is null
@@ -194,7 +194,7 @@ module Events
               -- NOTE: cumulative sum from previous events in the period
               (SUM(difference) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
-              -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
+              -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
               EXTRACT(EPOCH FROM LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names} ORDER BY timestamp) - timestamp)
               /
               -- NOTE: full duration of the period

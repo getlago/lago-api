@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Charge::AppliedTax, type: :model do
+RSpec.describe Charge::AppliedTax do
   subject(:charge_applied_tax) { create(:charge_applied_tax) }
 
   it { is_expected.to belong_to(:charge) }

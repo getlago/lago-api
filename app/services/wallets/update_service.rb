@@ -26,9 +26,14 @@ module Wallets
         if params.key?(:invoice_requires_successful_payment)
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
+        wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
+        wallet.paid_top_up_max_amount_cents = params[:paid_top_up_max_amount_cents] if params.key?(:paid_top_up_max_amount_cents)
         if params[:recurring_transaction_rules] && License.premium?
-          Wallets::RecurringTransactionRules::UpdateService.call(wallet:, params: params[:recurring_transaction_rules])
+          Wallets::RecurringTransactionRules::UpdateService.call!(wallet:, params: params[:recurring_transaction_rules])
         end
+
+        wallet.recurring_transaction_rules.find_each { |rule| validate_rule!(rule:) }
+
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
         end
@@ -45,11 +50,32 @@ module Wallets
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
 
     attr_reader :wallet, :params
+
+    def validate_rule!(rule:)
+      return unless rule.fixed?
+
+      credit_amount = rule.paid_credits
+      return if credit_amount.nil? || credit_amount.zero?
+
+      validator = Validators::WalletTransactionAmountLimitsValidator.new(
+        result,
+        wallet:,
+        credits_amount: credit_amount.to_s,
+        ignore_validation: rule.ignore_paid_top_up_limits
+      )
+
+      unless validator.valid?
+        result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
+        result.raise_if_error!
+      end
+    end
 
     def valid_recurring_transaction_rules?
       Wallets::ValidateRecurringTransactionRulesService.new(result, **params).valid?

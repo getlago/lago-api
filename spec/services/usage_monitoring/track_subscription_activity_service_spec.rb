@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, type: :service do
+RSpec.describe UsageMonitoring::TrackSubscriptionActivityService do
   subject { described_class.new(organization:, subscription:) }
 
   let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }

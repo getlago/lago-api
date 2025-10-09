@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::Hubspot::BaseService, type: :service do
+RSpec.describe Integrations::Aggregator::Invoices::Hubspot::BaseService do
   let(:service) { described_class.new(invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:integration) { create(:hubspot_integration, organization:) }

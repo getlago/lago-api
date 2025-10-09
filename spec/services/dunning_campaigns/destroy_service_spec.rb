@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::DestroyService, type: :service do
+RSpec.describe DunningCampaigns::DestroyService do
   subject(:destroy_service) { described_class.new(dunning_campaign:) }
 
   let(:organization) { create(:organization) }

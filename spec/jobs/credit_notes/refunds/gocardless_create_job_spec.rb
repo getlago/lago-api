@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::Refunds::GocardlessCreateJob, type: :job do
+RSpec.describe CreditNotes::Refunds::GocardlessCreateJob do
   let(:credit_note) { create(:credit_note) }
 
   let(:refund_service) do

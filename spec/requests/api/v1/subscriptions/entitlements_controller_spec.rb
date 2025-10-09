@@ -290,8 +290,17 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
           expect(privilege_removal.reload).to be_discarded
           expect(entitlement.reload).to be_discarded
           expect(entitlement_value.reload).to be_discarded
-          pp subscription.entitlement_removals.pluck(:entitlement_feature_id)
           expect(subscription.entitlement_removals.where(feature:)).to exist
+        end
+      end
+
+      context "when feature was already removed via entitlement removal" do
+        it "returns a success" do
+          create(:subscription_feature_removal, feature:, subscription:)
+          expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription)).to be_empty
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:entitlements]).to be_empty
         end
       end
     end

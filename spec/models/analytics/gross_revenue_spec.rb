@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::GrossRevenue, type: :model do
+RSpec.describe Analytics::GrossRevenue do
   describe ".cache_key" do
     subject(:gross_revenue_cache_key) { described_class.cache_key(organization_id, **args) }
 

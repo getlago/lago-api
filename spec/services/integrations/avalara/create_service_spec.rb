@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Avalara::CreateService, type: :service do
+RSpec.describe Integrations::Avalara::CreateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 

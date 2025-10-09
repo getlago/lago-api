@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::FlagRefreshedJob, type: :job do
+RSpec.describe Subscriptions::FlagRefreshedJob do
   describe "#perform" do
     let(:subscription_id) { SecureRandom.uuid }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::RecreditService, type: :service do
+RSpec.describe CreditNotes::RecreditService do
   subject(:service) { described_class.new(credit:) }
 
   let(:credit_note) { credit.credit_note }

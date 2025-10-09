@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   subject(:create_service) { described_class.new(wallet:, wallet_params:) }
 
-  let(:wallet) { create(:wallet) }
+  let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 15_00) }
   let(:wallet_params) do
     {
       paid_credits: "100.0",
@@ -22,7 +22,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       granted_credits: "5.0",
       started_at: "2024-05-30T12:48:26Z",
       target_ongoing_balance: "100.0",
-      trigger: "interval"
+      trigger: "interval",
+      ignore_paid_top_up_limits: "true"
     }
   end
 
@@ -48,7 +49,8 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           target_ongoing_balance: 100.0,
           threshold_credits: 0.0,
           trigger: "interval",
-          invoice_requires_successful_payment: false
+          invoice_requires_successful_payment: false,
+          ignore_paid_top_up_limits: true
         )
       end
 
@@ -56,17 +58,96 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         let(:rule_params) do
           {
             trigger: "threshold",
-            threshold_credits: "1.0"
+            threshold_credits: "1.0",
+            paid_credits:
           }
         end
 
-        it "creates rule with expected attributes" do
+        context "when paid and granted credits are omitted for rule" do
+          let(:rule_params) do
+            {
+              trigger: "threshold",
+              threshold_credits: "1.0"
+            }
+          end
+
+          it "creates rule with paid and granted credits amounts inherited from wallet" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              granted_credits: 50.0,
+              method: "fixed",
+              paid_credits: 100.0,
+              target_ongoing_balance: nil,
+              threshold_credits: 1.0,
+              trigger: "threshold"
+            )
+          end
+        end
+
+        context "when paid credits amount aligned with wallet limits" do
+          let(:paid_credits) { "15" }
+
+          it "creates rule with expected attributes" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              granted_credits: 0.0,
+              method: "fixed",
+              paid_credits: 15.0,
+              target_ongoing_balance: nil,
+              threshold_credits: 1.0,
+              trigger: "threshold"
+            )
+          end
+        end
+
+        context "when paid credits amount exceeds wallet limits" do
+          let(:paid_credits) { "5" }
+
+          it "fails with validation error" do
+            expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
+
+            expect(create_service.call).to be_failure
+            expect(create_service.call.error.messages).to match({recurring_transaction_rules: ["invalid_recurring_rule"]})
+          end
+        end
+
+        context "when paid credits amount is zero" do
+          let(:paid_credits) { "0" }
+
+          it "creates rule with expected attributes" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              granted_credits: 0.0,
+              method: "fixed",
+              paid_credits: 0.0,
+              target_ongoing_balance: nil,
+              threshold_credits: 1.0,
+              trigger: "threshold"
+            )
+          end
+        end
+      end
+
+      context "when method is target" do
+        let(:rule_params) do
+          {
+            trigger: "threshold",
+            method: "target",
+            threshold_credits: "1.0",
+            paid_credits: "5"
+          }
+        end
+
+        it "creates rule with expected attributes ignoring wallet limits" do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(
-            granted_credits: 50.0,
-            method: "fixed",
-            paid_credits: 100.0,
+            granted_credits: 0.0,
+            method: "target",
+            paid_credits: 5.0,
             target_ongoing_balance: nil,
             threshold_credits: 1.0,
             trigger: "threshold"
@@ -151,6 +232,31 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         it "creates a rule with the correct expiration_at" do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
           expect(wallet.recurring_transaction_rules.first.expiration_at).to eq(expiration_at)
+        end
+      end
+
+      {
+        "Custom Top-up Name" => "Custom Top-up Name",
+        "" => nil,
+        "   " => nil,
+        nil => nil
+      }.each do |transaction_name, expected_transaction_name|
+        context "when transaction_name is #{transaction_name.inspect}" do
+          let(:rule_params) do
+            {
+              trigger: "threshold",
+              threshold_credits: "1.0",
+              transaction_name:
+            }
+          end
+
+          it "creates rule with expected transaction_name" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              transaction_name: expected_transaction_name
+            )
+          end
         end
       end
     end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::RecreditService, type: :service do
+RSpec.describe WalletTransactions::RecreditService do
   subject(:service) { described_class.new(wallet_transaction:) }
 
   let(:wallet_transaction) { create(:wallet_transaction, wallet:) }

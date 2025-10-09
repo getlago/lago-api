@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service do
+RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice do
   subject(:credit_service) { described_class.new(progressive_billing_invoice:, amount:, reason:) }
 
   let(:reason) { :other }

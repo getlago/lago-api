@@ -2,24 +2,29 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetric, type: :model do
+RSpec.describe BillableMetric do
   subject(:billable_metric) { create(:billable_metric) }
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:organization)
+
+      expect(subject).to have_many(:alerts).class_name("UsageMonitoring::Alert")
+      expect(subject).to have_many(:charges).dependent(:destroy)
+      expect(subject).to have_many(:plans).through(:charges)
+      expect(subject).to have_many(:fees).through(:charges)
+      expect(subject).to have_many(:subscriptions).through(:plans)
+      expect(subject).to have_many(:invoices).through(:fees)
+      expect(subject).to have_many(:filters).dependent(:delete_all)
+      expect(subject).to have_many(:netsuite_mappings).dependent(:destroy)
+    end
+  end
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
-
-  it { is_expected.to have_many(:charges).dependent(:destroy) }
-  it { is_expected.to have_many(:plans).through(:charges) }
-  it { is_expected.to have_many(:fees).through(:charges) }
-  it { is_expected.to have_many(:subscriptions).through(:plans) }
-  it { is_expected.to have_many(:invoices).through(:fees) }
-  it { is_expected.to have_many(:filters).dependent(:delete_all) }
-  it { is_expected.to have_many(:netsuite_mappings).dependent(:destroy) }
 
   it { validate_presence_of(:field_name) }
   it { validate_presence_of(:custom_aggregator) }

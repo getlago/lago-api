@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateService, type: :service do
+RSpec.describe Charges::CreateService do
   let(:create_service) { described_class.new(plan:, params:) }
 
   let(:plan) { create(:plan) }
@@ -18,6 +18,15 @@ RSpec.describe Charges::CreateService, type: :service do
       it "returns an error" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("plan_not_found")
+      end
+    end
+
+    context "when billable metric is not found" do
+      let(:params) { {billable_metric_id: "non-existing-id"} }
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("billable_metric_not_found")
       end
     end
 

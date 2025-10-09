@@ -6,7 +6,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, credits_balance: 10, balance_cents: 1000) }
   let(:wallet_id) { wallet.id }
 
   before do
@@ -27,7 +27,8 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       {
         wallet_id:,
         paid_credits: "10",
-        granted_credits: "10"
+        granted_credits: "10",
+        name: "Custom Top-up Name"
       }
     end
 
@@ -38,13 +39,27 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(json[:wallet_transactions].count).to eq(2)
-      expect(json[:wallet_transactions].first[:lago_id]).to be_present
-      expect(json[:wallet_transactions].second[:lago_id]).to be_present
-      expect(json[:wallet_transactions].first[:status]).to eq("pending")
-      expect(json[:wallet_transactions].second[:status]).to eq("settled")
-      expect(json[:wallet_transactions].first[:lago_wallet_id]).to eq(wallet.id)
-      expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
+      wallet_transactions = json[:wallet_transactions]
+
+      expect(wallet_transactions.count).to eq(2)
+
+      paid_transaction = wallet_transactions.first
+      granted_transaction = wallet_transactions.second
+
+      expect(paid_transaction[:lago_id]).to be_present
+      expect(paid_transaction[:status]).to eq("pending")
+      expect(granted_transaction[:status]).to eq("settled")
+      expect(granted_transaction[:lago_id]).to be_present
+      expect(wallet_transactions).to all(include(name: "Custom Top-up Name", lago_wallet_id: wallet.id))
+    end
+
+    context "when paid credits is below the wallet minimum" do
+      it "returns an error" do
+        wallet.update!(paid_top_up_min_amount_cents: 20_00)
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:paid_credits]).to eq(["amount_below_minimum"])
+      end
     end
 
     context "with voided credits" do
@@ -78,6 +93,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
           wallet_id:,
           paid_credits: "10",
           granted_credits: "10",
+          voided_credits: "5",
           metadata: [{"key" => "valid_value", "value" => "also_valid"}]
         }
       end
@@ -86,11 +102,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet_transactions].count).to eq(2)
-        expect(json[:wallet_transactions].first[:metadata]).to be_present
-        expect(json[:wallet_transactions].second[:metadata]).to be_present
-        expect(json[:wallet_transactions].first[:metadata]).to include(key: "valid_value", value: "also_valid")
-        expect(json[:wallet_transactions].second[:metadata]).to include(key: "valid_value", value: "also_valid")
+
+        wallet_transactions = json[:wallet_transactions]
+
+        expect(wallet_transactions.count).to eq(3)
+        expect(wallet_transactions).to all(include(metadata: [{key: "valid_value", value: "also_valid"}]))
       end
     end
 
@@ -99,7 +115,7 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
 
       it "returns unprocessable_entity error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end

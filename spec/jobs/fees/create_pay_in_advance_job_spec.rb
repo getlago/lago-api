@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::CreatePayInAdvanceJob, type: :job do
+RSpec.describe Fees::CreatePayInAdvanceJob do
   let(:charge) { create(:standard_charge, :pay_in_advance) }
   let(:event) { create(:event) }
 

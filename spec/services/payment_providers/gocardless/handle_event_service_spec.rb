@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Gocardless::HandleEventService, type: :service do
+RSpec.describe PaymentProviders::Gocardless::HandleEventService do
   subject(:event_service) { described_class.new(event_json:) }
 
   let(:event_json) do

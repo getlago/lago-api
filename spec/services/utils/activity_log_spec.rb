@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Utils::ActivityLog, type: :service do
+RSpec.describe Utils::ActivityLog do
   subject(:activity_log) { described_class }
 
   let(:membership) { create(:membership) }

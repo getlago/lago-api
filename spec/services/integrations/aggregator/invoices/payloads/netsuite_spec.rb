@@ -255,6 +255,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         "tranid",
         "custbody_ava_disable_tax_calculation",
         "custbody_lago_invoice_link",
+        "trandate",
         "duedate",
         "taxdetailsoverride",
         "custbody_lago_id",
@@ -268,12 +269,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       column_keys_with_taxes.insert(7, "nexus")
     end
 
-    let(:column_keys_without_taxes) do
-      column_keys_with_taxes.insert(3, "trandate")
-    end
-
     let(:column_keys_without_taxes_with_nexus) do
-      column_keys_without_taxes.insert(8, "nexus")
+      column_keys_with_taxes.insert(8, "nexus")
     end
 
     before do
@@ -318,7 +315,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         end
 
         it "has the columns keys in order" do
-          expect(subject["columns"].keys).to match_array(column_keys_without_taxes)
+          expect(subject["columns"].keys).to match_array(column_keys_with_taxes)
         end
       end
 
@@ -408,6 +405,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               "custbody_lago_id" => invoice.id,
               "custbody_ava_disable_tax_calculation" => true,
               "custbody_lago_invoice_link" => invoice_link,
+              "trandate" => issuing_date,
               "duedate" => due_date,
               "nexus" => "some_nexus",
               "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
@@ -474,7 +472,139 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       end
 
       it "has the columns keys in order" do
-        expect(subject["columns"].keys).to match_array(column_keys_without_taxes)
+        expect(subject["columns"].keys).to match_array(column_keys_with_taxes)
+      end
+
+      context "when a fee has a quantity exceeding NetSuite maximum" do
+        let(:charge_fee_large) do
+          create(
+            :charge_fee,
+            invoice:,
+            charge:,
+            units: 20_000_000_000,
+            precise_unit_amount: 1.23,
+            amount_cents: 3_000,
+            created_at: current_time + 1.second
+          )
+        end
+
+        let(:expected_body) do
+          {
+            "type" => "invoice",
+            "isDynamic" => true,
+            "columns" => columns,
+            "lines" => [
+              {
+                "sublistId" => "item",
+                "lineItems" => [
+                  {
+                    "item" => "3",
+                    "account" => "33",
+                    "quantity" => 0.0,
+                    "rate" => 0.0,
+                    "amount" => 100.0,
+                    "taxdetailsreference" => fee_sub.id,
+                    "custcol_service_period_date_from" =>
+                      fee_sub.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "custcol_service_period_date_to" =>
+                      fee_sub.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "description" => fee_sub.item_name,
+                    "item_source" => fee_sub.item_source
+                  },
+                  {
+                    "item" => "4",
+                    "account" => "44",
+                    "quantity" => 0.0,
+                    "rate" => 0.0,
+                    "amount" => 2.0,
+                    "taxdetailsreference" => minimum_commitment_fee.id,
+                    "custcol_service_period_date_from" =>
+                      minimum_commitment_fee.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "custcol_service_period_date_to" =>
+                      minimum_commitment_fee.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "description" => minimum_commitment_fee.item_name,
+                    "item_source" => minimum_commitment_fee.item_source
+                  },
+                  {
+                    "item" => "m2",
+                    "account" => "m22",
+                    "quantity" => 2,
+                    "rate" => 4.1212121212334,
+                    "amount" => 2.0,
+                    "taxdetailsreference" => charge_fee.id,
+                    "custcol_service_period_date_from" =>
+                      charge_fee.properties["charges_from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "custcol_service_period_date_to" =>
+                      charge_fee.properties["charges_to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "description" => charge_fee.item_name,
+                    "item_source" => charge_fee.item_source
+                  },
+                  {
+                    "item" => "m2",
+                    "account" => "m22",
+                    "quantity" => 1,
+                    "rate" => 30.0,
+                    "amount" => 30.0,
+                    "taxdetailsreference" => charge_fee_large.id,
+                    "custcol_service_period_date_from" =>
+                      charge_fee_large.properties["charges_from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "custcol_service_period_date_to" =>
+                      charge_fee_large.properties["charges_to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                    "description" => charge_fee_large.item_name,
+                    "item_source" => charge_fee_large.item_source
+                  },
+                  {
+                    "item" => "2",
+                    "account" => "22",
+                    "quantity" => 1,
+                    "rate" => -20.0,
+                    "taxdetailsreference" => "coupon_item",
+                    "description" => invoice.credits.coupon_kind.map(&:item_name).join(","),
+                    "item_source" => "coupons"
+                  },
+                  {
+                    "item" => "6",
+                    "account" => "66",
+                    "quantity" => 1,
+                    "rate" => -40.0,
+                    "taxdetailsreference" => "credit_item",
+                    "description" => "Prepaid credits",
+                    "item_source" => "prepaid_credits"
+                  },
+                  {
+                    "item" => "6",
+                    "account" => "66",
+                    "quantity" => 1,
+                    "rate" => -1.0,
+                    "taxdetailsreference" => "credit_item_progressive_billing",
+                    "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(","),
+                    "item_source" => "progressive_billing_credits"
+                  },
+                  {
+                    "item" => "1",
+                    "account" => "11",
+                    "quantity" => 1,
+                    "rate" => -60.0,
+                    "taxdetailsreference" => "credit_note_item",
+                    "description" => invoice.credits.credit_note_kind.map(&:item_name).join(","),
+                    "item_source" => "credit_note_credits"
+                  }
+                ]
+              }
+            ],
+            "options" => {
+              "ignoreMandatoryFields" => false
+            }
+          }
+        end
+
+        before do
+          charge_fee_large
+        end
+
+        it "sets quantity to 1 and moves the total amount to the rate field for that line" do
+          expect(subject).to eq(expected_body)
+        end
       end
     end
   end

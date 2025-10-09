@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service do
+RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
   subject(:pull_taxes_service) { described_class.new(invoice:) }
 
   describe "#call" do

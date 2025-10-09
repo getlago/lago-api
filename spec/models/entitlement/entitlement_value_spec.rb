@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::EntitlementValue, type: :model do
+RSpec.describe Entitlement::EntitlementValue do
   subject { create(:entitlement_value) }
 
   it { expect(described_class).to be_soft_deletable }

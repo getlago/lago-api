@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::Preview::BuildSubscriptionService, type: :service do
+RSpec.describe Invoices::Preview::BuildSubscriptionService do
   describe ".call" do
     subject(:result) { described_class.call(customer:, params:) }
 

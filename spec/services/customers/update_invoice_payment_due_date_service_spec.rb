@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::UpdateInvoicePaymentDueDateService, type: :service do
+RSpec.describe Customers::UpdateInvoicePaymentDueDateService do
   subject(:update_service) { described_class.new(customer:, net_payment_term:) }
 
   let(:membership) { create(:membership) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ValidateService, type: :service do
+RSpec.describe Wallets::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }
@@ -61,7 +61,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
       end
     end
 
@@ -70,7 +70,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:granted_credits]).to eq(["invalid_granted_credits"])
+        expect(result.error.messages[:granted_credits]).to eq(["invalid_granted_credits", "invalid_amount"])
       end
     end
 

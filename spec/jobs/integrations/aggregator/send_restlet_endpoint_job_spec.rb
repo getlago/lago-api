@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::SendRestletEndpointJob, type: :job do
+RSpec.describe Integrations::Aggregator::SendRestletEndpointJob do
   subject(:send_endpoint_job) { described_class }
 
   let(:send_endpoint_service) { instance_double(Integrations::Aggregator::SendRestletEndpointService) }

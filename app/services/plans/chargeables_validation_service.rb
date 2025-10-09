@@ -31,7 +31,7 @@ module Plans
     def validate_billable_metrics
       return if charges.blank?
 
-      metric_ids = charges.map { |c| c[:billable_metric_id] }.uniq
+      metric_ids = charges.map { |c| c[:billable_metric_id] }.compact.uniq
       return if metric_ids.blank?
 
       if organization.billable_metrics.where(id: metric_ids).count != metric_ids.count

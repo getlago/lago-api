@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateChildrenJob, type: :job do
+RSpec.describe Charges::CreateChildrenJob do
   let(:billable_metric) { create(:billable_metric) }
   let(:plan) { create(:plan, organization: billable_metric.organization) }
   let(:subscription) { create(:subscription, plan: child_plan) }

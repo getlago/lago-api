@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PasswordReset, type: :model do
+RSpec.describe PasswordReset do
   subject(:password_reset) do
     described_class.new(
       user: create(:user),

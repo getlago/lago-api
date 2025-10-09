@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::IntegrationCollectionMappings::Destroy, type: :graphql do
+RSpec.describe Mutations::IntegrationCollectionMappings::Destroy do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }

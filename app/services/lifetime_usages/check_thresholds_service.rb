@@ -25,6 +25,7 @@ module LifetimeUsages
           SendWebhookJob.perform_later("subscription.usage_threshold_reached", subscription, usage_threshold:)
         end
       end
+
       result
     end
 

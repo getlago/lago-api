@@ -292,7 +292,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       it "returns an unprocessable_entity" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
@@ -339,7 +339,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
         it "returns an error" do
-          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response).to have_http_status(:unprocessable_content)
 
           expect(json[:error_details][:invoice_custom_sections]).to include("skip_sections_and_selected_ids_sent_together")
         end
@@ -427,6 +427,55 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "when filtering by customer_type" do
+      let(:params) { {customer_type: "company"} }
+      let!(:company) { create(:customer, organization:, customer_type: "company") }
+      let(:individual) { create(:customer, organization:, customer_type: "individual") }
+
+      before { individual }
+
+      context "when filtering by company" do
+        it "returns company customers" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(1)
+          expect(json[:customers].first[:lago_id]).to eq(company.id)
+        end
+      end
+    end
+
+    context "when filtering by has_customer_type" do
+      let(:params) { {has_customer_type: true} }
+      let!(:company) { create(:customer, organization:, customer_type: "company") }
+      let!(:individual) { create(:customer, organization:, customer_type: "individual") }
+
+      context "when filtering by true" do
+        it "returns customers with customer_type" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+          expect(json[:customers].pluck(:lago_id)).to match_array([company.id, individual.id])
+        end
+      end
+
+      context "when filtering by false and customer_type is provided" do
+        let(:params) { {has_customer_type: false, customer_type: "company"} }
+
+        it "returns an error" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {customer_type: ["must be nil when has_customer_type is false"]}},
+            status: 422
+          })
+        end
+      end
+    end
+
     context "when filtering by billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:customer) { create(:customer, organization:, billing_entity:) }
@@ -475,6 +524,174 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:customers].count).to eq(1)
           expect(json[:customers].first[:lago_id]).to eq(customer.id)
         end
+      end
+    end
+
+    context "when filtering by countries" do
+      let(:params) { {countries: ["US", "FR"]} }
+
+      let!(:customer) { create(:customer, organization:, country: "US") }
+      let!(:customer2) { create(:customer, organization:, country: "FR") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+
+      context "when filtering by invalid country" do
+        let(:params) { {countries: ["INVALID"]} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {countries: {"0": [/must be one of: AD, .*XK$/]}}},
+            status: 422
+          })
+        end
+      end
+    end
+
+    context "when filtering by states" do
+      let(:params) { {states: ["CA", "Paris"]} }
+      let!(:customer) { create(:customer, organization:, state: "CA") }
+      let!(:customer2) { create(:customer, organization:, state: "Paris") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
+    context "when filtering by zipcodes" do
+      let(:params) { {zipcodes: ["10115", "75001"]} }
+      let!(:customer) { create(:customer, organization:, zipcode: "10115") }
+      let!(:customer2) { create(:customer, organization:, zipcode: "75001") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+    end
+
+    context "when filtering by currencies" do
+      let(:params) { {currencies: ["AED", "CAD"]} }
+      let!(:customer) { create(:customer, organization:, currency: "AED") }
+      let!(:customer2) { create(:customer, organization:, currency: "CAD") }
+
+      it "returns only two customers" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(2)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id, customer2.id])
+      end
+
+      context "when filtering by invalid currency" do
+        let(:params) { {currencies: ["INVALID"]} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {currencies: {"0": [/must be one of: AED, AFN.*ZMW$/]}}},
+            status: 422
+          })
+        end
+      end
+    end
+
+    context "when filtering by has_tax_identification_number" do
+      let(:params) { {has_tax_identification_number: true} }
+      let!(:customer) { create(:customer, organization:, tax_identification_number: "1234567890") }
+
+      it "returns only the customer with a tax identification number" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id])
+      end
+
+      context "when filtering by false" do
+        let(:params) { {has_tax_identification_number: false} }
+
+        it "returns only the customer without a tax identification number" do
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:customers].count).to eq(2)
+          expect(json[:customers].map { |customer| customer[:lago_id] }).not_to include(customer.id)
+        end
+      end
+
+      context "when filtering by invalid value" do
+        let(:params) { {has_tax_identification_number: "invalid"} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {has_tax_identification_number: ["must be one of: true, false"]}},
+            status: 422
+          })
+        end
+      end
+    end
+
+    context "when filtering by metadata" do
+      let(:params) { {metadata: {is_synced: "true", last_synced_at: "2025-01-01", first_synced_at: ""}} }
+      let!(:customer) { create(:customer, organization:) }
+
+      before do
+        create(:customer_metadata, customer:, key: "is_synced", value: "true")
+        create(:customer_metadata, customer:, key: "last_synced_at", value: "2025-01-01")
+      end
+
+      it "returns only the customer with the specified metadata" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].map { |customer| customer[:lago_id] }).to match_array([customer.id])
+      end
+
+      context "when filtering by invalid metadata" do
+        let(:params) { {metadata: {nested: {deeply: true}, is_synced: ["true"]}} }
+
+        it "returns no customers" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to match({
+            code: "validation_errors",
+            error: "Unprocessable Entity",
+            error_details: {filters: {metadata: {is_synced: ["must be a string"], nested: ["must be a string"]}}},
+            status: 422
+          })
+        end
+      end
+    end
+
+    context "when filtering by search_term" do
+      let(:params) { {search_term: "oo b"} }
+      let!(:customer) { create(:customer, organization:, name: "Foo Bar") }
+
+      it "returns customers for the specified search_term" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].first[:lago_id]).to eq(customer.id)
       end
     end
   end

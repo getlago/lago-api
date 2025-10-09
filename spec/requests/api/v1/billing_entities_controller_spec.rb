@@ -187,7 +187,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       it "returns a 422" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error]).to eq("Unprocessable Entity")
         expect(json[:error_details]).to eq(code: ["value_already_exist"])
       end

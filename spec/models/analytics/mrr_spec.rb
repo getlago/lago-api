@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::Mrr, type: :model do
+RSpec.describe Analytics::Mrr do
   describe ".cache_key" do
     subject(:mrr_cache_key) { described_class.cache_key(organization_id, **args) }
 

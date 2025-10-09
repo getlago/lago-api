@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::AggregationFactory, type: :service do
+RSpec.describe BillableMetrics::AggregationFactory do
   subject(:factory) { described_class }
 
   let(:billable_metric) { create(billable_aggregation, recurring:) }

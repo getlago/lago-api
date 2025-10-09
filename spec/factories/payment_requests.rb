@@ -16,6 +16,14 @@ FactoryBot.define do
       invoices { [] }
     end
 
+    trait :succeeded do
+      payment_status { "succeeded" }
+    end
+
+    trait :failed do
+      payment_status { "failed" }
+    end
+
     after(:create) do |payment_request, evaluator|
       evaluator.invoices.each do |invoice|
         create(:payment_request_applied_invoice, payment_request:, invoice:)
