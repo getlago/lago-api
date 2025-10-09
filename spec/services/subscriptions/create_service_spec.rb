@@ -353,6 +353,24 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription.lifetime_usage).not_to be_present
         end
       end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge_1) { create(:fixed_charge, plan:) }
+        let(:fixed_charge_2) { create(:fixed_charge, plan:) }
+
+        before do
+          fixed_charge_1
+          fixed_charge_2
+        end
+
+        it "does not create fixed charge events for the subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_pending
+          expect(result.subscription.fixed_charge_events.count).to eq(0)
+        end
+      end
     end
 
     context "when subscription_at is given and is in the past" do
