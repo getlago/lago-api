@@ -5,7 +5,7 @@ module FixedCharges
     def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current)
       @fixed_charge = fixed_charge
       @subscription = subscription
-      @apply_units_immediately = apply_units_immediately
+      @apply_units_immediately = !!apply_units_immediately
       @timestamp = timestamp
       super
     end
