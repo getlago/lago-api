@@ -32,8 +32,11 @@ module FixedCharges
         fixed_charge.save!
         result.fixed_charge = fixed_charge
 
-        if params[:apply_units_immediately] && fixed_charge.units_previously_changed?
-          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(fixed_charge:)
+        if fixed_charge.units_previously_changed?
+          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+            fixed_charge:,
+            apply_units_immediately: params[:apply_units_immediately]
+          )
         end
 
         unless cascade || plan.attached_to_subscriptions?

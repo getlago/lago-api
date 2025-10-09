@@ -32,9 +32,11 @@ module FixedCharges
         end
         new_fixed_charge.save!
 
-        if params[:apply_units_immediately] && new_fixed_charge.units != fixed_charge.units
-          FixedCharges::EmitEventsForActiveSubscriptionsService.call!(fixed_charge: new_fixed_charge, subscription:)
-        end
+        FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
+          fixed_charge: new_fixed_charge,
+          subscription:,
+          apply_units_immediately: params[:apply_units_immediately]
+        )
 
         if params.key?(:tax_codes)
           taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge: new_fixed_charge, tax_codes: params[:tax_codes])
