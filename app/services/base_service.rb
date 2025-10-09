@@ -4,7 +4,6 @@ class BaseService
   include AfterCommitEverywhere
 
   # rubocop:disable ThreadSafety/ClassAndModuleAttributes
-  class_attribute :activity_log_config, instance_writer: false, default: nil
   class_attribute :middlewares, instance_writer: false, default: []
   # rubocop:enable ThreadSafety/ClassAndModuleAttributes
 
@@ -152,7 +151,7 @@ class BaseService
   Result = LegacyResult
 
   def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: true)
-    self.activity_log_config = {action:, record:, condition:, after_commit:}
+    use(Utils::ActivityLogMiddleware, action:, record:, condition:, after_commit:)
   end
 
   # Register a new middleware
@@ -160,9 +159,7 @@ class BaseService
     self.middlewares += [[middleware_class, args, kwargs]]
   end
 
-  # Register base middlewares
   use(Utils::LogTracerMiddleware)
-  use(Utils::ActivityLogMiddleware)
 
   def self.call(*, **, &)
     new(*, **).call_with_middlewares(&)
@@ -193,12 +190,6 @@ class BaseService
 
   def call_async(**args, &block)
     raise NotImplementedError
-  end
-
-  def produce_activity_log?
-    return false if activity_log_config.nil?
-
-    instance_exec(&self.class.activity_log_config[:condition])
   end
 
   def call_with_middlewares(&block)

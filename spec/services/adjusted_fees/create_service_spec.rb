@@ -16,7 +16,6 @@ RSpec.describe AdjustedFees::CreateService do
 
   let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
   let(:code) { "tax_code" }
-  let(:refresh_service) { instance_double(Invoices::RefreshDraftService) }
   let(:params) do
     {
       fee_id: fee.id,
@@ -28,8 +27,9 @@ RSpec.describe AdjustedFees::CreateService do
 
   describe "#call" do
     before do
-      allow(Invoices::RefreshDraftService).to receive(:new).with(invoice: invoice).and_return(refresh_service)
-      allow(refresh_service).to receive(:call).and_return(BaseService::Result.new)
+      allow(Invoices::RefreshDraftService)
+        .to receive(:call).with(invoice: invoice)
+        .and_return(BaseService::Result.new)
     end
 
     context "when license is premium" do
@@ -52,8 +52,7 @@ RSpec.describe AdjustedFees::CreateService do
       it "calls the RefreshDraft service" do
         create_service.call
 
-        expect(Invoices::RefreshDraftService).to have_received(:new)
-        expect(refresh_service).to have_received(:call)
+        expect(Invoices::RefreshDraftService).to have_received(:call)
       end
 
       it "populates precise and not precise values for the created adjusted fee" do
@@ -231,8 +230,7 @@ RSpec.describe AdjustedFees::CreateService do
         it "calls the RefreshDraft service" do
           create_service.call
 
-          expect(Invoices::RefreshDraftService).to have_received(:new)
-          expect(refresh_service).to have_received(:call)
+          expect(Invoices::RefreshDraftService).to have_received(:call)
         end
 
         context "when adjusting a dynamic charge" do

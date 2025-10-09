@@ -22,9 +22,9 @@ class BaseMiddleware
     raise
   end
 
-  private
-
   attr_reader :service_instance, :next_middleware, :args, :kwargs
+
+  private
 
   def before_call
     # Override this method in subclasses

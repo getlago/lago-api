@@ -8,7 +8,9 @@ RSpec.describe ::BaseService do
   it { is_expected.to be_kind_of(AfterCommitEverywhere) }
   it { is_expected.to respond_to(:call) }
   it { is_expected.to respond_to(:call_async) }
-  it { is_expected.to respond_to(:call_with_activity_log) }
+  it { is_expected.to respond_to(:call_with_middlewares) }
+
+  it { is_expected.to use_middleware(Utils::LogTracerMiddleware) }
 
   context "with current_user" do
     it "assigns the current_user to the result" do
@@ -55,6 +57,8 @@ RSpec.describe ::BaseService do
     let(:activity_loggable_after_commit) { false }
 
     def test_service_with_activity_loggable(after_commit:, action_match_updated: false)
+      expect(service_class).to use_middleware(Utils::ActivityLogMiddleware)
+
       allow(Utils::ActivityLog).to receive(:produce).and_wrap_original do |m, *args, **kwargs, &block|
         if action_match_updated
           # For "updated" actions, `Utils::ActivityLog#produce` will execute `BaseService#call` method so subscription is not yet updated here
