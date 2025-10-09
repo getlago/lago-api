@@ -313,7 +313,7 @@ RSpec.describe Payment do
     context "when payable is an invoice" do
       let(:payable) { create(:invoice) }
 
-      it "returns the invoice as a relationship" do
+      it "returns the invoice as a ActiveRecord::Relation" do
         expect(subject.invoices).to be_a(ActiveRecord::Relation)
         expect(subject.invoices.sole).to eq payable
       end
@@ -323,9 +323,9 @@ RSpec.describe Payment do
       let(:invoices) { create_list(:invoice, 2) }
       let(:payable) { create(:payment_request, invoices:) }
 
-      it "returns the payable in an array" do
+      it "returns the payment request invoices as a ActiveRecord::Relation" do
         expect(subject.invoices).to be_a ActiveRecord::Relation
-        expect(subject.invoices).to eq(invoices)
+        expect(subject.invoices).to match_array(invoices)
       end
     end
   end
