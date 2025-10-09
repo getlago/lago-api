@@ -28409,6 +28409,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "clickhouse_live_aggregation",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -40910,6 +40916,12 @@
             },
             {
               "name": "projected_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clickhouse_live_aggregation",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
