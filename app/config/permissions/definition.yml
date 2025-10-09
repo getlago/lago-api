@@ -138,3 +138,6 @@ payment_requests:
 payments:
   view: true
   create:
+payment_methods:
+  view: true
+  create:
