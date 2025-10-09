@@ -118,8 +118,6 @@ module Fees
     end
 
     def calculate_period_ratio
-      from_date = boundaries.charges_from_datetime.to_date
-      to_date = boundaries.charges_to_datetime.to_date
       from_date = boundaries[:fixed_charges_from_datetime].to_date
       to_date = boundaries[:fixed_charges_to_datetime].to_date
       current_date = Time.current.to_date
