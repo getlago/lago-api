@@ -87,7 +87,7 @@ RSpec.describe Charges::CreateService do
             charge_model: "standard",
             pay_in_advance: false,
             prorated: true,
-            invoiceable: false,
+            invoiceable: true,
             parent_id: parent_charge.id,
             min_amount_cents: 10,
             filters: [
@@ -142,7 +142,7 @@ RSpec.describe Charges::CreateService do
           it "assigns premium attributes values from params" do
             expect(result.charge)
               .to be_persisted
-              .and have_attributes(invoiceable: false, min_amount_cents: 10)
+              .and have_attributes(invoiceable: true, min_amount_cents: 10)
           end
 
           context "when applied pricing unit params are valid" do
