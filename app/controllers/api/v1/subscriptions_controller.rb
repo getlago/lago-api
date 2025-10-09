@@ -217,9 +217,12 @@ module Api
           ],
           fixed_charges: [
             :id,
+            :add_on_id,
+            :add_on_code,
             :invoice_display_name,
             :units,
             :apply_units_immediately,
+            :charge_model,
             properties: {},
             tax_codes: []
           ],
