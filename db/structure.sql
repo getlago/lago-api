@@ -1,4 +1,4 @@
-\restrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\restrict UG8fCH75GTBJjh0b4eHOxy3lcondPAOGn18z4GvpannnUd9TkWsJjUWIPNNvDGX
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -147,6 +147,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_66eb6b32c1;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_665ae33492;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_651eadaaa4;
+ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_650fccfc41;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_63ca8e33c5;
@@ -439,8 +440,10 @@ DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_int_items_on_external_id_and_int_id_and_type;
-DROP INDEX IF EXISTS public.index_int_collection_mappings_on_mapping_type_and_int_id;
+DROP INDEX IF EXISTS public.index_int_collection_mappings_unique_billing_entity_is_null;
+DROP INDEX IF EXISTS public.index_int_collection_mappings_unique_billing_entity_is_not_null;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_processing_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_created_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_organization_id;
@@ -3566,7 +3569,8 @@ CREATE TABLE public.integration_collection_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid
 );
 
 
@@ -6817,10 +6821,17 @@ CREATE INDEX index_inbound_webhooks_on_status_and_processing_at ON public.inboun
 
 
 --
--- Name: index_int_collection_mappings_on_mapping_type_and_int_id; Type: INDEX; Schema: public; Owner: -
+-- Name: index_int_collection_mappings_unique_billing_entity_is_not_null; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_int_collection_mappings_on_mapping_type_and_int_id ON public.integration_collection_mappings USING btree (mapping_type, integration_id);
+CREATE UNIQUE INDEX index_int_collection_mappings_unique_billing_entity_is_not_null ON public.integration_collection_mappings USING btree (mapping_type, integration_id, billing_entity_id) WHERE (billing_entity_id IS NOT NULL);
+
+
+--
+-- Name: index_int_collection_mappings_unique_billing_entity_is_null; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_int_collection_mappings_unique_billing_entity_is_null ON public.integration_collection_mappings USING btree (mapping_type, integration_id, organization_id) WHERE (billing_entity_id IS NULL);
 
 
 --
@@ -6828,6 +6839,13 @@ CREATE UNIQUE INDEX index_int_collection_mappings_on_mapping_type_and_int_id ON 
 --
 
 CREATE UNIQUE INDEX index_int_items_on_external_id_and_int_id_and_type ON public.integration_items USING btree (external_id, integration_id, item_type);
+
+
+--
+-- Name: index_integration_collection_mappings_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_collection_mappings_on_billing_entity_id ON public.integration_collection_mappings USING btree (billing_entity_id);
 
 
 --
@@ -8861,6 +8879,14 @@ ALTER TABLE ONLY public.memberships
 
 
 --
+-- Name: integration_collection_mappings fk_rails_650fccfc41; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_collection_mappings
+    ADD CONSTRAINT fk_rails_650fccfc41 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) ON DELETE CASCADE;
+
+
+--
 -- Name: billing_entities_taxes fk_rails_651eadaaa4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9928,11 +9954,13 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\unrestrict UG8fCH75GTBJjh0b4eHOxy3lcondPAOGn18z4GvpannnUd9TkWsJjUWIPNNvDGX
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251003171658'),
+('20251003171653'),
 ('20250926185510'),
 ('20250919124523'),
 ('20250919124037'),
