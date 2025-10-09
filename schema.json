@@ -11792,6 +11792,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "billingEntityId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "externalAccountCode",
               "description": null,
               "type": {
@@ -31135,6 +31147,18 @@
           "name": "Mapping",
           "description": null,
           "fields": [
+            {
+              "name": "billingEntityId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "externalAccountCode",
               "description": null,

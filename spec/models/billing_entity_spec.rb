@@ -8,6 +8,7 @@ RSpec.describe BillingEntity do
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:organization) }
+  it { is_expected.to belong_to(:applied_dunning_campaign).class_name("DunningCampaign").optional }
 
   it { is_expected.to have_many(:customers) }
   it { is_expected.to have_many(:invoices) }
@@ -15,6 +16,7 @@ RSpec.describe BillingEntity do
   it { is_expected.to have_many(:payment_receipts) }
   it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("BillingEntity::AppliedInvoiceCustomSection").dependent(:destroy) }
   it { is_expected.to have_many(:integration_collection_mappings).class_name("IntegrationCollectionMappings::BaseCollectionMapping").dependent(:destroy) }
+  it { is_expected.to have_many(:integration_mappings).class_name("IntegrationMappings::BaseMapping").dependent(:destroy) }
 
   it { is_expected.to have_many(:subscriptions).through(:customers) }
   it { is_expected.to have_many(:wallets).through(:customers) }
