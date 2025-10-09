@@ -45,6 +45,7 @@ class Charge < ApplicationRecord
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
+  validates :invoiceable, presence: true, unless: -> { pay_in_advance? }
 
   validate :charge_model_allowance
   validate :validate_pay_in_advance

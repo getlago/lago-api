@@ -440,7 +440,6 @@ RSpec.describe Charge do
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: true, regroup_paid_fees: nil)).to be_valid
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: nil)).to be_valid
         expect(build(:standard_charge, pay_in_advance: false, invoiceable: true, regroup_paid_fees: nil)).to be_valid
-        expect(build(:standard_charge, pay_in_advance: false, invoiceable: false, regroup_paid_fees: nil)).to be_valid
       end
     end
 
@@ -646,6 +645,24 @@ RSpec.describe Charge do
 
   describe "validations" do
     subject { charge.valid? }
+
+    describe "of invoiceable" do
+      subject { charge }
+
+      let(:charge) { build_stubbed(:charge, pay_in_advance:) }
+
+      context "when pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it { is_expected.not_to validate_presence_of(:invoiceable) }
+      end
+
+      context "when pay in arrears" do
+        let(:pay_in_advance) { false }
+
+        it { is_expected.to validate_presence_of(:invoiceable) }
+      end
+    end
 
     describe "of charge model" do
       let(:error) { charge.errors.where(:charge_model, :graduated_percentage_requires_premium_license) }
