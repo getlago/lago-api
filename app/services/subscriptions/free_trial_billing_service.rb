@@ -9,6 +9,7 @@ module Subscriptions
     end
 
     def call
+      # add test here for fixed charges
       ending_trial_subscriptions.each do |subscription|
         if subscription.plan_pay_in_advance &&
             !subscription.was_already_billed_today &&

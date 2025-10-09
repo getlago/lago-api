@@ -11,8 +11,7 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
   let(:fixed_charges_to_datetime) { Time.current }
   let(:events) { [] }
   let(:boundaries) do
-    Struct.new(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)
-      .new(fixed_charges_from_datetime, fixed_charges_to_datetime, 10)
+    {fixed_charges_from_datetime:, fixed_charges_to_datetime:, fixed_charges_duration: 10}
   end
 
   before { events }
