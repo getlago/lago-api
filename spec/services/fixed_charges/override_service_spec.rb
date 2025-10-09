@@ -46,6 +46,10 @@ RSpec.describe FixedCharges::OverrideService do
     context "when lago premium" do
       around { |test| lago_premium!(&test) }
 
+      before do
+        allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
+      end
+
       it "creates a fixed charge based on the given fixed charge" do
         expect { override_service.call }.to change(FixedCharge, :count).by(1)
 
@@ -65,6 +69,19 @@ RSpec.describe FixedCharges::OverrideService do
           units: 10
         )
         expect(new_fixed_charge.taxes).to contain_exactly(tax)
+      end
+
+      it "emits fixed charge events for all active subscriptions" do
+        result = override_service.call
+
+        expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          .to have_received(:call!)
+          .with(
+            fixed_charge: result.fixed_charge,
+            subscription: nil,
+            apply_units_immediately: true
+          )
+          .once
       end
 
       context "when only properties are provided" do
@@ -237,64 +254,6 @@ RSpec.describe FixedCharges::OverrideService do
         end
       end
 
-      context "when apply_units_immediately is true" do
-        let(:params) do
-          {
-            apply_units_immediately: true,
-            units: fixed_charge.units,
-            properties: {amount: "200"},
-            plan_id: plan2.id
-          }
-        end
-
-        before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to receive(:call!)
-        end
-
-        it "emits fixed charge events for all active subscriptions" do
-          result = override_service.call
-
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to have_received(:call!)
-            .with(
-              fixed_charge: result.fixed_charge,
-              subscription: nil,
-              apply_units_immediately: true
-            )
-            .once
-        end
-      end
-
-      context "when apply_units_immediately is false" do
-        let(:params) do
-          {
-            apply_units_immediately: false,
-            units: fixed_charge.units,
-            properties: {amount: "200"},
-            plan_id: plan2.id
-          }
-        end
-
-        before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to receive(:call!)
-        end
-
-        it "emits fixed charge events for all active subscriptions" do
-          result = override_service.call
-
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to have_received(:call!)
-            .with(
-              fixed_charge: result.fixed_charge,
-              subscription: nil,
-              apply_units_immediately: false
-            )
-            .once
-        end
-      end
-
       context "when subscription parameter is passed during plan override" do
         # Subscription update with plan override
         subject(:override_service) { described_class.new(fixed_charge:, params:, subscription:) }
@@ -302,7 +261,6 @@ RSpec.describe FixedCharges::OverrideService do
         let(:subscription) { create(:subscription, plan:, organization:) }
         let(:params) do
           {
-            apply_units_immediately: true,
             units: 15,
             plan_id: plan2.id
           }

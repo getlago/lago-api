@@ -308,12 +308,6 @@ RSpec.describe FixedCharges::CreateService do
         end
 
         context "when apply_units_immediately is true" do
-          let(:customer_1) { create(:customer, organization:) }
-          let(:customer_2) { create(:customer, organization:) }
-          let(:active_subscription_1) { create(:subscription, :active, plan:, customer: customer_1) }
-          let(:active_subscription_2) { create(:subscription, :active, plan:, customer: customer_2) }
-          let(:terminated_subscription) { create(:subscription, :terminated, plan:, customer: customer_1) }
-
           let(:params) do
             {
               add_on_id: add_on.id,
@@ -323,48 +317,28 @@ RSpec.describe FixedCharges::CreateService do
           end
 
           before do
-            active_subscription_1
-            active_subscription_2
-            terminated_subscription
-            allow(FixedChargeEvents::CreateService).to receive(:call!)
+            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to receive(:call!)
           end
 
           it "creates new fixed charge" do
-            expect { subject }.to change(FixedCharge, :count).by(1)
+            expect { result }.to change(FixedCharge, :count).by(1)
+
+            expect(result).to be_success
+            expect(result.fixed_charge).to be_persisted
           end
 
           it "emits fixed charge events for all active subscriptions" do
             result
 
-            expect(FixedChargeEvents::CreateService)
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
               .to have_received(:call!)
-              .with(subscription: active_subscription_1, fixed_charge: result.fixed_charge)
+              .with(fixed_charge: result.fixed_charge, apply_units_immediately: true)
               .once
-
-            expect(FixedChargeEvents::CreateService)
-              .to have_received(:call!)
-              .with(subscription: active_subscription_2, fixed_charge: result.fixed_charge)
-              .once
-          end
-
-          it "does not emit events for terminated subscriptions" do
-            result
-
-            expect(FixedChargeEvents::CreateService)
-              .not_to have_received(:call!)
-              .with(subscription: terminated_subscription, fixed_charge: result.fixed_charge)
-          end
-
-          it "returns success result" do
-            expect(result).to be_success
-            expect(result.fixed_charge).to be_persisted
           end
         end
 
         context "when apply_units_immediately is false" do
-          let(:customer) { create(:customer, organization:) }
-          let(:subscription) { create(:subscription, plan:, customer:) }
-
           let(:params) do
             {
               add_on_id: add_on.id,
@@ -374,18 +348,23 @@ RSpec.describe FixedCharges::CreateService do
           end
 
           before do
-            subscription
-            allow(FixedChargeEvents::CreateService).to receive(:call!)
+            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to receive(:call!)
           end
 
           it "creates new fixed charge" do
-            expect { subject }.to change(FixedCharge, :count).by(1)
+            expect { result }.to change(FixedCharge, :count).by(1)
+            expect(result).to be_success
+            expect(result.fixed_charge).to be_persisted
           end
 
-          it "does not emit any fixed charge events" do
+          it "emits fixed charge events for active subscriptions with apply_units_immediately false" do
             result
 
-            expect(FixedChargeEvents::CreateService).not_to have_received(:call!)
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to have_received(:call!)
+              .with(fixed_charge: result.fixed_charge, apply_units_immediately: false)
+              .once
           end
         end
       end
