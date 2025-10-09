@@ -415,6 +415,16 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           parent_id: fixed_charge.id
         )
       end
+
+      it "creates fixed charge events for the subscription" do
+        subject
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        fixed_charge_override = FixedCharge.find_by(parent_id: fixed_charge.id)
+        expect(subscription.fixed_charge_events.count).to eq(1)
+        expect(subscription.fixed_charge_events.first.fixed_charge_id).to eq(fixed_charge_override.id)
+        expect(subscription.fixed_charge_events.first.timestamp).to be_within(5.second).of(Time.current)
+      end
     end
   end
 
