@@ -10,9 +10,9 @@ module FixedChargeEvents
         @fixed_charge = fixed_charge
         @subscription = subscription
         @customer = subscription.customer
-        @from_datetime = boundaries.fixed_charges_from_datetime
-        @to_datetime = boundaries.fixed_charges_to_datetime
-        @charges_duration = boundaries.fixed_charges_duration
+        @from_datetime = boundaries[:fixed_charges_from_datetime]
+        @to_datetime = boundaries[:fixed_charges_to_datetime]
+        @charges_duration = boundaries[:fixed_charges_duration]
 
         super(nil)
         result.aggregator = self
