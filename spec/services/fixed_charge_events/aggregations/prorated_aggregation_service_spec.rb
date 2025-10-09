@@ -11,9 +11,7 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
   let(:fixed_charges_to_datetime) { Time.current }
   let(:fixed_charges_duration) { 10 }
   let(:boundaries) do
-    # TODO: switch to fixed_charges_boundaries
-    Struct.new(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)
-      .new(fixed_charges_from_datetime, fixed_charges_to_datetime, fixed_charges_duration)
+    {fixed_charges_from_datetime:, fixed_charges_to_datetime:, fixed_charges_duration:}
   end
 
   context "when there are no events" do

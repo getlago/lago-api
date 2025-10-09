@@ -93,8 +93,9 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
+    # we also need a test here...
     def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
+      sub.active? && sub.subscription_at.today? && (plan.pay_in_advance? || plan.fixed_charges.pay_in_advance.any?) && !sub.in_trial_period?
     end
 
     def create_subscription
@@ -108,6 +109,8 @@ module Subscriptions
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at]
       )
+
+      # emit event for fixed charges
 
       if new_subscription.subscription_at > Time.current
         new_subscription.pending!
@@ -129,6 +132,7 @@ module Subscriptions
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
         after_commit do
+          # add test here for fixed charges
           BillSubscriptionJob.perform_later(
             [new_subscription],
             Time.zone.now.to_i,
