@@ -7,7 +7,7 @@ module Integrations
         module Payloads
           class Avalara < BasePayload
             def initialize(integration:, customer:, integration_customer:, credit_note:)
-              super(integration:)
+              super(integration:, billing_entity: customer.billing_entity)
 
               @customer = customer
               @integration_customer = integration_customer

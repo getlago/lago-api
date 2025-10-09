@@ -6,7 +6,7 @@ module Integrations
       module Payloads
         class BasePayload < Integrations::Aggregator::BasePayload
           def initialize(integration:, customer:, integration_customer: nil, subsidiary_id: nil)
-            super(integration:)
+            super(integration:, billing_entity: customer.billing_entity)
 
             @customer = customer
             @integration_customer = integration_customer
