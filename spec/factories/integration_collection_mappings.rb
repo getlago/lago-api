@@ -5,6 +5,7 @@ FactoryBot.define do
     association :integration, factory: :netsuite_integration
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample }
     organization { integration&.organization || association(:organization) }
+    billing_entity { nil }
 
     settings do
       {
@@ -22,11 +23,42 @@ FactoryBot.define do
     association :integration, factory: :xero_integration
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
     organization { integration&.organization || association(:organization) }
+    billing_entity { nil }
 
     settings do
       {
         external_id: "xero-123",
         external_account_code: "xero-code-1",
+        external_name: "Credits and Discounts"
+      }
+    end
+  end
+
+  factory :anrok_collection_mapping, class: "IntegrationCollectionMappings::AnrokCollectionMapping" do
+    association :integration, factory: :anrok_integration
+    mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
+    organization { integration&.organization || association(:organization) }
+    billing_entity { nil }
+
+    settings do
+      {
+        external_id: "anrok-123",
+        external_account_code: "anrok-code-1",
+        external_name: "Credits and Discounts"
+      }
+    end
+  end
+
+  factory :avalara_collection_mapping, class: "IntegrationCollectionMappings::AvalaraCollectionMapping" do
+    association :integration, factory: :avalara_integration
+    mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
+    organization { integration&.organization || association(:organization) }
+    billing_entity { nil }
+
+    settings do
+      {
+        external_id: "avalara-123",
+        external_account_code: "avalara-code-1",
         external_name: "Credits and Discounts"
       }
     end
