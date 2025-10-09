@@ -487,7 +487,6 @@ RSpec.describe Mutations::Plans::Update do
                 applyUnitsImmediately: true
               },
               {
-                # newly added fixed charge
                 addOnId: add_on_3.id,
                 units: "30",
                 chargeModel: "standard",
@@ -552,9 +551,23 @@ RSpec.describe Mutations::Plans::Update do
       expect(result_data["fixedCharges"].fifth["addOn"]["id"]).to eq(add_on_5.id)
       expect(result_data["fixedCharges"].fifth["addOn"]["name"]).to eq(add_on_5.name)
 
-      expect(FixedChargeEvent.count).to eq(2)
-      expect(FixedChargeEvent.order(created_at: :asc).first).to have_attributes(units: BigDecimal("20"))
-      expect(FixedChargeEvent.order(created_at: :asc).second).to have_attributes(units: BigDecimal("30"))
+      expect(FixedCharge.count).to eq(5)
+
+      # NOTE: first fixed charge does not have event associated because units did not change
+      # and subscription was created with factory and already activated.
+      expect(FixedChargeEvent.count).to eq(4)
+
+      fixed_charge_3 = plan.fixed_charges.find_by(add_on_id: add_on_3.id)
+      fixed_charge_4 = plan.fixed_charges.find_by(add_on_id: add_on_4.id)
+      fixed_charge_5 = plan.fixed_charges.find_by(add_on_id: add_on_5.id)
+
+      expect(FixedChargeEvent.pluck(:fixed_charge_id, :timestamp, :units))
+        .to contain_exactly(
+          [fixed_charge_2.id, be_within(1.second).of(Time.current), BigDecimal("20")],
+          [fixed_charge_3.id, be_within(1.second).of(Time.current), BigDecimal("30")],
+          [fixed_charge_4.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("40")],
+          [fixed_charge_5.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("50")]
+        )
     end
   end
 
