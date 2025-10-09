@@ -1,4 +1,4 @@
-\restrict jMENvENKEbDacbpayQy5NpihGcOIUP8hn5akatTuxOZMLvel7yhmW3kf9p8gAzE
+\restrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -255,6 +255,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
@@ -376,6 +377,7 @@ DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_payment_methods_on_provider_method_type;
+DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_customer_id;
@@ -3825,7 +3827,8 @@ CREATE TABLE public.payment_methods (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
-    payment_provider_customer_id uuid NOT NULL,
+    payment_provider_id uuid,
+    payment_provider_customer_id uuid,
     provider_method_id character varying NOT NULL,
     provider_method_type character varying,
     is_default boolean DEFAULT false NOT NULL,
@@ -7365,6 +7368,13 @@ CREATE INDEX index_payment_methods_on_payment_provider_customer_id ON public.pay
 
 
 --
+-- Name: index_payment_methods_on_payment_provider_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_payment_provider_id ON public.payment_methods USING btree (payment_provider_id);
+
+
+--
 -- Name: index_payment_methods_on_provider_method_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8090,6 +8100,14 @@ CREATE OR REPLACE VIEW public.flat_filters AS
 --
 
 CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_receipts FOR EACH ROW EXECUTE FUNCTION public.set_payment_receipt_number();
+
+
+--
+-- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT fk_rails_00e7a45b0b FOREIGN KEY (payment_provider_id) REFERENCES public.payment_providers(id);
 
 
 --
@@ -10024,7 +10042,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jMENvENKEbDacbpayQy5NpihGcOIUP8hn5akatTuxOZMLvel7yhmW3kf9p8gAzE
+\unrestrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
 
 SET search_path TO "$user", public;
 

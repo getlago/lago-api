@@ -9,7 +9,8 @@ RSpec.describe PaymentMethod do
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:customer) }
-  it { is_expected.to belong_to(:payment_provider_customer).class_name("PaymentProviderCustomers::BaseCustomer") }
+  it { is_expected.to belong_to(:payment_provider).class_name("PaymentProviders::BaseProvider").optional }
+  it { is_expected.to belong_to(:payment_provider_customer).class_name("PaymentProviderCustomers::BaseCustomer").optional }
 
   it { expect(described_class).to be_soft_deletable }
 

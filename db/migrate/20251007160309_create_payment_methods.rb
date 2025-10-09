@@ -5,7 +5,8 @@ class CreatePaymentMethods < ActiveRecord::Migration[8.0]
     create_table :payment_methods, id: :uuid do |t|
       t.references :organization, type: :uuid, null: false, foreign_key: true
       t.references :customer, type: :uuid, null: false, foreign_key: true
-      t.references :payment_provider_customer, type: :uuid, null: false, foreign_key: true
+      t.references :payment_provider, type: :uuid, foreign_key: true
+      t.references :payment_provider_customer, type: :uuid, foreign_key: true
 
       t.string :provider_method_id, null: false
       t.string :provider_method_type, null: true, index: true

@@ -8,8 +8,9 @@ class PaymentMethod < ApplicationRecord
   default_scope -> { kept }
 
   belongs_to :organization
-  belongs_to :customer
-  belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
+  belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
 
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
@@ -28,7 +29,8 @@ end
 #  updated_at                   :datetime         not null
 #  customer_id                  :uuid             not null
 #  organization_id              :uuid             not null
-#  payment_provider_customer_id :uuid             not null
+#  payment_provider_customer_id :uuid
+#  payment_provider_id          :uuid
 #  provider_method_id           :string           not null
 #
 # Indexes
@@ -36,6 +38,7 @@ end
 #  index_payment_methods_on_customer_id                   (customer_id)
 #  index_payment_methods_on_organization_id               (organization_id)
 #  index_payment_methods_on_payment_provider_customer_id  (payment_provider_customer_id)
+#  index_payment_methods_on_payment_provider_id           (payment_provider_id)
 #  index_payment_methods_on_provider_method_type          (provider_method_type)
 #  unique_default_payment_method_per_customer             (customer_id) UNIQUE WHERE ((is_default = true) AND (deleted_at IS NULL))
 #
@@ -44,4 +47,5 @@ end
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_customer_id => payment_provider_customers.id)
+#  fk_rails_...  (payment_provider_id => payment_providers.id)
 #
