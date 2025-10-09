@@ -1,4 +1,4 @@
-\restrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\restrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -59,8 +59,10 @@ ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_c9183c59d9;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c8606f586b;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
@@ -113,6 +115,7 @@ ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_84a67e8b40;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_81eedc32c0;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS fk_rails_81e3b6abba;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS fk_rails_81d8b323cf;
@@ -252,6 +255,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
@@ -279,6 +283,7 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
+DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
@@ -371,6 +376,11 @@ DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_custome
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_payment_methods_on_provider_method_type;
+DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_id;
+DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_customer_id;
+DROP INDEX IF EXISTS public.index_payment_methods_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_methods_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id;
@@ -724,6 +734,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS pay
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS payment_provider_customers_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS payment_methods_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_intents DROP CONSTRAINT IF EXISTS payment_intents_pkey;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS password_resets_pkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
@@ -824,6 +835,7 @@ DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
+DROP TABLE IF EXISTS public.payment_methods;
 DROP TABLE IF EXISTS public.payment_intents;
 DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
@@ -3808,6 +3820,26 @@ CREATE TABLE public.payment_intents (
 
 
 --
+-- Name: payment_methods; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_methods (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    payment_provider_id uuid,
+    payment_provider_customer_id uuid,
+    provider_method_id character varying NOT NULL,
+    provider_method_type character varying,
+    is_default boolean DEFAULT false NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    details jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: payment_providers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4804,6 +4836,14 @@ ALTER TABLE ONLY public.password_resets
 
 ALTER TABLE ONLY public.payment_intents
     ADD CONSTRAINT payment_intents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payment_methods payment_methods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT payment_methods_pkey PRIMARY KEY (id);
 
 
 --
@@ -7307,6 +7347,41 @@ CREATE INDEX index_payment_intents_on_organization_id ON public.payment_intents 
 
 
 --
+-- Name: index_payment_methods_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_customer_id ON public.payment_methods USING btree (customer_id);
+
+
+--
+-- Name: index_payment_methods_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_organization_id ON public.payment_methods USING btree (organization_id);
+
+
+--
+-- Name: index_payment_methods_on_payment_provider_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_payment_provider_customer_id ON public.payment_methods USING btree (payment_provider_customer_id);
+
+
+--
+-- Name: index_payment_methods_on_payment_provider_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_payment_provider_id ON public.payment_methods USING btree (payment_provider_id);
+
+
+--
+-- Name: index_payment_methods_on_provider_method_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_methods_on_provider_method_type ON public.payment_methods USING btree (provider_method_type);
+
+
+--
 -- Name: index_payment_provider_customers_on_customer_id_and_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7951,6 +8026,13 @@ CREATE INDEX index_webhooks_on_webhook_endpoint_id ON public.webhooks USING btre
 
 
 --
+-- Name: unique_default_payment_method_per_customer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment_methods USING btree (customer_id) WHERE ((is_default = true) AND (deleted_at IS NULL));
+
+
+--
 -- Name: billable_metrics_grouped_charges _RETURN; Type: RULE; Schema: public; Owner: -
 --
 
@@ -8018,6 +8100,14 @@ CREATE OR REPLACE VIEW public.flat_filters AS
 --
 
 CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_receipts FOR EACH ROW EXECUTE FUNCTION public.set_payment_receipt_number();
+
+
+--
+-- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT fk_rails_00e7a45b0b FOREIGN KEY (payment_provider_id) REFERENCES public.payment_providers(id);
 
 
 --
@@ -9133,6 +9223,14 @@ ALTER TABLE ONLY public.wallet_targets
 
 
 --
+-- Name: payment_methods fk_rails_84a67e8b40; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT fk_rails_84a67e8b40 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
 -- Name: payments fk_rails_84f4587409; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9549,6 +9647,14 @@ ALTER TABLE ONLY public.pricing_unit_usages
 
 
 --
+-- Name: payment_methods fk_rails_c60c12efbd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT fk_rails_c60c12efbd FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customers_invoice_custom_sections fk_rails_c64033bcb0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9562,6 +9668,14 @@ ALTER TABLE ONLY public.customers_invoice_custom_sections
 
 ALTER TABLE ONLY public.invites
     ADD CONSTRAINT fk_rails_c71f4b2026 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
+
+
+--
+-- Name: payment_methods fk_rails_c8606f586b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_methods
+    ADD CONSTRAINT fk_rails_c8606f586b FOREIGN KEY (payment_provider_customer_id) REFERENCES public.payment_provider_customers(id);
 
 
 --
@@ -9928,11 +10042,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict X6hu2dLiYvxZFd8pFhMqprCZBJJqBho1BL722Hcgg5uMjkHJNG1M6exdAVQ8mbX
+\unrestrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251007160309'),
 ('20250926185510'),
 ('20250919124523'),
 ('20250919124037'),

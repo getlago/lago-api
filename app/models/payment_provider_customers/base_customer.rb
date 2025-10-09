@@ -15,6 +15,7 @@ module PaymentProviderCustomers
     belongs_to :organization
 
     has_many :payments
+    has_many :payment_methods, foreign_key: :payment_provider_customer_id
     has_many :refunds, foreign_key: :payment_provider_customer_id
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}

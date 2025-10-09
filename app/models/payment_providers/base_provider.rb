@@ -20,6 +20,7 @@ module PaymentProviders
 
     has_many :customers, through: :payment_provider_customers
     has_many :payments, dependent: :nullify, foreign_key: :payment_provider_id
+    has_many :payment_methods, dependent: :nullify, foreign_key: :payment_provider_id
     has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id
 
     validates :code, uniqueness: {conditions: -> { kept }, scope: :organization_id}
