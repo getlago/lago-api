@@ -149,10 +149,17 @@ module Invoices
     end
 
     def create_fixed_charge_fees(subscription, boundaries)
+<<<<<<< HEAD
       return unless fixed_charge_boundaries_valid?(boundaries)
 
       subscription.fixed_charges.find_each do |fixed_charge|
         next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+=======
+      # return unless fixed_charge_boundaries_valid?(boundaries)
+
+      subscription.fixed_charges.find_each do |fixed_charge|
+        next if should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+>>>>>>> ee9c8ff55 (squashed commit)
 
         Fees::FixedChargeService.call!(
           invoice:,
@@ -164,6 +171,7 @@ module Invoices
       end
     end
 
+<<<<<<< HEAD
     # In current PR we just always create the fixed charges. In the upcoming we'll handle upgrade/downgrade/termination scenarios
     def should_create_fixed_charge_fee?(fixed_charge, subscription)
       # when "starting" invoice - it's only for pay_in_advance fees
@@ -179,6 +187,38 @@ module Invoices
       true
     end
 
+=======
+    def should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+      # For pay_in_advance fixed charges, when upgrading subscription,
+      # and it's the first invoice, we don't need to create fee again
+      # if it already was billed in previous subscription for this period
+      # TODO: discuss with Mike
+      # if subscription.invoices.count == 1 && fixed_charge.pay_in_advance? && subscription.previous_subscription&.terminated?
+      #   return true if fixed_charge_fee_is_already_billed_for_this_period?(fixed_charge, subscription.previous_subscription)
+      # end
+
+      if fixed_charge.pay_in_advance?
+        condition = subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
+
+        return condition
+      end
+
+      return false if fixed_charge.prorated?
+
+      subscription.terminated? && subscription.upgraded? &&
+        fixed_charge.included_in_next_subscription?(subscription)
+    end
+
+    # TODO: discuss with Mike
+    # def fixed_charge_fee_is_already_billed_for_this_period?(fixed_charge, previous_subscription)
+    #   previous_fixed_charge = previous_subscription.plan.fixed_charges.where(add_on_id: fixed_charge.add_on_id)
+    #   return false if previous_fixed_charge.blank?
+
+    #   previous_fixed_charge.fees.fixed_charge.exists?(created_at: subscription.from_datetime..subscription.to_datetime)
+    # end
+
+>>>>>>> ee9c8ff55 (squashed commit)
     def should_create_recurring_non_invoiceable_fees?(subscription)
       return false if invoice.skip_charges
 
@@ -335,17 +375,37 @@ module Invoices
     end
 
     def should_create_fixed_charge_fees?(subscription, boundaries)
+<<<<<<< HEAD
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
 
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
       #       fee if the fixed_charge is pay in arrears, otherwise this fee will never
+=======
+      fee_count = subscription.fees
+        .fixed_charge
+        .includes(:invoice)
+        .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
+        .where.not(invoice_id: invoice.id)
+        .where.not(invoice_id: invoice.voided_invoice_id)
+        .count
+
+      return false if fee_count > 0 && subscription.plan.fixed_charges.pay_in_advance.count == fee_count
+      return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
+
+      # NOTE: When a subscription is terminated we still need to charge the fixed_charges
+      #       fee if the plan is in pay in arrears, otherwise this fee will never
+>>>>>>> ee9c8ff55 (squashed commit)
       #       be created.
       subscription.active? ||
         (subscription.terminated? && subscription.plan.fixed_charges.pay_in_arrears.any?) ||
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
+<<<<<<< HEAD
     def wallets
+=======
+    def wallet
+>>>>>>> ee9c8ff55 (squashed commit)
       @wallets ||= customer.wallets.active.includes(:wallet_targets)
         .with_positive_balance.in_application_order
     end
