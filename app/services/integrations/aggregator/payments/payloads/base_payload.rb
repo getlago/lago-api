@@ -6,7 +6,7 @@ module Integrations
       module Payloads
         class BasePayload < Integrations::Aggregator::BasePayload
           def initialize(integration:, payment:)
-            super(integration:)
+            super(integration:, billing_entity: payment.payable.customer.billing_entity)
 
             @payment = payment
           end
