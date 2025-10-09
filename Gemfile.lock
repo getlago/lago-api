@@ -355,6 +355,9 @@ GEM
       reline
     htmlbeautifier (1.4.3)
     httpclient (2.8.3)
+    httplog (1.7.3)
+      rack (>= 2.0)
+      rainbow (>= 2.0.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     io-console (0.8.0)
@@ -1061,6 +1064,7 @@ DEPENDENCIES
   graphql-pagination
   guard-rspec
   htmlbeautifier (~> 1.4)
+  httplog
   i18n-tasks!
   jwt
   kaminari-activerecord

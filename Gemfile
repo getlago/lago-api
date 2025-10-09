@@ -108,6 +108,7 @@ gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby
 group :development, :test, :staging do
   gem "factory_bot_rails"
   gem "faker"
+  gem "httplog"
 end
 
 group :development, :test do
