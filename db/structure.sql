@@ -1,4 +1,4 @@
-\restrict tdPBUs8BNhdHzc5pPNrb6FpR0bGSc0ZZEnohfHemq3NGlTDc95b3Vss2PeBsaed
+\restrict jMENvENKEbDacbpayQy5NpihGcOIUP8hn5akatTuxOZMLvel7yhmW3kf9p8gAzE
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -8019,7 +8019,7 @@ CREATE INDEX index_webhooks_on_webhook_endpoint_id ON public.webhooks USING btre
 -- Name: unique_default_payment_method_per_customer; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment_methods USING btree (customer_id) WHERE (is_default = true);
+CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment_methods USING btree (customer_id) WHERE ((is_default = true) AND (deleted_at IS NULL));
 
 
 --
@@ -10024,7 +10024,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tdPBUs8BNhdHzc5pPNrb6FpR0bGSc0ZZEnohfHemq3NGlTDc95b3Vss2PeBsaed
+\unrestrict jMENvENKEbDacbpayQy5NpihGcOIUP8hn5akatTuxOZMLvel7yhmW3kf9p8gAzE
 
 SET search_path TO "$user", public;
 

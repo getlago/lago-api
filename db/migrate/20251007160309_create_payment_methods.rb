@@ -15,7 +15,7 @@ class CreatePaymentMethods < ActiveRecord::Migration[8.0]
 
       t.timestamps
 
-      t.index [:customer_id], where: "is_default = TRUE", name: "unique_default_payment_method_per_customer", unique: true
+      t.index [:customer_id], where: "is_default = TRUE AND deleted_at IS NULL", name: "unique_default_payment_method_per_customer", unique: true
     end
   end
 end

@@ -3,7 +3,9 @@
 class PaymentMethod < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+
   self.discard_column = :deleted_at
+  default_scope -> { kept }
 
   belongs_to :organization
   belongs_to :customer
@@ -35,7 +37,7 @@ end
 #  index_payment_methods_on_organization_id               (organization_id)
 #  index_payment_methods_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payment_methods_on_provider_method_type          (provider_method_type)
-#  unique_default_payment_method_per_customer             (customer_id) UNIQUE WHERE (is_default = true)
+#  unique_default_payment_method_per_customer             (customer_id) UNIQUE WHERE ((is_default = true) AND (deleted_at IS NULL))
 #
 # Foreign Keys
 #
