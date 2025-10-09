@@ -230,7 +230,7 @@ module Fees
       taxes_result
     end
 
-    FakeInvoice = Data.define(:id, :issuing_date, :currency, :customer)
+    FakeInvoice = Data.define(:id, :issuing_date, :currency, :customer, :billing_entity)
 
     def invoice
       result.invoice_id = SecureRandom.uuid
@@ -239,7 +239,8 @@ module Fees
         id: result.invoice_id,
         issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
         currency: subscription.plan.amount_currency,
-        customer:
+        customer:,
+        billing_entity: customer.billing_entity
       )
     end
 
