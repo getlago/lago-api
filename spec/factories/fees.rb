@@ -100,7 +100,7 @@ FactoryBot.define do
   factory :minimum_commitment_fee, class: "Fee" do
     invoice
     fee_type { "commitment" }
-    subscription
+    subscription { invoice&.subscriptions&.first || association(:subscription) }
 
     organization { invoice&.organization || association(:organization) }
     billing_entity { invoice&.billing_entity || association(:billing_entity) }
