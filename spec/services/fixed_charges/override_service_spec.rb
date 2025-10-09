@@ -302,7 +302,6 @@ RSpec.describe FixedCharges::OverrideService do
         let(:subscription) { create(:subscription, plan:, organization:) }
         let(:params) do
           {
-            apply_units_immediately: true,
             units: 15,
             plan_id: plan2.id
           }
