@@ -839,71 +839,158 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
-    context "when adding a fixed charge with apply_units_immediately" do
-      let(:subscription) { create(:subscription, plan:) }
-
-      let(:fixed_charges_params) do
-        [
-          {
-            apply_units_immediately: true,
-            invoice_display_name: "Fixed charge 2",
-            units: 100,
-            add_on_id: add_on.id,
-            charge_model: "standard",
-            properties: {amount: "10"}
-          }
-        ]
-      end
+    context "when adding a fixed charge" do
+      let(:plan) { create(:plan, organization:, interval: :weekly) }
+      let(:subscription) { create(:subscription, :active, :calendar, plan:, started_at: started_at) }
+      let(:started_at) { 3.days.ago }
 
       before { subscription }
 
-      it "adds a fixed charge and creates fixed charge events for all active subscriptions" do
-        expect { subject }.to change(FixedChargeEvent, :count).by(1)
+      context "when apply_units_immediately is true" do
+        let(:fixed_charges_params) do
+          [
+            {
+              apply_units_immediately: true,
+              invoice_display_name: "Fixed charge 2",
+              units: 100,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              properties: {amount: "10"}
+            }
+          ]
+        end
 
-        fixed_charge = FixedCharge.find(json[:plan][:fixed_charges].first[:lago_id])
+        it "adds a fixed charge" do
+          subject
 
-        expect(fixed_charge.events.first).to have_attributes(
-          subscription:,
-          fixed_charge:,
-          units: 100
-        )
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:fixed_charges].count).to eq(1)
+          expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 2")
+          expect(json[:plan][:fixed_charges].first[:units]).to eq("100.0")
+        end
 
-        expect(response).to have_http_status(:success)
-        expect(json[:plan][:fixed_charges].count).to eq(1)
-        expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 2")
-        expect(json[:plan][:fixed_charges].first[:units]).to eq("100.0")
+        it "creates fixed charge events for all active subscriptions with current timestamp" do
+          expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+          fixed_charge = FixedCharge.find(json[:plan][:fixed_charges].first[:lago_id])
+
+          expect(fixed_charge.events.first).to have_attributes(
+            subscription:,
+            fixed_charge:,
+            units: 100,
+            timestamp: be_within(5.seconds).of(Time.current)
+          )
+        end
+      end
+
+      context "when apply_units_immediately is false" do
+        let(:fixed_charges_params) do
+          [
+            {
+              apply_units_immediately: false,
+              invoice_display_name: "Fixed charge 2",
+              units: 100,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              properties: {amount: "10"}
+            }
+          ]
+        end
+
+        it "adds a fixed charge" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:fixed_charges].count).to eq(1)
+          expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 2")
+          expect(json[:plan][:fixed_charges].first[:units]).to eq("100.0")
+        end
+
+        it "creates fixed charge events for all active subscriptions with next billing period timestamp" do
+          expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+          fixed_charge = FixedCharge.find(json[:plan][:fixed_charges].first[:lago_id])
+
+          expect(fixed_charge.events.first).to have_attributes(
+            subscription:,
+            fixed_charge:,
+            units: 100,
+            timestamp: be_within(1.second).of((started_at + 1.week).beginning_of_week)
+          )
+        end
       end
     end
 
-    context "when editing a fixed charge with apply_units_immediately" do
-      let(:subscription) { create(:subscription, plan:) }
+    context "when editing a fixed charge" do
+      let(:plan) { create(:plan, organization:, interval: :weekly) }
+      let(:subscription) { create(:subscription, :active, :calendar, plan:, started_at: started_at) }
       let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, units: 1) }
-
-      let(:fixed_charges_params) do
-        [
-          {
-            id: fixed_charge.id,
-            apply_units_immediately: true,
-            units: 25,
-            properties: {amount: "10"}
-          }
-        ]
-      end
+      let(:started_at) { 3.days.ago }
 
       before { subscription }
 
-      it "updates a fixed charge and creates fixed charge events for all active subscriptions" do
-        expect { subject }.to change(FixedChargeEvent, :count).by(1)
+      context "when apply_units_immediately is true" do
+        let(:fixed_charges_params) do
+          [
+            {
+              id: fixed_charge.id,
+              apply_units_immediately: true,
+              units: 25,
+              properties: {amount: "10"}
+            }
+          ]
+        end
 
-        expect(fixed_charge.events.first).to have_attributes(
-          subscription:,
-          fixed_charge:,
-          units: 25
-        )
+        it "updates a fixed charge" do
+          subject
 
-        expect(response).to have_http_status(:success)
-        expect(json[:plan][:fixed_charges].count).to eq(1)
-        expect(json[:plan][:fixed_charges].first[:units]).to eq("25.0")
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:fixed_charges].count).to eq(1)
+          expect(json[:plan][:fixed_charges].first[:units]).to eq("25.0")
+        end
+
+        it "creates fixed charge events for all active subscriptions with current timestamp" do
+          expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+          expect(fixed_charge.events.first).to have_attributes(
+            subscription:,
+            fixed_charge:,
+            units: 25,
+            timestamp: be_within(1.second).of(Time.current)
+          )
+        end
+      end
+
+      context "when apply_units_immediately is false" do
+        let(:fixed_charges_params) do
+          [
+            {
+              id: fixed_charge.id,
+              apply_units_immediately: false,
+              units: 25,
+              properties: {amount: "10"}
+            }
+          ]
+        end
+
+        it "updates a fixed charge" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:fixed_charges].count).to eq(1)
+          expect(json[:plan][:fixed_charges].first[:units]).to eq("25.0")
+        end
+
+        it "creates fixed charge events for all active subscriptions with next billing period timestamp" do
+          expect { subject }.to change(FixedChargeEvent, :count).by(1)
+
+          expect(fixed_charge.events.first).to have_attributes(
+            subscription:,
+            fixed_charge:,
+            units: 25,
+            timestamp: be_within(1.second).of((started_at + 1.week).beginning_of_week)
+          )
+        end
       end
     end
 
