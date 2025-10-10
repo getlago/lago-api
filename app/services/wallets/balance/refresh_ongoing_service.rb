@@ -117,10 +117,10 @@ module Wallets
         all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
         return 0 if all_fees.empty?
 
-        walletes_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
+        wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
 
         all_fees.sum do |f|
-          (walletes_applicable_on_fees[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
+          (wallets_applicable_on_fees[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
         end
       end
     end
