@@ -21,7 +21,12 @@ module Credits
 
         next unless progressive_billing_invoice
 
-        total_charges_amount = invoice.fees.charge.where(subscription: subscription).sum(:amount_cents)
+        total_charges_amount = invoice
+          .fees
+          .charge
+          .where(subscription:)
+          .where(charge_id: progressive_billing_invoice.fees.charge.pluck(:charge_id))
+          .sum(:amount_cents)
 
         # Don't be tempted to calculate the credit amount yourself, you have to use the result from this service.
         amount_to_credit = progressive_billed_result.to_credit_amount
