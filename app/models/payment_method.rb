@@ -14,6 +14,10 @@ class PaymentMethod < ApplicationRecord
 
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
+
+  def payment_provider_type
+    payment_provider&.payment_type
+  end
 end
 
 # == Schema Information
