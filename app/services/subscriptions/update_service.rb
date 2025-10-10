@@ -19,6 +19,7 @@ module Subscriptions
 
     def call
       return result.not_found_failure!(resource: "subscription") unless subscription
+
       unless valid?(
         customer: subscription.customer,
         plan: subscription.plan,
@@ -29,6 +30,7 @@ module Subscriptions
       )
         return result
       end
+
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
       subscription.name = params[:name] if params.key?(:name)
@@ -80,6 +82,11 @@ module Subscriptions
     def process_subscription_at_change(subscription)
       if subscription.subscription_at <= Time.current
         subscription.mark_as_active!(subscription.subscription_at)
+
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [subscription],
+          timestamp: subscription.started_at
+        )
       else
         subscription.save!
       end
@@ -100,7 +107,8 @@ module Subscriptions
       else
         Plans::OverrideService.call(
           plan: current_plan,
-          params: params[:plan_overrides].to_h.with_indifferent_access
+          params: params[:plan_overrides].to_h.with_indifferent_access,
+          subscription:
         )
       end
     end

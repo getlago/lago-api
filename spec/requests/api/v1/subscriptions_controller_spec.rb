@@ -415,6 +415,16 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           parent_id: fixed_charge.id
         )
       end
+
+      it "creates fixed charge events for the subscription" do
+        subject
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        fixed_charge_override = FixedCharge.find_by(parent_id: fixed_charge.id)
+        expect(subscription.fixed_charge_events.count).to eq(1)
+        expect(subscription.fixed_charge_events.first.fixed_charge_id).to eq(fixed_charge_override.id)
+        expect(subscription.fixed_charge_events.first.timestamp).to be_within(5.seconds).of(Time.current)
+      end
     end
   end
 
@@ -821,6 +831,16 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
                 tax_codes: [tax.code]
               }
             ],
+            fixed_charges: [
+              {
+                id: overriden_fixed_charge.id,
+                units: 90,
+                invoice_display_name: "Overridden Fixed Charge",
+                properties: {amount: "20"},
+                tax_codes: [tax.code],
+                apply_units_immediately: true
+              }
+            ],
             minimum_commitment: {
               invoice_display_name: commitment_invoice_display_name,
               amount_cents: commitment_amount_cents,
@@ -844,12 +864,15 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       let(:overriden_plan) { create(:plan, organization:, parent_id: plan.id) }
       let(:billable_metric) { create(:billable_metric, organization:) }
       let(:overriden_package_charge) { create(:package_charge, plan: overriden_plan, organization:, billable_metric:) }
+      let(:overriden_fixed_charge) { create(:fixed_charge, plan: overriden_plan, organization:, parent_id: fixed_charge) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, organization:) }
       let(:commitment) { create(:commitment, plan: overriden_plan) }
       let(:overriden_usage_threshold) { create(:usage_threshold, plan: overriden_plan, threshold_display_name: "Threshold 1", amount_cents: 1000) }
       let(:other_billable_metric) { create(:billable_metric, organization:) }
 
       before do
         overriden_package_charge
+        overriden_fixed_charge
         overriden_usage_threshold
         commitment
         other_billable_metric
@@ -1019,6 +1042,18 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
             }
           )
         end
+      end
+
+      it "creates fixed charge events for the subscription" do
+        subject
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.fixed_charge_events.count).to eq(1)
+
+        expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp, :units))
+          .to contain_exactly(
+            [overriden_fixed_charge.id, subscription.started_at, 90]
+          )
       end
     end
 

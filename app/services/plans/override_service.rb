@@ -2,9 +2,10 @@
 
 module Plans
   class OverrideService < BaseService
-    def initialize(plan:, params:)
+    def initialize(plan:, params:, subscription: nil)
       @plan = plan
       @params = params
+      @subscription = subscription
 
       super
     end
@@ -40,7 +41,7 @@ module Plans
           fixed_charge_params = (
             params[:fixed_charges]&.find { |p| p[:id] == fixed_charge.id } || {}
           ).merge(plan_id: new_plan.id)
-          FixedCharges::OverrideService.call(fixed_charge:, params: fixed_charge_params)
+          FixedCharges::OverrideService.call(fixed_charge:, params: fixed_charge_params, subscription:)
         end
 
         if params[:usage_thresholds].present? &&
@@ -74,7 +75,7 @@ module Plans
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :subscription
 
     def track_plan_created(plan)
       count_by_charge_model = plan.charges.group(:charge_model).count

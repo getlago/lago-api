@@ -34,6 +34,12 @@ module Subscriptions
         )
 
         new_subscription.mark_as_active!
+
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [new_subscription],
+          timestamp: new_subscription.started_at
+        )
+
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
           Utils::ActivityLog.produce(new_subscription, "subscription.started")

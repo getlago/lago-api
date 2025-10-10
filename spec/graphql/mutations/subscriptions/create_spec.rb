@@ -8,6 +8,7 @@ RSpec.describe Mutations::Subscriptions::Create do
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
   let(:charge) { create(:standard_charge, plan:) }
+  let(:fixed_charge) { create(:fixed_charge, plan:) }
   let(:threshold) { create(:usage_threshold, plan:) }
   let(:ending_at) { Time.current.beginning_of_day + 1.year }
   let(:customer) { create(:customer, organization:) }
@@ -40,6 +41,10 @@ RSpec.describe Mutations::Subscriptions::Create do
             usageThresholds {
               amountCents
               thresholdDisplayName
+            }
+            fixedCharges {
+              invoiceDisplayName
+              units
             }
           }
         }
@@ -76,6 +81,13 @@ RSpec.describe Mutations::Subscriptions::Create do
               billableMetricId: charge.billable_metric_id,
               invoiceDisplayName: "invoice display name"
             ],
+            fixedCharges: [
+              {
+                id: fixed_charge.id,
+                invoiceDisplayName: "NEW fixed charge display name",
+                units: "99"
+              }
+            ],
             usageThresholds: [
               amountCents: 100,
               thresholdDisplayName: "threshold display name"
@@ -106,6 +118,10 @@ RSpec.describe Mutations::Subscriptions::Create do
     expect(result_data["plan"]["usageThresholds"].first).to include(
       "thresholdDisplayName" => "threshold display name",
       "amountCents" => "100"
+    )
+    expect(result_data["plan"]["fixedCharges"].first).to include(
+      "invoiceDisplayName" => "NEW fixed charge display name",
+      "units" => "99.0"
     )
   end
 end

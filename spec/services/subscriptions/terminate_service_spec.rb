@@ -329,7 +329,7 @@ RSpec.describe Subscriptions::TerminateService do
 
   describe "#terminate_and_start_next" do
     let(:subscription) { create(:subscription) }
-    let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
+    let(:next_subscription) { create(:subscription, :pending, previous_subscription_id: subscription.id) }
     let(:timestamp) { Time.zone.now.to_i }
 
     before do
@@ -361,6 +361,18 @@ RSpec.describe Subscriptions::TerminateService do
       terminate_service.terminate_and_start_next(timestamp:)
       expect(Utils::ActivityLog).to have_produced("subscription.terminated").with(subscription)
       expect(Utils::ActivityLog).to have_produced("subscription.started").with(next_subscription)
+    end
+
+    context "when plan has fixed charges" do
+      let(:fixed_charge) { create(:fixed_charge, plan: next_subscription.plan) }
+
+      before { fixed_charge }
+
+      it "creates fixed charge events for the new subscription" do
+        result = terminate_service.terminate_and_start_next(timestamp:)
+        expect(result.subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+          .to match_array([[fixed_charge.id, be_within(5.seconds).of(Time.zone.at(timestamp))]])
+      end
     end
 
     context "when terminated subscription is payed in arrear" do

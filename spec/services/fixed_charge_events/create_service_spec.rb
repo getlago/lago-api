@@ -7,7 +7,6 @@ RSpec.describe FixedChargeEvents::CreateService do
     described_class.new(
       subscription:,
       fixed_charge:,
-      units:,
       timestamp:
     )
   end
@@ -19,7 +18,6 @@ RSpec.describe FixedChargeEvents::CreateService do
   let(:add_on) { create(:add_on, organization:) }
   let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on:) }
   let(:timestamp) { Time.current }
-  let(:units) { 5.0 }
 
   describe "#call" do
     subject(:result) { create_service.call }
@@ -37,29 +35,9 @@ RSpec.describe FixedChargeEvents::CreateService do
           organization:,
           subscription:,
           fixed_charge:,
-          units: BigDecimal("5.0"),
+          units: fixed_charge.units,
           timestamp:
         )
-      end
-    end
-
-    context "when units is nil" do
-      let(:units) { nil }
-
-      it "returns a validation error" do
-        expect(result).to be_a_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:units]).to include("is not a number")
-      end
-    end
-
-    context "when units is negative" do
-      let(:units) { -1.0 }
-
-      it "returns a validation error" do
-        expect(result).to be_a_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:units]).to include("value_is_out_of_range")
       end
     end
 

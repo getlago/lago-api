@@ -5377,6 +5377,7 @@ input FixedChargeInput {
   addOnId: ID!
   applyUnitsImmediately: Boolean
   chargeModel: FixedChargeChargeModelEnum!
+  id: ID
   invoiceDisplayName: String
   payInAdvance: Boolean
   properties: FixedChargePropertiesInput
@@ -5386,12 +5387,13 @@ input FixedChargeInput {
 }
 
 input FixedChargeOverridesInput {
-  addOnId: ID!
+  addOnId: ID
+  applyUnitsImmediately: Boolean
   id: ID
   invoiceDisplayName: String
   properties: FixedChargePropertiesInput
   taxCodes: [String!]
-  units: String!
+  units: String
 }
 
 type FixedChargeProperties {
