@@ -104,7 +104,7 @@ module Wallets
           result = Wallets::FindApplicableOnFeesService.call!(
             wallet_allocation: allocation_rules, fee:, first_match: true
           )
-          fee_wallet[key] = result.applicable_wallets.first
+          fee_wallet[key] = result.applicable_wallets.presence || []
         end
 
         fee_wallet
