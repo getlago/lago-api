@@ -322,6 +322,155 @@ RSpec.describe Fees::ChargeService do
           create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
         end
 
+        context "with filters" do
+          let(:charge) do
+            create(
+              :standard_charge,
+              plan: subscription.plan,
+              billable_metric:,
+              properties: {
+                amount: "20",
+                pricing_group_keys: ["region", "country"]
+              }
+            )
+          end
+          let(:region) do
+            create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu na])
+          end
+          let(:country) do
+            create(:billable_metric_filter, billable_metric:, key: "country", values: %w[us ca fr de])
+          end
+
+          let(:eu_filter) do
+            create(:charge_filter, charge:, properties: {amount: "30", pricing_group_keys: ["region", "country"]})
+          end
+          let(:eu_country_filter_value) { create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: country, values: ["fr", "de"]) }
+          let(:eu_region_filter_value) { create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"]) }
+
+          let(:na_filter) do
+            create(:charge_filter, charge:, properties: {amount: "40", pricing_group_keys: ["region", "country"]})
+          end
+          let(:na_country_filter_value) { create(:charge_filter_value, charge_filter: na_filter, billable_metric_filter: country, values: ["us", "ca"]) }
+          let(:na_region_filter_value) { create(:charge_filter_value, charge_filter: na_filter, billable_metric_filter: region, values: ["na"]) }
+
+          before do
+            na_country_filter_value
+            na_region_filter_value
+            eu_country_filter_value
+            eu_region_filter_value
+            create_event("eu", "fr")
+            create_event("eu", "de")
+            create_event("na", "us")
+            create_event("na", "ca")
+            create_event("af", "ma")
+            create_event("af", "ma")
+            create_event("af", "dz")
+          end
+
+          def create_event(region, country)
+            create(
+              :event,
+              organization: subscription.organization,
+              subscription:,
+              code: charge.billable_metric.code,
+              timestamp: Time.zone.parse("2022-03-16"),
+              properties: {region:, country:, value: 1}
+            )
+          end
+
+          it "creates a fee for each group" do
+            result = charge_subscription_service.call
+            expect(result).to be_success
+            expect(result.fees.count).to eq(6)
+
+            sorted_fees = result.fees.sort_by { [it.grouped_by["region"], it.grouped_by["country"]] }
+
+            af_dz_fee = sorted_fees[0]
+            expect(af_dz_fee).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 2000,
+              precise_amount_cents: 2000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 1,
+              unit_amount_cents: 2000,
+              precise_unit_amount: 20,
+              grouped_by: {"country" => "dz", "region" => "af"}
+            )
+
+            af_ma_fee = sorted_fees[1]
+            expect(af_ma_fee).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 4000,
+              precise_amount_cents: 4000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 2,
+              unit_amount_cents: 2000,
+              precise_unit_amount: 20,
+              grouped_by: {"country" => "ma", "region" => "af"}
+            )
+
+            eu_de = sorted_fees[2]
+            expect(eu_de).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 3000,
+              precise_amount_cents: 3000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 1,
+              unit_amount_cents: 3000,
+              precise_unit_amount: 30,
+              grouped_by: {"country" => "de", "region" => "eu"}
+            )
+
+            eu_fr = sorted_fees[3]
+            expect(eu_fr).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 3000,
+              precise_amount_cents: 3000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 1,
+              unit_amount_cents: 3000,
+              precise_unit_amount: 30,
+              grouped_by: {"country" => "fr", "region" => "eu"}
+            )
+
+            na_ca_fee = sorted_fees[4]
+            expect(na_ca_fee).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 4000,
+              precise_amount_cents: 4000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 1,
+              unit_amount_cents: 4000,
+              precise_unit_amount: 40,
+              grouped_by: {"country" => "ca", "region" => "na"}
+            )
+
+            na_us_fee = sorted_fees[5]
+            expect(na_us_fee).to have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_cents: 4000,
+              precise_amount_cents: 4000.0,
+              taxes_precise_amount_cents: 0.0,
+              amount_currency: "EUR",
+              units: 1,
+              unit_amount_cents: 4000,
+              precise_unit_amount: 40,
+              grouped_by: {"country" => "us", "region" => "na"}
+            )
+          end
+        end
+
         context "without events" do
           it "does not create a fee" do
             result = charge_subscription_service.call

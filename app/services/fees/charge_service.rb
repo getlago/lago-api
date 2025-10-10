@@ -85,7 +85,8 @@ module Fees
       end
 
       # NOTE: Create a fee for events not matching any filters.
-      init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
+      charge_filter = ChargeFilter.new(charge:, properties: {"pricing_group_keys" => charge.pricing_group_keys})
+      init_charge_fees(properties: charge.properties, charge_filter:)
     end
 
     def init_charge_fees(properties:, charge_filter: nil)
