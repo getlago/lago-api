@@ -216,6 +216,53 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when License is premium and plan_overrides is passed" do
+      around { |test| lago_premium!(&test) }
+
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          started_at:,
+          plan_overrides: {
+            fixed_charges: [
+              {
+                id: fixed_charge.id,
+                units: 100
+              }
+            ]
+          }
+        }
+      end
+
+      let(:fixed_charge) { create(:fixed_charge, plan:) }
+      let(:add_on) { create(:add_on, organization:) }
+      let(:started_at) { Time.current }
+
+      before do
+        fixed_charge
+      end
+
+      it "creates the subscription with overridden plan" do
+        result = create_service.call
+
+        expect(result.subscription).to be_active
+        expect(result.subscription.fixed_charge_events.count).to eq(1)
+
+        fixed_charge_event = result.subscription.fixed_charge_events.first
+        fixed_charge_overide = fixed_charge_event.fixed_charge
+
+        expect(fixed_charge_overide.parent_id).to eq(fixed_charge.id)
+        expect(fixed_charge_event.timestamp).to be_within(1.second).of(Time.current)
+        expect(fixed_charge_event.units.to_i).to eq(100)
+      end
+    end
+
     context "when customer does not exists in API context" do
       let(:customer) { Customer.new(organization:, external_id: SecureRandom.uuid, billing_entity: organization.default_billing_entity) }
 
@@ -351,6 +398,24 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription.external_id).to eq(external_id)
           expect(subscription).to be_anniversary
           expect(subscription.lifetime_usage).not_to be_present
+        end
+      end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge_1) { create(:fixed_charge, plan:) }
+        let(:fixed_charge_2) { create(:fixed_charge, plan:) }
+
+        before do
+          fixed_charge_1
+          fixed_charge_2
+        end
+
+        it "does not create fixed charge events for the subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_pending
+          expect(result.subscription.fixed_charge_events.count).to eq(0)
         end
       end
     end
@@ -720,6 +785,26 @@ RSpec.describe Subscriptions::CreateService do
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
               expect(result.subscription.lifetime_usage).to be_present
+            end
+          end
+
+          context "when plan has fixed charges" do
+            let(:fixed_charge_1) { create(:fixed_charge, plan:) }
+            let(:fixed_charge_2) { create(:fixed_charge, plan:) }
+
+            before do
+              fixed_charge_1
+              fixed_charge_2
+            end
+
+            it "does not create fixed charge events for the new subscription" do
+              result = create_service.call
+
+              expect(result).to be_success
+
+              next_subscription = result.subscription.next_subscription
+              expect(next_subscription).to be_pending
+              expect(next_subscription.fixed_charge_events.count).to eq(0)
             end
           end
 

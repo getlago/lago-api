@@ -306,6 +306,67 @@ RSpec.describe FixedCharges::CreateService do
             expect(result.fixed_charge.properties["invalid_property"]).to be_nil
           end
         end
+
+        context "when apply_units_immediately is true" do
+          let(:params) do
+            {
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              apply_units_immediately: true
+            }
+          end
+
+          before do
+            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to receive(:call!)
+          end
+
+          it "creates new fixed charge" do
+            expect { result }.to change(FixedCharge, :count).by(1)
+
+            expect(result).to be_success
+            expect(result.fixed_charge).to be_persisted
+          end
+
+          it "emits fixed charge events for all active subscriptions" do
+            result
+
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to have_received(:call!)
+              .with(fixed_charge: result.fixed_charge, apply_units_immediately: true)
+              .once
+          end
+        end
+
+        context "when apply_units_immediately is false" do
+          let(:params) do
+            {
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              apply_units_immediately: false
+            }
+          end
+
+          before do
+            allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to receive(:call!)
+          end
+
+          it "creates new fixed charge" do
+            expect { result }.to change(FixedCharge, :count).by(1)
+            expect(result).to be_success
+            expect(result.fixed_charge).to be_persisted
+          end
+
+          it "emits fixed charge events for active subscriptions with apply_units_immediately false" do
+            result
+
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to have_received(:call!)
+              .with(fixed_charge: result.fixed_charge, apply_units_immediately: false)
+              .once
+          end
+        end
       end
     end
   end
