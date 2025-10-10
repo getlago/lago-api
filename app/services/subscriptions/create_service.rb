@@ -93,7 +93,6 @@ module Subscriptions
       plan.yearly_amount_cents < current_subscription.plan.yearly_amount_cents
     end
 
-    # we also need a test here...
     def should_be_billed_today?(sub)
       sub.active? && sub.subscription_at.today? &&
         sub.should_be_billed_when_started? &&
