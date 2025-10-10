@@ -27,7 +27,7 @@ module Resolvers
         }
       )
 
-      result.payment_methods
+      result.payment_methods.includes(:payment_provider)
     end
   end
 end
