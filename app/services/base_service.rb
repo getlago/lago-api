@@ -155,8 +155,22 @@ class BaseService
   end
 
   # Register a new middleware
-  def self.use(middleware_class, *args, **kwargs)
-    self.middlewares += [[middleware_class, args, kwargs]]
+  def self.use(middleware_class, *args, on_conflict: :raise, **kwargs)
+    existing_middleware = middlewares.map(&:first)
+
+    if !existing_middleware.include?(middleware_class) || on_conflict == :append
+      return self.middlewares += [[middleware_class, args, kwargs]]
+    end
+
+    # Middleware already exists
+    case on_conflict
+    when :raise
+      raise Middlewares::AlreadyAddedError.new(middleware_class, self)
+    when :replace
+      self.middlewares[existing_middleware.index(middleware_class)] = [middleware_class, args, kwargs]
+    when :ignore
+      # Do nothing
+    end
   end
 
   use(Middlewares::LogTracerMiddleware)

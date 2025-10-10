@@ -12,7 +12,7 @@ module Middlewares
     def call(&block)
       before_call
 
-      result = @next_middleware.call(&block)
+      result = call_next(&block)
 
       after_call(result)
 
@@ -26,6 +26,10 @@ module Middlewares
     attr_reader :service_instance, :next_middleware, :args, :kwargs
 
     private
+
+    def call_next(&block)
+      @next_middleware.call(&block)
+    end
 
     def before_call
       # Override this method in subclasses

@@ -2,21 +2,21 @@
 
 module Middlewares
   class ActivityLogMiddleware < BaseMiddleware
-    def call
+    def call(&block)
       if produce_activity_log?
         log_kwargs = {after_commit:}.compact
 
         case action
         when /updated/
-          Utils::ActivityLog.produce(record, action, **log_kwargs) { super }
+          Utils::ActivityLog.produce(record, action, **log_kwargs) { call_next(&block) }
 
         else
-          super.tap do |result|
+          call_next(&block).tap do |result|
             Utils::ActivityLog.produce(record, action, **log_kwargs) { result }
           end
         end
       else
-        super
+        call_next(&block)
       end
     end
 

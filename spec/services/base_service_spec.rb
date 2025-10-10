@@ -127,4 +127,53 @@ RSpec.describe ::BaseService do
       end
     end
   end
+
+  describe ".use" do
+    let(:middleware) { Class.new(Middlewares::BaseMiddleware) }
+    let(:service) { Class.new(BaseService) }
+
+    it "adds a middleware to the service" do
+      service.use(middleware)
+
+      expect(service.middlewares.map(&:first)).to include(middleware)
+    end
+
+    context "when adding multiple time the same middleware" do
+      before { service.use(middleware) }
+
+      it "raises an error" do
+        expect { service.use(middleware) }.to raise_error(Middlewares::AlreadyAddedError)
+      end
+
+      context "when on conflict append" do
+        it "adds the middleware a second time" do
+          service.use(middleware, on_conflict: :append)
+
+          expect(service.middlewares.map(&:first)).to include(middleware, middleware)
+        end
+      end
+
+      context "when on conflict replace" do
+        it "adds the middleware a second time" do
+          service.use(middleware, count: 2, on_conflict: :replace)
+
+          expect(service.middlewares.map(&:first)).to include(middleware)
+
+          found_middleware = service.middlewares.find { |m| m.first == middleware }
+          expect(found_middleware.last[:count]).to eq(2)
+        end
+      end
+
+      context "when on conflict ignore" do
+        it "adds the middleware a second time" do
+          service.use(middleware, count: 2, on_conflict: :ignore)
+
+          expect(service.middlewares.map(&:first)).to include(middleware)
+
+          found_middleware = service.middlewares.find { |m| m.first == middleware }
+          expect(found_middleware.last).to eq({})
+        end
+      end
+    end
+  end
 end

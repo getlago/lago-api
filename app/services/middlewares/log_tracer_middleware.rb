@@ -2,9 +2,9 @@
 
 module Middlewares
   class LogTracerMiddleware < BaseMiddleware
-    def call
+    def call(&block)
       LagoTracer.in_span("#{service_instance.class.name}#call") do
-        super
+        call_next(&block)
       end
     end
   end
