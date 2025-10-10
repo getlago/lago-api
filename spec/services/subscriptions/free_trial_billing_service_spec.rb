@@ -73,5 +73,23 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           .to have_received(:perform_later).with(subscription: subscription)
       end
     end
+
+    context "with plan pay in arrears" do
+      context "when plan has fixed charges" do
+        context "when fixed_charges are pay in advance" do
+          let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+          let(:subscription) { create(:subscription, plan:, started_at: 11.days.ago) }
+
+          before do
+            fixed_charge
+            subscription
+          end
+
+          it "enqueues a job to bill the subscription" do
+            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+      end
+    end
   end
 end
