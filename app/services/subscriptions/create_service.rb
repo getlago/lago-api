@@ -94,7 +94,7 @@ module Subscriptions
     end
 
     def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
+      sub.active? && sub.subscription_at.today? && (plan.pay_in_advance? || plan.fixed_charges.pay_in_advance.any?) && !sub.in_trial_period?
     end
 
     def create_subscription
@@ -129,6 +129,8 @@ module Subscriptions
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
         after_commit do
+          # add test here for fixed charges(event already exist,
+          # we should simply make the fixed_charge if it's pay_in_advance)
           BillSubscriptionJob.perform_later(
             [new_subscription],
             Time.zone.now.to_i,

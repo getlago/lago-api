@@ -20,8 +20,8 @@ RSpec.describe FixedCharge do
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
   it { is_expected.to validate_presence_of(:charge_model) }
-  it { is_expected.to validate_inclusion_of(:pay_in_advance).in_array([true, false]) }
-  it { is_expected.to validate_inclusion_of(:prorated).in_array([true, false]) }
+  it { is_expected.to validate_exclusion_of(:pay_in_advance).in_array([nil]) }
+  it { is_expected.to validate_exclusion_of(:prorated).in_array([nil]) }
   it { is_expected.to validate_presence_of(:properties) }
 
   describe "#equal_properties?" do
@@ -48,6 +48,29 @@ RSpec.describe FixedCharge do
 
       it "returns true if both charge model and properties are the same" do
         expect(fixed_charge1.equal_properties?(fixed_charge2)).to be true
+      end
+    end
+  end
+
+  describe "#included_in_next_subscription?" do
+    let(:add_on) { build(:add_on) }
+    let(:fixed_charge) { build(:fixed_charge, add_on:) }
+    let(:subscription) { create(:subscription, plan: fixed_charge.plan) }
+    let(:next_subscription) { create(:subscription, :with_previous_subscription, previous_subscription: subscription) }
+
+    context "when the fixed charge is included in the next subscription" do
+      before { next_subscription.plan.fixed_charges = [fixed_charge] }
+
+      it "returns true" do
+        expect(fixed_charge.included_in_next_subscription?(subscription)).to be true
+      end
+    end
+
+    context "when the fixed charge is not included in the next subscription" do
+      before { next_subscription.plan.fixed_charges = [] }
+
+      it "returns false" do
+        expect(fixed_charge.included_in_next_subscription?(subscription)).to be false
       end
     end
   end
