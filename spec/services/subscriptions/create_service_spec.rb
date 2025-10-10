@@ -110,6 +110,20 @@ RSpec.describe Subscriptions::CreateService do
             ]
           )
       end
+
+      context "when all fixed_charges and plan are pay in arrears and subscription is active" do
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when one of the fixed_charges is pay in advance and subscription is active" do
+        let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
     end
 
     context "when subscription should sync with Hubspot" do
@@ -421,37 +435,37 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
-    context "when plan is pay_in_advance but subscription is not active" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
-      let(:subscription_at) { Time.current + 1.hour }
-
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-      end
-    end
-
-    context "when plan is pay_in_advance and subscription_at is current date" do
+    context "when plan is pay_in_advance" do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
-      it "enqueues a job to bill the subscription" do
-        expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+      context "when subscription is not active" do
+        let(:subscription_at) { Time.current + 1.hour }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
       end
-    end
 
-    context "when plan is pay_in_advance and subscription_at is in the future" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
-      let(:subscription_at) { Time.current + 5.days }
-
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+      context "when ubscription_at is current date" do
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
       end
-    end
 
-    context "when plan is pay_in_advance and subscription_at is current date but there is a trial period" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+      context "when subscription_at is in the future" do
+        let(:subscription_at) { Time.current + 5.days }
 
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when subscription_at is current date but there is a trial period" do
+        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
       end
     end
 
