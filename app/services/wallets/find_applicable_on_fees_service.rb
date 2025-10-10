@@ -15,15 +15,15 @@ module Wallets
       bm_id = fee.respond_to?(:charge) ? fee.charge&.billable_metric_id : nil
 
       if wallet_allocation[:bm_map][bm_id].present?
-        applicable_wallets << wallet_allocation[:bm_map][bm_id]
+        applicable_wallets.concat(wallet_allocation[:bm_map][bm_id])
       end
 
       if wallet_allocation[:type_map][fee.fee_type].present? && applicable_wallets.empty?
-        applicable_wallets << wallet_allocation[:type_map][fee.fee_type]
+        applicable_wallets.concat(wallet_allocation[:type_map][fee.fee_type])
       end
 
       if wallet_allocation[:unrestricted].present? && applicable_wallets.empty?
-        applicable_wallets << wallet_allocation[:unrestricted]
+        applicable_wallets.concat(wallet_allocation[:unrestricted])
       end
 
       result.applicable_wallets = first_match ? applicable_wallets.first : applicable_wallets
