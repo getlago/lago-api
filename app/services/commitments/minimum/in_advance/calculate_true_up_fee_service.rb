@@ -37,14 +37,12 @@ module Commitments
         end
 
         def charge_fees
-          invoices_result = FetchInvoicesService.call(commitment: minimum_commitment, invoice_subscription:)
-
           Fee
             .charge
             .joins(:charge)
             .where(
               subscription_id: subscription.id,
-              invoice_id: invoices_result.invoices.ids,
+              invoice_id: invoices_ids,
               charge: {pay_in_advance: false}
             )
         end
@@ -92,14 +90,12 @@ module Commitments
         end
 
         def fixed_charge_fees
-          invoices_result = FetchInvoicesService.call(commitment: minimum_commitment, invoice_subscription:)
-
           Fee
             .fixed_charge
             .joins(:fixed_charge)
             .where(
               subscription_id: subscription.id,
-              invoice_id: invoices_result.invoices.ids,
+              invoice_id: invoices_ids,
               fixed_charge: {pay_in_advance: false}
             )
         end
@@ -128,6 +124,13 @@ module Commitments
             commitment: minimum_commitment,
             invoice_subscription: invoice_subscription.previous_invoice_subscription
           ).call
+        end
+
+        def invoices_ids
+          @invoices_ids ||= FetchInvoicesService.call(
+            commitment: minimum_commitment,
+            invoice_subscription:
+          ).invoices.ids
         end
       end
     end
