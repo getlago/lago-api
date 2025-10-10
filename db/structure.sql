@@ -1,4 +1,4 @@
-\restrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
+\restrict V27QnkJyP653Nf0D8rY60zpLjqbvscF4j1Ru96P3hfiTe5NzduLHJ784aFNj37H
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -99,6 +99,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_91802dc891;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_90fd72ac8f;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
@@ -1298,7 +1299,8 @@ CREATE TABLE public.adjusted_fees (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    fixed_charge_id uuid
 );
 
 
@@ -9359,6 +9361,14 @@ ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
 
 
 --
+-- Name: adjusted_fees fk_rails_91802dc891; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.adjusted_fees
+    ADD CONSTRAINT fk_rails_91802dc891 FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id) NOT VALID;
+
+
+--
 -- Name: data_export_parts fk_rails_9298b8fdad; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10042,11 +10052,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
+\unrestrict V27QnkJyP653Nf0D8rY60zpLjqbvscF4j1Ru96P3hfiTe5NzduLHJ784aFNj37H
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251010092830'),
 ('20251007160309'),
 ('20250926185510'),
 ('20250919124523'),
