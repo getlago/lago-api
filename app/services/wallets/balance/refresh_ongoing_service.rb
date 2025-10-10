@@ -93,48 +93,19 @@ module Wallets
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
-      # Assigns each fee to a wallet based on the wallet's limitations
-      # the ongoing balance should only affect the wallet
-      # with the highest priority with the corresponding limitations ( can go negative )
       def assign_wallet_per_fee(fees)
         fee_wallet = {}
-        return fee_wallet if fees.blank?
 
-        wallets = customer.active_wallets_in_application_order.includes(:wallet_targets)
-
-        wallets_data = wallets.map do |w|
-          {
-            id: w.id,
-            bm_limited: w.limited_to_billable_metrics?,
-            type_limited: w.limited_fee_types?,
-            bm_ids: (w.wallet_targets.map(&:billable_metric_id).to_set if w.limited_to_billable_metrics?),
-            allowed_types: (Array(w.allowed_fee_types).to_set if w.limited_fee_types?),
-            unrestricted: !w.limited_to_billable_metrics? && !w.limited_fee_types?
-          }
-        end
+        result = Wallets::BuildAllocationRulesService.call!(customer:)
+        allocation_rules = result.allocation_rules
 
         fees.each do |fee|
           key = fee.id || fee.object_id
-          bm_id = fee.respond_to?(:charge) ? fee.charge&.billable_metric_id : nil
+          result = Wallets::FindApplicableOnFeesService.call!(
+            wallet_allocation: allocation_rules, fee:, first_match: true
+          )
 
-          next if fee_wallet.key?(key)
-
-          wallets_data.each do |wd|
-            if wd[:bm_limited] && bm_id && wd[:bm_ids]&.include?(bm_id)
-              fee_wallet[key] ||= wd[:id]
-              break
-            end
-
-            if wd[:type_limited] && fee.fee_type && wd[:allowed_types]&.include?(fee.fee_type)
-              fee_wallet[key] ||= wd[:id]
-              break
-            end
-
-            if wd[:unrestricted]
-              fee_wallet[key] ||= wd[:id]
-              break
-            end
-          end
+          fee_wallet[key] = result.applicable_wallets.presence
         end
 
         fee_wallet
@@ -144,10 +115,10 @@ module Wallets
         all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
         return 0 if all_fees.empty?
 
-        owners = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
+        wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
 
         all_fees.sum do |f|
-          (owners[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
+          (wallets_applicable_on_fees[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
         end
       end
     end

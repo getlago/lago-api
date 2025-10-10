@@ -295,7 +295,7 @@ class Customer < ApplicationRecord
   end
 
   def active_wallets_in_application_order
-    wallets.active.order(:priority, :created_at)
+    wallets.includes(:wallet_targets).active.order(:priority, :created_at)
   end
 
   def tax_customer
