@@ -151,7 +151,7 @@ class BaseService
   Result = LegacyResult
 
   def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: true)
-    use(Utils::ActivityLogMiddleware, action:, record:, condition:, after_commit:)
+    use(Middlewares::ActivityLogMiddleware, action:, record:, condition:, after_commit:)
   end
 
   # Register a new middleware
@@ -159,7 +159,7 @@ class BaseService
     self.middlewares += [[middleware_class, args, kwargs]]
   end
 
-  use(Utils::LogTracerMiddleware)
+  use(Middlewares::LogTracerMiddleware)
 
   def self.call(*, **, &)
     new(*, **).call_with_middlewares(&)

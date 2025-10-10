@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Utils
+module Middlewares
   class ActivityLogMiddleware < BaseMiddleware
     def call
       if produce_activity_log?

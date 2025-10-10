@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Utils::ActivityLogMiddleware do
+RSpec.describe Middlewares::ActivityLogMiddleware do
   let(:service_class) do
     action = activity_loggable_action
     after_commit = activity_loggable_after_commit

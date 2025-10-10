@@ -10,7 +10,7 @@ RSpec.describe ::BaseService do
   it { is_expected.to respond_to(:call_async) }
   it { is_expected.to respond_to(:call_with_middlewares) }
 
-  it { is_expected.to use_middleware(Utils::LogTracerMiddleware) }
+  it { is_expected.to use_middleware(Middlewares::LogTracerMiddleware) }
 
   context "with current_user" do
     it "assigns the current_user to the result" do
@@ -57,7 +57,7 @@ RSpec.describe ::BaseService do
     let(:activity_loggable_after_commit) { false }
 
     def test_service_with_activity_loggable(after_commit:, action_match_updated: false)
-      expect(service_class).to use_middleware(Utils::ActivityLogMiddleware)
+      expect(service_class).to use_middleware(Middlewares::ActivityLogMiddleware)
 
       allow(Utils::ActivityLog).to receive(:produce).and_wrap_original do |m, *args, **kwargs, &block|
         if action_match_updated
