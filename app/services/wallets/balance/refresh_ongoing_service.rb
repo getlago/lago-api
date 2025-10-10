@@ -97,11 +97,11 @@ module Wallets
         fee_wallet = {}
 
         result = Wallets::BuildAllocationRulesService.call!(customer:)
-        result.allocation_rules
+        allocation_rules = result.allocation_rules
 
         fees.each do |fee|
           key = fee.id || fee.object_id
-          result = Wallets::FindApplicableOnFeesService.call!(wallet_allocation:, fee:, only_top: true)
+          result = Wallets::FindApplicableOnFeesService.call!(wallet_allocation: allocation_rules, fee:, only_top: true)
           fee_wallet[key] = result.applicable_wallets.first
         end
 
