@@ -19,11 +19,6 @@ module Commitments
         end
 
         def subscription_fees
-          dates_service = Commitments::DatesService.new_instance(
-            commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription
-          ).call
-
           Fee
             .subscription
             .joins(subscription: :plan)
@@ -55,11 +50,6 @@ module Commitments
         end
 
         def charge_in_advance_fees
-          dates_service = Commitments::DatesService.new_instance(
-            commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription
-          ).call
-
           Fee
             .charge
             .joins(:charge)
@@ -80,11 +70,6 @@ module Commitments
 
         def charge_in_advance_recurring_fees
           return Fee.none unless invoice_subscription.previous_invoice_subscription
-
-          dates_service = Commitments::DatesService.new_instance(
-            commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription
-          ).call
 
           Fee
             .charge
@@ -120,11 +105,6 @@ module Commitments
         end
 
         def fixed_charge_in_advance_fees
-          dates_service = Commitments::DatesService.new_instance(
-            commitment: minimum_commitment,
-            invoice_subscription: invoice_subscription.previous_invoice_subscription
-          ).call
-
           Fee
             .fixed_charge
             .joins(:fixed_charge)
@@ -141,6 +121,13 @@ module Commitments
               "(fees.properties->>'fixed_charges_to_datetime') <= ?",
               dates_service.end_of_period&.iso8601(3)
             )
+        end
+
+        def dates_service
+          @dates_service ||= Commitments::DatesService.new_instance(
+            commitment: minimum_commitment,
+            invoice_subscription: invoice_subscription.previous_invoice_subscription
+          ).call
         end
       end
     end
