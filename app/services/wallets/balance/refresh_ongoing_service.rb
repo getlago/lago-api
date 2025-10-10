@@ -105,10 +105,8 @@ module Wallets
             wallet_allocation: allocation_rules, fee:, first_match: true
           )
 
-          if result.applicable_wallets.present?
-            fee_wallet[key] = result.applicable_wallets.first
-          else
-            fee_wallet[key] = nil
+          fee_wallet[key] = if result.applicable_wallets.present?
+            result.applicable_wallets.first
           end
         end
 
