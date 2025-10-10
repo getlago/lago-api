@@ -23,9 +23,9 @@
 #   expect(rendered_template).to match_html_snapshot
 # end
 # ```
-RSpec::Matchers.define :match_html_snapshot do |name = nil, strip_style: true, strip_head: true|
+RSpec::Matchers.define :match_html_snapshot do |name: nil, strip_style: true, strip_head: true|
   match(notify_expectation_failures: true) do |html|
-    name = [snapshot_name(RSpec.current_example.metadata), name].compact.join("/")
+    name = [snapshot_name(RSpec.current_example.metadata), sanitize_fragment(name)].compact.join("/")
     name += ".html"
     html = beautify(html, strip_style: strip_style, strip_head: strip_head)
     expect(html).to match_snapshot(name)
@@ -33,11 +33,17 @@ RSpec::Matchers.define :match_html_snapshot do |name = nil, strip_style: true, s
 
   private
 
+  def sanitize_fragment(fragment)
+    return nil if fragment.nil?
+
+    fragment.tr("/", "_").tr(" ", "_")
+  end
+
   def snapshot_name(metadata)
     description = metadata[:description].empty? ? metadata[:scoped_id] : metadata[:description]
     example_group = metadata.key?(:example_group) ? metadata[:example_group] : metadata[:parent_example_group]
 
-    description = description.tr("/", "_").tr(" ", "_")
+    description = sanitize_fragment(description)
     if example_group
       [snapshot_name(example_group), description].join("/")
     else
