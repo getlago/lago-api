@@ -45,10 +45,7 @@ class FixedCharge < ApplicationRecord
   def included_in_next_subscription?(subscription)
     return false if subscription.next_subscription.nil?
 
-    next_subscription_charges = subscription.next_subscription.plan.fixed_charges
-    return false if next_subscription_charges.blank?
-
-    next_subscription_charges.pluck(:add_on_id).include?(add_on_id)
+    subscription.next_subscription.plan.fixed_charges.exists?(add_on_id:)
   end
 end
 
