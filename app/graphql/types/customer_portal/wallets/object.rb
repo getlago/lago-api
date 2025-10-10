@@ -12,6 +12,7 @@ module Types
         field :currency, Types::CurrencyEnum, null: false
         field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
         field :name, String, null: true
+        field :priority, Integer, null: false
         field :status, Types::Wallets::StatusEnum, null: false
 
         field :balance_cents, GraphQL::Types::BigInt, null: false
