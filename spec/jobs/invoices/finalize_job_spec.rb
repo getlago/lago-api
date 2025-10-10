@@ -7,21 +7,14 @@ RSpec.describe Invoices::FinalizeJob do
 
   let(:result) { BaseService::Result.new }
 
-  let(:finalize_service) do
-    instance_double(Invoices::RefreshDraftAndFinalizeService)
-  end
-
   it "delegates to the RefreshDraftAndFinalizeService service" do
-    allow(Invoices::RefreshDraftAndFinalizeService).to receive(:new)
+    allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
       .with(invoice:)
-      .and_return(finalize_service)
-    allow(finalize_service).to receive(:call)
       .and_return(result)
 
     described_class.perform_now(invoice)
 
-    expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:new)
-    expect(finalize_service).to have_received(:call)
+    expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:call)
   end
 
   context "when there was a tax fetching error in RefreshDraftAndFinalize service" do

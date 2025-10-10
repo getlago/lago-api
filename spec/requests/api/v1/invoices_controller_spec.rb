@@ -703,13 +703,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
-    let(:sync_salesforce_service) { instance_double(Invoices::SyncSalesforceIdService) }
     let(:result) { BaseService::Result.new }
 
     before do
       result.invoice = invoice
-      allow(Invoices::SyncSalesforceIdService).to receive(:new).and_return(sync_salesforce_service)
-      allow(sync_salesforce_service).to receive(:call).and_return(result)
+      allow(Invoices::SyncSalesforceIdService).to receive(:call).and_return(result)
     end
 
     context "when invoice exists" do
@@ -718,10 +716,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       it "calls sync salesforce id service" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(sync_salesforce_service).to have_received(:call)
-        end
+        expect(response).to have_http_status(:success)
+        expect(Invoices::SyncSalesforceIdService).to have_received(:call)
       end
     end
 

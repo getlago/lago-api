@@ -6,29 +6,21 @@ RSpec.describe Invoices::RefreshDraftJob do
   let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
   let(:result) { BaseService::Result.new }
 
-  let(:refresh_service) do
-    instance_double(Invoices::RefreshDraftService)
-  end
-
   it "delegates to the RefreshDraft service" do
-    allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
-    allow(refresh_service).to receive(:call).and_return(result)
+    allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:).and_return(result)
 
     described_class.perform_now(invoice:)
 
-    expect(Invoices::RefreshDraftService).to have_received(:new)
-    expect(refresh_service).to have_received(:call)
+    expect(Invoices::RefreshDraftService).to have_received(:call)
   end
 
   it "does not delegate to the RefreshDraft service if the ready_to_be_refreshed? is false" do
-    allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
-    allow(refresh_service).to receive(:call)
+    allow(Invoices::RefreshDraftService).to receive(:call).with(invoice:)
 
     invoice.update ready_to_be_refreshed: false
     described_class.perform_now(invoice:)
 
-    expect(Invoices::RefreshDraftService).not_to have_received(:new)
-    expect(refresh_service).not_to have_received(:call)
+    expect(Invoices::RefreshDraftService).not_to have_received(:call)
   end
 
   it "has a lock_ttl of 12.hours" do

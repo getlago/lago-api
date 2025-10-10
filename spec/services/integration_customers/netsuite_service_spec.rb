@@ -18,22 +18,17 @@ RSpec.describe IntegrationCustomers::NetsuiteService do
       result.contact_id = contact_id
       result
     end
-    let(:aggregator_contacts_create_service) do
-      instance_double(Integrations::Aggregator::Contacts::CreateService)
-    end
 
     before do
       allow(Integrations::Aggregator::Contacts::CreateService)
-        .to receive(:new).and_return(aggregator_contacts_create_service)
-
-      allow(aggregator_contacts_create_service).to receive(:call).and_return(create_result)
+        .to receive(:call).and_return(create_result)
     end
 
     context "when integration customer does not exist" do
       it "returns integration customer" do
         result = service_call
 
-        expect(aggregator_contacts_create_service).to have_received(:call)
+        expect(Integrations::Aggregator::Contacts::CreateService).to have_received(:call)
         expect(result).to be_success
         expect(result.integration_customer.subsidiary_id).to eq("1")
         expect(result.integration_customer.external_customer_id).to eq(contact_id)
@@ -54,7 +49,7 @@ RSpec.describe IntegrationCustomers::NetsuiteService do
 
       it "does not call aggregator contacts create service" do
         service_call
-        expect(aggregator_contacts_create_service).not_to have_received(:call)
+        expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
       end
 
       it "returns existing integration customer" do

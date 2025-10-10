@@ -40,10 +40,6 @@ RSpec.describe IntegrationCustomers::UpdateService do
         result
       end
 
-      let(:aggregator_contacts_update_service) do
-        instance_double(Integrations::Aggregator::Contacts::UpdateService)
-      end
-
       around { |test| lago_premium!(&test) }
 
       before do
@@ -52,9 +48,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
         integration_customer
 
         allow(Integrations::Aggregator::Contacts::UpdateService)
-          .to receive(:new).and_return(aggregator_contacts_update_service)
-
-        allow(aggregator_contacts_update_service).to receive(:call).and_return(update_result)
+          .to receive(:call).and_return(update_result)
       end
 
       context "when sync with provider is true" do
@@ -67,7 +61,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_update_service).to have_received(:call)
+              expect(Integrations::Aggregator::Contacts::UpdateService).to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
               expect(result.integration_customer.external_customer_id).to eq(external_customer_id)
@@ -80,7 +74,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_update_service).to have_received(:call)
+              expect(Integrations::Aggregator::Contacts::UpdateService).to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
             end
@@ -94,7 +88,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_update_service).to have_received(:call)
+              expect(Integrations::Aggregator::Contacts::UpdateService).to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
             end
@@ -108,7 +102,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
           it "does not calls aggregator update service" do
             service_call
 
-            expect(aggregator_contacts_update_service).not_to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
           end
 
           it "does not update integration customer" do
@@ -126,7 +120,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
           it "does not calls aggregator update service" do
             service_call
 
-            expect(aggregator_contacts_update_service).not_to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
           end
 
           it "does not update integration customer" do
@@ -146,7 +140,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
           it "calls aggregator update service" do
             service_call
 
-            expect(aggregator_contacts_update_service).to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::UpdateService).to have_received(:call)
           end
 
           it "updates integration customer" do
@@ -160,7 +154,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
           let(:external_customer_id) { nil }
 
           it "does not calls aggregator update service" do
-            expect(aggregator_contacts_update_service).not_to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
           end
 
           it "does not update integration customer" do

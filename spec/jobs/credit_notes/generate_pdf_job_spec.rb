@@ -7,20 +7,13 @@ RSpec.describe CreditNotes::GeneratePdfJob do
 
   let(:result) { BaseService::Result.new }
 
-  let(:generate_service) do
-    instance_double(CreditNotes::GenerateService)
-  end
-
   it "delegates to the Generate service" do
-    allow(CreditNotes::GenerateService).to receive(:new)
+    allow(CreditNotes::GenerateService).to receive(:call)
       .with(credit_note:, context: "api")
-      .and_return(generate_service)
-    allow(generate_service).to receive(:call)
       .and_return(result)
 
     described_class.perform_now(credit_note)
 
-    expect(CreditNotes::GenerateService).to have_received(:new)
-    expect(generate_service).to have_received(:call)
+    expect(CreditNotes::GenerateService).to have_received(:call)
   end
 end

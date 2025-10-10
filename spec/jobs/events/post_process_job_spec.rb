@@ -3,7 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Events::PostProcessJob do
-  let(:process_service) { instance_double(Events::PostProcessService) }
   let(:result) { BaseService::Result.new }
 
   let(:event) do
@@ -11,15 +10,12 @@ RSpec.describe Events::PostProcessJob do
   end
 
   it "calls the event post process service" do
-    allow(Events::PostProcessService).to receive(:new)
+    allow(Events::PostProcessService).to receive(:call)
       .with(event:)
-      .and_return(process_service)
-    allow(process_service).to receive(:call)
       .and_return(result)
 
     described_class.perform_now(event:)
 
-    expect(Events::PostProcessService).to have_received(:new)
-    expect(process_service).to have_received(:call)
+    expect(Events::PostProcessService).to have_received(:call)
   end
 end

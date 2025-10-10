@@ -5,13 +5,11 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateJob do
   subject(:create_job) { described_class }
 
-  let(:service) { instance_double(Integrations::Aggregator::Subscriptions::Hubspot::CreateService) }
   let(:subscription) { create(:subscription) }
   let(:result) { BaseService::Result.new }
 
   before do
-    allow(Integrations::Aggregator::Subscriptions::Hubspot::CreateService).to receive(:new).and_return(service)
-    allow(service).to receive(:call).and_return(result)
+    allow(Integrations::Aggregator::Subscriptions::Hubspot::CreateService).to receive(:call).and_return(result)
   end
 
   context "when the service call is not successful" do
@@ -29,10 +27,7 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateJob do
     it "calls the aggregator create subscription hubspot service" do
       described_class.perform_now(subscription:)
 
-      aggregate_failures do
-        expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateService).to have_received(:new)
-        expect(service).to have_received(:call)
-      end
+      expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateService).to have_received(:call)
     end
 
     it "enqueues the aggregator create customer association subscription job" do

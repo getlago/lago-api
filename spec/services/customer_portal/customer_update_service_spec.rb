@@ -84,7 +84,6 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   end
 
   context "when organization has eu tax management" do
-    let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
     let(:organization) { customer.organization }
     let(:tax_code) { "lago_eu_fr_standard" }
     let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
@@ -94,8 +93,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       organization.update!(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
-      allow(Customers::EuAutoTaxesService).to receive(:new).and_return(eu_auto_tax_service)
-      allow(eu_auto_tax_service).to receive(:call).and_return(eu_tax_result)
+      allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
     it "assigns the right tax to the customer", :aggregate_failures do

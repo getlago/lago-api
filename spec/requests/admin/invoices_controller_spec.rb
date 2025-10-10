@@ -6,16 +6,9 @@ RSpec.describe Admin::InvoicesController, type: [:request, :admin] do
   let(:invoice) { create(:invoice) }
   let(:result) { BaseService::Result.new }
 
-  let(:generate_service) do
-    instance_double(Invoices::GeneratePdfService)
-  end
-
   before do
-    allow(Invoices::GeneratePdfService).to receive(:new)
+    allow(Invoices::GeneratePdfService).to receive(:call)
       .with(invoice:, context: "admin")
-      .and_return(generate_service)
-    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
-    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
   end
 
@@ -23,7 +16,7 @@ RSpec.describe Admin::InvoicesController, type: [:request, :admin] do
     it "regenerates the invoice PDF" do
       admin_post("/admin/invoices/#{invoice.id}/regenerate")
 
-      expect(Invoices::GeneratePdfService).to have_received(:new)
+      expect(Invoices::GeneratePdfService).to have_received(:call)
       expect(response).to have_http_status(:success)
     end
   end

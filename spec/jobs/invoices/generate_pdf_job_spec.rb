@@ -7,21 +7,13 @@ RSpec.describe Invoices::GeneratePdfJob do
 
   let(:result) { BaseService::Result.new }
 
-  let(:generate_service) do
-    instance_double(Invoices::GeneratePdfService)
-  end
-
   it "delegates to the Generate service" do
-    allow(Invoices::GeneratePdfService).to receive(:new)
+    allow(Invoices::GeneratePdfService).to receive(:call)
       .with(invoice:, context: "api")
-      .and_return(generate_service)
-    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
-    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
 
     described_class.perform_now(invoice)
 
-    expect(Invoices::GeneratePdfService).to have_received(:new)
-    expect(generate_service).to have_received(:call_with_activity_log)
+    expect(Invoices::GeneratePdfService).to have_received(:call)
   end
 end
