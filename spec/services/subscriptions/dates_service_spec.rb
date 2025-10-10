@@ -150,4 +150,79 @@ RSpec.describe Subscriptions::DatesService do
         .to raise_error(NotImplementedError)
     end
   end
+
+  describe ".fixed_charge_pay_in_advance_interval" do
+    let(:timestamp) { Time.zone.parse("2022-03-07 04:20:46.011").to_i }
+    let(:result) { described_class.fixed_charge_pay_in_advance_interval(timestamp, subscription) }
+    # subscription is anniversary, subscription_at is 02 Feb 2021, Tuesday
+
+    context "when interval is monthly" do
+      let(:interval) { :monthly }
+
+      it "returns the correct fixed charge interval data" do
+        expect(result).to include(
+          fixed_charges_from_datetime: Time.parse("2022-03-02").beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-04-01").end_of_day,
+          fixed_charges_duration: 31
+        )
+      end
+
+      it "creates a date service instance with current_usage: true" do
+        expect(described_class).to receive(:new_instance)
+          .with(subscription, Time.zone.at(timestamp), current_usage: true)
+          .and_call_original
+
+        result
+      end
+    end
+
+    context "when interval is yearly" do
+      let(:interval) { :yearly }
+
+      it "returns the correct fixed charge interval data" do
+        expect(result).to include(
+          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2023-02-01").end_of_day,
+          fixed_charges_duration: 365
+        )
+      end
+    end
+
+    context "when interval is semiannual" do
+      let(:interval) { :semiannual }
+
+      it "returns the correct fixed charge interval data" do
+        expect(result).to include(
+          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-08-01").end_of_day,
+          fixed_charges_duration: 181
+        )
+      end
+    end
+
+    context "when interval is quarterly" do
+      let(:interval) { :quarterly }
+
+      it "returns the correct fixed charge interval data" do
+        expect(result).to include(
+          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-05-01").end_of_day,
+          fixed_charges_duration: 89
+        )
+      end
+    end
+
+    context "when interval is weekly" do
+      let(:interval) { :weekly }
+
+      # 2022-03-01 is Tuesday
+      it "returns the correct fixed charge interval data" do
+        expect(result).to include(
+          fixed_charges_from_datetime: Time.parse("2022-03-01").beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-03-07").end_of_day,
+          fixed_charges_duration: 7
+        )
+      end
+    end
+  end
 end
