@@ -965,61 +965,61 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
   end
 
   describe "fixed_charges_duration_in_days" do
-  let(:result) { date_service.fixed_charges_duration_in_days }
+    let(:result) { date_service.fixed_charges_duration_in_days }
 
-  context "when billing_time is calendar" do
-    let(:billing_time) { :calendar }
-    let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+    context "when billing_time is calendar" do
+      let(:billing_time) { :calendar }
+      let(:billing_at) { Time.zone.parse("01 Jul 2022") }
 
-    it "returns the quarter duration" do
-      expect(result).to eq(181)
-    end
-
-    context "when on a leap year" do
-      let(:subscription_at) { Time.zone.parse("28 Feb 2019") }
-      let(:billing_at) { Time.zone.parse("01 Jul 2020") }
-
-      it "returns the duration in days" do
-        expect(result).to eq(182)
-      end
-    end
-
-    context "when billing charge monthly" do
-      before { plan.update!(bill_fixed_charges_monthly: true) }
-
-      it "returns the month duration" do
-        expect(result).to eq(30)
-      end
-    end
-  end
-
-  context "when billing_time is anniversary" do
-    let(:billing_time) { :anniversary }
-    let(:subscription_at) { Time.zone.parse("01 Jan 2024") }
-    let(:billing_at) { Time.zone.parse("01 Jul 2024") }
-
-    it "returns the month duration" do
-      expect(result).to eq(182)
-    end
-
-    context "when not on a leap year" do
-      let(:subscription_at) { Time.zone.parse("01 Jan 2023") }
-      let(:billing_at) { Time.zone.parse("01 Jul 2023") }
-
-      it "returns the duration in days" do
+      it "returns the quarter duration" do
         expect(result).to eq(181)
       end
+
+      context "when on a leap year" do
+        let(:subscription_at) { Time.zone.parse("28 Feb 2019") }
+        let(:billing_at) { Time.zone.parse("01 Jul 2020") }
+
+        it "returns the duration in days" do
+          expect(result).to eq(182)
+        end
+      end
+
+      context "when billing charge monthly" do
+        before { plan.update!(bill_fixed_charges_monthly: true) }
+
+        it "returns the month duration" do
+          expect(result).to eq(30)
+        end
+      end
     end
 
-    context "when billing charge monthly" do
-      before { plan.update!(bill_fixed_charges_monthly: true) }
+    context "when billing_time is anniversary" do
+      let(:billing_time) { :anniversary }
+      let(:subscription_at) { Time.zone.parse("01 Jan 2024") }
+      let(:billing_at) { Time.zone.parse("01 Jul 2024") }
 
       it "returns the month duration" do
-        expect(result).to eq(30)
+        expect(result).to eq(182)
+      end
+
+      context "when not on a leap year" do
+        let(:subscription_at) { Time.zone.parse("01 Jan 2023") }
+        let(:billing_at) { Time.zone.parse("01 Jul 2023") }
+
+        it "returns the duration in days" do
+          expect(result).to eq(181)
+        end
+      end
+
+      context "when billing charge monthly" do
+        before { plan.update!(bill_fixed_charges_monthly: true) }
+
+        it "returns the month duration" do
+          expect(result).to eq(30)
+        end
       end
     end
   end
-end
 
   describe "first_month_in_semiannual_period?" do
     let(:result) { date_service.first_month_in_semiannual_period? }

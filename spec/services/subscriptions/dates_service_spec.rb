@@ -161,18 +161,19 @@ RSpec.describe Subscriptions::DatesService do
 
       it "returns the correct fixed charge interval data" do
         expect(result).to include(
-          fixed_charges_from_datetime: Time.parse("2022-03-02").beginning_of_day,
-          fixed_charges_to_datetime: Time.parse("2022-04-01").end_of_day,
+          fixed_charges_from_datetime: Time.parse("2022-03-02").utc.beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-04-01").utc.end_of_day,
           fixed_charges_duration: 31
         )
       end
 
       it "creates a date service instance with current_usage: true" do
-        expect(described_class).to receive(:new_instance)
-          .with(subscription, Time.zone.at(timestamp), current_usage: true)
-          .and_call_original
+        allow(described_class).to receive(:new_instance).and_call_original
 
         result
+
+        expect(described_class).to have_received(:new_instance)
+          .with(subscription, Time.zone.at(timestamp), current_usage: true)
       end
     end
 
@@ -181,8 +182,8 @@ RSpec.describe Subscriptions::DatesService do
 
       it "returns the correct fixed charge interval data" do
         expect(result).to include(
-          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
-          fixed_charges_to_datetime: Time.parse("2023-02-01").end_of_day,
+          fixed_charges_from_datetime: Time.parse("2022-02-02").utc.beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2023-02-01").utc.end_of_day,
           fixed_charges_duration: 365
         )
       end
@@ -193,8 +194,8 @@ RSpec.describe Subscriptions::DatesService do
 
       it "returns the correct fixed charge interval data" do
         expect(result).to include(
-          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
-          fixed_charges_to_datetime: Time.parse("2022-08-01").end_of_day,
+          fixed_charges_from_datetime: Time.parse("2022-02-02").utc.beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-08-01").utc.end_of_day,
           fixed_charges_duration: 181
         )
       end
@@ -205,8 +206,8 @@ RSpec.describe Subscriptions::DatesService do
 
       it "returns the correct fixed charge interval data" do
         expect(result).to include(
-          fixed_charges_from_datetime: Time.parse("2022-02-02").beginning_of_day,
-          fixed_charges_to_datetime: Time.parse("2022-05-01").end_of_day,
+          fixed_charges_from_datetime: Time.parse("2022-02-02").utc.beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-05-01").utc.end_of_day,
           fixed_charges_duration: 89
         )
       end
@@ -218,8 +219,8 @@ RSpec.describe Subscriptions::DatesService do
       # 2022-03-01 is Tuesday
       it "returns the correct fixed charge interval data" do
         expect(result).to include(
-          fixed_charges_from_datetime: Time.parse("2022-03-01").beginning_of_day,
-          fixed_charges_to_datetime: Time.parse("2022-03-07").end_of_day,
+          fixed_charges_from_datetime: Time.parse("2022-03-01").utc.beginning_of_day,
+          fixed_charges_to_datetime: Time.parse("2022-03-07").utc.end_of_day,
           fixed_charges_duration: 7
         )
       end
