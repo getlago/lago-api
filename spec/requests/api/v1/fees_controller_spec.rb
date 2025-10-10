@@ -99,8 +99,6 @@ RSpec.describe Api::V1::FeesController, type: :request do
       create(:charge_fee, fee_type: "charge", pay_in_advance: true, subscription:, invoice: nil)
     end
 
-    before { fee.charge.update!(invoiceable: false) }
-
     include_examples "requires API permission", "fee", "write"
 
     it "updates the fee" do

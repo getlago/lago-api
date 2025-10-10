@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Fees::UpdateService do
   subject(:update_service) { described_class.new(fee:, params:) }
 
-  let(:charge) { create(:standard_charge, invoiceable: false) }
+  let(:charge) { create(:standard_charge) }
   let(:old_date) { Time.current - 3.days }
   let(:fee) { create(:charge_fee, fee_type: "charge", pay_in_advance: true, invoice: nil, charge:, failed_at: old_date, succeeded_at: old_date, refunded_at: old_date) }
 
