@@ -1,4 +1,4 @@
-\restrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
+\restrict CdjwbEDkKTIsj0Wba46rjWvwKkhM099mEkD3rXUJeFvsxTCkd9a7HEh8cvKaeHj
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -10042,11 +10042,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uwy5gMCwyz6S03bk4zP0gsshiPl5XKEOgy0Scb1qBiYNevro52i9kqA6gbqGMrZ
+\unrestrict CdjwbEDkKTIsj0Wba46rjWvwKkhM099mEkD3rXUJeFvsxTCkd9a7HEh8cvKaeHj
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251010073504'),
 ('20251007160309'),
 ('20250926185510'),
 ('20250919124523'),
