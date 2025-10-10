@@ -36,6 +36,8 @@ module Invoices
           to_datetime: boundaries.to_datetime,
           charges_from_datetime: boundaries.charges_from_datetime,
           charges_to_datetime: boundaries.charges_to_datetime,
+          fixed_charges_from_datetime: boundaries.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: boundaries.fixed_charges_to_datetime,
           recurring: invoicing_reason.to_sym == :subscription_periodic,
           invoicing_reason: invoicing_reason_for_subscription(subscription)
         )
@@ -87,6 +89,9 @@ module Invoices
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         charges_duration: date_service.charges_duration_in_days,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
+        fixed_charges_duration: date_service.fixed_charges_duration_in_days,
         timestamp: datetime
       )
     end
@@ -126,8 +131,11 @@ module Invoices
         to_datetime: dates_service.to_datetime,
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
+        fixed_charges_from_datetime: dates_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: dates_service.fixed_charges_to_datetime,
         timestamp: datetime,
-        charges_duration: dates_service.charges_duration_in_days
+        charges_duration: dates_service.charges_duration_in_days,
+        fixed_charges_duration: dates_service.fixed_charges_duration_in_days
       )
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
