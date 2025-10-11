@@ -12,74 +12,110 @@ module Credits
     end
 
     def call
+      result.prepaid_credit_amount_cents ||= 0
+      result.wallet_transactions ||= []
+
       if wallets_already_applied?
         return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
       end
 
-      result.prepaid_credit_amount_cents ||= 0
-      result.wallet_transactions ||= []
+      # build a hash of remaining_amounts for each (fee_type and billable_metric_id) pair
+      remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
 
-      wallet_allocations = Wallets::BuildAllocationRulesService.call!(customer:)
-      wallet_transactions = Hash.new { |h, k| h[k] = [] }
+      ApplicationRecord.transaction do
+        wallets.each do |wallet|
+          break if remaining_amounts.values.all? { |v| BigDecimal(v.to_s) <= 0 }
 
-      invoice.fees.each do |fee|
-        fee_remaining_amount = fee_amount(fee)
-        wallets_sorted = Wallets::FindApplicableOnFeesService.call!(
-          wallet_allocation: wallet_allocations.allocation_rules,
-          fee: fee
-        )
+          # returns applied amount on the fees_by_type_and_bm
+          amount = applicable_wallet_amount(wallet, remaining_amounts)
+          next if amount <= 0
 
-        wallets_sorted.applicable_wallets.each do |wallet_id|
-          break if fee_remaining_amount <= 0
-          wallet_to_use = wallets.find { |w| w.id == wallet_id }
-          next unless wallet_to_use
+          wallet_transaction = create_and_decrease!(wallet: wallet, amount_cents: amount, invoice:)
+          result.wallet_transactions << wallet_transaction
 
-          used_amount = wallet_transactions[wallet_id].sum { |t| t[:amount_cents] }
-          remaining_wallet_balance = wallet_to_use.balance_cents - used_amount
-          next if remaining_wallet_balance <= 0
+          Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.created", after_commit: true)
+          after_commit { SendWebhookJob.perform_later("wallet_transaction.created", wallet_transaction) }
 
-          transaction_amount = [fee_remaining_amount, remaining_wallet_balance].min
-          fee_remaining_amount -= transaction_amount
-          wallet_transactions[wallet_id] << {fee_id: fee.id, amount_cents: transaction_amount}
+          invoice.prepaid_credit_amount_cents += amount
+          result.prepaid_credit_amount_cents += amount
         end
+
+        invoice.save! if invoice.changed?
       end
-
-      wallet_transactions.each do |wallet_id, fees|
-        total_amount_cents = fees.sum { |t| t[:amount_cents] }
-        wallet = wallets.find { |w| w.id == wallet_id }
-        next unless wallet
-
-        wallet_transaction = create_and_decrease!(
-          wallet: wallet,
-          amount_cents: total_amount_cents,
-          invoice: invoice
-        )
-        result.wallet_transactions << wallet_transaction
-        result.prepaid_credit_amount_cents += total_amount_cents
-        invoice.prepaid_credit_amount_cents += total_amount_cents
-
-        Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.created", after_commit: true)
-        after_commit { SendWebhookJob.perform_later("wallet_transaction.created", wallet_transaction) }
-      end
-      invoice.save! if invoice.changed?
       result
     end
 
     private
 
-    attr_accessor :invoice, :wallets, :customer
-    delegate :customer, to: :invoice
-
-    def fee_amount(fee)
-      fee.sub_total_excluding_taxes_precise_amount_cents +
-        fee.taxes_precise_amount_cents -
-        fee.precise_credit_notes_amount_cents
-    end
+    attr_accessor :invoice, :wallets
 
     def wallets_already_applied?
       return false unless invoice
+      wallet_ids = wallets.map { |w| w.id }
+      invoice.wallet_transactions.exists?(wallet_id: wallet_ids)
+    end
 
-      invoice.wallet_transactions.exists?(wallet_id: wallets.pluck(:id))
+    # build a hash of [fee_type, billable_metric_id] => remaining_amount
+    def calculate_amounts_for_fees_by_type_and_bm
+      remaining = Hash.new(0)
+
+      invoice.fees.each do |f|
+        cap = f.sub_total_excluding_taxes_amount_cents +
+          f.taxes_precise_amount_cents -
+          f.precise_credit_notes_amount_cents
+
+        key = [f.fee_type, f.charge&.billable_metric_id]
+        remaining[key] += cap
+      end
+
+      remaining
+    end
+
+    def applicable_wallet_amount(wallet, remaining_amounts_by_fee_type_and_bm)
+      amount_left = wallet.balance_cents
+      applied = 0
+
+      eligible_fee_keys_for_wallet(wallet).each do |key|
+        break if amount_left <= 0
+        next if remaining_amounts_by_fee_type_and_bm[key].to_i <= 0
+
+        take = [remaining_amounts_by_fee_type_and_bm[key], amount_left].min
+        remaining_amounts_by_fee_type_and_bm[key] -= take
+        amount_left -= take
+        applied += take
+      end
+
+      applied
+    end
+
+    def eligible_fee_keys_for_wallet(wallet)
+      all_fees = invoice.fees
+
+      chosen = if wallet.limited_to_billable_metrics?
+        fees_for_wallet_limited_to_bm(wallet, all_fees)
+      elsif wallet.limited_fee_types?
+        all_fees.select { |f| wallet.allowed_fee_types.include?(f.fee_type) }
+      else
+        all_fees
+      end
+
+      chosen.map { |f| [f.fee_type, f.charge&.billable_metric_id] }.uniq
+    end
+
+    def fees_for_wallet_limited_to_bm(wallet, all_fees)
+      limited_to_bm_ids = wallet.wallet_targets.pluck(:billable_metric_id)
+      fees_limited_by_bm = all_fees.select do |f|
+        f.charge&.billable_metric_id && limited_to_bm_ids.include?(f.charge.billable_metric_id)
+      end
+      # a wallet can be limited only to BM or to BM AND some fee_types
+      return fees_limited_by_bm unless wallet.limited_fee_types?
+
+      remaining_fees = all_fees - fees_limited_by_bm
+      # when wallet is limited to BM, it can't be applied to charge fees
+      remaining_fees.reject! { |f| f.fee_type == "charge" }
+
+      fees_limited_by_type = remaining_fees.select { |f| wallet.allowed_fee_types.include?(f.fee_type) }
+      fees_limited_by_bm + fees_limited_by_type
     end
 
     def create_and_decrease!(wallet:, amount_cents:, invoice:)
