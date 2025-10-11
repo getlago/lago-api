@@ -45,7 +45,7 @@ module Credits
       end
 
       wallet_transactions.each do |wallet_id, fees|
-        total_amount_cents = fees.sum { |t| t[:amount_cents].to_i }
+        total_amount_cents = fees.sum { |t| t[:amount_cents] }
         wallet = wallets.find { |w| w.id == wallet_id }
         next unless wallet
 
@@ -71,7 +71,7 @@ module Credits
     delegate :customer, to: :invoice
 
     def fee_amount(fee)
-      fee.sub_total_excluding_taxes_amount_cents +
+      fee.sub_total_excluding_taxes_precise_amount_cents +
         fee.taxes_precise_amount_cents -
         fee.precise_credit_notes_amount_cents
     end
