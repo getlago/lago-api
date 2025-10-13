@@ -68,8 +68,7 @@ module Wallets
       wallet.wallet_targets.each do |wallet_target|
         metric_wallets = bm_map[wallet_target.billable_metric_id]
 
-        # check if we need to get something from the charges array
-        # and after that check if we need to get something unrestricted array
+        # add what we already can have from the higher priority arrays
         add_all_unique(metric_wallets, type_map["charge"])
         add_all_unique(metric_wallets, unrestricted)
         add_unique(metric_wallets, wallet.id)
@@ -79,7 +78,7 @@ module Wallets
     def handle_fee_type_wallet(wallet, bm_map, type_map, unrestricted)
       Array(wallet.allowed_fee_types).each do |fee_type|
         fee_type_wallets = type_map[fee_type]
-        # check if we need to get something from the unrestricted array
+        # add what we already can have from the higher priority arrays
         add_all_unique(fee_type_wallets, unrestricted)
         add_unique(fee_type_wallets, wallet.id)
 
