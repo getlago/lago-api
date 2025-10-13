@@ -336,7 +336,11 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+<<<<<<< HEAD
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
+=======
+DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_all_charges_boundaries;
+>>>>>>> 5d22329ee (fix test with invoice creation)
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
@@ -8243,7 +8247,7 @@ CREATE INDEX index_taxes_on_organization_id ON public.taxes USING btree (organiz
 
 
 --
--- Name: index_uniq_invoice_subscriptions_on_charges_from_to_datetime; Type: INDEX; Schema: public; Owner: -
+-- Name: index_uniq_invoice_subscriptions_on_all_charges_boundaries; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
