@@ -82,7 +82,7 @@ class CreditNote < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
   end
 
-  def xml_file_url
+  def xml_url
     return if xml_file.blank?
 
     Rails.application.routes.url_helpers.rails_blob_url(xml_file, host: ENV["LAGO_API_URL"])

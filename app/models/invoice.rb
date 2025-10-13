@@ -176,7 +176,7 @@ class Invoice < ApplicationRecord
     File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
-  def xml_file_url
+  def xml_url
     return if xml_file.blank?
 
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(

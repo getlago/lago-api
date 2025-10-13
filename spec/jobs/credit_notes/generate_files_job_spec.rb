@@ -15,16 +15,16 @@ RSpec.describe CreditNotes::GenerateFilesJob do
     allow(CreditNotes::GenerateXmlService).to receive(:new)
       .with(credit_note:, context: "api")
       .and_return(generate_xml_service)
-    allow(generate_pdf_service).to receive(:call)
+    allow(generate_pdf_service).to receive(:call_with_middlewares)
       .and_return(result)
-    allow(generate_xml_service).to receive(:call)
+    allow(generate_xml_service).to receive(:call_with_middlewares)
       .and_return(result)
 
     described_class.perform_now(credit_note)
 
     expect(CreditNotes::GenerateService).to have_received(:new)
-    expect(generate_pdf_service).to have_received(:call)
+    expect(generate_pdf_service).to have_received(:call_with_middlewares)
     expect(CreditNotes::GenerateXmlService).to have_received(:new)
-    expect(generate_xml_service).to have_received(:call)
+    expect(generate_xml_service).to have_received(:call_with_middlewares)
   end
 end
