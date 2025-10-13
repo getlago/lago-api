@@ -389,8 +389,7 @@ RSpec.describe AdjustedFees::CreateService do
         it "calls the RefreshDraft service" do
           create_service.call
 
-          expect(Invoices::RefreshDraftService).to have_received(:new)
-          expect(refresh_service).to have_received(:call)
+          expect(Invoices::RefreshDraftService).to have_received(:call)
         end
 
         context "when adjusting units only" do
