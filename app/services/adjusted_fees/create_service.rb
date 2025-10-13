@@ -126,14 +126,6 @@ module AdjustedFees
     def create_fee(subscription, chargeable, fee_type)
       invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
 
-      boundaries = {
-        timestamp: invoice_subscription.timestamp,
-        charges_from_datetime: invoice_subscription.charges_from_datetime,
-        charges_to_datetime: invoice_subscription.charges_to_datetime,
-        fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
-        fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
-      }
-
       Fee.create!(
         organization:,
         billing_entity_id: invoice.billing_entity_id,
@@ -156,8 +148,24 @@ module AdjustedFees
         taxes_precise_amount_cents: 0.to_d,
         units: 0,
         total_aggregated_units: 0,
-        properties: boundaries
+        properties: fee_boundaries(invoice_subscription, fee_type)
       )
+    end
+
+    def fee_boundaries(invoice_subscription, fee_type)
+      base = {timestamp: invoice_subscription.timestamp}
+
+      if fee_type == :charge
+        base.merge(
+          charges_from_datetime: invoice_subscription.charges_from_datetime,
+          charges_to_datetime: invoice_subscription.charges_to_datetime
+        )
+      else
+        base.merge(
+          fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
+        )
+      end
     end
 
     def disabled_charge_model?(charge)
