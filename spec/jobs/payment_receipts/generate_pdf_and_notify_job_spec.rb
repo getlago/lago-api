@@ -5,15 +5,11 @@ require "rails_helper"
 RSpec.describe PaymentReceipts::GeneratePdfAndNotifyJob do
   let(:payment_receipt) { create(:payment_receipt) }
   let(:result) { BaseService::Result.new }
-  let(:generate_service) { instance_double(PaymentReceipts::GeneratePdfService) }
   let(:payment_receipt_mailer) { PaymentReceiptMailer.with(payment_receipt:) }
 
   before do
-    allow(PaymentReceipts::GeneratePdfService).to receive(:new)
+    allow(PaymentReceipts::GeneratePdfService).to receive(:call)
       .with(payment_receipt:, context: "api")
-      .and_return(generate_service)
-    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
-    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
     allow(PaymentReceiptMailer).to receive(:with)
       .with(payment_receipt:)
@@ -23,8 +19,7 @@ RSpec.describe PaymentReceipts::GeneratePdfAndNotifyJob do
   it "delegates to the Generate service" do
     described_class.perform_now(payment_receipt:, email: true)
 
-    expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
-    expect(generate_service).to have_received(:call_with_activity_log)
+    expect(PaymentReceipts::GeneratePdfService).to have_received(:call)
   end
 
   context "when email is true" do
