@@ -8243,7 +8243,7 @@ CREATE INDEX index_taxes_on_organization_id ON public.taxes USING btree (organiz
 
 
 --
--- Name: index_uniq_invoice_subscriptions_on_charges_from_to_datetime; Type: INDEX; Schema: public; Owner: -
+-- Name: index_uniq_invoice_subscriptions_on_all_charges_boundaries; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
