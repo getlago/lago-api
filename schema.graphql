@@ -490,24 +490,23 @@ type AiConversationMessage {
   type: String!
 }
 
-"""
-AiConversationMessageCollection type
-"""
-type AiConversationMessageCollection {
-  """
-  A collection of paginated AiConversationMessageCollection
-  """
-  collection: [AiConversationMessage!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
-}
-
 type AiConversationStream {
   chunk: String
   done: Boolean!
+}
+
+type AiConversationWithMessages {
+  createdAt: ISO8601DateTime!
+  id: ID!
+
+  """
+  Messages belonging to this conversation
+  """
+  messages: [AiConversationMessage!]!
+  mistralConversationId: String
+  name: String!
+  organization: Organization!
+  updatedAt: ISO8601DateTime!
 }
 
 type Alert {
@@ -8432,7 +8431,7 @@ type Query {
     Uniq ID of the ai conversation
     """
     id: ID!
-  ): AiConversationMessageCollection
+  ): AiConversationWithMessages
 
   """
   Query the latest AI conversations of current organization

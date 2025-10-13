@@ -24,7 +24,11 @@ Rails.application.configure do
     :local
   end
 
-  config.log_level = :info
+  config.log_level = if ENV["LAGO_LOG_LEVEL"].present? && ENV["LAGO_LOG_LEVEL"] != ""
+    ENV["LAGO_LOG_LEVEL"].downcase.to_sym
+  else
+    :info
+  end
 
   config.action_cable.disable_request_forgery_protection = true
   config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]

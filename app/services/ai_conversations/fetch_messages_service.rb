@@ -8,11 +8,16 @@ module AiConversations
     def initialize(ai_conversation:)
       @ai_conversation = ai_conversation
       @http = LagoHttpClient::Client.new(api_url)
+
+      super
     end
 
     def call
-      result = @http.get(headers:)
-      messages = result["messages"].map { |h| h.slice("content", "created_at", "type") }
+      result.messages = []
+      return result if ai_conversation.mistral_conversation_id.blank?
+
+      http_result = @http.get(headers:)
+      messages = http_result["messages"].map { |h| h.slice("content", "created_at", "type") }
 
       result.messages = messages
       result
