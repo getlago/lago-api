@@ -30,7 +30,8 @@ module AdjustedFees
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
-        charge:,
+        charge: fee.charge,
+        fixed_charge: fee.fixed_charge,
         adjusted_units: params[:units].present? && params[:unit_precise_amount].blank?,
         adjusted_amount: params[:units].present? && params[:unit_precise_amount].present?,
         invoice_display_name: params[:invoice_display_name],
@@ -47,13 +48,18 @@ module AdjustedFees
 
       subscription_id = fee.subscription_id
       charge_id = fee.charge_id
+      fixed_charge_id = fee.fixed_charge_id
       charge_filter_id = fee.charge_filter_id
 
       refresh_result = Invoices::RefreshDraftService.call(invoice: invoice)
       refresh_result.raise_if_error!
 
       result.adjusted_fee = adjusted_fee.reload
-      result.fee = invoice.fees.find_by(subscription_id:, charge_id:, charge_filter_id:)
+      result.fee = if fixed_charge_id
+        invoice.fees.find_by(subscription_id:, fixed_charge_id:)
+      else
+        invoice.fees.find_by(subscription_id:, charge_id:, charge_filter_id:)
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -62,6 +68,10 @@ module AdjustedFees
     private
 
     attr_reader :organization, :invoice, :params, :preview
+
+    def subscription
+      @subscription ||= invoice.subscriptions.includes(plan: {charges: :filters, fixed_charges: nil}).find_by(id: params[:subscription_id])
+    end
 
     def forbidden?
       !preview && (!License.premium? || !invoice.draft?)
@@ -75,34 +85,21 @@ module AdjustedFees
 
     def find_existing_fee
       fee = invoice.fees.find_by(id: params[:fee_id])
-      if fee.blank?
-        result.not_found_failure!(resource: "fee")
-        return
-      end
+      return result.not_found_failure!(resource: "fee") if fee.blank?
 
       fee
     end
 
     def create_empty_fee
-      subscription = invoice.subscriptions.includes(plan: {charges: :filters}).find_by(id: params[:subscription_id])
-      unless subscription
-        result.not_found_failure!(resource: "subscription")
-        return
-      end
+      return result.not_found_failure!(resource: "subscription") unless subscription
+      return create_empty_fee_for_fixed_charge if params[:fixed_charge_id].present?
 
-      charge = subscription.plan.charges.find { |c| c.id == params[:charge_id] }
-      unless charge
-        result.not_found_failure!(resource: "charge")
-        return
-      end
+      charge = subscription.plan.charges.find_by(id: params[:charge_id])
+      return result.not_found_failure!(resource: "charge") unless charge
 
       if params[:charge_filter_id].present?
         charge_filter = charge.filters.find_by(id: params[:charge_filter_id])
-
-        unless charge_filter
-          result.not_found_failure!(resource: "charge_filter")
-          return
-        end
+        return result.not_found_failure!(resource: "charge_filter") unless charge_filter
       end
 
       fee = invoice.fees.find_by(
@@ -110,16 +107,31 @@ module AdjustedFees
         charge_id: charge.id,
         charge_filter_id: params[:charge_filter_id]
       )
-      fee || create_fee(subscription, charge)
+      fee || create_fee(subscription, charge, :charge)
     end
 
-    def create_fee(subscription, charge)
+    def create_empty_fee_for_fixed_charge
+      return result.not_found_failure!(resource: "subscription") unless subscription
+
+      fixed_charge = subscription.plan.fixed_charges.find_by(id: params[:fixed_charge_id])
+      return result.not_found_failure!(resource: "fixed_charge") unless fixed_charge
+
+      fee = invoice.fees.find_by(
+        subscription_id: subscription.id,
+        fixed_charge_id: fixed_charge.id
+      )
+      fee || create_fee(subscription, fixed_charge, :fixed_charge)
+    end
+
+    def create_fee(subscription, chargeable, fee_type)
       invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
 
       boundaries = {
         timestamp: invoice_subscription.timestamp,
         charges_from_datetime: invoice_subscription.charges_from_datetime,
-        charges_to_datetime: invoice_subscription.charges_to_datetime
+        charges_to_datetime: invoice_subscription.charges_to_datetime,
+        fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
       }
 
       Fee.create!(
@@ -127,11 +139,12 @@ module AdjustedFees
         billing_entity_id: invoice.billing_entity_id,
         invoice:,
         subscription:,
-        invoiceable: charge,
-        charge:,
+        invoiceable: chargeable,
+        charge: chargeable.is_a?(Charge) ? chargeable : nil,
+        fixed_charge: chargeable.is_a?(FixedCharge) ? chargeable : nil,
         charge_filter_id: params[:charge_filter_id],
         grouped_by: {},
-        fee_type: :charge,
+        fee_type:,
         payment_status: :pending,
         events_count: 0,
         amount_currency: invoice.currency,
@@ -148,9 +161,14 @@ module AdjustedFees
     end
 
     def disabled_charge_model?(charge)
-      unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
+      return false unless charge
+      return false unless unit_adjustment?
 
-      charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
+      charge.percentage? || (charge.prorated? && charge.graduated?)
+    end
+
+    def unit_adjustment?
+      params[:units].present? && params[:unit_precise_amount].blank?
     end
   end
 end
