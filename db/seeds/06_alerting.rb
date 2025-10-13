@@ -1,46 +1,16 @@
 # frozen_string_literal: true
 
-organization ||= Organization.find_by(name: "Hooli")
+# NOTE: If hooli is not found, run 01_base.rb first
+organization = Organization.find_by!(name: "Hooli")
+sum_bm = BillableMetric.find_by!(organization:, code: "sum_bm")
+subscription = Subscription.find_by!(external_id: "sub_john-doe-main")
 
-# Create Plan with default alerts
-# The pay in advance charge helps us test alerting by sending events
-plan = Plan.create_with(
-  interval: "monthly", pay_in_advance: false, amount_cents: 49_00, amount_currency: "EUR"
-).find_or_create_by!(organization:, name: "Premium Plan", code: "premium_plan")
+existing_alerts = UsageMonitoring::Alert.where(organization:, subscription_external_id: subscription.external_id)
+UsageMonitoring::TriggeredAlert.where(alert: existing_alerts).delete_all
+UsageMonitoring::AlertThreshold.where(alert: existing_alerts).delete_all
+existing_alerts.delete_all
 
-ops_bm = BillableMetric.find_or_create_by!(
-  organization:,
-  aggregation_type: "sum_agg",
-  name: "Operations",
-  code: "ops",
-  field_name: "ops_count"
-)
-
-Charge.create_with(
-  organization:,
-  charge_model: "standard",
-  amount_currency: "EUR",
-  properties: {
-    amount: "500"
-  }
-).find_or_create_by!(plan:, billable_metric: ops_bm)
-
-def create_customer_with_sub(ext_id, plan:, organization:)
-  customer = FactoryBot.create(:customer, organization:, external_id: "cust_#{ext_id}")
-  customer.subscriptions.create!(
-    started_at: Time.current,
-    subscription_at: Time.current,
-    status: :active,
-    billing_time: :calendar,
-    plan:,
-    external_id: "sub_#{ext_id}",
-    organization:
-  )
-end
-
-subscription = create_customer_with_sub("alerting-#{SecureRandom.hex}", plan:, organization:)
-
-UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
+UsageMonitoring::CreateAlertService.call!(organization:, subscription:, params: {
   alert_type: "current_usage_amount",
   code: "default",
   name: "Default Alert",
@@ -52,7 +22,7 @@ UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
 })
 
 if License.premium?
-  alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
+  alert = UsageMonitoring::CreateAlertService.call!(organization:, subscription:, params: {
     alert_type: "lifetime_usage_amount",
     code: "total",
     thresholds: [
@@ -81,7 +51,7 @@ end
 
 bm_alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   alert_type: "billable_metric_current_usage_amount",
-  billable_metric: ops_bm,
+  billable_metric: sum_bm,
   code: "ops",
   name: "Operations Alert",
   thresholds: [
