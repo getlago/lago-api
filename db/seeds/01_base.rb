@@ -29,7 +29,7 @@ k.update_columns(value: "lago_key-hooli-1234567890") # rubocop:disable Rails/Ski
 
 # == BillableMetrics
 
-BillableMetric.find_or_create_by!(
+sum_bm = BillableMetric.find_or_create_by!(
   organization:,
   aggregation_type: "sum_agg",
   name: "Sum BM",
@@ -37,7 +37,7 @@ BillableMetric.find_or_create_by!(
   field_name: "custom_field"
 )
 
-BillableMetric.find_or_create_by!(
+count_bm = BillableMetric.find_or_create_by!(
   organization:,
   aggregation_type: "count_agg",
   name: "Count BM",
@@ -109,5 +109,73 @@ unless Coupon.exists?(organization:, code: "10_euro_off")
     amount_currency: "EUR",
     frequency: "forever",
     expiration: "no_expiration"
+  )
+end
+
+# == Plans
+
+unless Plan.exists?(organization:, code: "standard_plan")
+  Plans::CreateService.call!(
+    organization_id: organization.id,
+    name: "Standard Plan",
+    code: "standard_plan",
+    interval: "monthly",
+    pay_in_advance: true,
+    amount_cents: 19_99,
+    amount_currency: "EUR",
+    tax_codes: ["lago_eu_fr_standard"],
+    charges: [
+      {
+        billable_metric_id: sum_bm.id,
+        charge_model: "standard",
+        amount_currency: "EUR",
+        pay_in_advance: false,
+        properties: {
+          amount: 100.to_s
+        }
+      },
+      {
+        billable_metric_id: count_bm.id,
+        charge_model: "standard",
+        amount_currency: "EUR",
+        pay_in_advance: false,
+        properties: {
+          amount: 499.to_s
+        }
+      }
+    ]
+  )
+end
+
+unless Plan.exists?(organization:, code: "premium_plan")
+  Plans::CreateService.call!(
+    organization_id: organization.id,
+    name: "Premium Plan",
+    code: "premium_plan",
+    interval: "monthly",
+    pay_in_advance: true,
+    amount_cents: 100_00,
+    amount_currency: "EUR",
+    tax_codes: ["lago_eu_fr_standard"],
+    charges: [
+      {
+        billable_metric_id: sum_bm.id,
+        charge_model: "standard",
+        amount_currency: "EUR",
+        pay_in_advance: false,
+        properties: {
+          amount: 30.to_s
+        }
+      },
+      {
+        billable_metric_id: count_bm.id,
+        charge_model: "standard",
+        amount_currency: "EUR",
+        pay_in_advance: false,
+        properties: {
+          amount: 399.to_s
+        }
+      }
+    ]
   )
 end
