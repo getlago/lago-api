@@ -179,11 +179,15 @@ class CreditNote < ApplicationRecord
   private
 
   def ensure_number
-    return if number.present?
+    return if number.present? && !status_changed_to_finalized?
 
     formatted_sequential_id = format("%03d", sequential_id)
 
     self.number = "#{invoice.number}-CN#{formatted_sequential_id}"
+  end
+
+  def status_changed_to_finalized?
+    status_changed?(from: "draft", to: "finalized")
   end
 end
 
