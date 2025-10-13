@@ -76,10 +76,6 @@ class Wallet < ApplicationRecord
     billable_metrics.any?
   end
 
-  def unrestricted?
-    !limited_to_billable_metrics? && !limited_fee_types?
-  end
-
   private
 
   def paid_top_up_max_greater_than_or_equal_min
