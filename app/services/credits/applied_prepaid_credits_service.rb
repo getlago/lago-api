@@ -19,6 +19,7 @@ module Credits
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
 
+      wallets_by_id = wallets.index_by(&:id)
       wallet_allocations = Wallets::BuildAllocationRulesService.call!(customer:)
       wallet_transactions = Hash.new { |h, k| h[k] = [] }
 
@@ -31,7 +32,7 @@ module Credits
 
         wallets_sorted.applicable_wallets.each do |wallet_id|
           break if fee_remaining_amount <= 0
-          wallet_to_use = wallets.find { |w| w.id == wallet_id }
+          wallet_to_use = wallets_by_id[wallet_id]
           next unless wallet_to_use
 
           used_amount = wallet_transactions[wallet_id].sum { |t| t[:amount_cents] }
@@ -46,7 +47,7 @@ module Credits
 
       wallet_transactions.each do |wallet_id, fees|
         total_amount_cents = fees.sum { |t| t[:amount_cents] }
-        wallet = wallets.find { |w| w.id == wallet_id }
+        wallet = wallets_by_id[wallet_id]
         next unless wallet
 
         wallet_transaction = create_and_decrease!(
@@ -79,7 +80,7 @@ module Credits
     def wallets_already_applied?
       return false unless invoice
 
-      invoice.wallet_transactions.exists?(wallet_id: wallets.pluck(:id))
+      WalletTransaction.exists?(invoice_id: invoice.id, wallet_id: wallets.map(&:id))
     end
 
     def create_and_decrease!(wallet:, amount_cents:, invoice:)
