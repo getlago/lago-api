@@ -148,6 +148,7 @@ end
 group :development do
   gem "coffee-rails"
   gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
+  gem "httplog"
 
   gem "standard", require: false
   gem "annotaterb"
