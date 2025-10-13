@@ -133,6 +133,7 @@ GEM
       uri (>= 0.13.1)
     addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
+    addressing (1.1.0)
     adyen-ruby-api-library (7.3.1)
       faraday
     after_commit_everywhere (1.4.0)
@@ -1031,6 +1032,7 @@ DEPENDENCIES
   aasm
   active_storage_validations
   activejob-uniqueness
+  addressing
   adyen-ruby-api-library
   after_commit_everywhere
   analytics-ruby (~> 2.4.0)
