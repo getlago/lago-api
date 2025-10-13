@@ -141,3 +141,4 @@ payments:
 payment_methods:
   view: true
   create:
+  update:
