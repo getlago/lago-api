@@ -1833,7 +1833,6 @@ RSpec.describe Invoices::CalculateFeesService do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription.count).to eq(1)
-            # what about fixed_charge fee here? - as I understand, they should follow subscription fee
             expect(invoice.fees.fixed_charge.count).to eq(1)
             expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
@@ -1861,8 +1860,10 @@ RSpec.describe Invoices::CalculateFeesService do
               expect(invoice.fees.subscription.count).to eq(0)
               expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
-              # we have very weird boundaries here and the aggregator does not get the fixed charge fee event
-              expect(invoice.fees.fixed_charge.count).to eq(1)
+              # plan is billed anniversary on 21 of November (started_at, 2024). At the timestamp, 1st Jan 2025,
+              # previous billing period is "empty" - 21Nov 2024 - 21 Nov 2024, because it's not current usage, so we get an "empty"
+              # boundaries and cannot fetch any usage
+              expect(invoice.fees.fixed_charge.count).to eq(0)
             end
           end
         end
