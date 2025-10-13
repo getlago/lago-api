@@ -8002,6 +8002,7 @@ type Permissions {
   organizationUpdate: Boolean!
   organizationView: Boolean!
   paymentMethodsCreate: Boolean!
+  paymentMethodsUpdate: Boolean!
   paymentMethodsView: Boolean!
   paymentRequestsCreate: Boolean!
   paymentRequestsView: Boolean!
