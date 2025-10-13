@@ -6,8 +6,7 @@ RSpec.describe ::V1::PaymentMethodSerializer do
   subject(:serializer) do
     described_class.new(
       payment_method,
-      root_name: "payment_method",
-      includes: %i[customer]
+      root_name: "payment_method"
     )
   end
 
@@ -22,8 +21,8 @@ RSpec.describe ::V1::PaymentMethodSerializer do
         "is_default" => payment_method.is_default,
         "payment_provider_code" => payment_method.payment_provider&.code,
         "payment_provider_type" => "stripe",
-        "created_at" => payment_method.created_at.iso8601,
-        "customer" => hash_including("lago_id" => payment_method.customer.id)
+        "provider_method_id" => payment_method.provider_method_id,
+        "created_at" => payment_method.created_at.iso8601
       )
     end
   end

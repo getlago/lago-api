@@ -22,8 +22,7 @@ module PaymentMethodIndex
           result.payment_methods.preload(:customer, :payment_provider),
           ::V1::PaymentMethodSerializer,
           collection_name: "payment_methods",
-          meta: pagination_metadata(result.payment_methods),
-          includes: %i[customer]
+          meta: pagination_metadata(result.payment_methods)
         )
       )
     else
