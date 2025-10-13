@@ -37,9 +37,13 @@ module Wallets
       unrestricted = []
 
       wallets.each do |wallet|
-        handle_billable_metric_wallet(wallet, bm_map, type_map, unrestricted) if wallet.limited_to_billable_metrics?
-        handle_fee_type_wallet(wallet, bm_map, type_map, unrestricted) if wallet.limited_fee_types?
-        handle_unrestricted_wallet(wallet, bm_map, type_map, unrestricted) if wallet.unrestricted?
+        if wallet.wallet_targets.any?
+          handle_billable_metric_wallet(wallet, bm_map, type_map, unrestricted)
+        elsif wallet.allowed_fee_types.present?
+          handle_fee_type_wallet(wallet, bm_map, type_map, unrestricted)
+        else
+          handle_unrestricted_wallet(wallet, bm_map, type_map, unrestricted)
+        end
       end
 
       result.allocation_rules = {bm_map:, type_map:, unrestricted:}
@@ -61,7 +65,7 @@ module Wallets
 
     def wallets
       @wallets ||= customer.active_wallets_in_application_order
-        .includes(:wallet_targets)
+        .includes(wallet_targets: :billable_metric)
     end
 
     def handle_billable_metric_wallet(wallet, bm_map, type_map, unrestricted)
