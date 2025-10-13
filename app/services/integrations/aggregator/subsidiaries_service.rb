@@ -3,6 +3,8 @@
 module Integrations
   module Aggregator
     class SubsidiariesService < BaseService
+      Subsidiary = Data.define(:external_id, :external_name)
+
       def action_path
         "v1/#{provider}/subsidiaries"
       end
@@ -27,7 +29,7 @@ module Integrations
 
       def handle_subsidiaries(subsidiaries)
         subsidiaries.map do |subsidiary|
-          OpenStruct.new(external_id: subsidiary["id"], external_name: subsidiary["name"])
+          Subsidiary.new(external_id: subsidiary["id"], external_name: subsidiary["name"])
         end
       end
     end
