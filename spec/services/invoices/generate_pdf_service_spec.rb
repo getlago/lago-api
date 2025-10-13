@@ -111,7 +111,7 @@ RSpec.describe Invoices::GeneratePdfService do
         create(:invoice, :self_billed, customer:, status: :finalized, organization:)
       end
 
-      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call: pdf_response) }
+      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call_with_middlewares: pdf_response) }
 
       let(:pdf_response) do
         BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }

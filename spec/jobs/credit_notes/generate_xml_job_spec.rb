@@ -15,12 +15,12 @@ RSpec.describe CreditNotes::GenerateXmlJob do
     allow(CreditNotes::GenerateXmlService).to receive(:new)
       .with(credit_note:, context: "api")
       .and_return(generate_service)
-    allow(generate_service).to receive(:call)
+    allow(generate_service).to receive(:call_with_middlewares)
       .and_return(result)
 
     described_class.perform_now(credit_note)
 
     expect(CreditNotes::GenerateXmlService).to have_received(:new)
-    expect(generate_service).to have_received(:call)
+    expect(generate_service).to have_received(:call_with_middlewares)
   end
 end

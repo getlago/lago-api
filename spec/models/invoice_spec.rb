@@ -1607,7 +1607,7 @@ RSpec.describe Invoice do
     end
   end
 
-  describe ".xml_file_url" do
+  describe ".xml_url" do
     before do
       invoice.xml_file.attach(
         io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
@@ -1617,10 +1617,10 @@ RSpec.describe Invoice do
     end
 
     it "returns the xml file url" do
-      xml_file_url = invoice.xml_file_url
+      xml_url = invoice.xml_url
 
-      expect(xml_file_url).to be_present
-      expect(xml_file_url).to include(ENV["LAGO_API_URL"])
+      expect(xml_url).to be_present
+      expect(xml_url).to include(ENV["LAGO_API_URL"])
     end
   end
 

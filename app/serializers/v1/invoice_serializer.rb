@@ -28,7 +28,7 @@ module V1
         total_due_amount_cents: model.total_due_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
-        xml_url: model.xml_file_url,
+        xml_url: model.xml_url,
         version_number: model.version_number,
         self_billed: model.self_billed,
         created_at: model.created_at.iso8601,

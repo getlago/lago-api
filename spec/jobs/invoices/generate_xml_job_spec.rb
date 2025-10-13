@@ -15,12 +15,12 @@ RSpec.describe Invoices::GenerateXmlJob, type: :job do
     allow(service_class).to receive(:new)
       .with(invoice:, context: "api")
       .and_return(generate_service)
-    allow(generate_service).to receive(:call)
+    allow(generate_service).to receive(:call_with_middlewares)
       .and_return(result)
 
     described_class.perform_now(invoice)
 
     expect(service_class).to have_received(:new)
-    expect(generate_service).to have_received(:call)
+    expect(generate_service).to have_received(:call_with_middlewares)
   end
 end
