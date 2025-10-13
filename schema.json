@@ -8972,6 +8972,18 @@
               "deprecationReason": null
             },
             {
+              "name": "fixedChargeId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "subscriptionId",
               "description": null,
               "type": {
@@ -24408,6 +24420,18 @@
                   "name": "FeeTypesEnum",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fixedCharge",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "FixedCharge",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -41183,6 +41207,18 @@
             },
             {
               "name": "chargeId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fixedChargeId",
               "description": null,
               "type": {
                 "kind": "SCALAR",

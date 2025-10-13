@@ -13,6 +13,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:description).of_type("String")
     expect(subject).to have_field(:grouped_by).of_type("JSON!")
+    expect(subject).to have_field(:fixed_charge).of_type("FixedCharge")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
     expect(subject).to have_field(:invoice_name).of_type("String")
     expect(subject).to have_field(:subscription).of_type("Subscription")
