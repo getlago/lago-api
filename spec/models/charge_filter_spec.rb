@@ -363,16 +363,25 @@ RSpec.describe ChargeFilter do
         create(:charge_filter_value, charge_filter:, values: ["visa"], billable_metric_filter: scheme)
       ]
     end
+    let(:card_filter_value) { values.first }
 
     before { values }
 
-    it "returns the values as a hash" do
-      expect(charge_filter.to_h).to eq(
-        {
-          "card" => ["credit"],
-          "scheme" => ["visa"]
-        }
-      )
+    it "returns the values as a memoized frozen hash" do
+      original_values = {"card" => ["credit"], "scheme" => ["visa"]}
+      expect(charge_filter.to_h).to eq(original_values)
+
+      expect(charge_filter.to_h).to be_frozen
+
+      card_filter_value.update(values: ["debit"])
+      charge_filter.values.reload
+
+      expect(charge_filter.to_h).to eq(original_values)
+
+      expect(described_class.find(charge_filter.id).to_h).to eq({
+        "card" => ["debit"],
+        "scheme" => ["visa"]
+      })
     end
   end
 
@@ -383,46 +392,58 @@ RSpec.describe ChargeFilter do
     let(:scheme) { create(:billable_metric_filter, key: "scheme", values: %w[visa mastercard]) }
     let(:values) do
       [
-        create(:charge_filter_value, charge_filter:, values: ["credit"], billable_metric_filter: card).discard,
-        create(:charge_filter_value, charge_filter:, values: ["visa"], billable_metric_filter: scheme).discard
+        create(:charge_filter_value, charge_filter:, values: ["credit"], billable_metric_filter: card).tap(&:discard),
+        create(:charge_filter_value, charge_filter:, values: ["visa"], billable_metric_filter: scheme).tap(&:discard)
       ]
     end
+    let(:card_filter_value) { values.first }
 
     before { values }
 
     it "returns the values as a hash" do
-      expect(charge_filter.to_h_with_discarded).to eq(
-        {
-          "card" => ["credit"],
-          "scheme" => ["visa"]
-        }
-      )
+      original_values = {"card" => ["credit"], "scheme" => ["visa"]}
+      expect(charge_filter.to_h_with_discarded).to eq(original_values)
+      expect(charge_filter.to_h_with_discarded).to be_frozen
+
+      card_filter_value.update(values: ["debit"])
+      charge_filter.values.reload
+
+      expect(charge_filter.to_h_with_discarded).to eq(original_values)
+
+      expect(described_class.find(charge_filter.id).to_h_with_discarded).to eq({
+        "card" => ["debit"],
+        "scheme" => ["visa"]
+      })
     end
   end
 
   describe "#to_h_with_all_values" do
-    subject(:charge_filter) { build(:charge_filter, values:) }
+    subject(:charge_filter) { create(:charge_filter, values:) }
 
     let(:card) { create(:billable_metric_filter, key: "card", values: %w[credit debit]) }
     let(:scheme) { create(:billable_metric_filter, key: "scheme", values: %w[visa mastercard]) }
     let(:values) do
       [
         build(:charge_filter_value, values: ["credit"], billable_metric_filter: card),
-        build(
-          :charge_filter_value,
-          values: [ChargeFilterValue::ALL_FILTER_VALUES],
-          billable_metric_filter: scheme
-        )
+        build(:charge_filter_value, values: [ChargeFilterValue::ALL_FILTER_VALUES], billable_metric_filter: scheme)
       ]
     end
+    let(:card_filter_value) { values.first }
 
-    it "returns all values as a hash" do
-      expect(charge_filter.to_h_with_all_values).to eq(
-        {
-          "card" => ["credit"],
-          "scheme" => %w[visa mastercard]
-        }
-      )
+    it "returns all values as a memoized frozen hash" do
+      original_values = {"card" => ["credit"], "scheme" => %w[visa mastercard]}
+      expect(charge_filter.to_h_with_all_values).to eq(original_values)
+      expect(charge_filter.to_h_with_all_values).to be_frozen
+
+      card_filter_value.update(values: ["debit"])
+      charge_filter.values.reload
+
+      expect(charge_filter.to_h_with_all_values).to eq(original_values)
+
+      expect(described_class.find(charge_filter.id).to_h_with_all_values).to eq({
+        "card" => ["debit"],
+        "scheme" => %w[visa mastercard]
+      })
     end
   end
 
