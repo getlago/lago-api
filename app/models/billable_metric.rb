@@ -48,7 +48,7 @@ class BillableMetric < ApplicationRecord
   validate :validate_expression
 
   validates :name, presence: true
-  validates :field_name, presence: true, if: :should_have_field_name?
+  validates_presence_of :field_name, if: :should_have_field_name?
   validates :aggregation_type, inclusion: {in: AGGREGATION_TYPES.keys.map(&:to_s)}
   validates :code,
     presence: true,
@@ -97,6 +97,17 @@ class BillableMetric < ApplicationRecord
     return if Lago::ExpressionParser.validate(expression).blank?
 
     errors.add(:expression, :invalid_expression)
+  end
+
+  # by default rails would return " Validation failed: Field name value_is_mandatory", which is confusing
+  # as model also has "name" attribute. This method overrides the default behavior to return "field_name" instead.
+  def self.human_attribute_name(attr, options = {})
+    case attr.to_s
+    when 'field_name'
+      'field_name'
+    else
+      super
+    end
   end
 end
 
