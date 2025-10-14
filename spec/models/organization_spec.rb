@@ -43,6 +43,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:invoice_custom_sections)
       expect(subject).to have_many(:ai_conversations)
       expect(subject).to have_many(:manual_invoice_custom_sections).conditions(section_type: "manual")
+      expect(subject).to have_many(:payment_methods) }
       expect(subject).to have_many(:system_generated_invoice_custom_sections).conditions(section_type: "system_generated")
 
       expect(subject).to have_many(:features).class_name("Entitlement::Feature")

@@ -12,7 +12,10 @@ module PaymentMethods
 
     def call
       return result.not_found_failure!(resource: "payment_method") unless payment_method
-      return result if payment_method.is_default?
+      if payment_method.is_default?
+        result.payment_method = payment_method
+        return result
+      end
 
       ActiveRecord::Base.transaction do
         payment_method.customer.payment_methods.where.not(id: payment_method.id).update_all(is_default: false) # rubocop:disable Rails/SkipsModelValidations

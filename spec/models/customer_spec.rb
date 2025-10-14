@@ -15,6 +15,7 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:daily_usages) }
 
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
+  it { is_expected.to have_many(:payment_methods) }
   it { is_expected.to have_many(:payment_requests) }
 
   it { is_expected.to have_one(:netsuite_customer) }
