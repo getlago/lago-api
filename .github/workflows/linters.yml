@@ -18,7 +18,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4.5"
+          ruby-version: "3.4.7"
           bundler-cache: true
       - name: Setup Rubocop
         # A bug requires the use of `bundle install` to use `rubocop-rails`. A fix is coming to Rubocop.
