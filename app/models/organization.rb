@@ -202,7 +202,7 @@ class Organization < ApplicationRecord
   end
 
   def from_email_address
-    return email if from_email_enabled?
+    return email if from_email_enabled? && email
 
     ENV["LAGO_FROM_EMAIL"]
   end
