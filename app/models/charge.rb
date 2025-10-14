@@ -119,6 +119,7 @@ class Charge < ApplicationRecord
   end
 
   # NOTE: A prorated charge cannot be created in the following cases:
+  # - for metered charges,
   # - for pay_in_arrears, price model cannot be package, graduated and percentage
   # - for pay_in_advance, price model cannot be package, graduated, percentage and volume
   # - for weighted_sum aggregation as it already apply pro-ration logic
