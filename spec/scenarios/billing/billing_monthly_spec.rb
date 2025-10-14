@@ -118,9 +118,8 @@ describe "Billing Monthly Scenarios with all charges types" do
       # we have 1 because we're starting having fixed_charges
       # but it will be empty now
       expect(subscription.reload.invoices.count).to eq(1)
-      expect(subscription.invoices.first.total_amount_cents).to eq(0)
-      # this will be a part of another PR:
-      # expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
+      pay_in_advance_fixed_charges_invoice = subscription.invoices.first
+      expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
 
       # 28th of Feb - before billing, no usage sent for usage charges
       time = DateTime.new(2024, 2, 28)
