@@ -142,3 +142,4 @@ payment_methods:
   view: true
   create:
   update:
+  delete:
