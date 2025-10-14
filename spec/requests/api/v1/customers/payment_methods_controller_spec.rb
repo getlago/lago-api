@@ -72,6 +72,17 @@ RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
       end
     end
 
+    context "with unknown payment method" do
+      subject { put_with_token(organization, "/api/v1/customers/#{external_id}/payment_methods/invalid/set_as_default") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq("payment_method_not_found")
+      end
+    end
+
     context "when payment method is already default" do
       let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
       let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: false) }
