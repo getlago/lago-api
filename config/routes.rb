@@ -43,10 +43,12 @@ Rails.application.routes.draw do
           resources :credit_notes, only: %i[index]
           resources :invoices, only: %i[index]
           resources :payments, only: %i[index]
-          resources :payment_methods, only: %i[index]
           resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
           resources :wallets, only: %i[index]
+          resources :payment_methods, only: %i[index] do
+            put :set_as_default, on: :member
+          end
         end
       end
 
