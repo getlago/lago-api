@@ -35,6 +35,7 @@ module Types
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :file_url, String, null: true
+      field :xml_url, String, null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :applied_taxes, [Types::CreditNotes::AppliedTaxes::Object]
