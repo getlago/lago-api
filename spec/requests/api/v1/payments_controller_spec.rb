@@ -35,7 +35,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
       include_examples "requires API permission", "payment", "write"
 
-      it "delegates to Payments::ManualCreateService", :aggregate_failures do
+      it "delegates to Payments::ManualCreateService" do
         subject
 
         expect(Payments::ManualCreateService).to have_received(:call).with(organization:, params:)
@@ -55,7 +55,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         }
       end
 
-      let(:error_details) { {amount_cents: %w[value_is_mandatory]} }
+      let(:error_details) { {amount_cents: %w[invalid_value]} }
 
       around { |test| lago_premium!(&test) }
 

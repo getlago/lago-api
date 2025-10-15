@@ -82,7 +82,7 @@ RSpec.describe Payments::ManualCreateService do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:amount_cents]).to eq(["value_is_mandatory"])
+          expect(result.error.messages[:amount_cents]).to eq(["invalid_value"])
         end
       end
 
