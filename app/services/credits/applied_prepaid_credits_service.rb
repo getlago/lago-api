@@ -66,11 +66,11 @@ module Credits
           result.prepaid_credit_amount_cents += total_amount_cents
           invoice.prepaid_credit_amount_cents += total_amount_cents
         end
-        # Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
-        schedule_webhook_notifications(result.wallet_transactions)
+        #Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
         invoice.save! if invoice.changed?
       end
 
+      schedule_webhook_notifications(result.wallet_transactions)
       result
     end
 
@@ -80,11 +80,9 @@ module Credits
     delegate :customer, to: :invoice
 
     def schedule_webhook_notifications(wallet_transactions)
-      ActiveRecord::Base.after_commit do
-        wallet_transactions.each do |wt|
-          Utils::ActivityLog.produce(wt, "wallet_transaction.created")
-          SendWebhookJob.perform_later("wallet_transaction.created", wt)
-        end
+      wallet_transactions.each do |wt|
+        Utils::ActivityLog.produce(wt, "wallet_transaction.created")
+        SendWebhookJob.perform_later("wallet_transaction.created", wt)
       end
     end
 
