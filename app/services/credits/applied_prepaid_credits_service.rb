@@ -80,7 +80,7 @@ module Credits
     delegate :customer, to: :invoice
 
     def schedule_webhook_notifications(wallet_transactions)
-      ActiveRecord::Base.connection.after_commit do
+      ActiveRecord.after_commit do
         wallet_transactions.each do |wt|
           Utils::ActivityLog.produce(wt, "wallet_transaction.created")
           SendWebhookJob.perform_later("wallet_transaction.created", wt)
