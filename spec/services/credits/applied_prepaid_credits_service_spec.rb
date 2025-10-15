@@ -107,7 +107,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     it "produces an activity log" do
       wallet_transaction = described_class.call(invoice:, wallets:).wallet_transactions.first
 
-      expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
+      expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").with(wallet_transaction)
     end
 
     context "when priority wallet credits are less than invoice amount" do
