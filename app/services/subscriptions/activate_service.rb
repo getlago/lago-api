@@ -21,6 +21,11 @@ module Subscriptions
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
 
+          EmitFixedChargeEventsService.call!(
+            subscriptions: [subscription],
+            timestamp: subscription.started_at
+          )
+
           if subscription.should_sync_hubspot_subscription?
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
           end

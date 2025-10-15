@@ -124,6 +124,16 @@ RSpec.describe Subscriptions::UpdateService do
           end
         end
       end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+        before { fixed_charge }
+
+        it "does not create fixed charge events" do
+          expect { update_service.call }.not_to change(FixedChargeEvent, :count)
+        end
+      end
     end
 
     context "when subscription is starting in the future" do
@@ -152,6 +162,18 @@ RSpec.describe Subscriptions::UpdateService do
           it "does not enqueue a job to bill the subscription" do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
+
+          context "when plan has fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+            before { fixed_charge }
+
+            it "creates fixed charge events" do
+              expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
+              expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+                .to match_array([[fixed_charge.id, subscription.started_at]])
+            end
+          end
         end
 
         context "when subscription date is set to today" do
@@ -175,6 +197,18 @@ RSpec.describe Subscriptions::UpdateService do
             expect { update_service.call }.to have_enqueued_job_after_commit(BillSubscriptionJob)
               .with([subscription], Time.now.to_i, invoicing_reason: :subscription_starting)
           end
+
+          context "when plan has fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+            before { fixed_charge }
+
+            it "creates fixed charge events" do
+              expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
+              expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+                .to match_array([[fixed_charge.id, subscription.started_at]])
+            end
+          end
         end
 
         context "when subscription_at is set to future date" do
@@ -191,6 +225,16 @@ RSpec.describe Subscriptions::UpdateService do
           it "does not enqueue billing job" do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
+
+          context "when plan has fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+            before { fixed_charge }
+
+            it "does not create fixed charge events" do
+              expect { update_service.call }.not_to change(FixedChargeEvent, :count)
+            end
+          end
         end
       end
 
@@ -200,6 +244,18 @@ RSpec.describe Subscriptions::UpdateService do
 
           it "does not enqueue billing job" do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          context "when plan has fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+
+            before { fixed_charge }
+
+            it "creates fixed charge events" do
+              expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
+              expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+                .to match_array([[fixed_charge.id, be_within(5.seconds).of(Time.current)]])
+            end
           end
         end
       end

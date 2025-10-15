@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe FixedCharges::UpdateService do
   subject(:update_service) { described_class.new(fixed_charge:, params:, cascade_options:) }
 
-  let(:plan) { create(:plan) }
-  let(:add_on) { create(:add_on, organization: plan.organization) }
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
 
   let(:fixed_charge) do
     create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false, units: 10)
@@ -200,6 +201,80 @@ RSpec.describe FixedCharges::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.error_code).to eq("tax_not_found")
+        end
+      end
+
+      context "when units have been changed" do
+        let(:params) do
+          {
+            charge_model: "standard",
+            apply_units_immediately: true,
+            units: fixed_charge.units + 15,
+            properties: {amount: "200"}
+          }
+        end
+
+        before do
+          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .to receive(:call!)
+        end
+
+        it "emits fixed charge events for all active subscriptions" do
+          result
+
+          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .to have_received(:call!)
+            .with(
+              fixed_charge: result.fixed_charge,
+              apply_units_immediately: true
+            )
+            .once
+        end
+
+        context "when apply_units_immediately is false" do
+          let(:params) do
+            {
+              charge_model: "standard",
+              apply_units_immediately: false,
+              units: fixed_charge.units + 15,
+              properties: {amount: "200"}
+            }
+          end
+
+          it "emits fixed charge events for all active subscriptions" do
+            result
+
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to have_received(:call!)
+              .with(
+                fixed_charge: result.fixed_charge,
+                apply_units_immediately: false
+              )
+              .once
+          end
+        end
+      end
+
+      context "when units does not change" do
+        let(:params) do
+          {
+            charge_model: "standard",
+            apply_units_immediately: true,
+            units: fixed_charge.units,
+            properties: {amount: "200"}
+          }
+        end
+
+        before do
+          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .to receive(:call!)
+        end
+
+        it "does not emit any fixed charge events" do
+          result
+
+          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .not_to have_received(:call!)
         end
       end
     end

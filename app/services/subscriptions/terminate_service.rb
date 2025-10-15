@@ -76,6 +76,12 @@ module Subscriptions
         end
 
         next_subscription.mark_as_active!(rotation_date)
+
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [next_subscription],
+          timestamp: next_subscription.started_at
+        )
+
         if next_subscription.should_sync_hubspot_subscription?
           Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(next_subscription)
         end
