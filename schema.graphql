@@ -2443,6 +2443,7 @@ input CreateAdjustedFeeInput {
   """
   clientMutationId: String
   feeId: ID
+  fixedChargeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
   invoiceSubscriptionId: ID
@@ -5221,6 +5222,7 @@ type Fee implements InvoiceItem {
   description: String
   eventsCount: BigInt
   feeType: FeeTypesEnum!
+  fixedCharge: FixedCharge
   groupedBy: JSON!
   id: ID!
   invoiceDisplayName: String
@@ -8238,6 +8240,7 @@ input PreviewAdjustedFeeInput {
   """
   clientMutationId: String
   feeId: ID
+  fixedChargeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
   invoiceSubscriptionId: ID
