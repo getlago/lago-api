@@ -161,7 +161,8 @@ module Api
             :charge_model,
             :pay_in_advance,
             :prorated,
-            {properties: {}}
+            {properties: {}},
+            {tax_codes: []},
           ],
           usage_thresholds: [
             :id,
