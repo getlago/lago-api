@@ -469,9 +469,44 @@ type AiConversation {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+AiConversationCollection type
+"""
+type AiConversationCollection {
+  """
+  A collection of paginated AiConversationCollection
+  """
+  collection: [AiConversation!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type AiConversationMessage {
+  content: String!
+  createdAt: ISO8601DateTime!
+  type: String!
+}
+
 type AiConversationStream {
   chunk: String
   done: Boolean!
+}
+
+type AiConversationWithMessages {
+  createdAt: ISO8601DateTime!
+  id: ID!
+
+  """
+  Messages belonging to this conversation
+  """
+  messages: [AiConversationMessage!]!
+  mistralConversationId: String
+  name: String!
+  organization: Organization!
+  updatedAt: ISO8601DateTime!
 }
 
 type Alert {
@@ -8422,6 +8457,21 @@ type Query {
   Query add-ons of an organization
   """
   addOns(limit: Int, page: Int, searchTerm: String): AddOnCollection!
+
+  """
+  Query a single ai conversation of an organization
+  """
+  aiConversation(
+    """
+    Uniq ID of the ai conversation
+    """
+    id: ID!
+  ): AiConversationWithMessages
+
+  """
+  Query the latest AI conversations of current organization
+  """
+  aiConversations(limit: Int): AiConversationCollection
 
   """
   Query a single alert
