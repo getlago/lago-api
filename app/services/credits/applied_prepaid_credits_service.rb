@@ -20,7 +20,7 @@ module Credits
       result.wallet_transactions ||= []
 
       ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
-      wallets.includes(:wallet_targets).find_each do |wallet|
+      wallets.each do |wallet|
         wallet_fee_transactions = []
         wallet_targets_array = wallet.wallet_targets.map do |wt|
           if wt&.billable_metric_id
