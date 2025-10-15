@@ -26,22 +26,47 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
     let(:payment) { create(:payment, payable: invoice) }
 
-    before do
-      allow(Payments::ManualCreateService).to receive(:call).and_return(
-        BaseService::Result.new.tap { |r| r.payment = payment }
-      )
+    context "when all parameters are valid" do
+      before do
+        allow(Payments::ManualCreateService).to receive(:call).and_return(
+          BaseService::Result.new.tap { |r| r.payment = payment }
+        )
+      end
+
+      include_examples "requires API permission", "payment", "write"
+
+      it "delegates to Payments::ManualCreateService" do
+        subject
+
+        expect(Payments::ManualCreateService).to have_received(:call).with(organization:, params:)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment][:lago_id]).to eq(payment.id)
+        expect(json[:payment][:invoice_ids].first).to eq(payment.payable.id)
+      end
     end
 
-    include_examples "requires API permission", "payment", "write"
+    context "when amount_cents is missing or misspelled" do
+      let(:params) do
+        {
+          invoice_id: invoice.id,
+          amount_in_cents: 100,
+          reference: "ref1"
+        }
+      end
 
-    it "delegates to Payments::ManualCreateService", :aggregate_failures do
-      subject
+      let(:error_details) { {amount_cents: %w[invalid_value]} }
 
-      expect(Payments::ManualCreateService).to have_received(:call).with(organization:, params:)
+      around { |test| lago_premium!(&test) }
 
-      expect(response).to have_http_status(:success)
-      expect(json[:payment][:lago_id]).to eq(payment.id)
-      expect(json[:payment][:invoice_ids].first).to eq(payment.payable.id)
+      it "returns a bad request error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details]).to eq(error_details)
+      end
     end
   end
 
