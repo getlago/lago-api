@@ -365,6 +365,15 @@ class Invoice < ApplicationRecord
     subscription_from != charges_from && subscription_to != charges_to
   end
 
+  def different_boundaries_for_subscription_and_fixed_charges(subscription)
+    subscription_from = invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
+    subscription_to = invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
+    fixed_charges_from = invoice_subscription(subscription.id).fixed_charges_from_datetime_in_customer_timezone&.to_date
+    fixed_charges_to = invoice_subscription(subscription.id).fixed_charges_to_datetime_in_customer_timezone&.to_date
+
+    subscription_from != fixed_charges_from && subscription_to != fixed_charges_to
+  end
+
   def mark_as_dispute_lost!(timestamp = Time.current)
     self.payment_dispute_lost_at ||= timestamp
     self.payment_overdue = false
