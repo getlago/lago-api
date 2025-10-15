@@ -383,11 +383,9 @@ RSpec.describe Organization do
     context "when organization from_email integration is enabled" do
       around { |test| lago_premium!(&test) }
 
-      it "returns the organization email if set" do
+      it "returns the organization email" do
         organization.update!(premium_integrations: ["from_email"])
         expect(organization.from_email_address).to eq(organization.email)
-        organization.update!(email: nil)
-        expect(organization.from_email_address).to eq("noreply@getlago.com")
       end
     end
   end
