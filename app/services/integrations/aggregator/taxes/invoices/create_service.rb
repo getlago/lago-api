@@ -25,7 +25,7 @@ module Integrations
             result
           rescue LagoHttpClient::HttpError => e
             raise Integrations::Aggregator::RequestLimitError(e) if request_limit_error?(e)
-            raise e if bad_gateway_error?(e)
+            raise Integrations::Aggregator::BadGatewayError.new(e.error_body, e.uri) if bad_gateway_error?(e)
 
             code = code(e)
             message = message(e)
