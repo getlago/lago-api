@@ -66,7 +66,7 @@ module Credits
           result.prepaid_credit_amount_cents += total_amount_cents
           invoice.prepaid_credit_amount_cents += total_amount_cents
         end
-        #Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
+        # Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
         invoice.save! if invoice.changed?
       end
 
