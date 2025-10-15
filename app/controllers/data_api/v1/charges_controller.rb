@@ -39,7 +39,7 @@ module DataApi
 
           percentile_results = {}
 
-          [:units_10th, :units_50th, :units_90th].each do |percentile_key|
+          [:units_conservative, :units_realistic, :units_optimistic].each do |percentile_key|
             units = charge_data[percentile_key]
             next unless units
 
@@ -50,7 +50,7 @@ module DataApi
             )
 
             if result.success?
-              suffix = percentile_key.to_s.gsub("units_", "").gsub("th", "th_percentile")
+              suffix = percentile_key.to_s.gsub("units_", "")
               percentile_results["charge_amount_cents_#{suffix}"] = result.charge_amount_cents * 100
               percentile_results["subscription_amount_cents_#{suffix}"] = result.subscription_amount_cents * 100
               percentile_results["total_amount_cents_#{suffix}"] = result.total_amount_cents * 100

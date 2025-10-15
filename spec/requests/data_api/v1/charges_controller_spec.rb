@@ -44,16 +44,16 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
             record_id: 1,
             charge_id: charge1.id,
             charge_filter_id: charge_filter.id,
-            units_10th: 100,
-            units_50th: 500,
-            units_90th: 1000
+            units_conservative: 100,
+            units_realistic: 500,
+            units_optimistic: 1000
           },
           {
             record_id: 2,
             charge_id: charge2.id,
-            units_10th: 200,
-            units_50th: 600,
-            units_90th: 1200
+            units_conservative: 200,
+            units_realistic: 600,
+            units_optimistic: 1200
           }
         ]
       }
@@ -92,9 +92,9 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           expect(first_result[:record_id]).to eq(1)
           expect(first_result[:charge_id]).to eq(charge1.id)
           expect(first_result[:charge_filter_id]).to eq(charge_filter.id)
-          expect(first_result).to have_key(:charge_amount_cents_10th_percentile)
-          expect(first_result).to have_key(:charge_amount_cents_50th_percentile)
-          expect(first_result).to have_key(:charge_amount_cents_90th_percentile)
+          expect(first_result).to have_key(:charge_amount_cents_conservative)
+          expect(first_result).to have_key(:charge_amount_cents_realistic)
+          expect(first_result).to have_key(:charge_amount_cents_optimistic)
 
           second_result = json_response[:results].second
           expect(second_result[:record_id]).to eq(2)
@@ -129,7 +129,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
               {
                 record_id: 3,
                 charge_id: "nonexistent",
-                units_10th: 100
+                units_conservative: 100
               }
             ]
           }
@@ -159,7 +159,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
                 record_id: 4,
                 charge_id: charge1.id,
                 charge_filter_id: "nonexistent",
-                units_10th: 100
+                units_conservative: 100
               }
             ]
           }
@@ -199,12 +199,12 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
               {
                 record_id: 5,
                 charge_id: charge1.id,
-                units_10th: 100
+                units_conservative: 100
               },
               {
                 record_id: 6,
                 charge_id: "nonexistent",
-                units_10th: 200
+                units_conservative: 200
               }
             ]
           }
