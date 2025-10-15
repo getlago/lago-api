@@ -12,6 +12,8 @@ module V1
           subscription_to_datetime: model.to_datetime.iso8601,
           charges_from_datetime: model.charges_from_datetime.iso8601,
           charges_to_datetime: model.charges_to_datetime.iso8601,
+          fixed_charges_from_datetime: model.fixed_charges_from_datetime.iso8601,
+          fixed_charges_to_datetime: model.fixed_charges_to_datetime.iso8601,
           invoicing_reason: model.invoicing_reason
         }
       end

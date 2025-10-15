@@ -15,6 +15,8 @@ FactoryBot.define do
       to_datetime { timestamp.end_of_month }
       charges_from_datetime { from_datetime - 1.month }
       charges_to_datetime { to_datetime.end_of_month }
+      fixed_charges_from_datetime { from_datetime.beginning_of_month }
+      fixed_charges_to_datetime { to_datetime.end_of_month }
     end
   end
 end

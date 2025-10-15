@@ -18,6 +18,8 @@ RSpec.describe ::V1::Invoices::BillingPeriodSerializer do
       expect(result["billing_period"]["subscription_to_datetime"]).to eq(invoice_subscription.to_datetime.iso8601)
       expect(result["billing_period"]["charges_from_datetime"]).to eq(invoice_subscription.charges_from_datetime.iso8601)
       expect(result["billing_period"]["charges_to_datetime"]).to eq(invoice_subscription.charges_to_datetime.iso8601)
+      expect(result["billing_period"]["fixed_charges_from_datetime"]).to eq(invoice_subscription.fixed_charges_from_datetime.iso8601)
+      expect(result["billing_period"]["fixed_charges_to_datetime"]).to eq(invoice_subscription.fixed_charges_to_datetime.iso8601)
       expect(result["billing_period"]["invoicing_reason"]).to eq(invoice_subscription.invoicing_reason)
     end
   end
