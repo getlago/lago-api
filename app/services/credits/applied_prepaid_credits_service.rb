@@ -19,53 +19,58 @@ module Credits
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
 
-      ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
-      wallets.each do |wallet|
-        wallet_fee_transactions = []
-        wallet_targets_array = wallet.wallet_targets.map do |wt|
-          if wt&.billable_metric_id
-            ["charge", wt.billable_metric_id]
+      ActiveRecord::Base.transaction do
+        ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
+        wallets.each do |wallet|
+          wallet.reload
+          wallet_fee_transactions = []
+          wallet_targets_array = wallet.wallet_targets.map do |wt|
+            if wt&.billable_metric_id
+              ["charge", wt.billable_metric_id]
+            end
           end
+          wallet_types_array = wallet.allowed_fee_types
+
+          ordered_remaining_amounts.each do |fee_key, remaining_amount|
+            next if remaining_amount <= 0
+            target_match = wallet_targets_array.include?(fee_key)
+            type_match = wallet_types_array.include?(fee_key.first)
+            unrestricted_wallet = wallet_targets_array.empty? && wallet_types_array.empty?
+            should_apply_wallet_on_this_fee = target_match || type_match || unrestricted_wallet
+
+            next unless should_apply_wallet_on_this_fee
+
+            used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
+            remaining_wallet_balance = wallet.balance_cents - used_amount
+            next if remaining_wallet_balance <= 0
+
+            transaction_amount = [remaining_amount, remaining_wallet_balance].min
+            next if transaction_amount <= 0
+
+            ordered_remaining_amounts[fee_key] -= transaction_amount
+            wallet_fee_transactions << {
+              fee_key: fee_key,
+              amount_cents: transaction_amount
+            }
+          end
+
+          total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
+          next if total_amount_cents <= 0
+
+          wallet_transaction = create_and_decrease!(
+            wallet: wallet,
+            amount_cents: total_amount_cents,
+            invoice: invoice
+          )
+          result.wallet_transactions << wallet_transaction
+          result.prepaid_credit_amount_cents += total_amount_cents
+          invoice.prepaid_credit_amount_cents += total_amount_cents
         end
-        wallet_types_array = wallet.allowed_fee_types
-
-        ordered_remaining_amounts.each do |fee_key, remaining_amount|
-          next if remaining_amount <= 0
-          target_match = wallet_targets_array.include?(fee_key)
-          type_match = wallet_types_array.include?(fee_key.first)
-          unrestricted_wallet = wallet_targets_array.empty? && wallet_types_array.empty?
-          should_apply_wallet_on_this_fee = target_match || type_match || unrestricted_wallet
-
-          next unless should_apply_wallet_on_this_fee
-
-          used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
-          remaining_wallet_balance = wallet.balance_cents - used_amount
-          next if remaining_wallet_balance <= 0
-
-          transaction_amount = [remaining_amount, remaining_wallet_balance].min
-          next if transaction_amount <= 0
-
-          ordered_remaining_amounts[fee_key] -= transaction_amount
-          wallet_fee_transactions << {
-            fee_key: fee_key,
-            amount_cents: transaction_amount
-          }
-        end
-
-        total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
-        next if total_amount_cents <= 0
-
-        wallet_transaction = create_and_decrease!(
-          wallet: wallet,
-          amount_cents: total_amount_cents,
-          invoice: invoice
-        )
-        result.wallet_transactions << wallet_transaction
-        result.prepaid_credit_amount_cents += total_amount_cents
-        invoice.prepaid_credit_amount_cents += total_amount_cents
+        # Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
+        schedule_webhook_notifications(result.wallet_transactions)
+        invoice.save! if invoice.changed?
       end
 
-      invoice.save! if invoice.changed?
       result
     end
 
@@ -73,6 +78,15 @@ module Credits
 
     attr_accessor :invoice, :wallets, :customer
     delegate :customer, to: :invoice
+
+    def schedule_webhook_notifications(wallet_transactions)
+      ActiveRecord::Base.connection.after_commit do
+        wallet_transactions.each do |wt|
+          Utils::ActivityLog.produce(wt, "wallet_transaction.created")
+          SendWebhookJob.perform_later("wallet_transaction.created", wt)
+        end
+      end
+    end
 
     def calculate_amounts_for_fees_by_type_and_bm
       remaining = Hash.new(0)
@@ -114,8 +128,6 @@ module Credits
       begin
         decrease_attempt += 1
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction: wallet_transaction).call
-        Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.created", after_commit: true)
-        after_commit { SendWebhookJob.perform_later("wallet_transaction.created", wallet_transaction) }
       rescue ActiveRecord::StaleObjectError
         if decrease_attempt <= MAX_WALLET_DECREASE_ATTEMPTS
           sleep(rand(0.1..0.5))
