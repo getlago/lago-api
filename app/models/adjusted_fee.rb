@@ -5,6 +5,7 @@ class AdjustedFee < ApplicationRecord
   belongs_to :subscription
   belongs_to :fee, optional: true
   belongs_to :charge, optional: true
+  belongs_to :fixed_charge, optional: true
   belongs_to :charge_with_discarded,
     -> { with_discarded },
     class_name: "Charge",
