@@ -24,5 +24,13 @@ FactoryBot.define do
 
       invoice { association(:invoice, customer:, organization: customer.organization) }
     end
+
+    trait :with_credit_note do
+      transient do
+        customer { association(:customer) }
+      end
+
+      credit_note { association(:credit_note, customer:, invoice:, organization: customer.organization) }
+    end
   end
 end

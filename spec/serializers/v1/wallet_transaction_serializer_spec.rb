@@ -8,16 +8,17 @@ RSpec.describe ::V1::WalletTransactionSerializer do
   end
 
   let(:wallet_transaction) { create(:wallet_transaction) }
+  let(:includes) { [] }
 
   context "when includes is empty" do
-    let(:includes) { [] }
-
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
 
       expect(result["wallet_transaction"]).to include(
         "lago_id" => wallet_transaction.id,
         "lago_wallet_id" => wallet_transaction.wallet_id,
+        "lago_invoice_id" => nil,
+        "lago_credit_note_id" => nil,
         "status" => wallet_transaction.status,
         "source" => wallet_transaction.source,
         "transaction_status" => wallet_transaction.transaction_status,
@@ -30,6 +31,19 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "invoice_requires_successful_payment" => wallet_transaction.invoice_requires_successful_payment?,
         "metadata" => wallet_transaction.metadata,
         "name" => "Custom Transaction Name"
+      )
+    end
+  end
+
+  context "when transaction has an invoice and a credit note" do
+    let(:wallet_transaction) { create(:wallet_transaction, :with_invoice, :with_credit_note) }
+
+    it "serializes the invoice id" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]).to include(
+        "lago_invoice_id" => wallet_transaction.invoice.id,
+        "lago_credit_note_id" => wallet_transaction.credit_note.id
       )
     end
   end

@@ -6,6 +6,8 @@ module V1
       payload = {
         lago_id: model.id,
         lago_wallet_id: model.wallet_id,
+        lago_invoice_id: model.invoice_id,
+        lago_credit_note_id: model.credit_note_id,
         status: model.status,
         source: model.source,
         transaction_status: model.transaction_status,
