@@ -38,7 +38,7 @@ module ChargeFilters
       #         }
       #       ]
       result.ignored_filters = children.map do |child|
-        res = child.to_h_with_all_values
+        res = child.to_h_with_all_values.dup
 
         if res.keys == result.matching_filters.keys
           # NOTE: when child and filter have the same keys, we need to remove the filter value from the child

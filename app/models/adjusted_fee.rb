@@ -5,6 +5,7 @@ class AdjustedFee < ApplicationRecord
   belongs_to :subscription
   belongs_to :fee, optional: true
   belongs_to :charge, optional: true
+  belongs_to :fixed_charge, optional: true
   belongs_to :charge_with_discarded,
     -> { with_discarded },
     class_name: "Charge",
@@ -50,6 +51,7 @@ end
 #  charge_filter_id          :uuid
 #  charge_id                 :uuid
 #  fee_id                    :uuid
+#  fixed_charge_id           :uuid
 #  group_id                  :uuid
 #  invoice_id                :uuid             not null
 #  organization_id           :uuid             not null
@@ -69,6 +71,7 @@ end
 #
 #  fk_rails_...  (charge_id => charges.id)
 #  fk_rails_...  (fee_id => fees.id)
+#  fk_rails_...  (fixed_charge_id => fixed_charges.id)
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)

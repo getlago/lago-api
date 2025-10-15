@@ -46,6 +46,7 @@ class Organization < ApplicationRecord
   has_many :daily_usages
   has_many :invites
   has_many :integrations, class_name: "Integrations::BaseIntegration"
+  has_many :payment_methods
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_requests
   has_many :taxes
@@ -121,6 +122,7 @@ class Organization < ApplicationRecord
     analytics_dashboards
     forecasted_usage
     projected_usage
+    clickhouse_live_aggregation
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze

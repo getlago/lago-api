@@ -394,18 +394,7 @@ html
           .body-2 = customer.display_name
           - if customer.legal_number.present?
             .body-2 #{customer.legal_number}
-          .body-2 = customer.address_line1
-          .body-2 = customer.address_line2
-          .body-2
-            span
-              = customer.zipcode
-            - if customer.zipcode.present? && customer.city.present?
-              span
-                | , &nbsp;
-            span
-              = customer.city
-          .body-2 = customer.state
-          .body-2 = ISO3166::Country.new(customer.country)&.common_name
+          == SlimHelper.render('templates/invoices/v4/_customer_address', self)
           .body-2 = customer.email
           - if customer.tax_identification_number.present?
             .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)

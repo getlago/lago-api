@@ -74,6 +74,18 @@ RSpec.describe Payments::ManualCreateService do
         end
       end
 
+      context "when amount_cents in missing" do
+        let(:params) { {invoice_id:, amount_in_cents: 123, reference: "ref1", paid_at:} }
+
+        it "returns a validation failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:amount_cents]).to eq(["invalid_value"])
+        end
+      end
+
       context "when paid_at format is invalid" do
         let(:paid_at) { "invalid_date" }
 

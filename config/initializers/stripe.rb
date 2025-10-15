@@ -9,5 +9,4 @@ Stripe.api_version = ENV.fetch("STRIPE_API_VERSION", "2025-04-30.basil")
 # The key should never be set outside of development env
 if Rails.env.development?
   Stripe.api_key = ENV["STRIPE_API_KEY"]
-  Stripe.log_level = Logger::DEBUG
 end

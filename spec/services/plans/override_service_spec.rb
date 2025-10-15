@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Plans::OverrideService do
-  subject(:override_service) { described_class.new(plan: parent_plan, params:) }
+  subject(:override_service) { described_class.new(plan: parent_plan, params:, subscription:) }
+
+  let(:subscription) { nil }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -113,7 +115,7 @@ RSpec.describe Plans::OverrideService do
       filter_value
     end
 
-    it "creates a plan based from the parent plan", :aggregate_failures do
+    it "creates a plan based from the parent plan" do
       expect { override_service.call }.to change(Plan, :count).by(1)
 
       plan = Plan.order(:created_at).last
@@ -180,7 +182,7 @@ RSpec.describe Plans::OverrideService do
       )
     end
 
-    it "creates charges based from the parent plan", :aggregate_failures do
+    it "creates charges based from the parent plan" do
       charge2 = create(
         :graduated_charge,
         plan: parent_plan,
@@ -240,6 +242,54 @@ RSpec.describe Plans::OverrideService do
       it "returns error", :aggregate_failures do
         expect { override_service.call }.not_to change(Plan, :count)
         expect(override_service.call).not_to be_success
+      end
+    end
+
+    context "when subscription parameter is provided" do
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, plan: parent_plan, customer:) }
+
+      it "creates a plan successfully with subscription parameter" do
+        expect { override_service.call }.to change(Plan, :count).by(1)
+
+        result = override_service.call
+        expect(result).to be_success
+        expect(result.plan.parent_id).to eq(parent_plan.id)
+      end
+
+      context "when fixed charge has apply_units_immediately set to true" do
+        let(:fixed_charges_params) do
+          [
+            {
+              id: fixed_charge.id,
+              properties: {amount: "1000"},
+              units: 25,
+              apply_units_immediately: true
+            }
+          ]
+        end
+
+        before do
+          allow(FixedCharges::OverrideService).to receive(:call).and_call_original
+        end
+
+        it "passes subscription parameter to FixedCharges::OverrideService" do
+          override_service.call
+
+          expect(FixedCharges::OverrideService)
+            .to have_received(:call)
+            .with(
+              fixed_charge: fixed_charge,
+              params: {
+                id: fixed_charge.id,
+                properties: {amount: "1000"},
+                units: 25,
+                apply_units_immediately: true,
+                plan_id: kind_of(String)
+              },
+              subscription: subscription
+            )
+        end
       end
     end
   end

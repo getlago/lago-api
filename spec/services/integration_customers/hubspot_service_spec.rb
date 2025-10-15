@@ -19,22 +19,17 @@ RSpec.describe IntegrationCustomers::HubspotService do
       result.email = customer.email
       result
     end
-    let(:aggregator_contacts_create_service) do
-      instance_double(Integrations::Aggregator::Contacts::CreateService)
-    end
 
     before do
       allow(Integrations::Aggregator::Contacts::CreateService)
-        .to receive(:new).and_return(aggregator_contacts_create_service)
-
-      allow(aggregator_contacts_create_service).to receive(:call).and_return(create_result)
+        .to receive(:call).and_return(create_result)
     end
 
     it "returns integration customer" do
       result = service_call
 
       aggregate_failures do
-        expect(aggregator_contacts_create_service).to have_received(:call)
+        expect(Integrations::Aggregator::Contacts::CreateService).to have_received(:call)
         expect(result).to be_success
         expect(result.integration_customer.external_customer_id).to eq(contact_id)
         expect(result.integration_customer.integration_id).to eq(integration.id)

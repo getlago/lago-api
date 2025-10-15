@@ -13,6 +13,8 @@ module Types
     field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :ai_conversation, resolver: Resolvers::AiConversationResolver
+    field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::UsageMonitoring::AlertResolver
     field :alerts, resolver: Resolvers::UsageMonitoring::SubscriptionAlertsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
@@ -73,6 +75,7 @@ module Types
     field :overdue_balances, resolver: Resolvers::Analytics::OverdueBalancesResolver
     field :password_reset, resolver: Resolvers::PasswordResetResolver
     field :payment, resolver: Resolvers::PaymentResolver
+    field :payment_methods, resolver: Resolvers::PaymentMethodsResolver
     field :payment_provider, resolver: Resolvers::PaymentProviderResolver
     field :payment_providers, resolver: Resolvers::PaymentProvidersResolver
     field :payment_requests, resolver: Resolvers::PaymentRequestsResolver

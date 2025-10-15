@@ -117,6 +117,13 @@ module Subscriptions
         new_subscription.mark_as_active!
       end
 
+      if new_subscription.active?
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [new_subscription],
+          timestamp: new_subscription.started_at
+        )
+      end
+
       if should_be_billed_today?(new_subscription)
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
@@ -146,9 +153,7 @@ module Subscriptions
     end
 
     def upgrade_subscription
-      PlanUpgradeService.call(current_subscription:, plan:, params:).tap do |result|
-        result.raise_if_error!
-      end.subscription
+      PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription
     end
 
     def downgrade_subscription

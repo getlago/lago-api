@@ -36,10 +36,6 @@ RSpec.describe IntegrationCustomers::CreateService do
         result
       end
 
-      let(:aggregator_contacts_create_service) do
-        instance_double(Integrations::Aggregator::Contacts::CreateService)
-      end
-
       let(:integration_customer) { IntegrationCustomers::BaseCustomer.last }
 
       around { |test| lago_premium!(&test) }
@@ -48,9 +44,7 @@ RSpec.describe IntegrationCustomers::CreateService do
         organization.update!(premium_integrations: ["netsuite"])
 
         allow(Integrations::Aggregator::Contacts::CreateService)
-          .to receive(:new).and_return(aggregator_contacts_create_service)
-
-        allow(aggregator_contacts_create_service).to receive(:call).and_return(create_result)
+          .to receive(:call).and_return(create_result)
       end
 
       context "when sync with provider is true" do
@@ -63,7 +57,7 @@ RSpec.describe IntegrationCustomers::CreateService do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_create_service).not_to have_received(:call)
+              expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
               expect(result.integration_customer.external_customer_id).to eq(external_customer_id)
@@ -82,7 +76,7 @@ RSpec.describe IntegrationCustomers::CreateService do
               result = service_call
 
               aggregate_failures do
-                expect(aggregator_contacts_create_service).not_to have_received(:call)
+                expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
                 expect(result).to be_success
                 expect(result.integration_customer).to eq(integration_customer)
                 expect(result.integration_customer.external_customer_id).to eq(external_customer_id)
@@ -99,7 +93,7 @@ RSpec.describe IntegrationCustomers::CreateService do
             result = service_call
 
             aggregate_failures do
-              expect(aggregator_contacts_create_service).to have_received(:call)
+              expect(Integrations::Aggregator::Contacts::CreateService).to have_received(:call)
               expect(result).to be_success
               expect(result.integration_customer).to eq(integration_customer)
             end
@@ -136,7 +130,7 @@ RSpec.describe IntegrationCustomers::CreateService do
           it "does not calls aggregator create service" do
             service_call
 
-            expect(aggregator_contacts_create_service).not_to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
           end
 
           it "creates integration customer" do
@@ -150,7 +144,7 @@ RSpec.describe IntegrationCustomers::CreateService do
           it "does not calls aggregator create service" do
             service_call
 
-            expect(aggregator_contacts_create_service).not_to have_received(:call)
+            expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
           end
 
           it "does not create integration customer" do

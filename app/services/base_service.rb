@@ -4,8 +4,9 @@ class BaseService
   include AfterCommitEverywhere
 
   # rubocop:disable ThreadSafety/ClassAndModuleAttributes
-  class_attribute :activity_log_config, instance_writer: false, default: nil
+  class_attribute :middlewares, instance_writer: false, default: []
   # rubocop:enable ThreadSafety/ClassAndModuleAttributes
+
   class FailedResult < StandardError
     attr_reader :result, :original_error
 
@@ -150,19 +151,32 @@ class BaseService
   Result = LegacyResult
 
   def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: true)
-    self.activity_log_config = {action:, record:, condition:, after_commit:}
+    use(Middlewares::ActivityLogMiddleware, action:, record:, condition:, after_commit:)
   end
 
-  def self.call(*, **, &)
-    LagoTracer.in_span("#{name}#call") do
-      instance = new(*, **)
+  # Register a new middleware
+  def self.use(middleware_class, *args, on_conflict: :raise, **kwargs)
+    existing_middleware = middlewares.map(&:first)
 
-      if instance.try(:produce_activity_log?)
-        instance.call_with_activity_log(&)
-      else
-        instance.call(&)
-      end
+    if !existing_middleware.include?(middleware_class) || on_conflict == :append
+      return self.middlewares += [[middleware_class, args, kwargs]]
     end
+
+    # Middleware already exists
+    case on_conflict
+    when :raise
+      raise Middlewares::AlreadyAddedError.new(middleware_class, self)
+    when :replace
+      self.middlewares[existing_middleware.index(middleware_class)] = [middleware_class, args, kwargs]
+    when :ignore
+      # Do nothing
+    end
+  end
+
+  use(Middlewares::LogTracerMiddleware)
+
+  def self.call(*, **, &)
+    new(*, **).call_with_middlewares(&)
   end
 
   def self.call_async(*, **, &)
@@ -192,27 +206,10 @@ class BaseService
     raise NotImplementedError
   end
 
-  def produce_activity_log?
-    return false if activity_log_config.nil?
+  def call_with_middlewares(&block)
+    chain = init_middlewares
 
-    instance_exec(&self.class.activity_log_config[:condition])
-  end
-
-  def call_with_activity_log(&block)
-    action = self.class.activity_log_config[:action]
-    after_commit = self.class.activity_log_config[:after_commit]
-    kwargs = {after_commit:}.compact
-
-    case action
-    when /updated/
-      record = instance_exec(&self.class.activity_log_config[:record])
-      Utils::ActivityLog.produce(record, action, **kwargs) { call(&block) }
-    else
-      call(&block).tap do |result|
-        record = instance_exec(&self.class.activity_log_config[:record])
-        Utils::ActivityLog.produce(record, action, **kwargs) { result }
-      end
-    end
+    chain.call { call(&block) }
   end
 
   protected
@@ -233,5 +230,21 @@ class BaseService
 
   def at_time_zone(customer: "customers", billing_entity: "billing_entities")
     Utils::Timezone.at_time_zone_sql(customer:, billing_entity:)
+  end
+
+  def init_middlewares
+    stack = lambda { |&block| block.call }
+
+    # Initialize middlewares in reverse order (Rake like approach)
+    self.class.middlewares.reverse_each do |middleware_klass, args, kwargs|
+      current_stack = stack
+
+      stack = lambda do |&block|
+        middleware = middleware_klass.new(self, current_stack, *args, **kwargs)
+        middleware.call(&block)
+      end
+    end
+
+    stack
   end
 end

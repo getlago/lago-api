@@ -10,9 +10,10 @@ module Types
       # NOTE: adjust an existing fee
       argument :fee_id, ID, required: false
 
-      # NOTE: adjust a empty charge fee
+      # NOTE: adjust a empty charge or fixed charge fee
       argument :charge_filter_id, ID, required: false
       argument :charge_id, ID, required: false
+      argument :fixed_charge_id, ID, required: false
       argument :subscription_id, ID, required: false
 
       argument :invoice_display_name, String, required: false

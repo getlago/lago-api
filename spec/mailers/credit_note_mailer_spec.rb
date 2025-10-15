@@ -32,21 +32,17 @@ RSpec.describe CreditNoteMailer do
     end
 
     context "with no pdf file" do
-      let(:pdf_service) { instance_double(CreditNotes::GenerateService) }
-
       before do
         credit_note.file = nil
 
-        allow(CreditNotes::GenerateService).to receive(:new)
-          .and_return(pdf_service)
-        allow(pdf_service).to receive(:call)
+        allow(CreditNotes::GenerateService).to receive(:call)
       end
 
       it "calls the credit note pdf generate service" do
         mailer = credit_note_mailer.with(credit_note:).created
 
         expect(mailer.to).not_to be_nil
-        expect(CreditNotes::GenerateService).to have_received(:new)
+        expect(CreditNotes::GenerateService).to have_received(:call)
       end
     end
 

@@ -91,6 +91,7 @@ gem "google-cloud-storage", require: false
 # Templating
 gem "slim"
 gem "slim-rails"
+gem "addressing"
 
 # Kafka
 gem "karafka", "~> 2.5.0"
@@ -148,6 +149,7 @@ end
 group :development do
   gem "coffee-rails"
   gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
+  gem "httplog"
 
   gem "standard", require: false
   gem "annotaterb"

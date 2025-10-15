@@ -133,6 +133,7 @@ GEM
       uri (>= 0.13.1)
     addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
+    addressing (1.1.0)
     adyen-ruby-api-library (7.3.1)
       faraday
     after_commit_everywhere (1.4.0)
@@ -355,6 +356,9 @@ GEM
       reline
     htmlbeautifier (1.4.3)
     httpclient (2.8.3)
+    httplog (1.7.3)
+      rack (>= 2.0)
+      rainbow (>= 2.0.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     io-console (0.8.0)
@@ -721,7 +725,7 @@ GEM
     puma (6.5.0)
       nio4r (~> 2.0)
     racc (1.8.1)
-    rack (3.2.2)
+    rack (3.2.3)
     rack-cors (1.1.1)
       rack (>= 2.0.0)
     rack-session (2.1.1)
@@ -1028,6 +1032,7 @@ DEPENDENCIES
   aasm
   active_storage_validations
   activejob-uniqueness
+  addressing
   adyen-ruby-api-library
   after_commit_everywhere
   analytics-ruby (~> 2.4.0)
@@ -1061,6 +1066,7 @@ DEPENDENCIES
   graphql-pagination
   guard-rspec
   htmlbeautifier (~> 1.4)
+  httplog
   i18n-tasks!
   jwt
   kaminari-activerecord
@@ -1130,4 +1136,4 @@ RUBY VERSION
    ruby 3.4.5p51
 
 BUNDLED WITH
-   2.6.8
+   2.7.2

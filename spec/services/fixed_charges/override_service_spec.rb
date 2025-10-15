@@ -46,6 +46,10 @@ RSpec.describe FixedCharges::OverrideService do
     context "when lago premium" do
       around { |test| lago_premium!(&test) }
 
+      before do
+        allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
+      end
+
       it "creates a fixed charge based on the given fixed charge" do
         expect { override_service.call }.to change(FixedCharge, :count).by(1)
 
@@ -65,6 +69,19 @@ RSpec.describe FixedCharges::OverrideService do
           units: 10
         )
         expect(new_fixed_charge.taxes).to contain_exactly(tax)
+      end
+
+      it "emits fixed charge events for all active subscriptions" do
+        result = override_service.call
+
+        expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          .to have_received(:call!)
+          .with(
+            fixed_charge: result.fixed_charge,
+            subscription: nil,
+            apply_units_immediately: true
+          )
+          .once
       end
 
       context "when only properties are provided" do
@@ -234,6 +251,47 @@ RSpec.describe FixedCharges::OverrideService do
           # note: properties are being filtered for the matching charge model,
           # and in case properties are not matching the charge model, they are fully filtered out
           expect(result.error.messages[:properties]).to eq(["value_is_mandatory"])
+        end
+      end
+
+      context "when subscription parameter is passed during plan override" do
+        # Subscription update with plan override
+        subject(:override_service) { described_class.new(fixed_charge:, params:, subscription:) }
+
+        let(:subscription) { create(:subscription, plan:, organization:) }
+        let(:params) do
+          {
+            units: 15,
+            plan_id: plan2.id
+          }
+        end
+
+        before do
+          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .to receive(:call!)
+        end
+
+        it "creates a fixed charge for the new plan" do
+          result = override_service.call
+
+          expect(result).to be_success
+
+          override_fixed_charge = result.fixed_charge
+          expect(override_fixed_charge.plan_id).to eq(plan2.id)
+          expect(override_fixed_charge.units).to eq(15)
+        end
+
+        it "creates fixed charge events for the specific subscription" do
+          result = override_service.call
+
+          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+            .to have_received(:call!)
+            .with(
+              fixed_charge: result.fixed_charge,
+              subscription:,
+              apply_units_immediately: true
+            )
+            .once
         end
       end
     end

@@ -73,10 +73,15 @@ module Payments
       return result.forbidden_failure! if !License.premium?
       return result.forbidden_failure! unless invoice.allow_manual_payment?
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
+      result.single_validation_failure!(error_code: "invalid_value", field: "amount_cents") unless valid_amount_cents?
     end
 
     def valid_paid_at?
       params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at], format: :any)
+    end
+
+    def valid_amount_cents?
+      params[:amount_cents].is_a?(Integer) && params[:amount_cents] > 0
     end
   end
 end
