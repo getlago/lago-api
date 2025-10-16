@@ -494,6 +494,31 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when plan is not pay_in_advance, subscription_at is current date and there are fixed charges" do
+      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
+
+      before do
+        fixed_charge
+      end
+
+      context "when at least one fixed charge is pay_in_advance" do
+        let(:pay_in_advance) { true }
+
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when all fixed charges are not pay_in_advance" do
+        let(:pay_in_advance) { false }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+    end
+
     context "when customer is missing" do
       let(:customer) { nil }
       let(:external_customer_id) { nil }
