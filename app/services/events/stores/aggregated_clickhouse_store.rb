@@ -84,6 +84,16 @@ module Events
         query.project(select).to_sql
       end
 
+      def distinct_codes
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::EventsEnrichedExpanded
+            .where(external_subscription_id: subscription.external_id)
+            .where(organization_id: subscription.organization.id)
+            .where(timestamp: from_datetime..applicable_to_datetime)
+            .pluck("DISTINCT(code)")
+        end
+      end
+
       def distinct_charge_filter_ids
         ::Clickhouse::EventsEnrichedExpanded
           .where(subscription_id: subscription.id)
