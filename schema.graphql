@@ -4531,16 +4531,16 @@ type DataApiUsageCollection {
 
 type DataApiUsageForecasted {
   amountCents: BigInt!
-  amountCentsForecast10thPercentile: BigInt!
-  amountCentsForecast50thPercentile: BigInt!
-  amountCentsForecast90thPercentile: BigInt!
+  amountCentsForecastConservative: BigInt!
+  amountCentsForecastOptimistic: BigInt!
+  amountCentsForecastRealistic: BigInt!
   amountCurrency: CurrencyEnum!
   endOfPeriodDt: ISO8601Date!
   startOfPeriodDt: ISO8601Date!
   units: Float!
-  unitsForecast10thPercentile: Float!
-  unitsForecast50thPercentile: Float!
-  unitsForecast90thPercentile: Float!
+  unitsForecastConservative: Float!
+  unitsForecastOptimistic: Float!
+  unitsForecastRealistic: Float!
 }
 
 """

@@ -2,15 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::Usages::ForecastedChargesService, type: :service do
+RSpec.describe DataApi::Usages::ForecastedService, type: :service do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
-  let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_forecasted_charges.json") }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_forecasted.json") }
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/charges/")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
@@ -33,14 +33,18 @@ RSpec.describe DataApi::Usages::ForecastedChargesService, type: :service do
         eq(
           {
             "organization_id" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "created_at" => "2025-06-27T06:46:28.300Z",
-            "subscription_id" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "dt" => "2025-06-27",
-            "charge_id" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "charge_filter_id" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "units_forecast_10th_percentile" => 0,
-            "units_forecast_50th_percentile" => 0,
-            "units_forecast_90th_percentile" => 0
+            "billable_metric_code" => "account_members",
+            "start_of_period_dt" => "2025-06-27T06:46:28.300Z",
+            "end_of_period_dt" => "2025-06-28T06:46:28.300Z",
+            "amount_currency" => "EUR",
+            "units" => 100,
+            "amount_cents" => 1000,
+            "units_forecast_conservative" => 100,
+            "units_forecast_realistic" => 100,
+            "units_forecast_optimistic" => 100,
+            "amount_cents_forecast_conservative" => 1000,
+            "amount_cents_forecast_realistic" => 1000,
+            "amount_cents_forecast_optimistic" => 1000
           }
         )
       end
@@ -50,8 +54,8 @@ RSpec.describe DataApi::Usages::ForecastedChargesService, type: :service do
   describe "#action_path" do
     subject(:service_path) { service.send(:action_path) }
 
-    it "returns the correct forecasted charges path" do
-      expect(service_path).to eq("usages/#{organization.id}/forecasted/charges/")
+    it "returns the correct forecasted path" do
+      expect(service_path).to eq("usages/#{organization.id}/forecasted")
     end
   end
 end

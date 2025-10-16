@@ -11,13 +11,13 @@ RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, type: :graphql do
           collection {
             amountCurrency
             amountCents
-            amountCentsForecast10thPercentile
-            amountCentsForecast50thPercentile
-            amountCentsForecast90thPercentile
+            amountCentsForecastConservative
+            amountCentsForecastRealistic
+            amountCentsForecastOptimistic
             units
-            unitsForecast10thPercentile
-            unitsForecast50thPercentile
-            unitsForecast90thPercentile
+            unitsForecastConservative
+            unitsForecastRealistic
+            unitsForecastOptimistic
             endOfPeriodDt
             startOfPeriodDt
           }
@@ -28,10 +28,10 @@ RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:body_response) { File.read("spec/fixtures/lago_data_api/forecasted.json") }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_forecasted.json") }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted")
       .to_return(status: 200, body: body_response, headers: {})
   end
 

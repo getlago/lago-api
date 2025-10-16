@@ -21384,7 +21384,7 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCentsForecast10thPercentile",
+              "name": "amountCentsForecastConservative",
               "description": null,
               "args": [],
               "type": {
@@ -21400,7 +21400,7 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCentsForecast50thPercentile",
+              "name": "amountCentsForecastOptimistic",
               "description": null,
               "args": [],
               "type": {
@@ -21416,7 +21416,7 @@
               "deprecationReason": null
             },
             {
-              "name": "amountCentsForecast90thPercentile",
+              "name": "amountCentsForecastRealistic",
               "description": null,
               "args": [],
               "type": {
@@ -21496,7 +21496,7 @@
               "deprecationReason": null
             },
             {
-              "name": "unitsForecast10thPercentile",
+              "name": "unitsForecastConservative",
               "description": null,
               "args": [],
               "type": {
@@ -21512,7 +21512,7 @@
               "deprecationReason": null
             },
             {
-              "name": "unitsForecast50thPercentile",
+              "name": "unitsForecastOptimistic",
               "description": null,
               "args": [],
               "type": {
@@ -21528,7 +21528,7 @@
               "deprecationReason": null
             },
             {
-              "name": "unitsForecast90thPercentile",
+              "name": "unitsForecastRealistic",
               "description": null,
               "args": [],
               "type": {

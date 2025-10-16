@@ -1,0 +1,17 @@
+[
+    {
+        "organization_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "billable_metric_code": "account_members",
+        "start_of_period_dt": "2025-06-27T06:46:28.300Z",
+        "end_of_period_dt": "2025-06-28T06:46:28.300Z",
+        "amount_currency": "EUR",
+        "units": 100,
+        "amount_cents": 1000,
+        "units_forecast_conservative": 100,
+        "units_forecast_realistic": 100,
+        "units_forecast_optimistic": 100,
+        "amount_cents_forecast_conservative": 1000,
+        "amount_cents_forecast_realistic": 1000,
+        "amount_cents_forecast_optimistic": 1000
+    }
+]
