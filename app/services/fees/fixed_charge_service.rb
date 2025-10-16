@@ -144,11 +144,15 @@ module Fees
 
     # Note: boundaries are taken from the subscription and they do not consider some fixed_charges being pay_in_advance
     def readjust_boundaries(boundaries)
-      return boundaries.to_h if !fixed_charge.pay_in_advance?
+      properties = boundaries.to_h
+      properties["charges_from_datetime"] = nil
+      properties["charges_to_datetime"] = nil
+      properties["charges_duration"] = nil
+
+      return properties if !fixed_charge.pay_in_advance?
       timestamp = boundaries.timestamp
       in_advance_dates = Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
 
-      properties = boundaries.to_h
       properties["fixed_charges_from_datetime"] = in_advance_dates[:fixed_charges_from_datetime]
       properties["fixed_charges_to_datetime"] = in_advance_dates[:fixed_charges_to_datetime]
       properties["fixed_charges_duration"] = in_advance_dates[:fixed_charges_duration]

@@ -175,7 +175,7 @@ module Fees
         invoiceable: charge,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
-        properties: boundaries.to_h,
+        properties: filtered_for_charge_boundaries(boundaries.to_h),
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,
@@ -377,6 +377,14 @@ module Fees
 
       ratio = days_passed.fdiv(charges_duration)
       ratio.clamp(0.0, 1.0)
+    end
+
+    def filtered_for_charge_boundaries(boundaries)
+      properties = boundaries.to_h
+      properties["fixed_charges_from_datetime"] = nil
+      properties["fixed_charges_to_datetime"] = nil
+      properties["fixed_charges_duration"] = nil
+      properties
     end
   end
 end
