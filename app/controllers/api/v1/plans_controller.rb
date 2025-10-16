@@ -162,7 +162,7 @@ module Api
             :pay_in_advance,
             :prorated,
             {properties: {}},
-            {tax_codes: []},
+            {tax_codes: []}
           ],
           usage_thresholds: [
             :id,
