@@ -113,4 +113,20 @@ RSpec.describe "templates/invoices/v4.slim", type: :view do
       end
     end
   end
+
+  context "when invoice has fixed charges" do
+    let(:fee) do
+      build_stubbed(
+        id: "12345678-90ab-cdef-1234-567890abcdef",
+        fee_type: :fixed_charge,
+        invoiceable: nil,
+        amount_cents: 5000,
+        amount_currency: "USD"
+      )
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 end
