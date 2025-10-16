@@ -114,7 +114,7 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
-  context "when invoice has fixed charge fees" do
+  context "when invoice_type is subscription and plan is paid in arrears" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
     let(:customer) { create(:customer, :with_static_values, organization: organization, billing_entity: billing_entity) }
@@ -126,30 +126,6 @@ RSpec.describe "templates/invoices/v4.slim" do
         interval: "monthly",
         pay_in_advance: false,
         invoice_display_name: "Premium Plan"
-      )
-    end
-
-    let(:add_on) do
-      create(
-        :add_on,
-        organization: organization,
-        name: "Setup Fee",
-        invoice_display_name: "Setup Fee"
-      )
-    end
-
-    let(:fixed_charge) do
-      create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: add_on,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: false,
-        units: 2,
-        invoice_display_name: "Setup Fee",
-        properties: {amount: "25.00"}
       )
     end
 
@@ -197,12 +173,28 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    let(:fee) do
+    # 1. Standard model - not prorated
+    let(:standard_addon) { create(:add_on, organization: organization, name: "Setup Fee", invoice_display_name: "Setup Fee") }
+    let(:standard_fixed_charge) do
+      create(
+        :fixed_charge,
+        organization: organization,
+        plan: plan,
+        add_on: standard_addon,
+        charge_model: "standard",
+        pay_in_advance: false,
+        prorated: false,
+        units: 2,
+        invoice_display_name: "Setup Fee",
+        properties: {amount: "25.00"}
+      )
+    end
+    let(:standard_fee) do
       create(
         :fee,
         invoice: invoice,
         subscription: subscription,
-        fixed_charge: fixed_charge,
+        fixed_charge: standard_fixed_charge,
         fee_type: :fixed_charge,
         organization: organization,
         billing_entity: billing_entity,
@@ -216,12 +208,266 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    before do
-      fee
-      invoice_subscription
+    # 2. Standard model - prorated
+    let(:standard_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Fee", invoice_display_name: "Prorated Fee") }
+    let(:standard_prorated_fixed_charge) do
+      create(
+        :fixed_charge,
+        organization: organization,
+        plan: plan,
+        add_on: standard_prorated_addon,
+        charge_model: "standard",
+        pay_in_advance: false,
+        prorated: true,
+        units: 1,
+        invoice_display_name: "Prorated Setup Fee",
+        properties: {amount: "100.00"}
+      )
+    end
+    let(:standard_prorated_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: standard_prorated_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 0.5,
+        unit_amount_cents: 10000,
+        precise_unit_amount: 100.00,
+        invoice_display_name: "Prorated Setup Fee",
+        invoiceable: nil
+      )
     end
 
-    it "renders correctly" do
+    # 3. Graduated model - not prorated
+    let(:graduated_addon) { create(:add_on, organization: organization, name: "Graduated Fee", invoice_display_name: "Graduated Fee") }
+    let(:graduated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        organization: organization,
+        plan: plan,
+        add_on: graduated_addon,
+        charge_model: "graduated",
+        pay_in_advance: false,
+        prorated: false,
+        units: 1,
+        invoice_display_name: "Graduated Fixed Charge",
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 10, per_unit_amount: "5", flat_amount: "200"},
+            {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "300"}
+          ]
+        }
+      )
+    end
+    let(:graduated_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: graduated_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 55500,
+        amount_currency: "USD",
+        units: 15,
+        unit_amount_cents: 3700,
+        precise_unit_amount: 37.00,
+        invoice_display_name: "Graduated Fixed Charge",
+        amount_details: {
+          "graduated_ranges" => [
+            {
+              "from_value" => 0,
+              "to_value" => 10,
+              "units" => 10.0,
+              "per_unit_amount" => "5.0",
+              "per_unit_total_amount" => "50.0",
+              "flat_unit_amount" => "200.0"
+            },
+            {
+              "from_value" => 11,
+              "to_value" => nil,
+              "units" => 5.0,
+              "per_unit_amount" => "1.0",
+              "per_unit_total_amount" => "5.0",
+              "flat_unit_amount" => "300.0"
+            }
+          ]
+        },
+        invoiceable: nil
+      )
+    end
+
+    # 4. Graduated model - prorated
+    let(:graduated_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Graduated Fee", invoice_display_name: "Prorated Graduated Fee") }
+    let(:graduated_prorated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        organization: organization,
+        plan: plan,
+        add_on: graduated_prorated_addon,
+        charge_model: "graduated",
+        pay_in_advance: false,
+        prorated: true,
+        units: 1,
+        invoice_display_name: "Prorated Graduated Fixed Charge",
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 10, per_unit_amount: "3", flat_amount: "100"},
+            {from_value: 11, to_value: nil, per_unit_amount: "0.5", flat_amount: "150"}
+          ]
+        }
+      )
+    end
+    let(:graduated_prorated_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: graduated_prorated_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 28100,
+        amount_currency: "USD",
+        units: 12,
+        unit_amount_cents: 2342,
+        precise_unit_amount: 23.42,
+        invoice_display_name: "Prorated Graduated Fixed Charge",
+        amount_details: {
+          "graduated_ranges" => [
+            {
+              "from_value" => 0,
+              "to_value" => 10,
+              "units" => 10.0,
+              "per_unit_amount" => "3.0",
+              "per_unit_total_amount" => "30.0",
+              "flat_unit_amount" => "100.0"
+            },
+            {
+              "from_value" => 11,
+              "to_value" => nil,
+              "units" => 2.0,
+              "per_unit_amount" => "0.5",
+              "per_unit_total_amount" => "1.0",
+              "flat_unit_amount" => "150.0"
+            }
+          ]
+        },
+        invoiceable: nil
+      )
+    end
+
+    # 5. Volume model - not prorated
+    let(:volume_addon) { create(:add_on, organization: organization, name: "Volume Fee", invoice_display_name: "Volume Fee") }
+    let(:volume_fixed_charge) do
+      create(
+        :fixed_charge,
+        :volume,
+        organization: organization,
+        plan: plan,
+        add_on: volume_addon,
+        charge_model: "volume",
+        pay_in_advance: false,
+        prorated: false,
+        units: 1,
+        invoice_display_name: "Volume Fixed Charge",
+        properties: {
+          volume_ranges: [
+            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+            {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+          ]
+        }
+      )
+    end
+    let(:volume_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: volume_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 15100,
+        amount_currency: "USD",
+        units: 75,
+        unit_amount_cents: 201,
+        precise_unit_amount: 2.01,
+        invoice_display_name: "Volume Fixed Charge",
+        amount_details: {
+          "per_unit_amount" => "2.0",
+          "per_unit_total_amount" => "150.0",
+          "flat_unit_amount" => "1.0"
+        },
+        invoiceable: nil
+      )
+    end
+
+    # 6. Volume model - prorated
+    let(:volume_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Volume Fee", invoice_display_name: "Prorated Volume Fee") }
+    let(:volume_prorated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :volume,
+        organization: organization,
+        plan: plan,
+        add_on: volume_prorated_addon,
+        charge_model: "volume",
+        pay_in_advance: false,
+        prorated: true,
+        units: 1,
+        invoice_display_name: "Prorated Volume Fixed Charge",
+        properties: {
+          volume_ranges: [
+            {from_value: 0, to_value: 50, per_unit_amount: "3", flat_amount: "2"},
+            {from_value: 51, to_value: nil, per_unit_amount: "1.5", flat_amount: "0"}
+          ]
+        }
+      )
+    end
+    let(:volume_prorated_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: volume_prorated_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 9200,
+        amount_currency: "USD",
+        units: 30,
+        unit_amount_cents: 307,
+        precise_unit_amount: 3.07,
+        invoice_display_name: "Prorated Volume Fixed Charge",
+        amount_details: {
+          "per_unit_amount" => "3.0",
+          "per_unit_total_amount" => "90.0",
+          "flat_unit_amount" => "2.0"
+        },
+        invoiceable: nil
+      )
+    end
+
+    before do
+      invoice_subscription
+      standard_fee
+      standard_prorated_fee
+      graduated_fee
+      graduated_prorated_fee
+      volume_fee
+      volume_prorated_fee
+    end
+
+    it "renders correctly with all included fees types" do
       expect(rendered_template).to match_html_snapshot
     end
   end
