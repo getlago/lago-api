@@ -97,6 +97,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:created_at]).to be_present
         expect(json[:plan][:charges].first[:lago_id]).to be_present
         expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
+        expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
       end
 
       context "when license is not premium" do
@@ -654,9 +655,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             units: 1,
             add_on_id: add_on.id,
             charge_model: "standard",
-            properties: {
-              amount: "15"
-            },
+            properties: {amount: "15"},
             tax_codes:
           },
           {
@@ -664,10 +663,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             units: 1,
             add_on_id: add_on.id,
             charge_model: "standard",
-            properties: {
-              amount: "10"
-            },
-            tax_codes:
+            properties: {amount: "10"}
           }
         ]
       end
@@ -680,7 +676,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:plan][:fixed_charges].count).to eq(2)
         expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
+        expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
         expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
+        expect(json[:plan][:fixed_charges].last[:taxes]).to be_empty
       end
     end
 
@@ -700,7 +698,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
               units: 100,
               add_on_id: add_on.id,
               charge_model: "standard",
-              properties: {amount: "10"}
+              properties: {amount: "10"},
+              tax_codes: [tax.code]
             }
           ]
         end
@@ -712,6 +711,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           expect(json[:plan][:fixed_charges].count).to eq(1)
           expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 2")
           expect(json[:plan][:fixed_charges].first[:units]).to eq("100.0")
+          expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
         end
 
         it "creates fixed charge events for all active subscriptions with current timestamp" do
