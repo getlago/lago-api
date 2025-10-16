@@ -5774,8 +5774,8 @@ enum IntegrationTypeEnum {
   auto_dunning
   avalara
   beta_payment_authorization
-  forecasted_usage
   clickhouse_live_aggregation
+  forecasted_usage
   from_email
   hubspot
   issue_receipts
@@ -8237,8 +8237,8 @@ enum PremiumIntegrationTypeEnum {
   auto_dunning
   avalara
   beta_payment_authorization
-  forecasted_usage
   clickhouse_live_aggregation
+  forecasted_usage
   from_email
   hubspot
   issue_receipts

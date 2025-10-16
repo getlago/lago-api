@@ -21366,12 +21366,11 @@
           "kind": "OBJECT",
           "name": "DataApiUsageForecasted",
           "description": null,
-          "interfaces": [],
-          "possibleTypes": null,
           "fields": [
             {
               "name": "amountCents",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21382,12 +21381,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "amountCentsForecast10thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21398,12 +21397,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "amountCentsForecast50thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21414,12 +21413,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "amountCentsForecast90thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21430,12 +21429,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "amountCurrency",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21446,12 +21445,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "endOfPeriodDt",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21462,12 +21461,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "startOfPeriodDt",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21478,12 +21477,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "units",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21494,12 +21493,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "unitsForecast10thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21510,12 +21509,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "unitsForecast50thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21526,12 +21525,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "unitsForecast90thPercentile",
               "description": null,
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21542,23 +21541,23 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             }
           ],
           "inputFields": null,
-          "enumValues": null
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
         },
         {
           "kind": "OBJECT",
           "name": "DataApiUsageForecastedCollection",
           "description": "DataApiUsageForecastedCollection type",
-          "interfaces": [],
-          "possibleTypes": null,
           "fields": [
             {
               "name": "collection",
               "description": "A collection of paginated DataApiUsageForecastedCollection",
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21577,12 +21576,12 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             },
             {
               "name": "metadata",
               "description": "Pagination Metadata for navigating the Pagination",
+              "args": [],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -21593,12 +21592,13 @@
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
+              "deprecationReason": null
             }
           ],
           "inputFields": null,
-          "enumValues": null
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
         },
         {
           "kind": "OBJECT",
@@ -46947,22 +46947,22 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
-              ]
-            },
-            {
-              "name": "dataApiUsagesForecasted",
-              "description": "Query forecasted usages of an organization",
+              ],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "DataApiUsageForecastedCollection",
+                  "name": "DataApiUsageAggregatedAmountCollection",
                   "ofType": null
                 }
               },
               "isDeprecated": false,
-              "deprecationReason": null,
+              "deprecationReason": null
+            },
+            {
+              "name": "dataApiUsagesForecasted",
+              "description": "Query forecasted usages of an organization",
               "args": [
                 {
                   "name": "currency",
@@ -47096,17 +47096,13 @@
                   "isDeprecated": false,
                   "deprecationReason": null
                 }
-              ]
-            },
-            {
-              "name": "dataApiUsagesInvoiced",
-              "description": "Query invoiced usages of an organization",
+              ],
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "DataApiUsageAggregatedAmountCollection",
+                  "name": "DataApiUsageForecastedCollection",
                   "ofType": null
                 }
               },
