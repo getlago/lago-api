@@ -209,9 +209,10 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       # Note: prorated_fee_amount should be 500000 * 10 * 17/31,
       # prorated_fee_amount = 2_741_935 - this is math correct, but service returns 2_741_940 because of rounding (10 * 17 / 31).
+      prorated_fee_amount = 2_741_940
       expected_charge_fees = [
         {charge_id: charge_metered_not_prorated_in_arrears.id, amount_cents: 10_000},
-        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: 2_741_940},
+        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: prorated_fee_amount},
         {charge_id: charge_recurring_prorated_in_advance.id, amount_cents: 50_000_000}
       ]
 
@@ -224,7 +225,7 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       expect(actual_charge_fees).to match_array(expected_charge_fees)
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map{|fee| fee.amount_cents}).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 50_000_000 + 10_000 + prorated_fee_amount)
 
       # travel to several dates in the next month and send usages
