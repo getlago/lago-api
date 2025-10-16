@@ -14,7 +14,7 @@ class OrganizationMailer < ApplicationMailer
 
     mail(
       bcc: @organization.admins.map(&:email),
-      from: email_address_with_name(@organization.from_email_address, @organization.name),
+      from: ENV["LAGO_FROM_EMAIL"],
       reply_to: email_address_with_name(@organization.from_email_address, @organization.name),
       subject: I18n.t(
         "email.organization.authentication_methods_updated.subject"
