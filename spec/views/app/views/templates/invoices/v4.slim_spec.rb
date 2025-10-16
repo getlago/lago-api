@@ -457,6 +457,76 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
+    # 7. Standard model - zero amount
+    let(:zero_addon) { create(:add_on, organization: organization, name: "Free Fee", invoice_display_name: "Free Fee") }
+    let(:zero_fixed_charge) do
+      create(
+        :fixed_charge,
+        organization: organization,
+        plan: plan,
+        add_on: zero_addon,
+        charge_model: "standard",
+        pay_in_advance: false,
+        prorated: false,
+        units: 1,
+        invoice_display_name: "Free Setup Fee",
+        properties: {amount: "0"}
+      )
+    end
+    let(:zero_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: zero_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 0,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0.00,
+        invoice_display_name: "Free Setup Fee",
+        invoiceable: nil
+      )
+    end
+
+    # 8. Fixed charge paid in advance (on plan paid in arrears)
+    let(:advance_addon) { create(:add_on, organization: organization, name: "Advance Fee", invoice_display_name: "Advance Fee") }
+    let(:advance_fixed_charge) do
+      create(
+        :fixed_charge,
+        organization: organization,
+        plan: plan,
+        add_on: advance_addon,
+        charge_model: "standard",
+        pay_in_advance: true,
+        prorated: false,
+        units: 1,
+        invoice_display_name: "Advance Fixed Charge",
+        properties: {amount: "75.00"}
+      )
+    end
+    let(:advance_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: advance_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 7500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 7500,
+        precise_unit_amount: 75.00,
+        invoice_display_name: "Advance Fixed Charge",
+        invoiceable: nil
+      )
+    end
+
     before do
       invoice_subscription
       standard_fee
@@ -465,6 +535,8 @@ RSpec.describe "templates/invoices/v4.slim" do
       graduated_prorated_fee
       volume_fee
       volume_prorated_fee
+      zero_fee
+      advance_fee
     end
 
     it "renders correctly with all included fees types" do
