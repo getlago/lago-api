@@ -238,8 +238,11 @@ class Subscription < ApplicationRecord
       to_datetime: dates_service.to_datetime,
       charges_from_datetime: dates_service.charges_from_datetime,
       charges_to_datetime: dates_service.charges_to_datetime,
+      fixed_charges_from_datetime: dates_service.fixed_charges_from_datetime,
+      fixed_charges_to_datetime: dates_service.fixed_charges_to_datetime,
       timestamp: datetime,
-      charges_duration: dates_service.charges_duration_in_days
+      charges_duration: dates_service.charges_duration_in_days,
+      fixed_charges_duration: dates_service.fixed_charges_duration_in_days
     )
 
     InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
