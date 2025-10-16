@@ -36,7 +36,7 @@ module Invoices
         unless invoice.closed?
           SendWebhookJob.perform_later("invoice.created", invoice)
           Utils::ActivityLog.produce(invoice, "invoice.created")
-          GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+          GenerateFilesAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
@@ -47,7 +47,7 @@ module Invoices
           track_credit_note_created(credit_note)
           SendWebhookJob.perform_later("credit_note.created", credit_note)
           Utils::ActivityLog.produce(credit_note, "credit_note.created")
-          CreditNotes::GeneratePdfJob.perform_later(credit_note)
+          CreditNotes::GenerateFilesJob.perform_later(credit_note)
         end
       end
 

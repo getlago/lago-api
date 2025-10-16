@@ -73,6 +73,24 @@ module Api
         head(:ok)
       end
 
+      def download_xml
+        credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
+        return not_found_error(resource: "credit_note") unless credit_note
+
+        if credit_note.file.present?
+          return render(
+            json: ::V1::CreditNoteSerializer.new(
+              credit_note,
+              root_name: "credit_note"
+            )
+          )
+        end
+
+        CreditNotes::GenerateXmlJob.perform_later(credit_note)
+
+        head(:ok)
+      end
+
       def void
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: "credit_note") unless credit_note

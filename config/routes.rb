@@ -75,6 +75,7 @@ Rails.application.routes.draw do
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
+        post :download_xml, on: :member
         put :void, on: :member
         post :estimate, on: :collection
       end
@@ -86,7 +87,9 @@ Rails.application.routes.draw do
       resources :applied_coupons, only: %i[create index]
       resources :fees, only: %i[show update index destroy]
       resources :invoices, only: %i[create update show index] do
-        post :download, on: :member
+        post :download, on: :member, action: :download_pdf
+        post :download_pdf, on: :member
+        post :download_xml, on: :member
         post :void, on: :member
         post :lose_dispute, on: :member
         post :retry, on: :member

@@ -195,6 +195,62 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
+  describe "POST /api/v1/credit_notes/:id/download_xml" do
+    subject do
+      post_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/download_xml")
+    end
+
+    let(:credit_note_id) { credit_note.id }
+
+    include_examples "requires API permission", "credit_note", "write"
+
+    it "enqueues a job to generate the PDF" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(CreditNotes::GenerateXmlJob).to have_been_enqueued
+    end
+
+    context "when a file is attached to the credit note" do
+      let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
+
+      it "returns the credit note object" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note]).to be_present
+      end
+    end
+
+    context "when credit note does not exist" do
+      let(:credit_note_id) { SecureRandom.uuid }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when credit note is draft" do
+      let(:credit_note) { create(:credit_note, :draft) }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when credit note belongs to another organization" do
+      let(:wrong_credit_note) { create(:credit_note) }
+      let(:credit_note_id) { wrong_credit_note.id }
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
   describe "GET /api/v1/credit_notes" do
     it_behaves_like "a credit note index endpoint" do
       subject { get_with_token(organization, "/api/v1/credit_notes", params) }
