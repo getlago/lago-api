@@ -158,6 +158,54 @@ RSpec.describe Events::Stores::AggregatedClickhouseStore, clickhouse: true do
     end
   end
 
+  describe ".distinct_codes" do
+    let(:other_event) do
+      Clickhouse::EventsEnrichedExpanded.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        subscription_id: subscription.id,
+        plan_id: plan.id,
+        code: "other_code",
+        aggregation_type:,
+        charge_id:,
+        charge_version: charge.updated_at,
+        timestamp: boundaries[:from_datetime] + 4.days,
+        properties: {},
+        value: 4.to_s,
+        decimal_value: 4.to_d,
+        precise_total_amount_cents: 4 + 1.1,
+        grouped_by: {}
+      )
+    end
+
+    let(:outside_boundaries_event) do
+      Clickhouse::EventsEnrichedExpanded.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        subscription_id: subscription.id,
+        plan_id: plan.id,
+        code: "outside_boundaries",
+        aggregation_type:,
+        charge_id:,
+        charge_version: charge.updated_at,
+        timestamp: boundaries[:from_datetime] - 4.days,
+        properties: {},
+        value: 4.to_s,
+        decimal_value: 4.to_d,
+        precise_total_amount_cents: 4 + 1.1,
+        grouped_by: {}
+      )
+    end
+
+    before { other_event }
+
+    it "returns an array of distinct codes" do
+      expect(event_store.distinct_codes).to match_array([billable_metric.code, "other_code"])
+    end
+  end
+
   describe ".distinct_charge_filter_ids" do
     it "returns an empty array of when no charge filters are present" do
       expect(event_store.distinct_charge_filter_ids).to be_empty
