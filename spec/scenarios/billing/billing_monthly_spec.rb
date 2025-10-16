@@ -115,8 +115,6 @@ describe "Billing Monthly Scenarios with all charges types" do
       travel_to subscription_date + 10.minutes do
         perform_all_enqueued_jobs
       end
-      # we have 1 because we're starting having fixed_charges
-      # but it will be empty now
       expect(subscription.reload.invoices.count).to eq(1)
       pay_in_advance_fixed_charges_invoice = subscription.invoices.first
       expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
@@ -225,6 +223,9 @@ describe "Billing Monthly Scenarios with all charges types" do
       end
 
       expect(actual_charge_fees).to match_array(expected_charge_fees)
+      expect(last_invoice.fees.subscription.count).to eq(1)
+      expect(last_invoice.fees.subscription.map{|fee| fee.amount_cents}).to match_array([5_000_000])
+      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 50_000_000 + 10_000 + prorated_fee_amount)
 
       # travel to several dates in the next month and send usages
       [DateTime.new(2024, 4, 10), DateTime.new(2024, 4, 30)].each do |date|
@@ -360,5 +361,8 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000)
     end
+  end
+
+  context "without fixed_charges" do
   end
 end
