@@ -144,7 +144,6 @@ describe "Billing Boundaries Scenario" do
       expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-03-29T23:59:59Z")
       expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-02-29T00:00:00Z")
       expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-03-29T23:59:59Z")
-
       # April billing
       travel_to(Time.zone.parse("2024-04-30T02:00:00Z")) do
         expect { perform_billing }.to change { subscription.reload.invoices.count }.by(1)
