@@ -52,8 +52,17 @@ RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, type: :graphql do
     forecasted_response = result["data"]["dataApiUsagesForecasted"]
     expect(forecasted_response["collection"].first).to include(
       {
-        "startOfPeriodDt" => "2024-01-01",
-        "endOfPeriodDt" => "2024-01-31"
+        "amountCents" => "1000",
+        "amountCentsForecastConservative" => "1000",
+        "amountCentsForecastOptimistic" => "1000",
+        "amountCentsForecastRealistic" => "1000",
+        "amountCurrency" => "EUR",
+        "endOfPeriodDt" => "2025-06-28",
+        "startOfPeriodDt" => "2025-06-27",
+        "units" => 100.0,
+        "unitsForecastConservative" => 100.0,
+        "unitsForecastOptimistic" => 100.0,
+        "unitsForecastRealistic" => 100.0
       }
     )
   end

@@ -12,6 +12,9 @@ module Resolvers
         graphql_name "DataApiUsagesForecasted"
         description "Query forecasted usages of an organization"
 
+        argument :charge_filter_id, String, required: false
+        argument :charge_id, String, required: false
+
         argument :currency, Types::CurrencyEnum, required: false
 
         argument :customer_country, Types::CountryCodeEnum, required: false
@@ -25,6 +28,7 @@ module Resolvers
         argument :external_customer_id, String, required: false
         argument :external_subscription_id, String, required: false
 
+        argument :billable_metric_code, String, required: false
         argument :billing_entity_code, String, required: false
         argument :plan_code, String, required: false
 

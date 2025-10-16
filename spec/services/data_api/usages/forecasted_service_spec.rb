@@ -29,11 +29,9 @@ RSpec.describe DataApi::Usages::ForecastedService, type: :service do
 
       it "returns expected forecasted usage" do
         expect(service_call).to be_success
-        expect(service_call.forecasted_charges_usages.count).to eq(1)
+        expect(service_call.forecasted_usages.count).to eq(1)
         eq(
           {
-            "organization_id" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "billable_metric_code" => "account_members",
             "start_of_period_dt" => "2025-06-27T06:46:28.300Z",
             "end_of_period_dt" => "2025-06-28T06:46:28.300Z",
             "amount_currency" => "EUR",
