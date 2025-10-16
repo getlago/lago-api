@@ -662,6 +662,8 @@ RSpec.describe Subscription do
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
         timestamp: billing_date
       }
     end
@@ -696,6 +698,8 @@ RSpec.describe Subscription do
         expect(new_boundaries.to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
         expect(new_boundaries.charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
         expect(new_boundaries.charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.fixed_charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.fixed_charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
       end
     end
   end
