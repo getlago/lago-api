@@ -6,16 +6,12 @@ module Fees
 
     def initialize(charge:, event:, billing_at: nil, estimate: false)
       @charge = charge
-      ActiveRecord::Associations::Preloader.new.preload(
-        @charge,
-        [:billable_metric, :applied_pricing_unit, :pricing_unit]
-      )
+      ActiveRecord::Associations::Preloader.new(
+        records: [@charge],
+        associations: [:billable_metric, :applied_pricing_unit, :pricing_unit]
+      ).call
 
       @event = Events::CommonFactory.new_instance(source: event)
-      ActiveRecord::Associations::Preloader.new.preload(
-        @event,
-        [:subscription]
-      )
 
       @billing_at = billing_at || @event.timestamp
       @estimate = estimate
@@ -148,9 +144,7 @@ module Fees
     end
 
     def properties
-      @properties ||= begin
-        filter&.properties || charge.properties
-      end
+      @properties ||= filter&.properties || charge.properties
     end
 
     def boundaries
