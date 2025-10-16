@@ -665,6 +665,10 @@ RSpec.describe Invoices::CalculateFeesService do
       end
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -863,6 +867,9 @@ RSpec.describe Invoices::CalculateFeesService do
       end
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -895,6 +902,10 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:terminated_at) { timestamp - 2.days }
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -963,6 +974,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -1010,6 +1025,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -1081,6 +1100,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -1160,6 +1183,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -1220,6 +1247,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
