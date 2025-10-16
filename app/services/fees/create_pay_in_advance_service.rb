@@ -55,6 +55,10 @@ module Fees
     delegate :billable_metric, to: :charge
     delegate :subscription, to: :event
 
+    def filter
+      @filter ||= ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+    end
+
     def init_fee(properties:, charge_filter: nil)
       aggregation_result = aggregate(properties:, charge_filter:)
 
@@ -110,8 +114,6 @@ module Fees
     end
 
     def init_charge_filter_fee
-      filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-
       init_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
     end
 
@@ -137,7 +139,6 @@ module Fees
 
     def properties
       @properties ||= begin
-        filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
         filter&.properties || charge.properties
       end
     end
