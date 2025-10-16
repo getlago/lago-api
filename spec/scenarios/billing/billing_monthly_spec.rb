@@ -459,4 +459,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000 + fixed_charge_fees_sum)
     end
   end
+
+  context "without fixed_charges" do
+  end
 end

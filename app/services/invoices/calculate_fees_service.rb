@@ -264,8 +264,13 @@ module Invoices
       return false unless should_create_yearly_subscription_fee?(subscription)
       return false unless should_create_semiannual_subscription_fee?(subscription)
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
+<<<<<<< HEAD
       # now we have a case, where we bill a subscription on the first day, but it's not a pay_in_advance plan - it includes pay_in_advance fixed_charges
       return false if billing_advance_fixed_charges_on_first_invoice?(subscription)
+=======
+      # now we have a case, where we bill a subscription on the first day, but it's not a pay_in_advance plan...
+      return false if only_billing_first_fixed_charges_in_advance?(subscription)
+>>>>>>> 3efd427f6 (WIP - adding tests)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrears, otherwise this fee will never
