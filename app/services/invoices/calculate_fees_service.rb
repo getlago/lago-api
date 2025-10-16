@@ -223,6 +223,8 @@ module Invoices
       return false unless should_create_yearly_subscription_fee?(subscription)
       return false unless should_create_semiannual_subscription_fee?(subscription)
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
+      # now we have a case, where we bill a subscription on the first day, but it's not a pay_in_advance plan...
+      return false if only_billing_first_fixed_charges_in_advance?(subscription)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrears, otherwise this fee will never
@@ -345,6 +347,17 @@ module Invoices
       tz = subscription.customer.applicable_timezone
 
       timestamp.in_time_zone(tz).to_date != subscription.trial_end_datetime.in_time_zone(tz).to_date
+    end
+
+    def only_billing_first_fixed_charges_in_advance?(subscription)
+      return false if subscription.plan.fixed_charges.pay_in_advance.empty?
+      return false if subscription.plan.pay_in_advance?
+      return false if invoice.invoice_subscriptions.count > 1
+      invoice_subscription = invoice.invoice_subscriptions.first
+      # I believe this should work...... 
+      return true if invoice_subscription.from_datetime == invoice_subscription.to_datetime &&
+        invoice_subscription.from_datetime == subscription.started_at
+      false
     end
 
     def finalizing_invoice?

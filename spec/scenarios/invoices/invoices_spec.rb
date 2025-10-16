@@ -392,7 +392,7 @@ describe "Invoices Scenarios" do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
 
-    it "does bill the charges" do
+    it "does bill the charges", transaction: true do
       ### 15 Dec: Create subscription + charge.
       dec15 = Time.zone.parse("2022-12-15")
 
@@ -424,9 +424,11 @@ describe "Invoices Scenarios" do
             transaction_id: SecureRandom.uuid,
             code: metric.code,
             timestamp: Time.current.to_i,
-            properties: {metric.field_name => 0}
+            properties: {metric.field_name => 10}
           }
         )
+        # we need to commit the transaction, so the event will also be visible with ActiveRecord::Base.connection
+        EventsRecord.connection.commit_db_transaction
       end
 
       ### 20 Dec: Terminate subscription + refresh.
@@ -440,6 +442,7 @@ describe "Invoices Scenarios" do
 
         invoice = subscription.invoices.first
         expect(invoice.fees.charge.count).to eq(1)
+        expect(invoice.fees.charge.first.amount_cents).to eq(484)
       end
     end
   end
