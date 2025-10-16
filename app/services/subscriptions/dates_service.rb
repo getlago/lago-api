@@ -40,6 +40,19 @@ module Subscriptions
       }
     end
 
+    def self.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+      date_service = new_instance(
+        subscription,
+        Time.zone.at(timestamp),
+        current_usage: true
+      )
+
+      {
+        fixed_charges_from_date: date_service.fixed_charges_from_datetime&.to_date,
+        fixed_charges_to_date: date_service.fixed_charges_to_datetime&.to_date
+      }
+    end
+
     def initialize(subscription, billing_at, current_usage)
       @subscription = subscription
 
