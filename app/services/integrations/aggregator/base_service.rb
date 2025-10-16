@@ -7,7 +7,7 @@ module Integrations
     class BaseService < BaseService
       BASE_URL = "https://api.nango.dev/"
       REQUEST_LIMIT_ERROR_CODE = "SSS_REQUEST_LIMIT_EXCEEDED"
-      BAD_REQUEST_ERROR = "502 Bad Gateway"
+      BAD_GATEWAY_ERROR = "502 Bad Gateway"
 
       def initialize(integration:, options: {})
         @integration = integration
@@ -162,14 +162,15 @@ module Integrations
       end
 
       def bad_gateway_error?(http_error)
-        http_error.error_body.include?(BAD_REQUEST_ERROR)
+        http_error.error_code.to_s == "502" ||
+          http_error.error_body.include?(BAD_GATEWAY_ERROR)
       end
 
       def parse_response(response)
         JSON.parse(response.body)
       rescue JSON::ParserError
-        if response.body.include?(BAD_REQUEST_ERROR)
-          # NOTE: Sometimes, Anrock is responding with an HTTP 200 with a payload containing a 502 error...
+        if response.body.include?(BAD_GATEWAY_ERROR)
+          # NOTE: Sometimes, Anrok is responding with an HTTP 200 with a payload containing a 502 error...
           raise(Integrations::Aggregator::BadGatewayError.new(response.body, http_client.uri))
         end
 

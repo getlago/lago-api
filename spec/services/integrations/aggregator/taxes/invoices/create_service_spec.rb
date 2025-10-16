@@ -9,7 +9,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:, external_customer_id: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
-  let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
   let(:add_on) { create(:add_on, organization:) }
   let(:add_on_two) { create(:add_on, organization:) }
@@ -64,12 +63,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       "Provider-Config-Key" => "anrok"
     }
   end
+  let(:response_status) { 200 }
 
   let(:params) do
     [
       {
-        "id" => invoice.id,
-        "issuing_date" => invoice.issuing_date,
+        "issuing_date" => invoice.issuing_date.to_s,
         "currency" => invoice.currency,
         "contact" => {
           "external_id" => customer.external_id,
@@ -94,33 +93,25 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             "item_code" => "1",
             "amount_cents" => 200
           }
-        ]
+        ],
+        "id" => invoice.id
       }
     ]
   end
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new)
-      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      .and_return(lago_client)
-
     integration_customer
     integration_collection_mapping1
     integration_mapping_add_on
     fee_add_on
     fee_add_on_two
+
+    stub_request(:post, endpoint).with(body: params.to_json, headers:)
+      .and_return(status: response_status, body:)
   end
 
   describe "#call" do
     context "when service call is successful" do
-      let(:response) { instance_double(Net::HTTPOK) }
-
-      before do
-        allow(lago_client).to receive(:post_with_response).with(array_including(params), headers).and_return(response)
-        allow(response).to receive(:body).and_return(body)
-        allow(lago_client).to receive(:uri).and_return(endpoint)
-      end
-
       context "when taxes are successfully fetched for finalized invoice" do
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
@@ -158,8 +149,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         let(:params) do
           [
             {
-              "id" => invoice.id,
-              "type" => "salesInvoice",
               "issuing_date" => invoice.issuing_date,
               "currency" => invoice.currency,
               "contact" => {
@@ -185,17 +174,19 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                   "item_key" => fee_add_on.item_key,
                   "item_id" => fee_add_on.id,
                   "item_code" => "m1",
-                  "unit" => 0.00,
+                  "unit" => "0.0",
                   "amount" => "2.0"
                 },
                 {
                   "item_key" => fee_add_on_two.item_key,
                   "item_id" => fee_add_on_two.id,
                   "item_code" => "1",
-                  "unit" => 0.00,
+                  "unit" => "0.0",
                   "amount" => "2.0"
                 }
-              ]
+              ],
+              "id" => invoice.id,
+              "type" => "salesInvoice"
             }
           ]
         end
@@ -232,8 +223,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           let(:params) do
             [
               {
-                "id" => invoice.id,
-                "type" => "returnInvoice",
                 "issuing_date" => invoice.issuing_date,
                 "currency" => invoice.currency,
                 "contact" => {
@@ -254,22 +243,24 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                   "region" => customer.billing_entity&.state,
                   "country" => customer.billing_entity&.country
                 },
-                "fees" => an_array_matching([
+                "fees" => [
                   {
                     "item_key" => fee_add_on.item_key,
                     "item_id" => fee_add_on.id,
                     "item_code" => "m1",
-                    "unit" => 0.00,
+                    "unit" => "0.0",
                     "amount" => "-2.0"
                   },
                   {
                     "item_key" => fee_add_on_two.item_key,
                     "item_id" => fee_add_on_two.id,
                     "item_code" => "1",
-                    "unit" => 0.00,
+                    "unit" => "0.0",
                     "amount" => "-2.0"
                   }
-                ])
+                ],
+                "id" => invoice.id,
+                "type" => "returnInvoice"
               }
             ]
           end
@@ -335,19 +326,21 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
     end
 
     context "when service call is not successful" do
-      let(:body) do
-        path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
-        File.read(path)
-      end
+      context "when the error code is 502" do
+        let(:response_status) { 502 }
+        let(:body) { "" }
 
-      let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
-
-      before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        it "raises an HTTP error" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
+        end
       end
 
       context "when it is a server error" do
-        let(:error_code) { Faker::Number.between(from: 500, to: 599) }
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
+          File.read(path)
+        end
+        let(:response_status) { 500 }
 
         it "returns an error" do
           result = service_call
