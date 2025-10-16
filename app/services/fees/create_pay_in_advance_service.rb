@@ -6,13 +6,7 @@ module Fees
 
     def initialize(charge:, event:, billing_at: nil, estimate: false)
       @charge = charge
-      ActiveRecord::Associations::Preloader.new(
-        records: [@charge],
-        associations: [:billable_metric, :applied_pricing_unit, :pricing_unit]
-      ).call
-
       @event = Events::CommonFactory.new_instance(source: event)
-
       @billing_at = billing_at || @event.timestamp
       @estimate = estimate
 
