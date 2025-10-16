@@ -115,7 +115,8 @@ describe "Billing Monthly Scenarios with all charges types" do
       travel_to subscription_date + 10.minutes do
         perform_all_enqueued_jobs
       end
-      # it immediately creates invoice with pay_in_advance fixed_charges
+      # we have 1 because we're starting having fixed_charges
+      # but it will be empty now
       expect(subscription.reload.invoices.count).to eq(1)
       pay_in_advance_fixed_charges_invoice = subscription.invoices.first
       expect(pay_in_advance_fixed_charges_invoice.fees.count).to eq(2)
