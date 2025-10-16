@@ -24,6 +24,7 @@ RSpec.describe FixedCharge do
   it { is_expected.to validate_exclusion_of(:prorated).in_array([nil]) }
   it { is_expected.to validate_presence_of(:properties) }
 
+<<<<<<< HEAD
   describe "#validate_properties" do
     context "with standard charge model" do
       subject(:fixed_charge) { build(:fixed_charge, charge_model: "standard", properties:) }
@@ -117,6 +118,8 @@ RSpec.describe FixedCharge do
     end
   end
 
+=======
+>>>>>>> 0e08a5be4 (squashed commit)
   describe "scopes" do
     let(:scoped) { create(:fixed_charge) }
     let(:deleted) { create(:fixed_charge, :deleted) }
