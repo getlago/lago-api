@@ -350,7 +350,7 @@ module Invoices
       return false if subscription.plan.pay_in_advance?
       return false if invoice.invoice_subscriptions.count > 1
       invoice_subscription = invoice.invoice_subscriptions.first
-      # I believe this should work...... 
+      # I believe this should work......
       return true if invoice_subscription.from_datetime == invoice_subscription.to_datetime &&
         invoice_subscription.from_datetime == subscription.started_at
       false
