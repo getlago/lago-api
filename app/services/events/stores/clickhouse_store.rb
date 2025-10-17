@@ -553,7 +553,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
-          connection.select_all(
+          rows = connection.select_all(
             ActiveRecord::Base.sanitize_sql_for_conditions(
               [
                 sanitize_colon(query.breakdown_query),
@@ -566,6 +566,9 @@ module Events
               ]
             )
           ).rows
+          rows.map do |row|
+            [row[0], row[1], row[2], row[3].to_i, row[4]]
+          end
         end
       end
 
