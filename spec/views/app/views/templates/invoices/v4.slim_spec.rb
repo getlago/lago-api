@@ -544,6 +544,133 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
+  context "when invoice has different boundaries for fixed charges" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
+    let(:customer) { create(:customer, :with_static_values, organization: organization, billing_entity: billing_entity) }
+
+    # Yearly plan with monthly billed fixed charges
+    let(:plan) do
+      create(
+        :plan,
+        organization: organization,
+        interval: "yearly",
+        pay_in_advance: false,
+        invoice_display_name: "Annual Plan",
+        bill_fixed_charges_monthly: true
+      )
+    end
+
+    let(:subscription) do
+      create(
+        :subscription,
+        organization: organization,
+        customer: customer,
+        plan: plan,
+        status: "active"
+      )
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        organization: organization,
+        billing_entity: billing_entity,
+        customer: customer,
+        number: "LAGO-202509-003",
+        payment_due_date: Date.parse("2025-09-04"),
+        issuing_date: Date.parse("2025-09-04"),
+        invoice_type: :subscription,
+        total_amount_cents: 5000,
+        currency: "USD",
+        fees_amount_cents: 5000,
+        sub_total_excluding_taxes_amount_cents: 5000,
+        sub_total_including_taxes_amount_cents: 5000
+      )
+    end
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice: invoice,
+        subscription: subscription,
+        organization: organization,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        # Fixed charges billed monthly have different boundaries
+        fixed_charges_from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-09-30 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    # Subscription fee for the yearly plan
+    let(:subscription_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fee_type: :subscription,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 99900,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 99900,
+        precise_unit_amount: 999.00,
+        invoice_display_name: nil,
+        invoiceable: subscription,
+        invoiceable_type: "Subscription"
+      )
+    end
+
+    let(:monthly_addon) { create(:add_on, organization: organization, name: "Monthly Fee", invoice_display_name: "Monthly Fee") }
+    let(:monthly_fixed_charge) do
+      create(
+        :fixed_charge,
+        organization: organization,
+        plan: plan,
+        add_on: monthly_addon,
+        charge_model: "standard",
+        pay_in_advance: false,
+        prorated: false,
+        units: 1,
+        invoice_display_name: "Monthly Fixed Charge",
+        properties: {amount: "100.00"}
+      )
+    end
+    let(:monthly_fee) do
+      create(
+        :fee,
+        invoice: invoice,
+        subscription: subscription,
+        fixed_charge: monthly_fixed_charge,
+        fee_type: :fixed_charge,
+        organization: organization,
+        billing_entity: billing_entity,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 10000,
+        precise_unit_amount: 100.00,
+        invoice_display_name: "Monthly Fixed Charge",
+        invoiceable: nil
+      )
+    end
+
+    it "renders correctly with different boundaries" do
+      travel_to Time.zone.parse("2025-10-01 12:00:00") do
+        invoice_subscription
+        subscription_fee
+        monthly_fee
+
+        expect(rendered_template).to match_html_snapshot
+      end
+    end
+  end
+
   context "when invoice_type is subscription and plan is paid in advance" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
