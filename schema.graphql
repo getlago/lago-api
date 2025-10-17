@@ -11536,7 +11536,33 @@ type WalletCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: WalletCollectionMetadata!
+}
+
+"""
+Type for CollectionMetadataType
+"""
+type WalletCollectionMetadata {
+  """
+  Current Page of loaded data
+  """
+  currentPage: Int!
+  customerActiveWalletsCount: Int!
+
+  """
+  The number of items per page
+  """
+  limitValue: Int!
+
+  """
+  The total number of items to be paginated
+  """
+  totalCount: Int!
+
+  """
+  The total number of pages in the pagination
+  """
+  totalPages: Int!
 }
 
 enum WalletStatusEnum {
