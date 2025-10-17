@@ -527,20 +527,20 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    before do
-      invoice_subscription
-      standard_fee
-      standard_prorated_fee
-      graduated_fee
-      graduated_prorated_fee
-      volume_fee
-      volume_prorated_fee
-      zero_fee
-      advance_fee
-    end
-
     it "renders correctly with all included fees types" do
-      expect(rendered_template).to match_html_snapshot
+      travel_to Time.zone.parse("2025-10-01 12:00:00") do
+        invoice_subscription
+        standard_fee
+        standard_prorated_fee
+        graduated_fee
+        graduated_prorated_fee
+        volume_fee
+        volume_prorated_fee
+        zero_fee
+        advance_fee
+
+        expect(rendered_template).to match_html_snapshot
+      end
     end
   end
 
