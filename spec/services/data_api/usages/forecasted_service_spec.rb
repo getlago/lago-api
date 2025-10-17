@@ -10,7 +10,7 @@ RSpec.describe DataApi::Usages::ForecastedService, type: :service do
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
@@ -53,7 +53,7 @@ RSpec.describe DataApi::Usages::ForecastedService, type: :service do
     subject(:service_path) { service.send(:action_path) }
 
     it "returns the correct forecasted path" do
-      expect(service_path).to eq("usages/#{organization.id}/forecasted")
+      expect(service_path).to eq("usages/#{organization.id}/forecasted/")
     end
   end
 end
