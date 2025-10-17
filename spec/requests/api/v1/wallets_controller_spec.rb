@@ -20,6 +20,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         external_customer_id: customer.external_id,
         rate_amount: "1",
         name: "Wallet1",
+        priority: 12,
         currency: "EUR",
         paid_credits: "10",
         granted_credits: "10",
@@ -48,6 +49,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       expect(json[:wallet][:lago_id]).to be_present
       expect(json[:wallet][:name]).to eq(create_params[:name])
+      expect(json[:wallet][:priority]).to eq(create_params[:priority])
       expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
       expect(json[:wallet][:expiration_at]).to eq(expiration_at)
       expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
@@ -437,6 +439,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       {
         name: "wallet1",
         expiration_at:,
+        priority: 5,
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 6_00,
         paid_top_up_max_amount_cents: 10_00
@@ -454,6 +457,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       expect(json[:wallet][:lago_id]).to eq(wallet.id)
       expect(json[:wallet][:name]).to eq(update_params[:name])
+      expect(json[:wallet][:priority]).to eq(update_params[:priority])
       expect(json[:wallet][:expiration_at]).to eq(expiration_at)
       expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
       expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
@@ -761,6 +765,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:wallet][:lago_id]).to eq(wallet.id)
       expect(json[:wallet][:name]).to eq(wallet.name)
+      expect(json[:wallet][:priority]).to eq(50)
     end
 
     context "when wallet does not exist" do
