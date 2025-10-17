@@ -8,7 +8,11 @@ RSpec.describe Resolvers::WalletsResolver do
       query($customerId: ID!) {
         wallets(customerId: $customerId, limit: 5, status: active) {
           collection { id }
-          metadata { currentPage, totalCount }
+          metadata { 
+            currentPage,
+            totalCount,
+            customerActiveWalletsCount
+          }
         }
       }
     GQL
@@ -43,6 +47,7 @@ RSpec.describe Resolvers::WalletsResolver do
       expect(wallets_response["collection"].count).to eq(customer.wallets.active.count)
       expect(wallets_response["collection"].first["id"]).to eq(wallet.id)
 
+      expect(wallets_response["metadata"]["customerActiveWalletsCount"]).to eq(1)
       expect(wallets_response["metadata"]["currentPage"]).to eq(1)
       expect(wallets_response["metadata"]["totalCount"]).to eq(1)
     end
