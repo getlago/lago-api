@@ -37,6 +37,7 @@ module V1
         taxes_amount_cents: model.taxes_amount_cents,
         taxes_precise_amount: model.taxes_precise_amount_cents.fdiv(subunit_to_unit),
         taxes_rate: model.taxes_rate,
+        total_aggregated_units: model.total_aggregated_units,
         total_amount_cents: model.total_amount_cents,
         total_amount_currency: model.amount_currency,
         units: model.units,

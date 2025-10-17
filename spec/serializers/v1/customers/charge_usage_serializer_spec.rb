@@ -28,6 +28,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         billable_metric: billable_metric,
         charge: charge,
         units: "10",
+        total_aggregated_units: "10",
         events_count: 12,
         amount_cents: 100,
         amount_currency: "EUR",
@@ -78,6 +79,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "pricing_unit_details" => nil,
           "events_count" => 12,
           "units" => "10.0",
+          "total_aggregated_units" => "10.0",
           "grouped_by" => {"card_type" => "visa"},
           "filters" => []
         }
@@ -93,6 +95,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     it "serializes the fee" do
       expect(result["charges"].first).to include(
         "units" => "10.0",
+        "total_aggregated_units" => "10.0",
         "events_count" => 12,
         "amount_cents" => 100,
         "pricing_unit_details" => {
@@ -123,6 +126,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             },
             "events_count" => 12,
             "units" => "10.0",
+            "total_aggregated_units" => "10.0",
             "grouped_by" => {"card_type" => "visa"},
             "filters" => []
           }

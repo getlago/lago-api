@@ -30,6 +30,7 @@ module V1
       def current_usage_data(fees)
         {
           units: current_units(fees).to_s,
+          total_aggregated_units: total_aggregated_units(fees).to_s,
           events_count: fees.sum { |f| f.events_count.to_i },
           amount_cents: fees.sum(&:amount_cents),
           amount_currency: fees.first.amount_currency
@@ -38,6 +39,10 @@ module V1
 
       def current_units(fees)
         fees.sum { |f| BigDecimal(f.units) }
+      end
+
+      def total_aggregated_units(fees)
+        fees.sum { |f| BigDecimal(f.total_aggregated_units || 0) }
       end
 
       def past_usage?

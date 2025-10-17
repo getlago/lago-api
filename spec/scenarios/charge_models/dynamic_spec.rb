@@ -117,8 +117,8 @@ describe "Charge Models - Dynamic Pricing Scenarios", transaction: false do
 
         expect(json[:customer_usage][:charges_usage][0][:grouped_usage]).to match_array(
           [
-            {amount_cents: 902, events_count: 1, units: "10.0", grouped_by: {group_key: "value 2"}, filters: [], pricing_unit_details: nil},
-            {amount_cents: 10, events_count: 1, units: "10.0", grouped_by: {group_key: "value 1"}, filters: [], pricing_unit_details: nil}
+            {amount_cents: 902, events_count: 1, total_aggregated_units: "10.0", units: "10.0", grouped_by: {group_key: "value 2"}, filters: [], pricing_unit_details: nil},
+            {amount_cents: 10, events_count: 1, total_aggregated_units: "10.0", units: "10.0", grouped_by: {group_key: "value 1"}, filters: [], pricing_unit_details: nil}
           ]
         )
       end
