@@ -78,6 +78,18 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when customer has reached the wallet limit" do
+      before do
+        create_list(:wallet, 5, customer:, organization:, status: :active)
+      end
+
+      it "returns an error" do
+        expect { service_result }.not_to change(Wallet, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:customer]).to eq(["wallet_limit_reached"])
+      end
+    end
+
     context "when paid_credits is above the maximum" do
       let(:paid_credits) { "1002.0" }
 
