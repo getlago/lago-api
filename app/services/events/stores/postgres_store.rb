@@ -59,7 +59,7 @@ module Events
           )
           .to_sql
 
-        prepare_grouped_result(Event.connection.select_all(sql).rows, timestamp: true)
+        prepare_grouped_result(select_all(sql).rows, timestamp: true)
       end
 
       def prorated_events_values(total_duration)
@@ -94,8 +94,8 @@ module Events
 
       def unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions([query.query])
-        result = Event.connection.select_one(sql)
+        sql = sanitize_sql_for_conditions([query.query])
+        result = select_one(sql)
 
         result["aggregation"]
       end
@@ -103,14 +103,14 @@ module Events
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def unique_count_breakdown
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
-        ActiveRecord::Base.connection.select_all(
-          ActiveRecord::Base.sanitize_sql_for_conditions([query.breakdown_query])
+        select_all(
+          sanitize_sql_for_conditions([query.breakdown_query])
         ).rows
       end
 
       def prorated_unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [
             sanitize_colon(query.prorated_query),
             {
@@ -120,14 +120,14 @@ module Events
             }
           ]
         )
-        result = ActiveRecord::Base.connection.select_one(sql)
+        result = select_one(sql)
 
         result["aggregation"]
       end
 
       def prorated_unique_count_breakdown(with_remove: false)
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [
             sanitize_colon(query.prorated_breakdown_query(with_remove:)),
             {
@@ -137,22 +137,22 @@ module Events
             }
           ]
         )
-        ActiveRecord::Base.connection.select_all(sql).to_a
+        select_all(sql).to_a
       end
 
       def grouped_unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
 
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [query.grouped_query]
         )
 
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows)
       end
 
       def grouped_prorated_unique_count
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [
             sanitize_colon(query.grouped_prorated_query),
             {
@@ -162,7 +162,7 @@ module Events
             }
           ]
         )
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows)
       end
 
       def max
@@ -192,7 +192,7 @@ module Events
           )
           .to_sql
 
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows)
       end
 
       def sum_precise_total_amount_cents
@@ -234,11 +234,7 @@ module Events
           ) AS sum_result
         SQL
 
-        ActiveRecord::Base.connection.execute(
-          Arel.sql(
-            events.select(sql).to_sql
-          )
-        ).first["sum_result"]
+        connection.execute(Arel.sql(events.select(sql).to_sql)).first["sum_result"]
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -260,7 +256,7 @@ module Events
           .select(sum_sql)
           .to_sql
 
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows)
       end
 
       def sum_date_breakdown
@@ -277,7 +273,7 @@ module Events
       def weighted_sum(initial_value: 0)
         query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
 
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [
             sanitize_colon(query.query),
             {
@@ -288,7 +284,7 @@ module Events
           ]
         )
 
-        result = ActiveRecord::Base.connection.select_one(sql)
+        result = select_one(sql)
         result["aggregation"]
       end
 
@@ -312,7 +308,7 @@ module Events
         end
         return [] if formated_initial_values.empty?
 
-        sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+        sql = sanitize_sql_for_conditions(
           [
             sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
             {
@@ -322,14 +318,14 @@ module Events
           ]
         )
 
-        prepare_grouped_result(Event.connection.select_all(sql).rows)
+        prepare_grouped_result(select_all(sql).rows)
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
       def weighted_sum_breakdown(initial_value: 0)
         query = Events::Stores::Postgres::WeightedSumQuery.new(store: self)
-        ActiveRecord::Base.connection.select_all(
-          ActiveRecord::Base.sanitize_sql_for_conditions(
+        select_all(
+          sanitize_sql_for_conditions(
             [
               sanitize_colon(query.breakdown_query),
               {
@@ -353,7 +349,7 @@ module Events
 
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_sql_for_conditions(
               ["(coalesce(events.properties ->> ?, '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
@@ -370,7 +366,7 @@ module Events
             scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
           else
             scope.where(
-              ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by])
+              sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by])
             )
           end
         end
@@ -379,13 +375,13 @@ module Events
       end
 
       def sanitized_property_name(property = aggregation_property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
+        sanitize_sql_for_conditions(
           ["events.properties->>?", property]
         )
       end
 
       def presence_condition
-        "events.properties::jsonb ? '#{ActiveRecord::Base.sanitize_sql_for_conditions(aggregation_property)}'"
+        "events.properties::jsonb ? '#{sanitize_sql_for_conditions(aggregation_property)}'"
       end
 
       def numeric_condition
@@ -395,6 +391,17 @@ module Events
 
       def sanitized_grouped_by
         grouped_by.map { sanitized_property_name(it) }
+      end
+
+      def connection
+        Event.connection
+      end
+
+      delegate :select_all, to: :connection
+      delegate :select_one, to: :connection
+
+      def sanitize_sql_for_conditions(sql)
+        ActiveRecord::Base.sanitize_sql_for_conditions(sql)
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
