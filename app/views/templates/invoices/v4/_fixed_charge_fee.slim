@@ -17,7 +17,3 @@
     == SlimHelper.render('templates/invoices/v4/_graduated', fee)
   - when :volume
     == SlimHelper.render('templates/invoices/v4/_volume', fee)
-
-/ True up fees attached to the fee
-- if fee.true_up_fee.present?
-  == SlimHelper.render('templates/invoices/v4/_true_up_fee', fee)
