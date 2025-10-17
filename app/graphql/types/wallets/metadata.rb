@@ -7,11 +7,9 @@ module Types
       field :customer_active_wallets_count, Integer, null: false
 
       def customer_active_wallets_count
-        # Get customer from the first wallet in the collection
-        collection = object.items
-        return 0 if collection.empty?
+        return 0 if object.empty?
 
-        collection.first.customer.wallets.active.count
+        object.first.customer.wallets.active.count
       end
     end
   end
