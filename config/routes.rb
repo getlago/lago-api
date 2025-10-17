@@ -12,6 +12,15 @@ Rails.application.routes.draw do
   # Health Check status
   get "/health", to: "application#health"
 
+  namespace :data_api do
+    namespace :v1 do
+      resources :charges, only: [] do
+        post :forecasted_usage_amount, on: :member
+        post :bulk_forecasted_usage_amount, on: :collection
+      end
+    end
+  end
+
   namespace :api do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]
