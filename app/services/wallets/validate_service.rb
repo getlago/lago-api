@@ -2,6 +2,8 @@
 
 module Wallets
   class ValidateService < BaseValidator
+    MAXIMUM_WALLETS_PER_CUSTOMER = 5
+
     def valid?
       valid_customer?
       valid_paid_credits_amount? if args[:paid_credits]
@@ -10,6 +12,7 @@ module Wallets
       valid_recurring_transaction_rules? if args[:recurring_transaction_rules].present?
       valid_metadata? if args[:transaction_metadata]
       valid_limitations? if args[:applies_to]
+      valid_wallet_limit?
 
       if errors?
         result.validation_failure!(errors:)
@@ -20,6 +23,16 @@ module Wallets
     end
 
     private
+
+    def valid_wallet_limit?
+      return true unless result.current_customer
+
+      if result.current_customer.wallets.active.count >= MAXIMUM_WALLETS_PER_CUSTOMER
+        return add_error(field: :customer, error_code: "wallet_limit_reached")
+      end
+
+      true
+    end
 
     def valid_customer?
       result.current_customer = args[:customer]
