@@ -31,7 +31,7 @@ RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, type: :graphql do
   let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_forecasted.json") }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
