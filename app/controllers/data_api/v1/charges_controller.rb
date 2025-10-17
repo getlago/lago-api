@@ -3,7 +3,7 @@
 module DataApi
   module V1
     class ChargesController < DataApi::BaseController
-      # include PremiumFeatureOnly
+      include PremiumFeatureOnly
 
       def bulk_forecasted_usage_amount
         charges_data = params[:charges] || []
