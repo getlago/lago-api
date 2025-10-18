@@ -94,7 +94,7 @@ module BillableMetrics
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(charge_id: charge.id)
-          .where("cached_aggregations.timestamp::timestamp(0) < ?", to_datetime)
+          .where("cached_aggregations.timestamp < ?", to_datetime)
           .where(grouped_by: grouped_by_values.presence || {})
           .order(timestamp: :desc, created_at: :desc)
 
