@@ -90,11 +90,13 @@ module BillableMetrics
       end
 
       def latest_state(grouped_by_values:)
+        truncated_datetime = to_datetime.change(usec: 0)
+
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(charge_id: charge.id)
-          .where("DATE_TRUNC('second', cached_aggregations.timestamp) < DATE_TRUNC('second', ?)", to_datetime)
+          .where("cached_aggregations.timestamp < ?", truncated_datetime)
           .where(grouped_by: grouped_by_values.presence || {})
           .order(timestamp: :desc, created_at: :desc)
 
