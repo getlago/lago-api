@@ -11,8 +11,6 @@ module Events
     end
 
     def call
-      event.external_customer_id ||= customer&.external_id
-
       unless event.external_subscription_id
         Deprecation.report("event_missing_external_subscription_id", organization.id)
       end
@@ -21,9 +19,8 @@ module Events
       #       if multiple terminated matches the timestamp, takes the most recent
       if !event.external_subscription_id && subscriptions.count(&:active?) <= 1
         event.external_subscription_id ||= subscriptions.first&.external_id
+        event.save!
       end
-
-      event.save!
 
       expire_cached_charges(subscriptions)
       track_subscription_activity
@@ -109,7 +106,9 @@ module Events
       return unless billable_metric
       return unless charges.any?
 
-      Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
+      Events::PayInAdvanceJob
+        .set(wait: rand(10..60).seconds)
+        .perform_later(Events::CommonFactory.new_instance(source: event).as_json)
     end
 
     def charges
