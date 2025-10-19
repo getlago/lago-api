@@ -10,6 +10,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
           collection {
             id
             name
+            priority
             currency
             paidTopUpMinAmountCents
             paidTopUpMinCredits
@@ -44,6 +45,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
     wallet_item = wallets_response["collection"].sole
     expect(wallet_item["id"]).to eq(wallet.id)
     expect(wallet_item["name"]).to eq(wallet.name)
+    expect(wallet_item["priority"]).to eq(wallet.priority)
     expect(wallet_item["currency"]).to eq(wallet.currency)
     expect(wallet_item["paidTopUpMinAmountCents"]).to eq("1000")
     expect(wallet_item["paidTopUpMinCredits"]).to eq("10")

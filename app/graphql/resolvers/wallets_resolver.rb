@@ -13,7 +13,7 @@ module Resolvers
     argument :page, Integer, required: false
     argument :status, Types::Wallets::StatusEnum, required: false
 
-    type Types::Wallets::Object.collection_type, null: false
+    type Types::Wallets::Object.collection_type(metadata_type: Types::Wallets::Metadata), null: false
 
     def resolve(customer_id: nil, ids: nil, page: nil, limit: nil, status: nil)
       current_customer = current_organization.customers.find(customer_id)

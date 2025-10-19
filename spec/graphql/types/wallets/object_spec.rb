@@ -10,6 +10,7 @@ RSpec.describe Types::Wallets::Object do
 
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:name).of_type("String")
+    expect(subject).to have_field(:priority).of_type("Int!")
     expect(subject).to have_field(:status).of_type("WalletStatusEnum!")
 
     expect(subject).to have_field(:rate_amount).of_type("Float!")

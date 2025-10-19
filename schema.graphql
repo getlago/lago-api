@@ -2698,6 +2698,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -4253,6 +4254,7 @@ type CustomerPortalWallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   status: WalletStatusEnum!
 }
@@ -8706,9 +8708,19 @@ type Query {
   customerPortalUser: CustomerPortalCustomer
 
   """
+  Query a single wallet from the customer portal
+  """
+  customerPortalWallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): CustomerPortalWallet
+
+  """
   Query wallets
   """
-  customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+  customerPortalWallets(limit: Int, page: Int, status: WalletStatusEnum): CustomerPortalWalletCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -10922,6 +10934,7 @@ input UpdateCustomerWalletInput {
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11462,6 +11475,7 @@ type Wallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
@@ -11486,7 +11500,33 @@ type WalletCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: WalletCollectionMetadata!
+}
+
+"""
+Type for CollectionMetadataType
+"""
+type WalletCollectionMetadata {
+  """
+  Current Page of loaded data
+  """
+  currentPage: Int!
+  customerActiveWalletsCount: Int!
+
+  """
+  The number of items per page
+  """
+  limitValue: Int!
+
+  """
+  The total number of items to be paginated
+  """
+  totalCount: Int!
+
+  """
+  The total number of pages in the pagination
+  """
+  totalPages: Int!
 }
 
 enum WalletStatusEnum {

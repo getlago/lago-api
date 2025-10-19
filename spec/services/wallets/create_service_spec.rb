@@ -19,6 +19,7 @@ RSpec.describe Wallets::CreateService do
     let(:params) do
       {
         name: "New Wallet",
+        priority: 5,
         customer:,
         organization_id: organization.id,
         currency: "EUR",
@@ -43,6 +44,7 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.customer_id).to eq(customer.id)
         expect(wallet.name).to eq("New Wallet")
+        expect(wallet.priority).to eq(5)
         expect(wallet.currency).to eq("EUR")
         expect(wallet.rate_amount).to eq(5.0)
         expect(wallet.expiration_at.iso8601).to eq(expiration_at)
@@ -76,6 +78,18 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when customer has reached the wallet limit" do
+      before do
+        create_list(:wallet, 5, customer:, organization:, status: :active)
+      end
+
+      it "returns an error" do
+        expect { service_result }.not_to change(Wallet, :count)
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:customer]).to eq(["wallet_limit_reached"])
+      end
+    end
+
     context "when paid_credits is above the maximum" do
       let(:paid_credits) { "1002.0" }
 
@@ -97,6 +111,43 @@ RSpec.describe Wallets::CreateService do
           transaction = service_result.wallet.wallet_transactions.first
           expect(transaction).to have_attributes(credit_amount: 1002.00)
         end
+      end
+    end
+
+    context "when priority is out of bounds" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          priority: 55
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:priority]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when priority is not set" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00"
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.priority).to eq(50)
       end
     end
 
