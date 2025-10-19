@@ -9,8 +9,8 @@ class CachedAggregation < ApplicationRecord
   validates :external_subscription_id, presence: true
   validates :timestamp, presence: true
 
-  scope :from_datetime, ->(from_datetime) { where("cached_aggregations.timestamp >= ?", from_datetime.change(usec: 0)) }
-  scope :to_datetime, ->(to_datetime) { where("cached_aggregations.timestamp <= ?", to_datetime.change(usec: 0)) }
+  scope :from_datetime, ->(from_datetime) { where("cached_aggregations.timestamp >= ?", from_datetime&.change(usec: 0)) }
+  scope :to_datetime, ->(to_datetime) { where("cached_aggregations.timestamp <= ?", to_datetime&.change(usec: 0)) }
 end
 
 # == Schema Information
