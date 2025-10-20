@@ -95,7 +95,7 @@ module Subscriptions
 
     def should_be_billed_today?(sub)
       sub.active? && sub.subscription_at.today? &&
-        (plan.pay_in_advance? || plan.fixed_charges.pay_in_advance.exists?) &&
+        sub.should_be_billed_when_started? &&
         !sub.in_trial_period?
     end
 

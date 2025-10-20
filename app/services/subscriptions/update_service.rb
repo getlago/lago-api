@@ -97,7 +97,7 @@ module Subscriptions
         subscription.save!
       end
 
-      return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
+      return unless subscription.should_be_billed_when_started? && subscription.subscription_at.today?
 
       BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
     end
