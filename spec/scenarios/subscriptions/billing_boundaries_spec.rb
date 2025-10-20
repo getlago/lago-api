@@ -388,5 +388,3 @@ describe "Billing Boundaries Scenario" do
     end
   end
 end
-
-
