@@ -1101,10 +1101,7 @@ RSpec.describe Invoices::CalculateFeesService do
         let(:fixed_charge) do
           create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
         end
-<<<<<<< HEAD
 
-=======
->>>>>>> 69171f9b1 (fix tests)
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
