@@ -58,4 +58,13 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
       expect(mapping.tax_code).to eq(tax_code)
     end
   end
+
+  describe "#currencies" do
+    let(:currencies) { {"EUR" => "8"} }
+
+    it "assigns and retrieve a setting" do
+      mapping.currencies = currencies
+      expect(mapping.currencies).to eq(currencies)
+    end
+  end
 end
