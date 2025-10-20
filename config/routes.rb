@@ -46,7 +46,7 @@ Rails.application.routes.draw do
           resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
           resources :wallets, only: %i[index]
-          resources :payment_methods, only: %i[index] do
+          resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end
         end
