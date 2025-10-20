@@ -48,7 +48,7 @@ class BillableMetric < ApplicationRecord
   validate :validate_expression
 
   validates :name, presence: true
-  validates :field_name, presence: {if: :should_have_field_name?}
+  validates :field_name, presence: true, if: :should_have_field_name?
   validates :aggregation_type, inclusion: {in: AGGREGATION_TYPES.keys.map(&:to_s)}
   validates :code,
     presence: true,
