@@ -3,13 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization) }
+  let(:external_id) { customer.external_id }
+  let(:payment_method) { create(:payment_method, customer:, organization:) }
+
   describe "GET /api/v1/customers/:external_id/payment_methods" do
     subject { get_with_token(organization, "/api/v1/customers/#{external_id}/payment_methods", {}) }
 
-    let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
-    let(:external_id) { customer.external_id }
-    let(:payment_method) { create(:payment_method, customer:, organization:) }
     let(:second_payment_method) { create(:payment_method, organization:, customer:, is_default: false) }
 
     include_examples "requires API permission", "payment_method", "read"
@@ -51,6 +52,80 @@ RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
           payment_method.id,
           second_payment_method.id
         )
+      end
+    end
+  end
+
+  describe "PUT /api/v1/customers/:external_id/payment_methods/:id/set_as_default" do
+    subject { put_with_token(organization, "/api/v1/customers/#{external_id}/payment_methods/#{payment_method.id}/set_as_default") }
+
+    include_examples "requires API permission", "payment_method", "write"
+
+    context "with unknown customer" do
+      let(:external_id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq("customer_not_found")
+      end
+    end
+
+    context "with unknown payment method" do
+      subject { put_with_token(organization, "/api/v1/customers/#{external_id}/payment_methods/invalid/set_as_default") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq("payment_method_not_found")
+      end
+    end
+
+    context "when payment method is already default" do
+      let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
+      let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: false) }
+      let(:payment_method3) { create(:payment_method, customer:, organization:, is_default: false) }
+
+      before do
+        payment_method
+        payment_method2
+        payment_method3
+      end
+
+      it "returns valid payment method" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_method][:lago_id]).to eq(payment_method.id)
+        expect(json[:payment_method][:is_default]).to eq(true)
+        expect(payment_method.reload.is_default).to eq(true)
+        expect(payment_method2.reload.is_default).to eq(false)
+        expect(payment_method2.reload.is_default).to eq(false)
+      end
+    end
+
+    context "when payment method is not default" do
+      let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false) }
+      let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: true) }
+      let(:payment_method3) { create(:payment_method, customer:, organization:, is_default: false) }
+
+      before do
+        payment_method
+        payment_method2
+        payment_method3
+      end
+
+      it "sets payment method to default and returns valid payment method" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_method][:lago_id]).to eq(payment_method.id)
+        expect(json[:payment_method][:is_default]).to eq(true)
+        expect(payment_method.reload.is_default).to eq(true)
+        expect(payment_method2.reload.is_default).to eq(false)
+        expect(payment_method2.reload.is_default).to eq(false)
       end
     end
   end
