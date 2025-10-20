@@ -131,11 +131,11 @@ RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
   end
 
   describe "DELETE /api/v1/customers/:external_id/payment_methods/:id" do
-    let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
-
     subject do
       delete_with_token(organization, "/api/v1/customers/#{external_id}/payment_methods/#{payment_method.id}")
     end
+
+    let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
 
     include_examples "requires API permission", "payment_method", "write"
 
@@ -177,13 +177,13 @@ RSpec.describe Api::V1::Customers::PaymentMethodsController, type: :request do
             .and change { payment_method.reload.deleted_at }.from(nil).to(Time.current)
         end
       end
-    end
 
-    it "returns deleted payment method" do
-      subject
+      it "returns deleted payment method" do
+        subject
 
-      expect(response).to have_http_status(:success)
-      expect(json[:payment_method][:lago_id]).to eq(payment_method.id)
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_method][:lago_id]).to eq(payment_method.id)
+      end
     end
   end
 end
