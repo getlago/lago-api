@@ -356,20 +356,22 @@ class Invoice < ApplicationRecord
     end
   end
 
-  def different_boundaries_for_subscription_and_charges(subscription)
-    subscription_from = invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
-    subscription_to = invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
-    charges_from = invoice_subscription(subscription.id).charges_from_datetime_in_customer_timezone&.to_date
-    charges_to = invoice_subscription(subscription.id).charges_to_datetime_in_customer_timezone&.to_date
+  def has_different_boundaries_for_subscription_and_charges?(subscription)
+    invoice_subscription = invoice_subscription(subscription.id)
+    subscription_from = invoice_subscription.from_datetime_in_customer_timezone&.to_date
+    subscription_to = invoice_subscription.to_datetime_in_customer_timezone&.to_date
+    charges_from = invoice_subscription.charges_from_datetime_in_customer_timezone&.to_date
+    charges_to = invoice_subscription.charges_to_datetime_in_customer_timezone&.to_date
 
     subscription_from != charges_from && subscription_to != charges_to
   end
 
-  def different_boundaries_for_subscription_and_fixed_charges(subscription)
-    subscription_from = invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
-    subscription_to = invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date
-    fixed_charges_from = invoice_subscription(subscription.id).fixed_charges_from_datetime_in_customer_timezone&.to_date
-    fixed_charges_to = invoice_subscription(subscription.id).fixed_charges_to_datetime_in_customer_timezone&.to_date
+  def has_different_boundaries_for_subscription_and_fixed_charges?(subscription)
+    invoice_subscription = invoice_subscription(subscription.id)
+    subscription_from = invoice_subscription.from_datetime_in_customer_timezone&.to_date
+    subscription_to = invoice_subscription.to_datetime_in_customer_timezone&.to_date
+    fixed_charges_from = invoice_subscription.fixed_charges_from_datetime_in_customer_timezone&.to_date
+    fixed_charges_to = invoice_subscription.fixed_charges_to_datetime_in_customer_timezone&.to_date
 
     subscription_from != fixed_charges_from && subscription_to != fixed_charges_to
   end

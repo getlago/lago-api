@@ -807,8 +807,8 @@ RSpec.describe Invoice do
     end
   end
 
-  describe "#different_boundaries_for_subscription_and_charges" do
-    subject { invoice.different_boundaries_for_subscription_and_charges(subscription) }
+  describe "#has_different_boundaries_for_subscription_and_charges?" do
+    subject { invoice.has_different_boundaries_for_subscription_and_charges?(subscription) }
 
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }
@@ -881,8 +881,8 @@ RSpec.describe Invoice do
     end
   end
 
-  describe "#different_boundaries_for_subscription_and_fixed_charges" do
-    subject { invoice.different_boundaries_for_subscription_and_fixed_charges(subscription) }
+  describe "#has_different_boundaries_for_subscription_and_fixed_charges?" do
+    subject { invoice.has_different_boundaries_for_subscription_and_fixed_charges?(subscription) }
 
     let(:invoice) { invoice_subscription.invoice }
     let(:subscription) { invoice_subscription.subscription }

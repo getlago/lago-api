@@ -8,7 +8,7 @@
 
     / Subscription fee section
     - if subscription? && subscription_fees(subscription.id).subscription.any?
-      .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge.any? && different_boundaries_for_subscription_and_charges(subscription)}"
+      .invoice-resume.overflow-auto class="#{'mb-24' if subscription_fees(subscription.id).charge.any? && has_different_boundaries_for_subscription_and_charges?(subscription)}"
         table.invoice-resume-table width="100%"
           tr.first_child
             - if subscription.plan.bill_charges_monthly? && !FeeDisplayHelper.should_display_subscription_fee?(invoice_subscription)
@@ -62,7 +62,7 @@
       - if subscription.plan.charges.where(pay_in_advance: false).any? && existing_fees_in_interval?(subscription_id: subscription.id)
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
-            - if different_boundaries_for_subscription_and_charges(subscription) || subscription.plan.bill_charges_monthly?
+            - if has_different_boundaries_for_subscription_and_charges?(subscription) || subscription.plan.bill_charges_monthly?
               tr.first_child
                 td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.charges_to_datetime_in_customer_timezone&.to_date, format: :default))
                 td.body-2 = I18n.t('invoice.units')
