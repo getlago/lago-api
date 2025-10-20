@@ -1,4 +1,4 @@
-\restrict V27QnkJyP653Nf0D8rY60zpLjqbvscF4j1Ru96P3hfiTe5NzduLHJ784aFNj37H
+\restrict buj6uL1CBEd2oMRc6nEHJglhWA7bF1g91Ik6l46KBRPxejoo3DmJKV9jFQBLSRb
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -598,7 +598,6 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
-DROP INDEX IF EXISTS public.index_cached_aggregations_on_organization_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_id;
@@ -669,7 +668,6 @@ DROP INDEX IF EXISTS public.idx_on_usage_threshold_id_invoice_id_cb82cdf163;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370d;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
-DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_fixed_charge_id_d85b30a9bf;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
@@ -705,6 +703,7 @@ DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
+DROP INDEX IF EXISTS public.idx_aggregation_lookup_with_transaction_id;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
@@ -5088,6 +5087,13 @@ CREATE INDEX idx_aggregation_lookup ON public.cached_aggregations USING btree (e
 
 
 --
+-- Name: idx_aggregation_lookup_with_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_aggregation_lookup_with_transaction_id ON public.cached_aggregations USING btree (event_transaction_id, external_subscription_id, charge_id, "timestamp") INCLUDE (organization_id, grouped_by);
+
+
+--
 -- Name: idx_alerts_code_unique_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5330,13 +5336,6 @@ CREATE INDEX idx_on_subscription_id_bd763c5aa3 ON public.subscription_fixed_char
 --
 
 CREATE UNIQUE INDEX idx_on_subscription_id_fixed_charge_id_d85b30a9bf ON public.subscription_fixed_charge_units_overrides USING btree (subscription_id, fixed_charge_id) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_on_timestamp_charge_id_external_subscription_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_on_timestamp_charge_id_external_subscription_id ON public.cached_aggregations USING btree ("timestamp", charge_id, external_subscription_id);
 
 
 --
@@ -5827,13 +5826,6 @@ CREATE INDEX index_cached_aggregations_on_event_transaction_id ON public.cached_
 --
 
 CREATE INDEX index_cached_aggregations_on_external_subscription_id ON public.cached_aggregations USING btree (external_subscription_id);
-
-
---
--- Name: index_cached_aggregations_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_cached_aggregations_on_organization_id ON public.cached_aggregations USING btree (organization_id);
 
 
 --
@@ -10052,11 +10044,13 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict V27QnkJyP653Nf0D8rY60zpLjqbvscF4j1Ru96P3hfiTe5NzduLHJ784aFNj37H
+\unrestrict buj6uL1CBEd2oMRc6nEHJglhWA7bF1g91Ik6l46KBRPxejoo3DmJKV9jFQBLSRb
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251020074349'),
+('20251020073334'),
 ('20251010092830'),
 ('20251007160309'),
 ('20250926185510'),
