@@ -1856,7 +1856,6 @@ RSpec.describe Invoices::CalculateFeesService do
           end
         end
       end
-
     end
   end
 
