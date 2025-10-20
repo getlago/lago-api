@@ -614,5 +614,3 @@ describe "Billing Boundaries Scenario" do
     # NOTE: there are no quarterly with charges monthly!
   end
 end
-
-
