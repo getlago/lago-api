@@ -553,7 +553,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
-          connection.select_all(
+          rows = connection.select_all(
             ActiveRecord::Base.sanitize_sql_for_conditions(
               [
                 sanitize_colon(query.breakdown_query),
@@ -566,6 +566,18 @@ module Events
               ]
             )
           ).rows
+          # `date_diff` actually returns an `Int64` and ActiveRecord transform that into a `String`. If we cast the
+          # result in a `Int32`, then we get the result as `Integer`:
+          # ```ruby
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int64")
+          # => {"CAST('1', 'Int64')" => "1"}
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int32")
+          # => {"CAST('1', 'Int32')" => 1}
+          # ```
+          # To keep consistency with the PG implementation, we call `#to_i` on the value.
+          rows.map do |(timestamp, difference, cumul, second_duration, period_ratio)|
+            [timestamp, difference, cumul, second_duration.to_i, period_ratio]
+          end
         end
       end
 

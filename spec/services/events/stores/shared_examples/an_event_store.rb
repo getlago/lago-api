@@ -839,4 +839,468 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       )
     end
   end
+
+  describe "#prorated_events_values" do
+    it "returns the values attached to each event with prorata on period duration" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
+        [0.516, 0.968, 1.355, 1.677, 1.935]
+      )
+    end
+  end
+
+  describe "#prorated_sum" do
+    it "returns the prorated sum of event properties" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      expect(event_store.prorated_sum(period_duration: 31).round(5)).to eq(6.45161)
+    end
+
+    context "with persisted_duration" do
+      it "returns the prorated sum of event properties" do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        expect(event_store.prorated_sum(period_duration: 31, persisted_duration: 10).round(5)).to eq(4.83871)
+      end
+    end
+  end
+
+  describe "#grouped_prorated_sum" do
+    let(:grouped_by) { %w[region] }
+
+    it "returns the prorated sum of event properties" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      result = event_store.grouped_prorated_sum(period_duration: 31)
+
+      expect(result).to match_array([
+        {groups: {"region" => nil}, value: within(0.00001).of(2.64516)},
+        {groups: {"region" => "europe"}, value: within(0.00001).of(3.80645)}
+      ])
+    end
+
+    context "with persisted_duration" do
+      it "returns the prorated sum of event properties" do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        result = event_store.grouped_prorated_sum(period_duration: 31, persisted_duration: 10)
+
+        expect(result).to match_array([
+          {groups: {"region" => nil}, value: within(0.00001).of(1.93548)},
+          {groups: {"region" => "europe"}, value: within(0.00001).of(2.90322)}
+        ])
+      end
+    end
+
+    context "with multiple groups" do
+      let(:grouped_by) { %w[region country] }
+
+      it "returns the sum of values grouped by the provided groups" do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+
+        result = event_store.grouped_prorated_sum(period_duration: 31)
+
+        expect(result).to match_array(
+          [
+            {
+              groups: {"country" => "united kingdom", "region" => "europe"},
+              value: within(0.00001).of(1.93548)
+            },
+            {
+              groups: {"country" => nil, "region" => nil},
+              value: within(0.00001).of(2.64516)
+            },
+            {
+              groups: {"country" => "france", "region" => "europe"},
+              value: within(0.00001).of(1.87096)
+            }
+          ]
+        )
+      end
+    end
+  end
+
+  describe "#weighted_sum" do
+    let(:started_at) { Time.zone.parse("2023-03-01") }
+
+    let(:events_values) do
+      [
+        {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2},
+        {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3},
+        {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1},
+        {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4},
+        {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2},
+        {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10},
+        {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10}
+      ]
+    end
+
+    let(:events) do
+      events_values.map do |values|
+        properties = {}
+        properties[:region] = values[:region] if values[:region]
+
+        create_event(
+          value: values[:value],
+          timestamp: values[:timestamp],
+          properties:
+        )
+      end
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it "returns the weighted sum of event properties" do
+      expect(event_store.weighted_sum.round(5)).to eq(0.02218)
+    end
+
+    context "with a single event" do
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000}
+        ]
+      end
+
+      it "returns the weighted sum of event properties" do
+        expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+      end
+    end
+
+    context "with no events" do
+      let(:events_values) { [] }
+
+      it "returns the weighted sum of event properties" do
+        expect(event_store.weighted_sum.round(5)).to eq(0.0)
+      end
+    end
+
+    context "with events with the same timestamp" do
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3},
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3}
+        ]
+      end
+
+      it "returns the weighted sum of event properties" do
+        expect(event_store.weighted_sum.round(5)).to eq(5.22581) # 4 / 31 * 0 + 27 / 31 * 6
+      end
+    end
+
+    context "with initial value" do
+      let(:initial_value) { 1000 }
+
+      it "uses the initial value in the aggregation" do
+        expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.02218)
+      end
+
+      context "without events" do
+        let(:events_values) { [] }
+
+        it "uses only the initial value in the aggregation" do
+          expect(event_store.weighted_sum(initial_value:).round(5)).to eq(1000.0)
+        end
+      end
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {region: ["europe"]} }
+
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-04 00:00:00.000"), value: 1000, region: "us"},
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe"}
+        ]
+      end
+
+      it "returns the weighted sum of event properties scoped to the group" do
+        expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
+      end
+    end
+  end
+
+  describe "#weighted_sum_breakdown" do
+    let(:started_at) { Time.zone.parse("2023-03-01") }
+
+    let(:events_values) do
+      [
+        {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2},
+        {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3},
+        {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1},
+        {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4},
+        {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2},
+        {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10},
+        {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10}
+      ]
+    end
+
+    let(:events) do
+      events_values.map do |values|
+        properties = {}
+        properties[:region] = values[:region] if values[:region]
+
+        create_event(
+          value: values[:value],
+          timestamp: values[:timestamp],
+          properties:
+        )
+      end
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it "returns the weighted sum of event properties" do
+      expected_breakdown = [
+        [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 0.0, 0.0, 345600, 0.0],
+        [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 2, 2, 3600, within(0.00001).of(0.00268)],
+        [format_timestamp("2023-03-05T01:00:00.000Z", precision: 5), 3, 5, 1800, within(0.00001).of(0.00336)],
+        [format_timestamp("2023-03-05T01:30:00.000Z", precision: 5), 1, 6, 1800, within(0.00001).of(0.00403)],
+        [format_timestamp("2023-03-05T02:00:00.000Z", precision: 5), -4, 2, 7200, within(0.00001).of(0.00537)],
+        [format_timestamp("2023-03-05T04:00:00.000Z", precision: 5), -2, 0.0, 3600, 0.0],
+        [format_timestamp("2023-03-05T05:00:00.000Z", precision: 5), 10, 10, 1800, within(0.00001).of(0.00672)],
+        [format_timestamp("2023-03-05T05:30:00.000Z", precision: 5), -10, 0.0, 2313000, 0.0],
+        [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 0.0, 0.0, 0.0]
+      ]
+      expect(event_store.weighted_sum_breakdown).to match(expected_breakdown)
+    end
+
+    context "with a single event" do
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000}
+        ]
+      end
+
+      it "returns the weighted sum of event properties" do
+        expected_breakdown = [
+          [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 0.0, 0.0, 345600, 0.0],
+          [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 1000, 1000, 2332800, within(0.00001).of(870.96774)],
+          [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 1000, 0.0, 0.0]
+        ]
+        expect(event_store.weighted_sum_breakdown).to match(expected_breakdown)
+      end
+    end
+
+    context "with no events" do
+      let(:events_values) { [] }
+
+      it "returns the weighted sum of event properties" do
+        expect(event_store.weighted_sum_breakdown).to match([
+          [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 0.0, 0.0, 2678400, 0.0],
+          [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 0.0, 0.0, 0.0]
+        ])
+      end
+    end
+
+    context "with events with the same timestamp" do
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3},
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 3}
+        ]
+      end
+
+      it "returns the weighted sum of event properties" do
+        expected_breakdown = [
+          [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 0, 0, 345600, 0.0],
+          [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 3, 3, 0, 0.0],
+          [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 3, 6, 2332800, within(0.00001).of(5.22580)],
+          [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 6, 0.0, 0.0]
+        ]
+        expect(event_store.weighted_sum_breakdown).to match(expected_breakdown)
+      end
+    end
+
+    context "with initial value" do
+      let(:initial_value) { 1000 }
+
+      it "uses the initial value in the aggregation" do
+        expected_breakdown = [
+          [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 1000, 1000, 345600, within(0.00001).of(129.03225)],
+          [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 2, 1002, 3600, within(0.00001).of(1.34677)],
+          [format_timestamp("2023-03-05T01:00:00.000Z", precision: 5), 3, 1005, 1800, within(0.00001).of(0.67540)],
+          [format_timestamp("2023-03-05T01:30:00.000Z", precision: 5), 1, 1006, 1800, within(0.00001).of(0.67607)],
+          [format_timestamp("2023-03-05T02:00:00.000Z", precision: 5), -4, 1002, 7200, within(0.00001).of(2.69354)],
+          [format_timestamp("2023-03-05T04:00:00.000Z", precision: 5), -2, 1000, 3600, within(0.00001).of(1.34408)],
+          [format_timestamp("2023-03-05T05:00:00.000Z", precision: 5), 10, 1010, 1800, within(0.00001).of(0.67876)],
+          [format_timestamp("2023-03-05T05:30:00.000Z", precision: 5), -10, 1000, 2313000, within(0.00001).of(863.57526)],
+          [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 1000, 0.0, 0.0]
+        ]
+        expect(event_store.weighted_sum_breakdown(initial_value:)).to match(expected_breakdown)
+      end
+
+      context "without events" do
+        let(:events_values) { [] }
+
+        it "uses only the initial value in the aggregation" do
+          expected_breakdown = [
+            [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 1000, 1000, 2678400, 1000],
+            [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 1000, 0.0, 0.0]
+          ]
+          expect(event_store.weighted_sum_breakdown(initial_value:)).to match(expected_breakdown)
+        end
+      end
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {region: ["europe"]} }
+
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-04 00:00:00.000"), value: 1000, region: "us"},
+          {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe"}
+        ]
+      end
+
+      it "returns the weighted sum of event properties scoped to the group" do
+        expected_breakdown = [
+          [format_timestamp("2023-03-01T00:00:00.000Z", precision: 5), 0, 0, 345600, 0.0],
+          [format_timestamp("2023-03-05T00:00:00.000Z", precision: 5), 1000, 1000, 2332800, within(0.00001).of(870.96774)],
+          [format_timestamp("2023-04-01T00:00:00.000Z", precision: 5), 0.0, 1000, 0.0, 0.0]
+        ]
+        expect(event_store.weighted_sum_breakdown).to match(expected_breakdown)
+      end
+    end
+  end
+
+  describe "#grouped_weighted_sum" do
+    let(:grouped_by) { %w[agent_name other] }
+
+    let(:started_at) { Time.zone.parse("2023-03-01") }
+
+    let(:events_values) do
+      [
+        {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, agent_name: "frodo"},
+        {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, agent_name: "frodo"},
+
+        {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10, agent_name: "aragorn"},
+        {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10, agent_name: "aragorn"},
+
+        {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 2},
+        {timestamp: Time.zone.parse("2023-03-05 01:00:00"), value: 3},
+        {timestamp: Time.zone.parse("2023-03-05 01:30:00"), value: 1},
+        {timestamp: Time.zone.parse("2023-03-05 02:00:00"), value: -4},
+        {timestamp: Time.zone.parse("2023-03-05 04:00:00"), value: -2},
+        {timestamp: Time.zone.parse("2023-03-05 05:00:00"), value: 10},
+        {timestamp: Time.zone.parse("2023-03-05 05:30:00"), value: -10}
+      ]
+    end
+
+    let(:events) do
+      events_values.map do |values|
+        properties = {}
+        properties[:region] = values[:region] if values[:region]
+        properties[:agent_name] = values[:agent_name] if values[:agent_name]
+
+        create_event(
+          timestamp: values[:timestamp],
+          value: values[:value],
+          properties:
+        )
+      end
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+    end
+
+    it "returns the weighted sum of event properties" do
+      result = event_store.grouped_weighted_sum
+
+      expect(result.count).to eq(3)
+
+      null_group = result.find { |v| v[:groups]["agent_name"].nil? }
+      expect(null_group[:groups]["agent_name"]).to be_nil
+      expect(null_group[:groups]["other"]).to be_nil
+      expect(null_group[:value].round(5)).to eq(0.02218)
+
+      (result - [null_group]).each do |row|
+        expect(row[:groups]["agent_name"]).not_to be_nil
+        expect(row[:groups]["other"]).to be_nil
+        expect(row[:value].round(5)).to eq(0.02218)
+      end
+    end
+
+    context "with no events" do
+      let(:events_values) { [] }
+
+      it "returns the weighted sum of event properties" do
+        result = event_store.grouped_weighted_sum
+
+        expect(result.count).to eq(0)
+      end
+    end
+
+    context "with initial values" do
+      let(:initial_values) do
+        [
+          {groups: {"agent_name" => "frodo", "other" => nil}, value: 1000},
+          {groups: {"agent_name" => "aragorn", "other" => nil}, value: 1000},
+          {groups: {"agent_name" => nil, "other" => nil}, value: 1000}
+        ]
+      end
+
+      it "uses the initial value in the aggregation" do
+        result = event_store.grouped_weighted_sum(initial_values:)
+
+        expect(result.count).to eq(3)
+
+        null_group = result.find { |v| v[:groups]["agent_name"].nil? }
+        expect(null_group[:groups]["agent_name"]).to be_nil
+        expect(null_group[:groups]["other"]).to be_nil
+        expect(null_group[:value].round(5)).to eq(1000.02218)
+
+        (result - [null_group]).each do |row|
+          expect(row[:groups]["agent_name"]).not_to be_nil
+          expect(row[:groups]["other"]).to be_nil
+          expect(row[:value].round(5)).to eq(1000.02218)
+        end
+      end
+
+      context "without events" do
+        let(:events_values) { [] }
+
+        it "uses only the initial value in the aggregation" do
+          result = event_store.grouped_weighted_sum(initial_values:)
+
+          expect(result.count).to eq(3)
+
+          null_group = result.find { |v| v[:groups]["agent_name"].nil? }
+          expect(null_group[:groups]["agent_name"]).to be_nil
+          expect(null_group[:groups]["other"]).to be_nil
+          expect(null_group[:value].round(5)).to eq(1000)
+
+          (result - [null_group]).each do |row|
+            expect(row[:groups]["agent_name"]).not_to be_nil
+            expect(row[:groups]["other"]).to be_nil
+            expect(row[:value].round(5)).to eq(1000)
+          end
+        end
+      end
+    end
+  end
 end
