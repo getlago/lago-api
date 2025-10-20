@@ -2464,6 +2464,101 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(result.invoice.fees.fixed_charge.count).to eq(0)
       end
     end
+
+    # it is very dangerous! consider moving to a separate PR
+    context "when subscription that is started" do
+      let(:subscription) { create(:subscription, plan:, started_at:, customer:) }
+      let(:date_service) do
+        Subscriptions::DatesService.new_instance(
+          subscription,
+          Time.zone.at(timestamp),
+          current_usage: false
+        )
+      end
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          invoicing_reason: :subscription_starting,
+          timestamp:,
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+          fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: date_service.fixed_charges_to_datetime
+        )
+      end
+      let(:plan) { create(:plan, pay_in_advance:) }
+      let(:charge) { create(:standard_charge, plan:, pay_in_advance: charge_pay_in_advance) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: fixed_charge_pay_in_advance) }
+      let(:pay_in_advance) { false }
+      let(:charge_pay_in_advance) { false }
+      let(:fixed_charge_pay_in_advance) { false }
+      let(:started_at) { DateTime.parse("01 Jan 2022") }
+      let(:timestamp) { started_at }
+      let(:invoice) { create(:invoice) }
+      let(:fixed_charge_event) { create(:fixed_charge_event, fixed_charge:, units: 10, timestamp: started_at, created_at: started_at) }
+
+      before do
+        invoice
+        charge
+        fixed_charge_event
+        invoice_subscription
+      end
+
+      # Check the logic: it's an active subscription, that is not pay in advance, fixed_charges are not pay in advance, but we get
+      # into billing service. Right now we will create a subscriptions fee. Shall we add a check and do not create a subscription fee
+      # in this case?
+      it "does not create a subscription fee, does not create charge fee, does not create fixed charge fee" do
+        result = invoice_service.call
+
+        expect(result.invoice.fees.subscription.count).to eq(1)
+        expect(result.invoice.fees.charge.count).to eq(0)
+        expect(result.invoice.fees.fixed_charge.count).to eq(0)
+      end
+
+      context "when fixed_charge is pay in advance" do
+        let(:fixed_charge_pay_in_advance) { true }
+
+        it "creates a subscription fee, does not create charge fee, creates fixed charge fee" do
+          result = invoice_service.call
+
+          expect(result.invoice.fees.subscription.count).to eq(0)
+          expect(result.invoice.fees.charge.count).to eq(0)
+          # To Be changed when we actually generate fixed charge fees
+          expect(result.invoice.fees.fixed_charge.count).to eq(0)
+        end
+      end
+
+      context "when plan is pay in advance" do
+        let(:pay_in_advance) { true }
+
+        it "creates a subscription fee, does not create charge fee, does not create fixed charge fee" do
+          result = invoice_service.call
+
+          expect(result.invoice.fees.subscription.count).to eq(1)
+          expect(result.invoice.fees.charge.count).to eq(0)
+          expect(result.invoice.fees.fixed_charge.count).to eq(0)
+        end
+
+        context "when fixed_charge is pay in advance" do
+          let(:fixed_charge_pay_in_advance) { true }
+
+          it "creates a subscription fee, does not create charge fee, creates fixed charge fee" do
+            result = invoice_service.call
+
+            expect(result.invoice.fees.subscription.count).to eq(1)
+            expect(result.invoice.fees.charge.count).to eq(0)
+            # To Be changed when we actually generate fixed charge fees
+            expect(result.invoice.fees.fixed_charge.count).to eq(0)
+          end
+        end
+      end
+
+    end
   end
 
   describe "#should_create_yearly_subscription_fee?" do
