@@ -6,7 +6,7 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
   subject(:mapping) { build(:netsuite_collection_mapping, settings: {}) }
 
   let(:mapping_types) do
-    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account]
+    %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account currencies]
   end
 
   it_behaves_like "paper_trail traceable"

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::IntegrationCollectionMappings::Create do
+  subject { execute_query(query:, input:) }
+
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
@@ -12,7 +14,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
 
-  let(:mutation) do
+  let(:query) do
     <<-GQL
       mutation($input: CreateIntegrationCollectionMappingInput!) {
         createIntegrationCollectionMapping(input: $input) {
@@ -21,7 +23,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
           mappingType,
           externalAccountCode,
           externalId,
-          externalName
+          externalName,
+          currencies {currencyCode currencyExternalCode}
         }
       }
     GQL
@@ -39,7 +42,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
   let(:billing_entity_id) { nil }
 
   def create_integration_collection_mapping(input:, raw: false)
-    result = execute_query(query: mutation, input:)
+    result = execute_query(query:, input:)
     raw ? result : result["data"]["createIntegrationCollectionMapping"]
   end
 
@@ -56,8 +59,27 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
       "mappingType" => mapping_type,
       "externalAccountCode" => external_account_code,
       "externalId" => external_id,
-      "externalName" => external_name
+      "externalName" => external_name,
+      "currencies" => nil
     )
+  end
+
+  context "with currencies" do
+    let(:input) do
+      {
+        integrationId: integration.id,
+        mappingType: "currencies",
+        currencies: [
+          {"currencyCode" => "EUR", "currencyExternalCode" => "1000222"}
+        ]
+      }
+    end
+
+    it "updates the mapping" do
+      result_data = subject["data"]["createIntegrationCollectionMapping"]
+      expect(result_data["integrationId"]).to eq(integration.id)
+      expect(result_data["currencies"]).to eq([{"currencyCode" => "EUR", "currencyExternalCode" => "1000222"}])
+    end
   end
 
   context "with billing entity" do
@@ -73,7 +95,8 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
         "mappingType" => mapping_type,
         "externalAccountCode" => external_account_code,
         "externalId" => external_id,
-        "externalName" => external_name
+        "externalName" => external_name,
+        "currencies" => nil
       )
     end
 

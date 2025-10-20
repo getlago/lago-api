@@ -47,5 +47,26 @@ RSpec.describe IntegrationCollectionMappings::UpdateService do
         expect(result.integration_collection_mapping).to be_a(IntegrationCollectionMappings::NetsuiteCollectionMapping)
       end
     end
+
+    context "with netsuite currencies mapping" do
+      let(:integration_collection_mapping) { create(:netsuite_currencies_mapping) }
+
+      context "with valid currencies format" do
+        it "saves the new mapping" do
+          update_args[:currencies] = {"USD" => "799344"}
+          result = service_call
+          expect(result.integration_collection_mapping.reload.currencies).to eq({"USD" => "799344"})
+        end
+      end
+
+      context "with invalid currencies format" do
+        it "returns validation errors for invalid currencies format" do
+          update_args[:currencies] = {yolo: true}
+          result = service_call
+
+          expect(result.error.messages[:currencies]).to eq ["invalid_format"]
+        end
+      end
+    end
   end
 end
