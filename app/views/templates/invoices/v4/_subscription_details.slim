@@ -62,7 +62,7 @@
       - if subscription.plan.fixed_charges.where(pay_in_advance: false).any? && existing_fixed_charge_fees_in_interval?(subscription_id: subscription.id)
         .invoice-resume.overflow-auto
           table.invoice-resume-table width="100%"
-            - if different_boundaries_for_subscription_and_fixed_charges(subscription)
+            - if has_different_boundaries_for_subscription_and_fixed_charges?(subscription)
               tr.first_child
                 td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.fixed_charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.fixed_charges_to_datetime_in_customer_timezone&.to_date, format: :default))
                 td.body-2 = I18n.t('invoice.units')
