@@ -596,16 +596,13 @@ module Events
 
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
-            Arel::Nodes::NamedFunction.new(
-              "COALESCE",
-              [
-                Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)),
-                Arel::Nodes::SqlLiteral.new("''")
-              ]
-            ).in(values.map(&:to_s))
-          end.inject(&:and)
-        end.inject(&:or)
-        scope.where(conditions.not) if conditions.present?
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
+            )
+          end.join(" AND ")
+        end
+        sql = conditions.map { "(#{it})" }.join(" OR ")
+        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
 
         scope
       end
