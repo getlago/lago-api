@@ -63,7 +63,7 @@ module DataApi
             charge_filter_id: charge_data[:charge_filter_id],
             **percentile_results
           }
-        rescue => e
+        rescue StandardError => e
           failed_charges << {
             record_id: record_id,
             charge_id: charge_data[:charge_id],
