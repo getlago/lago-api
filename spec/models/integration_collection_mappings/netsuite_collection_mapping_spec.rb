@@ -58,4 +58,61 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
       expect(mapping.tax_code).to eq(tax_code)
     end
   end
+
+  describe "#currencies" do
+    let(:currencies) { {"EUR" => "8"} }
+
+    it "assigns and retrieve a setting" do
+      mapping.currencies = currencies
+      expect(mapping.currencies).to eq(currencies)
+    end
+
+    it do
+      mapping.mapping_type = :currencies
+      expect(mapping).to be_invalid
+    end
+  end
+
+  describe "currencies validation" do
+    context "when mapping type is currencies" do
+      subject(:mapping) { build(:netsuite_collection_mapping, mapping_type: :currencies) }
+
+      context "when currencies is blank" do
+        it do
+          mapping.currencies = nil
+          expect(mapping).to be_invalid
+          expect(mapping.errors[:currencies]).to eq ["value_is_mandatory"]
+
+          mapping.currencies = {}
+          expect(mapping).to be_invalid
+          expect(mapping.errors[:currencies]).to eq ["cannot_be_empty"]
+        end
+      end
+
+      context "when currencies is invalid" do
+        [
+          [],
+          "invalid",
+          :mapping,
+          {"USD" => 8},
+          {USD: "8"},
+          {"invalid" => "8"},
+          {"USD" => :test}
+
+        ].each do |currencies|
+          it do
+            mapping.currencies = currencies
+            expect(mapping).to be_invalid
+            expect(mapping.errors[:currencies]).to eq ["invalid_format"]
+          end
+        end
+      end
+    end
+
+    context "when currencies is expected" do
+      subject(:mapping) { build(:netsuite_collection_mapping, mapping_type: :currencies) }
+
+      it { is_expected.to be_invalid }
+    end
+  end
 end
