@@ -367,8 +367,8 @@ describe "Billing Boundaries Scenario" do
         expect(invoice_subscription.to_datetime).to match_datetime("2024-01-31T01:00:00Z")
         expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-01-31T01:00:00Z")
         expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-01-31T01:00:00Z")
-        expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-01-31T01:00:00Z")
-        expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-03-31T00:00:00Z")
+        expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-03-31T00:00:00Z")
+        expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-04-29T23:59:59Z")
 
         # next year billing
         travel_to(Time.zone.parse("2025-01-31T02:00:00Z")) do
