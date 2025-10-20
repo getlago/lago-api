@@ -52,9 +52,13 @@ module Subscriptions
             UNION
             (#{semiannual_with_monthly_charges_calendar})
             UNION
+            (#{semiannual_with_monthly_fixed_charges_calendar})
+            UNION
             (#{semiannual_calendar})
             UNION
             (#{yearly_with_monthly_charges_calendar})
+            UNION
+            (#{yearly_with_monthly_fixed_charges_calendar})
             UNION
             (#{yearly_calendar})
             UNION
@@ -67,9 +71,13 @@ module Subscriptions
             UNION
             (#{semiannual_with_monthly_charges_anniversary})
             UNION
+            (#{semiannual_with_monthly_fixed_charges_anniversary})
+            UNION
             (#{semiannual_anniversary})
             UNION
             (#{yearly_with_monthly_charges_anniversary})
+            UNION
+            (#{yearly_with_monthly_fixed_charges_anniversary})
             UNION
             (#{yearly_anniversary})
           ),
@@ -167,6 +175,18 @@ module Subscriptions
       )
     end
 
+    # NOTE: Bill fixed charges monthly for yearly plans on 1st day of the month
+    def yearly_with_monthly_fixed_charges_calendar
+      base_subscription_scope(
+        billing_time: :calendar,
+        interval: :yearly,
+        conditions: [
+          "DATE_PART('day', (:today#{at_time_zone})) = 1",
+          "plans.bill_fixed_charges_monthly = 't'"
+        ]
+      )
+    end
+
     # NOTE: Billed yearly on first day of the year
     def yearly_calendar
       base_subscription_scope(
@@ -204,6 +224,18 @@ module Subscriptions
         conditions: [
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
           "plans.bill_charges_monthly = 't'"
+        ]
+      )
+    end
+
+    # NOTE: Bill fixed charges monthly for semiannual plans on 1st day of the month
+    def semiannual_with_monthly_fixed_charges_calendar
+      base_subscription_scope(
+        billing_time: :calendar,
+        interval: :semiannual,
+        conditions: [
+          "DATE_PART('day', (:today#{at_time_zone})) = 1",
+          "plans.bill_fixed_charges_monthly = 't'"
         ]
       )
     end
@@ -334,6 +366,31 @@ module Subscriptions
       )
     end
 
+    def yearly_with_monthly_fixed_charges_anniversary
+      billing_day = <<-SQL
+        DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+          -- Check if today is the last day of the month
+          CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
+          THEN
+            -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+            (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
+          ELSE
+            -- Otherwise, we just need the current day
+            (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+          END
+        )
+      SQL
+
+      base_subscription_scope(
+        billing_time: :anniversary,
+        interval: :yearly,
+        conditions: [
+          "plans.bill_fixed_charges_monthly = 't'",
+          billing_day
+        ]
+      )
+    end
+
     def semiannual_anniversary
       billing_day = <<-SQL
         DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
@@ -390,6 +447,31 @@ module Subscriptions
         interval: :semiannual,
         conditions: [
           "plans.bill_charges_monthly = 't'",
+          billing_day
+        ]
+      )
+    end
+
+    def semiannual_with_monthly_fixed_charges_anniversary
+      billing_day = <<-SQL
+        DATE_PART('day', (subscriptions.subscription_at#{at_time_zone})) = ANY (
+          -- Check if today is the last day of the month
+          CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
+          THEN
+            -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+            (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
+          ELSE
+            -- Otherwise, we just need the current day
+            (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+          END
+        )
+      SQL
+
+      base_subscription_scope(
+        billing_time: :anniversary,
+        interval: :semiannual,
+        conditions: [
+          "plans.bill_fixed_charges_monthly = 't'",
           billing_day
         ]
       )
