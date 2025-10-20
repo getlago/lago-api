@@ -125,6 +125,10 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000])
       # check invoice_subscription boundaries
       invoice_subscription = pay_in_advance_fixed_charges_invoice.invoice_subscriptions.first
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9f4bd092a (fix linter)
       expect(invoice_subscription).to have_attributes(
         from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
         to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),

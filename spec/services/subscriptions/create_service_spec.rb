@@ -1191,14 +1191,19 @@ RSpec.describe Subscriptions::CreateService do
               fixed_charge_2
             end
 
-            it "does not create fixed charge events for the new subscription" do
+            it "creates fixed charge events for the subscription" do
               result = create_service.call
 
               expect(result).to be_success
-
-              next_subscription = result.subscription.next_subscription
-              expect(next_subscription).to be_pending
-              expect(next_subscription.fixed_charge_events.count).to eq(0)
+              expect(result.subscription).to be_active
+              expect(result.subscription.next_subscription).to be_pending
+              expect(result.subscription.next_subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
+                .to match_array(
+                  [
+                    [fixed_charge_1.id, result.subscription.ending_at],
+                    [fixed_charge_2.id, result.subscription.ending_at]
+                  ]
+                )
             end
           end
 
