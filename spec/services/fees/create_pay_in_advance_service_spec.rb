@@ -652,7 +652,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
           cached_aggregation = CachedAggregation.last
           expect(cached_aggregation.organization_id).to eq(organization.id)
-          expect(cached_aggregation.event_id).to eq(event.id)
+          expect(cached_aggregation.event_transaction_id).to eq(event.transaction_id)
           expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
           expect(cached_aggregation.charge_id).to eq(charge.id)
           expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)

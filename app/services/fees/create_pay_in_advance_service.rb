@@ -181,7 +181,6 @@ module Fees
 
       CachedAggregation.create!(
         organization_id: event.organization_id,
-        event_id: event.id,
         event_transaction_id: event.transaction_id,
         timestamp: billing_at,
         external_subscription_id: event.external_subscription_id,

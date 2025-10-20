@@ -28,7 +28,6 @@ end
 #  updated_at                     :datetime         not null
 #  charge_filter_id               :uuid
 #  charge_id                      :uuid             not null
-#  event_id                       :uuid
 #  event_transaction_id           :string
 #  external_subscription_id       :string           not null
 #  group_id                       :uuid
@@ -39,7 +38,6 @@ end
 #  idx_aggregation_lookup                                 (external_subscription_id,charge_id,timestamp)
 #  idx_cached_aggregation_filtered_lookup                 (organization_id,external_subscription_id,charge_id,timestamp DESC,created_at DESC)
 #  index_cached_aggregations_on_charge_id                 (charge_id)
-#  index_cached_aggregations_on_event_id                  (event_id)
 #  index_cached_aggregations_on_event_transaction_id      (organization_id,event_transaction_id)
 #  index_cached_aggregations_on_external_subscription_id  (external_subscription_id)
 #
