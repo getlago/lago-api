@@ -349,14 +349,15 @@ module Invoices
       timestamp.in_time_zone(tz).to_date != subscription.trial_end_datetime.in_time_zone(tz).to_date
     end
 
+    # it seems quite dangerous! consider moving to a separate PR
     def only_billing_first_fixed_charges_in_advance?(subscription)
-      return false if invoice.invoice_subscriptions.count > 1
+      return false if subscription.invoice_subscriptions.count > 1
       invoice_subscription = invoice.invoice_subscriptions.first
-      return false unless invoice_subscription.invoicing_reason.subscription_starting?
+      return false unless invoice_subscription.subscription_starting?
       return false if subscription.plan.fixed_charges.pay_in_advance.empty?
       return false if subscription.plan.pay_in_advance?
-      # at this point we have an invoice for starting subscriptions, where plan is not paid in advance and there are
-      # some fixed_charges that are paid_in_advance
+      # at this point we have an invoice for starting subscription (billed first time), where plan
+      # is not paid in advance and there are some fixed_charges that are paid_in_advance
       true
     end
 
