@@ -263,6 +263,7 @@ RSpec.describe Subscriptions::UpdateService do
 
             context "when at least one fixed_charge is pay in advance" do
               let(:fixed_charge_2) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
+
               before { fixed_charge_2 }
 
               it "schedules BillSubscriptionJob" do
