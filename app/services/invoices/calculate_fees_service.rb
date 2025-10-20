@@ -350,14 +350,14 @@ module Invoices
     end
 
     def only_billing_first_fixed_charges_in_advance?(subscription)
-      return false if subscription.plan.fixed_charges.pay_in_advance.empty?
-      return false if subscription.plan.pay_in_advance?
       return false if invoice.invoice_subscriptions.count > 1
       invoice_subscription = invoice.invoice_subscriptions.first
-      # I believe this should work......
-      return true if invoice_subscription.from_datetime == invoice_subscription.to_datetime &&
-        invoice_subscription.from_datetime == subscription.started_at
-      false
+      return false unless invoice_subscription.invoicing_reason.subscription_starting?
+      return false if subscription.plan.fixed_charges.pay_in_advance.empty?
+      return false if subscription.plan.pay_in_advance?
+      # at this point we have an invoice for starting subscriptions, where plan is not paid in advance and there are
+      # some fixed_charges that are paid_in_advance
+      true
     end
 
     def finalizing_invoice?
