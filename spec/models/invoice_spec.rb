@@ -807,6 +807,154 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#has_different_boundaries_for_subscription_and_charges?" do
+    subject { invoice.has_different_boundaries_for_subscription_and_charges?(subscription) }
+
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:customer) { subscription.customer }
+    let(:from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+    let(:to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+    let(:charges_from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+    let(:charges_to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime:,
+        charges_to_datetime:
+      )
+    end
+
+    it { is_expected.to be(false) }
+
+    context "when only from_datetime differs" do
+      let(:charges_from_datetime) { DateTime.parse("2024-01-02 00:00:00") }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when only to_datetime differs" do
+      let(:charges_to_datetime) { DateTime.parse("2024-01-30 23:59:59") }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when both from_datetime and to_datetime differ" do
+      let(:charges_from_datetime) { DateTime.parse("2024-01-02 00:00:00") }
+      let(:charges_to_datetime) { DateTime.parse("2024-01-30 23:59:59") }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with customer timezone" do
+      let(:customer) { create(:customer, timezone: "America/New_York") }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:from_datetime) { DateTime.parse("2024-01-01 05:00:00 UTC") }
+      let(:to_datetime) { DateTime.parse("2024-02-01 04:59:59 UTC") }
+      let(:charges_from_datetime) { DateTime.parse("2024-01-02 05:00:00 UTC") }
+      let(:charges_to_datetime) { DateTime.parse("2024-02-02 04:59:59 UTC") }
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          from_datetime:,
+          to_datetime:,
+          charges_from_datetime:,
+          charges_to_datetime:
+        )
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when dates are at boundary edges and dates conver to same day in customer timezone" do
+      let(:from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+      let(:to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+      let(:charges_from_datetime) { DateTime.parse("2024-01-01 00:00:01") }
+      let(:charges_to_datetime) { DateTime.parse("2024-01-31 23:59:58") }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#has_different_boundaries_for_subscription_and_fixed_charges?" do
+    subject { invoice.has_different_boundaries_for_subscription_and_fixed_charges?(subscription) }
+
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:customer) { subscription.customer }
+    let(:from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+    let(:to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+    let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+    let(:fixed_charges_to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        from_datetime:,
+        to_datetime:,
+        fixed_charges_from_datetime:,
+        fixed_charges_to_datetime:
+      )
+    end
+
+    it { is_expected.to be(false) }
+
+    context "when only from_datetime differs" do
+      let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-02 00:00:00") }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when only to_datetime differs" do
+      let(:fixed_charges_to_datetime) { DateTime.parse("2024-01-30 23:59:59") }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when both from_datetime and to_datetime differ" do
+      let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-02 00:00:00") }
+      let(:fixed_charges_to_datetime) { DateTime.parse("2024-01-30 23:59:59") }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with customer timezone" do
+      let(:customer) { create(:customer, timezone: "America/New_York") }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:from_datetime) { DateTime.parse("2024-01-01 05:00:00 UTC") }
+      let(:to_datetime) { DateTime.parse("2024-02-01 04:59:59 UTC") }
+      let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-02 05:00:00 UTC") }
+      let(:fixed_charges_to_datetime) { DateTime.parse("2024-02-02 04:59:59 UTC") }
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          from_datetime:,
+          to_datetime:,
+          fixed_charges_from_datetime:,
+          fixed_charges_to_datetime:
+        )
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when dates are at boundary edges and dates conver to same day in customer timezone" do
+      let(:from_datetime) { DateTime.parse("2024-01-01 00:00:00") }
+      let(:to_datetime) { DateTime.parse("2024-01-31 23:59:59") }
+      let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01 00:00:01") }
+      let(:fixed_charges_to_datetime) { DateTime.parse("2024-01-31 23:59:58") }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#subscription_fees" do
     let(:invoice_subscription) { create(:invoice_subscription) }
 
