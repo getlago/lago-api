@@ -728,23 +728,24 @@ RSpec.describe Subscription do
       let(:plan) { create(:plan) }
 
       it "returns false" do
-        expect(subscription.should_be_billed_when_started?).to_be false
+        expect(subscription.should_be_billed_when_started?).to be(false)
       end
 
       context "when plan has fixed_charges" do
-        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
         let(:pay_in_advance) { false }
-        before {fixed_charge}
+
+        before { fixed_charge }
 
         it "returns false" do
-          expect(subscription.should_be_billed_when_started?).to_be false
+          expect(subscription.should_be_billed_when_started?).to be(false)
         end
 
         context "when fixed_charge is pay_in_advance" do
           let(:pay_in_advance) { true }
 
           it "return true" do
-            expect(subscription.should_be_billed_when_started?).to_be true
+            expect(subscription.should_be_billed_when_started?).to be(true)
           end
         end
       end
@@ -754,23 +755,24 @@ RSpec.describe Subscription do
       let(:plan) { create(:plan, :pay_in_advance) }
 
       it "returns true" do
-        expect(subscription.should_be_billed_when_started?).to_be false
+        expect(subscription.should_be_billed_when_started?).to be(true)
       end
 
       context "when plan has fixed_charges" do
-        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance) }
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
         let(:pay_in_advance) { false }
-        before {fixed_charge}
+
+        before { fixed_charge }
 
         it "returns true" do
-          expect(subscription.should_be_billed_when_started?).to_be true
+          expect(subscription.should_be_billed_when_started?).to be(true)
         end
 
         context "when fixed_charge is pay_in_advance" do
           let(:pay_in_advance) { true }
 
           it "return true" do
-            expect(subscription.should_be_billed_when_started?).to_be true
+            expect(subscription.should_be_billed_when_started?).to be(true)
           end
         end
       end
