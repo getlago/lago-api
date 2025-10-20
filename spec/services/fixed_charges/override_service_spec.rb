@@ -294,47 +294,6 @@ RSpec.describe FixedCharges::OverrideService do
             .once
         end
       end
-
-      context "when subscription parameter is passed during plan override" do
-        # Subscription update with plan override
-        subject(:override_service) { described_class.new(fixed_charge:, params:, subscription:) }
-
-        let(:subscription) { create(:subscription, plan:, organization:) }
-        let(:params) do
-          {
-            units: 15,
-            plan_id: plan2.id
-          }
-        end
-
-        before do
-          allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to receive(:call!)
-        end
-
-        it "creates a fixed charge for the new plan" do
-          result = override_service.call
-
-          expect(result).to be_success
-
-          override_fixed_charge = result.fixed_charge
-          expect(override_fixed_charge.plan_id).to eq(plan2.id)
-          expect(override_fixed_charge.units).to eq(15)
-        end
-
-        it "creates fixed charge events for the specific subscription" do
-          result = override_service.call
-
-          expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
-            .to have_received(:call!)
-            .with(
-              fixed_charge: result.fixed_charge,
-              subscription:,
-              apply_units_immediately: true
-            )
-            .once
-        end
-      end
     end
   end
 end

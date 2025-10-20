@@ -125,7 +125,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000])
       # check invoice_subscription boundaries
       invoice_subscription = pay_in_advance_fixed_charges_invoice.invoice_subscriptions.first
-      
+
       expect(invoice_subscription).to have_attributes(
         from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
         to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
@@ -255,7 +255,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(recurring_prorated_advance_fee.amount_cents).to eq(50_000_000)
 
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map{|fee| fee.amount_cents}).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 50_000_000 + 10_000 + prorated_fee_amount + fixed_charge_fees_sum)
 
       # check boundaries
@@ -355,7 +355,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(recurring_prorated_advance_fee.amount_cents).to eq(250_000_000)
 
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map{|fee| fee.amount_cents}).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 40_000 + prorated_fee_amount + fixed_charge_fees_sum)
 
       # month without any events
@@ -384,7 +384,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(recurring_prorated_advance_fee.amount_cents).to eq(250_000_000)
 
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map{|fee| fee.amount_cents}).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000 + fixed_charge_fees_sum)
     end
   end

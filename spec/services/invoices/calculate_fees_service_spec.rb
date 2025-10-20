@@ -871,6 +871,7 @@ RSpec.describe Invoices::CalculateFeesService do
         let(:fixed_charge) do
           create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
         end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -1029,12 +1030,11 @@ RSpec.describe Invoices::CalculateFeesService do
           let(:fixed_charge) do
             create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
           end
+          let(:event) { nil }
 
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
-
-          let(:event) { nil }
 
           it "creates a charge fee and a minimum commitment fee" do
             result = invoice_service.call
