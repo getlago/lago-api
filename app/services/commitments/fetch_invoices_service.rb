@@ -29,6 +29,5 @@ module Commitments
     attr_reader :commitment, :invoice_subscription
 
     delegate :subscription, to: :invoice_subscription
-    delegate :plan, to: :subscription
   end
 end

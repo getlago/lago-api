@@ -322,40 +322,6 @@ RSpec.describe Plan do
     end
   end
 
-  describe "#charges_or_fixed_charges_billed_in_monthly_split_intervals?" do
-    subject(:method_call) { plan.charges_or_fixed_charges_billed_in_monthly_split_intervals? }
-
-    let(:plan) { build_stubbed(:plan, interval: :yearly, bill_charges_monthly:, bill_fixed_charges_monthly:) }
-
-    context "when charges and fixed charges billed in monthly split intervals are false" do
-      let(:bill_charges_monthly) { false }
-      let(:bill_fixed_charges_monthly) { false }
-
-      it { is_expected.to be false }
-    end
-
-    context "when charges and fixed charges billed in monthly split intervals are true" do
-      let(:bill_charges_monthly) { true }
-      let(:bill_fixed_charges_monthly) { true }
-
-      it { is_expected.to be true }
-    end
-
-    context "when charges billed in monthly split intervals is true" do
-      let(:bill_charges_monthly) { true }
-      let(:bill_fixed_charges_monthly) { false }
-
-      it { is_expected.to be true }
-    end
-
-    context "when fixed charges billed in monthly split intervals is true" do
-      let(:bill_charges_monthly) { false }
-      let(:bill_fixed_charges_monthly) { true }
-
-      it { is_expected.to be true }
-    end
-  end
-
   describe "#yearly_amount_cents" do
     subject(:method_call) { plan.yearly_amount_cents }
 

@@ -23,7 +23,7 @@ module Commitments
         end
 
         def fetch_invoices
-          unless plan.charges_or_fixed_charges_billed_in_monthly_split_intervals?
+          unless subscription.plan.charges_billed_in_monthly_split_intervals?
             return Invoice.where(id: invoice_subscription.invoice_id)
           end
 
