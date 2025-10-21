@@ -29,11 +29,11 @@ end
 # NOTE: Assigns valid events
 6.times do |offset|
   5.times do
-    create_event(code: sum_bm.code, time: (offset.month - rand(1..20).days).ago)
+    create_event(code: sum_bm.code, time: (offset.month + rand(1..20).days).ago)
   end
 
   2.times do
-    create_event(code: count_bm.code, time: (offset.month - rand(1..20).days).ago)
+    create_event(code: count_bm.code, time: (offset.month + rand(1..20).days).ago)
   end
 end
 
