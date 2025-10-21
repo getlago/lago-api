@@ -2529,9 +2529,6 @@ CREATE VIEW public.exports_customers AS
     c.document_locale,
     ppc.provider_customer_id,
     ppc.settings AS provider_settings,
-    COALESCE(( SELECT json_agg(json_build_object('id', cm.id, 'key', cm.key, 'value', cm.value, 'display_in_invoice', cm.display_in_invoice)) AS json_agg
-           FROM public.customer_metadata cm
-          WHERE (cm.customer_id = c.id)), '[]'::json) AS metadata,
     to_json(ARRAY( SELECT ct.tax_id AS lago_tax_id
            FROM public.customers_taxes ct
           WHERE (ct.customer_id = c.id))) AS lago_taxes_ids
@@ -10001,6 +9998,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251021105732'),
 ('20251021083946'),
 ('20251021073412'),
 ('20251020142629'),
