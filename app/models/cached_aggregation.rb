@@ -37,7 +37,7 @@ end
 # Indexes
 #
 #  idx_aggregation_lookup                                 (external_subscription_id,charge_id,timestamp)
-#  idx_aggregation_lookup_with_transaction_id             (event_transaction_id,external_subscription_id,charge_id,timestamp)
+#  idx_cached_aggregation_filtered_lookup                 (organization_id,external_subscription_id,charge_id,timestamp DESC,created_at DESC)
 #  index_cached_aggregations_on_charge_id                 (charge_id)
 #  index_cached_aggregations_on_event_id                  (event_id)
 #  index_cached_aggregations_on_event_transaction_id      (organization_id,event_transaction_id)

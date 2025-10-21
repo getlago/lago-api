@@ -1,4 +1,4 @@
-\restrict buj6uL1CBEd2oMRc6nEHJglhWA7bF1g91Ik6l46KBRPxejoo3DmJKV9jFQBLSRb
+\restrict bcYcTyR5yK21dHe2wekAFPYOMX1RmnePdeTYuQWweyLzZoJSJmU0r5MarAm4kdn
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -700,10 +700,10 @@ DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_times
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
+DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
-DROP INDEX IF EXISTS public.idx_aggregation_lookup_with_transaction_id;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
@@ -5087,13 +5087,6 @@ CREATE INDEX idx_aggregation_lookup ON public.cached_aggregations USING btree (e
 
 
 --
--- Name: idx_aggregation_lookup_with_transaction_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_aggregation_lookup_with_transaction_id ON public.cached_aggregations USING btree (event_transaction_id, external_subscription_id, charge_id, "timestamp") INCLUDE (organization_id, grouped_by);
-
-
---
 -- Name: idx_alerts_code_unique_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5112,6 +5105,13 @@ CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_subscription ON public.usage_
 --
 
 CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_subscription_with_bm ON public.usage_monitoring_alerts USING btree (subscription_external_id, organization_id, alert_type, billable_metric_id) WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL));
+
+
+--
+-- Name: idx_cached_aggregation_filtered_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregations USING btree (organization_id, external_subscription_id, charge_id, "timestamp" DESC, created_at DESC) INCLUDE (grouped_by, charge_filter_id, event_transaction_id);
 
 
 --
@@ -10044,11 +10044,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict buj6uL1CBEd2oMRc6nEHJglhWA7bF1g91Ik6l46KBRPxejoo3DmJKV9jFQBLSRb
+\unrestrict bcYcTyR5yK21dHe2wekAFPYOMX1RmnePdeTYuQWweyLzZoJSJmU0r5MarAm4kdn
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251020142629'),
 ('20251020074349'),
 ('20251020073334'),
 ('20251010092830'),
