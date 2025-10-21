@@ -4,7 +4,7 @@ class AddIndexOnCachedAggregationCreatedAt < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   def up
-    remove_index :cached_aggregations, name: :idx_aggregation_lookup_with_transaction_id, if_exists: true
+    remove_index :cached_aggregations, name: :idx_aggregation_lookup_with_transaction_id, if_exists: true, algorithm: :concurrently
 
     safety_assured do
       add_index(
@@ -28,7 +28,7 @@ class AddIndexOnCachedAggregationCreatedAt < ActiveRecord::Migration[8.0]
         algorithm: :concurrently
       )
 
-      remove_index :cached_aggregations, name: :idx_cached_agg_comprehensive
+      remove_index :cached_aggregations, name: :idx_cached_agg_comprehensive, algorithm: :concurrently
     end
   end
 end
