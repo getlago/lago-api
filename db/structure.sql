@@ -1,4 +1,4 @@
-\restrict bcYcTyR5yK21dHe2wekAFPYOMX1RmnePdeTYuQWweyLzZoJSJmU0r5MarAm4kdn
+\restrict 0YnQz6mdbiT17EToblvHXVZghG3HAkgbndPcS1rWRpPhVqIdUq50NjPFITpZy8F
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -600,7 +600,6 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
-DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_organization_id;
@@ -1567,7 +1566,6 @@ CREATE TABLE public.billing_entities_taxes (
 CREATE TABLE public.cached_aggregations (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    event_id uuid,
     "timestamp" timestamp(6) without time zone NOT NULL,
     external_subscription_id character varying NOT NULL,
     charge_id uuid NOT NULL,
@@ -5808,13 +5806,6 @@ CREATE INDEX index_cached_aggregations_on_charge_id ON public.cached_aggregation
 
 
 --
--- Name: index_cached_aggregations_on_event_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_cached_aggregations_on_event_id ON public.cached_aggregations USING btree (event_id);
-
-
---
 -- Name: index_cached_aggregations_on_event_transaction_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10044,12 +10035,13 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bcYcTyR5yK21dHe2wekAFPYOMX1RmnePdeTYuQWweyLzZoJSJmU0r5MarAm4kdn
+\unrestrict 0YnQz6mdbiT17EToblvHXVZghG3HAkgbndPcS1rWRpPhVqIdUq50NjPFITpZy8F
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20251020142629'),
+('20251020090137'),
 ('20251020074349'),
 ('20251020073334'),
 ('20251010092830'),
