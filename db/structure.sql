@@ -1,8 +1,3 @@
-\restrict uIl0Bs1E0mdc0RgMjWikogMVmxdaEFrKBVmVsOV0qtoR6X99XSrhger4HyEImXE
-
--- Dumped from database version 14.0
--- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -10042,8 +10037,6 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict uIl0Bs1E0mdc0RgMjWikogMVmxdaEFrKBVmVsOV0qtoR6X99XSrhger4HyEImXE
 
 SET search_path TO "$user", public;
 
