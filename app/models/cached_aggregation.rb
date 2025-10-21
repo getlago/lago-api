@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CachedAggregation < ApplicationRecord
+  self.ignored_columns += %w[event_id]
+
   belongs_to :organization
   belongs_to :charge
   belongs_to :group, optional: true
