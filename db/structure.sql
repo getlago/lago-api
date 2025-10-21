@@ -1,4 +1,4 @@
-\restrict 0YnQz6mdbiT17EToblvHXVZghG3HAkgbndPcS1rWRpPhVqIdUq50NjPFITpZy8F
+\restrict uIl0Bs1E0mdc0RgMjWikogMVmxdaEFrKBVmVsOV0qtoR6X99XSrhger4HyEImXE
 
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
@@ -698,6 +698,7 @@ DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
+DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -5117,6 +5118,13 @@ CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregation
 --
 
 CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscription_activities USING btree (organization_id, enqueued);
+
+
+--
+-- Name: idx_events_for_distinct_codes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_for_distinct_codes ON public.events USING btree (external_subscription_id, organization_id, "timestamp") INCLUDE (code) WHERE (deleted_at IS NULL);
 
 
 --
@@ -10035,11 +10043,12 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0YnQz6mdbiT17EToblvHXVZghG3HAkgbndPcS1rWRpPhVqIdUq50NjPFITpZy8F
+\unrestrict uIl0Bs1E0mdc0RgMjWikogMVmxdaEFrKBVmVsOV0qtoR6X99XSrhger4HyEImXE
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251021073412'),
 ('20251020142629'),
 ('20251020090137'),
 ('20251020074349'),
