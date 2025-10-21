@@ -81,6 +81,7 @@ end
 #
 # Indexes
 #
+#  idx_events_for_distinct_codes                                    (external_subscription_id,organization_id,timestamp) WHERE (deleted_at IS NULL)
 #  idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp  (external_subscription_id,organization_id,code,timestamp) WHERE (deleted_at IS NULL)
 #  index_events_on_customer_id                                      (customer_id)
 #  index_events_on_deleted_at                                       (deleted_at)
