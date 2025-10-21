@@ -46,7 +46,7 @@ pidfile ENV.fetch("PIDFILE", "tmp/pids/server.pid")
 workers ENV.fetch("WEB_CONCURRENCY", 0)
 
 # Ensure we flush and close Karafka producer when puma is shutting down
-if ENV.fetch("WEB_CONCURRENCY", 0).to_i > 1
+if ENV.fetch("WEB_CONCURRENCY", 0).to_i > 0
   before_worker_shutdown do
     ::Karafka.producer.close
   end
