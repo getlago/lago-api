@@ -51,7 +51,7 @@ if ENV.fetch("WEB_CONCURRENCY", 0).to_i > 0
     ::Karafka.producer.close
   end
 else
-  @config.options[:events].after_stopped do
+  after_stopped do
     ::Karafka.producer.close
   end
 end
