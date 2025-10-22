@@ -430,133 +430,164 @@ RSpec.describe Invoices::CalculateFeesService do
             end
           end
 
-          # TODO: discuss with Mike
-          # context "when changing the subscription" do
-          #   let(:add_on1) { create(:add_on, organization:) }
-          #   let(:add_on2) { create(:add_on, organization:) }
+          context "when changing the subscription" do
+            let(:add_on1) { create(:add_on, organization:) }
+            let(:add_on2) { create(:add_on, organization:) }
 
-          #   let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
-          #   let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+            let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
+            let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
 
-          #   let(:old_fixed_charge) do
-          #     create(
-          #       :fixed_charge,
-          #       plan: old_plan,
-          #       add_on: add_on1,
-          #       charge_model: "standard",
-          #       pay_in_advance: true,
-          #       properties: {amount: "10"}
-          #     )
-          #   end
+            let(:old_fixed_charge) do
+              create(
+                :fixed_charge,
+                plan: old_plan,
+                add_on: add_on1,
+                charge_model: "standard",
+                pay_in_advance: true,
+                properties: {amount: "10"}
+              )
+            end
 
-          #   let(:new_fixed_charge1) do
-          #     create(
-          #       :fixed_charge,
-          #       plan: new_plan,
-          #       add_on: add_on1,
-          #       charge_model: "standard",
-          #       pay_in_advance: true,
-          #       properties: {amount: "10"}
-          #     )
-          #   end
+            let(:new_fixed_charge1) do
+              create(
+                :fixed_charge,
+                plan: new_plan,
+                add_on: add_on1,
+                charge_model: "standard",
+                pay_in_advance: true,
+                properties: {amount: "10"}
+              )
+            end
 
-          #   let(:new_fixed_charge2) do
-          #     create(
-          #       :fixed_charge,
-          #       plan: new_plan,
-          #       add_on: add_on2,
-          #       charge_model: "standard",
-          #       pay_in_advance: true,
-          #       properties: {amount: "15"}
-          #     )
-          #   end
+            let(:new_fixed_charge2) do
+              create(
+                :fixed_charge,
+                plan: new_plan,
+                add_on: add_on2,
+                charge_model: "standard",
+                pay_in_advance: true,
+                properties: {amount: "15"}
+              )
+            end
 
-          #   let(:old_subscription) do
-          #     create(
-          #       :subscription,
-          #       plan: old_plan,
-          #       organization:,
-          #       customer:,
-          #       billing_time:,
-          #       subscription_at: started_at,
-          #       started_at:,
-          #       created_at:,
-          #       status: :terminated,
-          #       terminated_at: timestamp - 1.day
-          #     )
-          #   end
+            let(:old_subscription) do
+              create(
+                :subscription,
+                plan: old_plan,
+                organization:,
+                customer:,
+                billing_time:,
+                subscription_at: started_at,
+                started_at:,
+                created_at:,
+                status: :terminated,
+                terminated_at: timestamp - 1.day
+              )
+            end
 
-          #   let(:new_subscription) do
-          #     create(
-          #       :subscription,
-          #       plan: new_plan,
-          #       organization:,
-          #       customer:,
-          #       billing_time:,
-          #       subscription_at: started_at,
-          #       started_at: timestamp,
-          #       created_at: timestamp,
-          #       status: :active,
-          #       previous_subscription: old_subscription
-          #     )
-          #   end
+            let(:new_subscription) do
+              create(
+                :subscription,
+                plan: new_plan,
+                organization:,
+                customer:,
+                billing_time:,
+                subscription_at: started_at,
+                started_at: timestamp,
+                created_at: timestamp,
+                status: :active,
+                previous_subscription: old_subscription
+              )
+            end
 
-          #   let(:new_fixed_charge1_event) do
-          #     create(:fixed_charge_event, fixed_charge: new_fixed_charge1, subscription: new_subscription, timestamp: timestamp, units: 1)
-          #   end
+            let(:new_fixed_charge1_event) do
+              create(:fixed_charge_event, fixed_charge: new_fixed_charge1, subscription: new_subscription, timestamp: timestamp, units: 1)
+            end
 
-          #   let(:new_fixed_charge2_event) do
-          #     create(:fixed_charge_event, fixed_charge: new_fixed_charge2, subscription: new_subscription, timestamp: timestamp, units: 1)
-          #   end
+            let(:new_fixed_charge2_event) do
+              create(:fixed_charge_event, fixed_charge: new_fixed_charge2, subscription: new_subscription, timestamp: timestamp, units: 1)
+            end
 
-          #   before do
-          #     old_fixed_charge
-          #     new_fixed_charge1_event
-          #     new_fixed_charge2_event
-          #   end
+            before do
+              old_fixed_charge
+              fixed_charge.update(pay_in_advance: false)
+              new_fixed_charge1
+              new_fixed_charge2
+              new_fixed_charge1_event
+              new_fixed_charge2_event
+            end
 
-          #   context "when subscription is upgraded" do
-          #     context "when passing old subscription in the service" do
-          #       let(:subscription) { old_subscription }
-          #       it "does not create a fixed charge fee for the previous subscription" do
-          #         byebug
-          #         result = invoice_service.call
+            # for now we'll just always create the fixed_charge fee. in the next PR we'll handle upgrade/downgrade/termination scenarios
+            # for terminated subscription do not issue pay in advance fee, issue only pay in arrears fee
+            context "when subscription is upgraded" do
+              context "when passing old subscription in the service" do
+                let(:subscription) { old_subscription }
 
-          #         expect(result).to be_success
-          #         expect(invoice.fees.fixed_charge.count).to eq(0)
-          #       end
-          #     end
+                it "does not create a fixed charge fee for the previous subscription" do
+                  result = invoice_service.call
 
-          #     context "when passing new subscription in the service" do
-          #       let(:subscription) { new_subscription }
-          #       it "creates a fixed charge fee for the new subscription only for new charges" do
-          #         byebug
-          #         result = invoice_service.call
+                  expect(result).to be_success
+                  expect(subscription.fixed_charges.count).to eq(2)
+                  expect(invoice.fees.fixed_charge.count).to eq(1)
+                end
+              end
 
-          #         expect(result).to be_success
-          #         expect(invoice.fees.fixed_charge.count).to eq(1)
-          #       end
-          #     end
-          #   end
+              # issuing a new fee for pay_in_advance charge, terminated subscription
+              context "when passing new subscription in the service" do
+                let(:subscription) { new_subscription }
 
-          #   context "when subscriptions is downgraded" do
-          #     it "does not create a fixed charge fee for the previous subscription" do
-          #       byebug
-          #       result = invoice_service.call
+                before do
+                  invoice_subscription[:invoicing_reason] = :subscription_starting
+                  invoice_subscription.save
+                end
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(0)
-          #     end
+                it "creates a fixed charge fee for the new subscription only for pay in advance charges" do
+                  result = invoice_service.call
 
-          #     it "creates a fixed charge fee for the new subscription only for new charges" do
-          #       byebug
-          #       result = invoice_service.call
+                  expect(result).to be_success
+                  expect(subscription.fixed_charges.count).to eq(3)
+                  expect(invoice.fees.fixed_charge.count).to eq(2)
+                end
+              end
+            end
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(1)
-          #     end
-          #   end
-          # end
+            context "when subscriptions is downgraded" do
+              let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 10000) }
+              let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+
+              context "when passing old subscription in the service" do
+                let(:subscription) { old_subscription }
+
+                it "does create a fixed charge fee for the previous subscription" do
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(1)
+                end
+              end
+
+              context "when passing new subscription in the service" do
+                let(:subscription) { new_subscription }
+                let(:fixed_charge) do
+                  create(
+                    :fixed_charge,
+                    plan: new_plan,
+                    charge_model: "standard",
+                    pay_in_advance: false,
+                    properties: {amount: "10"},
+                    units: 1
+                  )
+                end
+
+                it "creates a fixed charge fee for the new subscription only for pay in advance charges" do
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(3)
+                end
+              end
+            end
+          end
         end
 
         context "when fixed charge is pay_in_arrears" do
@@ -587,56 +618,149 @@ RSpec.describe Invoices::CalculateFeesService do
             expect(fee_properties["fixed_charges_to_datetime"]).to match_datetime(Time.parse("2022-03-05T23:59:59.999Z"))
           end
 
-          # TODO: discuss with Mike
-          # context "when subscription is terminated" do
-          #   let(:status) { :terminated }
-          #   let(:terminated_at) { timestamp - 1.day }
+          # TODO: Update when we have conditions on creation of fixed charge fees
+          context "when subscription is terminated" do
+            let(:status) { :terminated }
+            let(:terminated_at) { timestamp - 1.day }
 
-          #   it "does create a fixed charge fee" do
-          #     result = invoice_service.call
+            it "does create a fixed charge fee" do
+              result = invoice_service.call
 
-          #     expect(result).to be_success
-          #     expect(invoice.fees.fixed_charge.count).to eq(1)
-          #   end
-          # end
+              expect(result).to be_success
+              expect(invoice.fees.fixed_charge.count).to eq(1)
+            end
+          end
 
-          # context "when changing the subscription" do
-          #   context "when subscription is upgraded" do
-          #     it "does not create a fixed charge fee for the previous subscription" do
-          #       byebug
-          #       result = invoice_service.call
+          context "when changing the subscription" do
+            let(:add_on1) { create(:add_on, organization:) }
+            let(:add_on2) { create(:add_on, organization:) }
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(0)
-          #     end
+            let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
+            let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
 
-          #     it "creates a fixed charge fee for the new subscription only for new charges" do
-          #       byebug
-          #       result = invoice_service.call
+            let(:old_fixed_charge) do
+              create(
+                :fixed_charge,
+                plan: old_plan,
+                add_on: add_on1,
+                charge_model: "standard",
+                pay_in_advance: false,
+                properties: {amount: "10"}
+              )
+            end
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(1)
-          #     end
-          #   end
+            let(:new_fixed_charge1) do
+              create(
+                :fixed_charge,
+                plan: new_plan,
+                add_on: add_on1,
+                charge_model: "standard",
+                pay_in_advance: false,
+                properties: {amount: "10"}
+              )
+            end
 
-          #   context "when subscriptions is downgraded" do
-          #     it "does not create a fixed charge fee for the previous subscription" do
-          #       byebug
-          #       result = invoice_service.call
+            let(:old_subscription) do
+              create(
+                :subscription,
+                plan: old_plan,
+                organization:,
+                customer:,
+                billing_time:,
+                subscription_at: started_at,
+                started_at:,
+                created_at:,
+                status: :terminated,
+                terminated_at: timestamp - 1.day
+              )
+            end
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(0)
-          #     end
+            let(:new_subscription) do
+              create(
+                :subscription,
+                plan: new_plan,
+                organization:,
+                customer:,
+                billing_time:,
+                subscription_at: started_at,
+                started_at: timestamp,
+                created_at: timestamp,
+                status: :active,
+                previous_subscription: old_subscription
+              )
+            end
 
-          #     it "creates a fixed charge fee for the new subscription only for new charges" do
-          #       byebug
-          #       result = invoice_service.call
+            let(:new_fixed_charge1_event) do
+              create(:fixed_charge_event, fixed_charge: new_fixed_charge1, subscription: new_subscription, timestamp: timestamp, units: 1)
+            end
 
-          #       expect(result).to be_success
-          #       expect(invoice.fees.fixed_charge.count).to eq(1)
-          #     end
-          #   end
-          # end
+            before do
+              old_fixed_charge
+              fixed_charge.update(pay_in_advance: false)
+              new_fixed_charge1
+              new_fixed_charge1_event
+            end
+
+            context "when subscription is upgraded" do
+              let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
+              let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+
+              context "when passing old subscription in the service" do
+                let(:subscription) { old_subscription }
+
+                it "does create a fixed charge fee for the previous subscription" do
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(1)
+                end
+              end
+
+              context "when passing new subscription in the service" do
+                let(:subscription) { new_subscription }
+
+                it "does not create a fixed charge fee pay in arrears fees when billing for :subscription_starting" do
+                  invoice_subscription[:invoicing_reason] = :subscription_starting
+                  invoice_subscription.save
+
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(0)
+                end
+              end
+            end
+
+            context "when subscriptions is downgraded" do
+              let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 10000) }
+              let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+
+              context "when passing old subscription in the service" do
+                let(:subscription) { old_subscription }
+
+                it "does create a fixed charge fee for the previous subscription" do
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(1)
+                end
+              end
+
+              context "when passing new subscription in the service" do
+                let(:subscription) { new_subscription }
+
+                it "does not create a fixed charge fee pay in arrears fees when billing for :subscription_starting" do
+                  invoice_subscription[:invoicing_reason] = :subscription_starting
+                  invoice_subscription.save
+
+                  result = invoice_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.fees.fixed_charge.count).to eq(0)
+                end
+              end
+            end
+          end
         end
       end
     end
@@ -841,8 +965,8 @@ RSpec.describe Invoices::CalculateFeesService do
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
           charges_to_datetime: date_service.charges_to_datetime,
-          fixed_charges_from_datetime: date_service.charges_from_datetime,
-          fixed_charges_to_datetime: date_service.charges_to_datetime
+          fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: date_service.fixed_charges_to_datetime
         )
       end
 
@@ -1348,7 +1472,10 @@ RSpec.describe Invoices::CalculateFeesService do
           create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 5, created_at: event_timestamp)
         end
 
-        before { new_subscription }
+        before do
+          invoice_subscription[:invoicing_reason] = :subscription_starting
+          invoice_subscription.save
+        end
 
         context "when fixed charge is pay in advance" do
           let(:fixed_charge) do
@@ -1361,7 +1488,7 @@ RSpec.describe Invoices::CalculateFeesService do
             )
           end
 
-          it "does not create a fixed charge fee" do
+          it "does not create a fixed charge fee for the old subscription" do
             result = invoice_service.call
 
             expect(result).to be_success
@@ -1380,7 +1507,7 @@ RSpec.describe Invoices::CalculateFeesService do
             )
           end
 
-          it "does not create a fixed charge fee" do
+          it "does create a fixed charge fee for the old subscription pay in arrears charge" do
             result = invoice_service.call
 
             expect(result).to be_success
