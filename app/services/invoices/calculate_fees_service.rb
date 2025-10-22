@@ -150,6 +150,7 @@ module Invoices
 
     def create_fixed_charge_fees(subscription, boundaries)
 <<<<<<< HEAD
+<<<<<<< HEAD
       return unless fixed_charge_boundaries_valid?(boundaries)
 
       subscription.fixed_charges.find_each do |fixed_charge|
@@ -160,6 +161,12 @@ module Invoices
       subscription.fixed_charges.find_each do |fixed_charge|
         next if should_not_create_fixed_charge_fee?(fixed_charge, subscription)
 >>>>>>> ee9c8ff55 (squashed commit)
+=======
+      return unless fixed_charge_boundaries_valid?(boundaries)
+
+      subscription.fixed_charges.find_each do |fixed_charge|
+        next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+>>>>>>> e62bd75a9 (first view on when fixed charges need to be created)
 
         Fees::FixedChargeService.call!(
           invoice:,
@@ -172,6 +179,9 @@ module Invoices
     end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> e62bd75a9 (first view on when fixed charges need to be created)
     # In current PR we just always create the fixed charges. In the upcoming we'll handle upgrade/downgrade/termination scenarios
     def should_create_fixed_charge_fee?(fixed_charge, subscription)
       # when "starting" invoice - it's only for pay_in_advance fees
@@ -182,6 +192,7 @@ module Invoices
       # for terminated subscription we do not chage pay_in_advance fees
       if fixed_charge.pay_in_advance? && subscription.terminated?
         return false
+<<<<<<< HEAD
       end
 
       true
@@ -202,14 +213,14 @@ module Invoices
           (subscription.upgraded? || subscription.next_subscription.nil?)
 
         return condition
+=======
+>>>>>>> e62bd75a9 (first view on when fixed charges need to be created)
       end
 
-      return false if fixed_charge.prorated?
-
-      subscription.terminated? && subscription.upgraded? &&
-        fixed_charge.included_in_next_subscription?(subscription)
+      true
     end
 
+<<<<<<< HEAD
     # TODO: discuss with Mike
     # def fixed_charge_fee_is_already_billed_for_this_period?(fixed_charge, previous_subscription)
     #   previous_fixed_charge = previous_subscription.plan.fixed_charges.where(add_on_id: fixed_charge.add_on_id)
@@ -219,6 +230,8 @@ module Invoices
     # end
 
 >>>>>>> ee9c8ff55 (squashed commit)
+=======
+>>>>>>> e62bd75a9 (first view on when fixed charges need to be created)
     def should_create_recurring_non_invoiceable_fees?(subscription)
       return false if invoice.skip_charges
 
