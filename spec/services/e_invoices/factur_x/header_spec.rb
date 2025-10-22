@@ -74,5 +74,27 @@ RSpec.describe EInvoices::FacturX::Header, type: :service do
           .with_attribute("format", EInvoices::FacturX::BaseService::CCYYMMDD)
       end
     end
+
+    context "when payment" do
+      let(:payment) { create(:payment, payable: invoice) }
+      let(:payment_receipt) { create(:payment_receipt, payment:, created_at:) }
+      let(:created_at) { "20251022" }
+      let(:resource) { payment_receipt }
+      let(:type_code) { EInvoices::BaseService::PAYMENT_RECEIPT }
+
+      it "expects to have the payment receipt number" do
+        expect(subject).to contains_xml_node("#{root}/ram:ID").with_value(payment_receipt.number)
+      end
+
+      it "expects to have a type code" do
+        expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(EInvoices::BaseService::PAYMENT_RECEIPT)
+      end
+
+      it "expects to have invoice issuing date" do
+        expect(subject).to contains_xml_node("#{root}/ram:IssueDateTime/udt:DateTimeString")
+          .with_value(created_at)
+          .with_attribute("format", EInvoices::FacturX::BaseService::CCYYMMDD)
+      end
+    end
   end
 end

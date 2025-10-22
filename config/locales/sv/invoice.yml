@@ -35,6 +35,8 @@ sv:
       discount_reason: Rabatt %{tax_rate} andel
       payment_information: "%{payment_label} på %{currency} %{amount} tillämpad"
       standard_payment: Standardbetaling
+      credit_card: Kreditkortsbetalning
+      credit_card_information: Kreditkortsbetalning mottagen %{date}
     fee_prorated: Avgiften är proraterad för användningsdagar, det visade enhetspriset är ett genomsnitt
     fees_from_to_date: Avgifter från %{from_date} till %{to_date}
     from_to_date: Från %{from_date} till %{to_date}

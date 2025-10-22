@@ -36,6 +36,8 @@ it:
       discount_reason: Sconto %{tax_rate} parte
       payment_information: "%{payment_label} di %{currency} %{amount} applicato"
       standard_payment: Pagamento standard
+      credit_card: Pagamento con carta di credito
+      credit_card_information: Pagamento con carta di credito ricevuto il %{date}
     fee_prorated: La tariffa è calcolata in base ai giorni di utilizzo, il prezzo unitario visualizzato è una media
     fees_from_to_date: Tariffe dal %{from_date} al %{to_date}
     from_to_date: Dal %{from_date} al %{to_date}
