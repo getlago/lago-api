@@ -2352,14 +2352,15 @@ RSpec.describe Invoices::CalculateFeesService do
 
         expect(result).to be_success
         expect(result.invoice.fees_amount_cents).to eq(300_00)
-        # BE tax is 10%
-        expect(result.invoice.taxes_amount_cents).to eq(25_50)
-        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(255_00)
-        expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(280_50)
+        # Billing entity tax is 10%
+        # subtotal = fees_amount_cents - coupons_amount_cents - progressive_billing_credit_amount_cents
         expect(result.invoice.progressive_billing_credit_amount_cents).to eq(30_00)
-        # Check this test thorously! (I'm not fully getting all the sums)
-        # expect(result.invoice.total_amount_cents).to eq(212_27) # 280_50 - 10_00 (credit note) - 63_23 (wallet)
-        expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 10_00 (credit note) - 63_23 (wallet)
+        expect(result.invoice.coupons_amount_cents).to eq(15_00)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(255_00)
+        expect(result.invoice.taxes_amount_cents).to eq(25_50)
+        expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(280_50)
+
+        expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 10_00 (credit note) - 66_35 (wallet)
       end
     end
 
