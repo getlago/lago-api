@@ -8,7 +8,6 @@ module Mutations
 
       REQUIRED_PERMISSION = "payment_methods:create"
 
-      graphql_name "GenerateCheckoutUrl"
       description "Generates checkout url for payment method"
 
       argument :customer_id, ID, required: true
