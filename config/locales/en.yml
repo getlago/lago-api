@@ -4,6 +4,7 @@ en:
     errors:
       messages:
         blank: value_is_mandatory
+        cannot_be_empty: cannot_be_empty
         country_code_invalid: not_a_valid_country_code
         graduated_percentage_requires_premium_license: graduated_percentage_requires_premium_license
         greater_than: value_is_out_of_range
