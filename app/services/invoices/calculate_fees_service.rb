@@ -105,8 +105,7 @@ module Invoices
     end
 
     def fixed_charge_boundaries_valid?(boundaries)
-      # TODO: Investigate why invalid boundaries are even possible
-      boundaries.fixed_charges_from_datetime < boundaries.fixed_charges_to_datetime
+      boundaries.fixed_charges_from_datetime <= boundaries.fixed_charges_to_datetime
     end
 
     def create_charges_fees(subscription, boundaries)
@@ -148,10 +147,10 @@ module Invoices
     end
 
     def create_fixed_charge_fees(subscription, boundaries)
-      # return unless fixed_charge_boundaries_valid?(boundaries)
+      return unless fixed_charge_boundaries_valid?(boundaries)
 
       subscription.fixed_charges.find_each do |fixed_charge|
-        next if should_not_create_fixed_charge_fee?(fixed_charge, subscription)
+        next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
 
         Fees::FixedChargeService.call!(
           invoice:,
@@ -163,35 +162,20 @@ module Invoices
       end
     end
 
-    def should_not_create_fixed_charge_fee?(fixed_charge, subscription)
-      # For pay_in_advance fixed charges, when upgrading subscription,
-      # and it's the first invoice, we don't need to create fee again
-      # if it already was billed in previous subscription for this period
-      # TODO: discuss with Mike
-      # if subscription.invoices.count == 1 && fixed_charge.pay_in_advance? && subscription.previous_subscription&.terminated?
-      #   return true if fixed_charge_fee_is_already_billed_for_this_period?(fixed_charge, subscription.previous_subscription)
-      # end
-
-      if fixed_charge.pay_in_advance?
-        condition = subscription.terminated? &&
-          (subscription.upgraded? || subscription.next_subscription.nil?)
-
-        return condition
+    # In current PR we just always create the fixed charges. In the upcoming we'll handle upgrade/downgrade/termination scenarios
+    def should_create_fixed_charge_fee?(fixed_charge, subscription)
+      # when "starting" invoice - it's only for pay_in_advance fees
+      if !fixed_charge.pay_in_advance? && subscription.invoice_subscriptions.count == 1 &&
+          subscription.invoice_subscriptions.first.subscription_starting?
+        return false
+      end
+      # for terminated subscription we do not chage pay_in_advance fees
+      if fixed_charge.pay_in_advance? && subscription.terminated?
+        return false
       end
 
-      return false if fixed_charge.prorated?
-
-      subscription.terminated? && subscription.upgraded? &&
-        fixed_charge.included_in_next_subscription?(subscription)
+      true
     end
-
-    # TODO: discuss with Mike
-    # def fixed_charge_fee_is_already_billed_for_this_period?(fixed_charge, previous_subscription)
-    #   previous_fixed_charge = previous_subscription.plan.fixed_charges.where(add_on_id: fixed_charge.add_on_id)
-    #   return false if previous_fixed_charge.blank?
-
-    #   previous_fixed_charge.fees.fixed_charge.exists?(created_at: subscription.from_datetime..subscription.to_datetime)
-    # end
 
     def should_create_recurring_non_invoiceable_fees?(subscription)
       return false if invoice.skip_charges
