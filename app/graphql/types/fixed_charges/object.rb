@@ -27,6 +27,12 @@ module Types
         JSON.parse(object.properties)
       end
 
+      def units
+        # Remove decimal part when it is zero (e.g., "1.0" becomes "1")
+        value = object.units.to_f
+        (value == value.to_i) ? value.to_i.to_s : value.to_s
+      end
+
       def add_on
         AddOn.with_discarded.find_by(id: object.add_on_id)
       end

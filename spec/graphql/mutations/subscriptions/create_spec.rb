@@ -121,7 +121,7 @@ RSpec.describe Mutations::Subscriptions::Create do
     )
     expect(result_data["plan"]["fixedCharges"].first).to include(
       "invoiceDisplayName" => "NEW fixed charge display name",
-      "units" => "99.0"
+      "units" => "99"
     )
   end
 end
