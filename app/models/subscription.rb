@@ -251,8 +251,7 @@ class Subscription < ApplicationRecord
       fixed_charges_duration: dates_service.fixed_charges_duration_in_days
     )
 
-    # TODO: remove except when fixed charges are fully life
-    InvoiceSubscription.matching?(self, previous_period_boundaries.except(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)) ? boundaries : previous_period_boundaries
+    InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
   end
 end
 
