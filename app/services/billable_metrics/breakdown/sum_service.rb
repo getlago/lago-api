@@ -3,6 +3,8 @@
 module BillableMetrics
   module Breakdown
     class SumService < BillableMetrics::ProratedAggregations::SumService
+      Result = BaseResult[:aggregator, :breakdown]
+
       def breakdown
         breakdown = persisted_breakdown
         breakdown += period_breakdown
