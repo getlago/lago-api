@@ -353,28 +353,6 @@ RSpec.describe Invoices::CalculateFeesService do
           expect(Fee.charge.where(invoice_id: nil).count).to eq(1)
         end
       end
-
-      context "when charge is pay_in_arrears and not invoiceable" do
-        let(:charge) do
-          create(
-            :standard_charge,
-            plan: subscription.plan,
-            organization:,
-            charge_model: "standard",
-            invoiceable: false
-          )
-        end
-
-        it "does not create a charge fee" do
-          result = invoice_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(Fee.charge.count).to eq(0)
-          end
-        end
-      end
     end
 
     context "when billed for the first time" do

@@ -440,7 +440,6 @@ RSpec.describe Charge do
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: true, regroup_paid_fees: nil)).to be_valid
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: nil)).to be_valid
         expect(build(:standard_charge, pay_in_advance: false, invoiceable: true, regroup_paid_fees: nil)).to be_valid
-        expect(build(:standard_charge, pay_in_advance: false, invoiceable: false, regroup_paid_fees: nil)).to be_valid
       end
     end
 
@@ -646,6 +645,51 @@ RSpec.describe Charge do
 
   describe "validations" do
     subject { charge.valid? }
+
+    describe "#validate_invoiceable_unless_pay_in_advance" do
+      let(:charge) { build_stubbed(:standard_charge, pay_in_advance:, invoiceable:) }
+
+      context "when pay_in_advance is true" do
+        let(:pay_in_advance) { true }
+
+        context "with invoiceable set to true" do
+          let(:invoiceable) { true }
+
+          it "is valid" do
+            expect(subject).to be true
+          end
+        end
+
+        context "with invoiceable set to false" do
+          let(:invoiceable) { false }
+
+          it "is valid" do
+            expect(subject).to be true
+          end
+        end
+      end
+
+      context "when pay_in_advance is false" do
+        let(:pay_in_advance) { false }
+
+        context "with invoiceable set to true" do
+          let(:invoiceable) { true }
+
+          it "is valid" do
+            expect(subject).to be true
+          end
+        end
+
+        context "with invoiceable set to false" do
+          let(:invoiceable) { false }
+
+          it "is invalid" do
+            expect(subject).to be false
+            expect(charge.errors[:invoiceable]).to include("must_be_true_unless_pay_in_advance")
+          end
+        end
+      end
+    end
 
     describe "of charge model" do
       let(:error) { charge.errors.where(:charge_model, :graduated_percentage_requires_premium_license) }
