@@ -9,7 +9,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
   let(:organization) { create(:organization) }
-  let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
   let(:add_on) { create(:add_on, organization:) }
   let(:add_on_two) { create(:add_on, organization:) }
@@ -64,6 +63,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       "Provider-Config-Key" => "anrok"
     }
   end
+  let(:response_status) { 200 }
 
   let(:params) do
     [
@@ -99,32 +99,24 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
   end
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new)
-      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      .and_return(lago_client)
-
     integration_customer
     integration_collection_mapping1
     integration_mapping_add_on
     fee_add_on
     fee_add_on_two
+
+    stub_request(:post, endpoint).with(body: params.to_json, headers:)
+      .and_return(status: response_status, body:)
   end
 
   describe "#call" do
     context "when service call is successful" do
-      let(:response) { instance_double(Net::HTTPOK) }
-
-      before do
-        allow(lago_client).to receive(:post_with_response).with(kind_of(Array), headers).and_return(response)
-        allow(response).to receive(:body).and_return(body)
-        allow(lago_client).to receive(:uri).and_return(endpoint)
-      end
-
       context "when taxes are successfully fetched" do
-        let(:body) do
+        let(:base_body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
           File.read(path)
         end
+        let(:body) { base_body }
 
         it "returns fees" do
           result = service_call
@@ -140,8 +132,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         end
 
         context "when special rules applied" do
-          before do
-            parsed_body = JSON.parse(body)
+          let(:body) do
+            parsed_body = JSON.parse(base_body)
             parsed_body["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 0
             parsed_body["succeededInvoices"].first["fees"].first["tax_breakdown"] = [
               {
@@ -149,7 +141,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                 type: rule
               }
             ]
-            allow(response).to receive(:body).and_return(parsed_body.to_json)
+            parsed_body.to_json
           end
 
           special_rules =
@@ -242,6 +234,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
           before do
             params.first["fees"].each { |fee| fee["item_code"] = nil }
+            stub_request(:post, endpoint).with(body: params.to_json, headers:)
+              .and_return(status: response_status, body:)
           end
 
           it "sends request to anrok with empty link to fallback item" do
@@ -275,14 +269,29 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         File.read(path)
       end
 
-      let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
+      context "when the body contains a bad gateway error" do
+        let(:response_status) { 200 }
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/bad_gateway_error.html")
+          File.read(path)
+        end
 
-      before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        it "raises an HTTP error" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
+        end
       end
 
-      context "when it is a server error" do
-        let(:error_code) { Faker::Number.between(from: 500, to: 599) }
+      context "when the error code is 502" do
+        let(:response_status) { 502 }
+        let(:body) { "" }
+
+        it "raises an HTTP error" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
+        end
+      end
+
+      context "when it is another server error" do
+        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
 
         it "returns an error" do
           result = service_call
