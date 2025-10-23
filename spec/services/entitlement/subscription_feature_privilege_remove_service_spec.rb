@@ -14,8 +14,6 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
   let(:feature_code) { feature.code }
   let(:privilege_code) { privilege.code }
 
-  it_behaves_like "a premium service"
-
   describe "#call" do
     around { |test| lago_premium!(&test) }
 

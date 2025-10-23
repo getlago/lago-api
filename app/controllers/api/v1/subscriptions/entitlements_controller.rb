@@ -4,8 +4,6 @@ module Api
   module V1
     module Subscriptions
       class EntitlementsController < Api::BaseController
-        include PremiumFeatureOnly
-
         # Shall we update BaseController to include hae active subscriptions only?
         before_action :find_subscription
 

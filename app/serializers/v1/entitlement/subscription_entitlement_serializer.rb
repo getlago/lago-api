@@ -26,7 +26,6 @@ module V1
             override_value: Utils::Entitlement.cast_value(it.subscription_value, it.value_type),
             config: it.config
           }
-          # TODO: plan_value ?
         end
       end
 

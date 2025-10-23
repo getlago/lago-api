@@ -29,8 +29,6 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
     privilege
   end
 
-  it_behaves_like "a premium service"
-
   describe "#call" do
     around { |test| lago_premium!(&test) }
 

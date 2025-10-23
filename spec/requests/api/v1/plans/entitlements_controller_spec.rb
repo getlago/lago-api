@@ -8,8 +8,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
 
-  around { |test| lago_premium!(&test) }
-
   describe "GET /api/v1/plans/:plan_code/entitlements" do
     subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements" }
 
@@ -20,8 +18,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement
       entitlement_value
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "returns a list of entitlements" do
       subject
@@ -61,8 +57,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
-    it_behaves_like "a Premium API endpoint"
-
     it "returns the entitlement" do
       subject
 
@@ -101,8 +95,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       feature
       privilege
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "creates entitlements for the plan" do
       expect { subject }.to change { plan.entitlements.count }.by(1)
@@ -293,8 +285,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
-    it_behaves_like "a Premium API endpoint"
-
     it "updates existing entitlement value" do
       subject
 
@@ -461,8 +451,6 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement
       entitlement_value
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "deletes the entitlement and its values" do
       expect { subject }.to change(feature.entitlements, :count).by(-1)

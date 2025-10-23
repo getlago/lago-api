@@ -16,7 +16,6 @@ module Entitlement
     )
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "entitlement") unless entitlement
 
       entitlement_value = find_entitlement_value

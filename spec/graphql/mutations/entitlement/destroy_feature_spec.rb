@@ -28,7 +28,6 @@ RSpec.describe Mutations::Entitlement::DestroyFeature do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:delete"
-  it_behaves_like "requires Premium license"
 
   it "destroys a feature" do
     expect { feature }.to change(Entitlement::Feature, :count).by(1)

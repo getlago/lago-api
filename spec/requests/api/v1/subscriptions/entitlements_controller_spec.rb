@@ -11,8 +11,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
   let(:privilege1) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
   let(:privilege2) { create(:privilege, organization:, feature:, code: "root?", value_type: "boolean") }
 
-  around { |test| lago_premium!(&test) }
-
   describe "GET /api/v1/subscriptions/:external_id/entitlements" do
     subject { get_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements" }
 
@@ -25,8 +23,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       entitlement_value1
       entitlement_value2
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "returns a list of entitlements" do
       subject
@@ -86,8 +82,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       entitlement
       entitlement_value
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "updates existing entitlement value" do
       subject
@@ -258,8 +252,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       entitlement
       entitlement_value
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "deletes the entitlement and its values" do
       expect { subject }.to change(feature.entitlements, :count).by(-1)
