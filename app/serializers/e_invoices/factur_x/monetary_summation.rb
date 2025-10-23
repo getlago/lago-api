@@ -24,7 +24,7 @@ module EInvoices
         @amounts = amounts
       end
 
-      def call
+      def serialize
         xml.comment "Monetary Summation"
         xml["ram"].SpecifiedTradeSettlementHeaderMonetarySummation do
           xml["ram"].LineTotalAmount format_number(amounts.line_total_amount)

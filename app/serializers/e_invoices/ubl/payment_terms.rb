@@ -9,7 +9,7 @@ module EInvoices
         @note = note
       end
 
-      def call
+      def serialize
         xml.comment "Payment Terms"
         xml["cac"].PaymentTerms do
           xml["cbc"].Note note

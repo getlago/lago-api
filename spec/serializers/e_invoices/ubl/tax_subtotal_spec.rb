@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::Ubl::TaxSubtotal do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, resource:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
+      described_class.serialize(xml:, resource:, tax_category:, tax_rate:, basis_amount:, tax_amount:)
     end
   end
 
@@ -18,7 +18,7 @@ RSpec.describe EInvoices::Ubl::TaxSubtotal do
 
   let(:root) { "//cac:TaxSubtotal" }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

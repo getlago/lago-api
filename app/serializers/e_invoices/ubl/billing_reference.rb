@@ -3,7 +3,7 @@
 module EInvoices
   module Ubl
     class BillingReference < BaseSerializer
-      def call
+      def serialize
         xml.comment "Reference to Original Invoice"
         xml["cac"].BillingReference do
           xml["cac"].InvoiceDocumentReference do

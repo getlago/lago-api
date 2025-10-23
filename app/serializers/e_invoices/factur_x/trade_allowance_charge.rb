@@ -11,7 +11,7 @@ module EInvoices
         @amount = amount
       end
 
-      def call
+      def serialize
         xml.comment "Allowance/Charge - Discount #{percent(tax_rate)} portion"
         xml["ram"].SpecifiedTradeAllowanceCharge do
           xml["ram"].ChargeIndicator do

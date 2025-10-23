@@ -12,7 +12,7 @@ module EInvoices
         @tax_amount = tax_amount
       end
 
-      def call
+      def serialize
         xml.comment "Tax Information #{percent(tax_rate)} #{VAT}"
         xml["cac"].TaxSubtotal do
           xml["cbc"].TaxableAmount format_number(basis_amount), currencyID: resource.currency

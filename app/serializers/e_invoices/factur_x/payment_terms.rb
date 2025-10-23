@@ -10,7 +10,7 @@ module EInvoices
         @due_date = due_date
       end
 
-      def call
+      def serialize
         xml.comment "Payment Terms"
         xml["ram"].SpecifiedTradePaymentTerms do
           xml["ram"].Description description

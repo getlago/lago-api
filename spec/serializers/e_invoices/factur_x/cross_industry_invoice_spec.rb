@@ -5,12 +5,12 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::CrossIndustryInvoice do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:) do
+      described_class.serialize(xml:) do
       end
     end
   end
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

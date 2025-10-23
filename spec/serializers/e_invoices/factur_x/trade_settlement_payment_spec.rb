@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::TradeSettlementPayment do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, resource:, type:, amount:)
+      described_class.serialize(xml:, resource:, type:, amount:)
     end
   end
 
@@ -15,7 +15,7 @@ RSpec.describe EInvoices::FacturX::TradeSettlementPayment do
 
   let(:root) { "//ram:SpecifiedTradeSettlementPaymentMeans" }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     context "when STANDARD_PAYMENT" do

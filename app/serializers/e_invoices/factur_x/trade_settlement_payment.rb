@@ -10,7 +10,7 @@ module EInvoices
         @amount = amount
       end
 
-      def call
+      def serialize
         xml.comment "Payment Means: #{payment_label(type)}"
         xml["ram"].SpecifiedTradeSettlementPaymentMeans do
           xml["ram"].TypeCode type

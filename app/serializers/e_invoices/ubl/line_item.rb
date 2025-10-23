@@ -22,7 +22,7 @@ module EInvoices
         @data = data
       end
 
-      def call
+      def serialize
         xml.comment "Line Item #{data.line_id}: #{data.item_description}"
         xml["cac"].send(line_tag) do
           xml["cbc"].ID data.line_id

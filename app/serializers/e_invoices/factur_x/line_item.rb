@@ -20,7 +20,7 @@ module EInvoices
         @data = data
       end
 
-      def call
+      def serialize
         xml.comment "Line Item #{data.line_id}: #{data.description}"
         xml["ram"].IncludedSupplyChainTradeLineItem do
           xml["ram"].AssociatedDocumentLineDocument do

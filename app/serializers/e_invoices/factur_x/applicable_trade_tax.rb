@@ -12,7 +12,7 @@ module EInvoices
         @tax_amount = tax_amount
       end
 
-      def call
+      def serialize
         xml.comment "Tax Information #{percent(tax_rate)} #{VAT}"
         xml["ram"].ApplicableTradeTax do
           xml["ram"].CalculatedAmount format_number(tax_amount)

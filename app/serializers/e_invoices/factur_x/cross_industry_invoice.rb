@@ -3,7 +3,7 @@
 module EInvoices
   module FacturX
     class CrossIndustryInvoice < BaseSerializer
-      def call
+      def serialize
         xml["rsm"].CrossIndustryInvoice(ROOT_NAMESPACES) do
           xml.comment "Exchange Document Context"
           xml["rsm"].ExchangedDocumentContext do

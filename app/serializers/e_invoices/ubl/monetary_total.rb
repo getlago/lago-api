@@ -23,7 +23,7 @@ module EInvoices
         @amounts = amounts
       end
 
-      def call
+      def serialize
         xml.comment "Legal Monetary Total"
         xml["cac"].LegalMonetaryTotal do
           xml["cbc"].LineExtensionAmount format_number(amounts.line_extension_amount), currencyID: resource.currency

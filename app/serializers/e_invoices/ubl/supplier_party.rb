@@ -17,7 +17,7 @@ module EInvoices
         @options = options
       end
 
-      def call
+      def serialize
         xml.comment "Supplier Party"
         xml["cac"].AccountingSupplierParty do
           xml["cac"].Party do

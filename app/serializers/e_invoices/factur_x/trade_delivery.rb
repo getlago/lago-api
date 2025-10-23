@@ -9,7 +9,7 @@ module EInvoices
         @delivery_date = delivery_date
       end
 
-      def call
+      def serialize
         xml.comment "Applicable Header Trade Delivery"
         xml["ram"].ApplicableHeaderTradeDelivery do
           xml["ram"].ActualDeliverySupplyChainEvent do

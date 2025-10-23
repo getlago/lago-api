@@ -20,7 +20,7 @@ module EInvoices
         @options = options
       end
 
-      def call
+      def serialize
         xml.comment "Applicable Header Trade Agreement"
         xml["ram"].ApplicableHeaderTradeAgreement do
           xml["ram"].SellerTradeParty do

@@ -10,7 +10,7 @@ module EInvoices
         @notes = notes
       end
 
-      def call
+      def serialize
         xml.comment "Invoice Header Information"
         xml["cbc"].ID resource.number
         xml["cbc"].IssueDate formatted_date(resource.issuing_date)

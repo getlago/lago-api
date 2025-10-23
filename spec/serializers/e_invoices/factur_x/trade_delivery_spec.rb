@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::TradeDelivery do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, delivery_date:)
+      described_class.serialize(xml:, delivery_date:)
     end
   end
 
@@ -13,7 +13,7 @@ RSpec.describe EInvoices::FacturX::TradeDelivery do
 
   let(:root) { "//ram:ApplicableHeaderTradeDelivery" }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

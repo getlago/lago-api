@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::Ubl::Header do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, resource:, type_code:)
+      described_class.serialize(xml:, resource:, type_code:)
     end
   end
 
@@ -16,7 +16,7 @@ RSpec.describe EInvoices::Ubl::Header do
 
   before { resource }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

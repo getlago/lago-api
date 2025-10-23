@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::TradeAgreement do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, resource:, options:)
+      described_class.serialize(xml:, resource:, options:)
     end
   end
 
@@ -34,7 +34,7 @@ RSpec.describe EInvoices::FacturX::TradeAgreement do
 
   let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

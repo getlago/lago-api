@@ -5,7 +5,7 @@ module EInvoices
     class CustomerParty < BaseSerializer
       delegate :customer, to: :resource
 
-      def call
+      def serialize
         xml.comment "Customer Party"
         xml["cac"].AccountingCustomerParty do
           xml["cac"].Party do

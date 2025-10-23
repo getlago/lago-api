@@ -10,7 +10,7 @@ module EInvoices
         @notes = notes
       end
 
-      def call
+      def serialize
         xml.comment "Exchange Document Header"
         xml["rsm"].ExchangedDocument do
           xml["ram"].ID resource.number

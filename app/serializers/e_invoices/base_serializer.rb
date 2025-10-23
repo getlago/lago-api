@@ -41,8 +41,8 @@ module EInvoices
       @resource = resource
     end
 
-    def self.call(*, **, &)
-      new(*, **).call(&)
+    def self.serialize(*, **, &)
+      new(*, **).serialize(&)
     end
 
     private

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::Ubl::Delivery do
   subject do
     xml_document(:ubl) do |xml|
-      described_class.call(xml:, delivery_date:)
+      described_class.serialize(xml:, delivery_date:)
     end
   end
 
@@ -14,7 +14,7 @@ RSpec.describe EInvoices::Ubl::Delivery do
 
   let(:root) { "//cac:Delivery" }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do

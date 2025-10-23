@@ -3,7 +3,7 @@
 module EInvoices
   module FacturX
     class TradeSettlement < BaseSerializer
-      def call
+      def serialize
         xml.comment "Applicable Header Trade Settlement"
         xml["ram"].ApplicableHeaderTradeSettlement do
           xml["ram"].InvoiceCurrencyCode resource.currency

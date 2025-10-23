@@ -9,7 +9,7 @@ module EInvoices
         @delivery_date = delivery_date
       end
 
-      def call
+      def serialize
         xml.comment "Delivery Information"
         xml["cac"].Delivery do
           xml["cbc"].ActualDeliveryDate formatted_date(delivery_date)

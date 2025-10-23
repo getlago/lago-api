@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::Header do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, resource:, type_code:, notes:)
+      described_class.serialize(xml:, resource:, type_code:, notes:)
     end
   end
 
@@ -19,7 +19,7 @@ RSpec.describe EInvoices::FacturX::Header do
 
   before { invoice }
 
-  describe ".call" do
+  describe ".serialize" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do
