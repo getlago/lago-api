@@ -37,13 +37,13 @@ module Commitments
             current_usage: true
           )
 
+          # This will be deleted in main, but when we add fixed_charges boundaries, it cannot be OR, becuase
+          # then monthly fixed_charges inovice is also shown for the previous period (because charges boundaries will be the
+          # previous yearly period)
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
-              "(charges_from_datetime >= ? AND charges_to_datetime <= ?)" \
-              "OR (fixed_charges_from_datetime >= ? AND fixed_charges_to_datetime <= ?)",
-              ds.previous_beginning_of_period,
-              ds.end_of_period,
+              "(charges_from_datetime >= ? AND charges_to_datetime <= ?)",
               ds.previous_beginning_of_period,
               ds.end_of_period
             ).select(:invoice_id)
