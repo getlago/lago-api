@@ -652,18 +652,18 @@ RSpec.describe Charge do
       context "when pay_in_advance is true" do
         let(:pay_in_advance) { true }
 
-        context "and invoiceable is true" do
+        context "with invoiceable set to true" do
           let(:invoiceable) { true }
 
-          it "returns true" do
+          it "is valid" do
             expect(subject).to be true
           end
         end
 
-        context "and invoiceable is false" do
+        context "with invoiceable set to false" do
           let(:invoiceable) { false }
 
-          it "returns false" do
+          it "is valid" do
             expect(subject).to be true
           end
         end
@@ -672,18 +672,18 @@ RSpec.describe Charge do
       context "when pay_in_advance is false" do
         let(:pay_in_advance) { false }
 
-        context "and invoiceable is true" do
+        context "with invoiceable set to true" do
           let(:invoiceable) { true }
 
-          it "returns true" do
+          it "is valid" do
             expect(subject).to be true
           end
         end
 
-        context "and invoiceable is false" do
+        context "with invoiceable set to false" do
           let(:invoiceable) { false }
 
-          it "returns false" do
+          it "is invalid" do
             expect(subject).to be false
           end
         end
