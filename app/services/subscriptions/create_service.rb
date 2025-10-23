@@ -131,8 +131,6 @@ module Subscriptions
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
         after_commit do
-          # add test here for fixed charges(event already exist,
-          # we should simply make the fixed_charge if it's pay_in_advance)
           BillSubscriptionJob.perform_later(
             [new_subscription],
             Time.zone.now.to_i,
