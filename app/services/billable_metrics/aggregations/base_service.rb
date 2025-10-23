@@ -3,6 +3,34 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
+      Result = BaseResult[
+        :aggregator, # Aggregator instance, used in some charge models
+        :aggregations, # Array of aggregation result when in a grouped by scenario
+        :aggregation, # Aggregation result computed using the event store
+        :grouped_by, # Pricing group keys applied to this aggregation result
+        :current_usage_units, # Number of aggregated units when computing the current usage
+        :count, # Number of events used to compute the aggregation
+        :full_units_number, # Total number of aggregated units without proration
+        :options, # Extra options passed to the charge models (running_total, aggregation...)
+        # Sum aggregation fields
+        :precise_total_amount_cents, # Sum of events precise amount cents when billable metric is configured to use it
+        # Weighted sum aggregation fields
+        :total_aggregated_units, # Total number of active units for a weighted sum aggregation
+        :variation, # Number of new active units on the current period for a weighted sum aggregation
+        # Custom aggregation fields
+        :current_amount, # Current amount computed in a custom aggregation scenario
+        :custom_aggregation, # Custom aggregation result (Hash with total_units, and amount fields)
+        # Pay in advance fields
+        :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
+        :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
+        # Cached aggregation fields
+        :current_aggregation, # Current total aggregation cached in a pay in advance scenario (billing and current usage)
+        :max_aggregation, # Maximum aggregation result cached in a pay in advance scenario (billing and current usage)
+        :max_aggregation_with_proration, # Similar to max_aggregation but with proration on billing period applied
+        :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
+        :recurring_updated_at # Date when the recurring cached aggregation was updated
+      ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
       def initialize(event_store_class:, charge:, subscription:, boundaries:, filters: {}, bypass_aggregation: false)
@@ -22,6 +50,7 @@ module BillableMetrics
         @bypass_aggregation = bypass_aggregation
 
         result.aggregator = self
+        result.pay_in_advance_event = event if event
       end
 
       def aggregate(options: {})
