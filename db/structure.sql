@@ -10067,7 +10067,9 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20251023121031'),
+('20251023154344'),
+('20251023154123'),
+('20251023153834'),
 ('20251022104121'),
 ('20251021114023'),
 ('20251021105732'),
