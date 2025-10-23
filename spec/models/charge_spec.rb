@@ -649,11 +649,12 @@ RSpec.describe Charge do
     describe "#validate_invoiceable_unless_pay_in_advance" do
       let(:charge) { build_stubbed(:standard_charge, pay_in_advance:, invoiceable:) }
 
-
       context "when pay_in_advance is true" do
         let(:pay_in_advance) { true }
+
         context "and invoiceable is true" do
           let(:invoiceable) { true }
+
           it "returns true" do
             expect(subject).to be true
           end
@@ -661,6 +662,7 @@ RSpec.describe Charge do
 
         context "and invoiceable is false" do
           let(:invoiceable) { false }
+
           it "returns false" do
             expect(subject).to be true
           end
@@ -669,8 +671,10 @@ RSpec.describe Charge do
 
       context "when pay_in_advance is false" do
         let(:pay_in_advance) { false }
+
         context "and invoiceable is true" do
           let(:invoiceable) { true }
+
           it "returns true" do
             expect(subject).to be true
           end
@@ -678,6 +682,7 @@ RSpec.describe Charge do
 
         context "and invoiceable is false" do
           let(:invoiceable) { false }
+
           it "returns false" do
             expect(subject).to be false
           end
