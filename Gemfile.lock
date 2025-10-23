@@ -47,6 +47,12 @@ GIT
       railties
 
 GEM
+  remote: https://gems.contribsys.com/
+  specs:
+    sidekiq-pro (7.3.6)
+      sidekiq (>= 7.3.7, < 8)
+
+GEM
   remote: https://rubygems.org/
   specs:
     aasm (5.5.0)
@@ -1115,6 +1121,7 @@ DEPENDENCIES
   sentry-sidekiq
   shoulda-matchers
   sidekiq
+  sidekiq-pro!
   sidekiq-throttled (= 1.4.0)
   simplecov
   slim
