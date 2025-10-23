@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ::V1::SubscriptionSerializer do
   subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes: %i[customer plan entitlements]) }
 
-  let(:started_at) { Time.zone.parse("2024-04-23 10:00") }
+  let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do
     create(:subscription, created_at: started_at, started_at:, ending_at:)
@@ -30,9 +30,10 @@ RSpec.describe ::V1::SubscriptionSerializer do
             "plan_code" => subscription.plan.code,
             "status" => subscription.status,
             "billing_time" => subscription.billing_time,
-            "created_at" => started_at.iso8601,
+            "created_at" => "2024-04-23T10:02:03Z",
             "ending_at" => ending_at.iso8601,
             "trial_ended_at" => nil,
+            "started_at" => "2024-04-23T10:02:03.000Z",
             "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
             "current_billing_period_ending_at" => "2024-05-31T23:59:59Z"
           )
