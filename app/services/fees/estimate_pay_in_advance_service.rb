@@ -20,11 +20,10 @@ module Fees
 
       fees = []
 
-      EventsRecord.transaction do
-        event.save!
+      ApplicationRecord.transaction do
         charges.each { |charge| fees += estimated_charge_fees(charge) }
 
-        # NOTE: make sure the event is not persisted in database
+        # NOTE: make sure the event and fees are not persisted in database
         raise ActiveRecord::Rollback
       end
 
@@ -43,16 +42,22 @@ module Fees
     def event
       return @event if @event
 
-      @event = Event.new(
+      @event = Events::Common.new(
+        id: nil,
         organization_id: organization.id,
         code: event_params[:code],
-        external_customer_id: customer&.external_id,
         external_subscription_id: subscriptions.first&.external_id,
         properties: event_params[:properties] || {},
         transaction_id: SecureRandom.uuid,
         timestamp: Time.current,
-        precise_total_amount_cents: event_params[:precise_total_amount_cents] || 0
+        precise_total_amount_cents: event_params[:precise_total_amount_cents] || 0,
+        persisted: false
       )
+
+      expression_result = Events::CalculateExpressionService.call(organization:, event: @event)
+      result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?
+
+      @event
     end
 
     def customer
@@ -92,7 +97,7 @@ module Fees
     end
 
     def estimated_charge_fees(charge)
-      service_result = Fees::CreatePayInAdvanceService.call(charge:, event:, estimate: true)
+      service_result = Fees::CreatePayInAdvanceService.call(charge:, event:)
       service_result.raise_if_error!
 
       service_result.fees

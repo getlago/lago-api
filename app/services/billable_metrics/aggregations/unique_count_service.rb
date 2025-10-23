@@ -120,8 +120,10 @@ module BillableMetrics
         (1..aggregation).to_a
       end
 
-      def compute_per_event_aggregation(exclude_event:)
-        (0...event_store.events_values(force_from: true).count).map { |_| 1 }
+      def compute_per_event_aggregation(exclude_event:, include_event_value:)
+        count = event_store.events_values(force_from: true).count
+        count += 1 if include_event_value
+        (0...count).map { |_| 1 }
       end
 
       def count_unique_group_scope(events)

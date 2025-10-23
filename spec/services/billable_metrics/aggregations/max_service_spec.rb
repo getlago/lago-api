@@ -258,6 +258,39 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
         expect(result.event_aggregation).to eq([event.properties["total_count"]])
       end
     end
+
+    context "when including event value" do
+      let(:event) do
+        build(
+          :common_event,
+          subscription:,
+          organization:,
+          billable_metric:,
+          properties: {
+            billable_metric.field_name => event_property
+          }
+        )
+      end
+
+      let(:event_property) { 10 }
+      let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+
+      it "includes the event value in the result" do
+        result = max_service.per_event_aggregation(include_event_value: true)
+
+        expect(result.event_aggregation).to eq([0, 0, 0, 0, 12, 0])
+      end
+
+      context "when event properties is higher than the max value" do
+        let(:event_property) { 15 }
+
+        it "takes the event value into account" do
+          result = max_service.per_event_aggregation(include_event_value: true)
+
+          expect(result.event_aggregation).to eq([0, 0, 0, 0, 0, 15])
+        end
+      end
+    end
   end
 
   describe ".grouped_by_aggregation" do

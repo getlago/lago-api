@@ -277,6 +277,108 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         expect(group.first["prorated_value"].round(3)).to eq(0.387) # 12/31
         expect(group.first["operation_type"]).to eq("add")
       end
+
+      context "when including a final event" do
+        it "returns the breakdown of add and remove of unique event properties" do
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: boundaries[:from_datetime] + 1.day,
+            properties: {
+              billable_metric.field_name => 2
+            },
+            value: "2",
+            decimal_value: 2
+          )
+
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: boundaries[:from_datetime] + 1.day,
+            properties: {
+              billable_metric.field_name => 3
+            },
+            value: "30",
+            decimal_value: 30
+          )
+
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
+            properties: {
+              billable_metric.field_name => 2,
+              :operation_type => "remove"
+            },
+            value: "2",
+            decimal_value: 2
+          )
+
+          final_event = Events::Common.new(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: (boundaries[:to_datetime] - 1.day).end_of_day,
+            properties: {
+              billable_metric.field_name => "10",
+              :operation_type => "add"
+            }
+          )
+
+          event_store.aggregation_property = billable_metric.field_name
+
+          result = event_store.prorated_unique_count_breakdown(include_final_event: final_event)
+          expect(result.count).to eq(8)
+
+          # Ensure consistent ordering with 2 events with the same timestamp
+          expect(result.map { it["property"] }).to eq(%w[1 2 30 2 3 4 5 10])
+
+          grouped_result = result.group_by { |r| r["property"] }
+
+          # NOTE: group with property 1
+          group = grouped_result["1"]
+          expect(group.count).to eq(1)
+          expect(group.first["prorated_value"].round(3)).to eq(0.516) # 16/31
+          expect(group.first["operation_type"]).to eq("add")
+
+          # NOTE: group with property 2 (added and removed)
+          group = grouped_result["2"]
+          expect(group.first["prorated_value"].round(3)).to eq(0.032) # 1/31
+          expect(group.last["prorated_value"].round(3)).to eq(0.484) # 15/31
+          expect(group.count).to eq(2)
+
+          # NOTE: group with property 3
+          group = grouped_result["3"]
+          expect(group.count).to eq(1)
+          expect(group.first["prorated_value"].round(3)).to eq(0.452) # 14/31
+          expect(group.first["operation_type"]).to eq("add")
+
+          # NOTE: group with property 4
+          group = grouped_result["4"]
+          expect(group.count).to eq(1)
+          expect(group.first["prorated_value"].round(3)).to eq(0.419) # 13/31
+          expect(group.first["operation_type"]).to eq("add")
+
+          # NOTE: group with property 5
+          group = grouped_result["5"]
+          expect(group.count).to eq(1)
+          expect(group.first["prorated_value"].round(3)).to eq(0.387) # 12/31
+          expect(group.first["operation_type"]).to eq("add")
+
+          # NOTE: group with property 10
+          group = grouped_result["10"]
+          expect(group.count).to eq(1)
+          expect(group.first["prorated_value"].round(3)).to eq(0.065) # 2/31
+          expect(group.first["operation_type"]).to eq("add")
+        end
+      end
     end
   end
 end
