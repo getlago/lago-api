@@ -36,6 +36,7 @@ RSpec.describe Types::BillingEntities::Object do
   it { is_expected.to have_field(:billing_configuration).of_type("BillingEntityBillingConfiguration") }
   it { is_expected.to have_field(:email_settings).of_type("[BillingEntityEmailSettingsEnum!]") }
   it { is_expected.to have_field(:finalize_zero_amount_invoice).of_type("Boolean!") }
+  it { is_expected.to have_field(:einvoicing).of_type("Boolean!") }
 
   it { is_expected.to have_field(:applied_dunning_campaign).of_type("DunningCampaign") }
   it { is_expected.to have_field(:is_default).of_type("Boolean!") }
