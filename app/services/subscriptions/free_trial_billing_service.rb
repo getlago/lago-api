@@ -11,7 +11,7 @@ module Subscriptions
     def call
       # we need more tests :see_no_evil
       ending_trial_subscriptions.each do |subscription|
-        if (subscription.plan_pay_in_advance || subscription.has_pay_in_advance_fixed_charges) &&
+        if subscription.should_be_billed_when_started? &&
             !subscription.was_already_billed_today &&
             !already_billed_on_day_one?(subscription)
           BillSubscriptionJob.perform_later(
