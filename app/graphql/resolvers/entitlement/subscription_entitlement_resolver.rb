@@ -16,8 +16,6 @@ module Resolvers
       type Types::Entitlement::SubscriptionEntitlementObject, null: false
 
       def resolve(subscription_id:, feature_code:)
-        raise forbidden_error(code: "feature_unavailable") unless License.premium?
-
         subscription = current_organization.subscriptions.find(subscription_id)
 
         # TODO: Replace this once we have `where` clause on SubscriptionEntitlementQuery

@@ -43,7 +43,6 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
-  it_behaves_like "requires Premium license"
 
   context "when feature is not on plan nor on subscription" do
     it "adds the feature to the subscription" do

@@ -17,7 +17,6 @@ module Entitlement
     )
 
     def call
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
       if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])

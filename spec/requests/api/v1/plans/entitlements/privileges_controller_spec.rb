@@ -17,8 +17,6 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
     entitlement_value2
   end
 
-  around { |test| lago_premium!(&test) }
-
   describe "DELETE #destroy" do
     subject do
       delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}/privileges/#{privilege.code}"

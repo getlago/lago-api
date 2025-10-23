@@ -36,7 +36,6 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:view"
-  it_behaves_like "requires Premium license"
 
   it do
     expect(described_class).to accept_argument(:limit).of_type("Int")

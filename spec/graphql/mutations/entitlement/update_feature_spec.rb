@@ -38,7 +38,6 @@ RSpec.describe Mutations::Entitlement::UpdateFeature do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:update"
-  it_behaves_like "requires Premium license"
 
   it "updates a feature" do
     result = subject

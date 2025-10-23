@@ -18,8 +18,6 @@ module Resolvers
       type Types::Entitlement::FeatureObject, null: false
 
       def resolve(id: nil, code: nil)
-        raise forbidden_error(code: "feature_unavailable") unless License.premium?
-
         if id
           current_organization.features.find(id)
         elsif code

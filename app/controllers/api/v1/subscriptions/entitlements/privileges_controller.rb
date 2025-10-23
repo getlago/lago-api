@@ -5,8 +5,6 @@ module Api
     module Subscriptions
       module Entitlements
         class PrivilegesController < Api::BaseController
-          include PremiumFeatureOnly
-
           before_action :find_subscription
 
           def destroy

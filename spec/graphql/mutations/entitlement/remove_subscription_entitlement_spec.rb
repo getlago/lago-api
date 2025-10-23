@@ -35,7 +35,6 @@ RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
-  it_behaves_like "requires Premium license"
 
   context "when feature wasn't available in subscription" do
     it "removes the feature" do

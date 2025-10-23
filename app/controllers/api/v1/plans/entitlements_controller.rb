@@ -4,8 +4,6 @@ module Api
   module V1
     module Plans
       class EntitlementsController < Api::BaseController
-        include PremiumFeatureOnly
-
         before_action :find_plan
         before_action :find_entitlement, only: %i[show destroy]
 

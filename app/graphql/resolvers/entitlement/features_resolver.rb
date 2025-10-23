@@ -17,8 +17,6 @@ module Resolvers
       type Types::Entitlement::FeatureObject.collection_type, null: false
 
       def resolve(**args)
-        raise forbidden_error(code: "feature_unavailable") unless License.premium?
-
         result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,
           search_term: args[:search_term],

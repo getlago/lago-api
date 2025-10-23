@@ -12,8 +12,6 @@ RSpec.describe Api::V1::Subscriptions::Entitlements::PrivilegesController, type:
   let(:entitlement) { create(:entitlement, subscription: subscription, plan: nil, feature:) }
   let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30) }
 
-  around { |test| lago_premium!(&test) }
-
   describe "DELETE #destroy" do
     subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/privileges/#{privilege.code}" }
 
@@ -21,8 +19,6 @@ RSpec.describe Api::V1::Subscriptions::Entitlements::PrivilegesController, type:
       entitlement
       entitlement_value
     end
-
-    it_behaves_like "a Premium API endpoint"
 
     it "deletes the entitlement value" do
       expect { subject }.to change(feature.entitlement_values, :count).by(-1)

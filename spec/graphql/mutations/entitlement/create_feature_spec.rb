@@ -40,7 +40,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:create"
-  it_behaves_like "requires Premium license"
 
   it "creates a feature" do
     result = subject

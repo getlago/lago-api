@@ -38,7 +38,6 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:view"
-  it_behaves_like "requires Premium license"
 
   it do
     expect(described_class).to accept_argument(:subscription_id).of_type("ID!")

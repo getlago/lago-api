@@ -39,7 +39,6 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:view"
-  it_behaves_like "requires Premium license"
 
   it "returns a single feature" do
     privilege = create(:privilege, feature:, value_type: "boolean")
