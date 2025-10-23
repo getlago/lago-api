@@ -42,6 +42,7 @@ en:
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
+        must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required
         only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable
         payment_request_is_already_succeeded: payment_request_is_already_succeeded

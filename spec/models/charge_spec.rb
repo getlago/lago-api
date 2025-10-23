@@ -685,6 +685,7 @@ RSpec.describe Charge do
 
           it "is invalid" do
             expect(subject).to be false
+            expect(charge.errors[:invoiceable]).to include("must_be_true_unless_pay_in_advance")
           end
         end
       end
