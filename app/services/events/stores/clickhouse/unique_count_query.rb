@@ -206,9 +206,9 @@ module Events
           SQL
         end
 
-        def prorated_breakdown_query(with_remove: false)
+        def prorated_breakdown_query(with_remove: false, include_final_event: nil)
           <<-SQL
-            #{events_cte_sql},
+            #{events_cte_sql(include_final_event:)},
             -- Only ignore remove events if they are NOT the last event of the day
             same_day_ignored AS (
               SELECT
@@ -270,30 +270,41 @@ module Events
 
         delegate :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
 
-        def events_cte_sql
+        def events_cte_sql(include_final_event: nil)
+          sql = events_sql(
+            ordered: true,
+            select: [
+              arel_table[:timestamp].as("timestamp"),
+              arel_table[:value].as("property"),
+              Arel::Nodes::NamedFunction.new(
+                "coalesce",
+                [
+                  Arel::Nodes::NamedFunction.new("NULLIF", [
+                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("''")
+                  ]),
+                  Arel::Nodes::SqlLiteral.new("'add'")
+                ]
+              ).as("operation_type")
+            ]
+          )
+
+          if include_final_event
+            sql = "(#{sql}) UNION ALL (#{event_value_sql})"
+          end
+
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
           <<-SQL
-            WITH events_data AS (
-              (#{
-                events_sql(
-                  ordered: true,
-                  select: [
-                    arel_table[:timestamp].as("timestamp"),
-                    arel_table[:value].as("property"),
-                    Arel::Nodes::NamedFunction.new(
-                      "coalesce",
-                      [
-                        Arel::Nodes::NamedFunction.new("NULLIF", [
-                          Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
-                          Arel::Nodes::SqlLiteral.new("''")
-                        ]),
-                        Arel::Nodes::SqlLiteral.new("'add'")
-                      ]
-                    ).as("operation_type")
-                  ]
-                )
-              })
-            )
+            WITH events_data AS (#{sql})
+          SQL
+        end
+
+        def event_value_sql
+          <<-SQL
+            SELECT
+              toDateTime64(:event_timestamp, 5, 'UTC') as timestamp,
+              :event_value as property,
+              :event_operation_type as operation_type
           SQL
         end
 

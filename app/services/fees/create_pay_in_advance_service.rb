@@ -8,7 +8,12 @@ module Fees
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
       @billing_at = billing_at || @event.timestamp
-      @estimate = estimate
+
+      @estimate = if @event.persisted
+        estimate
+      else
+        true
+      end
 
       super
     end

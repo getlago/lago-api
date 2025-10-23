@@ -773,6 +773,28 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         expect(result.event_aggregation).to eq([12])
       end
     end
+
+    context "when including event value" do
+      let(:event) do
+        build(
+          :common_event,
+          subscription:,
+          organization:,
+          billable_metric:,
+          properties: {
+            billable_metric.field_name => 10
+          }
+        )
+      end
+
+      let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+
+      it "includes the event value in the result" do
+        result = sum_service.per_event_aggregation(include_event_value: true)
+
+        expect(result.event_aggregation).to eq([12, 12, 12, 12, 10])
+      end
+    end
   end
 
   describe ".grouped_by aggregation" do

@@ -50,11 +50,7 @@ module BillableMetrics
         @bypass_aggregation = bypass_aggregation
 
         result.aggregator = self
-<<<<<<< HEAD
         result.pay_in_advance_event = event if event
-=======
-        result.pay_in_advance_event = event
->>>>>>> 0a9819027 (feat(billable_metric): Define BillableMetrics::Aggregations::Result)
       end
 
       def aggregate(options: {})
@@ -92,10 +88,10 @@ module BillableMetrics
         raise NotImplementedError
       end
 
-      def per_event_aggregation(exclude_event: false, grouped_by_values: nil)
+      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         PerEventAggregationResult.new.tap do |result|
           result.event_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
-            compute_per_event_aggregation(exclude_event:)
+            compute_per_event_aggregation(exclude_event:, include_event_value:)
           end
         end
       end
@@ -132,6 +128,12 @@ module BillableMetrics
 
       def to_datetime
         boundaries[:to_datetime]
+      end
+
+      def event_value
+        return unless event
+
+        (event.properties || {})[billable_metric.field_name] || 0
       end
 
       def handle_in_advance_current_usage(total_aggregation, target_result: result)

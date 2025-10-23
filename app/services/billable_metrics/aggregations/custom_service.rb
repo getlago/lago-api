@@ -3,7 +3,9 @@
 module BillableMetrics
   module Aggregations
     class CustomService < BillableMetrics::Aggregations::BaseService
-      INITIAL_STATE = {total_units: BigDecimal("0"), amount: BigDecimal("0")}.freeze
+      # NOTE: DEPRECATED service
+
+      INITIAL_STATE = {total_units: BigDecimal(0), amount: BigDecimal(0)}.freeze
       BATCH_SIZE = 1000
 
       def compute_aggregation(options: {})
@@ -70,7 +72,7 @@ module BillableMetrics
         result
       end
 
-      def compute_per_event_aggregation(exclude_event:)
+      def compute_per_event_aggregation(exclude_event:, include_event_value:)
         # TODO: Implement custom aggregation logic returning 1 value per event
         event_store.events_properties
       end
