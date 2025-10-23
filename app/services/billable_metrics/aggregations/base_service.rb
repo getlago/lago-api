@@ -50,7 +50,11 @@ module BillableMetrics
         @bypass_aggregation = bypass_aggregation
 
         result.aggregator = self
+<<<<<<< HEAD
         result.pay_in_advance_event = event if event
+=======
+        result.pay_in_advance_event = event
+>>>>>>> 0a9819027 (feat(billable_metric): Define BillableMetrics::Aggregations::Result)
       end
 
       def aggregate(options: {})
