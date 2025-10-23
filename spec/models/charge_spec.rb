@@ -646,21 +646,42 @@ RSpec.describe Charge do
   describe "validations" do
     subject { charge.valid? }
 
-    describe "of invoiceable" do
-      subject { charge }
+    describe "#validate_invoiceable_unless_pay_in_advance" do
+      let(:charge) { build_stubbed(:standard_charge, pay_in_advance:, invoiceable:) }
 
-      let(:charge) { build_stubbed(:charge, pay_in_advance:) }
 
-      context "when pay in advance" do
+      context "when pay_in_advance is true" do
         let(:pay_in_advance) { true }
+        context "and invoiceable is true" do
+          let(:invoiceable) { true }
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
 
-        it { is_expected.not_to validate_presence_of(:invoiceable) }
+        context "and invoiceable is false" do
+          let(:invoiceable) { false }
+          it "returns false" do
+            expect(subject).to be true
+          end
+        end
       end
 
-      context "when pay in arrears" do
+      context "when pay_in_advance is false" do
         let(:pay_in_advance) { false }
+        context "and invoiceable is true" do
+          let(:invoiceable) { true }
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
 
-        it { is_expected.to validate_presence_of(:invoiceable) }
+        context "and invoiceable is false" do
+          let(:invoiceable) { false }
+          it "returns false" do
+            expect(subject).to be false
+          end
+        end
       end
     end
 

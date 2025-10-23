@@ -45,7 +45,6 @@ class Charge < ApplicationRecord
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
-  validates :invoiceable, presence: true, unless: -> { pay_in_advance? }
 
   validate :charge_model_allowance
   validate :validate_pay_in_advance
@@ -53,6 +52,7 @@ class Charge < ApplicationRecord
   validate :validate_prorated
   validate :validate_min_amount_cents
   validate :validate_custom_model
+  validate :validate_invoiceable_unless_pay_in_advance
 
   default_scope -> { kept }
 
@@ -88,6 +88,12 @@ class Charge < ApplicationRecord
 
   def validate_properties
     validate_charge_model_properties(charge_model)
+  end
+
+  def validate_invoiceable_unless_pay_in_advance
+    return if pay_in_advance? || invoiceable?
+
+    errors.add(:invoiceable, :must_be_true_unless_pay_in_advance)
   end
 
   def validate_dynamic
