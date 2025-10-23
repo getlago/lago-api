@@ -36,7 +36,18 @@ module EInvoices
     # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
     UNIT_CODE = "C62"
 
+    def initialize(xml:, resource: nil)
+      @xml = xml
+      @resource = resource
+    end
+
+    def self.call(*, **, &)
+      new(*, **).call(&)
+    end
+
     private
+
+    attr_accessor :xml, :resource
 
     def formatted_date(date)
       date.strftime(self.class::DATEFORMAT)

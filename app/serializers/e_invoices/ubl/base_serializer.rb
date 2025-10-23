@@ -17,19 +17,6 @@ module EInvoices
       }.merge(COMMON_NAMESPACES).freeze
 
       DATEFORMAT = "%Y-%m-%d"
-
-      def initialize(xml:, resource: nil)
-        @xml = xml
-        @resource = resource
-      end
-
-      def self.call(*, **, &)
-        new(*, **).call(&)
-      end
-
-      private
-
-      attr_accessor :xml, :resource
     end
   end
 end

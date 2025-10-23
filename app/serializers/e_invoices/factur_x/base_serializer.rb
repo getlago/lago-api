@@ -16,19 +16,6 @@ module EInvoices
       # More date formats for UNTDID 2379 here
       # https://service.unece.org/trade/untdid/d15a/tred/tred2379.htm
       CCYYMMDD = 102
-
-      def initialize(xml:, resource: nil)
-        @xml = xml
-        @resource = resource
-      end
-
-      def self.call(*, **, &)
-        new(*, **).call(&)
-      end
-
-      private
-
-      attr_accessor :xml, :resource
     end
   end
 end
