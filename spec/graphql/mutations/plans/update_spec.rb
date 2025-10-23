@@ -481,7 +481,7 @@ RSpec.describe Mutations::Plans::Update do
                 id: fixed_charge_2.id,
                 addOnId: add_on_2.id,
                 # changes units
-                units: "20",
+                units: "20.55",
                 chargeModel: "standard",
                 properties: {amount: "100.00"},
                 applyUnitsImmediately: true
@@ -524,29 +524,29 @@ RSpec.describe Mutations::Plans::Update do
       expect(result_data["fixedCharges"].count).to eq(5)
 
       expect(result_data["fixedCharges"].first["id"]).to eq(fixed_charge_1.id)
-      expect(result_data["fixedCharges"].first["units"]).to eq("10.0")
+      expect(result_data["fixedCharges"].first["units"]).to eq("10")
       expect(result_data["fixedCharges"].first["properties"]["amount"]).to eq("10.00")
       expect(result_data["fixedCharges"].first["addOn"]["id"]).to eq(fixed_charge_1.add_on_id)
 
       expect(result_data["fixedCharges"].second["id"]).to eq(fixed_charge_2.id)
-      expect(result_data["fixedCharges"].second["units"]).to eq("20.0")
+      expect(result_data["fixedCharges"].second["units"]).to eq("20.55")
       expect(result_data["fixedCharges"].second["properties"]["amount"]).to eq("100.00")
       expect(result_data["fixedCharges"].second["addOn"]["id"]).to eq(fixed_charge_2.add_on_id)
 
       expect(result_data["fixedCharges"].third["chargeModel"]).to eq("standard")
-      expect(result_data["fixedCharges"].third["units"]).to eq("30.0")
+      expect(result_data["fixedCharges"].third["units"]).to eq("30")
       expect(result_data["fixedCharges"].third["properties"]["amount"]).to eq("1000.00")
       expect(result_data["fixedCharges"].third["addOn"]["id"]).to eq(add_on_3.id)
       expect(result_data["fixedCharges"].third["addOn"]["name"]).to eq(add_on_3.name)
 
       expect(result_data["fixedCharges"].fourth["chargeModel"]).to eq("graduated")
-      expect(result_data["fixedCharges"].fourth["units"]).to eq("40.0")
+      expect(result_data["fixedCharges"].fourth["units"]).to eq("40")
       expect(result_data["fixedCharges"].fourth["properties"]["graduatedRanges"].count).to eq(2)
       expect(result_data["fixedCharges"].fourth["addOn"]["id"]).to eq(add_on_4.id)
       expect(result_data["fixedCharges"].fourth["addOn"]["name"]).to eq(add_on_4.name)
 
       expect(result_data["fixedCharges"].fifth["chargeModel"]).to eq("volume")
-      expect(result_data["fixedCharges"].fifth["units"]).to eq("50.0")
+      expect(result_data["fixedCharges"].fifth["units"]).to eq("50")
       expect(result_data["fixedCharges"].fifth["properties"]["volumeRanges"].count).to eq(1)
       expect(result_data["fixedCharges"].fifth["addOn"]["id"]).to eq(add_on_5.id)
       expect(result_data["fixedCharges"].fifth["addOn"]["name"]).to eq(add_on_5.name)
@@ -563,7 +563,7 @@ RSpec.describe Mutations::Plans::Update do
 
       expect(FixedChargeEvent.pluck(:fixed_charge_id, :timestamp, :units))
         .to contain_exactly(
-          [fixed_charge_2.id, be_within(1.second).of(Time.current), BigDecimal("20")],
+          [fixed_charge_2.id, be_within(1.second).of(Time.current), BigDecimal("20.55")],
           [fixed_charge_3.id, be_within(1.second).of(Time.current), BigDecimal("30")],
           [fixed_charge_4.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("40")],
           [fixed_charge_5.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("50")]

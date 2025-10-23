@@ -20,4 +20,40 @@ RSpec.describe Types::FixedCharges::Object do
   it { is_expected.to have_field(:updated_at).of_type("ISO8601DateTime!") }
 
   it { is_expected.to have_field(:taxes).of_type("[Tax!]") }
+
+  describe "#units" do
+    subject { run_graphql_field("FixedCharge.units", fixed_charge) }
+
+    context "when units is a whole number" do
+      let(:fixed_charge) { create(:fixed_charge, units: 1.0) }
+
+      it "returns the value without decimal point" do
+        expect(subject).to eq("1")
+      end
+    end
+
+    context "when units has decimal places" do
+      let(:fixed_charge) { create(:fixed_charge, units: 1.5) }
+
+      it "returns the value with decimal places" do
+        expect(subject).to eq("1.5")
+      end
+    end
+
+    context "when units is zero" do
+      let(:fixed_charge) { create(:fixed_charge, units: 0.0) }
+
+      it "returns zero without decimal point" do
+        expect(subject).to eq("0")
+      end
+    end
+
+    context "when units has trailing zeros" do
+      let(:fixed_charge) { create(:fixed_charge, units: 2.5000) }
+
+      it "returns the value without trailing zeros" do
+        expect(subject).to eq("2.5")
+      end
+    end
+  end
 end
