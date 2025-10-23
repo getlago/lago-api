@@ -16,6 +16,7 @@ module V1
         city: model.city,
         state: model.state,
         zipcode: model.zipcode,
+        einvoicing: model.einvoicing,
         email: model.email,
         legal_name: model.legal_name,
         legal_number: model.legal_number,

@@ -20,6 +20,7 @@ module BillingEntities
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
       billing_entity.name = params[:name] if params.key?(:name)
+      billing_entity.einvoicing = params[:einvoicing] if params.key?(:einvoicing)
       billing_entity.email = params[:email] if params.key?(:email)
       billing_entity.legal_name = params[:legal_name] if params.key?(:legal_name)
       billing_entity.legal_number = params[:legal_number] if params.key?(:legal_number)
@@ -74,6 +75,7 @@ module BillingEntities
         end
 
         handle_invoice_custom_sections if params.key?(:invoice_custom_section_ids) || params.key?(:invoice_custom_section_codes)
+        handle_einvoincing_setting if params.key?(:country) && billing_entity.einvoicing
 
         assign_premium_attributes
         handle_base64_logo if params.key?(:logo)
@@ -140,6 +142,10 @@ module BillingEntities
           organization_id: billing_entity.organization_id
         )
       end
+    end
+
+    def handle_einvoincing_setting
+      billing_entity.einvoicing = false unless BillingEntity::EINVOICING_COUNTRIES.include?(billing_entity.country)
     end
   end
 end
