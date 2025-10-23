@@ -6,6 +6,11 @@ RUN apt update && apt upgrade -y
 RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
+RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_x86_64.tar.xz -o pdfcpu.tar.xz \
+    && tar -xf pdfcpu.tar.xz \
+    && install -m 755 pdfcpu_0.11.0_Linux_x86_64/pdfcpu /usr/local/bin/ \
+    && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_x86_64
+
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
@@ -29,6 +34,7 @@ ENV GOCARDLESS_CLIENT_ID=$GOCARDLESS_CLIENT_ID
 ENV GOCARDLESS_CLIENT_SECRET=$GOCARDLESS_CLIENT_SECRET
 
 COPY --from=build /usr/local/bundle/ /usr/local/bundle
+COPY --from=build /usr/local/bin/pdfcpu /usr/local/bin/pdfcpu
 WORKDIR /app
 COPY . .
 
