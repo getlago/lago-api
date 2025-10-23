@@ -768,7 +768,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
     context "when editing a fixed charge" do
       let(:plan) { create(:plan, organization:, interval: :weekly) }
-      let(:subscription) { create(:subscription, :active, :calendar, plan:, started_at: started_at) }
+      let(:subscription) { create(:subscription, :active, :anniversary, plan:, started_at:, subscription_at: started_at) }
       let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, units: 1) }
       let(:started_at) { 3.days.ago }
 
@@ -833,7 +833,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             subscription:,
             fixed_charge:,
             units: 25,
-            timestamp: be_within(1.second).of((started_at + 1.week).beginning_of_week)
+            timestamp: be_within(1.second).of((started_at + 1.week).beginning_of_day)
           )
         end
       end
