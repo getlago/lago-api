@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::PaymentMeans, type: :service do
+RSpec.describe EInvoices::Ubl::PaymentMeans do
   subject do
     xml_document(:ubl) do |xml|
       described_class.call(xml:, type:, amount:)

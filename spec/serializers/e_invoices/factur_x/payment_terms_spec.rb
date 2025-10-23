@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::PaymentTerms, type: :service do
+RSpec.describe EInvoices::FacturX::PaymentTerms do
   subject do
     xml_document(:factur_x) do |xml|
       described_class.call(xml:, due_date:, description:) do

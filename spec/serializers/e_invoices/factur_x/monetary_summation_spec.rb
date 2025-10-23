@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::MonetarySummation, type: :service do
+RSpec.describe EInvoices::FacturX::MonetarySummation do
   subject do
     xml_document(:factur_x) do |xml|
       described_class.call(xml:, resource:, amounts:) do

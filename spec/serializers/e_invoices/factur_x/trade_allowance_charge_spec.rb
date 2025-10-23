@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::FacturX::TradeAllowanceCharge, type: :service do
+RSpec.describe EInvoices::FacturX::TradeAllowanceCharge do
   subject do
     xml_document(:factur_x) do |xml|
       described_class.call(xml:, resource:, indicator:, tax_rate:, amount:) do

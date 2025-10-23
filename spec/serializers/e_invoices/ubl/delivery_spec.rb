@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Delivery, type: :service do
+RSpec.describe EInvoices::Ubl::Delivery do
   subject do
     xml_document(:ubl) do |xml|
       described_class.call(xml:, delivery_date:)
