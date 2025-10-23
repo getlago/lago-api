@@ -179,6 +179,14 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         expect(result.event_aggregation).to eq([1])
       end
     end
+
+    context "when including event value" do
+      it "includes the event value in the result" do
+        result = count_service.per_event_aggregation(include_event_value: true)
+
+        expect(result.event_aggregation).to eq([1, 1, 1, 1, 1])
+      end
+    end
   end
 
   describe ".grouped_by_aggregation" do

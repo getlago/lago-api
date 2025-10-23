@@ -46,10 +46,15 @@ module BillableMetrics
         result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
-      def compute_per_event_aggregation(exclude_event:)
+      def compute_per_event_aggregation(exclude_event:, include_event_value:)
         max_value = event_store.max || 0
         event_values = event_store.events_values
         max_value_seen = false
+
+        if include_event_value
+          event_values += [event_value]
+          max_value = [max_value, event_value].max
+        end
 
         # NOTE: returns the first max value, 0 for all other events
         event_values.map do |value|

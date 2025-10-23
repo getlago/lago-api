@@ -1077,6 +1077,33 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
           end
         end
       end
+
+      context "when including event value" do
+        let(:fake_event) do
+          build(
+            :common_event,
+            subscription:,
+            organization:,
+            billable_metric:,
+            timestamp: to_datetime - 1.day,
+            properties: {
+              billable_metric.field_name => "fake_value"
+            }
+          )
+        end
+
+        let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event: fake_event} }
+
+        it "includes the event value in the result" do
+          result = unique_count_service.per_event_aggregation(include_event_value: true)
+
+          expect(result.event_aggregation).to eq([1, 1])
+          expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([
+            21.fdiv(31).ceil(5),
+            2.fdiv(31).ceil(5)
+          ])
+        end
+      end
     end
 
     context "with persisted metrics removed in the period" do

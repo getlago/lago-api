@@ -1,7 +1,23 @@
 # frozen_string_literal: true
 
 module Events
-  Common = Struct.new(:id, :organization_id, :transaction_id, :external_subscription_id, :timestamp, :code, :properties, :precise_total_amount_cents) do
+  Common = Struct.new(
+    :id,
+    :organization_id,
+    :transaction_id,
+    :external_subscription_id,
+    :timestamp,
+    :code,
+    :properties,
+    :precise_total_amount_cents,
+    :persisted,
+    keyword_init: true
+  ) do
+    def initialize(**args)
+      super
+      self[:persisted] = true unless args.key?(:persisted)
+    end
+
     def event_id
       id || transaction_id
     end

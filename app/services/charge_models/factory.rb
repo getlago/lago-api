@@ -50,5 +50,26 @@ module ChargeModels
         raise NotImplementedError, "Charge model #{chargeable.charge_model} is not implemented"
       end
     end
+
+    def self.in_advance_charge_model_class(chargeable:)
+      case chargeable.charge_model.to_sym
+      when :standard
+        ChargeModels::StandardService
+      when :graduated
+        ChargeModels::GraduatedService
+      when :graduated_percentage
+        ChargeModels::GraduatedPercentageService
+      when :package
+        ChargeModels::PackageService
+      when :percentage
+        ChargeModels::PercentageService
+      when :custom
+        ChargeModels::CustomService
+      when :dynamic
+        ChargeModels::DynamicService
+      else
+        raise NotImplementedError, "Charge model #{chargeable.charge_model} is not implemented"
+      end
+    end
   end
 end
