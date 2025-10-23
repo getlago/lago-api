@@ -39,10 +39,9 @@ module Commitments
             current_usage: true
           )
 
-          # note: current solution solves the problem for billed monthly charges and fixed charges. However,
-          # we still have wrong calculation when we're issuing an invoice for the previous period, but it contains
-          # pay_in_advance fixed charges and charges (recurring, for example), because in invoice_subscription
-          # we'll have boundaries of previous billing period.
+          # This will be deleted in main, but when we add fixed_charges boundaries, it cannot be OR, becuase
+          # then monthly fixed_charges inovice is also shown for the previous period (because charges boundaries will be the
+          # previous yearly period)
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
