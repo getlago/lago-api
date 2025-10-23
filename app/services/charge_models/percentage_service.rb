@@ -14,7 +14,7 @@ module ChargeModels
 
     def compute_projected_amount
       current_amount = compute_amount
-      return BigDecimal("0") if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
+      return BigDecimal(0) if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
 
       current_amount / BigDecimal(period_ratio.to_s)
     end
@@ -134,6 +134,7 @@ module ChargeModels
       #       see app/services/charges/apply_pay_in_advance_charge_model_service.rb:18
       aggregation_result.aggregator.per_event_aggregation(
         exclude_event: properties[:exclude_event],
+        include_event_value: properties[:include_event_value],
         grouped_by_values: grouped_by
       ).event_aggregation
     end

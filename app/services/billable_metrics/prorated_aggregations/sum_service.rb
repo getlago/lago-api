@@ -95,22 +95,29 @@ module BillableMetrics
         result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
-      def compute_per_event_prorated_aggregation
-        event_store.prorated_events_values(period_duration)
+      def compute_per_event_prorated_aggregation(include_event_value:)
+        values = event_store.prorated_events_values(period_duration)
+
+        if include_event_value
+          ratio = subscription.date_diff_with_timezone(event.timestamp, to_datetime).fdiv(period_duration)
+          values += [BigDecimal(event_value) * ratio]
+        end
+
+        values
       end
 
-      def per_event_aggregation(exclude_event: false, grouped_by_values: nil)
+      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         recurring_result = recurring_value
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
         recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
 
         ProratedPerEventAggregationResult.new.tap do |result|
           result.event_aggregation = recurring_aggregation +
-            base_aggregator.per_event_aggregation(exclude_event:, grouped_by_values:).event_aggregation
+            base_aggregator.per_event_aggregation(exclude_event:, include_event_value:, grouped_by_values:).event_aggregation
 
           event_store.with_grouped_by_values(grouped_by_values) do
             result.event_prorated_aggregation = recurring_prorated_aggregation +
-              compute_per_event_prorated_aggregation
+              compute_per_event_prorated_aggregation(include_event_value:)
           end
         end
       end
