@@ -31,6 +31,10 @@ es:
     document_name: Factura
     document_tax_name: Factura fiscal
     due_date: Vence el %{date}
+    e_invoicing:
+      discount_reason: Descuento del %{tax_rate}
+      payment_information: "%{payment_label} de %{currency} %{amount} aplicado"
+      standard_payment: Pago estándar
     fee_prorated: La tarifa se prorratea según los días de uso, el precio unitario mostrado es un promedio
     fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}
     from_to_date: Desde %{from_date} hasta %{to_date}
