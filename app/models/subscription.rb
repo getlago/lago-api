@@ -257,6 +257,7 @@ end
 #  name                       :string
 #  on_termination_credit_note :enum
 #  on_termination_invoice     :enum             default("generate"), not null
+#  payment_method_type        :enum             default("provider"), not null
 #  started_at                 :datetime
 #  status                     :integer          not null
 #  subscription_at            :datetime
@@ -267,6 +268,7 @@ end
 #  customer_id                :uuid             not null
 #  external_id                :string           not null
 #  organization_id            :uuid             not null
+#  payment_method_id          :uuid
 #  plan_id                    :uuid             not null
 #  previous_subscription_id   :uuid
 #
@@ -275,6 +277,7 @@ end
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_organization_id                      (organization_id)
+#  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
 #  index_subscriptions_on_started_at                           (started_at)
@@ -285,5 +288,6 @@ end
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
