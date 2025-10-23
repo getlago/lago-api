@@ -173,10 +173,15 @@ RSpec.describe CreditNote do
       let(:credit_note_item2) do
         create(:credit_note_item, credit_note:, fee: charge_fee)
       end
+      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
+      let(:credit_note_item3) do
+        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
+      end
 
       before do
         credit_note_item1
         credit_note_item2
+        credit_note_item3
       end
 
       it "returns the item for the subscription fee" do
@@ -208,13 +213,49 @@ RSpec.describe CreditNote do
         create(:credit_note_item, credit_note:, fee: charge_fee)
       end
 
+      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
+      let(:credit_note_item3) do
+        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
+      end
+
       before do
         credit_note_item1
         credit_note_item2
+        credit_note_item3
       end
 
-      it "returns the item for the subscription fee" do
+      it "returns the item for the charge fee" do
         expect(credit_note.subscription_charge_items(subscription.id)).to eq([credit_note_item2])
+      end
+    end
+
+    describe "#subscription_fixed_charge_items" do
+      let(:invoice) { credit_note.invoice }
+      let(:subscription_fee) { create(:fee, invoice:) }
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note:, fee: subscription_fee)
+      end
+
+      let(:subscription) { subscription_fee.subscription }
+
+      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
+      let(:credit_note_item2) do
+        create(:credit_note_item, credit_note:, fee: charge_fee)
+      end
+
+      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
+      let(:credit_note_item3) do
+        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
+      end
+
+      before do
+        credit_note_item1
+        credit_note_item2
+        credit_note_item3
+      end
+
+      it "returns the item for the fixed charge fee" do
+        expect(credit_note.subscription_fixed_charge_items(subscription.id)).to eq([credit_note_item3])
       end
     end
   end
