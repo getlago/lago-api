@@ -25,7 +25,7 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.server_timing = true
 
-  config.cache_store = :redis_cache_store, {url: ENV["LAGO_REDIS_CACHE_URL"], db: 3}
+  config.cache_store = :redis_cache_store, {url: ENV["LAGO_REDIS_CACHE_URL"], db: ENV.fetch("LAGO_REDIS_CACHE_DB", 0)}
   config.action_controller.perform_caching = false
 
   config.active_storage.service = if ENV["LAGO_USE_AWS_S3"].present? && ENV["LAGO_USE_AWS_S3"] == "true"
