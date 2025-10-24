@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Queries::PaymentsQueryFiltersContract do
-  subject(:result) { described_class.new.call(filters:) }
+  subject(:result) { described_class.new.call(filters.to_h) }
 
   let(:filters) { {} }
 
@@ -55,7 +55,7 @@ RSpec.describe Queries::PaymentsQueryFiltersContract do
 
       it "is invalid" do
         expect(result.success?).to be(false)
-        expect(result.errors.to_h).to include(filters: {invoice_id: ["is in invalid format"]})
+        expect(result.errors.to_h).to include(invoice_id: ["is in invalid format"])
       end
     end
 
@@ -64,7 +64,7 @@ RSpec.describe Queries::PaymentsQueryFiltersContract do
 
       it "is invalid" do
         expect(result.success?).to be(false)
-        expect(result.errors.to_h).to include(filters: {external_customer_id: ["must be a string"]})
+        expect(result.errors.to_h).to include(external_customer_id: ["must be a string"])
       end
     end
 
@@ -74,10 +74,8 @@ RSpec.describe Queries::PaymentsQueryFiltersContract do
       it "is invalid" do
         expect(result.success?).to be(false)
         expect(result.errors.to_h).to include(
-          filters: {
-            invoice_id: ["is in invalid format"],
-            external_customer_id: ["must be a string"]
-          }
+          invoice_id: ["is in invalid format"],
+          external_customer_id: ["must be a string"]
         )
       end
     end

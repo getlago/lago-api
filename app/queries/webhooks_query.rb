@@ -32,7 +32,7 @@ class WebhooksQuery < BaseQuery
   end
 
   def search_params
-    return nil if search_term.blank?
+    return if search_term.blank?
 
     {
       m: "or",
