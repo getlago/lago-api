@@ -51,6 +51,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:refundable_amount_cents).of_type("BigInt!")
 
     expect(subject).to have_field(:file_url).of_type("String")
+    expect(subject).to have_field(:xml_url).of_type("String")
     expect(subject).to have_field(:metadata).of_type("[InvoiceMetadata!]")
 
     expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
