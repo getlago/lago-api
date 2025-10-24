@@ -91,7 +91,7 @@ module Subscriptions
       #       if it has not been billed yet
       #       or only for the charges if subscription was billed in advance
       #       Also, add new pay in advance plan inside if applicable
-      billable_subscriptions = if next_subscription.plan.pay_in_advance?
+      billable_subscriptions = if next_subscription.should_be_billed_when_started?
         [subscription, next_subscription]
       else
         [subscription]
