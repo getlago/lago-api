@@ -52,6 +52,7 @@ class Invoice < ApplicationRecord
     as: :resource
 
   has_one_attached :file
+  has_one_attached :xml_file
 
   monetize :coupons_amount_cents,
     :credit_notes_amount_cents,
@@ -581,6 +582,7 @@ end
 #  total_paid_amount_cents                 :bigint           default(0), not null
 #  version_number                          :integer          default(4), not null
 #  voided_at                               :datetime
+#  xml_file                                :string
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
 #  billing_entity_id                       :uuid             not null
