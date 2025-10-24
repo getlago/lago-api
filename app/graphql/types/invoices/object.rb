@@ -55,6 +55,8 @@ module Types
       field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :file_url, String, null: true
+      field :xml_url, String, null: true
+
       field :metadata, [Types::Invoices::Metadata::Object], null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
