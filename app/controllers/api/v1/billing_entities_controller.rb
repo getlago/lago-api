@@ -70,6 +70,7 @@ module Api
         params.require(:billing_entity).permit(
           :code,
           :name,
+          :einvoicing,
           :email,
           :legal_name,
           :legal_number,
@@ -100,6 +101,7 @@ module Api
       def update_params
         params.require(:billing_entity).permit(
           :name,
+          :einvoicing,
           :email,
           :legal_name,
           :legal_number,

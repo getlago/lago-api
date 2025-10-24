@@ -30,4 +30,5 @@ RSpec.describe Types::BillingEntities::UpdateInput do
   it { is_expected.to accept_argument(:email_settings).of_type("[BillingEntityEmailSettingsEnum!]") }
   it { is_expected.to accept_argument(:finalize_zero_amount_invoice).of_type("Boolean") }
   it { is_expected.to accept_argument(:invoice_custom_section_ids).of_type("[ID!]") }
+  it { is_expected.to accept_argument(:einvoicing).of_type("Boolean") }
 end

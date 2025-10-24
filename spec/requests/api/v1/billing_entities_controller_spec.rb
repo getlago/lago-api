@@ -104,6 +104,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
           name: "New Name",
           email: "new@email.com",
           legal_name: "New Legal Name",
+          einvoicing: false,
           legal_number: "1234567890",
           tax_identification_number: "Tax-1234",
           address_line1: "Calle de la Princesa 1",
@@ -148,6 +149,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       expect(json[:billing_entity][:code]).to eq("NEW-0001")
       expect(json[:billing_entity][:name]).to eq("New Name")
       expect(json[:billing_entity][:email]).to eq("new@email.com")
+      expect(json[:billing_entity][:einvoicing]).to eq(false)
       expect(json[:billing_entity][:legal_name]).to eq("New Legal Name")
       expect(json[:billing_entity][:legal_number]).to eq("1234567890")
       expect(json[:billing_entity][:tax_identification_number]).to eq("Tax-1234")
@@ -218,6 +220,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
         billing_entity: {
           name: "New Name",
           email: "new@email.com",
+          einvoicing: false,
           legal_name: "New Legal Name",
           legal_number: "1234567890",
           tax_identification_number: "Tax-1234",
@@ -262,6 +265,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
 
       expect(json[:billing_entity][:name]).to eq("New Name")
       expect(json[:billing_entity][:email]).to eq("new@email.com")
+      expect(json[:billing_entity][:einvoicing]).to eq(false)
       expect(json[:billing_entity][:legal_name]).to eq("New Legal Name")
       expect(json[:billing_entity][:legal_number]).to eq("1234567890")
       expect(json[:billing_entity][:tax_identification_number]).to eq("Tax-1234")

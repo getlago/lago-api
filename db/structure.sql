@@ -1535,7 +1535,8 @@ CREATE TABLE public.billing_entities (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    applied_dunning_campaign_id uuid
+    applied_dunning_campaign_id uuid,
+    einvoicing boolean DEFAULT false NOT NULL
 );
 
 
@@ -10067,6 +10068,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251024130659'),
 ('20251023154344'),
 ('20251023154123'),
 ('20251023153834'),
