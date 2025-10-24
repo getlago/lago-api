@@ -265,7 +265,7 @@ RSpec.describe CustomersQuery, type: :query do
 
       it "returns no customers" do
         expect(result).not_to be_success
-        expect(result.error.messages[:filters][:countries]).to match({0 => [/^must be one of: AD, AE.*XK$/]})
+        expect(result.error.messages[:countries]).to match({0 => [/^must be one of: AD, AE.*XK$/]})
       end
     end
   end
@@ -282,7 +282,7 @@ RSpec.describe CustomersQuery, type: :query do
 
       it "returns no customers" do
         expect(result).not_to be_success
-        expect(result.error.messages[:filters][:states]).to eq(["must be an array"])
+        expect(result.error.messages[:states]).to eq(["must be an array"])
       end
     end
   end
@@ -299,7 +299,7 @@ RSpec.describe CustomersQuery, type: :query do
 
       it "returns no customers" do
         expect(result).not_to be_success
-        expect(result.error.messages[:filters][:zipcodes]).to eq(["must be an array"])
+        expect(result.error.messages[:zipcodes]).to eq(["must be an array"])
       end
     end
   end
@@ -389,7 +389,7 @@ RSpec.describe CustomersQuery, type: :query do
 
       it "returns no customers" do
         expect(result).not_to be_success
-        expect(result.error.messages[:filters][:currencies]).to match({0 => [/^must be one of: AED, AFN.*ZMW$/]})
+        expect(result.error.messages[:currencies]).to match({0 => [/^must be one of: AED, AFN.*ZMW$/]})
       end
     end
   end
@@ -459,7 +459,7 @@ RSpec.describe CustomersQuery, type: :query do
 
     it "captures all validation errors" do
       expect(result).not_to be_success
-      expect(result.error.messages[:filters][:account_type]).to eq({0 => ["must be one of: customer, partner"]})
+      expect(result.error.messages[:account_type]).to eq({0 => ["must be one of: customer, partner"]})
     end
   end
 end

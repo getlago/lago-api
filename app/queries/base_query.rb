@@ -23,7 +23,7 @@ class BaseQuery < BaseService
   attr_reader :organization, :pagination_params, :filters, :search_term, :order
 
   def validate_filters
-    validation_result = filters_contract.call(filters: filters.to_h, search_term:)
+    validation_result = filters_contract.call(filters.to_h)
 
     unless validation_result.success?
       errors = validation_result.errors.to_h
