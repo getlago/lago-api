@@ -54,7 +54,6 @@ class Subscription < ApplicationRecord
   enum :billing_time, BILLING_TIME
   enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
   enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
-  enum :payment_method_type, PaymentMethod::PAYMENT_METHOD_TYPES
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
 

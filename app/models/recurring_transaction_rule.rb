@@ -35,7 +35,6 @@ class RecurringTransactionRule < ApplicationRecord
   enum :method, METHODS
   enum :trigger, TRIGGERS
   enum :status, STATUSES
-  enum :payment_method_type, PaymentMethod::PAYMENT_METHOD_TYPES
 
   scope :active, -> { where(status: statuses[:active]).where("expiration_at IS NULL OR expiration_at > ?", Time.current) }
   scope :eligible_for_termination, -> {
