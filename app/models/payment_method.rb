@@ -12,6 +12,11 @@ class PaymentMethod < ApplicationRecord
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
 
+  PAYMENT_METHOD_TYPES = {
+    provider: "provider",
+    manual: "manual"
+  }.freeze
+
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
 
