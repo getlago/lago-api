@@ -2940,6 +2940,7 @@ CREATE TABLE public.invoices (
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
+    xml_file character varying,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -10069,6 +10070,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),
 ('20251023154123'),
