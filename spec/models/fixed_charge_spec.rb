@@ -24,6 +24,99 @@ RSpec.describe FixedCharge do
   it { is_expected.to validate_inclusion_of(:prorated).in_array([true, false]) }
   it { is_expected.to validate_presence_of(:properties) }
 
+  describe "#validate_properties" do
+    context "with standard charge model" do
+      subject(:fixed_charge) { build(:fixed_charge, charge_model: "standard", properties:) }
+
+      let(:properties) { {amount: "invalid"} }
+      let(:validation_service) { instance_double(Charges::Validators::StandardService) }
+      let(:service_response) do
+        BaseService::Result.new.validation_failure!(
+          errors: {amount: ["invalid_amount"]}
+        )
+      end
+
+      it "delegates to a validation service" do
+        allow(Charges::Validators::StandardService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
+          .and_return(service_response)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages.keys).to include(:properties)
+        expect(fixed_charge.errors.messages[:properties]).to include("invalid_amount")
+
+        expect(Charges::Validators::StandardService).to have_received(:new).with(charge: fixed_charge)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
+      end
+    end
+
+    context "with graduated charge model" do
+      subject(:fixed_charge) { build(:fixed_charge, :graduated, properties:) }
+
+      let(:properties) { {graduated_ranges: [{"foo" => "bar"}]} }
+      let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
+      let(:service_response) do
+        BaseService::Result.new.validation_failure!(
+          errors: {
+            amount: ["invalid_amount"],
+            ranges: ["invalid_graduated_ranges"]
+          }
+        )
+      end
+
+      it "delegates to a validation service" do
+        allow(Charges::Validators::GraduatedService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
+          .and_return(service_response)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages.keys).to include(:properties)
+        expect(fixed_charge.errors.messages[:properties]).to include("invalid_amount")
+        expect(fixed_charge.errors.messages[:properties]).to include("invalid_graduated_ranges")
+
+        expect(Charges::Validators::GraduatedService).to have_received(:new).with(charge: fixed_charge)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
+      end
+    end
+
+    context "with volume charge model" do
+      subject(:fixed_charge) { build(:fixed_charge, :volume, properties:) }
+
+      let(:properties) { {volume_ranges: [{"foo" => "bar"}]} }
+      let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
+      let(:service_response) do
+        BaseService::Result.new.validation_failure!(
+          errors: {ranges: ["invalid_volume_ranges"]}
+        )
+      end
+
+      it "delegates to a validation service" do
+        allow(Charges::Validators::VolumeService).to receive(:new)
+          .and_return(validation_service)
+        allow(validation_service).to receive(:valid?)
+          .and_return(false)
+        allow(validation_service).to receive(:result)
+          .and_return(service_response)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages.keys).to include(:properties)
+        expect(fixed_charge.errors.messages[:properties]).to include("invalid_volume_ranges")
+
+        expect(Charges::Validators::VolumeService).to have_received(:new).with(charge: fixed_charge)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
+      end
+    end
+  end
+
   describe "#equal_properties?" do
     let(:fixed_charge1) { build(:fixed_charge, properties: {amount: 100}) }
 
