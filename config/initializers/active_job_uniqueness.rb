@@ -3,14 +3,6 @@
 ActiveJob::Uniqueness.configure do |config|
   config.lock_ttl = 1.hour
 
-  config.redlock_options = {
-    retry_count: 3,
-    redis_timeout: 5,
-    retry_delay: 200,
-    # random delay to avoid lock contention
-    retry_jitter: 50
-  }
-
   if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
     uri = URI(ENV["REDIS_URL"])
     host = [uri.host, uri.path].join("")
