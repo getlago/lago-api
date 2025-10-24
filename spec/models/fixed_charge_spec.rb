@@ -51,4 +51,104 @@ RSpec.describe FixedCharge do
       end
     end
   end
+
+  describe "#validate_pay_in_advance" do
+    context "when charge model is standard" do
+      it "is valid with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is volume" do
+      it "returns an error with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: true)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages[:pay_in_advance]).to include("invalid_charge_model")
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is graduated" do
+      it "is valid with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+  end
+
+  describe "#validate_prorated" do
+    context "when charge model is standard" do
+      it "is valid with pay_in_advance true and prorated true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance true and prorated false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is volume" do
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is graduated" do
+      it "returns an error with pay_in_advance true and prorated true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true, prorated: true)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages[:prorated]).to include("invalid_charge_model")
+      end
+
+      it "is valid with pay_in_advance true and prorated false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+  end
 end
