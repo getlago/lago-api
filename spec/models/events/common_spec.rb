@@ -26,6 +26,29 @@ RSpec.describe Events::Common do
   let(:started_at) { Time.current - 3.days }
   let(:external_subscription_id) { subscription.external_id }
 
+  describe "#persisted?" do
+    it { expect(event.persisted).to be_truthy }
+
+    context "when persisted value is passed to the event" do
+      subject(:event) do
+        described_class.new(
+          id: nil,
+          organization_id: organization.id,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          timestamp:,
+          code: billable_metric.code,
+          properties: {},
+          persisted: false
+        )
+      end
+
+      it "sets the value to the instance" do
+        expect(event.persisted).to be_falsey
+      end
+    end
+  end
+
   describe "#event_id" do
     it "returns the transaction_id" do
       expect(event.event_id).to eq(event.transaction_id)

@@ -92,10 +92,12 @@ module BillableMetrics
         result
       end
 
-      def per_event_aggregation(grouped_by_values: nil)
+      def per_event_aggregation(grouped_by_values: nil, include_event_value: false)
         event_aggregation_array = []
         period_aggregation = event_store.with_grouped_by_values(grouped_by_values) do
-          event_store.prorated_unique_count_breakdown(with_remove: true).map do |row|
+          include_final_event = include_event_value ? event : nil
+
+          event_store.prorated_unique_count_breakdown(with_remove: true, include_final_event:).map do |row|
             event_aggregation_array << ((row["operation_type"] == "remove") ? -1 : 1)
             row["prorated_value"].ceil(5)
           end

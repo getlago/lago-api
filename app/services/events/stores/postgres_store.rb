@@ -125,16 +125,23 @@ module Events
         result["aggregation"]
       end
 
-      def prorated_unique_count_breakdown(with_remove: false)
+      def prorated_unique_count_breakdown(with_remove: false, include_final_event: nil)
         query = Events::Stores::Postgres::UniqueCountQuery.new(store: self)
+
+        properties = {from_datetime:, to_datetime:, timezone: customer.applicable_timezone}
+        if include_final_event
+          # Add non persisted event properties. Used when estimating the amount of an in advance event
+          properties.merge!(
+            event_timestamp: include_final_event.timestamp,
+            event_value: (include_final_event.properties || {})[aggregation_property],
+            event_operation_type: (include_final_event.properties || {})["operation_type"] || "add"
+          )
+        end
+
         sql = sanitize_sql_for_conditions(
           [
-            sanitize_colon(query.prorated_breakdown_query(with_remove:)),
-            {
-              from_datetime:,
-              to_datetime:,
-              timezone: customer.applicable_timezone
-            }
+            sanitize_colon(query.prorated_breakdown_query(with_remove:, include_final_event:)),
+            properties
           ]
         )
         select_all(sql).to_a

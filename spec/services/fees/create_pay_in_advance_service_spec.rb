@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService do
-  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
+  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -16,18 +16,16 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   let(:charge_filter) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:estimate) { false }
 
   let(:event) do
-    Events::CommonFactory.new_instance(
-      source: create(
-        :event,
-        external_subscription_id: subscription.external_id,
-        external_customer_id: customer.external_id,
-        organization_id: organization.id,
-        properties: event_properties
-      )
+    source = create(
+      :event,
+      external_subscription_id: subscription.external_id,
+      external_customer_id: customer.external_id,
+      organization_id: organization.id,
+      properties: event_properties
     )
+    Events::CommonFactory.new_instance(source:)
   end
 
   let(:event_properties) { {} }
@@ -453,8 +451,19 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       end
     end
 
-    context "when in estimate mode" do
-      let(:estimate) { true }
+    context "when event is not persisted" do
+      let(:event) do
+        Events::Common.new(
+          id: nil,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          organization_id: organization.id,
+          properties: event_properties,
+          timestamp: Time.current,
+          precise_total_amount_cents: nil,
+          persisted: false
+        )
+      end
 
       it "does not persist the fee" do
         result = fee_service.call
