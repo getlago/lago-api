@@ -264,6 +264,18 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  def vies_check_in_progress?
+    if billing_entity.eu_tax_management?
+      taxes.where("code ILIKE ?", "lago_eu%").none?
+    else
+      false
+    end
+  end
+
+  def vies_check_finished?
+    billing_entity.eu_tax_management? && taxes.where("code ILIKE ?", "lago_eu%").any?
+  end
+
   private
 
   def ensure_slug

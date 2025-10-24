@@ -13,9 +13,9 @@ RSpec.describe Invoices::RetryService do
       create(
         :invoice,
         :failed,
-        :with_tax_error,
         :subscription,
         customer:,
+        tax_status: "failed",
         organization:,
         subscriptions: [subscription],
         currency: "EUR",
@@ -86,17 +86,72 @@ RSpec.describe Invoices::RetryService do
       end
     end
 
-    it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
-      expect do
+    context "when customer has tax integration enabled" do
+      before do
+        allow(invoice.customer).to receive(:tax_customer).and_return(true)
+        allow(invoice).to receive(:should_apply_provider_tax?).and_return(true)
+      end
+
+      it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+        expect do
+          retry_service.call
+        end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+      end
+
+      it "sets correct statuses" do
         retry_service.call
-      end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+
+        expect(invoice.reload.status).to eq("pending")
+        expect(invoice.reload.tax_status).to eq("pending")
+      end
     end
 
-    it "sets correct statuses" do
-      retry_service.call
+    context "when customer has not tax integrations" do
+      before do
+        allow(invoice.customer).to receive(:tax_customer).and_return(false)
+      end
 
-      expect(invoice.reload.status).to eq("pending")
-      expect(invoice.reload.tax_status).to eq("pending")
+      context "when VIES check is finished" do
+        before do
+          allow(invoice.customer).to receive(:vies_check_finished?).and_return(true)
+        end
+
+        it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+          expect do
+            retry_service.call
+          end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
+
+        it "finalizes the invoice" do
+          retry_service.call
+
+          expect(invoice.reload.status).to eq("finalized")
+          expect(invoice.reload.tax_status).to eq("succeeded")
+        end
+      end
+
+      context "when VIES check is not finished" do
+        before do
+          allow(invoice.customer).to receive(:vies_check_finished?).and_return(false)
+          allow(Invoices::FinalizeAfterTaxesService).to receive(:call)
+        end
+
+        it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+          expect do
+            retry_service.call
+          end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
+
+        it "does not finalize the invoice" do
+          retry_service.call
+
+          expect(Invoices::FinalizeAfterTaxesService).not_to have_received(:call).with(invoice:)
+        end
+
+        it "does not update the invoice" do
+          expect { retry_service.call }.not_to change { invoice.reload.attributes }
+        end
+      end
     end
   end
 end
