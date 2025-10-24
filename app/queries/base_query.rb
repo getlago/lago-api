@@ -12,7 +12,7 @@ class BaseQuery < BaseService
     @organization = organization
     @pagination_params = pagination
     @filters = self.class::Filters.new(**(filters || {}))
-    @search_term = search_term
+    @search_term = search_term.to_s.strip
     @order = order
 
     super
