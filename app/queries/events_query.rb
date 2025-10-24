@@ -5,6 +5,7 @@ class EventsQuery < BaseQuery
   Filters = BaseFilters[
     :code,
     :external_subscription_id,
+    :timestamp_from_started_at,
     :timestamp_from,
     :timestamp_to
   ]
@@ -19,7 +20,7 @@ class EventsQuery < BaseQuery
 
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id
-    events = with_timestamp_range(events) if filters.timestamp_from || filters.timestamp_to
+    events = with_timestamp_range(events)
 
     result.events = events
     result
@@ -38,9 +39,19 @@ class EventsQuery < BaseQuery
   end
 
   def with_timestamp_range(scope)
-    scope = scope.where(timestamp: timestamp_from..) if filters.timestamp_from
+    if timestamp_from_started_at? && subscription
+      scope = scope.where(timestamp: subscription.started_at..)
+    elsif filters.timestamp_from
+      scope = scope.where(timestamp: timestamp_from..)
+    end
+
     scope = scope.where(timestamp: ..timestamp_to) if filters.timestamp_to
+
     scope
+  end
+
+  def subscription
+    @subscription ||= organization.subscriptions.find_by(external_id: filters.external_subscription_id)
   end
 
   def timestamp_from
@@ -49,5 +60,9 @@ class EventsQuery < BaseQuery
 
   def timestamp_to
     @timestamp_to ||= parse_datetime_filter(:timestamp_to)
+  end
+
+  def timestamp_from_started_at?
+    ActiveModel::Type::Boolean.new.cast(filters.timestamp_from_started_at)
   end
 end
