@@ -168,7 +168,7 @@ module Invoices
     def should_create_fixed_charge_fee?(fixed_charge, subscription)
       # when "starting" invoice - it's only for pay_in_advance fees
       if !fixed_charge.pay_in_advance? && subscription.invoice_subscriptions.count == 1 &&
-          subscription.invoice_subscriptions.first.subscription_starting?
+          subscription.invoice_subscriptions.order(:created_at).last.subscription_starting?
         return false
       end
       # for terminated subscription we do not chage pay_in_advance fees
@@ -399,8 +399,7 @@ module Invoices
 
     def billing_advance_fixed_charges_on_first_invoice?(subscription)
       return false if subscription.invoice_subscriptions.count > 1
-      invoice_subscription = invoice.invoice_subscriptions.first
-      return false unless invoice_subscription.subscription_starting?
+      return false unless subscription.invoice_subscriptions.order(:created_at).last.subscription_starting?
       return false if subscription.plan.fixed_charges.pay_in_advance.empty?
       return false if subscription.plan.pay_in_advance?
       # at this point we have an invoice for starting subscription (billed first time), where plan
