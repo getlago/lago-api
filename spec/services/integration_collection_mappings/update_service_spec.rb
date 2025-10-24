@@ -20,7 +20,8 @@ RSpec.describe IntegrationCollectionMappings::UpdateService do
         external_account_code: "code-2",
         tax_nexus: "updated-123",
         tax_code: "updated-456",
-        tax_type: "updated-tax-type-1"
+        tax_type: "updated-tax-type-1",
+        currencies: {"USD" => "7"}
       }
     end
 
@@ -38,6 +39,7 @@ RSpec.describe IntegrationCollectionMappings::UpdateService do
           expect(integration_collection_mapping.tax_nexus).to eq(update_args[:tax_nexus])
           expect(integration_collection_mapping.tax_code).to eq(update_args[:tax_code])
           expect(integration_collection_mapping.tax_type).to eq(update_args[:tax_type])
+          expect(integration_collection_mapping.currencies).to eq(update_args[:currencies])
         end
       end
 
@@ -45,6 +47,15 @@ RSpec.describe IntegrationCollectionMappings::UpdateService do
         result = service_call
 
         expect(result.integration_collection_mapping).to be_a(IntegrationCollectionMappings::NetsuiteCollectionMapping)
+      end
+    end
+
+    context "with invalid currencies format" do
+      it "returns validation errors for invalid currencies format" do
+        update_args[:currencies] = {yolo: true}
+        result = service_call
+
+        expect(result.error.messages[:currencies]).to eq ["invalid_format"]
       end
     end
   end

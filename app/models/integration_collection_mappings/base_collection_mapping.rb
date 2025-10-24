@@ -11,7 +11,7 @@ module IntegrationCollectionMappings
     belongs_to :organization
 
     MAPPING_TYPES = %i[
-      fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account
+      fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account currencies
     ].freeze
 
     enum :mapping_type, MAPPING_TYPES
