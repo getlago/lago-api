@@ -57,12 +57,66 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    attr_reader :messages
+    attr_reader :messages, :metadata
 
-    def initialize(result, messages:)
+    def initialize(result, messages:, metadata:)
       @messages = messages
+      @metadata = metadata
 
       super(result, format_messages)
+    end
+
+    def self.from_errors(result, errors)
+      messages = {}
+      metadata = []
+
+      errors.deep_symbolize_keys.each do |field, field_errors|
+        messages[field] = []
+
+        field_errors.each do |err|
+          if err.is_a?(String) || err.is_a?(Symbol)
+            # err is an error code
+            messages[field] << err.to_s
+            metadata << {field: field.to_s, code: err.to_s}
+          elsif err.is_a?(Hash)
+            # err is a hash with error code and metadata
+            messages[field] << err[:code].to_s
+            metadata << err.merge(field: field.to_s, code: err[:code].to_s)
+          elsif !Rails.env.production?
+            raise ArgumentError, "Invalid error format for validation failure"
+          end
+        end
+      end
+
+      new(result, messages:, metadata:)
+    end
+
+    def self.from_indexed_errors(result, indexed_errors)
+      messages = {}
+      metadata = []
+
+      indexed_errors.each do |index, errors|
+        messages[index] = {}
+        errors.deep_symbolize_keys.each do |field, field_errors|
+          messages[index][field] = []
+
+          field_errors.each do |err|
+            if err.is_a?(String) || err.is_a?(Symbol)
+              # err is an error code
+              messages[index][field] << err.to_s
+              metadata << {field: field.to_s, code: err.to_s, index: index.to_i}
+            elsif err.is_a?(Hash)
+              # err is a hash with error code and metadata
+              messages[index][field] << err[:code].to_s
+              metadata << err.merge(field: field.to_s, code: err[:code].to_s, index: index.to_i)
+            elsif !Rails.env.production?
+              raise ArgumentError, "Invalid error format for validation failure"
+            end
+          end
+        end
+      end
+
+      new(result, messages:, metadata:)
     end
 
     private
@@ -80,6 +134,14 @@ class BaseService
       @error_message = error_message
 
       super(result, "#{code}: #{error_message}", original_error:)
+    end
+
+    def as_validation_failure_arg(field: :base)
+      {
+        field => [
+          {code:, message: error_message}
+        ]
+      }
     end
   end
 
