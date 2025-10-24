@@ -111,6 +111,7 @@ end
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint
+#  payment_method_type                 :enum             default("provider"), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null
@@ -119,15 +120,18 @@ end
 #  updated_at                          :datetime         not null
 #  customer_id                         :uuid             not null
 #  organization_id                     :uuid             not null
+#  payment_method_id                   :uuid
 #
 # Indexes
 #
 #  index_wallets_on_customer_id            (customer_id)
 #  index_wallets_on_organization_id        (organization_id)
+#  index_wallets_on_payment_method_id      (payment_method_id)
 #  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #
