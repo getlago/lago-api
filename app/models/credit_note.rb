@@ -110,6 +110,13 @@ class CreditNote < ApplicationRecord
       .includes(:fee)
   end
 
+  def subscription_fixed_charge_items(subscription_id)
+    items.joins(:fee)
+      .merge(Fee.fixed_charge)
+      .where(fees: {subscription_id:})
+      .includes(:fee)
+  end
+
   def add_on_items
     items.joins(:fee)
       .merge(Fee.add_on)
