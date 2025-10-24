@@ -103,6 +103,7 @@ module Types
 
     field :create_invoice, mutation: Mutations::Invoices::Create
     field :download_invoice, mutation: Mutations::Invoices::Download
+    field :download_invoice_xml, mutation: Mutations::Invoices::DownloadXml
     field :finalize_all_invoices, mutation: Mutations::Invoices::FinalizeAll
     field :finalize_invoice, mutation: Mutations::Invoices::Finalize
     field :generate_payment_url, mutation: Mutations::Invoices::GeneratePaymentUrl
