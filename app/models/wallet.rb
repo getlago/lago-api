@@ -35,6 +35,7 @@ class Wallet < ApplicationRecord
   ].freeze
 
   enum :status, STATUSES
+  enum :payment_method_type, PaymentMethod::PAYMENT_METHOD_TYPES
 
   scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
