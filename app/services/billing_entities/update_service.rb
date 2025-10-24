@@ -75,7 +75,6 @@ module BillingEntities
         end
 
         handle_invoice_custom_sections if params.key?(:invoice_custom_section_ids) || params.key?(:invoice_custom_section_codes)
-        handle_einvoincing_setting if params.key?(:country) && billing_entity.einvoicing
 
         assign_premium_attributes
         handle_base64_logo if params.key?(:logo)
@@ -142,10 +141,6 @@ module BillingEntities
           organization_id: billing_entity.organization_id
         )
       end
-    end
-
-    def handle_einvoincing_setting
-      billing_entity.einvoicing = false unless BillingEntity::EINVOICING_COUNTRIES.include?(billing_entity.country)
     end
   end
 end

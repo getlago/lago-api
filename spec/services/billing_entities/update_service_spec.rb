@@ -209,10 +209,25 @@ RSpec.describe BillingEntities::UpdateService do
 
         before { billing_entity.update(einvoicing: true) }
 
-        it "disable einvoicing" do
+        it "returns an error" do
           result = update_service.call
-          expect(result).to be_success
-          expect(billing_entity.reload.einvoicing).to be_falsey
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:einvoicing]).to eq(["country_not_supported"])
+        end
+      end
+
+      context "when country is nil" do
+        let(:country) { nil }
+        let(:einvoicing) { true }
+
+        before { billing_entity.update(einvoicing: true) }
+
+        it "returns an error" do
+          result = update_service.call
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:einvoicing]).to eq(["country_must_be_present"])
         end
       end
     end
