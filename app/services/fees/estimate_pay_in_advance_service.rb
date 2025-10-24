@@ -20,8 +20,7 @@ module Fees
 
       fees = []
 
-      EventsRecord.transaction do
-        event.save!
+      ApplicationRecord.transaction do
         charges.each { |charge| fees += estimated_charge_fees(charge) }
 
         # NOTE: make sure the event is not persisted in database
