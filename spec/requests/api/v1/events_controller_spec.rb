@@ -320,6 +320,28 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(json[:events].first[:lago_id]).to eq(matching_event.id)
       end
     end
+
+    context "with timestamp_from_started_at" do
+      let(:started_at) { 1.day.ago }
+      let(:subscription) { create(:subscription, organization:, started_at:) }
+      let(:params) do
+        {
+          timestamp_from: 10.days.ago.to_date,
+          timestamp_from_started_at: true,
+          external_subscription_id: subscription.external_id
+        }
+      end
+
+      it do
+        matching_event = create(:event, timestamp: started_at + 1.second, external_subscription_id: subscription.external_id, organization:)
+        create(:event, timestamp: started_at - 1.second, external_subscription_id: subscription.external_id, organization:)
+
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].map { it[:lago_id] }).to contain_exactly(matching_event.id)
+      end
+    end
   end
 
   describe "GET /api/v1/events/:id" do
