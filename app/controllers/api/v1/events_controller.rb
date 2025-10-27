@@ -172,6 +172,7 @@ module Api
         params.permit(
           :code,
           :external_subscription_id,
+          :timestamp_from_started_at,
           :timestamp_from,
           :timestamp_to
         )
