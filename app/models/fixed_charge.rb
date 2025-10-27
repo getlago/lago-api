@@ -56,7 +56,6 @@ class FixedCharge < ApplicationRecord
   end
 
   private
-
   def validate_properties
     return if properties.blank?
 
