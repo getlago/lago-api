@@ -102,7 +102,7 @@ RSpec.shared_examples "a subscription index endpoint" do
 
   context "with terminated status" do
     let!(:terminated_subscription) do
-      create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
+      create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated, terminated_at: Time.current)
     end
 
     let(:params) do
