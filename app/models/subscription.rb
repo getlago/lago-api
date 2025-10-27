@@ -214,7 +214,7 @@ class Subscription < ApplicationRecord
     timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
 
     # TODO: Why it was <= ?
-    # the situation that i have: 
+    # the situation that i have:
     # timestamp: 2025-08-31 23:59:59
     # terminated_at: 2025-09-01 00:00:00
     # round makes both of them 2025-09-01 00:00:00
