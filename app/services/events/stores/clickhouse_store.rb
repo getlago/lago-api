@@ -206,28 +206,18 @@ module Events
         result["aggregation"]
       end
 
-      def prorated_unique_count_breakdown(with_remove: false, include_final_event: nil)
+      def prorated_unique_count_breakdown(with_remove: false)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-
-          properties = {
-            from_datetime:,
-            to_datetime:,
-            decimal_date_scale: DECIMAL_DATE_SCALE,
-            timezone: customer.applicable_timezone
-          }
-          if include_final_event
-            properties.merge!(
-              event_timestamp: include_final_event.timestamp,
-              event_value: (include_final_event.properties || {})[aggregation_property],
-              event_operation_type: (include_final_event.properties || {})["operation_type"] || "add"
-            )
-          end
-
           sql = ActiveRecord::Base.sanitize_sql_for_conditions(
             [
-              sanitize_colon(query.prorated_breakdown_query(with_remove:, include_final_event:)),
-              properties
+              sanitize_colon(query.prorated_breakdown_query(with_remove:)),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
             ]
           )
 

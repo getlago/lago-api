@@ -89,7 +89,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
         before { pay_in_advance_event.persisted = false }
 
         it "delegates to the charge model service" do
-          previous_agg_result = BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
+          non_persisted_agg_result = BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
             result.aggregation = 11
             result.count = 6
             result.options = {}
@@ -99,19 +99,19 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
 
           allow(charge_model_class).to receive(:apply)
             .with(charge:, aggregation_result:, properties:)
-            .and_return(BaseService::Result.new.tap { |r| r.amount = 10 })
+            .and_return(BaseService::Result.new.tap { |r| r.amount = 8 })
 
           allow(charge_model_class).to receive(:apply)
-            .with(charge:, aggregation_result: previous_agg_result, properties: properties.merge(include_event_value: true))
-            .and_return(BaseService::Result.new.tap { |r| r.amount = 8 })
+            .with(charge:, aggregation_result: non_persisted_agg_result, properties: properties.merge(include_event_value: true))
+            .and_return(BaseService::Result.new.tap { |r| r.amount = 10 })
 
           result = charge_service.call
 
           expect(result.units).to eq(1)
           expect(result.count).to eq(1)
-          expect(result.amount).to eq(18_00) # In cents
-          expect(result.precise_amount).to eq(18_00.0) # In cents
-          expect(result.unit_amount).to eq(18)
+          expect(result.amount).to eq(2_00) # In cents
+          expect(result.precise_amount).to eq(2_00.0) # In cents
+          expect(result.unit_amount).to eq(2)
           expect(result.amount_details).to be_nil
         end
       end

@@ -185,9 +185,9 @@ module Events
           SQL
         end
 
-        def prorated_breakdown_query(with_remove: false, include_final_event: nil)
+        def prorated_breakdown_query(with_remove: false)
           <<-SQL
-            #{events_cte_sql(include_final_event:)},
+            #{events_cte_sql},
             -- ignore if for remove event there is a following add event the same day that nullifies this one
             same_day_ignored AS (
               SELECT
@@ -241,30 +241,17 @@ module Events
 
         delegate :events, :charges_duration, :sanitized_property_name, to: :store
 
-        def events_cte_sql(include_final_event: nil)
-          sql = events(ordered: true)
-            .select(
-              "timestamp, \
-              #{sanitized_property_name} AS property, \
-              COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
-            ).to_sql
-
-          if include_final_event
-            sql = "(#{sql}) UNION (#{event_value_sql})"
-          end
-
+        def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
           <<-SQL
-            WITH events_data AS (#{sql})
-          SQL
-        end
-
-        def event_value_sql
-          <<-SQL
-            SELECT *
-            FROM (
-              VALUES (timestamp without time zone :event_timestamp, :event_value, :event_operation_type)
-            ) AS t(timestamp, property, operation_type)
+            WITH events_data AS (#{
+              events(ordered: true)
+                .select(
+                  "timestamp, \
+                  #{sanitized_property_name} AS property, \
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
+                ).to_sql
+            })
           SQL
         end
 
