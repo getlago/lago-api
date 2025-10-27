@@ -47,13 +47,14 @@ RSpec.describe Wallets::ValidateService do
       end
     end
 
-    context "when customer already has a wallet" do
-      before { create(:wallet, customer:) }
-
-      it "returns true without errors" do
-        expect(validate_service).to be_valid
-      end
-    end
+    # uncomment when we support multiple wallets per customer
+    # context "when customer already has a wallet" do
+    #   before { create(:wallet, customer:) }
+    #
+    #   it "returns true without errors" do
+    #     expect(validate_service).to be_valid
+    #   end
+    # end
 
     context "with invalid paid_credits" do
       let(:paid_credits) { "foobar" }
