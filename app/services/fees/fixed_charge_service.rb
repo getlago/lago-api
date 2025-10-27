@@ -182,7 +182,7 @@ module Fees
       return false unless fixed_charge.prorated?
       return false unless subscription.previous_subscription
       return false if subscription.invoices.count > 1
-      return fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
+      fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
     end
 
     def find_already_paid_fee_for_the_fixed_charge(current_fee_boundaries)

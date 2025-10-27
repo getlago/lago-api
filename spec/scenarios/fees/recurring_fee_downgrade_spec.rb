@@ -187,7 +187,7 @@ describe "Recurring Fees Subscription Downgrade" do
     let(:pay_in_advance) { true }
     let(:grouped_by) { ["item_id"] }
     let(:plan_2) { create(:plan, organization:, name: "downgraded", amount_cents: 49.99, pay_in_advance: true) }
-    
+
     let(:charge) do
       create(:charge, {
         plan:,
