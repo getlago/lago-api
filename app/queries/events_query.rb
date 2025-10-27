@@ -51,7 +51,11 @@ class EventsQuery < BaseQuery
   end
 
   def subscription
-    @subscription ||= organization.subscriptions.find_by(external_id: filters.external_subscription_id)
+    @subscription ||= organization.subscriptions
+      .order("terminated_at DESC NULLS FIRST, started_at DESC")
+      .find_by(
+        external_id: filters.external_subscription_id
+      )
   end
 
   def timestamp_from
