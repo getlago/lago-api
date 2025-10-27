@@ -85,7 +85,7 @@ module Events
       return unless billable_metric
       return unless charges.any?
 
-      Events::PayInAdvanceJob.set(wait: rand(0..30).seconds).perform_later(Events::CommonFactory.new_instance(source: event).as_json)
+      Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
     end
 
     def charges
