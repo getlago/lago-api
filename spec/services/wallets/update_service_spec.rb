@@ -552,5 +552,82 @@ RSpec.describe Wallets::UpdateService do
         end
       end
     end
+
+    context "with limitations" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:payment_method_params) do
+        {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        }
+      end
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "new name",
+          payment_method: payment_method_params
+        }
+      end
+
+      before { payment_method }
+
+      it "attaches payment_method" do
+        expect(result).to be_success
+        expect(result.wallet.reload.name).to eq(params[:name])
+        expect(result.wallet.reload.payment_method_id).to eq(payment_method_params[:payment_method_id])
+        expect(result.wallet.reload.payment_method_type).to eq(payment_method_params[:payment_method_type])
+        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+
+      context "when payment method is already attached" do
+        before do
+          wallet.payment_method = payment_method
+          wallet.payment_method_type = "provider"
+        end
+
+        let(:payment_method_params) do
+          {
+            payment_method_id: nil,
+            payment_method_type: "provider"
+          }
+        end
+
+        it "attaches payment_method" do
+          expect(result).to be_success
+          expect(result.wallet.reload.name).to eq(params[:name])
+          expect(result.wallet.reload.payment_method_id).to eq(nil)
+          expect(result.wallet.reload.payment_method_type).to eq("provider")
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+
+      context "when payment method type is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "when payment method id is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: "123",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
   end
 end

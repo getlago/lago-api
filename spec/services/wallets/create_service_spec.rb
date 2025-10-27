@@ -497,5 +497,69 @@ RSpec.describe Wallets::CreateService do
         end
       end
     end
+
+    context "with payment method" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:payment_method_params) do
+        {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        }
+      end
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          payment_method: payment_method_params
+        }
+      end
+
+      before { payment_method }
+
+      it "creates a wallet with correct payment method" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.reload.name).to eq("New Wallet")
+        expect(wallet.reload.payment_method_id).to eq(payment_method.id)
+        expect(wallet.reload.payment_method_type).to eq("provider")
+      end
+
+      context "when payment method type is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "returns an error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "when payment method id is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: "123",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "returns an error" do
+          expect(service_result).not_to be_success
+
+          expect(service_result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
   end
 end
