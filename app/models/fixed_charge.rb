@@ -45,13 +45,7 @@ class FixedCharge < ApplicationRecord
   # When upgrading a subscription with fixed_charges paid_in_advance,
   # this exact charge might have already been paid at the beginning of billing period.
   # in case of prorating, we need to deduct the prorated amount (remaining of the billing_period)
-  # that was already paid from the new price.
-  def already_paid_in_prev_subscription?(subscription)
-    return false if subscription.next_subscription.nil?
-
-    subscription.next_subscription.plan.fixed_charges.exists?(add_on_id:)
-  end
-
+  # that was already paid from the new price, so we need to find a fixed_charge with the same add_on_id in the previous subscription.
   def matching_fixed_charge_prev_subscription(subscription)
     return nil unless subscription.previous_subscription
 
