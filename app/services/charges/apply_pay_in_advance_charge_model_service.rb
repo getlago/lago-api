@@ -18,7 +18,7 @@ module Charges
       amount = if with_persisted_event?
         amount_from_aggregation - amount_excluding_persisted_event
       else
-        amount_from_aggregation + amount_including_non_persisted_event
+        amount_including_non_persisted_event - amount_from_aggregation
       end
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
