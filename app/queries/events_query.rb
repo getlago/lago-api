@@ -12,6 +12,8 @@ class EventsQuery < BaseQuery
   ]
 
   def call
+    return result unless validate_filters.success?
+
     events = event_model
     events = events.where(organization_id: organization.id)
     events = paginate(events)
@@ -36,6 +38,10 @@ class EventsQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::EventsQueryFiltersContract.new
+  end
 
   def event_model
     if pg_event?

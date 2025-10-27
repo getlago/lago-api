@@ -122,8 +122,8 @@ RSpec.describe EventsQuery do
         it "uses subscription started_at" do
           result = events_query.call
 
-          expect(result).to be_success
-          expect(result.events.ids).to contain_exactly(event_after.id)
+          expect(result).to be_failure
+          expect(result.error.messages).to eq({timestamp_from: ["cannot be used with timestamp_from_started_at"]})
         end
 
         context "when subscription_external_id is missing" do
@@ -134,10 +134,13 @@ RSpec.describe EventsQuery do
             }
           end
 
-          it "ignores timestamp_from_started_at and use timestamp_from" do
+          it "returns an error" do
             result = events_query.call
-            expect(result).to be_success
-            expect(result.events.ids).to contain_exactly(event.id, event_before.id, event_after.id, event_other_sub.id)
+            expect(result).to be_failure
+            expect(result.error.messages).to eq({
+              timestamp_from: ["cannot be used with timestamp_from_started_at"],
+              external_subscription_id: ["required with timestamp_from_started_at"]
+            })
           end
         end
       end
@@ -151,8 +154,8 @@ RSpec.describe EventsQuery do
 
         it "ignores timestamp_from_started_at" do
           result = events_query.call
-          expect(result).to be_success
-          expect(result.events.ids).to contain_exactly(old_event_other_sub.id, event.id, event_before.id, event_after.id, event_other_sub.id)
+          expect(result).to be_failure
+          expect(result.error.messages).to eq({external_subscription_id: ["required with timestamp_from_started_at"]})
         end
       end
     end
