@@ -207,13 +207,11 @@ describe "Subscription Downgrade Scenario", transaction: false do
 
           travel_to(DateTime.new(2023, 9, 01, 00, 00, 00)) do
             # we still need to charge subscription fee for the old plan
-            byebug
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(2).to(3)
           end
 
-          # note: this invoice includes both subscriptions: old and new
+          # note: this invoice includes both subscriptions: old and new 
           invoice = subscription.invoices.order(created_at: :asc).last
-          byebug
           expect(invoice.invoice_subscriptions.map(&:subscription)).to match_array([subscription, new_subscription])
           # this invoice contains subscription fee of the old plan
           expect(invoice.fees.subscription.count).to eq(1)
@@ -347,7 +345,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           new_subscription = subscription.reload.next_subscription
 
           travel_to(DateTime.new(2023, 9, 01, 00, 00, 00)) do
-            # Now we do charge the old plan
+            # Now we do charge the old plan pay in arrears
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
 
