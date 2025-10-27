@@ -11,20 +11,6 @@ module Events
     end
 
     def call
-      event.external_customer_id ||= customer&.external_id
-
-      unless event.external_subscription_id
-        Deprecation.report("event_missing_external_subscription_id", organization.id)
-      end
-
-      # NOTE: prevent subscription if more than 1 subscription is active
-      #       if multiple terminated matches the timestamp, takes the most recent
-      if !event.external_subscription_id && subscriptions.count(&:active?) <= 1
-        event.external_subscription_id ||= subscriptions.first&.external_id
-      end
-
-      event.save!
-
       expire_cached_charges(subscriptions)
       track_subscription_activity
       customer&.flag_wallets_for_refresh
@@ -32,10 +18,6 @@ module Events
       handle_pay_in_advance
 
       result.event = event
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      deliver_error_webhook(error: e.record.errors.messages)
-
       result
     rescue ActiveRecord::RecordNotUnique
       deliver_error_webhook(error: {transaction_id: ["value_already_exist"]})
@@ -50,19 +32,13 @@ module Events
     delegate :organization, to: :event
 
     def customer
-      return @customer if defined? @customer
-
-      @customer = organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
+      @customer ||= organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
     end
 
     def subscriptions
       return @subscriptions if defined? @subscriptions
 
-      subscriptions = if customer && event.external_subscription_id.blank?
-        customer.subscriptions
-      else
-        organization.subscriptions.where(external_id: event.external_subscription_id)
-      end
+      subscriptions = organization.subscriptions.where(external_id: event.external_subscription_id)
       return unless subscriptions
 
       @subscriptions = subscriptions
@@ -109,7 +85,7 @@ module Events
       return unless billable_metric
       return unless charges.any?
 
-      Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
+      Events::PayInAdvanceJob.set(wait: rand(0..30).seconds).perform_later(Events::CommonFactory.new_instance(source: event).as_json)
     end
 
     def charges
