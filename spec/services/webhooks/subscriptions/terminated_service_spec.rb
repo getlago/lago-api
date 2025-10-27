@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Webhooks::Subscriptions::TerminatedService do
   subject(:webhook_service) { described_class.new(object: subscription) }
 
-  let(:subscription) { create(:subscription, status: :terminated) }
+  let(:subscription) { create(:subscription, status: :terminated, terminated_at: Time.current) }
   let(:organization) { subscription.organization }
 
   describe ".call" do
