@@ -9,11 +9,8 @@ module Fees
       @event = Events::CommonFactory.new_instance(source: event)
       @billing_at = billing_at || @event.timestamp
 
-      @estimate = if @event.persisted
-        estimate
-      else
-        true
-      end
+      @estimate = estimate
+      raise ArgumentError, "estimate must be true if event if not persisted" if !@event.persisted && !estimate
 
       super
     end

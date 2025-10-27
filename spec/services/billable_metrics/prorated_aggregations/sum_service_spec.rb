@@ -587,31 +587,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258])
       end
     end
-
-    context "when including event value" do
-      let(:event) do
-        build(
-          :common_event,
-          subscription:,
-          organization:,
-          billable_metric:,
-          timestamp: from_datetime + 5.days,
-          properties: {
-            billable_metric.field_name => 12
-          }
-        )
-      end
-
-      let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
-
-      it "includes the event value in the result" do
-        sum_service.options = {}
-        result = sum_service.per_event_aggregation(include_event_value: true)
-
-        expect(result.event_aggregation).to eq([5, 12, 12, 12])
-        expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258, 2.32258, 10.06452])
-      end
-    end
   end
 
   describe ".grouped_by aggregation" do

@@ -75,12 +75,7 @@ module Fees
       return @subscriptions if defined? @subscriptions
 
       timestamp = Time.current
-      subscriptions = if customer && event_params[:external_subscription_id].blank?
-        customer.subscriptions
-      else
-        organization.subscriptions.where(external_id: event_params[:external_subscription_id])
-      end
-      return unless subscriptions
+      subscriptions = organization.subscriptions.where(external_id: event_params[:external_subscription_id])
 
       @subscriptions = subscriptions
         .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
@@ -98,7 +93,7 @@ module Fees
     end
 
     def estimated_charge_fees(charge)
-      Fees::CreatePayInAdvanceService.call!(charge:, event:).fees
+      Fees::CreatePayInAdvanceService.call!(charge:, event:, estimate: true).fees
     end
   end
 end

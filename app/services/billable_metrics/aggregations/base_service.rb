@@ -88,6 +88,11 @@ module BillableMetrics
         raise NotImplementedError
       end
 
+      # NOTE:
+      # - With include_event_value: true, the current event (not yet persisted) will be included in the list of event values
+      #   Used only for estimate_fees.
+      # - With exclude_event: true, the current event (persisted) will be excluded from the list of event values
+      #   Used only for in advance billing
       def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
         PerEventAggregationResult.new.tap do |result|
           result.event_aggregation = event_store.with_grouped_by_values(grouped_by_values) do

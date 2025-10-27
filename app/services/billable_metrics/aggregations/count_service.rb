@@ -54,7 +54,7 @@ module BillableMetrics
 
       def compute_per_event_aggregation(exclude_event:, include_event_value:)
         values = (0...event_store.count).map { |_| 1 }
-        values += [1] if include_event_value
+        values << 1 if include_event_value
         values
       end
     end

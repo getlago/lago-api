@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService do
-  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp) }
+  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -12,6 +12,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
+  let(:estimate) { false }
 
   let(:charge_filter) { nil }
 
@@ -452,6 +453,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
     end
 
     context "when event is not persisted" do
+      let(:estimate) { true }
       let(:event) do
         Events::Common.new(
           id: nil,
@@ -585,6 +587,15 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
         expect(SendWebhookJob).not_to have_been_enqueued
           .with("fee.created", Fee)
+      end
+
+      context "when stimate is false" do
+        let(:estimate) { false }
+
+        it "raises an argument error" do
+          expect { fee_service.call }
+            .to raise_error(ArgumentError, "estimate must be true if event if not persisted")
+        end
       end
     end
 

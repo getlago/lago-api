@@ -107,7 +107,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
         {
           external_subscription_id:,
           code:,
-          properties: {left: "1", right: "2"}
+          properties: {"left" => "1", "right" => "2"}
         }
       end
 
