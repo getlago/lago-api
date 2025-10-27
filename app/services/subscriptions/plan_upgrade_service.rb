@@ -114,7 +114,7 @@ module Subscriptions
         [current_subscription]
       end.to_a
 
-      billable_subscriptions << new_subscription if plan.pay_in_advance? && !new_subscription.in_trial_period?
+      billable_subscriptions << new_subscription if new_subscription.should_be_billed_when_started? && !new_subscription.in_trial_period?
 
       billable_subscriptions
     end
