@@ -59,12 +59,10 @@ module Fees
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
       precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
-      # for proration this should be amount_cents / units
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
       precise_unit_amount = amount_result.unit_amount
 
-      # for proration this should be the "full units" - not the prorated units
-      units = amount_result.units
+      units = amount_result.full_units_number
 
       if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
         already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
@@ -73,10 +71,8 @@ module Fees
           prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
           amount_cents -= prorated_for_current_period
           precise_amount_cents -= prorated_for_current_period.to_d
-          # unit_amount_cents -= prorated_for_current_period.to_d
-          # precise_unit_amount -= prorated_for_current_period.to_d
-          # units -= current_period_duration
-          # total_aggregated_units -= current_period_duration
+          amount_cents = 0 if amount_cents < 0
+          precise_amount_cents = 0 if precise_amount_cents < 0
         end
       end
 
