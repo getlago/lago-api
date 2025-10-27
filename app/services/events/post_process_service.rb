@@ -32,7 +32,7 @@ module Events
     delegate :organization, to: :event
 
     def customer
-      @customer ||= organization.subscriptions.find_by(external_id: event.external_subscription_id)&.customer
+      @customer ||= subscriptions.first&.customer
     end
 
     def subscriptions
