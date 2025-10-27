@@ -26,7 +26,7 @@ module Charges
       result.count = 1
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
-      result.unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / compute_units
+      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
       result.amount_details = calculated_single_event_amount_details
       result
     end
@@ -36,24 +36,7 @@ module Charges
     attr_reader :charge, :aggregation_result, :properties
 
     def charge_model
-      @charge_model ||= case charge.charge_model.to_sym
-      when :standard
-        ChargeModels::StandardService
-      when :graduated
-        ChargeModels::GraduatedService
-      when :graduated_percentage
-        ChargeModels::GraduatedPercentageService
-      when :package
-        ChargeModels::PackageService
-      when :percentage
-        ChargeModels::PercentageService
-      when :custom
-        ChargeModels::CustomService
-      when :dynamic
-        ChargeModels::DynamicService
-      else
-        raise(NotImplementedError)
-      end
+      @charge_model ||= ChargeModels::Factory.in_advance_charge_model_class(chargeable: charge)
     end
 
     def applied_charge_model
