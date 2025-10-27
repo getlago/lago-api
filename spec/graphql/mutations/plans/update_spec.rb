@@ -510,7 +510,7 @@ RSpec.describe Mutations::Plans::Update do
                 chargeModel: "volume",
                 properties: {
                   volumeRanges: [
-                    {fromValue: 0, toValue: 10, perUnitAmount: "10.00", flatAmount: "0"}
+                    {fromValue: 0, toValue: nil, perUnitAmount: "10.00", flatAmount: "0"}
                   ]
                 }
               }

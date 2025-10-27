@@ -2,6 +2,7 @@
 
 class FixedCharge < ApplicationRecord
   include PaperTrailTraceable
+  include ChargePropertiesValidation
   include Discard::Model
 
   self.discard_column = :deleted_at
@@ -37,8 +38,18 @@ class FixedCharge < ApplicationRecord
   validates :prorated, inclusion: {in: [true, false]}
   validates :properties, presence: true
 
+  validate :validate_properties
+
   def equal_properties?(fixed_charge)
     charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
+  end
+
+  private
+
+  def validate_properties
+    return if properties.blank?
+
+    validate_charge_model_properties(charge_model)
   end
 end
 

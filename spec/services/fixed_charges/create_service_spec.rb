@@ -195,6 +195,12 @@ RSpec.describe FixedCharges::CreateService do
                     to_value: 10,
                     per_unit_amount: "2",
                     flat_amount: "5"
+                  },
+                  {
+                    from_value: 11,
+                    to_value: nil,
+                    per_unit_amount: "1.5",
+                    flat_amount: "0"
                   }
                 ]
               }
@@ -209,6 +215,12 @@ RSpec.describe FixedCharges::CreateService do
                   "to_value" => 10,
                   "per_unit_amount" => "2",
                   "flat_amount" => "5"
+                },
+                {
+                  "from_value" => 11,
+                  "to_value" => nil,
+                  "per_unit_amount" => "1.5",
+                  "flat_amount" => "0"
                 }
               ]
             })
@@ -291,7 +303,7 @@ RSpec.describe FixedCharges::CreateService do
                 volume_ranges: [
                   {
                     from_value: 0,
-                    to_value: 100,
+                    to_value: nil,
                     per_unit_amount: "1.5",
                     flat_amount: "10"
                   }
