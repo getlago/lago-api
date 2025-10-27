@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Invoices
-  class GeneratePdfAndNotifyJob < ApplicationJob
+  class NotifyJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PDFS"])
         :pdfs
@@ -10,8 +10,8 @@ module Invoices
       end
     end
 
-    def perform(invoice:, email:)
-      Invoices::GenerateDocumentsJob.perform_now(invoice:, notify: email)
+    def perform(invoice:)
+      InvoiceMailer.with(invoice:).finalized.deliver_later
     end
   end
 end
