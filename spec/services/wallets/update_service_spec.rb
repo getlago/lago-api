@@ -553,7 +553,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "with limitations" do
+    context "with payment method" do
       let(:payment_method) { create(:payment_method, organization:, customer:) }
       let(:payment_method_params) do
         {
@@ -592,7 +592,7 @@ RSpec.describe Wallets::UpdateService do
           }
         end
 
-        it "attaches payment_method" do
+        it "removes payment_method" do
           expect(result).to be_success
           expect(result.wallet.reload.name).to eq(params[:name])
           expect(result.wallet.reload.payment_method_id).to eq(nil)
