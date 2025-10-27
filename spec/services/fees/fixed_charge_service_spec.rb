@@ -224,7 +224,7 @@ RSpec.describe Fees::FixedChargeService do
         it "creates a fee" do
           result = fixed_charge_service.call
           expect(result).to be_success
-          prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0).round(6)
+          # prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0)
           # prorated units is 5.5 => total amount is 10_00 + 10 * 5.5 = 1055
           full_units = 3.1
           expect(result.fee).to have_attributes(
@@ -318,7 +318,7 @@ RSpec.describe Fees::FixedChargeService do
         it "creates a fee" do
           result = fixed_charge_service.call
           expect(result).to be_success
-          prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0).round(6)
+          # prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0) = 5.5
           full_units = 3.1
           expect(result.fee).to have_attributes(
             id: String,
