@@ -469,7 +469,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json).to match({
             code: "validation_errors",
             error: "Unprocessable Entity",
-            error_details: {filters: {customer_type: ["must be nil when has_customer_type is false"]}},
+            error_details: {customer_type: ["must be nil when has_customer_type is false"]},
             status: 422
           })
         end
@@ -549,7 +549,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json).to match({
             code: "validation_errors",
             error: "Unprocessable Entity",
-            error_details: {filters: {countries: {"0": [/must be one of: AD, .*XK$/]}}},
+            error_details: {countries: {"0": [/must be one of: AD, .*XK$/]}},
             status: 422
           })
         end
@@ -603,7 +603,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json).to match({
             code: "validation_errors",
             error: "Unprocessable Entity",
-            error_details: {filters: {currencies: {"0": [/must be one of: AED, AFN.*ZMW$/]}}},
+            error_details: {currencies: {"0": [/must be one of: AED, AFN.*ZMW$/]}},
             status: 422
           })
         end
@@ -641,7 +641,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json).to match({
             code: "validation_errors",
             error: "Unprocessable Entity",
-            error_details: {filters: {has_tax_identification_number: ["must be one of: true, false"]}},
+            error_details: {has_tax_identification_number: ["must be one of: true, false"]},
             status: 422
           })
         end
@@ -674,7 +674,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json).to match({
             code: "validation_errors",
             error: "Unprocessable Entity",
-            error_details: {filters: {metadata: {is_synced: ["must be a string"], nested: ["must be a string"]}}},
+            error_details: {metadata: {is_synced: ["must be a string"], nested: ["must be a string"]}},
             status: 422
           })
         end
