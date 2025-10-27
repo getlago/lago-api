@@ -207,6 +207,15 @@ class Subscription < ApplicationRecord
     timestamp = timestamp.to_time if [Date, DateTime, String].include?(timestamp.class)
     timestamp = Time.zone.at(timestamp) if timestamp.is_a?(Integer)
 
+    # TODO: Why it was <= ?
+    # the situation that i have: 
+    # timestamp: 2025-08-31 23:59:59
+    # terminated_at: 2025-09-01 00:00:00
+    # round makes both of them 2025-09-01 00:00:00
+
+    # TODO: check how it works for charges - no, it does not. We need round to terminate the subscription
+    # (CreateInvoiceSubscriptionService should return subscription_terminated for invoiving reason, that's why)
+    # we do need the round, but the date_service should not return terminated_at instead of the received date...
     terminated_at.round <= timestamp.round
   end
 
