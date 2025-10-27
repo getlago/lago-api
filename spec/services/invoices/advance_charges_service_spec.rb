@@ -176,6 +176,7 @@ RSpec.describe Invoices::AdvanceChargesService do
           external_id: subscription.external_id,
           customer: subscription.customer,
           status: :terminated,
+          terminated_at: Time.current,
           started_at: Time.current - 1.year,
           plan:
         })
