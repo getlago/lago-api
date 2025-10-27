@@ -2700,6 +2700,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  paymentMethod: PaymentMethodReferenceInput
   priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
@@ -7946,6 +7947,16 @@ type PaymentMethodCollection {
   metadata: CollectionMetadata!
 }
 
+input PaymentMethodReferenceInput {
+  paymentMethodId: ID
+  paymentMethodType: PaymentMethodTypeEnum
+}
+
+enum PaymentMethodTypeEnum {
+  manual
+  provider
+}
+
 union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
@@ -10970,6 +10981,7 @@ input UpdateCustomerWalletInput {
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  paymentMethod: PaymentMethodReferenceInput
   priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }

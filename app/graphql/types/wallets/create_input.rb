@@ -23,6 +23,8 @@ module Types
       argument :transaction_name, String, required: false
 
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
+
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
     end
   end
 end
