@@ -33,7 +33,7 @@ module FixedChargeEvents
       attr_reader :fixed_charge, :subscription, :from_datetime, :to_datetime, :customer, :charges_duration
 
       def base_events
-        @events ||= FixedChargeEvent.where(fixed_charge:, subscription:)
+        @events ||= FixedChargeEvent.where(fixed_charge: [fixed_charge, fixed_charge.parent], subscription:)
       end
 
       def events_in_range
