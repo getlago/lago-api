@@ -13,7 +13,7 @@ gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 6.5"
-gem "rails", "~> 8.0"
+gem "rails", "~> 8.1"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
