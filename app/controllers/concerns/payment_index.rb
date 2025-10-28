@@ -4,7 +4,7 @@ module PaymentIndex
   include Pagination
   extend ActiveSupport::Concern
 
-  def payment_index(customer_external_id: nil)
+  def payment_index(customer_external_id:)
     filters = params.permit(:invoice_id)
     filters[:external_customer_id] = customer_external_id
     result = PaymentsQuery.call(
