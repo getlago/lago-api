@@ -50,7 +50,8 @@ module Fees
         external_subscription_id: subscriptions.first&.external_id,
         properties: event_params[:properties] || {},
         transaction_id: SecureRandom.uuid,
-        timestamp: Time.current
+        timestamp: Time.current,
+        precise_total_amount_cents: event_params[:precise_total_amount_cents] || 0
       )
     end
 

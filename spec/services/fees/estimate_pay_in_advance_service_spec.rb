@@ -62,6 +62,44 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
       end
     end
 
+    context "when charge model is dynamic" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+      let(:charge) { create(:dynamic_charge, :pay_in_advance, plan:, billable_metric:) }
+
+      let(:params) do
+        {
+          code:,
+          external_customer_id:,
+          external_subscription_id:,
+          properties: {billable_metric.field_name => 10},
+          precise_total_amount_cents: 120_00
+        }
+      end
+
+      it "returns a list of fees" do
+        result = estimate_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+          expect(fee).not_to be_persisted
+          expect(fee).to have_attributes(
+            subscription:,
+            charge:,
+            fee_type: "charge",
+            pay_in_advance: true,
+            invoiceable: charge,
+            events_count: 1,
+            pay_in_advance_event_id: nil,
+            pay_in_advance_event_transaction_id: String,
+            amount_cents: 120_00
+          )
+        end
+      end
+    end
+
     context "when event code does not match an pay_in_advance charge" do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
