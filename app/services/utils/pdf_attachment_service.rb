@@ -24,7 +24,6 @@ module Utils
 
       result
     end
-    alias_method :attach, :call
 
     private
 
