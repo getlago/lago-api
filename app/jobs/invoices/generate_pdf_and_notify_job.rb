@@ -11,7 +11,7 @@ module Invoices
     end
 
     def perform(invoice:, email:)
-      Invoices::GenerateDocumentsJob.perform_now(invoice:, notify: email)
+      Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: email)
     end
   end
 end
