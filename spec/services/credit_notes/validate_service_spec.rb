@@ -104,6 +104,15 @@ RSpec.describe CreditNotes::ValidateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
+
+      context "when the difference is due to rounding" do
+        let(:credit_amount_cents) { 241 }
+        let(:amount_cents) { 239 }
+
+        it "passes the validation" do
+          expect(validator).to be_valid
+        end
+      end
     end
 
     context "when refund amount is higher than invoice amount" do
@@ -247,6 +256,19 @@ RSpec.describe CreditNotes::ValidateService do
       let(:amount_cents) { 19333 }
       let(:credit_amount_cents) { 24166 }
       let(:precise_taxes_amount_cents) { 4833.3333 }
+
+      it "passes the validation" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the difference is due to rounding" do
+      let(:credit_amount_cents) { 241 }
+      let(:amount_cents) { 239 }
+
+      before do
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
+      end
 
       it "passes the validation" do
         expect(validator).to be_valid
