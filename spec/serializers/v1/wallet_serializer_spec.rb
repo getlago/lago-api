@@ -24,6 +24,7 @@ RSpec.describe ::V1::WalletSerializer do
       "status" => wallet.status,
       "currency" => wallet.currency,
       "name" => wallet.name,
+      "priority" => wallet.priority,
       "rate_amount" => wallet.rate_amount.to_s,
       "created_at" => wallet.created_at.iso8601,
       "expiration_at" => wallet.expiration_at&.iso8601,
