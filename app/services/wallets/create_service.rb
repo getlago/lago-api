@@ -140,7 +140,7 @@ module Wallets
       return @payment_method if defined? @payment_method
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
-      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id])
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: params[:organization_id])
     end
   end
 end

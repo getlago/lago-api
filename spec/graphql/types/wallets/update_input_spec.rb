@@ -17,5 +17,7 @@ RSpec.describe Types::Wallets::UpdateInput do
     expect(subject).to accept_argument(:recurring_transaction_rules).of_type("[UpdateRecurringTransactionRuleInput!]")
 
     expect(subject).to accept_argument(:applies_to).of_type("AppliesToInput")
+
+    expect(subject).to accept_argument(:payment_method).of_type("PaymentMethodReferenceInput")
   end
 end
