@@ -55,28 +55,28 @@ RSpec.describe Invoices::AddOnService do
       end.to have_enqueued_job(SendWebhookJob)
     end
 
-    it "enqueue an GeneratePdfAndNotifyJob with email false" do
+    it "enqueue an GenerateDocumentsJob with email false" do
       expect do
         invoice_service.create
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
     context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it "enqueues an GeneratePdfAndNotifyJob with email true" do
+      it "enqueues an GenerateDocumentsJob with email true" do
         expect do
           invoice_service.create
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+        end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))
       end
 
       context "when organization does not have right email settings" do
         before { applied_add_on.customer.billing_entity.update!(email_settings: []) }
 
-        it "enqueue an GeneratePdfAndNotifyJob with email false" do
+        it "enqueue an GenerateDocumentsJob with email false" do
           expect do
             invoice_service.create
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
         end
       end
     end

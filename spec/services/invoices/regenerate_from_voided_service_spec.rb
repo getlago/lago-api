@@ -84,10 +84,10 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       expect(Utils::SegmentTrack).to have_received(:invoice_created)
     end
 
-    it "enqueues GeneratePdfAndNotifyJob with email false" do
+    it "enqueues GenerateDocumentsJob with email false" do
       expect do
         regenerate_result
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
     it_behaves_like "syncs invoice" do

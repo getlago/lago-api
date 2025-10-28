@@ -112,10 +112,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
-    it "enqueues GeneratePdfAndNotifyJob with email false" do
+    it "enqueues GenerateDocumentsJob with email false" do
       expect do
         finalize_service.call
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
     it "flags lifetime usage for refresh" do
@@ -129,19 +129,19 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
     context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it "enqueues GeneratePdfAndNotifyJob with email true" do
+      it "enqueues GenerateDocumentsJob with email true" do
         expect do
           finalize_service.call
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+        end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))
       end
 
       context "when organization does not have right email settings" do
         before { invoice.billing_entity.update!(email_settings: []) }
 
-        it "enqueues GeneratePdfAndNotifyJob with email false" do
+        it "enqueues GenerateDocumentsJob with email false" do
           expect do
             finalize_service.call
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
         end
       end
     end
@@ -243,7 +243,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
         allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
         allow(SendWebhookJob).to receive(:perform_later).and_call_original
-        allow(Invoices::GeneratePdfAndNotifyJob).to receive(:perform_later).and_call_original
+        allow(Invoices::GenerateDocumentsJob).to receive(:perform_later).and_call_original
         allow(Integrations::Aggregator::Invoices::CreateJob).to receive(:perform_later).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
@@ -271,7 +271,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
           finalize_service.call
           aggregate_failures do
             expect(SendWebhookJob).not_to have_received(:perform_later).with("invoice.created", invoice)
-            expect(Invoices::GeneratePdfAndNotifyJob).not_to have_received(:perform_later)
+            expect(Invoices::GenerateDocumentsJob).not_to have_received(:perform_later)
             expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
             expect(Invoices::Payments::CreateService).not_to have_received(:new)
             expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
