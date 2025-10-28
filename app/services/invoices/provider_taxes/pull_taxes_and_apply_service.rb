@@ -67,6 +67,10 @@ module Invoices
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue ActiveRecord::InvalidForeignKey
+        # NOTE: A draft invoice has been refreshed while the taxes were applied
+        raise unless invoice.draft?
+        result
       rescue BaseService::FailedResult => e
         e.result
       end
