@@ -31,6 +31,9 @@ module PaymentReceipts
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.payment_receipt = payment.reload.payment_receipt
+      result
     end
 
     private
