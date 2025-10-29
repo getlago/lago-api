@@ -16,7 +16,7 @@ module Mutations
       type Types::CreditNotes::Object
 
       def resolve(**args)
-        result = ::CreditNotes::GenerateService.call(
+        result = ::CreditNotes::GeneratePdfService.call(
           credit_note: context[:current_user].credit_notes.find_by(id: args[:id])
         )
 

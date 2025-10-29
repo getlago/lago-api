@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module CreditNotes
-  class GenerateService < BaseService
+  class GeneratePdfService < BaseService
     def initialize(credit_note:, context: nil)
       @credit_note = credit_note
       @context = context
