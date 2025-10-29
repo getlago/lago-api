@@ -81,7 +81,7 @@ RSpec.describe Invoices::PaidCreditService do
     it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
     context "with lago_premium" do
@@ -90,7 +90,7 @@ RSpec.describe Invoices::PaidCreditService do
       it "enqueues an SendEmailJob" do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+        end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))
       end
 
       context "when organization does not have right email settings" do
@@ -99,7 +99,7 @@ RSpec.describe Invoices::PaidCreditService do
         it "does not enqueue an SendEmailJob" do
           expect do
             invoice_service.call
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
         end
       end
     end
@@ -171,7 +171,7 @@ RSpec.describe Invoices::PaidCreditService do
 
         # These jobs should only be enqueued for finalized invoices
         expect(SegmentTrackJob).not_to have_been_enqueued
-        expect(Invoices::GeneratePdfAndNotifyJob).not_to have_been_enqueued
+        expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
         expect(SendWebhookJob).not_to have_been_enqueued
       end
     end

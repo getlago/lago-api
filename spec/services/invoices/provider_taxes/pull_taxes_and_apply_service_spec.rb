@@ -207,28 +207,28 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
       end
 
-      it "enqueues GeneratePdfAndNotifyJob with email false" do
+      it "enqueues GenerateDocumentsJob with email false" do
         expect do
           pull_taxes_service.call
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+        end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
       end
 
       context "with lago_premium" do
         around { |test| lago_premium!(&test) }
 
-        it "enqueues GeneratePdfAndNotifyJob with email true" do
+        it "enqueues GenerateDocumentsJob with email true" do
           expect do
             pull_taxes_service.call
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+          end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))
         end
 
         context "when billing entity does not have right email settings" do
           before { invoice.billing_entity.update!(email_settings: []) }
 
-          it "enqueues GeneratePdfAndNotifyJob with email false" do
+          it "enqueues GenerateDocumentsJob with email false" do
             expect do
               pull_taxes_service.call
-            end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+            end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
           end
         end
       end

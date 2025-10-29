@@ -10,15 +10,8 @@ module Invoices
       end
     end
 
-    retry_on LagoHttpClient::HttpError, Errno::ECONNREFUSED, EOFError, wait: :polynomially_longer, attempts: 6
-
     def perform(invoice:, email:)
-      result = Invoices::GeneratePdfService.call(invoice:)
-      result.raise_if_error!
-
-      if email
-        InvoiceMailer.with(invoice:).finalized.deliver_later
-      end
+      Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: email)
     end
   end
 end

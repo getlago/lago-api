@@ -33,17 +33,46 @@ module Invoices
 
     def generate_pdf
       I18n.with_locale(invoice.customer.preferred_document_locale) do
-        pdf_service = Utils::PdfGenerator.new(template:, context: invoice)
-        pdf_result = pdf_service.call
-
-        invoice.file.attach(
-          io: pdf_result.io,
-          filename: "#{invoice.number}.pdf",
-          content_type: "application/pdf"
-        )
-
+        pdf_file = build_pdf_file
+        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
+        attach_pdf_to_invoice(pdf_file)
         invoice.save!
+      ensure
+        cleanup_tempfiles(pdf_file, xml_file)
       end
+    end
+
+    def build_pdf_file
+      pdf_content = Utils::PdfGenerator.call(template:, context: invoice).io.read
+
+      pdf_file = Tempfile.new([invoice.number, ".pdf"])
+      pdf_file.binmode
+      pdf_file.write(pdf_content)
+      pdf_file.flush
+
+      pdf_file
+    end
+
+    def attach_facturx(pdf_file)
+      xml_file = Tempfile.new([invoice.number, ".xml"])
+      xml_file.write(EInvoices::Invoices::FacturX::CreateService.call(invoice:).xml)
+      xml_file.flush
+
+      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
+      xml_file
+    end
+
+    def attach_pdf_to_invoice(pdf_file)
+      invoice.file.attach(
+        io: File.open(pdf_file.path),
+        filename: "#{invoice.number}.pdf",
+        content_type: "application/pdf"
+      )
+    end
+
+    def cleanup_tempfiles(pdf_file, xml_file)
+      pdf_file&.unlink
+      xml_file&.unlink
     end
 
     def template
@@ -67,6 +96,10 @@ module Invoices
       return false if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
 
       context == "admin" || invoice.file.blank?
+    end
+
+    def should_generate_facturx_einvoice_xml?
+      invoice.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(invoice.billing_entity.country.try(:upcase))
     end
 
     def charge?
