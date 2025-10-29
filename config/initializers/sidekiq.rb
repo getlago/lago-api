@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+begin
+  require "sidekiq-pro"
+rescue LoadError
+  if ENV["LAGO_SIDEKIQ_PRO_REQUIRED"] == "true"
+    raise "Sidekiq Pro is required. Please make sure it's properly installed."
+  end
+  Rails.logger.info "Sidekiq Pro is not installed. Reliability features will not be available."
+end
+
 require "socket"
 require "sidekiq/middleware/current_attributes"
 
@@ -25,6 +34,8 @@ if ENV["LAGO_SIDEKIQ_WEB"] == "true"
 end
 
 Sidekiq.configure_server do |config|
+  # Super fetch is only available in Sidekiq Pro. See https://github.com/sidekiq/sidekiq/wiki/Reliability.
+  config.super_fetch! if Sidekiq.pro?
   config.redis = redis_config
   config.logger = nil
   config[:max_retries] = 0
