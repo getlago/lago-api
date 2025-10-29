@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::GenerateService do
+RSpec.describe CreditNotes::GeneratePdfService do
   subject(:credit_note_generate_service) { described_class.new(credit_note:, context:) }
 
   let(:organization) { create(:organization, name: "LAGO") }

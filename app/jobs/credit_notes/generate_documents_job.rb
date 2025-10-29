@@ -6,7 +6,7 @@ module CreditNotes
 
     def perform(credit_note)
       CreditNotes::GenerateXmlService.call(credit_note:, context: "api").raise_if_error!
-      CreditNotes::GenerateService.call(credit_note:, context: "api").raise_if_error!
+      CreditNotes::GeneratePdfService.call(credit_note:, context: "api").raise_if_error!
     end
   end
 end
