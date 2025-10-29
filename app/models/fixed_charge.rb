@@ -68,7 +68,7 @@ class FixedCharge < ApplicationRecord
       errors.add(:prorated, :invalid_charge_model)
     end
   end
-  
+
   def validate_properties
     return if properties.blank?
 
