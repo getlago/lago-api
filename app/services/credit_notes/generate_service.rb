@@ -27,17 +27,52 @@ module CreditNotes
     attr_reader :credit_note, :context
 
     def generate_pdf(credit_note)
-      I18n.locale = credit_note.customer.preferred_document_locale
+      I18n.with_locale(credit_note.customer.preferred_document_locale) do
+        pdf_file = build_pdf_file
+        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
+        attach_pdf_to_credit_note(pdf_file)
 
-      pdf_result = Utils::PdfGenerator.call(template:, context: credit_note)
+        credit_note.save!
+      ensure
+        cleanup_tempfiles(pdf_file, xml_file)
+      end
+    end
 
+    def build_pdf_file
+      pdf_content = Utils::PdfGenerator.call(template:, context: credit_note).io.read
+
+      pdf_file = Tempfile.new([credit_note.number, ".pdf"])
+      pdf_file.binmode
+      pdf_file.write(pdf_content)
+      pdf_file.flush
+
+      pdf_file
+    end
+
+    def attach_facturx(pdf_file)
+      xml_file = Tempfile.new([credit_note.number, ".xml"])
+      xml_file.write(EInvoices::CreditNotes::FacturX::CreateService.call(credit_note:).xml)
+      xml_file.flush
+
+      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
+      xml_file
+    end
+
+    def attach_pdf_to_credit_note(pdf_file)
       credit_note.file.attach(
-        io: pdf_result.io,
+        io: File.open(pdf_file.path),
         filename: "#{credit_note.number}.pdf",
         content_type: "application/pdf"
       )
+    end
 
-      credit_note.save!
+    def cleanup_tempfiles(pdf_file, xml_file)
+      pdf_file&.unlink
+      xml_file&.unlink
+    end
+
+    def should_generate_facturx_einvoice_xml?
+      credit_note.billing_entity.einvoicing && BillingEntity::EINVOICING_COUNTRIES.include?(credit_note.billing_entity.country.try(:upcase))
     end
 
     def should_generate_pdf?
