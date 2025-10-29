@@ -4,7 +4,12 @@ on:
     branches:
       - main
   workflow_dispatch:
-permissions: { }
+    inputs:
+      sidekiq_pro:
+        type: boolean
+        default: true
+        description: Enable Sidekiq Pro
+permissions: {}
 jobs:
   build-api-image:
     runs-on: ubuntu-latest
@@ -41,3 +46,7 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.docker_tag.outputs.tag }}
+          build-args: |
+            BUNDLE_WITH=${{ (github.event_name == 'push' || github.event.inputs.sidekiq_pro == 'true') && 'sidekiq-pro' || '' }}
+          secrets: |
+            "BUNDLE_GEMS__CONTRIBSYS__COM=${{ secrets.BUNDLE_GEMS__CONTRIBSYS__COM }}"
