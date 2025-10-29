@@ -22,6 +22,10 @@ class CreditNoteItem < ApplicationRecord
     item_proportion_to_fee = amount_cents.to_f / fee.amount_cents
     item_proportion_to_fee * fee.sub_total_excluding_taxes_amount_cents
   end
+
+  def fee_rate
+    precise_amount_cents.fdiv(fee.precise_amount_cents.nonzero? || 1)
+  end
 end
 
 # == Schema Information
