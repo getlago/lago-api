@@ -43,6 +43,7 @@ module Types
     field :customer_portal_subscription, resolver: Resolvers::CustomerPortal::SubscriptionResolver
     field :customer_portal_subscriptions, resolver: Resolvers::CustomerPortal::SubscriptionsResolver
     field :customer_portal_user, resolver: Resolvers::CustomerPortal::CustomerResolver
+    field :customer_portal_wallet, resolver: Resolvers::CustomerPortal::WalletResolver
     field :customer_portal_wallets, resolver: Resolvers::CustomerPortal::WalletsResolver
     field :customer_projected_usage, resolver: Resolvers::Customers::ProjectedUsageResolver
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
@@ -107,6 +108,7 @@ module Types
     field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
     field :data_api_usages, resolver: Resolvers::DataApi::UsagesResolver
     field :data_api_usages_aggregated_amounts, resolver: Resolvers::DataApi::Usages::AggregatedAmountsResolver
+    field :data_api_usages_forecasted, resolver: Resolvers::DataApi::Usages::ForecastedResolver
     field :data_api_usages_invoiced, resolver: Resolvers::DataApi::Usages::InvoicedResolver
   end
 end

@@ -120,6 +120,7 @@ class Organization < ApplicationRecord
     multi_entities_pro
     multi_entities_enterprise
     analytics_dashboards
+    forecasted_usage
     projected_usage
     clickhouse_live_aggregation
   ].freeze

@@ -279,6 +279,12 @@ module ScenariosHelper
     end
   end
 
+  def estimate_event(params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/events/estimate_fees", {event: params})
+    end
+  end
+
   ### Credit notes
 
   def create_credit_note(params, **kwargs)

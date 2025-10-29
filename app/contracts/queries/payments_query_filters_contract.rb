@@ -3,10 +3,8 @@
 module Queries
   class PaymentsQueryFiltersContract < Dry::Validation::Contract
     params do
-      required(:filters).hash do
-        optional(:invoice_id).maybe(:string, format?: Regex::UUID)
-        optional(:external_customer_id).maybe(:string)
-      end
+      optional(:invoice_id).maybe(:string, format?: Regex::UUID)
+      optional(:external_customer_id).maybe(:string)
     end
   end
 end

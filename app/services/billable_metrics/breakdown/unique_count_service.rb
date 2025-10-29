@@ -3,6 +3,8 @@
 module BillableMetrics
   module Breakdown
     class UniqueCountService < BillableMetrics::ProratedAggregations::UniqueCountService
+      Result = BaseResult[:aggregator, :breakdown]
+
       def breakdown
         breakdown = event_store.prorated_unique_count_breakdown(with_remove: true)
           .group_by { |r| r["property"] }

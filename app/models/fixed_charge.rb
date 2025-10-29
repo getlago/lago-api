@@ -2,6 +2,7 @@
 
 class FixedCharge < ApplicationRecord
   include PaperTrailTraceable
+  include ChargePropertiesValidation
   include Discard::Model
 
   self.discard_column = :deleted_at
@@ -39,6 +40,7 @@ class FixedCharge < ApplicationRecord
 
   validate :validate_pay_in_advance
   validate :validate_prorated
+  validate :validate_properties
 
   def equal_properties?(fixed_charge)
     charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
@@ -65,6 +67,12 @@ class FixedCharge < ApplicationRecord
     if graduated? && pay_in_advance?
       errors.add(:prorated, :invalid_charge_model)
     end
+  end
+  
+  def validate_properties
+    return if properties.blank?
+
+    validate_charge_model_properties(charge_model)
   end
 end
 

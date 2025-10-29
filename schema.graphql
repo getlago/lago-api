@@ -2700,6 +2700,7 @@ input CreateCustomerWalletInput {
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
   transactionName: String
@@ -4255,6 +4256,7 @@ type CustomerPortalWallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   status: WalletStatusEnum!
 }
@@ -4524,6 +4526,35 @@ type DataApiUsageCollection {
   A collection of paginated DataApiUsageCollection
   """
   collection: [DataApiUsage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type DataApiUsageForecasted {
+  amountCents: BigInt!
+  amountCentsForecastConservative: BigInt!
+  amountCentsForecastOptimistic: BigInt!
+  amountCentsForecastRealistic: BigInt!
+  amountCurrency: CurrencyEnum!
+  endOfPeriodDt: ISO8601Date!
+  startOfPeriodDt: ISO8601Date!
+  units: Float!
+  unitsForecastConservative: Float!
+  unitsForecastOptimistic: Float!
+  unitsForecastRealistic: Float!
+}
+
+"""
+DataApiUsageForecastedCollection type
+"""
+type DataApiUsageForecastedCollection {
+  """
+  A collection of paginated DataApiUsageForecastedCollection
+  """
+  collection: [DataApiUsageForecasted!]!
 
   """
   Pagination Metadata for navigating the Pagination
@@ -5771,6 +5802,7 @@ enum IntegrationTypeEnum {
   avalara
   beta_payment_authorization
   clickhouse_live_aggregation
+  forecasted_usage
   from_email
   hubspot
   issue_receipts
@@ -8243,6 +8275,7 @@ enum PremiumIntegrationTypeEnum {
   avalara
   beta_payment_authorization
   clickhouse_live_aggregation
+  forecasted_usage
   from_email
   hubspot
   issue_receipts
@@ -8741,9 +8774,19 @@ type Query {
   customerPortalUser: CustomerPortalCustomer
 
   """
+  Query a single wallet from the customer portal
+  """
+  customerPortalWallet(
+    """
+    Uniq ID of the wallet
+    """
+    id: ID!
+  ): CustomerPortalWallet
+
+  """
   Query wallets
   """
-  customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+  customerPortalWallets(limit: Int, page: Int, status: WalletStatusEnum): CustomerPortalWalletCollection!
 
   """
   Query the projected usage of the customer on the current billing period
@@ -8799,6 +8842,11 @@ type Query {
   Query usages of an organization
   """
   dataApiUsagesAggregatedAmounts(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, isCustomerTinEmpty: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageAggregatedAmountCollection!
+
+  """
+  Query forecasted usages of an organization
+  """
+  dataApiUsagesForecasted(billableMetricCode: String, billingEntityCode: String, chargeFilterId: String, chargeId: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isCustomerTinEmpty: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageForecastedCollection!
 
   """
   Query invoiced usages of an organization
@@ -10958,6 +11006,7 @@ input UpdateCustomerWalletInput {
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
+  priority: Int!
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11498,6 +11547,7 @@ type Wallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
@@ -11522,7 +11572,33 @@ type WalletCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: WalletCollectionMetadata!
+}
+
+"""
+Type for CollectionMetadataType
+"""
+type WalletCollectionMetadata {
+  """
+  Current Page of loaded data
+  """
+  currentPage: Int!
+  customerActiveWalletsCount: Int!
+
+  """
+  The number of items per page
+  """
+  limitValue: Int!
+
+  """
+  The total number of items to be paginated
+  """
+  totalCount: Int!
+
+  """
+  The total number of pages in the pagination
+  """
+  totalPages: Int!
 }
 
 enum WalletStatusEnum {

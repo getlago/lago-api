@@ -11,6 +11,7 @@ RSpec.describe Wallets::UpdateService do
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, allowed_fee_types: []) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
+  let(:priority) { 5 }
 
   describe "#call" do
     before do
@@ -22,6 +23,7 @@ RSpec.describe Wallets::UpdateService do
       {
         id: wallet&.id,
         name: "new name",
+        priority:,
         expiration_at:,
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 1_00,
@@ -35,6 +37,7 @@ RSpec.describe Wallets::UpdateService do
       expect(result.wallet.name).to eq("new name")
       expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
       expect(result.wallet.invoice_requires_successful_payment).to eq(true)
+      expect(result.wallet.priority).to eq(priority)
       expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
       expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
 
@@ -58,6 +61,15 @@ RSpec.describe Wallets::UpdateService do
         expect(result.error.error_code).to eq("wallet_not_found")
 
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with invalid priority" do
+      let(:priority) { 55 }
+
+      it "returns false and result has errors" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:priority]).to eq(["value_is_invalid"])
       end
     end
 

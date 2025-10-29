@@ -3,18 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Charges::CalculatePriceService do
-  subject(:calculate_price_service) do
-    described_class.new(
-      subscription:,
-      units:,
-      charge:
-    )
-  end
+  subject(:calculate_price_service) { described_class.new(units:, charge:) }
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 1000) }
-  let(:subscription) { create(:subscription, customer:, plan:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:units) { 5 }
 
@@ -22,14 +14,12 @@ RSpec.describe Charges::CalculatePriceService do
     context "when there is no charge for the billable metric" do
       let(:charge) { nil }
 
-      before { charge }
-
-      it "returns only the subscription amount" do
+      it "fails with a validation error" do
         result = calculate_price_service.call
 
-        expect(result.charge_amount_cents).to eq(0)
-        expect(result.subscription_amount_cents).to eq(1000)
-        expect(result.total_amount_cents).to eq(1000)
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("charge_not_found")
       end
     end
 

@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.4.5"
+ruby "3.4.7"
 
 # Core
 gem "aasm"
@@ -16,6 +16,11 @@ gem "puma", "~> 6.5"
 gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
+group :'sidekiq-pro', optional: true do
+  source "https://gems.contribsys.com/" do
+    gem "sidekiq-pro"
+  end
+end
 gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
 gem "dry-validation"

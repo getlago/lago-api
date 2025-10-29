@@ -29,15 +29,6 @@ RSpec.describe Events::PostProcessService do
   end
 
   describe "#call" do
-    it "assigns the customer external_id" do
-      result = process_service.call
-
-      aggregate_failures do
-        expect(result).to be_success
-        expect(event.external_customer_id).to eq(customer.external_id)
-      end
-    end
-
     it "flags wallets for refresh" do
       wallet = create(:wallet, customer:)
 
@@ -62,14 +53,6 @@ RSpec.describe Events::PostProcessService do
 
       it "enqueues a job to perform the pay_in_advance aggregation" do
         expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
-      end
-    end
-
-    context "when there is an error" do
-      it "delivers an error webhook" do
-        allow(event).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(event))
-
-        expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
       end
     end
   end
