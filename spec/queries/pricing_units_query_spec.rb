@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PricingUnitsQuery, type: :query do
+RSpec.describe PricingUnitsQuery do
   subject(:result) { described_class.call(organization:, search_term:, pagination:) }
 
   let(:organization) { create(:organization) }

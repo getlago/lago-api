@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PlansQuery, type: :query do
+RSpec.describe PlansQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:, filters:)
   end

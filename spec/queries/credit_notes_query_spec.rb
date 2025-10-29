@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotesQuery, type: :query do
+RSpec.describe CreditNotesQuery do
   subject(:result) do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PastUsageQuery, type: :query do
+RSpec.describe PastUsageQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:) }
 
   let(:organization) { create(:organization) }

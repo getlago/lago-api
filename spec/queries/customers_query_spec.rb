@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CustomersQuery, type: :query do
+RSpec.describe CustomersQuery do
   subject(:result) do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end

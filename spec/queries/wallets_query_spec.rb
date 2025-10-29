@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletsQuery, type: :query do
+RSpec.describe WalletsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end

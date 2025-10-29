@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
+RSpec.describe ApiLogsQuery, clickhouse: true do
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end

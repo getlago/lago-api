@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EventsQuery, type: :query do
+RSpec.describe EventsQuery do
   subject(:events_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:organization) { create(:organization) }

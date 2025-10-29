@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe FeesQuery, type: :query do
+RSpec.describe FeesQuery do
   subject(:fees_query) { described_class.new(organization:, pagination:, filters:) }
 
   let(:organization) { create(:organization) }

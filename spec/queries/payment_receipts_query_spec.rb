@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentReceiptsQuery, type: :query do
+RSpec.describe PaymentReceiptsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end

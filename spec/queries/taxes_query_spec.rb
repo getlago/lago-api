@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe TaxesQuery, type: :query do
+RSpec.describe TaxesQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, search_term:, filters:, order:)
   end

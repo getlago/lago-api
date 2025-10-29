@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe AppliedCouponsQuery, type: :query do
+RSpec.describe AppliedCouponsQuery do
   subject(:result) do
     described_class.call(organization:, pagination:, filters:)
   end
