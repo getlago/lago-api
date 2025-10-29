@@ -37,8 +37,12 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
       subscription = customer.subscriptions.first
 
-      ### 15 february: Send an event.
+      ### 15 February: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
+
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      # NOTE: This does not seem to matter
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days)
 
       travel_to(feb15) do
         expect do
@@ -119,6 +123,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
+
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      # NOTE: This does not seem to matter
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15, properties: {unique_id: "id_1"})
 
       travel_to(feb15) do
         expect do
@@ -219,8 +227,8 @@ describe "Pay in advance charges Scenarios", transaction: false do
       end
 
       ### 19 february: Send an event with the same unique id. It creates a 0 amount fee.
-      feb18 = DateTime.new(2023, 2, 19)
-      travel_to(feb18) do
+      feb19 = DateTime.new(2023, 2, 19)
+      travel_to(feb19) do
         expect do
           create_event(
             {
@@ -326,6 +334,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
 
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      # NOTE: This does not seem to matter
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days, properties: {amount: "5000"})
+
       travel_to(feb15) do
         expect do
           create_event(
@@ -422,6 +434,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
         ### 15 february: Send an event.
         feb15 = DateTime.new(2023, 2, 15)
 
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        # NOTE: This does not seem to matter
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days, properties: {amount: "50", region: "europe"})
+
         travel_to(feb15) do
           create_event(
             {
@@ -489,6 +505,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
         ### 15 february: Send an event.
         feb15 = DateTime.new(2023, 2, 15)
 
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        # NOTE: This does not seem to matter
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15, properties: {amount: "50", region: "africa", cloud: "AWS"})
+
         travel_to(feb15) do
           create_event(
             {
@@ -548,6 +568,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
+
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      # Test create events until the 18th so we make this event is after that
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days, properties: {amount: "5"})
 
       travel_to(feb15) do
         expect do
@@ -657,6 +681,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
 
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      # Test create events until the 18th so we make this event is after that
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days, properties: {amount: "5"})
+
       travel_to(feb15) do
         expect do
           create_event(
@@ -676,7 +704,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
         expect(fee.pay_in_advance).to eq(true)
         expect(fee.units).to eq(3)
         expect(fee.events_count).to eq(1)
-        expect(fee.amount_cents).to eq(2 * 3 + 1)
+        expect(fee.amount_cents).to eq(2 * 3 + 1) # 3 events * 0.02 + 0.01 flat fee
         expect(fee.amount_details).to eq({})
       end
 
@@ -752,6 +780,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
         )
 
         subscription = customer.subscriptions.first
+
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        # NOTE: This does not seem to matter
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: DateTime.new(2023, 2, 17), properties: {amount: "5"})
 
         travel_to(DateTime.new(2023, 2, 14)) do
           create_event(
@@ -903,6 +935,10 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
         ### 15 february: Send an event.
         feb15 = DateTime.new(2023, 2, 15)
+
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        # NOTE: This does not seem to matter
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 4.days, properties: {amount: "50"})
 
         travel_to(feb15) do
           expect do
@@ -1063,6 +1099,9 @@ describe "Pay in advance charges Scenarios", transaction: false do
         ### 15 february: Send an event.
         feb15 = DateTime.new(2023, 2, 15)
 
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 5.days, properties: {amount: "333"})
+
         travel_to(feb15) do
           expect do
             create_event(
@@ -1114,7 +1153,11 @@ describe "Pay in advance charges Scenarios", transaction: false do
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(575)
+
+          # NOTE: Notice that our event in the future is taken into account in current usage
+          expect(json[:customer_usage][:charges_usage].sole[:units]).to eq("11433.0")
+          expect(json[:customer_usage][:charges_usage].sole[:total_aggregated_units]).to eq("11433.0")
+          expect(json[:customer_usage][:total_amount_cents]).to eq(775)
         end
       end
     end
@@ -1224,6 +1267,9 @@ describe "Pay in advance charges Scenarios", transaction: false do
       ### 28th September: Send an event.
       sept28 = Time.zone.parse("2024-09-28")
 
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: Time.zone.parse("2024-09-30 11:00"), properties: {amount: "9876", precise_total_amount_cents: 9875.6823759})
+
       travel_to(sept28) do
         expect do
           create_event(
@@ -1305,6 +1351,9 @@ describe "Pay in advance charges Scenarios", transaction: false do
         ### 15 february: Send an event.
         feb15 = DateTime.new(2023, 2, 15)
 
+        # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+        create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 1.second, properties: {amount: "333"})
+
         travel_to(feb15) do
           expect do
             create_event(
@@ -1370,6 +1419,9 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
       ### 15 february: Send an event.
       feb15 = DateTime.new(2023, 2, 15)
+
+      # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 5.days, properties: {amount: "333"})
 
       travel_to(feb15) do
         expect do
