@@ -38,6 +38,10 @@ module Api
       CurrentContext.api_key_id = current_api_key.id
     end
 
+    def set_beta_header!
+      response.set_header("X-Lago-Endpoint-Status", "beta")
+    end
+
     def track_api_key_usage
       return unless track_api_key_usage?
 

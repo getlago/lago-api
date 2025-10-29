@@ -342,6 +342,126 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(json[:events].map { it[:lago_id] }).to contain_exactly(matching_event.id)
       end
     end
+
+    context "with clickhouse", clickhouse: true do
+      let(:params) { {} }
+
+      before { organization.update!(clickhouse_events_store: true) }
+
+      context "when event is raw" do
+        let(:event) do
+          Clickhouse::EventsRaw.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: metric.code,
+            timestamp: 5.days.ago.to_date,
+            properties: {}
+          )
+        end
+
+        it "returns an event" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+
+          json_event = json[:events].sole
+          expect(json_event[:lago_subscription_id]).to eq event.subscription_id
+          expect(json_event[:lago_customer_id]).to eq event.customer_id
+          expect(json_event[:code]).to eq event.code
+          expect(json_event[:transaction_id]).to eq event.transaction_id
+        end
+      end
+
+      context "when event is enriched" do
+        let(:event) do
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: metric.code,
+            timestamp: 5.days.ago.to_date,
+            properties: {},
+            enriched_at: DateTime.new(2025, 1, 1)
+          )
+        end
+
+        it "does not return any event" do
+          subject
+          expect(response).to have_http_status(:ok)
+          expect(json[:events]).to be_empty
+        end
+      end
+    end
+  end
+
+  describe "GET /api/v1/events_enriched" do
+    subject { get_with_token(organization, "/api/v1/events_enriched", params) }
+
+    context "without clickhouse" do
+      let(:params) { {} }
+
+      it "returns an error" do
+        subject
+        expect(response).to have_http_status(:forbidden)
+        expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
+      end
+    end
+
+    context "with clickhouse", clickhouse: true do
+      let(:params) { {external_subscription_id: event.external_subscription_id} }
+
+      before { organization.update!(clickhouse_events_store: true) }
+
+      context "when event is raw" do
+        let(:event) do
+          Clickhouse::EventsRaw.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: metric.code,
+            timestamp: 5.days.ago.to_date,
+            properties: {}
+          )
+        end
+
+        it "does not return any event" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
+          expect(json[:events]).to be_empty
+        end
+      end
+
+      context "when event is enriched" do
+        let(:event) do
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: metric.code,
+            timestamp: 5.days.ago.to_date,
+            properties: {},
+            enriched_at: DateTime.new(2025, 1, 1)
+          )
+        end
+
+        it "returns an event" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
+
+          json_event = json[:events].sole
+          expect(json_event[:enriched_at]).to eq "2025-01-01T00:00:00.000Z"
+          expect(json_event[:code]).to eq event.code
+          expect(json_event[:transaction_id]).to eq event.transaction_id
+          expect(json_event).not_to have_key(:lago_subscription_id)
+          expect(json_event).not_to have_key(:lago_customer_id)
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/events/:id" do

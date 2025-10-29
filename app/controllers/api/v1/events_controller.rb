@@ -89,6 +89,36 @@ module Api
         end
       end
 
+      def index_enriched
+        set_beta_header!
+
+        unless current_organization.clickhouse_events_store?
+          return forbidden_error(code: "endpoint_not_available")
+        end
+
+        result = EventsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: index_filters.to_h.merge(enriched: true)
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.events,
+              ::V1::EventEnrichedSerializer,
+              collection_name: "events",
+              meta: pagination_metadata(result.events)
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def estimate_instant_fees
         result = Fees::EstimateInstant::PayInAdvanceService.call(
           organization: current_organization,
