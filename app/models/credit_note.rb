@@ -141,6 +141,10 @@ class CreditNote < ApplicationRecord
     )
   end
 
+  def sub_total_including_taxes_amount_cents
+    sub_total_excluding_taxes_amount_cents + precise_taxes_amount_cents
+  end
+
   def sub_total_excluding_taxes_amount_cents
     (items.sum(&:precise_amount_cents) - precise_coupons_adjustment_amount_cents).round
   end
