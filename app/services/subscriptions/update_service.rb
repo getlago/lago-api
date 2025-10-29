@@ -85,7 +85,7 @@ module Subscriptions
 
         EmitFixedChargeEventsService.call!(
           subscriptions: [subscription],
-          timestamp: subscription.started_at
+          timestamp: subscription.started_at + 1.second
         )
       else
         subscription.save!

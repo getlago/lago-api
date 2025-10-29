@@ -79,7 +79,7 @@ module Subscriptions
 
         EmitFixedChargeEventsService.call!(
           subscriptions: [next_subscription],
-          timestamp: next_subscription.started_at
+          timestamp: next_subscription.started_at + 1.second
         )
 
         if next_subscription.should_sync_hubspot_subscription?
