@@ -255,28 +255,19 @@ module ScenariosHelper
   end
 
   def create_event(params, **kwargs)
-    api_call(**kwargs) do
+    params[:transaction_id] ||= SecureRandom.uuid
+
+    response = api_call(**kwargs) do
       post_with_token(organization, "/api/v1/events", {event: params})
     end
-  end
 
-  def create_clickhouse_event(params, in_advance: false)
-    event = Clickhouse::EventsEnriched.create!(params)
-    common_event = Events::Common.new(
-      id: nil,
-      organization_id: event.organization_id,
-      transaction_id: event.transaction_id,
-      external_subscription_id: event.external_subscription_id,
-      timestamp: event.timestamp,
-      code: event.code,
-      properties: event.properties,
-      precise_total_amount_cents: event.precise_total_amount_cents
-    )
-
-    if in_advance
-      Events::PayInAdvanceJob.perform_later(common_event.as_json)
-      perform_all_enqueued_jobs
+    if organization.clickhouse_events_store?
+      timestamp = params.key?(:timestamp) ? Time.zone.at(params[:timestamp]) : Time.iso8601(response.dig(:event, :timestamp))
+      params = params.merge(timestamp:)
+      create_clickhouse_event(params)
     end
+
+    response
   end
 
   def estimate_event(params, **kwargs)
@@ -371,6 +362,32 @@ module ScenariosHelper
     end
   end
 
+  private
+
+  def fetch_subscription(external_id)
+    subscription = Subscription.find_by(external_id:)
+    if subscription.nil?
+      raise "Subscription not found for external_id: #{external_id}"
+    end
+    subscription
+  end
+
+  def fetch_billable_metric(code)
+    billable_metric = BillableMetric.find_by(code:)
+    if billable_metric.nil?
+      raise "Billable metric not found for code: #{code}"
+    end
+    billable_metric
+  end
+
+  def fetch_charge(subscription, billable_metric)
+    charge = subscription.plan.charges.find_by(billable_metric:)
+    if charge.nil?
+      raise "Charge not found for billable_metric: #{billable_metric.code}"
+    end
+    charge
+  end
+
   def parse_result(as, model_class, key)
     case as
     when :json
@@ -385,5 +402,39 @@ module ScenariosHelper
     else
       raise "Invalid as: #{as}"
     end
+  end
+
+  def create_clickhouse_event(params)
+    subscription = fetch_subscription(params[:external_subscription_id])
+    billable_metric = fetch_billable_metric(params[:code])
+    charge = fetch_charge(subscription, billable_metric)
+
+    params[:organization_id] = organization.id
+    params[:value] ||= if billable_metric.count_agg?
+      "1"
+    else
+      params.fetch(:properties, {}).with_indifferent_access.fetch(billable_metric.field_name).to_s
+    end
+
+    enriched_event = Clickhouse::EventsEnriched.create!(params)
+
+    if charge.pay_in_advance?
+      process_pay_in_advance_clickhouse_event(enriched_event)
+    end
+  end
+
+  def process_pay_in_advance_clickhouse_event(enriched_event)
+    common_event = Events::Common.new(
+      id: nil,
+      organization_id: enriched_event.organization_id,
+      transaction_id: enriched_event.transaction_id,
+      external_subscription_id: enriched_event.external_subscription_id,
+      timestamp: enriched_event.timestamp,
+      code: enriched_event.code,
+      properties: enriched_event.properties,
+      precise_total_amount_cents: enriched_event.precise_total_amount_cents
+    )
+    Events::PayInAdvanceJob.perform_later(common_event.as_json)
+    perform_all_enqueued_jobs
   end
 end
