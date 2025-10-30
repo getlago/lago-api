@@ -42,7 +42,7 @@ module Wallets
 
       if params.key?(:payment_method)
         attributes[:payment_method_type] = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        attributes[:payment_method_id] = result.payment_method.id if params[:payment_method].key?(:payment_method_id)
+        attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
       wallet = Wallet.new(attributes)

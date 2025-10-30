@@ -532,6 +532,25 @@ RSpec.describe Wallets::CreateService do
         expect(wallet.reload.payment_method_type).to eq("provider")
       end
 
+      context "when payment method id is nil" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: nil,
+            payment_method_type: "provider"
+          }
+        end
+
+        it "successfully creates wallet" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.reload.name).to eq("New Wallet")
+          expect(wallet.reload.payment_method_id).to eq(nil)
+          expect(wallet.reload.payment_method_type).to eq("provider")
+        end
+      end
+
       context "when payment method type is not correct" do
         let(:payment_method_params) do
           {
