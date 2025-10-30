@@ -5,6 +5,8 @@ module Api
     class EventsController < Api::BaseController
       skip_audit_logs!
 
+      before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]
+
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
 
       def create
@@ -80,6 +82,32 @@ module Api
             json: ::CollectionSerializer.new(
               result.events,
               ::V1::EventSerializer,
+              collection_name: "events",
+              meta: pagination_metadata(result.events)
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def index_enriched
+        set_beta_header!
+
+        result = EventsQuery.call(
+          organization: current_organization,
+          pagination: {
+            page: params[:page],
+            limit: params[:per_page] || PER_PAGE
+          },
+          filters: index_filters.to_h.merge(enriched: true)
+        )
+
+        if result.success?
+          render(
+            json: ::CollectionSerializer.new(
+              result.events,
+              ::V1::EventEnrichedSerializer,
               collection_name: "events",
               meta: pagination_metadata(result.events)
             )

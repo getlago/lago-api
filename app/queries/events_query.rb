@@ -1,27 +1,34 @@
 # frozen_string_literal: true
 
 class EventsQuery < BaseQuery
-  Result = BaseResult[:events]
+  Result = BaseResult[:events, :event_model]
   Filters = BaseFilters[
     :code,
     :external_subscription_id,
     :timestamp_from_started_at,
     :timestamp_from,
-    :timestamp_to
+    :timestamp_to,
+    :enriched
   ]
 
   def call
-    events = organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
+    events = event_model
     events = events.where(organization_id: organization.id)
     events = paginate(events)
 
-    events = events.order(timestamp: :desc) unless organization.clickhouse_events_store?
-    events = events.order(ingested_at: :desc) if organization.clickhouse_events_store?
+    events = if pg_event?
+      events.order(timestamp: :desc)
+    elsif ch_event_raw?
+      events.order(ingested_at: :desc)
+    elsif ch_event_enriched?
+      events.order(enriched_at: :desc)
+    end
 
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id
     events = with_timestamp_range(events)
 
+    result.event_model = event_model.to_s
     result.events = events
     result
   rescue BaseService::FailedResult
@@ -29,6 +36,16 @@ class EventsQuery < BaseQuery
   end
 
   private
+
+  def event_model
+    if pg_event?
+      Event
+    elsif ch_event_raw?
+      Clickhouse::EventsRaw
+    elsif ch_event_enriched?
+      Clickhouse::EventsEnriched
+    end
+  end
 
   def with_code(scope)
     scope.where(code: filters.code)
@@ -68,5 +85,17 @@ class EventsQuery < BaseQuery
 
   def timestamp_from_started_at?
     ActiveModel::Type::Boolean.new.cast(filters.timestamp_from_started_at)
+  end
+
+  def pg_event?
+    !organization.clickhouse_events_store?
+  end
+
+  def ch_event_raw?
+    organization.clickhouse_events_store? && !filters.enriched
+  end
+
+  def ch_event_enriched?
+    organization.clickhouse_events_store? && filters.enriched
   end
 end

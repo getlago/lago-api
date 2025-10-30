@@ -157,4 +157,32 @@ RSpec.describe EventsQuery do
       end
     end
   end
+
+  describe "event model" do
+    let(:model) { events_query.send :event_model }
+
+    context "when organization is using postgres" do
+      let(:organization) { create(:organization, clickhouse_events_store: false) }
+
+      it { expect(model).to eq(Event) }
+
+      context "when `enriched` filter is true" do
+        let(:filters) { {enriched: true} }
+
+        it { expect(model).to eq(Event) }
+      end
+    end
+
+    context "when organization is not using clickhouse" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it { expect(model).to eq(Clickhouse::EventsRaw) }
+
+      context "when `enriched` filter is true" do
+        let(:filters) { {enriched: true} }
+
+        it { expect(model).to eq(Clickhouse::EventsEnriched) }
+      end
+    end
+  end
 end

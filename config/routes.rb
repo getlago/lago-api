@@ -89,6 +89,7 @@ Rails.application.routes.draw do
         put :void, on: :member
         post :estimate, on: :collection
       end
+      get :events_enriched, to: "events#index_enriched"
       resources :events, only: %i[create show index] do
         post :estimate_fees, on: :collection
         post :estimate_instant_fees, on: :collection

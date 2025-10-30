@@ -19,6 +19,10 @@ module Api
 
     attr_reader :current_api_key, :current_organization
 
+    def ensure_organization_uses_clickhouse
+      forbidden_error(code: "endpoint_not_available") unless current_organization.clickhouse_events_store?
+    end
+
     def authenticate
       return unauthorized_error unless auth_token
 
@@ -36,6 +40,10 @@ module Api
     def set_context_source
       CurrentContext.source = "api"
       CurrentContext.api_key_id = current_api_key.id
+    end
+
+    def set_beta_header!
+      response.set_header("X-Lago-Endpoint-Status", "beta")
     end
 
     def track_api_key_usage
