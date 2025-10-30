@@ -37,7 +37,7 @@ module Subscriptions
 
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at
+          timestamp: new_subscription.started_at + 1.second
         )
 
         after_commit do

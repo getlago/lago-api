@@ -120,7 +120,7 @@ module Subscriptions
       if new_subscription.active?
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at
+          timestamp: new_subscription.started_at + 1.second
         )
       end
 
