@@ -93,16 +93,22 @@ module CreditNotes
         add_error(field: :credit_amount_cents, error_code: "cannot_credit_invoice")
       end
 
-      return true if credit_note.credit_amount_cents <= invoice.fee_total_amount_cents - credited_invoice_amount_cents
+      creditable = invoice.fee_total_amount_cents - credited_invoice_amount_cents
+      return true if credit_note.credit_amount_cents <= creditable
 
-      add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
+      if (credit_note.credit_amount_cents - creditable).abs > 1
+        add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
+      end
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
     def valid_remaining_invoice_amount?
-      return true if total_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
+      remaining = invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
+      return true if total_amount_cents <= remaining
 
-      add_error(field: :base, error_code: "higher_than_remaining_invoice_amount")
+      if (total_amount_cents - remaining).abs > 1
+        add_error(field: :base, error_code: "higher_than_remaining_invoice_amount")
+      end
     end
 
     # NOTE: Check if total amount is greater than 0
