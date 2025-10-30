@@ -13,6 +13,7 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::CreateInput do
     expect(subject).to accept_argument(:ignore_paid_top_up_limits).of_type("Boolean")
     expect(subject).to accept_argument(:method).of_type("RecurringTransactionMethodEnum")
     expect(subject).to accept_argument(:paid_credits).of_type("String")
+    expect(subject).to accept_argument(:payment_method).of_type("PaymentMethodReferenceInput")
     expect(subject).to accept_argument(:started_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:target_ongoing_balance).of_type("String")
     expect(subject).to accept_argument(:threshold_credits).of_type("String")
