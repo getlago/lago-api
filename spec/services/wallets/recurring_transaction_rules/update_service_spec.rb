@@ -80,7 +80,11 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
             method: "target",
             paid_credits: "105",
             target_ongoing_balance: "300",
-            trigger: "interval"
+            trigger: "interval",
+            payment_method: {
+              payment_method_id: nil,
+              payment_method_type: "manual"
+            }
           }
         ]
       end
@@ -97,7 +101,9 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           paid_credits: 105.0,
           target_ongoing_balance: 300.0,
           threshold_credits: 0.0,
-          trigger: "interval"
+          trigger: "interval",
+          payment_method_id: nil,
+          payment_method_type: "manual"
         )
         expect(rule.id).not_to eq(recurring_transaction_rule.id)
       end
@@ -138,6 +144,87 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         it "updates existing recurring transaction rule with new transaction_metadata" do
           rule = result.wallet.reload.recurring_transaction_rules.active.first
           expect(rule.transaction_metadata).to eq(transaction_metadata)
+        end
+      end
+    end
+
+    context "when sending payment_method" do
+      let(:payment_method) { create(:payment_method, organization: wallet.organization, customer: wallet.customer) }
+      let(:payment_method_params) do
+        {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        }
+      end
+      let(:params) do
+        [
+          {
+            lago_id: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "weekly",
+            paid_credits: "105",
+            granted_credits: "105",
+            started_at: "2024-05-30T12:48:26Z",
+            payment_method: payment_method_params
+          }
+        ]
+      end
+
+      before { payment_method }
+
+      context "with valid payment method" do
+        it "updates existing recurring transaction rule with new payment method" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
+          expect(rule.payment_method_id).to eq(payment_method.id)
+          expect(rule.payment_method_type).to eq("provider")
+        end
+      end
+
+      context "when payment method is already attached" do
+        before do
+          recurring_transaction_rule.payment_method = payment_method
+          recurring_transaction_rule.payment_method_type = "provider"
+        end
+
+        let(:payment_method_params) do
+          {
+            payment_method_id: nil,
+            payment_method_type: "provider"
+          }
+        end
+
+        it "removes payment_method" do
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
+          expect(rule.payment_method_id).to eq(nil)
+          expect(rule.payment_method_type).to eq("provider")
+        end
+      end
+
+      context "when payment method type is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "when payment method id is not correct" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: "123",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
     end

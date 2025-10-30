@@ -3029,6 +3029,7 @@ input CreateRecurringTransactionRuleInput {
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
   paidCredits: String
+  paymentMethod: PaymentMethodReferenceInput
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -11390,6 +11391,7 @@ input UpdateRecurringTransactionRuleInput {
   lagoId: ID
   method: RecurringTransactionMethodEnum
   paidCredits: String
+  paymentMethod: PaymentMethodReferenceInput
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String

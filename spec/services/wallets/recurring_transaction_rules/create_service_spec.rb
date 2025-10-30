@@ -259,6 +259,84 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           end
         end
       end
+
+      context "with payment method" do
+        let(:payment_method) { create(:payment_method, organization: wallet.organization, customer: wallet.customer) }
+        let(:service_result) { create_service.call }
+        let(:rule_params) do
+          {
+            trigger: "threshold",
+            threshold_credits: "1.0",
+            payment_method: payment_method_params
+          }
+        end
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "provider"
+          }
+        end
+
+        before { payment_method }
+
+        it "creates recurring rule" do
+          expect { service_result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+          expect(service_result).to be_success
+
+          expect(wallet.recurring_transaction_rules.first).to have_attributes(
+            payment_method_id: payment_method.id,
+            payment_method_type: "provider"
+          )
+        end
+
+        context "when payment method id is nil" do
+          let(:payment_method_params) do
+            {
+              payment_method_id: nil,
+              payment_method_type: "provider"
+            }
+          end
+
+          it "creates recurring rule" do
+            expect { service_result }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+            expect(service_result).to be_success
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              payment_method_id: nil,
+              payment_method_type: "provider"
+            )
+          end
+        end
+
+        context "when payment method type is not correct" do
+          let(:payment_method_params) do
+            {
+              payment_method_id: payment_method.id,
+              payment_method_type: "invalid"
+            }
+          end
+
+          it "returns an error" do
+            expect(service_result).not_to be_success
+            expect(service_result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+          end
+        end
+
+        context "when payment method id is not correct" do
+          let(:payment_method_params) do
+            {
+              payment_method_id: "123",
+              payment_method_type: "provider"
+            }
+          end
+
+          it "returns an error" do
+            expect(service_result).not_to be_success
+
+            expect(service_result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+          end
+        end
+      end
     end
   end
 end

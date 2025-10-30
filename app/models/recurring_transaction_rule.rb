@@ -5,6 +5,7 @@ class RecurringTransactionRule < ApplicationRecord
 
   belongs_to :wallet
   belongs_to :organization
+  belongs_to :payment_method, optional: true
 
   validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
 
