@@ -33,6 +33,8 @@ nb:
     document_tax_name: Skattefaktura
     due_date: Forfallsdato %{date}
     e_invoicing:
+      credit_card: Kredittkortbetaling
+      credit_card_information: Kredittkortbetaling mottatt %{date}
       discount_reason: Rabatt %{tax_rate} andel
       payment_information: "%{payment_label} på %{currency} %{amount} brukt"
       standard_payment: Standardbetaling

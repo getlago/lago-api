@@ -4,6 +4,7 @@ module EInvoices
   class BaseSerializer
     # More document types defined on UNCL 1001 here
     # https://service.unece.org/trade/untdid/d99a/uncl/uncl1001.htm
+    PAYMENT_RECEIPT = 202
     COMMERCIAL_INVOICE = 380
     CREDIT_NOTE = 381
     PREPAID_INVOICE = 386
@@ -20,6 +21,7 @@ module EInvoices
     # You can see more payments codes UNTDID 4461 here
     # https://service.unece.org/trade/untdid/d21b/tred/tred4461.htm
     STANDARD_PAYMENT = 1
+    CREDIT_CARD_PAYMENT = 48
     PREPAID_PAYMENT = 57
     CREDIT_NOTE_PAYMENT = 97
 
@@ -59,6 +61,8 @@ module EInvoices
         payment_label(type)
       when PREPAID_PAYMENT, CREDIT_NOTE_PAYMENT
         I18n.t("invoice.e_invoicing.payment_information", payment_label: payment_label(type), currency: resource.currency, amount:)
+      when CREDIT_CARD_PAYMENT
+        I18n.t("invoice.e_invoicing.credit_card_information", date: resource.created_at)
       end
     end
 
@@ -70,6 +74,8 @@ module EInvoices
         I18n.t("invoice.prepaid_credits")
       when CREDIT_NOTE_PAYMENT
         I18n.t("invoice.credit_notes")
+      when CREDIT_CARD_PAYMENT
+        I18n.t("invoice.e_invoicing.credit_card")
       end
     end
 
