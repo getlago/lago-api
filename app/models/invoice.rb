@@ -423,7 +423,7 @@ class Invoice < ApplicationRecord
   def all_charges_have_base_fees?
     !Charge.exists?(
       Charge.joins(plan: :subscriptions)
-        .where(subscriptions: { id: subscriptions.select(:id) })
+        .where(subscriptions: {id: subscriptions.select(:id)})
         .where.not(
           id: fees.charge.where(charge_filter_id: nil).select(:charge_id)
         )
@@ -434,8 +434,8 @@ class Invoice < ApplicationRecord
   # Only relevant for charges that have filters defined
   def all_charge_filters_have_fees?
     !ChargeFilter.exists?(
-      ChargeFilter.joins(charge: { plan: :subscriptions })
-        .where(subscriptions: { id: subscriptions.select(:id) })
+      ChargeFilter.joins(charge: {plan: :subscriptions})
+        .where(subscriptions: {id: subscriptions.select(:id)})
         .where.not(
           id: fees.charge.where.not(charge_filter_id: nil).select(:charge_filter_id)
         )
