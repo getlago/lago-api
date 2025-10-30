@@ -23,6 +23,7 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
           externalAccountCode,
           externalId,
           externalName
+          currencies {currencyCode currencyExternalCode}
         }
       }
     GQL
@@ -50,11 +51,18 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
           mappingType: different_mapping_type,
           externalAccountCode: external_account_code,
           externalId: external_id,
-          externalName: external_name
+          externalName: external_name,
+          currencies: [
+            {currencyCode: "GBP", currencyExternalCode: "70000"},
+            {currencyCode: "EUR", currencyExternalCode: "300"}
+          ]
         }
       }
     )
 
+    expect(integration_collection_mapping.reload.currencies).to eq({
+      "GBP" => "70000", "EUR" => "300"
+    })
     result_data = result["data"]["updateIntegrationCollectionMapping"]
 
     # Deprecated fields should be ignored - original values should remain
@@ -64,5 +72,79 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
     expect(result_data["externalAccountCode"]).to eq(external_account_code)
     expect(result_data["externalId"]).to eq(external_id)
     expect(result_data["externalName"]).to eq(external_name)
+    expect(result_data["currencies"]).to contain_exactly(
+      {"currencyCode" => "GBP", "currencyExternalCode" => "70000"},
+      {"currencyCode" => "EUR", "currencyExternalCode" => "300"}
+    )
+  end
+
+  context "when currency_code is duplicated" do
+    it "returns a graphql error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: integration_collection_mapping.id,
+            currencies: [
+              {currencyCode: "EUR", currencyExternalCode: "1"},
+              {currencyCode: "EUR", currencyExternalCode: "2"},
+              {currencyCode: "GBP", currencyExternalCode: "3"},
+              {currencyCode: "USD", currencyExternalCode: "4"},
+              {currencyCode: "USD", currencyExternalCode: "4"}
+            ]
+          }
+        }
+      )
+
+      expect_graphql_error(result:, message: "duplicate_currency_code")
+    end
+  end
+
+  context "when currencies is empty" do
+    it "returns a graphql error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: integration_collection_mapping.id,
+            currencies: []
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result, details: {
+        currencies: ["cannot_be_empty"]
+      })
+    end
+  end
+
+  context "when currencies mapping has an empty value" do
+    it "returns a graphql error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: integration_collection_mapping.id,
+            currencies: [
+              {currencyCode: "EUR", currencyExternalCode: "1"},
+              {currencyCode: "USD", currencyExternalCode: ""}
+            ]
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result, details: {
+        currencies: ["invalid_format"]
+      })
+    end
   end
 end

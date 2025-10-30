@@ -4,6 +4,7 @@ en:
     errors:
       messages:
         blank: value_is_mandatory
+        cannot_be_empty: cannot_be_empty
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
