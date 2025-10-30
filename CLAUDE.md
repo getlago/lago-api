@@ -1,1 +1,1 @@
-.cursor/rules/rails-general.mdc
+@AGENTS.md
