@@ -1788,7 +1788,8 @@ CREATE TABLE public.credit_notes (
     precise_coupons_adjustment_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    xml_file character varying
 );
 
 
@@ -10070,6 +10071,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251029140035'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),

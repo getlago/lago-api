@@ -127,8 +127,8 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
-    it "enqueues a CreditNotes::GeneratePdfJob after commit" do
-      expect { subject }.to have_enqueued_job_after_commit(CreditNotes::GeneratePdfJob).with do |job_credit_note|
+    it "enqueues a CreditNotes::GenerateDocumentsJob after commit" do
+      expect { subject }.to have_enqueued_job_after_commit(CreditNotes::GenerateDocumentsJob).with do |job_credit_note|
         expect(job_credit_note).to eq(credit_note)
       end
     end
@@ -648,7 +648,7 @@ RSpec.describe CreditNotes::CreateService do
         subject
 
         expect(SendWebhookJob).not_to have_been_enqueued.with("credit_note.created", CreditNote)
-        expect(CreditNotes::GeneratePdfJob).not_to have_been_enqueued
+        expect(CreditNotes::GenerateDocumentsJob).not_to have_been_enqueued
       end
 
       it "does not send an email" do
