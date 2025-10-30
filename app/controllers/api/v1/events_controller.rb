@@ -5,6 +5,8 @@ module Api
     class EventsController < Api::BaseController
       skip_audit_logs!
 
+      before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]
+
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
 
       def create
@@ -91,10 +93,6 @@ module Api
 
       def index_enriched
         set_beta_header!
-
-        unless current_organization.clickhouse_events_store?
-          return forbidden_error(code: "endpoint_not_available")
-        end
 
         result = EventsQuery.call(
           organization: current_organization,

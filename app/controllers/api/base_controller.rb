@@ -19,6 +19,10 @@ module Api
 
     attr_reader :current_api_key, :current_organization
 
+    def ensure_organization_uses_clickhouse
+      forbidden_error(code: "endpoint_not_available") unless current_organization.clickhouse_events_store?
+    end
+
     def authenticate
       return unauthorized_error unless auth_token
 

@@ -404,7 +404,6 @@ RSpec.describe Api::V1::EventsController, type: :request do
       it "returns an error" do
         subject
         expect(response).to have_http_status(:forbidden)
-        expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
       end
     end
 
