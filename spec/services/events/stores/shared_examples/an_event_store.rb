@@ -296,6 +296,14 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     it "returns the sum of precise_total_amount_cent values" do
       expect(event_store.sum_precise_total_amount_cents).to eq(15)
     end
+
+    context "without events" do
+      let(:events) { [] }
+
+      it "returns zero" do
+        expect(event_store.sum_precise_total_amount_cents).to eq(0)
+      end
+    end
   end
 
   describe "#grouped_sum_precise_total_amount_cents" do

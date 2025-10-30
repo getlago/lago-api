@@ -338,7 +338,7 @@ module Events
             FROM events
           SQL
 
-          connection.select_value(sql)
+          connection.select_value(sql) || 0
         end
       end
 
