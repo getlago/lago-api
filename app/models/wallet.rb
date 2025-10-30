@@ -6,6 +6,7 @@ class Wallet < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
+  belongs_to :payment_method, optional: true
 
   has_many :wallet_transactions
   has_many :recurring_transaction_rules

@@ -19,6 +19,7 @@ module Wallets
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
+      return result unless valid_payment_method?
 
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
@@ -37,6 +38,11 @@ module Wallets
 
         if params.key?(:applies_to)
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
+        end
+
+        if params.key?(:payment_method)
+          wallet.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+          wallet.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
         process_billable_metrics
@@ -95,6 +101,11 @@ module Wallets
       Wallets::ValidateLimitationsService.new(result, **params).valid?
     end
 
+    def valid_payment_method?
+      result.payment_method = payment_method
+      PaymentMethods::ValidateService.new(result, **params).valid?
+    end
+
     def process_billable_metrics
       # In case of adding new type of limitation in wallet_targets, query from below should use compact to avoid nil values in the array
       existing_wallet_billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id)
@@ -134,6 +145,13 @@ module Wallets
       else
         BillableMetric.where(id: billable_metric_identifiers, organization_id: wallet.organization_id)
       end
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: wallet.organization_id)
     end
   end
 end

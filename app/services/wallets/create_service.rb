@@ -15,6 +15,7 @@ module Wallets
     def call
       result.billable_metric_identifiers = billable_metric_identifiers
       result.billable_metrics = billable_metrics
+      result.payment_method = payment_method
 
       return result unless valid?
 
@@ -37,6 +38,11 @@ module Wallets
 
       if params.key?(:applies_to)
         attributes[:allowed_fee_types] = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
+      end
+
+      if params.key?(:payment_method)
+        attributes[:payment_method_type] = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        attributes[:payment_method_id] = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
       wallet = Wallet.new(attributes)
@@ -128,6 +134,13 @@ module Wallets
       else
         BillableMetric.where(id: billable_metric_identifiers, organization_id: params[:organization_id])
       end
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: params[:organization_id])
     end
   end
 end
