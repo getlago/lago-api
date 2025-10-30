@@ -33,6 +33,8 @@ pt-BR:
     document_tax_name: Nota fiscal
     due_date: Vencimento %{date}
     e_invoicing:
+      credit_card: Pagamento com cartão de crédito
+      credit_card_information: Pago com cartão de crédito em %{date}
       discount_reason: Desconto da parte de %{tax_rate}
       payment_information: "%{payment_label} de %{currency} %{amount} aplicado"
       standard_payment: Pagamento padrão

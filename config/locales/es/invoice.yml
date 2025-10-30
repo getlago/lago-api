@@ -32,6 +32,8 @@ es:
     document_tax_name: Factura fiscal
     due_date: Vence el %{date}
     e_invoicing:
+      credit_card: Pago con tarjeta de crédito
+      credit_card_information: Pago con tarjeta de crédito recibido el %{date}
       discount_reason: Descuento del %{tax_rate}
       payment_information: "%{payment_label} de %{currency} %{amount} aplicado"
       standard_payment: Pago estándar
