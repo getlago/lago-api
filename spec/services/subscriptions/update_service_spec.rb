@@ -550,6 +550,75 @@ RSpec.describe Subscriptions::UpdateService do
           end
         end
       end
+
+      context "with pending subscription, fixed charge overrides and mixed apply_units_immediately" do
+        around { |test| lago_premium!(&test) }
+
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:, interval: :weekly) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription_at) { 7.days.from_now }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            :calendar,
+            plan:,
+            customer:,
+            subscription_at:,
+            status: :pending
+          )
+        end
+
+        let(:params) do
+          {
+            plan_overrides: {
+              fixed_charges: [
+                {
+                  id: fixed_charge1.id,
+                  units: 200,
+                  apply_units_immediately: true
+                },
+                {
+                  id: fixed_charge2.id,
+                  units: 300,
+                  apply_units_immediately: false
+                }
+              ]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+        end
+
+        it "creates override fixed charges for both fixed charges" do
+          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+
+          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+          expect(fc1_override.units).to eq(200)
+          expect(fc2_override.units).to eq(300)
+        end
+
+        it "does not create fixed charge events for pending subscription" do
+          travel_to(Time.zone.local(2025, 10, 29, 15, 33)) do
+            expect { update_service.call }.not_to change(FixedChargeEvent, :count)
+
+            subscription.reload
+
+            expect(subscription).to be_pending
+            expect(subscription.plan.parent_id).to eq(plan.id)
+            expect(subscription.fixed_charge_events.count).to be_zero
+          end
+        end
+      end
     end
 
     context "with empty params" do
