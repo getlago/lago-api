@@ -6,6 +6,7 @@ RSpec.describe Types::IntegrationCollectionMappings::Object do
   subject { described_class }
 
   it do
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:integration_id).of_type("ID!")
     expect(subject).to have_field(:mapping_type).of_type("MappingTypeEnum!")

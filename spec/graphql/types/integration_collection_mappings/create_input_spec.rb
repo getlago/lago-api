@@ -6,6 +6,7 @@ RSpec.describe Types::IntegrationCollectionMappings::CreateInput do
   subject { described_class }
 
   it do
+    expect(subject).to accept_argument(:billing_entity_id).of_type("ID")
     expect(subject).to accept_argument(:integration_id).of_type("ID!")
     expect(subject).to accept_argument(:mapping_type).of_type("MappingTypeEnum!")
     expect(subject).to accept_argument(:external_account_code).of_type("String")
