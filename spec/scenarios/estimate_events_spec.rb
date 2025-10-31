@@ -374,6 +374,68 @@ describe "Estimate In Advance Events" do
           end
         end
       end
+
+      context "with free units" do
+        let(:charge) do
+          create(
+            :percentage_charge,
+            plan:,
+            billable_metric: metric,
+            pay_in_advance: true,
+            properties: {rate: "50", free_units_per_events: 1}
+          )
+        end
+
+        it "returns the estimated price of the events, taking care of the existing ones" do
+          travel_to(Time.zone.parse("2025-09-01")) do
+            create_subscription({
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code
+            })
+          end
+
+          subscription = customer.subscriptions.last
+
+          # Estimate event without existing events
+          travel_to(Time.zone.parse("2025-09-02")) do
+            result = estimate_event({
+              code: metric.code,
+              external_subscription_id: subscription.external_id,
+              properties: {metric.field_name => 4}
+            })
+
+            fee = result[:fees].first
+            expect(fee["amount_cents"]).to eq(0)
+            expect(fee["units"]).to eq("4.0")
+            expect(fee["events_count"]).to eq(1)
+          end
+
+          # Create an event
+          travel_to(Time.zone.parse("2025-09-03")) do
+            create_event({
+              transaction_id: SecureRandom.uuid,
+              code: metric.code,
+              external_subscription_id: subscription.external_id,
+              properties: {metric.field_name => 4}
+            })
+          end
+
+          # Estimate a new event with an existing one
+          travel_to(Time.zone.parse("2025-09-04")) do
+            result = estimate_event({
+              code: metric.code,
+              external_subscription_id: subscription.external_id,
+              properties: {metric.field_name => 4}
+            })
+
+            fee = result[:fees].first
+            expect(fee["amount_cents"]).to eq(200)
+            expect(fee["units"]).to eq("4.0")
+            expect(fee["events_count"]).to eq(1)
+          end
+        end
+      end
     end
   end
 

@@ -334,7 +334,7 @@ module Events
           sql = <<-SQL
             WITH events AS (#{events_sql})
 
-            SELECT SUM(events.precise_total_amount_cents)
+            SELECT COALESCE(SUM(events.precise_total_amount_cents), 0)
             FROM events
           SQL
 
