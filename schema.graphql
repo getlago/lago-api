@@ -3028,6 +3028,7 @@ input CreateRecurringTransactionRuleInput {
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
   paidCredits: String
+  paymentMethod: PaymentMethodReferenceInput
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -7998,6 +7999,16 @@ type PaymentMethodCollection {
   metadata: CollectionMetadata!
 }
 
+input PaymentMethodReferenceInput {
+  paymentMethodId: ID
+  paymentMethodType: PaymentMethodTypeEnum
+}
+
+enum PaymentMethodTypeEnum {
+  manual
+  provider
+}
+
 union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
@@ -11369,6 +11380,7 @@ input UpdateRecurringTransactionRuleInput {
   lagoId: ID
   method: RecurringTransactionMethodEnum
   paidCredits: String
+  paymentMethod: PaymentMethodReferenceInput
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
