@@ -129,7 +129,7 @@ module Fees
       # Prevent trying to create a fee with negative units or amount.
       if amount_result.units.negative? || amount_result.amount.negative?
         amount_result.amount = amount_result.unit_amount = BigDecimal(0)
-        amount_result.full_units_number = amount_result.units = amount_result.total_aggregated_units = BigDecimal(0)
+        amount_result.full_units_number = amount_result.units = BigDecimal(0)
       end
 
       # NOTE: amount_result should be a BigDecimal, we need to round it
