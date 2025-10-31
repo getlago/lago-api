@@ -56,6 +56,7 @@ Rails.application.configure do
   config.hosts << "api"
 
   config.license_url = ENV.fetch("LAGO_LICENSE_URL", "http://license:3000")
+  config.api_key_cache_ttl = 10.seconds
 
   config.action_mailer.perform_caching = false
   config.action_mailer.perform_deliveries = true

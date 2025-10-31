@@ -46,6 +46,8 @@ module LagoApi
     end
 
     config.active_support.cache_format_version = 7.1
+
+    config.api_key_cache_ttl = 1.hour
   end
 end
 

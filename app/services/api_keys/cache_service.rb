@@ -3,12 +3,11 @@
 module ApiKeys
   class CacheService < ::CacheService
     CACHE_KEY_VERSION = "1"
-    CACHE_DURATION = 1.hour
 
     def initialize(auth_token, with_cache: false)
       @auth_token = auth_token
       @with_cache = with_cache
-      super(auth_token, expires_in: CACHE_DURATION)
+      super(auth_token, expires_in: Rails.application.config.api_key_cache_ttl)
     end
 
     def self.expire_all_cache(organization)
@@ -57,11 +56,12 @@ module ApiKeys
     end
 
     def write_to_cache(api_key)
-      # Ensure cache is kept for 1 hour at most
-      expiration = if api_key.expires_at && api_key.expires_at < Time.current + CACHE_DURATION
+      # Ensure cache is kept for 1 hour at most (10 seconds in development)
+      cache_duration = Rails.application.config.api_key_cache_ttl
+      expiration = if api_key.expires_at && api_key.expires_at < Time.current + cache_duration
         (api_key.expires_at - Time.current).to_i.seconds
       else
-        CACHE_DURATION
+        cache_duration
       end
 
       Rails.cache.write(
