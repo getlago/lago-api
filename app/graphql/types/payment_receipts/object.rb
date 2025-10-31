@@ -12,6 +12,7 @@ module Types
       field :number, String, null: false
       field :organization, Types::Organizations::OrganizationType, null: false
       field :payment, Types::Payments::Object, null: false
+      field :xml_url, String, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     end

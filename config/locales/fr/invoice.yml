@@ -33,6 +33,8 @@ fr:
     document_tax_name: Facture fiscale
     due_date: Date d'échéance le %{date}
     e_invoicing:
+      credit_card: Paiement par carte de crédit
+      credit_card_information: Paiement par carte de crédit reçu le %{date}
       discount_reason: Remise %{tax_rate} part
       payment_information: "%{payment_label} de %{currency} %{amount} appliqué"
       standard_payment: Paiement standard

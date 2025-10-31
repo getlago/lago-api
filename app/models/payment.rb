@@ -16,6 +16,8 @@ class Payment < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_one :payment_receipt, dependent: :destroy
 
+  alias_attribute :currency, :amount_currency
+
   monetize :amount_cents
 
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
@@ -29,6 +31,8 @@ class Payment < ApplicationRecord
   validate :payment_request_succeeded, on: :create
 
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
+
+  delegate :billing_entity, to: :customer
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
@@ -80,13 +84,19 @@ class Payment < ApplicationRecord
 
     type = provider_payment_method_data["type"]
     brand = provider_payment_method_data["brand"]
-    last4 = provider_payment_method_data["last4"]
 
     if type == "card"
-      "#{brand.to_s.titleize} **** #{last4}"
+      "#{brand.to_s.titleize} #{card_last_digits}"
     else
       type.to_s.titleize
     end
+  end
+
+  def card_last_digits
+    return nil if provider_payment_method_data.blank?
+    return nil if provider_payment_method_data["type"] != "card"
+
+    "**** #{provider_payment_method_data["last4"]}"
   end
 
   private

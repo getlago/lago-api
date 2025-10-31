@@ -56,5 +56,23 @@ RSpec.describe EInvoices::FacturX::TradeSettlementPayment do
         expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Credit notes of USD 10.00 applied")
       end
     end
+
+    context "when CREDIT_CARD_PAYMENT" do
+      let(:resource) { create(:payment, provider_payment_method_data: {"type" => "card", "brand" => "visa", "last4" => "1234"}) }
+      let(:type) { described_class::CREDIT_CARD_PAYMENT }
+
+      it "contains section name as comment" do
+        expect(subject).to contains_xml_comment("Payment Means: Credit Card Payment")
+      end
+
+      it "have the payment code and information" do
+        expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(type)
+        expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Credit card payment received on #{resource.created_at}")
+      end
+
+      it "have the card attributes" do
+        expect(subject).to contains_xml_node("#{root}/ram:ApplicableTradeSettlementFinancialCard/ram:ID").with_value(resource.card_last_digits)
+      end
+    end
   end
 end

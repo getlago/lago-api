@@ -16,7 +16,7 @@ module EInvoices
           xml["ram"].ID resource.number
           xml["ram"].TypeCode type_code
           xml["ram"].IssueDateTime do
-            xml["udt"].DateTimeString formatted_date(resource.issuing_date), format: CCYYMMDD
+            xml["udt"].DateTimeString formatted_date(issue_date), format: CCYYMMDD
           end
           notes.each do |note|
             xml["ram"].IncludedNote do
@@ -29,6 +29,10 @@ module EInvoices
       private
 
       attr_accessor :type_code, :notes
+
+      def issue_date
+        resource.try(:issuing_date) || resource.created_at
+      end
     end
   end
 end
