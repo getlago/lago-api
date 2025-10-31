@@ -1219,7 +1219,7 @@ RSpec.describe Fees::ChargeService do
           )
         end
 
-        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
 
         before do
           create(
@@ -1228,7 +1228,7 @@ RSpec.describe Fees::ChargeService do
             subscription:,
             code: billable_metric.code,
             timestamp: Time.zone.parse("2022-03-16"),
-            properties: {item_id: -10}
+            properties: {value: -10}
           )
         end
 
@@ -1244,6 +1244,7 @@ RSpec.describe Fees::ChargeService do
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
             units: 0,
+            total_aggregated_units: -10.0,
             unit_amount_cents: 0,
             precise_unit_amount: 0,
             events_count: 1,
@@ -1254,10 +1255,10 @@ RSpec.describe Fees::ChargeService do
                   "flat_unit_amount" => "0.01",
                   "from_value" => 0,
                   "per_unit_amount" => "0.01",
-                  "per_unit_total_amount" => "-0.1",
+                  "per_unit_total_amount" => "-0.051612903225806452",
                   "to_value" => nil,
-                  "total_with_flat_amount" => "-0.09",
-                  "units" => "-10.0"
+                  "total_with_flat_amount" => "-0.041612903225806452",
+                  "units" => "-5.1612903225806452"
                 }
               ]
             }
