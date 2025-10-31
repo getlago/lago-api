@@ -39,10 +39,6 @@ module EInvoices
 
       attr_accessor :payment
 
-      def payment_receipt
-        payment.payment_receipt
-      end
-
       def payment_terms_description
         "#{pay_method.to_s.titleize} payment received on  #{payment.created_at}"
       end
@@ -89,23 +85,6 @@ module EInvoices
         FacturX::TradeAgreement::Options.new(
           tax_registration: true
         )
-      end
-
-      def invoice_numbers
-        payment.invoices.pluck(:number).to_sentence
-      end
-
-      def notes
-        ["Receipt for payment of #{payment.amount_currency} #{payment.amount} received via #{payment_mode} for invoice #{invoice_numbers}"]
-      end
-
-      def payment_mode
-        case payment.payment_type
-        when "manual"
-          "Manual"
-        else
-          payment.payment_provider_type
-        end
       end
     end
   end

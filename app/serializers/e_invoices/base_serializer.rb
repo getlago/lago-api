@@ -38,6 +38,13 @@ module EInvoices
     # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
     UNIT_CODE = "C62"
 
+    # Response codes for Payments
+    # There are no strict codes for this
+    ACKNOWLEDGEMENT = "AC"
+    PENDING = "PE"
+    REJECTED = "RE"
+    PAID = "PD"
+
     def initialize(xml:, resource: nil)
       @xml = xml
       @resource = resource
@@ -53,6 +60,16 @@ module EInvoices
 
     def formatted_date(date)
       date.strftime(self.class::DATEFORMAT)
+    end
+
+    def invoice_type_code(invoice)
+      if invoice.credit?
+        EInvoices::BaseSerializer::PREPAID_INVOICE
+      elsif invoice.self_billed?
+        EInvoices::BaseSerializer::SELF_BILLED_INVOICE
+      else
+        EInvoices::BaseSerializer::COMMERCIAL_INVOICE
+      end
     end
 
     def payment_information(type, amount)
