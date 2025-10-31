@@ -7,7 +7,7 @@ module Integrations
         module Payloads
           class Anrok < BasePayload
             def initialize(integration:, customer:, invoice:, integration_customer:, fees: [])
-              super(integration:)
+              super(integration:, billing_entity: customer.billing_entity)
 
               @customer = customer
               @integration_customer = integration_customer
