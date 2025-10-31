@@ -12,6 +12,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
+  let(:blank_pdf_path) { Rails.root.join("spec/fixtures/blank.pdf") }
 
   before do
     billing_entity = organization.default_billing_entity
@@ -97,7 +98,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       let(:context) { "admin" }
 
       before do
-        invoice.file.attach(
+        payment_receipt.file.attach(
           io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
           filename: "receipt.pdf",
           content_type: "application/pdf"
@@ -108,6 +109,65 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
         result = payment_receipt_generate_service.call
 
         expect(result.payment_receipt.file.filename.to_s).not_to eq("receipt.pdf")
+      end
+    end
+
+    context "when create temp files" do
+      let(:pdf_tempfile) { instance_double(Tempfile).as_null_object }
+
+      before do
+        allow(pdf_tempfile).to receive(:path).and_return(blank_pdf_path)
+        allow(Tempfile).to receive(:new).and_call_original
+        allow(Tempfile).to receive(:new).with([payment_receipt.number, ".pdf"]).and_return(pdf_tempfile)
+      end
+
+      it "unlink the pdf file at the end" do
+        described_class.call(payment_receipt:, context:)
+
+        expect(pdf_tempfile).to have_received(:unlink)
+      end
+
+      context "with einvoicing enabled" do
+        let(:xml_tempfile) { instance_double(Tempfile).as_null_object }
+
+        before do
+          payment_receipt.billing_entity.update(country: "FR", einvoicing: true)
+
+          allow(Tempfile).to receive(:new).with([payment_receipt.number, ".xml"]).and_return(xml_tempfile)
+          allow(Utils::PdfAttachmentService).to receive(:call)
+        end
+
+        it "unlink all files at the end" do
+          described_class.call(payment_receipt:, context:)
+
+          expect(pdf_tempfile).to have_received(:unlink)
+          expect(xml_tempfile).to have_received(:unlink)
+        end
+      end
+    end
+
+    context "when einvoicing is enabled" do
+      let(:fake_xml) { "<xml>content</xml>" }
+      let(:country) { nil }
+      let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+
+      before do
+        payment_receipt.billing_entity.update(country:, einvoicing: true)
+
+        allow(EInvoices::Payments::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(Utils::PdfAttachmentService).to receive(:call)
+      end
+
+      context "with FR country" do
+        let(:country) { "FR" }
+
+        it "generates the payment_receipt with attached facturx xml synchronously" do
+          result = described_class.call(payment_receipt:, context:)
+
+          expect(Utils::PdfAttachmentService).to have_received(:call)
+          expect(EInvoices::Payments::FacturX::CreateService).to have_received(:call)
+          expect(result.payment_receipt.file).to be_present
+        end
       end
     end
   end
