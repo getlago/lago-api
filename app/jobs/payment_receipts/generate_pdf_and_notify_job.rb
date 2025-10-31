@@ -10,14 +10,8 @@ module PaymentReceipts
       end
     end
 
-    retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
-
     def perform(payment_receipt:, email:)
-      PaymentReceipts::GeneratePdfService.call!(payment_receipt:, context: "api")
-
-      if email
-        PaymentReceiptMailer.with(payment_receipt:).created.deliver_later
-      end
+      PaymentReceipts::GenerateDocumentsJob.perform_later(payment_receipt:, notify: email)
     end
   end
 end
