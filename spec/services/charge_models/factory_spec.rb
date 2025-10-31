@@ -6,12 +6,13 @@ RSpec.describe ChargeModels::Factory do
   subject(:factory) { described_class }
 
   let(:charge) { build(:standard_charge) }
-  let(:aggregation_result) { BaseService::Result.new }
-  let(:properties) { charge.properties }
-
-  let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
 
   describe "#new_instance" do
+    let(:aggregation_result) { BaseService::Result.new }
+    let(:properties) { charge.properties }
+
+    let(:result) { factory.new_instance(chargeable: charge, aggregation_result:, properties:) }
+
     context "when chargeable is not a charge or a fixed charge" do
       let(:chargeable) { build(:fee) }
 
