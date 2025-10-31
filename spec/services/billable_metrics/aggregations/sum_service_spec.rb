@@ -68,6 +68,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       }
     )
   end
+
   let(:latest_events) do
     create_list(
       :event,
@@ -398,6 +399,48 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
         expect(result.aggregation).to eq(0)
       end
+    end
+  end
+
+  context "with non persisted event" do
+    let(:options) do
+      {free_units_per_events: 4, free_units_per_total_aggregation: 30, is_pay_in_advance: true}
+    end
+
+    let(:latest_events) do
+      create_list(
+        :event,
+        2,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        customer:,
+        subscription:,
+        timestamp: to_datetime - 1.day,
+        properties: {
+          total_count: 12
+        }
+      )
+    end
+
+    let(:event) do
+      build(
+        :common_event,
+        subscription:,
+        organization:,
+        billable_metric:,
+        properties: {
+          billable_metric.field_name => 10
+        },
+        persisted: false
+      )
+    end
+
+    let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+
+    it "returns period maximum as aggregation" do
+      result = sum_service.aggregate(options:)
+
+      expect(result.options[:running_total]).to eq([12.0, 24.0, 34.0])
     end
   end
 
@@ -771,6 +814,28 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         result = sum_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
 
         expect(result.event_aggregation).to eq([12])
+      end
+    end
+
+    context "when including event value" do
+      let(:event) do
+        build(
+          :common_event,
+          subscription:,
+          organization:,
+          billable_metric:,
+          properties: {
+            billable_metric.field_name => 10
+          }
+        )
+      end
+
+      let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+
+      it "includes the event value in the result" do
+        result = sum_service.per_event_aggregation(include_event_value: true)
+
+        expect(result.event_aggregation).to eq([12, 12, 12, 12, 10])
       end
     end
   end
