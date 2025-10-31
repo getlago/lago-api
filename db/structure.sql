@@ -32,6 +32,7 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
+ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
@@ -440,6 +441,8 @@ DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
 DROP INDEX IF EXISTS public.index_integration_resources_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_mappings_unique_billing_entity_id_is_null;
+DROP INDEX IF EXISTS public.index_integration_mappings_unique_billing_entity_id_is_not_null;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
@@ -3645,7 +3648,8 @@ CREATE TABLE public.integration_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid
 );
 
 
@@ -6945,6 +6949,20 @@ CREATE INDEX index_integration_mappings_on_organization_id ON public.integration
 
 
 --
+-- Name: index_integration_mappings_unique_billing_entity_id_is_not_null; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integration_mappings_unique_billing_entity_id_is_not_null ON public.integration_mappings USING btree (mappable_type, mappable_id, integration_id, billing_entity_id) WHERE (billing_entity_id IS NOT NULL);
+
+
+--
+-- Name: index_integration_mappings_unique_billing_entity_id_is_null; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integration_mappings_unique_billing_entity_id_is_null ON public.integration_mappings USING btree (mappable_type, mappable_id, integration_id, organization_id) WHERE (billing_entity_id IS NULL);
+
+
+--
 -- Name: index_integration_resources_on_integration_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9906,6 +9924,14 @@ ALTER TABLE ONLY public.usage_monitoring_triggered_alerts
 
 
 --
+-- Name: integration_mappings fk_rails_e4a58fbcac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_mappings
+    ADD CONSTRAINT fk_rails_e4a58fbcac FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id) ON DELETE CASCADE;
+
+
+--
 -- Name: charge_filters fk_rails_e711e8089e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10113,6 +10139,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251010092830'),
 ('20251010073504'),
 ('20251007160309'),
+('20251007082822'),
+('20251007082809'),
 ('20251003171658'),
 ('20251003171653'),
 ('20250926185510'),
