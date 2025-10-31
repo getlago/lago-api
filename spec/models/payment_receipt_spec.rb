@@ -29,4 +29,22 @@ RSpec.describe PaymentReceipt do
       expect(file_url).to include(ENV["LAGO_API_URL"])
     end
   end
+
+  describe "#xml_url" do
+    before do
+      payment_receipt.save!
+      payment_receipt.xml_file.attach(
+        io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+        filename: "payment_receipt.xml",
+        content_type: "application/xml"
+      )
+    end
+
+    it "returns the xml url" do
+      xml_url = payment_receipt.xml_url
+
+      expect(xml_url).to be_present
+      expect(xml_url).to include(ENV["LAGO_API_URL"])
+    end
+  end
 end

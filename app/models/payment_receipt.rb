@@ -8,11 +8,18 @@ class PaymentReceipt < ApplicationRecord
   delegate :customer, to: :payment
 
   has_one_attached :file
+  has_one_attached :xml_file
 
   def file_url
     return if file.blank?
 
     Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
+  end
+
+  def xml_url
+    return if xml_file.blank?
+
+    Rails.application.routes.url_helpers.rails_blob_url(xml_file, host: ENV["LAGO_API_URL"])
   end
 end
 
