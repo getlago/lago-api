@@ -54,7 +54,7 @@ FactoryBot.define do
 
     trait :with_subscriptions do
       transient do
-        subscriptions { [create(:subscription)] }
+        subscriptions { [create(:subscription, organization:)] }
       end
 
       after :create do |invoice, evaluator|
