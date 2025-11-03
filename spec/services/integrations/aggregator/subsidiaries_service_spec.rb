@@ -35,12 +35,11 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
     it "successfully fetches subsidiaries" do
       result = subsidiaries_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:get)
-        expect(result.subsidiaries.count).to eq(4)
-        expect(result.subsidiaries.first.external_id).to eq("1")
-      end
+      expect(LagoHttpClient::Client).to have_received(:new).with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(lago_client).to have_received(:get)
+      expect(result.subsidiaries.count).to eq(4)
+      expect(result.subsidiaries.first.external_id).to eq("1")
+      expect(result.subsidiaries.first.external_name).to eq("Holo, Inc.")
     end
   end
 end
