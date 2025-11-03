@@ -22,6 +22,8 @@ module Fees
 
       EventsRecord.transaction do
         event.save!
+        result.raise_if_error!
+
         charges.each { |charge| fees += estimated_charge_fees(charge) }
 
         # NOTE: make sure the event is not persisted in database
@@ -53,6 +55,11 @@ module Fees
         timestamp: Time.current,
         precise_total_amount_cents: event_params[:precise_total_amount_cents] || 0
       )
+
+      expression_result = Events::CalculateExpressionService.call(organization:, event: @event)
+      result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?
+
+      @event
     end
 
     def customer
