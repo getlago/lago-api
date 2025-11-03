@@ -174,6 +174,71 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
             end
           end
         end
+
+        context "when subscription is ending" do
+          let(:external_ids) { [subscriptions.first.external_id] }
+          let(:ending_at) { end_of_period.iso8601 }
+          let(:end_of_period) do
+            Subscriptions::DatesService
+              .new_instance(subscriptions.first, Time.current, current_usage: true)
+              .end_of_period
+          end
+          let(:params) do
+            {
+              subscriptions: {
+                external_ids: external_ids
+              }
+            }
+          end
+
+          before { subscriptions.first.update!(ending_at:) }
+
+          context "with ending_at in current period" do
+            it "returns result with subscriptions marked as terminated" do
+              expect(result).to be_success
+
+              expect(subject).to all(
+                be_a(Subscription)
+                  .and(have_attributes(
+                    terminated_at: end_of_period.change(usec: 0),
+                    status: "terminated"
+                  ))
+              )
+            end
+          end
+
+          context "with ending_at in the future" do
+            let(:ending_at) { (Time.current + 5.months).iso8601 }
+
+            it "returns result with active subscription" do
+              expect(result).to be_success
+
+              expect(subject).to all(
+                be_a(Subscription)
+                  .and(have_attributes(
+                    terminated_at: nil,
+                    status: "active"
+                  ))
+              )
+            end
+          end
+
+          context "without ending_at" do
+            let(:ending_at) { nil }
+
+            it "returns result with active subscription" do
+              expect(result).to be_success
+
+              expect(subject).to all(
+                be_a(Subscription)
+                  .and(have_attributes(
+                    terminated_at: nil,
+                    status: "active"
+                  ))
+              )
+            end
+          end
+        end
       end
 
       context "when external_ids are not provided" do
