@@ -8,7 +8,7 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "100"}) }
 
   let(:customer) { create(:customer, organization:) }
 
@@ -96,6 +96,61 @@ RSpec.describe Fees::EstimatePayInAdvanceService do
             pay_in_advance_event_transaction_id: String,
             amount_cents: 120_00
           )
+        end
+      end
+    end
+
+    context "with an expression configured on the billable metric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
+
+      let(:params) do
+        {
+          external_subscription_id:,
+          code:,
+          properties: {left: "1", right: "2"}
+        }
+      end
+
+      before do
+        billable_metric
+      end
+
+      it "creates an event and updates the field name with the result of the expression" do
+        result = estimate_service.call
+
+        expect(result).to be_success
+
+        fee = result.fees.first
+        expect(fee).not_to be_persisted
+        expect(fee).to have_attributes(
+          subscription:,
+          charge:,
+          fee_type: "charge",
+          pay_in_advance: true,
+          invoiceable: charge,
+          events_count: 1,
+          pay_in_advance_event_id: nil,
+          pay_in_advance_event_transaction_id: String,
+          units: 3,
+          amount_cents: 300_00
+        )
+      end
+
+      context "when not all the event properties are not provided" do
+        let(:params) do
+          {
+            external_subscription_id:,
+            code:,
+            properties: {}
+          }
+        end
+
+        it "returns a service failure when the expression fails to evaluate" do
+          result = estimate_service.call
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq("expression_evaluation_failed: Variable: left not found")
         end
       end
     end
