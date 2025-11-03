@@ -20,7 +20,7 @@ ActiveJob::Uniqueness.configure do |config|
   }
 
   if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
-    redis_config.merge({ password: ENV["REDIS_PASSWORD"] })
+    redis_config.merge({password: ENV["REDIS_PASSWORD"]})
   end
 
   config.redlock_servers = [
