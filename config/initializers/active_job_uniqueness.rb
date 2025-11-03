@@ -11,14 +11,19 @@ ActiveJob::Uniqueness.configure do |config|
     retry_jitter: 50
   }
 
+  redis_config = {
+    url: ENV["REDIS_URL"],
+    ssl_params: {
+      verify_mode: OpenSSL::SSL::VERIFY_NONE
+    },
+    reconnect_attempts: 4
+  }
+
   if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
-    uri = URI(ENV["REDIS_URL"])
-    host = [uri.host, uri.path].join("")
-
-    if uri.query.present?
-      host = [host, uri.query].join("?")
-    end
-
-    config.redlock_servers = [RedisClient.new(url: "#{uri.scheme}://:#{ENV["REDIS_PASSWORD"]}@#{host}:#{uri.port}", reconnect_attempts: 4)]
+    redis_config.merge({ password: ENV["REDIS_PASSWORD"] })
   end
+
+  config.redlock_servers = {
+    RedisClient.new(redis_config)
+  }
 end
