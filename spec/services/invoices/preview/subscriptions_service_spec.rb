@@ -200,8 +200,8 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
               expect(subject).to all(
                 be_a(Subscription)
                   .and(have_attributes(
-                        terminated_at: end_of_period.change(usec: 0),
-                        status: "terminated"
+                    terminated_at: end_of_period.change(usec: 0),
+                    status: "terminated"
                   ))
               )
             end
@@ -216,8 +216,8 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
               expect(subject).to all(
                 be_a(Subscription)
                   .and(have_attributes(
-                      terminated_at: nil,
-                      status: "active"
+                    terminated_at: nil,
+                    status: "active"
                   ))
               )
             end

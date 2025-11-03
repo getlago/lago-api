@@ -91,8 +91,6 @@ module Invoices
 
         if customer_subscriptions&.size == 1 && subscription_ending_in_current_period?(current_subscription)
           current_subscription.ending_at.iso8601
-        else
-          nil
         end
       end
 
@@ -107,7 +105,7 @@ module Invoices
       def subscription_ending_in_current_period?(subscription)
         return false unless subscription&.ending_at
 
-        next_billing_day =  Subscriptions::DatesService
+        next_billing_day = Subscriptions::DatesService
           .new_instance(subscription, Time.current, current_usage: true)
           .end_of_period + 1.day
 
