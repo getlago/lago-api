@@ -27,6 +27,6 @@ google:
   service: GCS
   credentials: <%= ENV.fetch('LAGO_GCS_KEYFILE_JSON_PATH', Rails.root.join('gcs_keyfile.json')) %>
   iam: <%= ENV.fetch('LAGO_GCS_IAM', false) %>
-  gsa_email: <%= ENV.fetch('LAGO_GCS_GSA_EMAIL') %>
+  gsa_email: <%= ENV.fetch('LAGO_GCS_GSA_EMAIL', nil) %>
   project: <%= ENV['LAGO_GCS_PROJECT'] %>
   bucket: <%= ENV['LAGO_GCS_BUCKET'] %>
