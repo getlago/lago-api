@@ -23,7 +23,7 @@ ActiveJob::Uniqueness.configure do |config|
     redis_config.merge({ password: ENV["REDIS_PASSWORD"] })
   end
 
-  config.redlock_servers = {
+  config.redlock_servers = [
     RedisClient.new(redis_config)
-  }
+  ]
 end
