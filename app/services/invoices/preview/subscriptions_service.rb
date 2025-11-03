@@ -85,7 +85,15 @@ module Invoices
       end
 
       def terminated_at
-        params.dig(:subscriptions, :terminated_at)
+        terminated_at = params.dig(:subscriptions, :terminated_at)
+
+        return terminated_at if terminated_at
+
+        if customer_subscriptions&.size == 1 && subscription_ending_in_current_period?(current_subscription)
+          current_subscription.ending_at.iso8601
+        else
+          nil
+        end
       end
 
       def external_ids
@@ -94,6 +102,16 @@ module Invoices
 
       def target_plan_code
         params.dig(:subscriptions, :plan_code)
+      end
+
+      def subscription_ending_in_current_period?(subscription)
+        return false unless subscription&.ending_at
+
+        next_billing_day =  Subscriptions::DatesService
+          .new_instance(subscription, Time.current, current_usage: true)
+          .end_of_period + 1.day
+
+        subscription.ending_at.in_time_zone(customer.applicable_timezone) <= next_billing_day
       end
     end
   end
