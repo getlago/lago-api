@@ -101,12 +101,23 @@ module BillableMetrics
 
       def running_total_per_events(limit)
         total = 0.0
-        event_store.events_values(limit:).map { |x| total += x }
+        values = event_store.events_values(limit:)
+
+        # Handles event estimate as event is not persisted
+        if event && !event.persisted && values.size < limit
+          values << event_value
+        end
+
+        values.map { |x| total += x }
       end
 
       def running_total_per_aggregation(aggregation)
         total = 0.0
-        event_store.events_values.each_with_object([]) do |val, accumulator|
+
+        values = event_store.events_values
+        values << event_value if event && !event.persisted
+
+        values.each_with_object([]) do |val, accumulator|
           break accumulator if aggregation < total
 
           accumulator << total += val
@@ -150,8 +161,10 @@ module BillableMetrics
         BigDecimal(result)
       end
 
-      def compute_per_event_aggregation(exclude_event:)
-        event_store.events_values(force_from: true, exclude_event:)
+      def compute_per_event_aggregation(exclude_event:, include_event_value:)
+        values = event_store.events_values(force_from: true, exclude_event:)
+        values += [event_value] if include_event_value
+        values
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)

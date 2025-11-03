@@ -12,22 +12,21 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
+  let(:estimate) { false }
 
   let(:charge_filter) { nil }
 
   let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:) }
-  let(:estimate) { false }
 
   let(:event) do
-    Events::CommonFactory.new_instance(
-      source: create(
-        :event,
-        external_subscription_id: subscription.external_id,
-        external_customer_id: customer.external_id,
-        organization_id: organization.id,
-        properties: event_properties
-      )
+    source = create(
+      :event,
+      external_subscription_id: subscription.external_id,
+      external_customer_id: customer.external_id,
+      organization_id: organization.id,
+      properties: event_properties
     )
+    Events::CommonFactory.new_instance(source:)
   end
 
   let(:event_properties) { {} }
@@ -453,8 +452,20 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       end
     end
 
-    context "when in estimate mode" do
+    context "when event is not persisted" do
       let(:estimate) { true }
+      let(:event) do
+        Events::Common.new(
+          id: nil,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          organization_id: organization.id,
+          properties: event_properties,
+          timestamp: Time.current,
+          precise_total_amount_cents: nil,
+          persisted: false
+        )
+      end
 
       it "does not persist the fee" do
         result = fee_service.call
@@ -576,6 +587,15 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
         expect(SendWebhookJob).not_to have_been_enqueued
           .with("fee.created", Fee)
+      end
+
+      context "when stimate is false" do
+        let(:estimate) { false }
+
+        it "raises an argument error" do
+          expect { fee_service.call }
+            .to raise_error(ArgumentError, "estimate must be true if event if not persisted")
+        end
       end
     end
 
