@@ -7975,6 +7975,7 @@ type PaymentCollection {
 type PaymentMethod {
   createdAt: ISO8601DateTime!
   customer: Customer!
+  details: PaymentMethodDetails
   id: ID!
   isDefault: Boolean!
   paymentProviderCode: String
@@ -7996,6 +7997,14 @@ type PaymentMethodCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type PaymentMethodDetails {
+  brand: String
+  expirationMonth: String
+  expirationYear: String
+  last4: String
+  type: String
 }
 
 union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider

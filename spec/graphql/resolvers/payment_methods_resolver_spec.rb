@@ -30,6 +30,7 @@ RSpec.describe Resolvers::PaymentMethodsResolver do
               isDefault
               paymentProviderCode
               paymentProviderType
+              details { brand last4 }
             }
             metadata { currentPage, totalCount }
           }
@@ -53,6 +54,8 @@ RSpec.describe Resolvers::PaymentMethodsResolver do
       expect(payments_response["collection"].count).to eq(1)
       expect(payments_response["collection"].first["paymentProviderCode"]).to eq(payment_method.payment_provider.code)
       expect(payments_response["collection"].first["paymentProviderType"]).to eq("stripe")
+      expect(payments_response["collection"].first["details"]["brand"]).to eq("Visa")
+      expect(payments_response["collection"].first["details"]["last4"]).to eq("9876")
     end
   end
 end
