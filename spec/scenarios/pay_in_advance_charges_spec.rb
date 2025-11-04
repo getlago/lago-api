@@ -126,7 +126,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
 
       # Create events with timestamp AFTER the current event to invoice, to ensure `event.timestamp` is used as upper bound.
       # NOTE: This does not seem to matter
-      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15, properties: {unique_id: "id_1"})
+      create(:event, code: billable_metric.code, organization:, subscription:, timestamp: feb15 + 10.days, properties: {unique_id: "id_1"})
 
       travel_to(feb15) do
         expect do
