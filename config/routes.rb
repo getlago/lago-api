@@ -21,6 +21,12 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :public do
+    namespace :v1 do
+      resources :permissions, only: [:index]
+    end
+  end
+
   namespace :api do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]

@@ -20,4 +20,12 @@ RSpec.describe Permission do
       expect(described_class::DEFAULT_PERMISSIONS_HASH.keys).to match_array(described_class.const_get(name).keys)
     end
   end
+
+  it "defines default role table" do
+    expect(described_class::DEFAULT_ROLE_TABLE).to be_a(Hash)
+    expect(described_class::DEFAULT_ROLE_TABLE).to be_frozen
+    expect(described_class::DEFAULT_ROLE_TABLE.keys).to all(be_a(String))
+    expect(described_class::DEFAULT_ROLE_TABLE.values.map(&:keys).flatten.uniq).to contain_exactly("admin", "manager", "finance")
+    expect(described_class::DEFAULT_ROLE_TABLE.values.map(&:values).flatten.uniq).to contain_exactly(true, false)
+  end
 end
