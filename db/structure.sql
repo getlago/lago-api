@@ -1938,6 +1938,7 @@ CREATE TABLE public.customers (
     account_type public.customer_account_type DEFAULT 'customer'::public.customer_account_type NOT NULL,
     billing_entity_id uuid NOT NULL,
     payment_receipt_counter bigint DEFAULT 0 NOT NULL,
+    dunning_campaign_ended_at timestamp(6) without time zone,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10070,6 +10071,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251104162323'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),
@@ -10918,4 +10920,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
