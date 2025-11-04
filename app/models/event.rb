@@ -9,6 +9,7 @@ class Event < EventsRecord
 
   belongs_to :organization
 
+  validates :transaction_id, presence: true
   validates :code, presence: true
 
   default_scope -> { kept }
