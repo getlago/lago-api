@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Event do
+  subject { build(:event) }
+
+  it { is_expected.to validate_presence_of(:transaction_id) }
+  it { is_expected.to validate_presence_of(:code) }
+
   describe "#customer" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
