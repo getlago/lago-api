@@ -509,7 +509,8 @@ module Events
 
           connection.select_one(sql)
         end
-        result["aggregation"]
+
+        BigDecimal(result["aggregation"].presence || 0)
       end
 
       def grouped_weighted_sum(initial_values: [])
@@ -544,7 +545,7 @@ module Events
             ]
           )
 
-          prepare_grouped_result(connection.select_all(sql).rows)
+          prepare_grouped_result(connection.select_all(sql).rows, decimal: true)
         end
       end
 
@@ -660,14 +661,14 @@ module Events
       # NOTE: returns the values for each groups
       #       The result format will be an array of hash with the format:
       #       [{ groups: { 'cloud' => 'aws', 'region' => 'us_east_1' }, value: 12.9 }, ...]
-      def prepare_grouped_result(rows, timestamp: false)
+      def prepare_grouped_result(rows, timestamp: false, decimal: false)
         rows.map do |row|
           last_group = timestamp ? -2 : -1
           groups = row.flatten[...last_group].map(&:presence)
 
           result = {
             groups: grouped_by.each_with_object({}).with_index { |(g, r), i| r.merge!(g => groups[i]) },
-            value: row.last
+            value: decimal ? BigDecimal(row.last.presence || 0) : row.last
           }
 
           result[:timestamp] = row[-2] if timestamp
