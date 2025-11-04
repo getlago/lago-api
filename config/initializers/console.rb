@@ -18,13 +18,25 @@ Rails.application.console do
   end
 
   def find(id)
-    if /^gid/.match?(id)
+    model = if /^gid/.match?(id)
       GlobalID::Locator.locate(id)
     elsif Regex::EMAIL.match?(id)
       User.find_by email: id
     else
       raise "Don't know how to resolve this ¯\\_(ツ)_/¯. Please provide a valid email or Global ID."
     end
+    puts "Organization: #{model.organization&.name}"
+    model
+  end
+
+  def retry_generating_invoice(invoice)
+    Invoices::SubscriptionService.new(
+      subscriptions: invoice.subscriptions,
+      timestamp: invoice.invoice_subscriptions.first.timestamp,
+      invoicing_reason: :subscription_periodic,
+      invoice: invoice,
+      skip_charges: invoice.skip_charges
+    ).call
   end
 
   def deadjobs_summary
@@ -38,6 +50,16 @@ Rails.application.console do
       org.save!
     end
     org.reload.premium_integrations
+  end
+
+  def current_usage(subscription, apply_taxes: false, with_cache: false, **kwargs)
+    Invoices::CustomerUsageService.call!(
+      customer: subscription.customer,
+      subscription: subscription,
+      apply_taxes:,
+      with_cache:,
+      **kwargs
+    ).usage
   end
 
   def enable_all_premium_integrations!(org_id)
