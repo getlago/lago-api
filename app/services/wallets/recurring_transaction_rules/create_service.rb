@@ -3,7 +3,7 @@
 module Wallets
   module RecurringTransactionRules
     class CreateService < BaseService
-      Result = BaseResult[:recurring_transaction_rule]
+      Result = BaseResult[:recurring_transaction_rule, :payment_method]
 
       def initialize(wallet:, wallet_params:)
         @wallet = wallet
@@ -14,6 +14,7 @@ module Wallets
 
       def call
         return unless License.premium?
+        return result unless valid_payment_method?
 
         if method == "fixed" && rule_params[:paid_credits].nil? && rule_params[:granted_credits].nil?
           paid_credits = wallet_params[:paid_credits]
@@ -37,6 +38,11 @@ module Wallets
 
         if rule_params.key? :ignore_paid_top_up_limits
           attributes[:ignore_paid_top_up_limits] = ActiveModel::Type::Boolean.new.cast(rule_params[:ignore_paid_top_up_limits])
+        end
+
+        if rule_params.key?(:payment_method)
+          attributes[:payment_method_type] = rule_params[:payment_method][:payment_method_type] if rule_params[:payment_method].key?(:payment_method_type)
+          attributes[:payment_method_id] = rule_params[:payment_method][:payment_method_id] if rule_params[:payment_method].key?(:payment_method_id)
         end
 
         attributes[:invoice_requires_successful_payment] = if rule_params.key?(:invoice_requires_successful_payment)
@@ -84,6 +90,19 @@ module Wallets
           result.single_validation_failure!(field: :recurring_transaction_rules, error_code: "invalid_recurring_rule")
           result.raise_if_error!
         end
+      end
+
+      def valid_payment_method?
+        result.payment_method = payment_method
+
+        PaymentMethods::ValidateService.new(result, **rule_params).valid?
+      end
+
+      def payment_method
+        return @payment_method if defined? @payment_method
+        return nil if rule_params[:payment_method].blank? || rule_params[:payment_method][:payment_method_id].blank?
+
+        @payment_method = PaymentMethod.find_by(id: rule_params[:payment_method][:payment_method_id], organization_id: wallet.organization_id)
       end
     end
   end
