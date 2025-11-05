@@ -2,14 +2,11 @@
 
 class WebhooksQuery < BaseQuery
   Result = BaseResult[:webhooks]
-  Filters = BaseFilters[:status]
-
-  def initialize(webhook_endpoint:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
-    @webhook_endpoint = webhook_endpoint
-    super(organization: webhook_endpoint.organization, pagination:, filters:, search_term:, order:)
-  end
+  Filters = BaseFilters[:webhook_endpoint_id, :status]
 
   def call
+    return result unless validate_filters.success?
+
     webhooks = base_scope.result
     webhooks = paginate(webhooks)
     webhooks = webhooks.order({updated_at: :desc, created_at: :desc})
@@ -18,14 +15,18 @@ class WebhooksQuery < BaseQuery
 
     result.webhooks = webhooks
     result
+  rescue BaseService::FailedResult
+    result
   end
 
   private
 
-  attr_reader :webhook_endpoint
+  def filters_contract
+    @filters_contract ||= Queries::WebhooksQueryFiltersContract.new
+  end
 
   def base_scope
-    webhook_endpoint.webhooks.ransack(search_params)
+    Webhook.where(organization:, webhook_endpoint_id: filters.webhook_endpoint_id).ransack(search_params)
   end
 
   def search_params
