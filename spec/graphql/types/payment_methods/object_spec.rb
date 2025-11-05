@@ -8,6 +8,7 @@ RSpec.describe Types::PaymentMethods::Object do
   it { is_expected.to have_field(:id).of_type("ID!") }
 
   it { is_expected.to have_field(:customer).of_type("Customer!") }
+  it { is_expected.to have_field(:details).of_type("PaymentMethodDetails") }
   it { is_expected.to have_field(:is_default).of_type("Boolean!") }
   it { is_expected.to have_field(:payment_provider_code).of_type("String") }
   it { is_expected.to have_field(:payment_provider_customer_id).of_type("ID") }

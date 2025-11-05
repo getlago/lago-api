@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
 
       field :customer, Types::Customers::Object, null: false
+      field :details, Types::PaymentMethods::Details, null: true
       field :is_default, Boolean, null: false
       field :payment_provider_code, String, null: true
       field :payment_provider_customer_id, ID, null: true
