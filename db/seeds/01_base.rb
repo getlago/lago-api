@@ -29,21 +29,20 @@ k.update_columns(value: "lago_key-hooli-1234567890") # rubocop:disable Rails/Ski
 
 # == BillableMetrics
 
-sum_bm = BillableMetric.find_or_create_by!(
-  organization:,
+sum_bm = BillableMetrics::CreateService.call!(
+  organization_id: organization.id,
   aggregation_type: "sum_agg",
   name: "Sum BM",
   code: "sum_bm",
   field_name: "custom_field"
-)
+).billable_metric
 
-count_bm = BillableMetric.find_or_create_by!(
-  organization:,
+count_bm = BillableMetrics::CreateService.call!(
+  organization_id: organization.id,
   aggregation_type: "count_agg",
   name: "Count BM",
-  code: "count_bm",
-  field_name: "customer_field"
-)
+  code: "count_bm"
+).billable_metric
 
 # == Taxes
 
