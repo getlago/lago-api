@@ -17,6 +17,8 @@ module Types
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::UpdateInput], required: false
 
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
+
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
     end
   end
 end
