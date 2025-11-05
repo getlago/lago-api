@@ -3,7 +3,7 @@
 module Clock
   class InboundWebhooksCleanupJob < ClockJob
     def perform
-      InboundWebhook.where("updated_at < ?", 90.days.ago).destroy_all
+      InboundWebhook.where("updated_at < ?", 90.days.ago).delete_all
     end
   end
 end
