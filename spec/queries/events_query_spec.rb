@@ -62,6 +62,20 @@ RSpec.describe EventsQuery do
       end
     end
 
+    context "with transaction_id filter" do
+      let(:event2) { create(:event, organization:) }
+      let(:filters) { {transaction_id: event.transaction_id} }
+
+      before { event2 }
+
+      it "applies the filter" do
+        result = events_query.call
+
+        expect(result).to be_success
+        expect(result.events.count).to eq(1)
+      end
+    end
+
     context "with timestamp filters" do
       let(:filters) {
         {

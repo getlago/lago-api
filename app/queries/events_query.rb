@@ -8,7 +8,8 @@ class EventsQuery < BaseQuery
     :timestamp_from_started_at,
     :timestamp_from,
     :timestamp_to,
-    :enriched
+    :enriched,
+    :transaction_id
   ]
 
   def call
@@ -28,6 +29,7 @@ class EventsQuery < BaseQuery
 
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id
+    events = with_transaction_id(events) if filters.transaction_id
     events = with_timestamp_range(events)
 
     result.event_model = event_model.to_s
@@ -59,6 +61,10 @@ class EventsQuery < BaseQuery
 
   def with_external_subscription_id(scope)
     scope.where(external_subscription_id: filters.external_subscription_id)
+  end
+
+  def with_transaction_id(scope)
+    scope.where(transaction_id: filters.transaction_id)
   end
 
   def with_timestamp_range(scope)
