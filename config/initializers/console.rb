@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Rails/Output
 Rails.application.console do
   if Rails.env.development?
     def gavin
@@ -18,13 +19,25 @@ Rails.application.console do
   end
 
   def find(id)
-    if /^gid/.match?(id)
+    model = if /^gid/.match?(id)
       GlobalID::Locator.locate(id)
     elsif Regex::EMAIL.match?(id)
       User.find_by email: id
     else
       raise "Don't know how to resolve this ¯\\_(ツ)_/¯. Please provide a valid email or Global ID."
     end
+    puts "Organization: #{model.organization&.name}"
+    model
+  end
+
+  def retry_generating_invoice(invoice)
+    Invoices::SubscriptionService.new(
+      subscriptions: invoice.subscriptions,
+      timestamp: invoice.invoice_subscriptions.first.timestamp,
+      invoicing_reason: :subscription_periodic,
+      invoice: invoice,
+      skip_charges: invoice.skip_charges
+    ).call
   end
 
   def deadjobs_summary
@@ -40,6 +53,16 @@ Rails.application.console do
     org.reload.premium_integrations
   end
 
+  def current_usage(subscription, apply_taxes: false, with_cache: false, **kwargs)
+    Invoices::CustomerUsageService.call!(
+      customer: subscription.customer,
+      subscription: subscription,
+      apply_taxes:,
+      with_cache:,
+      **kwargs
+    ).usage
+  end
+
   def enable_all_premium_integrations!(org_id)
     org = Organization.find(org_id)
     org.update! premium_integrations: Organization::PREMIUM_INTEGRATIONS
@@ -48,17 +71,17 @@ Rails.application.console do
 
   def hard_delete_invoice(id)
     invoice = Invoice.find(id)
-    puts "Going to hard delete invoice from org `#{invoice.organization.name}` (id: #{invoice.id})" # rubocop:disable Rails/Output
+    puts "Going to hard delete invoice from org `#{invoice.organization.name}` (id: #{invoice.id})"
 
-    puts "Press any key to confirm deletion or CTRL+C to cancel." # rubocop:disable Rails/Output
+    puts "Press any key to confirm deletion or CTRL+C to cancel."
     c = $stdin.getch
 
     if c == "\u0003"
-      puts "Deletion cancelled." # rubocop:disable Rails/Output
+      puts "Deletion cancelled."
       return invoice
     end
 
-    puts "Deleting invoice #{invoice.id}..." # rubocop:disable Rails/Output
+    puts "Deleting invoice #{invoice.id}..."
     ActiveRecord::Base.transaction do
       invoice.invoice_subscriptions.destroy_all
       invoice.credit_notes.destroy_all
@@ -73,9 +96,9 @@ Rails.application.console do
 
     begin
       invoice.reload
-      puts "Invoice #{id} could not be deleted. Please try again." # rubocop:disable Rails/Output
+      puts "Invoice #{id} could not be deleted. Please try again."
     rescue ActiveRecord::RecordNotFound
-      puts "Invoice #{id} has been successfully deleted." # rubocop:disable Rails/Output
+      puts "Invoice #{id} has been successfully deleted."
     end
   end
 
@@ -91,19 +114,20 @@ Rails.application.console do
       role: :admin
     )
 
-    puts "Organization `#{org_name}` created with admin invite: #{result.invite_url}" # rubocop:disable Rails/Output
+    puts "Organization `#{org_name}` created with admin invite: #{result.invite_url}"
     {organization:, invite_url: result.invite_url}
   end
 
   # Often this procedure is called "regenerate invoice"
   def delete_invoice_pdf(id)
     inv = Invoice.find(id)
-    puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})" # rubocop:disable Rails/Output
+    puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})"
     unless inv.finalized?
-      puts "Invoice is not finalized. Skipping." # rubocop:disable Rails/Output
+      puts "Invoice is not finalized. Skipping."
       return
     end
 
     inv.file&.destroy
   end
 end
+# rubocop:enable Rails/Output
