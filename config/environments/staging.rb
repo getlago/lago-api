@@ -38,8 +38,8 @@ Rails.application.configure do
   config.active_support.report_deprecations = false
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
-    logger = ActiveSupport::Logger.new($stdout)
-    config.logger = logger
+    config.logger = ActiveSupport::Logger.new($stdout)
+      .tap { |logger| logger.formatter = ::Logger::Formatter.new }
   end
 
   config.active_record.dump_schema_after_migration = false
