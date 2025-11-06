@@ -39,7 +39,6 @@ Rails.application.configure do
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
     logger = ActiveSupport::Logger.new($stdout)
-    logger.formatter = ::Logger::Formatter.new
     config.logger = logger
   end
 

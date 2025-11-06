@@ -1106,6 +1106,7 @@ DEPENDENCIES
   rails (~> 8.0)
   ransack
   redis
+  redlock (~> 2.0.6)
   rspec-graphql_matchers
   rspec-rails
   rspec-snapshot (~> 2.0)
