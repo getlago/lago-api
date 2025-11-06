@@ -694,8 +694,8 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
-DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
+DROP INDEX IF EXISTS public.idx_events_billing_lookup;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -3401,11 +3401,11 @@ CREATE TABLE public.wallets (
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
+    priority integer DEFAULT 50 NOT NULL,
     paid_top_up_min_amount_cents bigint,
     paid_top_up_max_amount_cents bigint,
     payment_method_id uuid,
-    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    priority integer DEFAULT 50 NOT NULL
+    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL
 );
 
 
@@ -5136,17 +5136,17 @@ CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscripti
 
 
 --
+-- Name: idx_events_billing_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_billing_lookup ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") INCLUDE (properties) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_events_for_distinct_codes; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_events_for_distinct_codes ON public.events USING btree (external_subscription_id, organization_id, "timestamp") INCLUDE (code) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") WHERE (deleted_at IS NULL);
 
 
 --
@@ -10078,6 +10078,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251106093323'),
+('20251106092231'),
 ('20251106091730'),
 ('20251024200950'),
 ('20251024130659'),
