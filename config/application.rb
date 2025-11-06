@@ -52,5 +52,6 @@ module LagoApi
 end
 
 require_relative "../lib/active_job/uniqueness/strategies/until_executed_patch"
+require_relative "../lib/redlock/client_patch"
 require_relative "../lib/active_job/logging"
 require_relative "../lib/active_job/json_log_subscriber"
