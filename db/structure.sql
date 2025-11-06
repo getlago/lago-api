@@ -501,6 +501,7 @@ DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
+DROP INDEX IF EXISTS public.index_events_on_created_at;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
 DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
 DROP INDEX IF EXISTS public.index_error_details_on_error_code;
@@ -3400,11 +3401,11 @@ CREATE TABLE public.wallets (
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
-    priority integer DEFAULT 50 NOT NULL,
     paid_top_up_min_amount_cents bigint,
     paid_top_up_max_amount_cents bigint,
     payment_method_id uuid,
-    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL
+    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
+    priority integer DEFAULT 50 NOT NULL
 );
 
 
@@ -6490,6 +6491,13 @@ CREATE INDEX index_error_details_on_organization_id ON public.error_details USIN
 --
 
 CREATE INDEX index_error_details_on_owner ON public.error_details USING btree (owner_type, owner_id);
+
+
+--
+-- Name: index_events_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_created_at ON public.events USING btree (created_at) WHERE (deleted_at IS NULL);
 
 
 --
@@ -10070,6 +10078,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251106091730'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),
