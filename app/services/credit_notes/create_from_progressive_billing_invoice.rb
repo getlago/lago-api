@@ -17,9 +17,13 @@ module CreditNotes
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
 
+      # Don't create credit note if final amount is not positive after tax/coupon adjustments
+      final_credit_amount = creditable_amount_cents(amount, items)
+      return result if final_credit_amount <= 0
+
       CreditNotes::CreateService.call!(
         invoice: progressive_billing_invoice,
-        credit_amount_cents: creditable_amount_cents(amount, items),
+        credit_amount_cents: final_credit_amount,
         items:,
         reason:,
         automatic: true
