@@ -11456,6 +11456,7 @@ input UpdateSubscriptionInput {
   endingAt: ISO8601DateTime
   id: ID!
   name: String
+  paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
   subscriptionAt: ISO8601DateTime
 }

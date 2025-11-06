@@ -10,6 +10,7 @@ module Subscriptions
       valid_ending_at?
       valid_on_termination_credit_note?
       valid_on_termination_invoice?
+      valid_payment_method?
 
       if errors?
         result.validation_failure!(errors:)
@@ -91,6 +92,15 @@ module Subscriptions
       else
         args[:subscription_at]
       end
+    end
+
+    def valid_payment_method?
+      return true if args[:payment_method].blank?
+      return true if PaymentMethods::ValidateService.new(result, **args).valid?
+
+      add_error(field: :payment_method, error_code: "invalid_payment_method")
+
+      false
     end
   end
 end

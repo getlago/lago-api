@@ -2,7 +2,7 @@
 
 module Subscriptions
   class UpdateService < BaseService
-    Result = BaseResult[:subscription]
+    Result = BaseResult[:subscription, :payment_method]
 
     def initialize(subscription:, params:)
       @subscription = subscription
@@ -26,7 +26,8 @@ module Subscriptions
         subscription_at: params.key?(:subscription_at) ? params[:subscription_at] : subscription.subscription_at,
         ending_at: params[:ending_at],
         on_termination_credit_note: params[:on_termination_credit_note],
-        on_termination_invoice: params[:on_termination_invoice]
+        on_termination_invoice: params[:on_termination_invoice],
+        payment_method: params[:payment_method]
       )
         return result
       end
@@ -42,6 +43,11 @@ module Subscriptions
 
       if params.key?(:on_termination_invoice)
         subscription.on_termination_invoice = params[:on_termination_invoice]
+      end
+
+      if params.key?(:payment_method)
+        subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
       if params.key?(:plan_overrides)
@@ -114,7 +120,16 @@ module Subscriptions
     end
 
     def valid?(args)
+      result.payment_method = payment_method
+
       Subscriptions::ValidateService.new(result, **args).valid?
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: subscription.organization_id)
     end
   end
 end
