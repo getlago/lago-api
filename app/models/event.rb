@@ -82,9 +82,10 @@ end
 #
 # Indexes
 #
-#  idx_events_for_distinct_codes                                    (external_subscription_id,organization_id,timestamp) WHERE (deleted_at IS NULL)
-#  idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp  (external_subscription_id,organization_id,code,timestamp) WHERE (deleted_at IS NULL)
-#  index_events_on_organization_id                                  (organization_id)
-#  index_events_on_organization_id_and_code                         (organization_id,code)
-#  index_unique_transaction_id                                      (organization_id,external_subscription_id,transaction_id) UNIQUE
+#  idx_events_billing_lookup                 (external_subscription_id,organization_id,code,timestamp) WHERE (deleted_at IS NULL)
+#  idx_events_for_distinct_codes             (external_subscription_id,organization_id,timestamp) WHERE (deleted_at IS NULL)
+#  index_events_on_created_at                (created_at) WHERE (deleted_at IS NULL)
+#  index_events_on_organization_id           (organization_id)
+#  index_events_on_organization_id_and_code  (organization_id,code)
+#  index_unique_transaction_id               (organization_id,external_subscription_id,transaction_id) UNIQUE
 #

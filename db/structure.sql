@@ -501,6 +501,7 @@ DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
+DROP INDEX IF EXISTS public.index_events_on_created_at;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
 DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
 DROP INDEX IF EXISTS public.index_error_details_on_error_code;
@@ -693,8 +694,8 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
-DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
+DROP INDEX IF EXISTS public.idx_events_billing_lookup;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -5135,17 +5136,17 @@ CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscripti
 
 
 --
+-- Name: idx_events_billing_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_billing_lookup ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") INCLUDE (properties) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_events_for_distinct_codes; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_events_for_distinct_codes ON public.events USING btree (external_subscription_id, organization_id, "timestamp") INCLUDE (code) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") WHERE (deleted_at IS NULL);
 
 
 --
@@ -6490,6 +6491,13 @@ CREATE INDEX index_error_details_on_organization_id ON public.error_details USIN
 --
 
 CREATE INDEX index_error_details_on_owner ON public.error_details USING btree (owner_type, owner_id);
+
+
+--
+-- Name: index_events_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_created_at ON public.events USING btree (created_at) WHERE (deleted_at IS NULL);
 
 
 --
@@ -10070,6 +10078,9 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251106093323'),
+('20251106092231'),
+('20251106091730'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),
