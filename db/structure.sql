@@ -954,6 +954,8 @@ DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
 DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
+DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_anchors;
+DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1106,6 +1108,26 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: subscription_invoice_issuing_date_adjustments; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_invoice_issuing_date_adjustments AS ENUM (
+    'keep_anchor',
+    'align_with_finalization_date'
+);
+
+
+--
+-- Name: subscription_invoice_issuing_date_anchors; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_invoice_issuing_date_anchors AS ENUM (
+    'current_period_end',
+    'next_period_start'
 );
 
 
@@ -1543,7 +1565,9 @@ CREATE TABLE public.billing_entities (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     applied_dunning_campaign_id uuid,
-    einvoicing boolean DEFAULT false NOT NULL
+    einvoicing boolean DEFAULT false NOT NULL,
+    subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors DEFAULT 'next_period_start'::public.subscription_invoice_issuing_date_anchors NOT NULL,
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL
 );
 
 
@@ -1945,6 +1969,8 @@ CREATE TABLE public.customers (
     account_type public.customer_account_type DEFAULT 'customer'::public.customer_account_type NOT NULL,
     billing_entity_id uuid NOT NULL,
     payment_receipt_counter bigint DEFAULT 0 NOT NULL,
+    subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10130,9 +10156,11 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251107102548'),
 ('20251106093323'),
 ('20251106092231'),
 ('20251106091730'),
+('20251106072629'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),
