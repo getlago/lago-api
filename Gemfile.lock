@@ -887,6 +887,10 @@ GEM
     ruby-lsp-rails (0.3.30)
       ruby-lsp (>= 0.23.0, < 0.24.0)
     ruby-next-core (1.1.2)
+    ruby-prof (1.7.2)
+      base64
+    ruby-prof (1.7.2-x64-mingw-ucrt)
+      base64
     ruby-progressbar (1.13.0)
     sass-rails (6.0.0)
       sassc-rails (~> 2.1, >= 2.1.1)
@@ -1116,6 +1120,7 @@ DEPENDENCIES
   rubocop-rspec
   rubocop-thread_safety
   ruby-lsp-rails
+  ruby-prof (~> 1.0)
   sass-rails
   scenic
   sentry-rails
@@ -1148,4 +1153,4 @@ RUBY VERSION
    ruby 3.4.7p58
 
 BUNDLED WITH
-   2.7.2
+   2.6.8
