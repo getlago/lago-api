@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
 class AssignCustomersToBillingEntities < ActiveRecord::Migration[7.2]
+  class BillingEntity < ApplicationRecord
+    attribute :subscription_invoice_issuing_date_anchor, :string, default: "next_period_start"
+    attribute :subscription_invoice_issuing_date_adjustment, :string, default: "keep_anchor"
+  end
+
   class Customer < ApplicationRecord
     self.ignored_columns = []
+
+    attribute :subscription_invoice_issuing_date_anchor, :string, default: "next_period_start"
+    attribute :subscription_invoice_issuing_date_adjustment, :string, default: "keep_anchor"
   end
 
   def change
