@@ -17,13 +17,15 @@ RSpec.describe PaymentMethodsQuery do
   let(:customer) { create(:customer, organization:) }
   let(:payment_method_first) { create(:payment_method, organization:) }
   let(:payment_method_second) { create(:payment_method, organization:, customer:) }
+  let(:payment_method_third) { create(:payment_method, organization:, deleted_at: Time.current) }
 
   before do
     payment_method_first
     payment_method_second
+    payment_method_third
   end
 
-  it "returns all payment methods" do
+  it "returns all active payment methods" do
     expect(result).to be_success
     expect(returned_ids).to contain_exactly(payment_method_first.id, payment_method_second.id)
   end
@@ -68,6 +70,15 @@ RSpec.describe PaymentMethodsQuery do
     it "returns all payment methods of the customer" do
       expect(result).to be_success
       expect(returned_ids).to contain_exactly(payment_method_second.id)
+    end
+  end
+
+  context "when including deleted payment methods" do
+    let(:filters) { {with_deleted: true} }
+
+    it "returns all payment methods" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(payment_method_first.id, payment_method_second.id, payment_method_third.id)
     end
   end
 end
