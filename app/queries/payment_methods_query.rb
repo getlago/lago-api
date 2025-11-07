@@ -2,7 +2,7 @@
 
 class PaymentMethodsQuery < BaseQuery
   Result = BaseResult[:payment_methods]
-  Filters = BaseFilters[:external_customer_id]
+  Filters = BaseFilters[:external_customer_id, :with_deleted]
 
   def call
     payment_methods = base_scope
@@ -10,6 +10,7 @@ class PaymentMethodsQuery < BaseQuery
 
     payment_methods = apply_consistent_ordering(payment_methods)
     payment_methods = paginate(payment_methods)
+    payment_methods = payment_methods.with_discarded if filters.with_deleted
 
     result.payment_methods = payment_methods
     result

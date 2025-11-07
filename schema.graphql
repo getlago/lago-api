@@ -7977,6 +7977,7 @@ type PaymentCollection {
 type PaymentMethod {
   createdAt: ISO8601DateTime!
   customer: Customer!
+  deletedAt: ISO8601DateTime
   details: PaymentMethodDetails
   id: ID!
   isDefault: Boolean!
@@ -9128,6 +9129,7 @@ type Query {
     externalCustomerId: ID!
     limit: Int
     page: Int
+    withDeleted: Boolean
   ): PaymentMethodCollection!
 
   """

@@ -15,6 +15,7 @@ module Types
       field :payment_provider_type, Types::PaymentProviders::ProviderTypeEnum, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: true
 
       def payment_provider_code
