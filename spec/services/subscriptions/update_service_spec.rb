@@ -125,6 +125,49 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating payment method" do
+        let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
+        let(:params) { {payment_method: payment_method_params} }
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "provider"
+          }
+        end
+
+        before { payment_method }
+
+        it "updates the subscription" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.reload.payment_method_id).to eq(payment_method_params[:payment_method_id])
+          expect(result.subscription.reload.payment_method_type).to eq("provider")
+        end
+
+        context "when payment method is already attached" do
+          before do
+            subscription.payment_method = payment_method
+            subscription.payment_method_type = "provider"
+          end
+
+          let(:payment_method_params) do
+            {
+              payment_method_id: nil,
+              payment_method_type: "provider"
+            }
+          end
+
+          it "removes payment_method" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.reload.payment_method_id).to eq(nil)
+            expect(result.subscription.reload.payment_method_type).to eq("provider")
+          end
+        end
+      end
+
       context "when plan has fixed charges" do
         let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
 
@@ -331,6 +374,42 @@ RSpec.describe Subscriptions::UpdateService do
 
           expect(result).not_to be_success
           expect(result.error.messages).to eq({ending_at: ["invalid_date"]})
+        end
+      end
+
+      context "when payment method type is not correct" do
+        let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
+        let(:params) { {payment_method: payment_method_params} }
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "returns an error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "when payment method id is not correct" do
+        let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
+        let(:params) { {payment_method: payment_method_params} }
+        let(:payment_method_params) do
+          {
+            payment_method_id: "123",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "returns an error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
 
