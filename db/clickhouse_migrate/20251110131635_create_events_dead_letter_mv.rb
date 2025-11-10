@@ -10,7 +10,7 @@ class CreateEventsDeadLetterMv < ActiveRecord::Migration[8.0]
         JSONExtractString(event, 'transaction_id') AS transaction_id,
         toDateTime64(JSONExtractString(event, 'timestamp'), 3) AS timestamp,
         toDateTime64(JSONExtractString(event, 'ingested_at'), 3) AS ingested_at,
-        failed_at,
+        toDateTime64(parseDateTime64BestEffort(failed_at), 3) as failed_at,
         event,
         error_code,
         error_message,

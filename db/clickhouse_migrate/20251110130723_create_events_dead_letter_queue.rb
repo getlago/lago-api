@@ -16,7 +16,7 @@ class CreateEventsDeadLetterQueue < ActiveRecord::Migration[8.0]
       t.string :initial_error_message, null: false
       t.string :error_code, null: false
       t.string :error_message, null: false
-      t.datetime :failed_at, null: false
+      t.string :failed_at, null: false
     end
   end
 end
