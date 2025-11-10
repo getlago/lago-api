@@ -85,6 +85,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           name: "Foo Bar",
           billing_configuration: {
             invoice_grace_period: 3,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
             payment_provider: "stripe",
             payment_provider_code: stripe_provider.code,
             provider_customer_id: "stripe_id",
@@ -120,6 +122,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
@@ -141,6 +145,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
         end
@@ -162,6 +168,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
@@ -183,6 +191,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
         end

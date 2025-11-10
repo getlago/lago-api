@@ -56,6 +56,8 @@ RSpec.describe ::V1::CustomerSerializer do
     expect(result["customer"]["billing_configuration"]["payment_provider_code"]).to eq(customer.payment_provider_code)
     expect(result["customer"]["billing_configuration"]["invoice_grace_period"]).to eq(customer.invoice_grace_period)
     expect(result["customer"]["billing_configuration"]["document_locale"]).to eq(customer.document_locale)
+    expect(result["customer"]["billing_configuration"]["subscription_invoice_issuing_date_anchor"]).to eq(customer.subscription_invoice_issuing_date_anchor)
+    expect(result["customer"]["billing_configuration"]["subscription_invoice_issuing_date_adjustment"]).to eq(customer.subscription_invoice_issuing_date_adjustment)
     expect(result["customer"]["shipping_address"]["address_line1"]).to eq("test1")
     expect(result["customer"]["shipping_address"]["city"]).to eq("Paris")
     expect(result["customer"]["shipping_address"]["zipcode"]).to eq("002")

@@ -57,6 +57,8 @@ RSpec.describe Customers::UpsertFromApiService do
     billing = create_args[:billing_configuration]
     expect(customer.document_locale).to eq(billing[:document_locale])
     expect(customer.invoice_grace_period).to be_nil
+    expect(customer.subscription_invoice_issuing_date_anchor).to be_nil
+    expect(customer.subscription_invoice_issuing_date_adjustment).to be_nil
     expect(customer.skip_invoice_custom_sections).to eq(false)
 
     shipping_address = create_args[:shipping_address]
@@ -86,7 +88,9 @@ RSpec.describe Customers::UpsertFromApiService do
       currency: create_args[:currency],
       timezone: nil,
       document_locale: billing[:document_locale],
-      invoice_grace_period: nil
+      invoice_grace_period: nil,
+      subscription_invoice_issuing_date_anchor: nil,
+      subscription_invoice_issuing_date_adjustment: nil
     )
   end
 
@@ -400,7 +404,9 @@ RSpec.describe Customers::UpsertFromApiService do
         name: "Foo Bar",
         timezone: "Europe/Paris",
         billing_configuration: {
-          invoice_grace_period: 3
+          invoice_grace_period: 3,
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
         }
       }
     end
@@ -409,8 +415,9 @@ RSpec.describe Customers::UpsertFromApiService do
       expect(result).to be_success
       expect(result.customer.timezone).to eq(create_args[:timezone])
 
-      billing = create_args[:billing_configuration]
-      expect(result.customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+      expect(result.customer.invoice_grace_period).to eq(3)
+      expect(result.customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+      expect(result.customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
     end
 
     context "with revenue share feature enabled and account_type 'partner'" do
