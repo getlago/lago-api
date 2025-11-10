@@ -17,16 +17,20 @@ class BillingEntity < ApplicationRecord
   EINVOICING_COUNTRIES = %w[FR].map(&:upcase)
 
   belongs_to :organization
+  belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 
   has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
   has_many :customers
   has_many :fees
   has_many :invoices
   has_many :payment_receipts
-
   has_many :applied_invoice_custom_sections,
     class_name: "BillingEntity::AppliedInvoiceCustomSection",
     dependent: :destroy
+  has_many :integration_collection_mappings,
+    class_name: "IntegrationCollectionMappings::BaseCollectionMapping",
+    dependent: :destroy
+
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
@@ -49,8 +53,6 @@ class BillingEntity < ApplicationRecord
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",
     as: :resource
-
-  belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 
   has_one_attached :logo
 

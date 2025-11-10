@@ -15,10 +15,16 @@ module IntegrationCollectionMappings
 
       return result.not_found_failure!(resource: "integration") unless integration
 
+      if params[:billing_entity_id]
+        billing_entity = integration.organization.billing_entities.find_by(id: params[:billing_entity_id])
+        return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+      end
+
       integration_collection_mapping = IntegrationCollectionMappings::Factory.new_instance(integration:).new(
         organization_id: params[:organization_id],
         integration_id: params[:integration_id],
-        mapping_type: params[:mapping_type]
+        mapping_type: params[:mapping_type],
+        billing_entity_id: params[:billing_entity_id]
       )
 
       integration_collection_mapping.organization = integration.organization
