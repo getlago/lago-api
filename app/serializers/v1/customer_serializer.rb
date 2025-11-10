@@ -64,7 +64,9 @@ module V1
         invoice_grace_period: model.invoice_grace_period,
         payment_provider: model.payment_provider,
         payment_provider_code: model.payment_provider_code,
-        document_locale: model.document_locale
+        document_locale: model.document_locale,
+        subscription_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
+        subscription_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment
       }
 
       case model.payment_provider&.to_sym
