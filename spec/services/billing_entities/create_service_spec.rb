@@ -54,7 +54,11 @@ RSpec.describe BillingEntities::CreateService do
           {
             timezone: "Europe/Paris",
             email_settings: ["invoice.finalized"],
-            billing_configuration: {invoice_grace_period: 15}
+            billing_configuration: {
+              invoice_grace_period: 15,
+              subscription_invoice_issuing_date_anchor: "current_period_end",
+              subscription_invoice_issuing_date_adjustment: "keep_anchor"
+            }
           }
         )
 
@@ -63,6 +67,8 @@ RSpec.describe BillingEntities::CreateService do
         expect(result.billing_entity.invoice_grace_period).to eq(0)
         expect(result.billing_entity.timezone).to eq("UTC")
         expect(result.billing_entity.email_settings).to be_empty
+        expect(result.billing_entity.subscription_invoice_issuing_date_anchor).to eq("next_period_start")
+        expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("align_with_finalization_date")
       end
 
       context "when an id is provided in the params hash" do
@@ -127,7 +133,9 @@ RSpec.describe BillingEntities::CreateService do
             billing_configuration: {
               invoice_grace_period: 15,
               invoice_footer: "Invoice Footer",
-              document_locale: "fr"
+              document_locale: "fr",
+              subscription_invoice_issuing_date_anchor: "current_period_end",
+              subscription_invoice_issuing_date_adjustment: "keep_anchor"
             },
             eu_tax_management: true,
             logo: "data:image/png;base64,#{Base64.encode64(File.read("spec/factories/images/logo.png"))}"
@@ -164,6 +172,8 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.invoice_grace_period).to eq(15)
           expect(result.billing_entity.invoice_footer).to eq("Invoice Footer")
           expect(result.billing_entity.document_locale).to eq("fr")
+          expect(result.billing_entity.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+          expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
           expect(result.billing_entity.eu_tax_management).to eq(true)
           expect(result.billing_entity.logo).to be_attached
           expect(Taxes::AutoGenerateService).to have_received(:call).with(organization:)
