@@ -22,7 +22,7 @@ module Subscriptions
     end
 
     def call
-      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
+      return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at], payment_method: params[:payment_method])
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
@@ -69,6 +69,8 @@ module Subscriptions
       :plan_overrides
 
     def valid?(args)
+      result.payment_method = payment_method
+
       Subscriptions::ValidateService.new(result, **args).valid?
     end
 
@@ -108,6 +110,11 @@ module Subscriptions
         billing_time: billing_time || :calendar,
         ending_at: params[:ending_at]
       )
+
+      if params.key?(:payment_method)
+        new_subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        new_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+      end
 
       if new_subscription.subscription_at > Time.current
         new_subscription.pending!
@@ -167,7 +174,7 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      current_subscription.next_subscriptions.create!(
+      new_sub = current_subscription.next_subscriptions.create!(
         organization_id: customer.organization_id,
         customer:,
         plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
@@ -178,6 +185,12 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
+
+      if params.key?(:payment_method)
+        new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+        new_sub.save!
+      end
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)
@@ -230,6 +243,13 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: customer.organization_id)
     end
   end
 end

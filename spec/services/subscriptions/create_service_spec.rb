@@ -48,6 +48,43 @@ RSpec.describe Subscriptions::CreateService do
         expect(subscription.lifetime_usage).to be_present
         expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
         expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
+        expect(subscription.payment_method_id).to eq(nil)
+        expect(subscription.payment_method_type).to eq("provider")
+      end
+    end
+
+    context "when payment method is attached" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          payment_method: {
+            payment_method_id: payment_method.id,
+            payment_method_type: "provider"
+          }
+        }
+      end
+
+      it "creates a subscription" do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          subscription = result.subscription
+          expect(subscription.customer_id).to eq(customer.id)
+          expect(subscription.plan_id).to eq(plan.id)
+          expect(subscription).to be_active
+          expect(subscription.external_id).to eq(external_id)
+          expect(subscription.payment_method_id).to eq(payment_method.id)
+          expect(subscription.payment_method_type).to eq("provider")
+        end
       end
     end
 
@@ -459,6 +496,62 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "with invalid payment method" do
+      let(:payment_method) { create(:payment_method, organization:, customer:) }
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          payment_method: payment_method_params
+        }
+      end
+
+      before { payment_method }
+
+      context "when type is invalid" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "fails" do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+          end
+        end
+      end
+
+      context "when ID is invalid" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: "invalid",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "fails" do
+          result = create_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+          end
+        end
+      end
+    end
+
     context "when an active subscription already exists" do
       let(:subscription) do
         create(
@@ -564,6 +657,8 @@ RSpec.describe Subscriptions::CreateService do
               expect(result.subscription.plan.id).to eq(plan.id)
               expect(result.subscription.previous_subscription_id).to eq(subscription.id)
               expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+              expect(result.subscription.payment_method_id).to eq(nil)
+              expect(result.subscription.payment_method_type).to eq("provider")
             end
           end
 
@@ -589,6 +684,41 @@ RSpec.describe Subscriptions::CreateService do
                       [fixed_charge_2.id, be_within(1.second).of(Time.current)]
                     ]
                   )
+              end
+            end
+          end
+
+          context "when payment method is attached" do
+            let(:payment_method) { create(:payment_method, organization:, customer:) }
+            let(:params) do
+              {
+                external_customer_id:,
+                plan_code:,
+                name:,
+                external_id:,
+                billing_time:,
+                subscription_at:,
+                subscription_id:,
+                payment_method: {
+                  payment_method_id: payment_method.id,
+                  payment_method_type: "provider"
+                }
+              }
+            end
+
+            it "creates a new subscription" do
+              result = create_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+                expect(result.subscription.id).not_to eq(subscription.id)
+                expect(result.subscription).to be_active
+                expect(result.subscription.name).to eq("invoice display name new")
+                expect(result.subscription.plan.id).to eq(plan.id)
+                expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+                expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+                expect(result.subscription.payment_method_id).to eq(payment_method.id)
+                expect(result.subscription.payment_method_type).to eq("provider")
               end
             end
           end
@@ -764,6 +894,8 @@ RSpec.describe Subscriptions::CreateService do
               expect(next_subscription.previous_subscription).to eq(subscription)
               expect(next_subscription.ending_at).to eq(subscription.ending_at)
               expect(next_subscription.lifetime_usage).to be_nil
+              expect(next_subscription.payment_method_id).to be_nil
+              expect(next_subscription.payment_method_type).to eq("provider")
             end
           end
 
@@ -805,6 +937,45 @@ RSpec.describe Subscriptions::CreateService do
               next_subscription = result.subscription.next_subscription
               expect(next_subscription).to be_pending
               expect(next_subscription.fixed_charge_events.count).to eq(0)
+            end
+          end
+
+          context "when payment method is attached" do
+            let(:payment_method) { create(:payment_method, organization:, customer:) }
+            let(:params) do
+              {
+                external_customer_id:,
+                plan_code:,
+                name:,
+                external_id:,
+                billing_time:,
+                subscription_at:,
+                subscription_id:,
+                payment_method: {
+                  payment_method_id: payment_method.id,
+                  payment_method_type: "provider"
+                }
+              }
+            end
+
+            it "creates a new subscription" do
+              result = create_service.call
+
+              aggregate_failures do
+                expect(result).to be_success
+
+                next_subscription = result.subscription.next_subscription
+                expect(next_subscription.id).not_to eq(subscription.id)
+                expect(next_subscription).to be_pending
+                expect(next_subscription.name).to eq("invoice display name new")
+                expect(next_subscription.plan_id).to eq(plan.id)
+                expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
+                expect(next_subscription.previous_subscription).to eq(subscription)
+                expect(next_subscription.ending_at).to eq(subscription.ending_at)
+                expect(next_subscription.lifetime_usage).to be_nil
+                expect(next_subscription.payment_method_id).to eq(payment_method.id)
+                expect(next_subscription.payment_method_type).to eq("provider")
+              end
             end
           end
 
