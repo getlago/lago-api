@@ -6,12 +6,24 @@ module IntegrationCollectionMappings
     settings_accessors :currencies
 
     validate :currency_mapping_format
+    validate :organization_level_only_mapping
 
     private
+
+    def organization_level_only_mapping
+      if currencies? && billing_entity_id.present?
+        errors.add(:billing_entity, "value_must_be_blank")
+      end
+    end
 
     def currency_mapping_format
       # Other mapping_types shouldn't have currencies, but if they do, we validate the format
       return if !currencies? && currencies.nil?
+
+      if !currencies? && currencies.present?
+        errors.add(:currencies, "value_must_be_blank")
+        return
+      end
 
       if currencies? && currencies.nil?
         errors.add(:currencies, "value_is_mandatory")

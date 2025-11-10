@@ -114,5 +114,56 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
 
       it { is_expected.to be_invalid }
     end
+
+    context "when currencies shouldn't be set" do
+      subject(:mapping) { build(:netsuite_collection_mapping, mapping_type: :fallback_item) }
+
+      it do
+        mapping.currencies = {"EUR" => "12"}
+        expect(mapping).to be_invalid
+        expect(mapping.errors[:currencies]).to eq ["value_must_be_blank"]
+      end
+    end
+  end
+
+  describe "organization_level_only_mapping validation" do
+    context "when mapping type is currencies" do
+      subject(:mapping) do
+        build(:netsuite_collection_mapping,
+          integration:,
+          mapping_type: :currencies,
+          currencies: {"USD" => "1"})
+      end
+
+      let(:integration) { create(:netsuite_integration) }
+      let(:billing_entity) { create(:billing_entity, organization: integration.organization) }
+
+      context "when billing_entity_id is present" do
+        it do
+          mapping.billing_entity = billing_entity
+          expect(mapping).to be_invalid
+          expect(mapping.errors[:billing_entity]).to include "value_must_be_blank"
+        end
+      end
+
+      context "when billing_entity_id is nil" do
+        it do
+          mapping.billing_entity_id = nil
+          expect(mapping).to be_valid
+        end
+      end
+    end
+
+    context "when mapping type is not currencies" do
+      subject(:mapping) { build(:netsuite_collection_mapping, integration:, mapping_type: :fallback_item) }
+
+      let(:integration) { create(:netsuite_integration) }
+      let(:billing_entity) { create(:billing_entity, organization: integration.organization) }
+
+      it do
+        mapping.billing_entity = billing_entity
+        expect(mapping).to be_valid
+      end
+    end
   end
 end

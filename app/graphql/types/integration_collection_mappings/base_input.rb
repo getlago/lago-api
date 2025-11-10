@@ -15,7 +15,7 @@ module Types
 
       argument :currencies, [CurrencyMappingItemInput], required: false,
         prepare: :convert_currencies_to_hash,
-        validates: {::Validators::UniqueCodeInArrayValidator => {code_key: :currency_code}}
+        validates: {::Validators::UniqueByFieldValidator => {field_name: :currency_code}}
 
       def convert_currencies_to_hash(value)
         value.map { |item| [item[:currency_code], item[:currency_external_code]] }.to_h
