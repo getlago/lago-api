@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "rubocop"
+
 module Cops
   class ServiceCallCop < ::RuboCop::Cop::Base
     def_node_matcher :base_service_subclass?, <<~PATTERN
