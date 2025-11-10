@@ -51,6 +51,11 @@ module Integrations
               "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
             }
 
+            mapped_currency = netsuite_currency_for(currency: invoice.currency)
+            if mapped_currency.present?
+              result["currency"] = mapped_currency.to_s
+            end
+
             if tax_item&.tax_nexus.present?
               result["nexus"] = tax_item.tax_nexus
             end
@@ -130,6 +135,14 @@ module Integrations
               "description" => fee.item_name,
               "item_source" => fee.item_source
             }
+          end
+
+          def netsuite_currency_for(currency:)
+            mapping = IntegrationCollectionMappings::NetsuiteCollectionMapping.find_by(
+              integration_id: integration_customer.integration_id,
+              mapping_type: :currencies
+            )
+            mapping&.currencies&.dig(currency)
           end
 
           def discounts
