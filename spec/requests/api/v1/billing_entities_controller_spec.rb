@@ -125,7 +125,9 @@ RSpec.describe Api::V1::BillingEntitiesController do
           billing_configuration: {
             invoice_footer: "New Invoice Footer",
             document_locale: "es",
-            invoice_grace_period: 10
+            invoice_grace_period: 10,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor"
           }
         }
       }
@@ -170,6 +172,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:invoice_footer]).to eq("New Invoice Footer")
       expect(json[:billing_entity][:document_locale]).to eq("es")
       expect(json[:billing_entity][:invoice_grace_period]).to eq(10)
+      expect(json[:billing_entity][:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+      expect(json[:billing_entity][:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
@@ -242,7 +246,9 @@ RSpec.describe Api::V1::BillingEntitiesController do
           billing_configuration: {
             invoice_footer: "New Invoice Footer",
             document_locale: "es",
-            invoice_grace_period: 10
+            invoice_grace_period: 10,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor"
           }
         }
       }
@@ -286,6 +292,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:invoice_footer]).to eq("New Invoice Footer")
       expect(json[:billing_entity][:document_locale]).to eq("es")
       expect(json[:billing_entity][:invoice_grace_period]).to eq(10)
+      expect(json[:billing_entity][:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+      expect(json[:billing_entity][:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
