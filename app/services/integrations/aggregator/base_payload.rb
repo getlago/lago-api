@@ -13,52 +13,45 @@ module Integrations
         end
       end
 
-      def initialize(integration:)
+      def initialize(integration:, billing_entity:)
         @integration = integration
+        @billing_entity = billing_entity
       end
 
       def billable_metric_item(fee)
-        integration
-          .integration_mappings
-          .find_by(mappable_type: "BillableMetric", mappable_id: fee.billable_metric.id) || fallback_item
+        lookup_mapping("BillableMetric", fee.billable_metric.id)
       end
 
       def add_on_item(fee)
-        integration
-          .integration_mappings
-          .find_by(mappable_type: "AddOn", mappable_id: fee.add_on_id) || fallback_item
+        lookup_mapping("AddOn", fee.add_on_id)
       end
 
       def account_item
-        @account_item ||= collection_mapping(:account) || fallback_item
+        lookup_collection_mapping(:account)
       end
 
       def tax_item
-        @tax_item ||= collection_mapping(:tax)
+        lookup_collection_mapping(:tax, with_fallback_item: false)
       end
 
       def commitment_item
-        @commitment_item ||= collection_mapping(:minimum_commitment) || fallback_item
+        lookup_collection_mapping(:minimum_commitment)
       end
 
       def subscription_item
-        @subscription_item ||= collection_mapping(:subscription_fee) || fallback_item
+        lookup_collection_mapping(:subscription_fee)
       end
 
       def coupon_item
-        @coupon_item ||= collection_mapping(:coupon) || fallback_item
+        lookup_collection_mapping(:coupon)
       end
 
       def credit_item
-        @credit_item ||= collection_mapping(:prepaid_credit) || fallback_item
+        lookup_collection_mapping(:prepaid_credit)
       end
 
       def credit_note_item
-        @credit_note_item ||= collection_mapping(:credit_note) || fallback_item
-      end
-
-      def fallback_item
-        @fallback_item ||= collection_mapping(:fallback_item)
+        lookup_collection_mapping(:credit_note)
       end
 
       def amount(amount_cents, resource:)
@@ -67,13 +60,46 @@ module Integrations
         amount_cents.round.fdiv(currency.subunit_to_unit)
       end
 
-      def collection_mapping(type)
-        integration.integration_collection_mappings.where(mapping_type: type)&.first
-      end
-
       private
 
-      attr_reader :integration
+      attr_reader :integration, :billing_entity
+
+      def fallback_item(scope)
+        mappings = integration.integration_collection_mappings
+        fallback_items = mappings.filter { |mapping| mapping.mapping_type.to_sym == :fallback_item }
+        if scope == :billing_entity && billing_entity
+          return fallback_items.find { |mapping| mapping.billing_entity_id == billing_entity.id }
+        end
+
+        fallback_items.find { |mapping| mapping.billing_entity_id.nil? }
+      end
+
+      def lookup_collection_mapping(mapping_type, with_fallback_item: true)
+        mappings = integration.integration_collection_mappings
+        matching_mappings = mappings.filter { |mapping| mapping.mapping_type.to_sym == mapping_type.to_sym }
+        billing_entity_mapping = matching_mappings.find { |mapping| mapping.billing_entity_id == billing_entity.id }
+        organization_mapping = matching_mappings.find { |mapping| mapping.billing_entity_id.nil? }
+        if with_fallback_item
+          return billing_entity_mapping ||
+              fallback_item(:billing_entity) ||
+              organization_mapping ||
+              fallback_item(:organization)
+        end
+
+        billing_entity_mapping ||
+          organization_mapping
+      end
+
+      def lookup_mapping(mappable_type, mappable_id)
+        mappings = integration.integration_mappings
+        matching_mappings = mappings.filter { |mapping| mapping.mappable_type == mappable_type && mapping.mappable_id == mappable_id }
+        billing_entity_mapping = matching_mappings.find { |mapping| mapping.billing_entity_id == billing_entity.id }
+        organization_mapping = matching_mappings.find { |mapping| mapping.billing_entity_id.nil? }
+        billing_entity_mapping ||
+          fallback_item(:billing_entity) ||
+          organization_mapping ||
+          fallback_item(:organization)
+      end
 
       def tax_item_complete?
         tax_item&.tax_nexus.present? && tax_item&.tax_type.present? && tax_item&.tax_code.present?

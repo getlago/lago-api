@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
+RSpec.describe Integrations::Aggregator::Invoices::Payloads::Anrok do
   describe "#body" do
     subject(:payload) { described_class.new(integration_customer:, invoice:).body }
 
-    it_behaves_like "an integration payload", :xero do
+    it_behaves_like "an integration payload", :anrok do
       def build_expected_payload(mapping_codes)
         [
           {

@@ -7,13 +7,12 @@ module Integrations
         module Payloads
           class Avalara < BasePayload
             def initialize(integration:, customer:, invoice:, integration_customer:, fees: [])
-              super(integration:)
+              super(integration:, billing_entity: customer.billing_entity)
 
               @customer = customer
               @integration_customer = integration_customer
               @invoice = invoice
               @fees = fees
-              @billing_entity = customer.billing_entity
             end
 
             def body
@@ -67,7 +66,7 @@ module Integrations
 
             private
 
-            attr_reader :customer, :integration_customer, :invoice, :fees, :billing_entity
+            attr_reader :customer, :integration_customer, :invoice, :fees
 
             def empty_struct
               @empty_struct ||= OpenStruct.new
