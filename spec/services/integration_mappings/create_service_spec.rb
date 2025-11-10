@@ -17,7 +17,8 @@ RSpec.describe IntegrationMappings::CreateService do
       {
         mappable_type: "AddOn",
         mappable_id: add_on.id,
-        integration_id: integration.id
+        integration_id: integration.id,
+        external_id: "external_123"
       }
     end
 
@@ -27,17 +28,50 @@ RSpec.describe IntegrationMappings::CreateService do
 
         integration_mapping = IntegrationMappings::NetsuiteMapping.order(:created_at).last
 
-        aggregate_failures do
-          expect(integration_mapping.mappable_type).to eq("AddOn")
-          expect(integration_mapping.mappable_id).to eq(add_on.id)
-          expect(integration_mapping.integration_id).to eq(integration.id)
-        end
+        expect(integration_mapping.mappable_type).to eq("AddOn")
+        expect(integration_mapping.mappable_id).to eq(add_on.id)
+        expect(integration_mapping.integration_id).to eq(integration.id)
       end
 
       it "returns an integration mapping in result object" do
         result = service_call
 
         expect(result.integration_mapping).to be_a(IntegrationMappings::NetsuiteMapping)
+      end
+
+      context "with billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:create_args) do
+          {
+            mappable_type: "AddOn",
+            mappable_id: add_on.id,
+            integration_id: integration.id,
+            billing_entity_id: billing_entity.id,
+            external_id: "external_123"
+          }
+        end
+
+        it "creates an integration mapping with billing entity" do
+          expect { service_call }.to change(IntegrationMappings::NetsuiteMapping, :count).by(1)
+
+          integration_mapping = IntegrationMappings::NetsuiteMapping.order(:created_at).last
+
+          expect(integration_mapping.mappable_type).to eq("AddOn")
+          expect(integration_mapping.mappable_id).to eq(add_on.id)
+          expect(integration_mapping.integration_id).to eq(integration.id)
+          expect(integration_mapping.billing_entity_id).to eq(billing_entity.id)
+          expect(integration_mapping.external_id).to eq("external_123")
+        end
+
+        context "when billing entity belongs to different organization" do
+          let(:billing_entity) { create(:billing_entity, organization: create(:organization)) }
+
+          it "returns an error" do
+            expect(service_call).not_to be_success
+            expect(service_call.error).to be_a(BaseService::NotFoundFailure)
+            expect(service_call.error.message).to eq("billing_entity_not_found")
+          end
+        end
       end
     end
 
@@ -52,11 +86,9 @@ RSpec.describe IntegrationMappings::CreateService do
       it "returns an error" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("integration_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("integration_not_found")
       end
     end
   end
