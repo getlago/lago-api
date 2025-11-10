@@ -8,6 +8,7 @@ development:
     username: lago
     password: changeme
     database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
     port: 5432
   events:
     <<: *default
@@ -15,11 +16,13 @@ development:
     username: lago
     password: changeme
     database: lago
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
     port: 5432
   clickhouse:
     adapter: clickhouse
     database: default
     host: clickhouse
+    pool: <%= ENV.fetch('DATABASE_POOL', 5) %>
     port: 8123
     username: default
     password: default
