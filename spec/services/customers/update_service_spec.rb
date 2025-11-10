@@ -144,6 +144,8 @@ RSpec.describe Customers::UpdateService do
           id: customer.id,
           name: "Updated customer name",
           timezone: "Europe/Paris",
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor",
           billing_configuration: {
             invoice_grace_period: 3
           },
@@ -157,6 +159,8 @@ RSpec.describe Customers::UpdateService do
         updated_customer = result.customer
         aggregate_failures do
           expect(updated_customer.timezone).to eq("Europe/Paris")
+          expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+          expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
 
           billing = update_args[:billing_configuration]
           expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])

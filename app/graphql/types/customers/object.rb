@@ -34,6 +34,8 @@ module Types
       field :payment_provider_code, String, null: true
       field :phone, String, null: true
       field :state, String, null: true
+      field :subscription_invoice_issuing_date_adjustment, Types::Customers::SubscriptionInvoiceIssuingDateAdjustmentEnum, null: true
+      field :subscription_invoice_issuing_date_anchor, Types::Customers::SubscriptionInvoiceIssuingDateAnchorEnum, null: true
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true

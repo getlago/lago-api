@@ -17,6 +17,8 @@ RSpec.describe Customers::CreateService do
       currency: "EUR",
       timezone: "Europe/Paris",
       invoice_grace_period: 2,
+      subscription_invoice_issuing_date_anchor: "current_period_end",
+      subscription_invoice_issuing_date_adjustment: "keep_anchor",
       shipping_address: {
         address_line1: "line1",
         address_line2: "line2",
@@ -45,6 +47,8 @@ RSpec.describe Customers::CreateService do
     expect(customer.currency).to eq("EUR")
     expect(customer.timezone).to be_nil
     expect(customer.invoice_grace_period).to be_nil
+    expect(customer.subscription_invoice_issuing_date_anchor).to be_nil
+    expect(customer.subscription_invoice_issuing_date_adjustment).to be_nil
     expect(customer).to be_customer_account
     expect(customer).not_to be_exclude_from_dunning_campaign
 
@@ -130,7 +134,9 @@ RSpec.describe Customers::CreateService do
         lastname: "Last",
         organization_id: organization.id,
         timezone: "Europe/Paris",
-        invoice_grace_period: 2
+        invoice_grace_period: 2,
+        subscription_invoice_issuing_date_anchor: "current_period_end",
+        subscription_invoice_issuing_date_adjustment: "keep_anchor"
       }
     end
 
@@ -143,6 +149,8 @@ RSpec.describe Customers::CreateService do
       expect(customer.customer_type).to be_nil
       expect(customer.timezone).to eq("Europe/Paris")
       expect(customer.invoice_grace_period).to eq(2)
+      expect(customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+      expect(customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
     end
 
     context "with revenue share feature enabled and account_type 'partner'" do

@@ -32,6 +32,8 @@ RSpec.describe Mutations::Customers::Update do
           canEditAttributes
           invoiceGracePeriod
           finalizeZeroAmountInvoice
+          subscriptionInvoiceIssuingDateAnchor
+          subscriptionInvoiceIssuingDateAdjustment
           billingEntity { code }
           providerCustomer { id, providerCustomerId, providerPaymentMethods }
           billingConfiguration { id, documentLocale }
@@ -127,6 +129,8 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["timezone"]).to be_nil
       expect(result_data["netPaymentTerm"]).to eq(3)
       expect(result_data["invoiceGracePeriod"]).to be_nil
+      expect(result_data["subscriptionInvoiceIssuingDateAnchor"]).to be_nil
+      expect(result_data["subscriptionInvoiceIssuingDateAdjustment"]).to be_nil
       expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
       expect(result_data["providerCustomer"]["id"]).to be_present
       expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
@@ -154,7 +158,9 @@ RSpec.describe Mutations::Customers::Update do
             externalId: SecureRandom.uuid,
             name: "Updated customer",
             timezone: "TZ_EUROPE_PARIS",
-            invoiceGracePeriod: 2
+            invoiceGracePeriod: 2,
+            subscriptionInvoiceIssuingDateAnchor: "current_period_end",
+            subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
           }
         }
       )
@@ -164,6 +170,8 @@ RSpec.describe Mutations::Customers::Update do
       aggregate_failures do
         expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
         expect(result_data["invoiceGracePeriod"]).to eq(2)
+        expect(result_data["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+        expect(result_data["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       end
     end
   end

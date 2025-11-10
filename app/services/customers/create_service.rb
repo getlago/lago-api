@@ -145,6 +145,8 @@ module Customers
 
       customer.timezone = args[:timezone] if args.key?(:timezone)
       customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
+      customer.subscription_invoice_issuing_date_anchor = args[:subscription_invoice_issuing_date_anchor] if args.key?(:subscription_invoice_issuing_date_anchor)
+      customer.subscription_invoice_issuing_date_adjustment = args[:subscription_invoice_issuing_date_adjustment] if args.key?(:subscription_invoice_issuing_date_adjustment)
     end
 
     def create_billing_configuration(customer, billing_configuration = {})
