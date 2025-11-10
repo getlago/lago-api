@@ -30,7 +30,7 @@ module IntegrationCollectionMappings
     def currencies_hash_valid?
       valid_currencies = Currencies::ACCEPTED_CURRENCIES.keys
       currencies.keys.all? { it.is_a?(String) && valid_currencies.include?(it.to_sym) } &&
-        currencies.values.all? { it.is_a?(String) && it != "" }
+        currencies.values.all? { it.is_a?(String) && it.present? }
     end
   end
 end
