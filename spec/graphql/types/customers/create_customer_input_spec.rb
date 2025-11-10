@@ -18,6 +18,8 @@ RSpec.describe Types::Customers::CreateCustomerInput do
     expect(subject).to accept_argument(:external_salesforce_id).of_type("String")
     expect(subject).to accept_argument(:firstname).of_type("String")
     expect(subject).to accept_argument(:invoice_grace_period).of_type("Int")
+    expect(subject).to accept_argument(:subscription_invoice_issuing_date_anchor).of_type("CustomerSubscriptionInvoiceIssuingDateAnchorEnum")
+    expect(subject).to accept_argument(:subscription_invoice_issuing_date_adjustment).of_type("CustomerSubscriptionInvoiceIssuingDateAdjustmentEnum")
     expect(subject).to accept_argument(:lastname).of_type("String")
     expect(subject).to accept_argument(:legal_name).of_type("String")
     expect(subject).to accept_argument(:legal_number).of_type("String")

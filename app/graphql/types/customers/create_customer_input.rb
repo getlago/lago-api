@@ -25,6 +25,8 @@ module Types
       argument :net_payment_term, Integer, required: false
       argument :phone, String, required: false
       argument :state, String, required: false
+      argument :subscription_invoice_issuing_date_adjustment, Types::Customers::SubscriptionInvoiceIssuingDateAdjustmentEnum, required: false
+      argument :subscription_invoice_issuing_date_anchor, Types::Customers::SubscriptionInvoiceIssuingDateAnchorEnum, required: false
       argument :tax_codes, [String], required: false
       argument :tax_identification_number, String, required: false
       argument :timezone, Types::TimezoneEnum, required: false

@@ -32,6 +32,8 @@ RSpec.describe Mutations::Customers::Create do
           canEditAttributes
           invoiceGracePeriod
           finalizeZeroAmountInvoice
+          subscriptionInvoiceIssuingDateAnchor
+          subscriptionInvoiceIssuingDateAdjustment
           billingConfiguration { documentLocale }
           shippingAddress { addressLine1 city state }
           metadata { id, key, value, displayInInvoice }
@@ -170,6 +172,8 @@ RSpec.describe Mutations::Customers::Create do
       aggregate_failures do
         expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
         expect(result_data["invoiceGracePeriod"]).to be_nil
+        expect(result_data["subscriptionInvoiceIssuingDateAnchor"]).to be_nil
+        expect(result_data["subscriptionInvoiceIssuingDateAdjustment"]).to be_nil
       end
     end
   end
