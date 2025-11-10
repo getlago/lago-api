@@ -13,10 +13,6 @@ Rails.application.configure do
   config.middleware.use(ActionDispatch::Session::CookieStore, key: "_lago_dev")
   config.middleware.use(Rack::MethodOverride)
 
-  config.eager_load_paths += %W[
-    #{config.root}/dev
-  ]
-
   config.action_cable.disable_request_forgery_protection = true
   config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
 
