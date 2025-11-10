@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
+RSpec.describe Api::V1::Subscriptions::EntitlementsController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }

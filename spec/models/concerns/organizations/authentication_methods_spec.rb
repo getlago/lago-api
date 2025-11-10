@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Organizations::AuthenticationMethods, type: :concern do
+RSpec.describe Organizations::AuthenticationMethods do
   describe "authentication_methods" do
     let(:organization) { create(:organization) }
 

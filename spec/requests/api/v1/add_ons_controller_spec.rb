@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::AddOnsController, type: :request do
+RSpec.describe Api::V1::AddOnsController do
   let(:organization) { create(:organization) }
   let(:tax) { create(:tax, organization:) }
 

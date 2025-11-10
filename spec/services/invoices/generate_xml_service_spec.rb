@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::GenerateXmlService, type: :service do
+RSpec.describe Invoices::GenerateXmlService do
   let(:context) { "graphql" }
   let(:organization) { create(:organization, name: "LAGO") }
   let(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::PaymentRequestsController, type: :request do
+RSpec.describe Api::V1::PaymentRequestsController do
   let(:organization) { create(:organization) }
 
   describe "POST /api/v1/payment_requests" do

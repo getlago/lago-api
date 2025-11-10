@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
+RSpec.describe Api::V1::Analytics::GrossRevenuesController do
   describe "GET /analytics/gross_revenue" do
     subject { get_with_token(organization, "/api/v1/analytics/gross_revenue", params) }
 

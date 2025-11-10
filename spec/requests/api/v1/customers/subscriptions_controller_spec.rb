@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::SubscriptionsController, type: :request do
+RSpec.describe Api::V1::Customers::SubscriptionsController do
   describe "GET /api/v1/customers/:external_id/subscriptions" do
     subject { get_with_token(organization, "/api/v1/customers/#{external_id}/subscriptions", params) }
 

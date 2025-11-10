@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Credit note rounding issues Scenarios", :scenarios, type: :request do
+describe "Credit note rounding issues Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 

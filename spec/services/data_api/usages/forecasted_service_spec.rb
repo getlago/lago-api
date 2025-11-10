@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::Usages::ForecastedService, type: :service do
+RSpec.describe DataApi::Usages::ForecastedService do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

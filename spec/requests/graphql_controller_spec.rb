@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe GraphqlController, type: :request do
+RSpec.describe GraphqlController do
   describe "POST /graphql" do
     before do
       allow(CurrentContext).to receive(:source=)

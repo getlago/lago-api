@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::FeaturesController, type: :request do
+RSpec.describe Api::V1::FeaturesController do
   let(:organization) { create(:organization) }
   let(:feature1) { create(:feature, organization:, code: "seats", name: "Number of seats", description: "Number of users of the account") }
   let(:feature2) { create(:feature, organization:, code: "storage", name: "Storage", description: "Storage space") }

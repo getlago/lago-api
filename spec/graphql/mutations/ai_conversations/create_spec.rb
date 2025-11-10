@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AiConversations::Create, type: :graphql do
+RSpec.describe Mutations::AiConversations::Create do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
