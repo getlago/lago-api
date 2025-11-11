@@ -248,6 +248,56 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           end
         end
       end
+
+      context "with invalid payment method" do
+        let(:payment_method) { create(:payment_method, organization:, customer:) }
+        let(:params) do
+          {
+            wallet_id: wallet.id,
+            paid_credits:,
+            granted_credits:,
+            voided_credits:,
+            payment_method: payment_method_params,
+            **((name == :undefined) ? {} : {name:})
+          }
+        end
+
+        before { payment_method }
+
+        context "when type is invalid" do
+          let(:payment_method_params) do
+            {
+              payment_method_id: payment_method.id,
+              payment_method_type: "invalid"
+            }
+          end
+
+          it "fails" do
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+            end
+          end
+        end
+
+        context "when ID is invalid" do
+          let(:payment_method_params) do
+            {
+              payment_method_id: "invalid",
+              payment_method_type: "provider"
+            }
+          end
+
+          it "fails" do
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+            end
+          end
+        end
+      end
     end
 
     context "with decimal value" do

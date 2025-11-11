@@ -2722,6 +2722,7 @@ input CreateCustomerWalletTransactionInput {
   metadata: [WalletTransactionMetadataInput!]
   name: String
   paidCredits: String
+  paymentMethod: PaymentMethodReferenceInput
   priority: Int
   voidedCredits: String
   walletId: ID!
