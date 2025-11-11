@@ -2555,9 +2555,7 @@ CREATE VIEW public.exports_customers AS
     ppc.provider_customer_id,
     ppc.settings AS provider_settings,
     '{}'::json AS metadata,
-    to_json(ARRAY( SELECT ct.tax_id AS lago_tax_id
-           FROM public.customers_taxes ct
-          WHERE (ct.customer_id = c.id))) AS lago_taxes_ids
+    '[]'::json AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
      LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))));
@@ -10130,6 +10128,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251110191233'),
 ('20251106093323'),
 ('20251106092231'),
 ('20251106091730'),
