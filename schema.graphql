@@ -2894,6 +2894,7 @@ input CreateInvoiceInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  paymentMethod: PaymentMethodReferenceInput
   voidedInvoiceId: ID
 }
 
@@ -5387,6 +5388,7 @@ input FetchDraftInvoiceTaxesInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  paymentMethod: PaymentMethodReferenceInput
   voidedInvoiceId: ID
 }
 

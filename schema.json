@@ -12418,6 +12418,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentMethod",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "voidedInvoiceId",
               "description": null,
               "type": {
@@ -26268,6 +26280,18 @@
                     }
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentMethod",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
