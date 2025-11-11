@@ -2,13 +2,14 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
       @timestamp = timestamp
       @skip_psp = skip_psp
       @voided_invoice_id = voided_invoice_id
+      @payment_method_params = payment_method_params
 
       super(nil)
     end
@@ -22,6 +23,7 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "fees") if fees.blank?
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
+      return result unless valid_payment_method?
 
       ActiveRecord::Base.transaction do
         Customers::UpdateCurrencyService
@@ -75,7 +77,7 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id
+    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -116,6 +118,19 @@ module Invoices
 
     def tax_error?(fee_result)
       !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == "tax_error"
+    end
+
+    def valid_payment_method?
+      result.payment_method = payment_method
+
+      PaymentMethods::ValidateService.new(result, **{payment_method: payment_method_params}).valid?
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if payment_method_params.blank? || payment_method_params[:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: payment_method_params[:payment_method_id], organization_id: customer.organization_id)
     end
   end
 end
