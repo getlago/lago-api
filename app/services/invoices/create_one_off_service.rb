@@ -123,7 +123,7 @@ module Invoices
     def valid_payment_method?
       result.payment_method = payment_method
 
-      PaymentMethods::ValidateService.new(result, **{payment_method: payment_method_params}).valid?
+      PaymentMethods::ValidateService.new(result, payment_method: payment_method_params).valid?
     end
 
     def payment_method
