@@ -134,7 +134,9 @@ module PaymentProviders
             customer: provider_customer.provider_customer_id,
             payment_method_types: provider_customer.provider_payment_methods,
             confirm: true,
+            off_session: off_session?,
             return_url: success_redirect_url,
+            error_on_requires_action: error_on_requires_action?,
             description: reference,
             metadata: enriched_metadata
           }
@@ -197,6 +199,21 @@ module PaymentProviders
 
         def success_redirect_url
           payment_provider.success_redirect_url.presence || ::PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
+        end
+
+        # NOTE: Due to RBI limitation, all indians payment should be off_session
+        # to permit 3D secure authentication
+        # https://docs.stripe.com/india-recurring-payments
+        def off_session?
+          return false if invoice.customer.country == "IN"
+          return false if provider_customer.provider_payment_methods == ["customer_balance"]
+
+          true
+        end
+
+        # NOTE: Same as off_session?
+        def error_on_requires_action?
+          invoice.customer.country != "IN"
         end
 
         def prepare_failed_result(error, reraise: false, payable_payment_status: :failed)

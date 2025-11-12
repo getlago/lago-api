@@ -144,11 +144,11 @@ module ScenariosHelper
     invoice.reload
   end
 
-  def create_one_off_invoice(customer, addons, taxes: [], currency: "EUR", units: 1, **kwargs)
+  def create_one_off_invoice(customer, addons, taxes: [], units: 1, **kwargs)
     api_call(**kwargs) do
       create_invoice_params = {
         external_customer_id: customer.external_id,
-        currency:,
+        currency: "EUR",
         fees: [],
         timestamp: Time.zone.now.to_i
       }
