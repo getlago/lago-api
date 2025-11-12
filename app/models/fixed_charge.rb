@@ -39,6 +39,8 @@ class FixedCharge < ApplicationRecord
   validates :prorated, exclusion: [nil]
   validates :properties, presence: true
 
+  validate :validate_pay_in_advance
+  validate :validate_prorated
   validate :validate_properties
 
   def equal_properties?(fixed_charge)
@@ -56,6 +58,27 @@ class FixedCharge < ApplicationRecord
   end
 
   private
+  def validate_pay_in_advance
+    return unless pay_in_advance?
+
+    if volume?
+      errors.add(:pay_in_advance, :invalid_charge_model)
+    end
+  end
+
+  # NOTE: A prorated fixed charge is valid in the following cases:
+  # - standard model with any payment timing
+  # - volume model with pay_in_arrears only
+  # - graduated model with pay_in_arrears only
+  # Graduated + pay_in_advance + prorated is NOT allowed
+  def validate_prorated
+    return unless prorated?
+
+    if graduated? && pay_in_advance?
+      errors.add(:prorated, :invalid_charge_model)
+    end
+  end
+
   def validate_properties
     return if properties.blank?
 
