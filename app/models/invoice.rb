@@ -353,19 +353,13 @@ class Invoice < ApplicationRecord
     finalized? && (payment_pending? || payment_failed?)
   end
 
+  # Checks if all charges from subscription plans have corresponding fees
+  # For charges without filters: requires a base fee (charge_filter_id IS NULL)
+  # For charges with filters: requires BOTH a base fee AND fees for each filter
   def all_charges_have_fees?
     return true unless subscription?
 
-    subscriptions.includes(plan: {charges: :filters}).all? do |subscription|
-      subscription.plan.charges.all? do |charge|
-        charge_fee_exists = fees.charge.any? { |f| f.charge_id == charge.id && f.charge_filter_id.nil? }
-        next charge_fee_exists if charge.filters.empty?
-
-        charge_fee_exists && charge.filters.all? do |fi|
-          fees.charge.any? { |f| f.charge_id == charge.id && f.charge_filter_id == fi.id }
-        end
-      end
-    end
+    all_charges_have_base_fees? && all_charge_filters_have_fees?
   end
 
   def has_different_boundaries_for_subscription_and_charges?(subscription)
@@ -435,6 +429,30 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  # Checks that every charge has at least one fee without a filter (charge_filter_id IS NULL)
+  # This "base fee" is created for charges without filters, or for unmatched events when filters exist
+  def all_charges_have_base_fees?
+    !Charge.exists?(
+      Charge.joins(plan: :subscriptions)
+        .where(subscriptions: {id: subscriptions.select(:id)})
+        .where.not(
+          id: fees.charge.where(charge_filter_id: nil).select(:charge_id)
+        )
+    )
+  end
+
+  # Checks that every charge filter has a corresponding fee
+  # Only relevant for charges that have filters defined
+  def all_charge_filters_have_fees?
+    !ChargeFilter.exists?(
+      ChargeFilter.joins(charge: {plan: :subscriptions})
+        .where(subscriptions: {id: subscriptions.select(:id)})
+        .where.not(
+          id: fees.charge.where.not(charge_filter_id: nil).select(:charge_filter_id)
+        )
+    )
+  end
 
   def should_assign_sequential_id?
     status_changed_to_finalized?
