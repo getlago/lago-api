@@ -3088,6 +3088,7 @@ input CreateSubscriptionInput {
   endingAt: ISO8601DateTime
   externalId: String
   name: String
+  paymentMethod: PaymentMethodReferenceInput
   planId: ID!
   planOverrides: PlanOverridesInput
   subscriptionAt: ISO8601DateTime
