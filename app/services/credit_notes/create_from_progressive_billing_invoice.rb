@@ -17,6 +17,7 @@ module CreditNotes
 
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
+      return result unless result.success?
 
       credit_note_result = CreditNotes::CreateService.call!(
         invoice: progressive_billing_invoice,
@@ -25,10 +26,6 @@ module CreditNotes
         reason:,
         automatic: true
       )
-      # Note: it can be bigger because of taxes
-      if credit_note_result.credit_note.total_amount_cents < amount
-        return result.not_allowed_failure!(code: "creditable_amount_is_less_than_requested")
-      end
 
       result.credit_note = credit_note_result.credit_note
       result
@@ -57,10 +54,10 @@ module CreditNotes
         remaining -= fee_credit_amount
       end
 
-      # it could be that we have some amount remaining
+      # it could be that we have some amount remaining due to multiple progressive billing invoices. This case should be handled manually
       # TODO(ProgressiveBilling): verify and check in v2
       if remaining.positive?
-        @amount -= remaining
+        result.not_allowed_failure!(code: "creditable_amount_is_less_than_requested")
       end
 
       items
