@@ -90,6 +90,23 @@ RSpec.describe CreditNote do
     end
   end
 
+  describe "#xml_url" do
+    before do
+      credit_note.xml_file.attach(
+        io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+        filename: "credit_note.xml",
+        content_type: "application/xml"
+      )
+    end
+
+    it "returns the xml file url" do
+      xml_url = credit_note.xml_url
+
+      expect(xml_url).to be_present
+      expect(xml_url).to include(ENV["LAGO_API_URL"])
+    end
+  end
+
   describe "#currency" do
     let(:credit_note) { build(:credit_note, total_amount_currency: "JPY") }
 

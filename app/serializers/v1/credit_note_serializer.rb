@@ -29,6 +29,7 @@ module V1
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         file_url: model.file_url,
+        xml_url: model.xml_url,
         self_billed: model.invoice.self_billed
       }
 

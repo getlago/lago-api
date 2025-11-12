@@ -8,12 +8,12 @@ RSpec.describe CreditNotes::GeneratePdfJob do
   let(:result) { BaseService::Result.new }
 
   it "delegates to the Generate service" do
-    allow(CreditNotes::GenerateService).to receive(:call)
+    allow(CreditNotes::GeneratePdfService).to receive(:call)
       .with(credit_note:, context: "api")
       .and_return(result)
 
     described_class.perform_now(credit_note)
 
-    expect(CreditNotes::GenerateService).to have_received(:call)
+    expect(CreditNotes::GeneratePdfService).to have_received(:call)
   end
 end

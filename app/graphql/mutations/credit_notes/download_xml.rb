@@ -2,21 +2,21 @@
 
 module Mutations
   module CreditNotes
-    class Download < BaseMutation
+    class DownloadXml < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
 
       REQUIRED_PERMISSION = "credit_notes:view"
 
-      graphql_name "DownloadCreditNote"
-      description "Download a Credit Note PDF"
+      graphql_name "DownloadXmlCreditNote"
+      description "Download a Credit Note XML"
 
       argument :id, ID, required: true
 
       type Types::CreditNotes::Object
 
       def resolve(**args)
-        result = ::CreditNotes::GeneratePdfService.call(
+        result = ::CreditNotes::GenerateXmlService.call(
           credit_note: context[:current_user].credit_notes.find_by(id: args[:id])
         )
 
