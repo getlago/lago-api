@@ -114,7 +114,8 @@ module WalletTransactions
         invoice_requires_successful_payment:,
         metadata:,
         priority:,
-        name:
+        name:,
+        payment_method: params[:payment_method]
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)

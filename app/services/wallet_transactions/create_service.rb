@@ -13,7 +13,7 @@ module WalletTransactions
     end
 
     def call
-      result.wallet_transaction = wallet.wallet_transactions.create!(
+      transaction = wallet.wallet_transactions.create!(
         **transaction_params.slice(
           :credit_note_id,
           :invoice_id,
@@ -31,6 +31,14 @@ module WalletTransactions
         credit_amount:,
         metadata: transaction_params[:metadata] || []
       )
+
+      if transaction_params[:payment_method].present?
+        transaction.payment_method_type = transaction_params[:payment_method][:payment_method_type] if transaction_params[:payment_method].key?(:payment_method_type)
+        transaction.payment_method_id = transaction_params[:payment_method][:payment_method_id] if transaction_params[:payment_method].key?(:payment_method_id)
+        transaction.save!
+      end
+
+      result.wallet_transaction = transaction
 
       result
     end

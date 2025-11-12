@@ -215,6 +215,41 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       end
     end
 
+    context "with payment method" do
+      it "sets correctly default payment method values" do
+        expect(result).to be_success
+
+        transactions = WalletTransaction.where(wallet_id: wallet.id)
+        expect(transactions).to all(have_attributes(payment_method_id: nil))
+        expect(transactions).to all(have_attributes(payment_method_type: "provider"))
+      end
+
+      context "when specific payment method is passed" do
+        let(:payment_method) { create(:payment_method, organization:, customer:) }
+        let(:params) do
+          {
+            wallet_id: wallet.id,
+            paid_credits:,
+            granted_credits:,
+            voided_credits:,
+            payment_method: {
+              payment_method_id: payment_method.id,
+              payment_method_type: "provider"
+            },
+            **((name == :undefined) ? {} : {name:})
+          }
+        end
+
+        it "sets correctly payment method" do
+          expect(result).to be_success
+
+          transaction = WalletTransaction.where(wallet_id: wallet.id, transaction_status: :purchased).first
+          expect(transaction.payment_method_id).to eq(payment_method.id)
+          expect(transaction.payment_method_type).to eq("provider")
+        end
+      end
+    end
+
     context "with validation error" do
       let(:paid_credits) { "-15.00" }
 
