@@ -26,12 +26,25 @@ class Customer < ApplicationRecord
     partner: "partner"
   }.freeze
 
+  SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS = {
+    current_period_end: "current_period_end",
+    next_period_start: "next_period_start"
+  }.freeze
+
+  SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS = {
+    keep_anchor: "keep_anchor",
+    align_with_finalization_date: "align_with_finalization_date"
+  }.freeze
+
   attribute :finalize_zero_amount_invoice, :integer
   enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
   enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   attribute :account_type, :string
   enum :account_type, ACCOUNT_TYPES, suffix: :account
+
+  enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
+  enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
   before_save :ensure_slug
 
@@ -279,55 +292,57 @@ end
 #
 # Table name: customers
 #
-#  id                               :uuid             not null, primary key
-#  account_type                     :enum             default("customer"), not null
-#  address_line1                    :string
-#  address_line2                    :string
-#  city                             :string
-#  country                          :string
-#  currency                         :string
-#  customer_type                    :enum
-#  deleted_at                       :datetime
-#  document_locale                  :string
-#  email                            :string
-#  exclude_from_dunning_campaign    :boolean          default(FALSE), not null
-#  finalize_zero_amount_invoice     :integer          default("inherit"), not null
-#  firstname                        :string
-#  invoice_grace_period             :integer
-#  last_dunning_campaign_attempt    :integer          default(0), not null
-#  last_dunning_campaign_attempt_at :datetime
-#  lastname                         :string
-#  legal_name                       :string
-#  legal_number                     :string
-#  logo_url                         :string
-#  name                             :string
-#  net_payment_term                 :integer
-#  payment_provider                 :string
-#  payment_provider_code            :string
-#  payment_receipt_counter          :bigint           default(0), not null
-#  phone                            :string
-#  shipping_address_line1           :string
-#  shipping_address_line2           :string
-#  shipping_city                    :string
-#  shipping_country                 :string
-#  shipping_state                   :string
-#  shipping_zipcode                 :string
-#  skip_invoice_custom_sections     :boolean          default(FALSE), not null
-#  slug                             :string
-#  state                            :string
-#  tax_identification_number        :string
-#  timezone                         :string
-#  url                              :string
-#  vat_rate                         :float
-#  zipcode                          :string
-#  created_at                       :datetime         not null
-#  updated_at                       :datetime         not null
-#  applied_dunning_campaign_id      :uuid
-#  billing_entity_id                :uuid             not null
-#  external_id                      :string           not null
-#  external_salesforce_id           :string
-#  organization_id                  :uuid             not null
-#  sequential_id                    :bigint
+#  id                                           :uuid             not null, primary key
+#  account_type                                 :enum             default("customer"), not null
+#  address_line1                                :string
+#  address_line2                                :string
+#  city                                         :string
+#  country                                      :string
+#  currency                                     :string
+#  customer_type                                :enum
+#  deleted_at                                   :datetime
+#  document_locale                              :string
+#  email                                        :string
+#  exclude_from_dunning_campaign                :boolean          default(FALSE), not null
+#  finalize_zero_amount_invoice                 :integer          default("inherit"), not null
+#  firstname                                    :string
+#  invoice_grace_period                         :integer
+#  last_dunning_campaign_attempt                :integer          default(0), not null
+#  last_dunning_campaign_attempt_at             :datetime
+#  lastname                                     :string
+#  legal_name                                   :string
+#  legal_number                                 :string
+#  logo_url                                     :string
+#  name                                         :string
+#  net_payment_term                             :integer
+#  payment_provider                             :string
+#  payment_provider_code                        :string
+#  payment_receipt_counter                      :bigint           default(0), not null
+#  phone                                        :string
+#  shipping_address_line1                       :string
+#  shipping_address_line2                       :string
+#  shipping_city                                :string
+#  shipping_country                             :string
+#  shipping_state                               :string
+#  shipping_zipcode                             :string
+#  skip_invoice_custom_sections                 :boolean          default(FALSE), not null
+#  slug                                         :string
+#  state                                        :string
+#  subscription_invoice_issuing_date_adjustment :enum
+#  subscription_invoice_issuing_date_anchor     :enum
+#  tax_identification_number                    :string
+#  timezone                                     :string
+#  url                                          :string
+#  vat_rate                                     :float
+#  zipcode                                      :string
+#  created_at                                   :datetime         not null
+#  updated_at                                   :datetime         not null
+#  applied_dunning_campaign_id                  :uuid
+#  billing_entity_id                            :uuid             not null
+#  external_id                                  :string           not null
+#  external_salesforce_id                       :string
+#  organization_id                              :uuid             not null
+#  sequential_id                                :bigint
 #
 # Indexes
 #

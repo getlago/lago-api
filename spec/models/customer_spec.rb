@@ -234,6 +234,34 @@ RSpec.describe Customer do
       end
     end
 
+    it "validates subscription_invoice_issuing_date_anchor" do
+      customer.subscription_invoice_issuing_date_anchor = nil
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "invalid"
+      expect(customer).not_to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "current_period_end"
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "next_period_start"
+      expect(customer).to be_valid
+    end
+
+    it "validates subscription_invoice_issuing_date_adjustments" do
+      customer.subscription_invoice_issuing_date_adjustment = nil
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "invalid"
+      expect(customer).not_to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "keep_anchor"
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "align_with_finalization_date"
+      expect(customer).to be_valid
+    end
+
     it { is_expected.to validate_inclusion_of(:customer_type).in_array(described_class::CUSTOMER_TYPES.keys) }
   end
 

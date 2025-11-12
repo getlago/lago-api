@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
+  class BillingEntity < ApplicationRecord
+    attribute :subscription_invoice_issuing_date_anchor, :string, default: "next_period_start"
+    attribute :subscription_invoice_issuing_date_adjustment, :string, default: "keep_anchor"
+  end
+
   class Invoice < ApplicationRecord
     scope :non_self_billed, -> { where.not(self_billed: true) }
     scope :with_generated_number, -> { where(status: %w[finalized voided]) }
