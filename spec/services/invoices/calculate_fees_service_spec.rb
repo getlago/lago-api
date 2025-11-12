@@ -938,8 +938,11 @@ RSpec.describe Invoices::CalculateFeesService do
 
           fixed_charge_fee = invoice.fees.fixed_charge.first
           expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
-          expect(fixed_charge_fee.units).to eq(3)
+          expect(fixed_charge_fee.units).to eq(28)
+          # started_at is 3 days ago, so amount is 28 * 3 / 28  * 10_00 = 3000
           expect(fixed_charge_fee.amount_cents).to eq(3000)
+          # unit amount is 3000 / 28 = 107.14285714285714
+          expect(fixed_charge_fee.unit_amount_cents).to eq(107)
         end
       end
     end
