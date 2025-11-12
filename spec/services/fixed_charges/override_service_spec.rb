@@ -79,7 +79,7 @@ RSpec.describe FixedCharges::OverrideService do
           .with(
             fixed_charge: result.fixed_charge,
             subscription: nil,
-            apply_units_immediately: true
+            apply_units_immediately: false
           )
           .once
       end
@@ -289,9 +289,32 @@ RSpec.describe FixedCharges::OverrideService do
             .with(
               fixed_charge: result.fixed_charge,
               subscription:,
-              apply_units_immediately: true
+              apply_units_immediately: false
             )
             .once
+        end
+
+        context "when apply_units_immediately is true" do
+          let(:params) do
+            {
+              units: 15,
+              plan_id: plan2.id,
+              apply_units_immediately: true
+            }
+          end
+
+          it "creates fixed charge events for the specific subscription" do
+            result = override_service.call
+
+            expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+              .to have_received(:call!)
+              .with(
+                fixed_charge: result.fixed_charge,
+                subscription:,
+                apply_units_immediately: true
+              )
+              .once
+          end
         end
       end
     end

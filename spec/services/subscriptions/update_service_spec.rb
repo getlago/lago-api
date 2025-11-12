@@ -502,6 +502,216 @@ RSpec.describe Subscriptions::UpdateService do
           expect(result.error.code).to eq("feature_unavailable")
         end
       end
+
+      context "with fixed charge overrides and apply_units_immediately true" do
+        around { |test| lago_premium!(&test) }
+
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:, interval: :weekly) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) do
+          create(
+            :subscription,
+            :calendar,
+            plan:,
+            customer:,
+            subscription_at:,
+            started_at:
+          )
+        end
+        let(:subscription_at) { Date.new(2023, 9, 2) }
+        let(:started_at) { Date.new(2025, 5, 17) }
+
+        let(:params) do
+          {
+            plan_overrides: {
+              fixed_charges: [
+                {
+                  id: fixed_charge2.id,
+                  units: 300,
+                  apply_units_immediately: true
+                }
+              ]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+        end
+
+        it "creates override fixed charges for both fixed charges" do
+          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+
+          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+          expect(fc1_override.units).to eq(fixed_charge1.units)
+          expect(fc2_override.units).to eq(300)
+        end
+
+        it "creates 2 fixed charge events with correct timestamps and units" do
+          travel_to(Time.zone.local(2025, 10, 10, 15, 33)) do # Friday
+            expect { update_service.call }.to change(FixedChargeEvent, :count).by(2)
+
+            fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+            fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+            next_billing_period_start = Time.zone.local(2025, 10, 13) # Next Monday
+            events = subscription.fixed_charge_events.pluck(%i[fixed_charge_id units timestamp])
+
+            expect(events).to contain_exactly(
+              [fc1_override.id, fixed_charge1.units, be_within(1.second).of(next_billing_period_start)],
+              [fc2_override.id, 300, be_within(1.second).of(Time.current)]
+            )
+          end
+        end
+      end
+
+      context "with fixed charge overrides and apply_units_immediately false" do
+        around { |test| lago_premium!(&test) }
+
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:, interval: :weekly) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription) do
+          create(
+            :subscription,
+            :calendar,
+            plan:,
+            customer:,
+            subscription_at:,
+            started_at:
+          )
+        end
+        let(:subscription_at) { Date.new(2023, 9, 2) }
+        let(:started_at) { Date.new(2025, 5, 17) }
+
+        let(:params) do
+          {
+            plan_overrides: {
+              fixed_charges: [
+                {
+                  id: fixed_charge1.id,
+                  units: 15,
+                  apply_units_immediately: false
+                },
+                {
+                  id: fixed_charge2.id
+                }
+              ]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+        end
+
+        it "creates override fixed charges for both fixed charges" do
+          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+
+          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+          expect(fc1_override.units).to eq(15)
+          expect(fc2_override.units).to eq(fixed_charge2.units)
+        end
+
+        it "creates 2 fixed charge events with correct timestamps and units" do
+          travel_to(Time.zone.local(2025, 10, 10, 15, 33)) do # Friday
+            expect { update_service.call }.to change(FixedChargeEvent, :count).by(2)
+
+            fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+            fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+            next_billing_period_start = Time.zone.local(2025, 10, 13) # Next Monday
+            events = subscription.fixed_charge_events.pluck(%i[fixed_charge_id units timestamp])
+
+            expect(events).to contain_exactly(
+              [fc1_override.id, 15, be_within(1.second).of(next_billing_period_start)],
+              [fc2_override.id, fixed_charge2.units, be_within(1.second).of(next_billing_period_start)]
+            )
+          end
+        end
+      end
+
+      context "with pending subscription, fixed charge overrides and mixed apply_units_immediately" do
+        around { |test| lago_premium!(&test) }
+
+        let(:organization) { membership.organization }
+        let(:plan) { create(:plan, organization:, interval: :weekly) }
+        let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+        let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
+        let(:customer) { create(:customer, organization:) }
+        let(:subscription_at) { 7.days.from_now }
+
+        let(:subscription) do
+          create(
+            :subscription,
+            :calendar,
+            plan:,
+            customer:,
+            subscription_at:,
+            status: :pending
+          )
+        end
+
+        let(:params) do
+          {
+            plan_overrides: {
+              fixed_charges: [
+                {
+                  id: fixed_charge1.id,
+                  units: 200,
+                  apply_units_immediately: true
+                },
+                {
+                  id: fixed_charge2.id,
+                  units: 300,
+                  apply_units_immediately: false
+                }
+              ]
+            }
+          }
+        end
+
+        before do
+          fixed_charge1
+          fixed_charge2
+          subscription
+        end
+
+        it "creates override fixed charges for both fixed charges" do
+          expect { update_service.call }.to change(FixedCharge, :count).by(2)
+
+          fc1_override = FixedCharge.find_sole_by(parent_id: fixed_charge1.id)
+          fc2_override = FixedCharge.find_sole_by(parent_id: fixed_charge2.id)
+
+          expect(fc1_override.units).to eq(200)
+          expect(fc2_override.units).to eq(300)
+        end
+
+        it "does not create fixed charge events for pending subscription" do
+          travel_to(Time.zone.local(2025, 10, 29, 15, 33)) do
+            expect { update_service.call }.not_to change(FixedChargeEvent, :count)
+
+            subscription.reload
+
+            expect(subscription).to be_pending
+            expect(subscription.plan.parent_id).to eq(plan.id)
+            expect(subscription.fixed_charge_events.count).to be_zero
+          end
+        end
+      end
     end
 
     context "with empty params" do
