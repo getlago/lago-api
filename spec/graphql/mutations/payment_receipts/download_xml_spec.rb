@@ -30,23 +30,21 @@ RSpec.describe Mutations::PaymentReceipts::DownloadXml do
   it_behaves_like "requires permission", "invoices:view"
 
   it "generates the XML for the given payment receipt" do
-    freeze_time do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {id: payment_receipt.id}
-        }
-      )
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {id: payment_receipt.id}
+      }
+    )
 
-      result_data = result["data"]["downloadXmlPaymentReceipt"]
+    result_data = result["data"]["downloadXmlPaymentReceipt"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["xmlUrl"]).to be_present
-      end
+    aggregate_failures do
+      expect(result_data["id"]).to be_present
+      expect(result_data["xmlUrl"]).to be_present
     end
   end
 end

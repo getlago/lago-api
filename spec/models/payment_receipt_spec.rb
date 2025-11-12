@@ -10,6 +10,7 @@ RSpec.describe PaymentReceipt do
     expect(subject).to belong_to(:organization)
     expect(subject).to belong_to(:billing_entity)
     expect(subject).to have_one_attached(:file)
+    expect(subject).to have_one_attached(:xml_file)
   end
 
   describe "#file_url" do
