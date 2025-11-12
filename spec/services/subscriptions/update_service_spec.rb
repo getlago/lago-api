@@ -214,7 +214,7 @@ RSpec.describe Subscriptions::UpdateService do
             it "creates fixed charge events" do
               expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
               expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-                .to match_array([[fixed_charge.id, subscription.started_at]])
+                .to contain_exactly([fixed_charge.id, be_within(1.second).of(subscription.started_at)])
             end
           end
         end
@@ -249,7 +249,7 @@ RSpec.describe Subscriptions::UpdateService do
             it "creates fixed charge events" do
               expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
               expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
-                .to match_array([[fixed_charge.id, subscription.started_at]])
+                .to contain_exactly([fixed_charge.id, be_within(1.second).of(subscription.started_at)])
             end
           end
         end

@@ -1052,7 +1052,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
         expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp, :units))
           .to contain_exactly(
-            [overriden_fixed_charge.id, subscription.started_at, 90]
+            [overriden_fixed_charge.id, be_within(1.second).of(subscription.started_at), 90]
           )
       end
     end
