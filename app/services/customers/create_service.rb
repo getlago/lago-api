@@ -62,6 +62,8 @@ module Customers
         payment_provider_code: args[:payment_provider_code],
         currency: args[:currency],
         document_locale: billing_configuration[:document_locale],
+        subscription_invoice_issuing_date_anchor: billing_configuration[:subscription_invoice_issuing_date_anchor],
+        subscription_invoice_issuing_date_adjustment: billing_configuration[:subscription_invoice_issuing_date_adjustment],
         tax_identification_number: args[:tax_identification_number],
         firstname: args[:firstname],
         lastname: args[:lastname],
@@ -143,12 +145,8 @@ module Customers
     def assign_premium_attributes(customer, args)
       return unless License.premium?
 
-      billing = args[:billing_configuration]&.to_h || {}
-
       customer.timezone = args[:timezone] if args.key?(:timezone)
       customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
-      customer.subscription_invoice_issuing_date_anchor = billing[:subscription_invoice_issuing_date_anchor] if billing.key?(:subscription_invoice_issuing_date_anchor)
-      customer.subscription_invoice_issuing_date_adjustment = billing[:subscription_invoice_issuing_date_adjustment] if billing.key?(:subscription_invoice_issuing_date_adjustment)
     end
 
     def create_billing_configuration(customer, billing_configuration = {})

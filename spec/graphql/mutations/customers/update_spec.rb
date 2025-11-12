@@ -74,7 +74,9 @@ RSpec.describe Mutations::Customers::Update do
         providerPaymentMethods: %w[card sepa_debit]
       },
       billingConfiguration: {
-        documentLocale: "fr"
+        documentLocale: "fr",
+        subscriptionInvoiceIssuingDateAnchor: "current_period_end",
+        subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
       },
       metadata: [
         {
@@ -135,11 +137,11 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["providerCustomer"]["id"]).to be_present
       expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
       expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(%w[card sepa_debit])
+      expect(result_data["invoiceGracePeriod"]).to be_nil
       expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
       expect(result_data["billingConfiguration"]["id"]).to eq("#{customer.id}-c0nf")
-      expect(result_data["invoiceGracePeriod"]).to be_nil
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to be_nil
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to be_nil
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       expect(result_data["metadata"][0]["key"]).to eq("test-key")
       expect(result_data["taxes"][0]["code"]).to eq(tax.code)
       expect(result_data["configurableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
@@ -161,11 +163,7 @@ RSpec.describe Mutations::Customers::Update do
             externalId: SecureRandom.uuid,
             name: "Updated customer",
             timezone: "TZ_EUROPE_PARIS",
-            invoiceGracePeriod: 2,
-            billingConfiguration: {
-              subscriptionInvoiceIssuingDateAnchor: "current_period_end",
-              subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
-            }
+            invoiceGracePeriod: 2
           }
         }
       )
@@ -175,8 +173,6 @@ RSpec.describe Mutations::Customers::Update do
       aggregate_failures do
         expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
         expect(result_data["invoiceGracePeriod"]).to eq(2)
-        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
-        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       end
     end
   end

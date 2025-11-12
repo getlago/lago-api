@@ -35,7 +35,11 @@ RSpec.describe Customers::UpdateService do
         shipping_address: {
           city: "Paris"
         },
-        account_type: account_type
+        account_type: account_type,
+        billing_configuration: {
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        }
       }
     end
 
@@ -52,6 +56,9 @@ RSpec.describe Customers::UpdateService do
         expect(updated_customer.lastname).to eq(update_args[:lastname])
         expect(updated_customer.customer_type).to eq(update_args[:customer_type])
         expect(updated_customer.tax_identification_number).to eq(update_args[:tax_identification_number])
+        expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+        expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+
 
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
@@ -145,9 +152,7 @@ RSpec.describe Customers::UpdateService do
           name: "Updated customer name",
           timezone: "Europe/Paris",
           billing_configuration: {
-            invoice_grace_period: 3,
-            subscription_invoice_issuing_date_anchor: "current_period_end",
-            subscription_invoice_issuing_date_adjustment: "keep_anchor"
+            invoice_grace_period: 3
           },
           account_type:
         }
@@ -159,11 +164,7 @@ RSpec.describe Customers::UpdateService do
         updated_customer = result.customer
         aggregate_failures do
           expect(updated_customer.timezone).to eq("Europe/Paris")
-          expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
-          expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
-
-          billing = update_args[:billing_configuration]
-          expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+          expect(updated_customer.invoice_grace_period).to eq(3)
         end
       end
 
