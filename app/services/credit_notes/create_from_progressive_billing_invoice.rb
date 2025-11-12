@@ -25,7 +25,8 @@ module CreditNotes
         reason:,
         automatic: true
       )
-      if credit_note_result.credit_note.total_amount_cents != amount
+      # Note: it can be bigger because of taxes
+      if credit_note_result.credit_note.total_amount_cents < amount
         return result.not_allowed_failure!(code: "creditable_amount_is_less_than_requested")
       end
 
