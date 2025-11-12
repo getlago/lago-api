@@ -46,9 +46,6 @@ module Types
       argument :net_payment_term, Integer, required: false, permissions: %w[customer_settings:update:payment_terms customers:update]
       argument :tax_codes, [String], required: false, permissions: %w[customer_settings:update:tax_rates customers:update]
 
-      argument :subscription_invoice_issuing_date_adjustment, Types::Customers::SubscriptionInvoiceIssuingDateAdjustmentEnum, required: false
-      argument :subscription_invoice_issuing_date_anchor, Types::Customers::SubscriptionInvoiceIssuingDateAnchorEnum, required: false
-
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
       argument :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, required: false
 

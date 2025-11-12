@@ -213,9 +213,11 @@ module Customers
     def assign_premium_attributes(customer, args)
       return unless License.premium?
 
+      billing = args[:billing_configuration]&.to_h || {}
+
       customer.timezone = args[:timezone] if args.key?(:timezone)
-      customer.subscription_invoice_issuing_date_anchor = args[:subscription_invoice_issuing_date_anchor] if args.key?(:subscription_invoice_issuing_date_anchor)
-      customer.subscription_invoice_issuing_date_adjustment = args[:subscription_invoice_issuing_date_adjustment] if args.key?(:subscription_invoice_issuing_date_adjustment)
+      customer.subscription_invoice_issuing_date_anchor = billing[:subscription_invoice_issuing_date_anchor] if billing.key?(:subscription_invoice_issuing_date_anchor)
+      customer.subscription_invoice_issuing_date_adjustment = billing[:subscription_invoice_issuing_date_adjustment] if billing.key?(:subscription_invoice_issuing_date_adjustment)
     end
 
     def create_or_update_provider_customer(customer, payment_provider, billing_configuration = {})

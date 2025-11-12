@@ -29,8 +29,6 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:email).of_type("String")
     expect(subject).to have_field(:external_salesforce_id).of_type("String")
     expect(subject).to have_field(:invoice_grace_period).of_type("Int")
-    expect(subject).to have_field(:subscription_invoice_issuing_date_anchor).of_type("CustomerSubscriptionInvoiceIssuingDateAnchorEnum")
-    expect(subject).to have_field(:subscription_invoice_issuing_date_adjustment).of_type("CustomerSubscriptionInvoiceIssuingDateAdjustmentEnum")
     expect(subject).to have_field(:legal_name).of_type("String")
     expect(subject).to have_field(:legal_number).of_type("String")
     expect(subject).to have_field(:logo_url).of_type("String")

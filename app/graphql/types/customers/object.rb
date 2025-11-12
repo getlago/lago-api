@@ -34,8 +34,6 @@ module Types
       field :payment_provider_code, String, null: true
       field :phone, String, null: true
       field :state, String, null: true
-      field :subscription_invoice_issuing_date_adjustment, Types::Customers::SubscriptionInvoiceIssuingDateAdjustmentEnum, null: true
-      field :subscription_invoice_issuing_date_anchor, Types::Customers::SubscriptionInvoiceIssuingDateAnchorEnum, null: true
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
@@ -156,7 +154,9 @@ module Types
       def billing_configuration
         {
           id: "#{object&.id}-c0nf",
-          document_locale: object&.document_locale
+          document_locale: object&.document_locale,
+          subscription_invoice_issuing_date_anchor: object&.subscription_invoice_issuing_date_anchor,
+          subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment
         }
       end
 

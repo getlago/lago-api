@@ -17,8 +17,10 @@ RSpec.describe Customers::CreateService do
       currency: "EUR",
       timezone: "Europe/Paris",
       invoice_grace_period: 2,
-      subscription_invoice_issuing_date_anchor: "current_period_end",
-      subscription_invoice_issuing_date_adjustment: "keep_anchor",
+      billing_configuration: {
+        subscription_invoice_issuing_date_anchor: "current_period_end",
+        subscription_invoice_issuing_date_adjustment: "keep_anchor",
+      },
       shipping_address: {
         address_line1: "line1",
         address_line2: "line2",
@@ -135,8 +137,10 @@ RSpec.describe Customers::CreateService do
         organization_id: organization.id,
         timezone: "Europe/Paris",
         invoice_grace_period: 2,
-        subscription_invoice_issuing_date_anchor: "current_period_end",
-        subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        billing_configuration: {
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        }
       }
     end
 

@@ -144,10 +144,10 @@ RSpec.describe Customers::UpdateService do
           id: customer.id,
           name: "Updated customer name",
           timezone: "Europe/Paris",
-          subscription_invoice_issuing_date_anchor: "current_period_end",
-          subscription_invoice_issuing_date_adjustment: "keep_anchor",
           billing_configuration: {
-            invoice_grace_period: 3
+            invoice_grace_period: 3,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor"
           },
           account_type:
         }
