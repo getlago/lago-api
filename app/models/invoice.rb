@@ -371,6 +371,18 @@ class Invoice < ApplicationRecord
     all_charges_have_base_fees? && all_charge_filters_have_fees?
   end
 
+  def all_fixed_charges_have_fees?
+    return true unless subscription?
+
+    !FixedCharge.exists?(
+      FixedCharge.joins(plan: :subscriptions)
+      .where(subscriptions: {id: subscriptions.select(:id)})
+      .where.not(
+        id: fees.fixed_charge.select(:fixed_charge_id)
+      )
+    )
+  end
+
   def has_different_boundaries_for_subscription_and_charges?(subscription)
     invoice_subscription = invoice_subscription(subscription.id)
     subscription_from = invoice_subscription.from_datetime_in_customer_timezone&.to_date
