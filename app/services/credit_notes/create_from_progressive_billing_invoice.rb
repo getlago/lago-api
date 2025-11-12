@@ -2,6 +2,7 @@
 
 module CreditNotes
   class CreateFromProgressiveBillingInvoice < BaseService
+    Result = BaseResult[:credit_note]
     def initialize(progressive_billing_invoice:, amount:, reason: :other)
       @progressive_billing_invoice = progressive_billing_invoice
       @amount = amount
@@ -17,13 +18,19 @@ module CreditNotes
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
 
-      CreditNotes::CreateService.call!(
+      credit_note_result = CreditNotes::CreateService.call!(
         invoice: progressive_billing_invoice,
         credit_amount_cents: creditable_amount_cents(amount, items),
         items:,
         reason:,
         automatic: true
       )
+      if credit_note_result.credit_note.total_amount_cents != amount
+        return result.not_allowed_failure!(code: "creditable_amount_is_less_than_requested")
+      end
+
+      result.credit_note = credit_note_result.credit_note
+      result
     end
 
     private
