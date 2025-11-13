@@ -15,5 +15,6 @@ RSpec.describe Types::IntegrationCollectionMappings::UpdateInput do
     expect(subject).to accept_argument(:tax_code).of_type("String")
     expect(subject).to accept_argument(:tax_nexus).of_type("String")
     expect(subject).to accept_argument(:tax_type).of_type("String")
+    expect(subject).to accept_argument(:currencies).of_type("[CurrencyMappingItemInput!]")
   end
 end

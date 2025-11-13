@@ -289,6 +289,52 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       charge_fee2
     end
 
+    describe "with currency mapping" do
+      context "when no currencies mapping is defined" do
+        it "doesn't send the currency attribute" do
+          expect(subject["columns"]).not_to have_key("currency")
+        end
+      end
+
+      context "when currencies mapping is defined and has value for invoice currency" do
+        it "sends the currency attribute to NetSuite" do
+          create(:netsuite_currencies_mapping, integration:, settings: {
+            currencies: {
+              "EUR" => "312",
+              "USD" => "7"
+            }
+          })
+
+          expect(subject["columns"]["currency"]).to eq("312")
+        end
+      end
+
+      context "when currencies mapping is defined but have an invalid value" do
+        it "doesn't send the currency attribute" do
+          mapping = create(:netsuite_currencies_mapping, integration:)
+          settings = mapping.settings
+          # NOTE: Model validation prevents this from being saved, but just in case
+          settings["currencies"] = {"EUR" => "", "USD" => "7"}
+          mapping.update_column(:settings, settings) # rubocop:disable Rails/SkipsModelValidations
+
+          expect(subject["columns"]).not_to have_key("currency")
+        end
+      end
+
+      context "when currencies mapping is defined but doesn't have value for invoice currency" do
+        it "doesn't send the currency attribute" do
+          create(:netsuite_currencies_mapping, integration:, settings: {
+            currencies: {
+              "USD" => "7",
+              "GBP" => "312"
+            }
+          })
+
+          expect(subject["columns"]).not_to have_key("currency")
+        end
+      end
+    end
+
     context "when tax item is mapped" do
       before do
         integration_collection_mapping5

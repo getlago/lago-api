@@ -19,6 +19,21 @@ FactoryBot.define do
     end
   end
 
+  factory :netsuite_currencies_mapping, class: "IntegrationCollectionMappings::NetsuiteCollectionMapping" do
+    association :integration, factory: :netsuite_integration
+    organization { integration&.organization || association(:organization) }
+
+    mapping_type { :currencies }
+    settings do
+      {
+        currencies: {
+          "EUR" => "3",
+          "USD" => "7"
+        }
+      }
+    end
+  end
+
   factory :xero_collection_mapping, class: "IntegrationCollectionMappings::XeroCollectionMapping" do
     association :integration, factory: :xero_integration
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
