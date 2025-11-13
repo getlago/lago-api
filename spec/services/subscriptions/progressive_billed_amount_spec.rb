@@ -411,11 +411,11 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       voided_credit_note
     end
 
-    it "only subtracts available credit notes from to_credit_amount" do
+    it "subtracts available and consumed credit notes from to_credit_amount" do
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(80)
+      expect(result.to_credit_amount).to eq(70)
     end
   end
 
