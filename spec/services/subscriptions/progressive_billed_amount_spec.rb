@@ -197,6 +197,17 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billing_invoice).to eq(invoice)
         expect(result.to_credit_amount).to eq(0)
       end
+
+      context "when credit note is consumed" do
+        let(:credit_note) { create(:credit_note, invoice:, credit_amount_cents:, credit_status: :consumed) }
+
+        it "doesn't return amount cents that is fully consumed" do
+          result = service.call
+          expect(result.progressive_billed_amount).to eq(20)
+          expect(result.progressive_billing_invoice).to eq(invoice)
+          expect(result.to_credit_amount).to eq(0)
+        end
+      end
     end
 
     context "when partially credited" do
@@ -400,11 +411,11 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       voided_credit_note
     end
 
-    it "only subtracts available credit notes from to_credit_amount" do
+    it "subtracts available and consumed credit notes from to_credit_amount" do
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
-      expect(result.to_credit_amount).to eq(80)
+      expect(result.to_credit_amount).to eq(70)
     end
   end
 

@@ -2,6 +2,7 @@
 
 module CreditNotes
   class CreateFromProgressiveBillingInvoice < BaseService
+    Result = BaseResult[:credit_note]
     def initialize(progressive_billing_invoice:, amount:, reason: :other)
       @progressive_billing_invoice = progressive_billing_invoice
       @amount = amount
@@ -16,14 +17,18 @@ module CreditNotes
 
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
+      return result unless result.success?
 
-      CreditNotes::CreateService.call!(
+      credit_note_result = CreditNotes::CreateService.call!(
         invoice: progressive_billing_invoice,
         credit_amount_cents: creditable_amount_cents(amount, items),
         items:,
         reason:,
         automatic: true
       )
+
+      result.credit_note = credit_note_result.credit_note
+      result
     end
 
     private
@@ -49,10 +54,10 @@ module CreditNotes
         remaining -= fee_credit_amount
       end
 
-      # it could be that we have some amount remaining
+      # it could be that we have some amount remaining due to multiple progressive billing invoices. This case should be handled manually
       # TODO(ProgressiveBilling): verify and check in v2
       if remaining.positive?
-        @amount -= remaining
+        result.not_allowed_failure!(code: "creditable_amount_is_less_than_requested")
       end
 
       items

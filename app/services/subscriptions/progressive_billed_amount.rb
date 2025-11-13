@@ -53,7 +53,7 @@ module Subscriptions
       result.to_credit_amount = invoice.fees_amount_cents
       result.to_credit_amount -= invoice.coupons_amount_cents
       result.to_credit_amount -= invoice.progressive_billing_credits.sum(:amount_cents)
-      result.to_credit_amount -= invoice.credit_notes.available.sum(:credit_amount_cents)
+      result.to_credit_amount -= invoice.credit_notes.where(credit_status: ["available", "consumed"]).sum(:credit_amount_cents)
 
       # if for some reason this goes below zero, it should be zero.
       result.to_credit_amount = 0 if result.to_credit_amount.negative?
