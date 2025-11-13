@@ -5114,6 +5114,38 @@
               },
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "subscriptionInvoiceIssuingDateAdjustment",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscriptionInvoiceIssuingDateAnchor",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "inputFields": null,
@@ -5140,6 +5172,18 @@
               "deprecationReason": null
             },
             {
+              "name": "documentNumbering",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "BillingEntityDocumentNumberingEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceFooter",
               "description": null,
               "type": {
@@ -5157,6 +5201,30 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscriptionInvoiceIssuingDateAdjustment",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscriptionInvoiceIssuingDateAnchor",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -5265,6 +5333,52 @@
             {
               "name": "payment_receipt_created",
               "description": "payment_receipt.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum",
+          "description": "Subscription Invoice Issuing Date Adjustment Values",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "keep_anchor",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "align_with_finalization_date",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum",
+          "description": "Subscription Invoice Issuing Date Anchor Values",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "current_period_end",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "next_period_start",
+              "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             }

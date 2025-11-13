@@ -841,12 +841,17 @@ type BillingEntityBillingConfiguration {
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
+  subscriptionInvoiceIssuingDateAdjustment: BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum!
+  subscriptionInvoiceIssuingDateAnchor: BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum!
 }
 
 input BillingEntityBillingConfigurationInput {
   documentLocale: String
+  documentNumbering: BillingEntityDocumentNumberingEnum
   invoiceFooter: String
   invoiceGracePeriod: Int
+  subscriptionInvoiceIssuingDateAdjustment: BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum
+  subscriptionInvoiceIssuingDateAnchor: BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum
 }
 
 """
@@ -890,6 +895,22 @@ enum BillingEntityEmailSettingsEnum {
   payment_receipt.created
   """
   payment_receipt_created
+}
+
+"""
+Subscription Invoice Issuing Date Adjustment Values
+"""
+enum BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum {
+  align_with_finalization_date
+  keep_anchor
+}
+
+"""
+Subscription Invoice Issuing Date Anchor Values
+"""
+enum BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum {
+  current_period_end
+  next_period_start
 }
 
 """
