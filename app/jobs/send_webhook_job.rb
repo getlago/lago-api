@@ -75,6 +75,15 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
+  # Override the default perform_later to avoid creating webhooks if no webhook endpoints are present.
+  #
+  # This will prevent enqueueing jobs only to return early from the jobs.
+  def self.perform_later(webhook_type, object, options = {}, webhook_id = nil)
+    return if webhook_id.nil? && object.organization.webhook_endpoints.none?
+
+    super
+  end
+
   def perform(webhook_type, object, options = {}, webhook_id = nil)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
