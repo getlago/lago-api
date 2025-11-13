@@ -63,6 +63,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
@@ -294,6 +295,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
@@ -3352,7 +3354,9 @@ CREATE TABLE public.wallet_transactions (
     organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     priority integer DEFAULT 50 NOT NULL,
-    name character varying(255)
+    name character varying(255),
+    payment_method_id uuid,
+    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL
 );
 
 
@@ -8025,6 +8029,13 @@ CREATE INDEX index_wallet_transactions_on_organization_id ON public.wallet_trans
 
 
 --
+-- Name: index_wallet_transactions_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_on_payment_method_id ON public.wallet_transactions USING btree (payment_method_id);
+
+
+--
 -- Name: index_wallet_transactions_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9717,6 +9728,14 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: wallet_transactions fk_rails_c29bf4ff0f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+
+
+--
 -- Name: active_storage_attachments fk_rails_c3b3935057; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10155,6 +10174,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251112112544'),
 ('20251110191233'),
 ('20251107102548'),
 ('20251106093323'),

@@ -4,7 +4,7 @@ module WalletTransactions
   class CreateFromParamsService < ::BaseService
     MAX_WALLET_UPDATE_ATTEMPTS = 5
 
-    Result = BaseResult[:current_wallet, :wallet_transactions]
+    Result = BaseResult[:current_wallet, :wallet_transactions, :payment_method]
 
     def initialize(organization:, params:)
       @organization = organization
@@ -114,7 +114,8 @@ module WalletTransactions
         invoice_requires_successful_payment:,
         metadata:,
         priority:,
-        name:
+        name:,
+        payment_method: params[:payment_method]
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -151,8 +152,17 @@ module WalletTransactions
     end
 
     def valid?
+      result.payment_method = payment_method
+
       validate_params = params.merge(organization: organization)
       WalletTransactions::ValidateService.new(result, **validate_params).valid?
+    end
+
+    def payment_method
+      return @payment_method if defined? @payment_method
+      return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
+
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: organization.id)
     end
   end
 end
