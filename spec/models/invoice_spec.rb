@@ -2025,6 +2025,35 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#all_fixed_charges_have_fees?" do
+    let(:invoice) { create(:invoice, :subscription, subscriptions: [subscription]) }
+    let(:plan) { create(:plan) }
+    let(:subscription) { create(:subscription, plan:) }
+    let(:fixed_charge1) { create(:fixed_charge, plan:) }
+    let(:fixed_charge2) { create(:fixed_charge, plan:) }
+
+    before do
+      create(:fixed_charge_fee, fixed_charge: fixed_charge1, invoice:)
+      fixed_charge2
+    end
+
+    it { expect(invoice).not_to be_all_fixed_charges_have_fees }
+
+    context "when all fixed charges have fees" do
+      before do
+        create(:fixed_charge_fee, fixed_charge: fixed_charge2, invoice:)
+      end
+
+      it { expect(invoice).to be_all_fixed_charges_have_fees }
+    end
+
+    context "without subscription" do
+      let(:invoice) { create(:invoice) }
+
+      it { expect(invoice).to be_all_fixed_charges_have_fees }
+    end
+  end
+
   describe "should_apply_provider_tax?" do
     subject { invoice.should_apply_provider_tax? }
 
