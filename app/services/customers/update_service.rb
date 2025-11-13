@@ -78,6 +78,14 @@ module Customers
         if billing_configuration.key?(:document_locale)
           customer.document_locale = billing_configuration[:document_locale]
         end
+
+        if billing_configuration.key?(:subscription_invoice_issuing_date_anchor)
+          customer.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
+        end
+
+        if billing_configuration.key?(:subscription_invoice_issuing_date_adjustment)
+          customer.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
+        end
       end
 
       if License.premium? && args.key?(:invoice_grace_period)

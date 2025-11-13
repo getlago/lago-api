@@ -158,6 +158,8 @@ module Api
           ],
           billing_configuration: [
             :invoice_grace_period,
+            :subscription_invoice_issuing_date_anchor,
+            :subscription_invoice_issuing_date_adjustment,
             :payment_provider,
             :payment_provider_code,
             :provider_customer_id,

@@ -4187,10 +4187,14 @@ input CustomerAddressInput {
 type CustomerBillingConfiguration {
   documentLocale: String
   id: ID!
+  subscriptionInvoiceIssuingDateAdjustment: CustomerSubscriptionInvoiceIssuingDateAdjustmentEnum
+  subscriptionInvoiceIssuingDateAnchor: CustomerSubscriptionInvoiceIssuingDateAnchorEnum
 }
 
 input CustomerBillingConfigurationInput {
   documentLocale: String
+  subscriptionInvoiceIssuingDateAdjustment: CustomerSubscriptionInvoiceIssuingDateAdjustmentEnum
+  subscriptionInvoiceIssuingDateAnchor: CustomerSubscriptionInvoiceIssuingDateAnchorEnum
 }
 
 """
@@ -4345,6 +4349,22 @@ type CustomerProjectedUsage {
   taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
+}
+
+"""
+Subscription Invoice Issuing Date Adjustment Values
+"""
+enum CustomerSubscriptionInvoiceIssuingDateAdjustmentEnum {
+  align_with_finalization_date
+  keep_anchor
+}
+
+"""
+Subscription Invoice Issuing Date Anchor Values
+"""
+enum CustomerSubscriptionInvoiceIssuingDateAnchorEnum {
+  current_period_end
+  next_period_start
 }
 
 enum CustomerTypeEnum {

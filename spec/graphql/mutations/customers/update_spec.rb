@@ -34,7 +34,12 @@ RSpec.describe Mutations::Customers::Update do
           finalizeZeroAmountInvoice
           billingEntity { code }
           providerCustomer { id, providerCustomerId, providerPaymentMethods }
-          billingConfiguration { id, documentLocale }
+          billingConfiguration { 
+            id
+            subscriptionInvoiceIssuingDateAnchor
+            subscriptionInvoiceIssuingDateAdjustment
+            documentLocale 
+          }
           metadata { id, key, value, displayInInvoice }
           taxes { code }
           configurableInvoiceCustomSections { id }
@@ -69,7 +74,9 @@ RSpec.describe Mutations::Customers::Update do
         providerPaymentMethods: %w[card sepa_debit]
       },
       billingConfiguration: {
-        documentLocale: "fr"
+        documentLocale: "fr",
+        subscriptionInvoiceIssuingDateAnchor: "current_period_end",
+        subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
       },
       metadata: [
         {
@@ -126,13 +133,15 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["currency"]).to eq("USD")
       expect(result_data["timezone"]).to be_nil
       expect(result_data["netPaymentTerm"]).to eq(3)
-      expect(result_data["invoiceGracePeriod"]).to be_nil
       expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
       expect(result_data["providerCustomer"]["id"]).to be_present
       expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
       expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(%w[card sepa_debit])
+      expect(result_data["invoiceGracePeriod"]).to be_nil
       expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
       expect(result_data["billingConfiguration"]["id"]).to eq("#{customer.id}-c0nf")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       expect(result_data["metadata"][0]["key"]).to eq("test-key")
       expect(result_data["taxes"][0]["code"]).to eq(tax.code)
       expect(result_data["configurableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })

@@ -32,7 +32,11 @@ RSpec.describe Mutations::Customers::Create do
           canEditAttributes
           invoiceGracePeriod
           finalizeZeroAmountInvoice
-          billingConfiguration { documentLocale }
+          billingConfiguration { 
+            subscriptionInvoiceIssuingDateAnchor
+            subscriptionInvoiceIssuingDateAdjustment
+            documentLocale 
+          }
           shippingAddress { addressLine1 city state }
           metadata { id, key, value, displayInInvoice }
           taxes { code }
@@ -86,7 +90,9 @@ RSpec.describe Mutations::Customers::Create do
             providerPaymentMethods: ["card"]
           },
           billingConfiguration: {
-            documentLocale: "fr"
+            documentLocale: "fr",
+            subscriptionInvoiceIssuingDateAnchor: "current_period_end",
+            subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
           },
           shippingAddress: {
             addressLine1: "Test 12",
@@ -124,7 +130,10 @@ RSpec.describe Mutations::Customers::Create do
       expect(result_data["providerCustomer"]["id"]).to be_present
       expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
       expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(["card"])
+      expect(result_data["invoiceGracePeriod"]).to be_nil
       expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       expect(result_data["shippingAddress"]["addressLine1"]).to eq("Test 12")
       expect(result_data["shippingAddress"]["city"]).to eq("Paris")
       expect(result_data["shippingAddress"]["state"]).to eq("test state")
@@ -160,7 +169,8 @@ RSpec.describe Mutations::Customers::Create do
             providerCustomer: {
               providerCustomerId: "cu_12345",
               providerPaymentMethods: ["card"]
-            }
+            },
+            invoiceGracePeriod: 2
           }
         }
       )
@@ -169,7 +179,7 @@ RSpec.describe Mutations::Customers::Create do
 
       aggregate_failures do
         expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
-        expect(result_data["invoiceGracePeriod"]).to be_nil
+        expect(result_data["invoiceGracePeriod"]).to eq(2)
       end
     end
   end
