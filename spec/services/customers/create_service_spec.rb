@@ -19,7 +19,7 @@ RSpec.describe Customers::CreateService do
       invoice_grace_period: 2,
       billing_configuration: {
         subscription_invoice_issuing_date_anchor: "current_period_end",
-        subscription_invoice_issuing_date_adjustment: "keep_anchor",
+        subscription_invoice_issuing_date_adjustment: "keep_anchor"
       },
       shipping_address: {
         address_line1: "line1",

@@ -187,10 +187,8 @@ module Customers
     def assign_premium_attributes(customer, args)
       return unless License.premium?
 
-      billing = args[:billing_configuration] || {}
-
       customer.timezone = args[:timezone] if args.key?(:timezone)
-      customer.invoice_grace_period = billing[:invoice_grace_period] if billing.key?(:invoice_grace_period)
+      customer.invoice_grace_period = args[:invoice_grace_period] if args.key?(:invoice_grace_period)
     end
 
     def create_billing_configuration(customer, billing_configuration = {})

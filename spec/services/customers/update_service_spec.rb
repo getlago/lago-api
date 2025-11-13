@@ -59,7 +59,6 @@ RSpec.describe Customers::UpdateService do
         expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
         expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
 
-
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
         expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
