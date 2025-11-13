@@ -9231,6 +9231,11 @@ type Query {
   subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
+  Query Superset for the Auth Token
+  """
+  supersetToken(dashboardId: Int!): Token
+
+  """
   Query a single tax of an organization
   """
   tax(
@@ -10758,6 +10763,11 @@ enum TimezoneEnum {
   UTC
   """
   TZ_UTC
+}
+
+type Token {
+  accessToken: String
+  guestToken: String!
 }
 
 type TransactionMetadata {
