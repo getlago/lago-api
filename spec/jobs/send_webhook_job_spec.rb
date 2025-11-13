@@ -17,6 +17,14 @@ RSpec.describe SendWebhookJob do
           described_class.perform_later("invoice.created", invoice)
         end.not_to have_enqueued_job(described_class)
       end
+
+      context "when webhook_id is nil" do
+        it "does not enqueue a job" do
+          expect do
+            described_class.perform_later("invoice.created", invoice, {}, nil)
+          end.not_to have_enqueued_job(described_class)
+        end
+      end
     end
 
     context "when webhook_id is present" do
@@ -37,8 +45,8 @@ RSpec.describe SendWebhookJob do
     context "when webhook endpoint is present and no webhook_id is present" do
       it "enqueues a job to send the webhook" do
         expect do
-          described_class.perform_later("invoice.created", invoice)
-        end.to have_enqueued_job(described_class).with("invoice.created", invoice, {}, nil)
+          described_class.perform_later("invoice.created", invoice, {key: "value"})
+        end.to have_enqueued_job(described_class).with("invoice.created", invoice, {key: "value"})
       end
     end
   end

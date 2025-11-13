@@ -513,4 +513,10 @@ RSpec.describe Organization do
       end
     end
   end
+
+  describe "#organization" do
+    it "returns the organization" do
+      expect(organization.organization).to eq(organization)
+    end
+  end
 end

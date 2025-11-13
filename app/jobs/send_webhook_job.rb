@@ -75,13 +75,18 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
+  # This is a placeholder object to know which arguments were provided.
+  UNDEFINED = Object.new.freeze
+  private_constant :UNDEFINED
+
   # Override the default perform_later to avoid creating webhooks if no webhook endpoints are present.
   #
   # This will prevent enqueueing jobs only to return early from the jobs.
-  def self.perform_later(webhook_type, object, options = {}, webhook_id = nil)
-    return if webhook_id.nil? && object.organization.webhook_endpoints.none?
+  def self.perform_later(webhook_type, object, options = UNDEFINED, webhook_id = UNDEFINED)
+    return if (webhook_id.nil? || webhook_id == UNDEFINED) && object.organization.webhook_endpoints.none?
 
-    super
+    args = [webhook_type, object, options, webhook_id].filter { |arg| arg != UNDEFINED }
+    super(*args)
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
