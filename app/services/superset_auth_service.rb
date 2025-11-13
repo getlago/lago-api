@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 class SupersetAuthService < BaseService
-  Result = BaseResult[:guest_token, :access_token]
+  Result = BaseResult[:dashboards]
 
-  def initialize(organization:, dashboard_id:, user: nil)
+  def initialize(organization:, user: nil)
     @organization = organization
-    @dashboard_id = dashboard_id
     @user = user
     @cookies = []
+    @access_token = nil
+    @csrf_token = nil
 
     super()
   end
@@ -17,19 +18,36 @@ class SupersetAuthService < BaseService
     login_result = login_to_superset
     return result unless login_result[:success]
 
+    @access_token = login_result[:access_token]
+
     # Step 2: Get CSRF token
-    csrf_result = get_csrf_token(login_result[:access_token])
+    csrf_result = get_csrf_token
     return result unless csrf_result[:success]
 
-    # Step 3: Get guest token
-    guest_token_result = get_guest_token(
-      login_result[:access_token],
-      csrf_result[:csrf_token]
-    )
-    return result unless guest_token_result[:success]
+    @csrf_token = csrf_result[:csrf_token]
 
-    result.guest_token = guest_token_result[:guest_token]
-    result.access_token = login_result[:access_token]
+    # Step 3: Fetch all dashboards
+    dashboards_result = fetch_dashboards
+    return result unless dashboards_result[:success]
+
+    # Step 4: Process each dashboard to ensure embedded config and get guest token
+    processed_dashboards = []
+    dashboards_result[:dashboards].each do |dashboard|
+      embedded_config = ensure_embedded_config(dashboard["id"])
+      next unless embedded_config[:success]
+
+      guest_token_result = get_guest_token(dashboard["id"])
+      next unless guest_token_result[:success]
+
+      processed_dashboards << {
+        id: dashboard["id"].to_s,
+        dashboard_title: dashboard["dashboard_title"],
+        embedded_id: embedded_config[:uuid],
+        guest_token: guest_token_result[:guest_token]
+      }
+    end
+
+    result.dashboards = processed_dashboards
     result
   rescue URI::InvalidURIError => e
     result.service_failure!(code: "invalid_superset_url", message: "Invalid Superset URL: #{e.message}")
@@ -39,7 +57,7 @@ class SupersetAuthService < BaseService
 
   private
 
-  attr_reader :organization, :dashboard_id, :user, :cookies
+  attr_reader :organization, :user, :cookies, :access_token, :csrf_token
 
   def login_to_superset
     uri = URI.join(superset_base_url, "/api/v1/security/login")
@@ -78,7 +96,7 @@ class SupersetAuthService < BaseService
     {success: false}
   end
 
-  def get_csrf_token(access_token)
+  def get_csrf_token
     uri = URI.join(superset_base_url, "/api/v1/security/csrf_token/")
     http = create_http_client(uri)
 
@@ -110,7 +128,103 @@ class SupersetAuthService < BaseService
     {success: false}
   end
 
-  def get_guest_token(access_token, csrf_token)
+  def fetch_dashboards
+    uri = URI.join(superset_base_url, "/api/v1/dashboard/")
+    http = create_http_client(uri)
+
+    request = Net::HTTP::Get.new(uri.path)
+    request["Authorization"] = "Bearer #{access_token}"
+    request["Content-Type"] = "application/json"
+    request["Referer"] = "#{superset_base_url}/"
+    request["Cookie"] = cookies.join("; ")
+
+    response = http.request(request)
+
+    unless response.is_a?(Net::HTTPSuccess)
+      result.service_failure!(code: "fetch_dashboards_failed", message: "Failed to fetch dashboards: #{response.body}")
+      return {success: false}
+    end
+
+    parsed_response = JSON.parse(response.body)
+    dashboards = parsed_response["result"] || []
+
+    {success: true, dashboards: dashboards}
+  rescue JSON::ParserError => e
+    result.service_failure!(code: "invalid_response", message: "Invalid JSON response from Superset dashboards: #{e.message}")
+    {success: false}
+  end
+
+  def get_embedded_config(dashboard_id)
+    uri = URI.join(superset_base_url, "/api/v1/dashboard/#{dashboard_id}/embedded")
+    http = create_http_client(uri)
+
+    request = Net::HTTP::Get.new(uri.path)
+    request["Authorization"] = "Bearer #{access_token}"
+    request["Content-Type"] = "application/json"
+    request["Referer"] = "#{superset_base_url}/"
+    request["Cookie"] = cookies.join("; ")
+
+    response = http.request(request)
+
+    if response.is_a?(Net::HTTPSuccess)
+      parsed_response = JSON.parse(response.body)
+      uuid = parsed_response["result"]&.[]("uuid")
+      return {success: true, uuid: uuid, exists: true} if uuid
+    end
+
+    {success: true, exists: false}
+  rescue JSON::ParserError
+    {success: true, exists: false}
+  end
+
+  def create_embedded_config(dashboard_id)
+    uri = URI.join(superset_base_url, "/api/v1/dashboard/#{dashboard_id}/embedded")
+    http = create_http_client(uri)
+
+    request = Net::HTTP::Post.new(uri.path)
+    request["Authorization"] = "Bearer #{access_token}"
+    request["Content-Type"] = "application/json"
+    request["X-CSRFToken"] = csrf_token
+    request["Referer"] = "#{superset_base_url}/"
+    request["Cookie"] = cookies.join("; ")
+
+    body = {allowed_domains: []}
+    request.body = body.to_json
+
+    response = http.request(request)
+
+    unless response.is_a?(Net::HTTPSuccess)
+      result.service_failure!(code: "create_embedded_failed", message: "Failed to create embedded config for dashboard #{dashboard_id}: #{response.body}")
+      return {success: false}
+    end
+
+    parsed_response = JSON.parse(response.body)
+    uuid = parsed_response["result"]&.[]("uuid")
+
+    unless uuid
+      result.service_failure!(code: "no_embedded_uuid", message: "No embedded UUID received for dashboard #{dashboard_id}")
+      return {success: false}
+    end
+
+    {success: true, uuid: uuid}
+  rescue JSON::ParserError => e
+    result.service_failure!(code: "invalid_response", message: "Invalid JSON response from create embedded config: #{e.message}")
+    {success: false}
+  end
+
+  def ensure_embedded_config(dashboard_id)
+    # Check if embedded config exists
+    embedded_config = get_embedded_config(dashboard_id)
+    return {success: false} unless embedded_config[:success]
+
+    # If exists, return the UUID
+    return {success: true, uuid: embedded_config[:uuid]} if embedded_config[:exists]
+
+    # If not exists, create it
+    create_embedded_config(dashboard_id)
+  end
+
+  def get_guest_token(dashboard_id)
     uri = URI.join(superset_base_url, "/api/v1/security/guest_token/")
     http = create_http_client(uri)
 
@@ -122,7 +236,7 @@ class SupersetAuthService < BaseService
     request["Cookie"] = cookies.join("; ")
 
     body = {
-      resources: [{id: dashboard_id, type: "dashboard"}],
+      resources: [{id: dashboard_id.to_s, type: "dashboard"}],
       rls: [],
       user: guest_user_info
     }
@@ -131,7 +245,7 @@ class SupersetAuthService < BaseService
     response = http.request(request)
 
     unless response.is_a?(Net::HTTPSuccess)
-      result.service_failure!(code: "guest_token_failed", message: "Failed to get guest token: #{response.body}")
+      result.service_failure!(code: "guest_token_failed", message: "Failed to get guest token for dashboard #{dashboard_id}: #{response.body}")
       return {success: false}
     end
 
@@ -140,7 +254,7 @@ class SupersetAuthService < BaseService
     guest_token = parsed_response["token"] || parsed_response["result"] || parsed_response["access_token"]
 
     unless guest_token
-      result.service_failure!(code: "no_guest_token", message: "No guest token received from Superset")
+      result.service_failure!(code: "no_guest_token", message: "No guest token received for dashboard #{dashboard_id}")
       return {success: false}
     end
 

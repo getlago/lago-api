@@ -1,0 +1,26 @@
+# frozen_string_literal: true
+
+module Resolvers
+  module Superset
+    class DashboardsResolver < Resolvers::BaseResolver
+      include AuthenticableApiUser
+      include RequiredOrganization
+
+      REQUIRED_PERMISSION = "analytic:view"
+
+      graphql_name "SupersetDashboards"
+      description "Query all Superset dashboards with embedded configuration and guest tokens"
+
+      type [Types::Superset::Dashboard::Object], null: false
+
+      def resolve
+        result = SupersetAuthService.call(
+          organization: current_organization,
+          user: nil
+        )
+
+        result.dashboards
+      end
+    end
+  end
+end

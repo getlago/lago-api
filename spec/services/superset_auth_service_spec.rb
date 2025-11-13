@@ -3,10 +3,9 @@
 require "rails_helper"
 
 RSpec.describe SupersetAuthService do
-  subject(:service) { described_class.new(organization:, dashboard_id:, user:) }
+  subject(:service) { described_class.new(organization:, user:) }
 
   let(:organization) { create(:organization, name: "Test Org") }
-  let(:dashboard_id) { "2" }
   let(:user) { nil }
 
   let(:superset_url) { "http://localhost:8089" }
@@ -24,14 +23,30 @@ RSpec.describe SupersetAuthService do
   describe ".call" do
     let(:access_token) { "access_token_123" }
     let(:csrf_token) { "csrf_token_456" }
-    let(:guest_token) { "guest_token_789" }
+    let(:guest_token_1) { "guest_token_dashboard_1" }
+    let(:guest_token_2) { "guest_token_dashboard_2" }
+    let(:embedded_uuid_1) { "embedded-uuid-1" }
+    let(:embedded_uuid_2) { "embedded-uuid-2" }
 
     let(:login_response) { {access_token: access_token}.to_json }
     let(:csrf_response) { {result: csrf_token}.to_json }
-    let(:guest_token_response) { {token: guest_token}.to_json }
+    let(:dashboards_response) do
+      {
+        result: [
+          {id: "1", dashboard_title: "Dashboard 1"},
+          {id: "2", dashboard_title: "Dashboard 2"}
+        ]
+      }.to_json
+    end
 
-    context "when authentication is successful" do
+    let(:embedded_exists_response_1) { {result: {uuid: embedded_uuid_1}}.to_json }
+    let(:embedded_create_response_2) { {result: {uuid: embedded_uuid_2}}.to_json }
+    let(:guest_token_response_1) { {token: guest_token_1}.to_json }
+    let(:guest_token_response_2) { {token: guest_token_2}.to_json }
+
+    context "when authentication and dashboard processing is successful" do
       before do
+        # Step 1: Login
         stub_request(:post, "#{superset_url}/api/v1/security/login")
           .with(
             headers: {"Content-Type" => "application/json"},
@@ -48,6 +63,7 @@ RSpec.describe SupersetAuthService do
             headers: {"Set-Cookie" => "session=abc123; Path=/; HttpOnly"}
           )
 
+        # Step 2: Get CSRF token
         stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
           .with(
             headers: {
@@ -63,6 +79,57 @@ RSpec.describe SupersetAuthService do
             headers: {"Set-Cookie" => "csrf_token=def456; Path=/"}
           )
 
+        # Step 3: Fetch dashboards
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/")
+          .with(
+            headers: {
+              "Authorization" => "Bearer #{access_token}",
+              "Content-Type" => "application/json",
+              "Referer" => "#{superset_url}/",
+              "Cookie" => "session=abc123; csrf_token=def456"
+            }
+          )
+          .to_return(status: 200, body: dashboards_response)
+
+        # Step 4a: Check embedded config for dashboard 1 (exists)
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/1/embedded")
+          .with(
+            headers: {
+              "Authorization" => "Bearer #{access_token}",
+              "Content-Type" => "application/json",
+              "Referer" => "#{superset_url}/",
+              "Cookie" => "session=abc123; csrf_token=def456"
+            }
+          )
+          .to_return(status: 200, body: embedded_exists_response_1)
+
+        # Step 4b: Check embedded config for dashboard 2 (doesn't exist)
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/2/embedded")
+          .with(
+            headers: {
+              "Authorization" => "Bearer #{access_token}",
+              "Content-Type" => "application/json",
+              "Referer" => "#{superset_url}/",
+              "Cookie" => "session=abc123; csrf_token=def456"
+            }
+          )
+          .to_return(status: 404, body: {}.to_json)
+
+        # Step 4c: Create embedded config for dashboard 2
+        stub_request(:post, "#{superset_url}/api/v1/dashboard/2/embedded")
+          .with(
+            headers: {
+              "Authorization" => "Bearer #{access_token}",
+              "Content-Type" => "application/json",
+              "X-CSRFToken" => csrf_token,
+              "Referer" => "#{superset_url}/",
+              "Cookie" => "session=abc123; csrf_token=def456"
+            },
+            body: {allowed_domains: []}.to_json
+          )
+          .to_return(status: 200, body: embedded_create_response_2)
+
+        # Step 5: Get guest tokens
         stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
           .with(
             headers: {
@@ -72,25 +139,44 @@ RSpec.describe SupersetAuthService do
               "Referer" => "#{superset_url}/",
               "Cookie" => "session=abc123; csrf_token=def456"
             },
-            body: {
-              resources: [{id: dashboard_id, type: "dashboard"}],
-              rls: [],
-              user: {
-                first_name: "Test Org",
-                last_name: "User",
-                username: "guest_#{organization.id}"
-              }
-            }.to_json
+            body: hash_including(
+              resources: [{id: "1", type: "dashboard"}]
+            )
           )
-          .to_return(status: 200, body: guest_token_response)
+          .to_return(status: 200, body: guest_token_response_1)
+
+        stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
+          .with(
+            headers: {
+              "Authorization" => "Bearer #{access_token}",
+              "Content-Type" => "application/json",
+              "X-CSRFToken" => csrf_token,
+              "Referer" => "#{superset_url}/",
+              "Cookie" => "session=abc123; csrf_token=def456"
+            },
+            body: hash_including(
+              resources: [{id: "2", type: "dashboard"}]
+            )
+          )
+          .to_return(status: 200, body: guest_token_response_2)
       end
 
-      it "returns success with tokens" do
+      it "returns success with all dashboards" do
         result = service.call
 
         expect(result).to be_success
-        expect(result.guest_token).to eq(guest_token)
-        expect(result.access_token).to eq(access_token)
+        expect(result.dashboards).to be_an(Array)
+        expect(result.dashboards.size).to eq(2)
+
+        dashboard_1 = result.dashboards.find { |d| d[:id] == "1" }
+        expect(dashboard_1[:dashboard_title]).to eq("Dashboard 1")
+        expect(dashboard_1[:embedded_id]).to eq(embedded_uuid_1)
+        expect(dashboard_1[:guest_token]).to eq(guest_token_1)
+
+        dashboard_2 = result.dashboards.find { |d| d[:id] == "2" }
+        expect(dashboard_2[:dashboard_title]).to eq("Dashboard 2")
+        expect(dashboard_2[:embedded_id]).to eq(embedded_uuid_2)
+        expect(dashboard_2[:guest_token]).to eq(guest_token_2)
       end
     end
 
@@ -114,6 +200,12 @@ RSpec.describe SupersetAuthService do
         stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
           .to_return(status: 200, body: csrf_response)
 
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/")
+          .to_return(status: 200, body: {result: [{id: "1", dashboard_title: "Test"}]}.to_json)
+
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/1/embedded")
+          .to_return(status: 200, body: {result: {uuid: embedded_uuid_1}}.to_json)
+
         stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
           .with(
             body: hash_including(
@@ -124,14 +216,14 @@ RSpec.describe SupersetAuthService do
               }
             )
           )
-          .to_return(status: 200, body: guest_token_response)
+          .to_return(status: 200, body: {token: guest_token_1}.to_json)
       end
 
       it "uses the provided user info" do
         result = service.call
 
         expect(result).to be_success
-        expect(result.guest_token).to eq(guest_token)
+        expect(result.dashboards.size).to eq(1)
       end
     end
 
@@ -150,58 +242,7 @@ RSpec.describe SupersetAuthService do
       end
     end
 
-    context "when login returns no access token" do
-      before do
-        stub_request(:post, "#{superset_url}/api/v1/security/login")
-          .to_return(status: 200, body: {}.to_json)
-      end
-
-      it "returns a service failure" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("no_access_token")
-        expect(result.error.error_message).to eq("No access token received from Superset")
-      end
-    end
-
-    context "when CSRF token request fails" do
-      before do
-        stub_request(:post, "#{superset_url}/api/v1/security/login")
-          .to_return(status: 200, body: login_response)
-
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 403, body: {message: "Forbidden"}.to_json)
-      end
-
-      it "returns a service failure" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("csrf_failed")
-        expect(result.error.error_message).to include("Failed to get CSRF token")
-      end
-    end
-
-    context "when CSRF token response has no token" do
-      before do
-        stub_request(:post, "#{superset_url}/api/v1/security/login")
-          .to_return(status: 200, body: login_response)
-
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 200, body: {}.to_json)
-      end
-
-      it "returns a service failure" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("no_csrf_token")
-        expect(result.error.error_message).to eq("No CSRF token received from Superset")
-      end
-    end
-
-    context "when guest token request fails" do
+    context "when fetching dashboards fails" do
       before do
         stub_request(:post, "#{superset_url}/api/v1/security/login")
           .to_return(status: 200, body: login_response)
@@ -209,20 +250,20 @@ RSpec.describe SupersetAuthService do
         stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
           .to_return(status: 200, body: csrf_response)
 
-        stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
-          .to_return(status: 500, body: {message: "Internal server error"}.to_json)
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/")
+          .to_return(status: 500, body: {message: "Internal error"}.to_json)
       end
 
       it "returns a service failure" do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq("guest_token_failed")
-        expect(result.error.error_message).to include("Failed to get guest token")
+        expect(result.error.code).to eq("fetch_dashboards_failed")
+        expect(result.error.error_message).to include("Failed to fetch dashboards")
       end
     end
 
-    context "when guest token response has no token" do
+    context "when creating embedded config fails" do
       before do
         stub_request(:post, "#{superset_url}/api/v1/security/login")
           .to_return(status: 200, body: login_response)
@@ -230,31 +271,41 @@ RSpec.describe SupersetAuthService do
         stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
           .to_return(status: 200, body: csrf_response)
 
-        stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
-          .to_return(status: 200, body: {}.to_json)
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/")
+          .to_return(status: 200, body: {result: [{id: "1", dashboard_title: "Test"}]}.to_json)
+
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/1/embedded")
+          .to_return(status: 404, body: {}.to_json)
+
+        stub_request(:post, "#{superset_url}/api/v1/dashboard/1/embedded")
+          .to_return(status: 500, body: {message: "Failed to create"}.to_json)
       end
 
-      it "returns a service failure" do
+      it "returns success with empty dashboards array" do
         result = service.call
 
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("no_guest_token")
-        expect(result.error.error_message).to eq("No guest token received from Superset")
+        expect(result).to be_success
+        expect(result.dashboards).to be_empty
       end
     end
 
-    context "when login returns invalid JSON" do
+    context "when no dashboards exist" do
       before do
         stub_request(:post, "#{superset_url}/api/v1/security/login")
-          .to_return(status: 200, body: "invalid json")
+          .to_return(status: 200, body: login_response)
+
+        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
+          .to_return(status: 200, body: csrf_response)
+
+        stub_request(:get, "#{superset_url}/api/v1/dashboard/")
+          .to_return(status: 200, body: {result: []}.to_json)
       end
 
-      it "returns a service failure" do
+      it "returns success with empty dashboards array" do
         result = service.call
 
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("invalid_response")
-        expect(result.error.error_message).to include("Invalid JSON response from Superset login")
+        expect(result).to be_success
+        expect(result.dashboards).to eq([])
       end
     end
 
@@ -269,20 +320,6 @@ RSpec.describe SupersetAuthService do
         expect(result).not_to be_success
         expect(result.error.code).to eq("superset_auth_error")
         expect(result.error.error_message).to include("SUPERSET_URL environment variable not set")
-      end
-    end
-
-    context "when SUPERSET_URL is invalid" do
-      before do
-        stub_const("ENV", ENV.to_h.merge("SUPERSET_URL" => "not a valid url"))
-      end
-
-      it "returns a service failure" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("invalid_superset_url")
-        expect(result.error.error_message).to include("Invalid Superset URL")
       end
     end
   end

@@ -9231,9 +9231,9 @@ type Query {
   subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
-  Query Superset for the Auth Token
+  Query all Superset dashboards with embedded configuration and guest tokens
   """
-  supersetToken(dashboardId: String!): Token
+  supersetDashboards: [SupersetDashboard!]!
 
   """
   Query a single tax of an organization
@@ -9826,6 +9826,13 @@ type SubsidiaryCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SupersetDashboard {
+  dashboardTitle: String!
+  embeddedId: String!
+  guestToken: String!
+  id: String!
 }
 
 """
@@ -10763,11 +10770,6 @@ enum TimezoneEnum {
   UTC
   """
   TZ_UTC
-}
-
-type Token {
-  accessToken: String
-  guestToken: String!
 }
 
 type TransactionMetadata {

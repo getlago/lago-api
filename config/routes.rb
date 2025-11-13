@@ -36,10 +36,6 @@ Rails.application.routes.draw do
 
       get "analytics/usage", to: "data_api/usages#index", as: :usage
 
-      resources :superset, only: [] do
-        post :guest_token, on: :collection
-      end
-
       resources :billing_entities, param: :code, only: %i[index show update create]
 
       resources :customers, param: :external_id, only: %i[create index show destroy] do
