@@ -16,8 +16,8 @@ module Resolvers
       def resolve(**args)
         result = SupersetAuthService.call(
           organization: current_organization,
-          dashboard_id: params[:dashboard_id],
-          user: user_params
+          dashboard_id: args[:dashboard_id],
+          user: nil
         )
         {
           guest_token: result.guest_token,
