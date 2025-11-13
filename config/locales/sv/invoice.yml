@@ -32,6 +32,8 @@ sv:
     document_tax_name: Skattefaktura
     due_date: Förfaller %{date}
     e_invoicing:
+      credit_card: Kreditkortsbetalning
+      credit_card_information: Kreditkortsbetalning mottagen %{date}
       discount_reason: Rabatt %{tax_rate} andel
       payment_information: "%{payment_label} på %{currency} %{amount} tillämpad"
       standard_payment: Standardbetaling

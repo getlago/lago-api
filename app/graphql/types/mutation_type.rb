@@ -120,6 +120,7 @@ module Types
     field :void_invoice, mutation: Mutations::Invoices::Void
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
+    field :download_xml_payment_receipt, mutation: Mutations::PaymentReceipts::DownloadXml
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate

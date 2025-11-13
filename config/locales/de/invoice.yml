@@ -32,6 +32,12 @@ de:
     document_name: Rechnung
     document_tax_name: Steuerrechnung
     due_date: Fälligkeit %{date}
+    e_invoicing:
+      credit_card: Kreditkartenzahlung
+      credit_card_information: Kreditkartenzahlung erhalten am %{date}
+      discount_reason: Rabatt %{tax_rate} Anteil
+      payment_information: "%{payment_label} von %{currency} %{amount} angewendet"
+      standard_payment: Standardzahlung
     fee_prorated: Die Gebühr wird anteilig nach Nutzungstagen berechnet, der angezeigte Stückpreis ist ein Durchschnitt
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
     from_to_date: Vom %{from_date} bis %{to_date}
