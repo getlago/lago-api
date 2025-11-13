@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 
   # Health Check status
   get "/health", to: "application#health"
+  get "/ready", to: "application#ready"
 
   namespace :data_api do
     namespace :v1 do

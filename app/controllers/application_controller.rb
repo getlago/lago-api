@@ -30,6 +30,14 @@ class ApplicationController < ActionController::API
     )
   end
 
+  def ready
+    if $shutdown_requested # rubocop:disable Style/GlobalVars
+      render json: {status: "shutting down"}, status: :service_unavailable
+    else
+      render json: {status: "ok"}
+    end
+  end
+
   def not_found
     not_found_error(resource: "resource")
   end
