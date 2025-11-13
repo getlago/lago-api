@@ -3,9 +3,9 @@
 class SupersetAuthService < BaseService
   Result = BaseResult[:guest_token, :access_token]
 
-  def initialize(organization:, @:, user: nil)
+  def initialize(organization:, dashboard_id:, user: nil)
     @organization = organization
-    @@ = @
+    @dashboard_id = dashboard_id
     @user = user
     @cookies = []
 
@@ -39,7 +39,7 @@ class SupersetAuthService < BaseService
 
   private
 
-  attr_reader :organization, :@, :user, :cookies
+  attr_reader :organization, :dashboard_id, :user, :cookies
 
   def login_to_superset
     uri = URI.join(superset_base_url, "/api/v1/security/login")
@@ -122,7 +122,7 @@ class SupersetAuthService < BaseService
     request["Cookie"] = cookies.join("; ")
 
     body = {
-      resources: [{id: @dashboard_id, type: "dashboard"}],
+      resources: [{id: dashboard_id, type: "dashboard"}],
       rls: [],
       user: guest_user_info
     }
