@@ -9233,7 +9233,7 @@ type Query {
   """
   Query Superset for the Auth Token
   """
-  supersetToken(dashboardId: Int!): Token
+  supersetToken(dashboardId: String!): Token
 
   """
   Query a single tax of an organization

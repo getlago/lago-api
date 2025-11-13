@@ -9,7 +9,7 @@ module Resolvers
       graphql_name "SupersetToken"
       description "Query Superset for the Auth Token"
 
-      argument :dashboardId, Integer, required: true
+      argument :dashboardId, String, required: true
 
       type Types::Superset::Token::Object, null: true
 
