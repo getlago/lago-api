@@ -146,12 +146,12 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      wallet = subscription.customer.wallets.active.first
-      return unless wallet&.active?
-      return unless invoice.total_amount_cents.positive?
-      return unless wallet.balance.positive?
+      wallets = subscription.customer.wallets.active.with_positive_balance
 
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:).raise_if_error!
+      return if wallets.none?
+      return unless invoice.total_amount_cents.positive?
+
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call!(invoice:, wallets:)
 
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
     end

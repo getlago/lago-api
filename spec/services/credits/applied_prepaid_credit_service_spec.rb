@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Credits::AppliedPrepaidCreditService do
-  subject(:credit_service) { described_class.new(invoice:, wallet:) }
+  subject(:credit_service) { described_class.new(invoice:, wallets: [wallet]) }
 
   let(:invoice) do
     create(
@@ -54,7 +54,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
     end
 
     it "produces an activity log" do
-      wallet_transaction = described_class.call(invoice:, wallet:).wallet_transaction
+      wallet_transaction = described_class.call(invoice:, wallets: [wallet]).wallet_transaction
 
       expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
     end
