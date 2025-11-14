@@ -13,13 +13,13 @@ CREATE MATERIALIZED VIEW events_dead_letter_mv TO events_dead_letter
     `error_message` String
 )
 AS SELECT
-  JSONExtractString(event, 'organization_id') AS organization_id,
-  JSONExtractString(event, 'external_subscription_id') AS external_subscription_id,
-  JSONExtractString(event, 'code') AS code,
-  JSONExtractString(event, 'transaction_id') AS transaction_id,
-  toDateTime64(JSONExtractString(event, 'timestamp'), 3) AS timestamp,
-  toDateTime64(JSONExtractString(event, 'ingested_at'), 3) AS ingested_at,
-  toDateTime64(parseDateTime64BestEffort(failed_at), 3) as failed_at,
+  event.organization_id AS organization_id,
+  event.external_subscription_id AS external_subscription_id,
+  event.code AS code,
+  event.transaction_id AS transaction_id,
+  toDateTime64OrNull(toString(event.timestamp), 3) AS timestamp,
+  toDateTime64(event.ingested_at, 3) AS ingested_at,
+  failed_at,
   event,
   error_code,
   error_message,
