@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Credits
-  class AppliedPrepaidCreditService < BaseService
+  class AppliedPrepaidCreditsService < BaseService
     MAX_WALLET_DECREASE_ATTEMPTS = 5
 
     def initialize(invoice:, wallets:)

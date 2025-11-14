@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Credits::AppliedPrepaidCreditService do
+RSpec.describe Credits::AppliedPrepaidCreditsService do
   subject(:credit_service) { described_class.new(invoice:, wallets: [wallet]) }
 
   let(:invoice) do
