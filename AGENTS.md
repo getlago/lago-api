@@ -185,6 +185,7 @@ To create a webhook:
 
 # Testing
 
+- Do not test `#initialize` method.
 - In controller specs, use `get_with_token` and similar method, don't try to mock the token manually
 - to test a "resource not found error" from an `Api::V1` controller, use the custom match `be_not_found_error` like this:
   `expect(response).to be_not_found_error("alert")`

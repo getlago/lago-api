@@ -80,6 +80,13 @@ Sidekiq.configure_server do |config|
       end
     end
   end
+
+  if Rails.env.development? && ENV["SIDEKIQ_RUBY_PROF_ENABLED"] == "true"
+    require "sidekiq/ruby_prof_middleware"
+    config.server_middleware do |chain|
+      chain.prepend(Sidekiq::RubyProfMiddleware, dir: "tmp/ruby_prof", min_percent: 5, printers: [:graph_html, :stack])
+    end
+  end
 end
 
 Sidekiq.configure_client do |config|
