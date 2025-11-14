@@ -225,6 +225,15 @@ class Invoice < ApplicationRecord
       .any?
   end
 
+  def existing_fixed_charge_fees_in_interval?(subscription_id:, fixed_charge_in_advance: false)
+    subscription_fees(subscription_id)
+      .fixed_charge
+      .positive_units
+      .joins(:fixed_charge)
+      .where(fixed_charge: {pay_in_advance: fixed_charge_in_advance})
+      .any?
+  end
+
   def recurring_fees(subscription_id)
     subscription_fees(subscription_id)
       .joins(charge: :billable_metric)
@@ -360,6 +369,18 @@ class Invoice < ApplicationRecord
     return true unless subscription?
 
     all_charges_have_base_fees? && all_charge_filters_have_fees?
+  end
+
+  def all_fixed_charges_have_fees?
+    return true unless subscription?
+
+    !FixedCharge.exists?(
+      FixedCharge.joins(plan: :subscriptions)
+      .where(subscriptions: {id: subscriptions.select(:id)})
+      .where.not(
+        id: fees.fixed_charge.select(:fixed_charge_id)
+      )
+    )
   end
 
   def has_different_boundaries_for_subscription_and_charges?(subscription)

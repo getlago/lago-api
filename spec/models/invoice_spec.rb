@@ -1005,6 +1005,39 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#existing_fixed_charge_fees_in_interval?" do
+    subject { invoice.existing_fixed_charge_fees_in_interval?(subscription_id: subscription.id) }
+
+    let(:invoice_subscription) { create(:invoice_subscription) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:subscription) { invoice_subscription.subscription }
+    let(:add_on) { create(:add_on, organization: subscription.organization) }
+    let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, add_on:, pay_in_advance: false) }
+    let(:fee) { create(:fixed_charge_fee, subscription:, invoice:, fixed_charge:, units: 1) }
+
+    before { fee }
+
+    it { is_expected.to eq(true) }
+
+    context "when fixed charges are in advance" do
+      let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, add_on:, pay_in_advance: true) }
+
+      it { is_expected.to eq(false) }
+
+      context "with fixed_charge_in_advance set to true" do
+        subject { invoice.existing_fixed_charge_fees_in_interval?(subscription_id: subscription.id, fixed_charge_in_advance: true) }
+
+        it { is_expected.to eq(true) }
+      end
+    end
+
+    context "when unit number is zero" do
+      let(:fee) { create(:fixed_charge_fee, subscription:, invoice:, fixed_charge:, units: 0) }
+
+      it { is_expected.to eq(false) }
+    end
+  end
+
   describe "#recurring_fees" do
     let(:invoice_subscription) { create(:invoice_subscription) }
     let(:invoice) { invoice_subscription.invoice }
@@ -2022,6 +2055,35 @@ RSpec.describe Invoice do
 
         it { expect(invoice).to be_all_charges_have_fees }
       end
+    end
+  end
+
+  describe "#all_fixed_charges_have_fees?" do
+    let(:invoice) { create(:invoice, :subscription, subscriptions: [subscription]) }
+    let(:plan) { create(:plan) }
+    let(:subscription) { create(:subscription, plan:) }
+    let(:fixed_charge1) { create(:fixed_charge, plan:) }
+    let(:fixed_charge2) { create(:fixed_charge, plan:) }
+
+    before do
+      create(:fixed_charge_fee, fixed_charge: fixed_charge1, invoice:)
+      fixed_charge2
+    end
+
+    it { expect(invoice).not_to be_all_fixed_charges_have_fees }
+
+    context "when all fixed charges have fees" do
+      before do
+        create(:fixed_charge_fee, fixed_charge: fixed_charge2, invoice:)
+      end
+
+      it { expect(invoice).to be_all_fixed_charges_have_fees }
+    end
+
+    context "without subscription" do
+      let(:invoice) { create(:invoice) }
+
+      it { expect(invoice).to be_all_fixed_charges_have_fees }
     end
   end
 

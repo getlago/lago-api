@@ -662,6 +662,8 @@ RSpec.describe Subscription do
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
         timestamp: billing_date
       }
     end
@@ -696,6 +698,8 @@ RSpec.describe Subscription do
         expect(new_boundaries.to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
         expect(new_boundaries.charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
         expect(new_boundaries.charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.fixed_charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.fixed_charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
       end
     end
   end
@@ -715,6 +719,62 @@ RSpec.describe Subscription do
 
     it "returns most recently non-canceled next subscription" do
       expect(subject).to eq next_subscriptions.second
+    end
+  end
+
+  describe "#should_be_billed_when_started?" do
+    context "when plan is not pay in advance" do
+      let(:plan) { create(:plan) }
+
+      it "returns false" do
+        expect(subscription.should_be_billed_when_started?).to be(false)
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
+        let(:pay_in_advance) { false }
+
+        before { fixed_charge }
+
+        it "returns false" do
+          expect(subscription.should_be_billed_when_started?).to be(false)
+        end
+
+        context "when fixed_charge is pay_in_advance" do
+          let(:pay_in_advance) { true }
+
+          it "return true" do
+            expect(subscription.should_be_billed_when_started?).to be(true)
+          end
+        end
+      end
+    end
+
+    context "when plan is pay in advance" do
+      let(:plan) { create(:plan, :pay_in_advance) }
+
+      it "returns true" do
+        expect(subscription.should_be_billed_when_started?).to be(true)
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
+        let(:pay_in_advance) { false }
+
+        before { fixed_charge }
+
+        it "returns true" do
+          expect(subscription.should_be_billed_when_started?).to be(true)
+        end
+
+        context "when fixed_charge is pay_in_advance" do
+          let(:pay_in_advance) { true }
+
+          it "return true" do
+            expect(subscription.should_be_billed_when_started?).to be(true)
+          end
+        end
+      end
     end
   end
 end

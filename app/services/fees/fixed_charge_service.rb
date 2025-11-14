@@ -16,7 +16,7 @@ module Fees
       @fixed_charge = fixed_charge
       @subscription = subscription
       @organization = subscription.organization
-      @boundaries = boundaries
+      @boundaries = readjust_boundaries(boundaries)
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
       @context = context
@@ -59,10 +59,37 @@ module Fees
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
       precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
+      # for proration this should be amount_cents / units
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
       precise_unit_amount = amount_result.unit_amount
 
-      units = amount_result.units
+      units = amount_result.full_units_number
+
+      if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
+        already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
+        if already_paid_fee
+          current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
+          prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
+          amount_cents -= prorated_for_current_period
+          precise_amount_cents -= prorated_for_current_period.to_d
+          amount_cents = 0 if amount_cents < 0
+          precise_amount_cents = 0 if precise_amount_cents < 0
+        end
+      end
+
+      if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
+        already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
+        if already_paid_fee
+          current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
+          prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
+          amount_cents -= prorated_for_current_period
+          precise_amount_cents -= prorated_for_current_period.to_d
+          # unit_amount_cents -= prorated_for_current_period.to_d
+          # precise_unit_amount -= prorated_for_current_period.to_d
+          # units -= current_period_duration
+          # total_aggregated_units -= current_period_duration
+        end
+      end
 
       new_fee = Fee.new(
         invoice:,
@@ -118,13 +145,12 @@ module Fees
     end
 
     def calculate_period_ratio
-      from_date = boundaries.charges_from_datetime.to_date
-      to_date = boundaries.charges_to_datetime.to_date
+      from_date = boundaries[:fixed_charges_from_datetime].to_date
+      to_date = boundaries[:fixed_charges_to_datetime].to_date
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
-
-      charges_duration = boundaries.charges_duration || total_days
+      charges_duration = boundaries[:fixed_charges_duration] || total_days
 
       return 1.0 if current_date >= to_date
       return 0.0 if current_date < from_date
@@ -141,6 +167,47 @@ module Fees
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
 
       false
+    end
+
+    # Note: boundaries are taken from the subscription and they do not consider some fixed_charges being pay_in_advance
+    def readjust_boundaries(boundaries)
+      properties = boundaries.to_h
+      properties["charges_from_datetime"] = nil
+      properties["charges_to_datetime"] = nil
+      properties["charges_duration"] = nil
+
+      return properties if !fixed_charge.pay_in_advance?
+      timestamp = boundaries.timestamp
+      in_advance_dates = Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+
+      properties["fixed_charges_from_datetime"] = in_advance_dates[:fixed_charges_from_datetime]
+      properties["fixed_charges_to_datetime"] = in_advance_dates[:fixed_charges_to_datetime]
+      properties["fixed_charges_duration"] = in_advance_dates[:fixed_charges_duration]
+      properties
+    end
+
+    # if we have a prorated paid in advance fixed charge, and we're upgrading to a new plan with the same add_on,
+    # there is an existing fee paid for the full month, but at the moment of upgrade, the new price should applied,
+    # so we need to deduct the prorated for the rest of the billing period amount that was already paid from the new price.
+    def first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
+      return false unless fixed_charge.pay_in_advance?
+      return false unless fixed_charge.prorated?
+      return false unless subscription.previous_subscription
+      return false if subscription.invoices.count > 1
+      fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
+    end
+
+    def find_already_paid_fee_for_the_fixed_charge(current_fee_boundaries)
+      prev_fixed_charge = fixed_charge.matching_fixed_charge_prev_subscription(subscription)
+      Fee.where(
+        organization: organization,
+        billing_entity: subscription.customer.billing_entity,
+        fixed_charge: prev_fixed_charge
+      ).where(
+        "properties->>'fixed_charges_from_datetime' <= ? AND properties->>'fixed_charges_to_datetime' >= ?",
+        current_fee_boundaries[:fixed_charges_from_datetime],
+        current_fee_boundaries[:fixed_charges_to_datetime]
+      ).first
     end
   end
 end

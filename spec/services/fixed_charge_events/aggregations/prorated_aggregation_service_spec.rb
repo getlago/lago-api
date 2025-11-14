@@ -11,9 +11,7 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
   let(:fixed_charges_to_datetime) { Time.current }
   let(:fixed_charges_duration) { 10 }
   let(:boundaries) do
-    # TODO: switch to fixed_charges_boundaries
-    Struct.new(:fixed_charges_from_datetime, :fixed_charges_to_datetime, :fixed_charges_duration)
-      .new(fixed_charges_from_datetime, fixed_charges_to_datetime, fixed_charges_duration)
+    {fixed_charges_from_datetime:, fixed_charges_to_datetime:, fixed_charges_duration:}
   end
 
   context "when there are no events" do
@@ -184,6 +182,35 @@ RSpec.describe FixedChargeEvents::Aggregations::ProratedAggregationService do
           expect(result).to be_success
           expect(result.aggregation.round(2)).to eq(70)
         end
+      end
+    end
+  end
+
+  context "when an override was created after subscription started" do
+    let(:parent_charge) { create(:fixed_charge) }
+    let(:fixed_charge) { create(:fixed_charge, parent: parent_charge) }
+    let(:parent_event) { create(:fixed_charge_event, fixed_charge: parent_charge, subscription:, units: 10, timestamp: 12.days.ago, created_at: 10.days.ago) }
+
+    before { parent_event }
+
+    context "when there are only events for the parent charge" do
+      it "returns the simple aggregation" do
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(10)
+      end
+    end
+
+    context "when there are events for the parent and child charges" do
+      let(:child_event) { create(:fixed_charge_event, fixed_charge:, subscription:, units: 5, timestamp: 4.days.ago, created_at: 10.days.ago) }
+
+      before { child_event }
+
+      it "returns the simple aggregation" do
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(7.5)
+        expect(result.full_units_number).to eq(5)
       end
     end
   end

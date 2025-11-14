@@ -110,6 +110,20 @@ RSpec.describe Subscriptions::CreateService do
             ]
           )
       end
+
+      context "when all fixed_charges and plan are pay in arrears and subscription is active" do
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when one of the fixed_charges is pay in advance and subscription is active" do
+        let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
     end
 
     context "when subscription should sync with Hubspot" do
@@ -269,7 +283,7 @@ RSpec.describe Subscriptions::CreateService do
           plan_overrides: {
             fixed_charges: [
               {
-                id: fixed_charge.id,
+                id: fixed_charge2.id,
                 units: 100
               }
             ]
@@ -277,26 +291,80 @@ RSpec.describe Subscriptions::CreateService do
         }
       end
 
-      let(:fixed_charge) { create(:fixed_charge, plan:) }
+      let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
+      let(:fixed_charge2) { create(:fixed_charge, plan:, units: 9) }
       let(:add_on) { create(:add_on, organization:) }
       let(:started_at) { Time.current }
 
       before do
-        fixed_charge
+        fixed_charge1
+        fixed_charge2
       end
 
       it "creates the subscription with overridden plan" do
         result = create_service.call
 
+        expect(result).to be_success
         expect(result.subscription).to be_active
-        expect(result.subscription.fixed_charge_events.count).to eq(1)
+        expect(result.subscription.plan.parent_id).to eq(plan.id)
 
-        fixed_charge_event = result.subscription.fixed_charge_events.first
-        fixed_charge_overide = fixed_charge_event.fixed_charge
+        # Both fixed charges should be overridden in the new plan
+        overridden_plan = result.subscription.plan
+        expect(overridden_plan.fixed_charges.count).to eq(2)
 
-        expect(fixed_charge_overide.parent_id).to eq(fixed_charge.id)
-        expect(fixed_charge_event.timestamp).to be_within(1.second).of(Time.current)
-        expect(fixed_charge_event.units.to_i).to eq(100)
+        fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
+        fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
+
+        expect(fc1_override).to be_present
+        expect(fc1_override.units).to eq(5) # Original units (not specified in override)
+        expect(fc2_override).to be_present
+        expect(fc2_override.units).to eq(100) # Overridden units
+      end
+
+      it "creates fixed charge events with timestamp = subscription.started_at for active subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        subscription = result.subscription
+        expect(subscription.fixed_charge_events.count).to eq(2)
+
+        overridden_plan = subscription.plan
+        fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
+        fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
+
+        expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :units, :timestamp)).to contain_exactly(
+          [fc1_override.id, 5, be_within(1.second).of(subscription.started_at)],
+          [fc2_override.id, 100, be_within(1.second).of(subscription.started_at)]
+        )
+      end
+
+      context "when subscription starts in the future" do
+        let(:subscription_at) { 7.days.from_now }
+
+        it "creates pending subscription with overridden plan but does not create fixed charge events" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          subscription = result.subscription
+          expect(subscription).to be_pending
+          expect(subscription.started_at).to be_nil
+          expect(subscription.plan.parent_id).to eq(plan.id)
+
+          # Plan should have overridden fixed charges
+          overridden_plan = subscription.plan
+          expect(overridden_plan.fixed_charges.count).to eq(2)
+
+          fc1_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge1.id)
+          fc2_override = overridden_plan.fixed_charges.find_sole_by(parent_id: fixed_charge2.id)
+
+          expect(fc1_override.units).to eq(5)
+          expect(fc2_override.units).to eq(100)
+
+          # NO fixed charge events should be created for pending subscription
+          expect(subscription.fixed_charge_events.count).to eq(0)
+        end
       end
     end
 
@@ -338,37 +406,62 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
-    context "when plan is pay_in_advance but subscription is not active" do
+    context "when plan is pay_in_advance" do
       let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
-      let(:subscription_at) { Time.current + 1.hour }
 
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+      context "when subscription is not active" do
+        let(:subscription_at) { Time.current + 1.hour }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when ubscription_at is current date" do
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when subscription_at is in the future" do
+        let(:subscription_at) { Time.current + 5.days }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+      end
+
+      context "when subscription_at is current date but there is a trial period" do
+        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
       end
     end
 
-    context "when plan is pay_in_advance and subscription_at is current date" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
+    context "when plan is not pay_in_advance, subscription_at is current date and there are fixed charges" do
+      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
 
-      it "enqueues a job to bill the subscription" do
-        expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+      before do
+        fixed_charge
       end
-    end
 
-    context "when plan is pay_in_advance and subscription_at is in the future" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
-      let(:subscription_at) { Time.current + 5.days }
+      context "when at least one fixed charge is pay_in_advance" do
+        let(:pay_in_advance) { true }
 
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
       end
-    end
 
-    context "when plan is pay_in_advance and subscription_at is current date but there is a trial period" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+      context "when all fixed charges are not pay_in_advance" do
+        let(:pay_in_advance) { false }
 
-      it "does not enqueue a job to bill the subscription" do
-        expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        it "does not enqueue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
       end
     end
 

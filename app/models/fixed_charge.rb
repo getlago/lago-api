@@ -22,6 +22,7 @@ class FixedCharge < ApplicationRecord
   has_many :taxes, through: :applied_taxes
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  scope :pay_in_arrears, -> { where(pay_in_advance: false) }
 
   CHARGE_MODELS = {
     standard: "standard",
@@ -34,17 +35,49 @@ class FixedCharge < ApplicationRecord
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, presence: true
-  validates :pay_in_advance, inclusion: {in: [true, false]}
-  validates :prorated, inclusion: {in: [true, false]}
+  validates :pay_in_advance, exclusion: [nil]
+  validates :prorated, exclusion: [nil]
   validates :properties, presence: true
 
+  validate :validate_pay_in_advance
+  validate :validate_prorated
   validate :validate_properties
 
   def equal_properties?(fixed_charge)
     charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
   end
 
+  # When upgrading a subscription with fixed_charges paid_in_advance,
+  # this exact charge might have already been paid at the beginning of billing period.
+  # in case of prorating, we need to deduct the prorated amount (remaining of the billing_period)
+  # that was already paid from the new price.
+  def already_paid_in_prev_subscription?(subscription)
+    return false if subscription.next_subscription.nil?
+
+    subscription.next_subscription.plan.fixed_charges.exists?(add_on_id:)
+  end
+
   private
+  def validate_pay_in_advance
+    return unless pay_in_advance?
+
+    if volume?
+      errors.add(:pay_in_advance, :invalid_charge_model)
+    end
+  end
+
+  # NOTE: A prorated fixed charge is valid in the following cases:
+  # - standard model with any payment timing
+  # - volume model with pay_in_arrears only
+  # - graduated model with pay_in_arrears only
+  # Graduated + pay_in_advance + prorated is NOT allowed
+  def validate_prorated
+    return unless prorated?
+
+    if graduated? && pay_in_advance?
+      errors.add(:prorated, :invalid_charge_model)
+    end
+  end
 
   def validate_properties
     return if properties.blank?

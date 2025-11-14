@@ -20,99 +20,38 @@ RSpec.describe FixedCharge do
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
   it { is_expected.to validate_presence_of(:charge_model) }
-  it { is_expected.to validate_inclusion_of(:pay_in_advance).in_array([true, false]) }
-  it { is_expected.to validate_inclusion_of(:prorated).in_array([true, false]) }
+  it { is_expected.to validate_exclusion_of(:pay_in_advance).in_array([nil]) }
+  it { is_expected.to validate_exclusion_of(:prorated).in_array([nil]) }
   it { is_expected.to validate_presence_of(:properties) }
 
-  describe "#validate_properties" do
-    context "with standard charge model" do
-      subject(:fixed_charge) { build(:fixed_charge, charge_model: "standard", properties:) }
+  describe "scopes" do
+    let(:scoped) { create(:fixed_charge) }
+    let(:deleted) { create(:fixed_charge, :deleted) }
+    let(:pay_in_advance) { create(:fixed_charge, pay_in_advance: true) }
+    let(:pay_in_arrears) { create(:fixed_charge, pay_in_advance: false) }
 
-      let(:properties) { {amount: "invalid"} }
-      let(:validation_service) { instance_double(Charges::Validators::StandardService) }
-      let(:service_response) do
-        BaseService::Result.new.validation_failure!(
-          errors: {amount: ["invalid_amount"]}
-        )
-      end
+    before do
+      scoped
+      deleted
+      pay_in_advance
+      pay_in_arrears
+    end
 
-      it "delegates to a validation service" do
-        allow(Charges::Validators::StandardService).to receive(:new)
-          .and_return(validation_service)
-        allow(validation_service).to receive(:valid?)
-          .and_return(false)
-        allow(validation_service).to receive(:result)
-          .and_return(service_response)
-
-        expect(fixed_charge).not_to be_valid
-        expect(fixed_charge.errors.messages.keys).to include(:properties)
-        expect(fixed_charge.errors.messages[:properties]).to include("invalid_amount")
-
-        expect(Charges::Validators::StandardService).to have_received(:new).with(charge: fixed_charge)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
+    describe ".all" do
+      it "returns all not deleted fixed charges" do
+        expect(described_class.all).to match_array([scoped, pay_in_advance, pay_in_arrears])
       end
     end
 
-    context "with graduated charge model" do
-      subject(:fixed_charge) { build(:fixed_charge, :graduated, properties:) }
-
-      let(:properties) { {graduated_ranges: [{"foo" => "bar"}]} }
-      let(:validation_service) { instance_double(Charges::Validators::GraduatedService) }
-      let(:service_response) do
-        BaseService::Result.new.validation_failure!(
-          errors: {
-            amount: ["invalid_amount"],
-            ranges: ["invalid_graduated_ranges"]
-          }
-        )
-      end
-
-      it "delegates to a validation service" do
-        allow(Charges::Validators::GraduatedService).to receive(:new)
-          .and_return(validation_service)
-        allow(validation_service).to receive(:valid?)
-          .and_return(false)
-        allow(validation_service).to receive(:result)
-          .and_return(service_response)
-
-        expect(fixed_charge).not_to be_valid
-        expect(fixed_charge.errors.messages.keys).to include(:properties)
-        expect(fixed_charge.errors.messages[:properties]).to include("invalid_amount")
-        expect(fixed_charge.errors.messages[:properties]).to include("invalid_graduated_ranges")
-
-        expect(Charges::Validators::GraduatedService).to have_received(:new).with(charge: fixed_charge)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
+    describe ".pay_in_advance" do
+      it "returns only pay_in_advance fixed charges" do
+        expect(described_class.pay_in_advance).to match_array([pay_in_advance])
       end
     end
 
-    context "with volume charge model" do
-      subject(:fixed_charge) { build(:fixed_charge, :volume, properties:) }
-
-      let(:properties) { {volume_ranges: [{"foo" => "bar"}]} }
-      let(:validation_service) { instance_double(Charges::Validators::VolumeService) }
-      let(:service_response) do
-        BaseService::Result.new.validation_failure!(
-          errors: {ranges: ["invalid_volume_ranges"]}
-        )
-      end
-
-      it "delegates to a validation service" do
-        allow(Charges::Validators::VolumeService).to receive(:new)
-          .and_return(validation_service)
-        allow(validation_service).to receive(:valid?)
-          .and_return(false)
-        allow(validation_service).to receive(:result)
-          .and_return(service_response)
-
-        expect(fixed_charge).not_to be_valid
-        expect(fixed_charge.errors.messages.keys).to include(:properties)
-        expect(fixed_charge.errors.messages[:properties]).to include("invalid_volume_ranges")
-
-        expect(Charges::Validators::VolumeService).to have_received(:new).with(charge: fixed_charge)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
+    describe ".pay_in_arrears" do
+      it "returns only pay_in_arrears fixed charges" do
+        expect(described_class.pay_in_arrears).to match_array([pay_in_arrears, scoped])
       end
     end
   end
@@ -141,6 +80,106 @@ RSpec.describe FixedCharge do
 
       it "returns true if both charge model and properties are the same" do
         expect(fixed_charge1.equal_properties?(fixed_charge2)).to be true
+      end
+    end
+  end
+
+  describe "#validate_pay_in_advance" do
+    context "when charge model is standard" do
+      it "is valid with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is volume" do
+      it "returns an error with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: true)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages[:pay_in_advance]).to include("invalid_charge_model")
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is graduated" do
+      it "is valid with pay_in_advance true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+  end
+
+  describe "#validate_prorated" do
+    context "when charge model is standard" do
+      it "is valid with pay_in_advance true and prorated true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance true and prorated false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: true, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, charge_model: "standard", pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is volume" do
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, :volume, pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+    end
+
+    context "when charge model is graduated" do
+      it "returns an error with pay_in_advance true and prorated true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true, prorated: true)
+
+        expect(fixed_charge).not_to be_valid
+        expect(fixed_charge.errors.messages[:prorated]).to include("invalid_charge_model")
+      end
+
+      it "is valid with pay_in_advance true and prorated false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: true, prorated: false)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated true" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false, prorated: true)
+        expect(fixed_charge).to be_valid
+      end
+
+      it "is valid with pay_in_advance false and prorated false" do
+        fixed_charge = build(:fixed_charge, :graduated, pay_in_advance: false, prorated: false)
+        expect(fixed_charge).to be_valid
       end
     end
   end
