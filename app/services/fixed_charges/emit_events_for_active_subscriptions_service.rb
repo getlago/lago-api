@@ -31,7 +31,9 @@ module FixedCharges
       # This handles cases like plan overrides where the subscription hasn't been updated yet
       # otherwise, emit events for all active subscriptions on the plan
       if subscription
-        [subscription]
+        # Only emit events for active subscriptions, even when explicitly provided
+        # Pending subscriptions will have events created when they activate
+        subscription.active? ? [subscription] : []
       else
         fixed_charge.plan.subscriptions.active
       end
