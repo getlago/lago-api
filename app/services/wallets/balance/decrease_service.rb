@@ -3,9 +3,10 @@
 module Wallets
   module Balance
     class DecreaseService < BaseService
-      def initialize(wallet:, wallet_transaction:)
+      def initialize(wallet:, wallet_transaction:, skip_refresh: true)
         @wallet = wallet
         @wallet_transaction = wallet_transaction
+        @skip_refresh = skip_refresh
 
         super
       end
@@ -23,7 +24,12 @@ module Wallets
           last_consumed_credit_at: Time.current
         )
 
-        Wallets::Balance::RefreshOngoingService.call(wallet:, include_generating_invoices: true)
+        unless skip_refresh
+          Wallets::Balance::RefreshOngoingService.call(
+            wallet:,
+            include_generating_invoices: true
+          )
+        end
 
         after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
 
@@ -33,7 +39,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :wallet_transaction
+      attr_reader :wallet, :wallet_transaction, :skip_refresh
     end
   end
 end
