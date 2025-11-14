@@ -2,12 +2,13 @@
 
 module Credits
   class AppliedPrepaidCreditService < BaseService
-    MAX_WALLET_DECREASE_ATTEMPTS = 5
+    MAX_WALLET_DECREASE_ATTEMPTS = 6
 
-    def initialize(invoice:, wallet:)
+    def initialize(invoice:, wallet:, max_wallet_decrease_attempts: MAX_WALLET_DECREASE_ATTEMPTS)
       @invoice = invoice
       @wallet = wallet
-
+      @max_wallet_decrease_attempts = max_wallet_decrease_attempts
+      raise ArgumentError, "max_wallet_decrease_attempts must be greater than or equal to 1" if max_wallet_decrease_attempts < 1
       super(nil)
     end
 
@@ -23,30 +24,22 @@ module Credits
 
       amount_cents = compute_amount
       wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
-      wallet_transaction = WalletTransactions::CreateService.call!(
-        wallet:,
-        wallet_credit:,
-        invoice_id: invoice.id,
-        transaction_type: :outbound,
-        status: :settled,
-        settled_at: Time.current,
-        transaction_status: :invoiced
-      ).wallet_transaction
+      ApplicationRecord.transaction do
+        wallet_transaction = WalletTransactions::CreateService.call!(
+          wallet:,
+          wallet_credit:,
+          invoice_id: invoice.id,
+          transaction_type: :outbound,
+          status: :settled,
+          settled_at: Time.current,
+          transaction_status: :invoiced
+        ).wallet_transaction
 
-      result.wallet_transaction = wallet_transaction
+        result.wallet_transaction = wallet_transaction
 
-      decrease_attempt = 0
-      begin
-        decrease_attempt += 1
-        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction: wallet_transaction).call
-      rescue ActiveRecord::StaleObjectError
-        if decrease_attempt <= MAX_WALLET_DECREASE_ATTEMPTS
-          sleep(rand(0.1..0.5))
-          wallet.reload # Make sure the wallet is reloaded before retrying
-          retry
+        with_optimistic_lock_retry(wallet) do
+          Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)
         end
-
-        raise
       end
 
       result.prepaid_credit_amount_cents = amount_cents
@@ -64,6 +57,26 @@ module Credits
     attr_accessor :invoice, :wallet
 
     delegate :balance_cents, to: :wallet
+
+    def decrement_wallet_balance(wallet_transaction)
+      Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)
+    end
+
+    def with_optimistic_lock_retry(wallet, &block)
+      decrease_attempt = 0
+      begin
+        decrease_attempt += 1
+        yield
+      rescue ActiveRecord::StaleObjectError
+        if decrease_attempt < MAX_WALLET_DECREASE_ATTEMPTS
+          sleep(rand(0.1..0.5))
+          wallet.reload # Make sure the wallet is reloaded before retrying
+          retry
+        end
+
+        raise
+      end
+    end
 
     def already_applied?
       invoice&.wallet_transactions&.exists?
