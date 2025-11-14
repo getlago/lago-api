@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Credits::AppliedPrepaidCreditsService do
-  subject(:credit_service) { described_class.new(invoice:, wallets: [wallet]) }
-
   let(:invoice) do
     create(
       :invoice,
@@ -23,17 +21,15 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
   end
 
   describe "#call" do
-    it "calculates prepaid credit" do
-      result = credit_service.call
+    subject(:result) { described_class.call(invoice:, wallets: [wallet]) }
 
+    it "calculates prepaid credit" do
       expect(result).to be_success
       expect(result.prepaid_credit_amount_cents).to eq(100)
       expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
     it "creates wallet transaction" do
-      result = credit_service.call
-
       expect(result).to be_success
       expect(result.wallet_transaction).to be_present
       expect(result.wallet_transaction.amount).to eq(1.0)
@@ -41,7 +37,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     it "updates wallet balance" do
-      result = credit_service.call
       wallet = result.wallet_transaction.wallet
 
       expect(wallet.balance_cents).to eq(900)
@@ -49,12 +44,12 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     it "enqueues a SendWebhookJob" do
-      expect { credit_service.call }.to have_enqueued_job(SendWebhookJob)
+      expect { subject }.to have_enqueued_job(SendWebhookJob)
         .with("wallet_transaction.created", WalletTransaction)
     end
 
     it "produces an activity log" do
-      wallet_transaction = described_class.call(invoice:, wallets: [wallet]).wallet_transaction
+      wallet_transaction = result.wallet_transaction
 
       expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
     end
@@ -63,22 +58,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       let(:amount_cents) { 1500 }
 
       it "calculates prepaid credit" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.prepaid_credit_amount_cents).to eq(1000)
       end
 
       it "creates wallet transaction" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.wallet_transaction).to be_present
         expect(result.wallet_transaction.amount).to eq(10.0)
       end
 
       it "updates wallet balance" do
-        result = credit_service.call
         wallet = result.wallet_transaction.wallet
 
         expect(wallet.balance).to eq(0.0)
@@ -92,13 +82,9 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       before { wallet_transaction }
 
       it "returns error" do
-        result = credit_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("already_applied")
-          expect(result.error.error_message).to eq("Prepaid credits already applied")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("already_applied")
+        expect(result.error.error_message).to eq("Prepaid credits already applied")
       end
     end
 
@@ -111,16 +97,12 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       before { subscription_fees }
 
       it "calculates prepaid credit" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.prepaid_credit_amount_cents).to eq(44)
         expect(invoice.prepaid_credit_amount_cents).to eq(44)
       end
 
       it "creates wallet transaction" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.wallet_transaction).to be_present
         expect(result.wallet_transaction.amount).to eq(0.44)
@@ -128,7 +110,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "updates wallet balance" do
-        result = credit_service.call
         wallet = result.wallet_transaction.wallet
 
         expect(wallet.balance_cents).to eq(956)
@@ -141,22 +122,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400) }
 
         it "calculates prepaid credit" do
-          result = credit_service.call
-
           expect(result).to be_success
           expect(result.prepaid_credit_amount_cents).to eq(1000)
         end
 
         it "creates wallet transaction" do
-          result = credit_service.call
-
           expect(result).to be_success
           expect(result.wallet_transaction).to be_present
           expect(result.wallet_transaction.amount).to eq(10.0)
         end
 
         it "updates wallet balance" do
-          result = credit_service.call
           wallet = result.wallet_transaction.wallet
 
           expect(wallet.balance).to eq(0.0)
@@ -180,16 +156,12 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "calculates prepaid credit" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.prepaid_credit_amount_cents).to eq(44)
         expect(invoice.prepaid_credit_amount_cents).to eq(44)
       end
 
       it "creates wallet transaction" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.wallet_transaction).to be_present
         expect(result.wallet_transaction.amount).to eq(0.44)
@@ -197,7 +169,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "updates wallet balance" do
-        result = credit_service.call
         wallet = result.wallet_transaction.wallet
 
         expect(wallet.balance_cents).to eq(956)
@@ -210,22 +181,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 4_000, taxes_precise_amount_cents: 400, charge:) }
 
         it "calculates prepaid credit" do
-          result = credit_service.call
-
           expect(result).to be_success
           expect(result.prepaid_credit_amount_cents).to eq(1000)
         end
 
         it "creates wallet transaction" do
-          result = credit_service.call
-
           expect(result).to be_success
           expect(result.wallet_transaction).to be_present
           expect(result.wallet_transaction.amount).to eq(10.0)
         end
 
         it "updates wallet balance" do
-          result = credit_service.call
           wallet = result.wallet_transaction.wallet
 
           expect(wallet.balance).to eq(0.0)
@@ -250,16 +216,12 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "calculates prepaid credit" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.prepaid_credit_amount_cents).to eq(88)
         expect(invoice.prepaid_credit_amount_cents).to eq(88)
       end
 
       it "creates wallet transaction" do
-        result = credit_service.call
-
         expect(result).to be_success
         expect(result.wallet_transaction).to be_present
         expect(result.wallet_transaction.amount).to eq(0.88)
@@ -267,7 +229,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       it "updates wallet balance" do
-        result = credit_service.call
         wallet = result.wallet_transaction.wallet
 
         expect(wallet.balance_cents).to eq(912)
