@@ -44,7 +44,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     it "enqueues a SendWebhookJob" do
-      expect { subject }.to have_enqueued_job(SendWebhookJob)
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob)
         .with("wallet_transaction.created", WalletTransaction)
     end
 
@@ -233,6 +233,56 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
         expect(wallet.balance_cents).to eq(912)
         expect(wallet.credits_balance).to eq(9.12)
+      end
+    end
+
+    context "when wallet optimistic lock fails" do
+      def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
+        attempts = 0
+        allow(Wallets::Balance::DecreaseService).to receive(:call).and_wrap_original do |m, *args, **kwargs|
+          attempts += 1
+          if attempts >= succeed_on_attempt
+            next m.call(*args, **kwargs)
+          end
+
+          raise ActiveRecord::StaleObjectError
+        end
+      end
+
+      context "when it succeeds before the max attempts" do
+        before do
+          mock_wallet_balance_decrease_service(succeed_on_attempt: 6)
+        end
+
+        it "retries the operation" do
+          expect { subject }.not_to raise_error
+        end
+      end
+
+      context "when it fails after the max attempts" do
+        before do
+          mock_wallet_balance_decrease_service(succeed_on_attempt: 7)
+        end
+
+        it "raises an error and rolls back the transaction" do
+          expect { subject }.to raise_error(ActiveRecord::StaleObjectError)
+
+          expect(wallet.wallet_transactions.count).to eq(0)
+        end
+      end
+
+      context "when max attempts is specified" do
+        subject(:credit_service) { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 3) }
+
+        before do
+          mock_wallet_balance_decrease_service(succeed_on_attempt: 4)
+        end
+
+        it "retries the operation" do
+          expect do
+            subject.call
+          end.not_to raise_error
+        end
       end
     end
   end
