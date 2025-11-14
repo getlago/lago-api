@@ -20,6 +20,7 @@ module LagoApi
     config.eager_load_paths += %W[
       #{config.root}/lib
       #{config.root}/lib/lago_http_client
+      #{config.root}/lib/lago_mcp_client
       #{config.root}/lib/lago_utils
       #{config.root}/lib/lago_eu_vat
       #{config.root}/app/views/helpers
