@@ -4,9 +4,9 @@ module Credits
   class AppliedPrepaidCreditService < BaseService
     MAX_WALLET_DECREASE_ATTEMPTS = 5
 
-    def initialize(invoice:, wallet:)
+    def initialize(invoice:, wallets:)
       @invoice = invoice
-      @wallet = wallet
+      @wallet = wallets.first
 
       super(nil)
     end
