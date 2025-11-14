@@ -83,7 +83,7 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call!(invoice: regenerated_invoice, wallets:)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice: regenerated_invoice, wallets:)
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
