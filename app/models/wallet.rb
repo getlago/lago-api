@@ -41,7 +41,12 @@ class Wallet < ApplicationRecord
   enum :status, STATUSES
 
   scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
+  scope :with_positive_balance, -> { where("balance_cents > 0") }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
+
+  def self.in_application_order
+    order(:priority, :created_at)
+  end
 
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp
