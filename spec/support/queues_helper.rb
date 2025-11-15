@@ -15,10 +15,22 @@ module QueuesHelper
   #
   # ⚠️ Notice that `have_been_enqueued` might not work with perform_all_enqueued_jobs
   # because it's only aware of the last run of the loop.
-  def perform_all_enqueued_jobs
-    until enqueued_jobs.empty?
-      perform_enqueued_jobs
+  def perform_all_enqueued_jobs(only: nil, except: nil)
+    until enqueued_jobs(only:, except:).empty?
+      perform_enqueued_jobs(only:, except:)
       Sidekiq::Worker.drain_all
+    end
+  end
+
+  def enqueued_jobs(only: nil, except: nil)
+    super().filter do |job|
+      if only && !only.include?(job[:job])
+        next false
+      end
+      if except&.include?(job[:job])
+        next false
+      end
+      true
     end
   end
 end

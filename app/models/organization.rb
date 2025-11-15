@@ -235,6 +235,11 @@ class Organization < ApplicationRecord
     !clickhouse_events_store?
   end
 
+  # This is added to have a common interface for all organization-related models to access the organization.
+  def organization
+    self
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.

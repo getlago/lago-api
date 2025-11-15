@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WalletsController do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency: "EUR") }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
@@ -43,7 +43,7 @@ RSpec.describe Api::V1::WalletsController do
 
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.created", Wallet)
 
-      perform_all_enqueued_jobs
+      perform_all_enqueued_jobs(except: [SendWebhookJob])
 
       expect(response).to have_http_status(:success)
 
