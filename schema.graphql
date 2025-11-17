@@ -1042,8 +1042,9 @@ type ChargeUsage {
 
 type CollectionMapping {
   billingEntityId: ID
+  currencies: [CurrencyMappingItem!]
   externalAccountCode: String
-  externalId: String!
+  externalId: String
   externalName: String
   id: ID!
   integrationId: ID!
@@ -2849,8 +2850,9 @@ input CreateIntegrationCollectionMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  currencies: [CurrencyMappingItemInput!]
   externalAccountCode: String
-  externalId: String!
+  externalId: String
   externalName: String
   integrationId: ID!
   mappingType: MappingTypeEnum!
@@ -3983,6 +3985,16 @@ enum CurrencyEnum {
   Zambian Kwacha
   """
   ZMW
+}
+
+type CurrencyMappingItem {
+  currencyCode: CurrencyEnum!
+  currencyExternalCode: String!
+}
+
+input CurrencyMappingItemInput {
+  currencyCode: CurrencyEnum!
+  currencyExternalCode: String!
 }
 
 """
@@ -6241,6 +6253,7 @@ enum MappingTypeEnum {
   account
   coupon
   credit_note
+  currencies
   fallback_item
   minimum_commitment
   prepaid_credit
@@ -11255,6 +11268,7 @@ input UpdateIntegrationCollectionMappingInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  currencies: [CurrencyMappingItemInput!]
   externalAccountCode: String
   externalId: String
   externalName: String
