@@ -18,7 +18,6 @@ class SendWebhookJob < ApplicationJob
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
-    "invoice.add_on_added" => Webhooks::Invoices::AddOnCreatedService,
     "invoice.paid_credit_added" => Webhooks::Invoices::PaidCreditAddedService,
     "invoice.generated" => Webhooks::Invoices::GeneratedService,
     "invoice.drafted" => Webhooks::Invoices::DraftedService,
