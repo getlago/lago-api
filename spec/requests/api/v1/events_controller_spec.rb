@@ -303,6 +303,20 @@ RSpec.describe Api::V1::EventsController do
       end
     end
 
+    context "with transaction_id" do
+      let(:params) { {transaction_id: event.transaction_id} }
+
+      before { create(:event, organization:) }
+
+      it "returns events" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+        expect(json[:events].first[:lago_id]).to eq(event.id)
+      end
+    end
+
     context "with timestamp" do
       let(:params) do
         {timestamp_from: 2.days.ago.to_date, timestamp_to: Date.tomorrow.to_date}
