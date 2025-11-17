@@ -199,7 +199,6 @@ module Subscriptions
         new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         new_sub.save!
       end
-      EmitFixedChargeEventsService.call!(subscriptions: [new_sub], timestamp: new_sub.subscription_at)
 
       InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
