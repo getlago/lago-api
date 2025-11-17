@@ -9,8 +9,8 @@ module Types
         argument :client_id, String, required: true
         argument :client_secret, String, required: true
         argument :domain, String, required: true
-        argument :organization_name, String, required: true
         argument :host, String, required: false
+        argument :organization_name, String, required: true
       end
     end
   end

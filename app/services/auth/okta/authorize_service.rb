@@ -26,7 +26,7 @@ module Auth
           state:
         }
         result.url = URI::HTTPS.build(
-          host: "#{result.okta_integration.organization_name.downcase}.okta.com",
+          host: result.okta_integration.okta_host,
           path: "/oauth2/v1/authorize",
           query: params.to_query
         ).to_s

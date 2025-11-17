@@ -12862,6 +12862,18 @@
               "deprecationReason": null
             },
             {
+              "name": "host",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "organizationName",
               "description": null,
               "type": {
@@ -12872,18 +12884,6 @@
                   "name": "String",
                   "ofType": null
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "host",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -59597,7 +59597,7 @@
               "deprecationReason": null
             },
             {
-              "name": "organizationName",
+              "name": "host",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -59609,7 +59609,7 @@
               "deprecationReason": null
             },
             {
-              "name": "host",
+              "name": "organizationName",
               "description": null,
               "type": {
                 "kind": "SCALAR",
