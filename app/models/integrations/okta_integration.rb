@@ -5,7 +5,7 @@ module Integrations
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
     validate :domain_uniqueness
 
-    settings_accessors :client_id, :domain, :organization_name
+    settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
 
     private
