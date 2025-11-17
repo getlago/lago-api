@@ -208,6 +208,13 @@ GEM
       activerecord (>= 5.a)
       database_cleaner-core (~> 2.0.0)
     database_cleaner-core (2.0.1)
+    datadog (2.22.0)
+      datadog-ruby_core_source (~> 3.4, >= 3.4.1)
+      libdatadog (~> 22.0.1.1.0)
+      libddwaf (~> 1.25.1.1.0)
+      logger
+      msgpack
+    datadog-ruby_core_source (3.4.1)
     date (3.4.1)
     debug (1.10.0)
       irb (~> 1.10)
@@ -425,6 +432,19 @@ GEM
     knapsack_pro (8.1.0)
       rake
     language_server-protocol (3.17.0.5)
+    libdatadog (22.0.1.1.0)
+    libdatadog (22.0.1.1.0-aarch64-linux)
+    libdatadog (22.0.1.1.0-x86_64-linux)
+    libddwaf (1.25.1.1.0)
+      ffi (~> 1.0)
+    libddwaf (1.25.1.1.0-aarch64-linux)
+      ffi (~> 1.0)
+    libddwaf (1.25.1.1.0-arm64-darwin)
+      ffi (~> 1.0)
+    libddwaf (1.25.1.1.0-x86_64-darwin)
+      ffi (~> 1.0)
+    libddwaf (1.25.1.1.0-x86_64-linux)
+      ffi (~> 1.0)
     lint_roller (1.1.0)
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
@@ -1060,6 +1080,7 @@ DEPENDENCIES
   countries
   csv (~> 3.0)
   database_cleaner-active_record
+  datadog
   debug
   discard (~> 1.2)
   dotenv
@@ -1148,4 +1169,4 @@ RUBY VERSION
    ruby 3.4.7p58
 
 BUNDLED WITH
-   2.7.2
+   2.6.8
