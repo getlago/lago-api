@@ -12862,6 +12862,18 @@
               "deprecationReason": null
             },
             {
+              "name": "host",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "organizationName",
               "description": null,
               "type": {
@@ -59574,6 +59586,18 @@
             },
             {
               "name": "domain",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "host",
               "description": null,
               "type": {
                 "kind": "SCALAR",

@@ -2956,6 +2956,7 @@ input CreateOktaIntegrationInput {
   clientMutationId: String
   clientSecret: String!
   domain: String!
+  host: String
   organizationName: String!
 }
 
@@ -11401,6 +11402,7 @@ input UpdateOktaIntegrationInput {
   clientMutationId: String
   clientSecret: String
   domain: String
+  host: String
   id: ID
   organizationName: String
 }
