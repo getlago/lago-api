@@ -10,14 +10,14 @@ RSpec.describe Integrations::OktaIntegration do
   it { is_expected.to validate_presence_of(:client_id) }
   it { is_expected.to validate_presence_of(:client_secret) }
 
-  describe "#okta_host" do
+  describe "#host" do
     context "when settings host is present" do
       before do
         subject.host = "test.com"
       end
 
       it "use the settings host" do
-        expect(subject.okta_host).to eq("test.com")
+        expect(subject.host).to eq("test.com")
       end
     end
 
@@ -28,7 +28,7 @@ RSpec.describe Integrations::OktaIntegration do
       end
 
       it "use the default host" do
-        expect(subject.okta_host).to eq("test.okta.com")
+        expect(subject.host).to eq("test.okta.com")
       end
     end
   end

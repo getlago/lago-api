@@ -8,8 +8,8 @@ module Integrations
     settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
 
-    def okta_host
-      host || "#{organization_name.downcase}.okta.com"
+    def host
+      get_from_settings("host") || "#{organization_name.downcase}.okta.com"
     end
 
     private
