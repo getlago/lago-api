@@ -96,16 +96,16 @@ module Wallets
       def assign_wallet_per_fee(fees)
         fee_wallet = {}
 
-        result = Wallets::BuildAllocationRulesService.call!(customer:)
-        allocation_rules = result.allocation_rules
+        allocation_rules = Wallets::BuildAllocationRulesService.call!(customer:).allocation_rules
 
         fees.each do |fee|
           key = fee.id || fee.object_id
-          result = Wallets::FindApplicableOnFeesService.call!(
-            wallet_allocation: allocation_rules, fee:, first_match: true
-          )
 
-          fee_wallet[key] = result.applicable_wallets.presence
+          applicable_wallets = Wallets::FindApplicableOnFeesService.call!(
+            allocation_rules:, fee:, first_match: true
+          ).applicable_wallets
+
+          fee_wallet[key] = applicable_wallets.presence
         end
 
         fee_wallet

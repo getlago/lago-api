@@ -2,8 +2,8 @@
 
 module Wallets
   class FindApplicableOnFeesService < BaseService
-    def initialize(wallet_allocation:, fee:, first_match: false)
-      @wallet_allocation = wallet_allocation
+    def initialize(allocation_rules:, fee:, first_match: false)
+      @allocation_rules = allocation_rules
       @fee = fee
       @first_match = first_match
       super
@@ -12,13 +12,13 @@ module Wallets
     def call
       bm_id = fee.charge&.billable_metric_id
 
-      bm_wallets = wallet_allocation[:bm_map][bm_id]
+      bm_wallets = allocation_rules[:bm_map][bm_id]
       return result_with(bm_wallets) if bm_wallets&.any?
 
-      type_wallets = wallet_allocation[:type_map][fee.fee_type]
+      type_wallets = allocation_rules[:type_map][fee.fee_type]
       return result_with(type_wallets) if type_wallets&.any?
 
-      unrestricted_wallets = wallet_allocation[:unrestricted]
+      unrestricted_wallets = allocation_rules[:unrestricted]
       return result_with(unrestricted_wallets) if unrestricted_wallets&.any?
 
       result_with([])
@@ -26,7 +26,7 @@ module Wallets
 
     private
 
-    attr_reader :wallet_allocation, :fee, :first_match
+    attr_reader :allocation_rules, :fee, :first_match
 
     def result_with(wallets)
       result.applicable_wallets = first_match ? wallets.first : wallets
