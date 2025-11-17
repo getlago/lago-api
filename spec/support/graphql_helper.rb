@@ -69,13 +69,17 @@ module GraphQLHelper
     res
   end
 
-  def expect_graphql_error(result:, message:)
+  def expect_graphql_error(result:, message:, details: nil)
     symbolized_result = result.to_h.deep_symbolize_keys
 
     expect(symbolized_result[:errors]).not_to be_empty
 
     error = symbolized_result[:errors].find do |e|
       e[:message].to_s == message.to_s || e[:extensions][:code].to_s == message.to_s
+    end
+
+    if details
+      expect(error.dig(:extensions, :details)).to eq details
     end
 
     errors = symbolized_result[:errors].map do |error|
@@ -88,31 +92,35 @@ module GraphQLHelper
     expect(error).to be_present, "error message for #{message} is not present, got:\n#{errors}"
   end
 
-  def expect_unauthorized_error(result)
+  def expect_unauthorized_error(result, details: nil)
     expect_graphql_error(
       result:,
-      message: :unauthorized
+      message: :unauthorized,
+      details:
     )
   end
 
-  def expect_forbidden_error(result)
+  def expect_forbidden_error(result, details: nil)
     expect_graphql_error(
       result:,
-      message: :forbidden
+      message: :forbidden,
+      details:
     )
   end
 
-  def expect_unprocessable_entity(result)
+  def expect_unprocessable_entity(result, details: nil)
     expect_graphql_error(
       result:,
-      message: :unprocessable_entity
+      message: :unprocessable_entity,
+      details:
     )
   end
 
-  def expect_not_found(result)
+  def expect_not_found(result, details: nil)
     expect_graphql_error(
       result:,
-      message: :not_found
+      message: :not_found,
+      details:
     )
   end
 end
