@@ -2,13 +2,13 @@
 
 module Credits
   class AppliedPrepaidCreditsService < BaseService
-    MAX_WALLET_DECREASE_ATTEMPTS = 6
+    DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS = 6
 
-    def initialize(invoice:, wallets:, max_wallet_decrease_attempts: MAX_WALLET_DECREASE_ATTEMPTS)
+    def initialize(invoice:, wallets:, max_wallet_decrease_attempts: DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS)
       @invoice = invoice
       @wallet = wallets.first
       @max_wallet_decrease_attempts = max_wallet_decrease_attempts
-      raise ArgumentError, "max_wallet_decrease_attempts must be greater than or equal to 1" if max_wallet_decrease_attempts < 1
+      raise ArgumentError, "max_wallet_decrease_attempts must be between 1 and #{DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS} (inclusive)" if max_wallet_decrease_attempts < 1 || max_wallet_decrease_attempts > DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS
 
       super(nil)
     end
@@ -46,7 +46,7 @@ module Credits
 
     private
 
-    attr_accessor :invoice, :wallet
+    attr_accessor :invoice, :wallet, :max_wallet_decrease_attempts
 
     delegate :balance_cents, to: :wallet
 
@@ -71,7 +71,7 @@ module Credits
         decrease_attempt += 1
         yield
       rescue ActiveRecord::StaleObjectError
-        if decrease_attempt < MAX_WALLET_DECREASE_ATTEMPTS
+        if decrease_attempt < max_wallet_decrease_attempts
           sleep(rand(0.1..0.5))
           wallet.reload # Make sure the wallet is reloaded before retrying
           retry

@@ -20,6 +20,26 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     subscription
   end
 
+  describe "#initialize" do
+    context "when max_wallet_decrease_attempts is less than 1" do
+      it "raises an error" do
+        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 0) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+      end
+    end
+
+    context "when max_wallet_decrease_attempts is greater than 6" do
+      it "raises an error" do
+        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 7) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+      end
+    end
+
+    context "when max_wallet_decrease_attempts is between 1 and 6" do
+      it "does not raise an error" do
+        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 6) }.not_to raise_error
+      end
+    end
+  end
+
   describe "#call" do
     subject(:result) { described_class.call(invoice:, wallets: [wallet]) }
 
@@ -272,16 +292,28 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       context "when max attempts is specified" do
-        subject(:credit_service) { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 3) }
+        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 3) }
 
-        before do
-          mock_wallet_balance_decrease_service(succeed_on_attempt: 4)
+        context "when decrease attempts failed" do
+          before do
+            mock_wallet_balance_decrease_service(succeed_on_attempt: 4)
+          end
+
+          it "retries the operation" do
+            expect { applied_prepaid_credits_service.call }.to raise_error(ActiveRecord::StaleObjectError)
+
+            expect(wallet.wallet_transactions.count).to eq(0)
+          end
         end
 
-        it "retries the operation" do
-          expect do
-            subject.call
-          end.not_to raise_error
+        context "when decrease attempts succeed before the max attempts" do
+          before do
+            mock_wallet_balance_decrease_service(succeed_on_attempt: 3)
+          end
+
+          it "raises an error and rolls back the transaction" do
+            expect { applied_prepaid_credits_service.call }.not_to raise_error
+          end
         end
       end
     end
