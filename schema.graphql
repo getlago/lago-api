@@ -8108,11 +8108,6 @@ input PaymentMethodReferenceInput {
   paymentMethodType: PaymentMethodTypeEnum
 }
 
-type PaymentMethodReferenceObject {
-  paymentMethodId: ID
-  paymentMethodType: PaymentMethodTypeEnum
-}
-
 enum PaymentMethodTypeEnum {
   manual
   provider
@@ -9831,7 +9826,6 @@ type Subscription {
   nextSubscriptionType: NextSubscriptionTypeEnum
   onTerminationCreditNote: OnTerminationCreditNoteEnum
   onTerminationInvoice: OnTerminationInvoiceEnum!
-  paymentMethod: PaymentMethodReferenceObject
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime

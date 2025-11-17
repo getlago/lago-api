@@ -40,8 +40,6 @@ module Types
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
 
-      field :payment_method, Types::PaymentMethods::ReferenceObject, method: :itself
-
       def next_plan
         object.next_subscription&.plan
       end
