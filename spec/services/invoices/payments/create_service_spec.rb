@@ -295,7 +295,7 @@ RSpec.describe Invoices::Payments::CreateService do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
             r.error_message = "stripe_error"
-            r.error_code = "amount_too_small"
+            r.error_code = "unknown"
           end
         end
 
@@ -313,6 +313,30 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(provider_service).to have_received(:call!)
 
           expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      [
+        ::PaymentProviders::StripeProvider::AMOUNT_TOO_SMALL_ERROR_CODE,
+        ::PaymentProviders::StripeProvider::NEED_3DS_ERROR_CODE
+      ].each do |error_code|
+        context "when error_code is is pending" do
+          let(:result) do
+            BaseService::Result.new.tap do |r|
+              r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
+              r.error_message = "stripe_error"
+              r.error_code = error_code
+            end
+          end
+
+          it "updates the invoice payment status and does not delivers an error webhook" do
+            create_service.call
+
+            expect(provider_class).to have_received(:new)
+            expect(provider_service).to have_received(:call!)
+
+            expect(SendWebhookJob).not_to have_been_enqueued
+          end
         end
       end
     end

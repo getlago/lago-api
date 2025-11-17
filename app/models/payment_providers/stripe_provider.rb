@@ -2,6 +2,9 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
+    AMOUNT_TOO_SMALL_ERROR_CODE = "amount_too_small"
+    NEED_3DS_ERROR_CODE = "authentication_required"
+
     StripePayment = Data.define(:id, :status, :metadata, :error_code)
 
     SUCCESS_REDIRECT_URL = "https://stripe.com/"

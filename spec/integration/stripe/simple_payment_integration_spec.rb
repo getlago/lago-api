@@ -146,8 +146,11 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       invoice = customer.invoices.sole
       expect(stripe_customer.reload.payment_method_id).to eq three_ds_pm_id
       expect(invoice.reload.payment_status).to eq("pending")
-      expect(invoice.payments.where(status: "requires_action").count).to eq 1
-      expect(invoice.payment_attempts).to eq(1)
+      expect(invoice.payments.pluck(:status, :error_code)).to contain_exactly(
+        ["failed", ::PaymentProviders::StripeProvider::NEED_3DS_ERROR_CODE],
+        ["requires_action", nil]
+      )
+      expect(invoice.payment_attempts).to eq(2)
       expect(invoice).not_to be_ready_for_payment_processing
 
       webhook = webhooks_sent.find { it["webhook_type"] == "payment.requires_action" }
@@ -181,6 +184,12 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
       expect(invoice.total_amount_cents).to be > 1_000_00 # Ensure this is the subscription invoice
       expect(invoice.status).to eq "finalized"
       expect(invoice.payment_status).to eq "pending"
+      expect(invoice.payments.pluck(:status, :payable_payment_status, :error_code)).to contain_exactly(
+        ["failed", "failed", ::PaymentProviders::StripeProvider::NEED_3DS_ERROR_CODE],
+        ["requires_action", "processing", nil]
+      )
+      expect(invoice.payment_attempts).to eq(2)
+      expect(invoice).not_to be_ready_for_payment_processing
 
       payment_webhook = webhooks_sent.select { it["webhook_type"] == "payment.requires_action" }.sole
       expect(payment_webhook.dig("payment", "invoice_ids")).to contain_exactly(invoice.id)

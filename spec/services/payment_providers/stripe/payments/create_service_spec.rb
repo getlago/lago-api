@@ -46,7 +46,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       payment_provider: stripe_payment_provider,
       payment_provider_customer: stripe_customer,
       amount_cents: invoice.total_amount_cents,
-      amount_currency: invoice.currency
+      amount_currency: invoice.currency,
+      provider_payment_id: nil
     )
   end
 
@@ -252,6 +253,97 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         expect(result.error_code).to eq("amount_too_small")
         expect(result.payment.status).to eq("failed")
         expect(result.payment.payable_payment_status).to eq("pending")
+      end
+    end
+
+    context "when card requires authentication (3DS)" do
+      [:invoice, :payment_request].each do |payable_type|
+        context "when payable_type is #{payable_type}" do
+          let(:payable) do
+            if payable_type == :payment_request
+              create(:payment_request, customer: invoice.customer, amount_cents: invoice.total_amount_cents, currency: invoice.currency, invoices: [invoice])
+            else
+              invoice
+            end
+          end
+
+          let(:payment) do
+            create(
+              :payment,
+              payable:,
+              status: "pending",
+              payment_provider: stripe_payment_provider,
+              payment_provider_customer: stripe_customer,
+              amount_cents: payable.total_amount_cents,
+              amount_currency: payable.currency,
+              provider_payment_id: nil
+            )
+          end
+
+          context "when it's the first try" do
+            it "enqueued a new payment creation job" do
+              WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+                .with(body: ->(request) {
+                  params = Rack::Utils.parse_query(request)
+                  expect(params["confirm"]).to eq "true"
+                  expect(params["off_session"]).to eq "true"
+                  expect(params["error_on_requires_action"]).to eq "true"
+                })
+                .to_return(
+                  status: 400,
+                  body: get_stripe_fixtures("payment_intent_authentication_required_response.json", version: "2025-04-30.basil")
+                )
+
+              result = create_service.call
+
+              expect(result).to be_failure
+
+              expect(result.error_code).to eq "authentication_required"
+              expect(result.error.code).to eq "stripe_error"
+              expect(result.reraise).to eq false
+              expect(Stripe::PaymentIntent).to have_received(:create)
+              payment.reload
+              expect(payment.status).to eq "failed"
+              expect(payment.error_code).to eq "authentication_required"
+              expect(payment.payable_payment_status).to eq "failed"
+              expect(payment.provider_payment_id).to eq "pi_3SUpk9Q8iJWBZFaM20I3flZT"
+            end
+          end
+
+          context "when it's the second try" do
+            it "enqueued a new payment creation job" do
+              create(:payment, payable:, payable_payment_status: "failed", status: "failed", error_code: "authentication_required", provider_payment_id: "pi_3SUpk9Q8iJWBZFaM20I3flZT")
+
+              WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+                .with(body: ->(request) {
+                  params = Rack::Utils.parse_query(request)
+                  expect(params["confirm"]).to eq "true"
+                  expect(params).not_to have_key("off_session")
+                  expect(params).not_to have_key("error_on_requires_action")
+                })
+                .to_return(status: 200, body: get_stripe_fixtures("payment_intent_requires_action_response.json", version: "2025-04-30.basil"))
+
+              allow(::Invoices::Payments::CreateService).to receive(:call_async).and_call_original
+
+              result = create_service.call
+
+              expect(result).to be_success
+
+              expect(result.error_code).to be_nil
+              expect(result.error).to be_nil
+              expect(result.reraise).to be_nil
+              expect(Stripe::PaymentIntent).to have_received(:create)
+              expect(::Invoices::Payments::CreateService).not_to have_received(:call_async)
+
+              expect(result.payment.status).to eq "requires_action"
+              expect(result.payment.payable_payment_status).to eq "processing"
+              expect(result.payment.provider_payment_id).to eq "pi_3SUpkBQ8iJWBZFaM0SuylvJC"
+              expect(result.payment.provider_payment_data["type"]).to eq "redirect_to_url"
+
+              expect(invoice.reload.payment_status).to eq "pending"
+            end
+          end
+        end
       end
     end
 
