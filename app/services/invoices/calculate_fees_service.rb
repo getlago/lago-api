@@ -352,8 +352,8 @@ module Invoices
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
-    def wallet
-      return @wallet if @wallet
+    def wallets
+      return @wallets if @wallets
 
       @wallets ||= customer.wallets.active.with_positive_balance
     end

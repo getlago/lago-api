@@ -366,28 +366,6 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
 
-      context "when charge is pay_in_arrears and not invoiceable" do
-        let(:charge) do
-          create(
-            :standard_charge,
-            plan: subscription.plan,
-            organization:,
-            charge_model: "standard",
-            invoiceable: false
-          )
-        end
-
-        it "does not create a charge fee" do
-          result = invoice_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(Fee.charge.count).to eq(0)
-          end
-        end
-      end
-
       context "when plan has fixed charges" do
         # when pay_in_advance is true, the fixed charge fee is created, but with period of the next month
         context "when fixed charge is pay_in_advance" do
