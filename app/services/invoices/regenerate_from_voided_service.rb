@@ -75,20 +75,15 @@ module Invoices
     end
 
     def should_create_applied_prepaid_credit?
-      return false unless wallet&.active?
-      return false unless regenerated_invoice.total_amount_cents&.positive?
-
-      wallet.balance.positive?
+      regenerated_invoice.total_amount_cents&.positive? && wallets.any?
     end
 
-    def wallet
-      return @wallet if defined? @wallet
-
-      @wallet = voided_invoice.customer.wallets.active.first
+    def wallets
+      @wallets ||= voided_invoice.customer.wallets.active.with_positive_balance
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call!(invoice: regenerated_invoice, wallet:)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice: regenerated_invoice, wallets:)
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
