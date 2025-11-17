@@ -74,7 +74,7 @@ RSpec.describe PaymentReceipts::CreateService do
 
             context "when payment is succeeded" do
               let(:payable_payment_status) { "succeeded" }
-              let(:payment_receipt) { build(:payment_receipt) }
+              let(:payment_receipt) { build(:payment_receipt, organization:) }
 
               before do
                 allow(PaymentReceipt).to receive(:new).and_return(payment_receipt)
