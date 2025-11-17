@@ -11,6 +11,11 @@ class AdjustedFee < ApplicationRecord
     class_name: "Charge",
     foreign_key: :charge_id,
     optional: true
+  belongs_to :fixed_charge_with_discarded,
+    -> { with_discarded },
+    class_name: "FixedCharge",
+    foreign_key: :fixed_charge_id,
+    optional: true
   belongs_to :group, optional: true
   belongs_to :charge_filter, optional: true
   belongs_to :charge_filter_with_discarded,
