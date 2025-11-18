@@ -10,7 +10,7 @@ module Invoices
       @charge_in_advance = charge_in_advance
       @skip_charges = skip_charges
       @invoice_id = invoice_id
-      @recurring = invoicing_reason.to_sym == :subscription_periodic
+      @recurring = invoicing_reason&.to_sym == :subscription_periodic
 
       super
     end
