@@ -90,6 +90,8 @@ gem "sentry-rails"
 gem "sentry-ruby"
 gem "sentry-sidekiq"
 
+gem "datadog", require: false
+
 # Storage
 gem "aws-sdk-s3", require: false
 gem "google-cloud-storage", require: false
