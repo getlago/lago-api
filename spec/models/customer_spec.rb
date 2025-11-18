@@ -614,6 +614,50 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#applicable_subscription_invoice_issuing_date_anchor" do
+    subject(:customer) do
+      described_class.new(billing_entity:, subscription_invoice_issuing_date_anchor:)
+    end
+
+    context "when customer has subscription_invoice_issuing_date_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+
+      it "returns the customer subscription_invoice_issuing_date_anchor" do
+        expect(customer.applicable_subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+      end
+    end
+
+    context "when customer does not have subscription_invoice_issuing_date_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { nil }
+
+      it "returns the billing entity subscription_invoice_issuing_date_anchor" do
+        expect(customer.applicable_subscription_invoice_issuing_date_anchor).to eq("next_period_start")
+      end
+    end
+  end
+
+  describe "#applicable_subscription_invoice_issuing_date_adjustment" do
+    subject(:customer) do
+      described_class.new(billing_entity:, subscription_invoice_issuing_date_adjustment:)
+    end
+
+    context "when customer has subscription_invoice_issuing_date_adjustment" do
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+      it "returns the customer subscription_invoice_issuing_date_adjustment" do
+        expect(customer.applicable_subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+      end
+    end
+
+    context "when customer does not have subscription_invoice_issuing_date_adjustment" do
+      let(:subscription_invoice_issuing_date_adjustment) { nil }
+
+      it "returns the billing entity subscription_invoice_issuing_date_adjustment" do
+        expect(customer.applicable_subscription_invoice_issuing_date_adjustment).to eq("align_with_finalization_date")
+      end
+    end
+  end
+
   describe "#applicable_net_payment_term" do
     subject(:applicable_net_payment_term) { customer.applicable_net_payment_term }
 

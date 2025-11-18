@@ -100,5 +100,100 @@ RSpec.describe Customers::UpdateInvoiceGracePeriodService do
         expect { update_service.call }.to change(customer, :invoice_grace_period).from(0).to(nil)
       end
     end
+
+    context "with issuing date preferences" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          subscription_invoice_issuing_date_anchor:,
+          subscription_invoice_issuing_date_adjustment:
+        )
+      end
+
+      let(:recurring) { true }
+
+      before do
+        create(:invoice_subscription, invoice: invoice_to_be_finalized, organization:, recurring:)
+        create(:invoice_subscription, invoice: invoice_to_not_be_finalized, organization:, recurring:)
+      end
+
+      context "with keep_anchor" do
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        it "does not update issuing_date on draft invoices" do
+          current_date = DateTime.parse("22 Jun 2022")
+
+          travel_to(current_date) do
+            expect { update_service.call }.not_to change {
+              [
+                invoice_to_not_be_finalized.reload.issuing_date,
+                invoice_to_not_be_finalized.reload.payment_due_date
+              ]
+            }
+          end
+        end
+      end
+
+      context "with align_with_finalization_date" do
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+        it "updates issuing_date on draft invoices" do
+          current_date = DateTime.parse("22 Jun 2022")
+
+          travel_to(current_date) do
+            expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.payment_due_date }
+              .to(DateTime.parse("23 Jun 2022"))
+          end
+        end
+      end
+
+      context "with no preferences set on the customer level " do
+        let(:billing_entity) do
+          create(
+            :billing_entity,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor"
+          )
+        end
+
+        let(:customer) { create(:customer, billing_entity:, organization:) }
+
+        it "updates issuing_date on draft invoices based on billing entity settings" do
+          current_date = DateTime.parse("22 Jun 2022")
+
+          travel_to(current_date) do
+            expect { update_service.call }.not_to change {
+              [
+                invoice_to_not_be_finalized.reload.issuing_date,
+                invoice_to_not_be_finalized.reload.payment_due_date
+              ]
+            }
+          end
+        end
+      end
+
+      context "when invoice is not recurring" do
+        let(:recurring) { false }
+
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        it "ignores all issuing date preferences" do
+          current_date = DateTime.parse("22 Jun 2022")
+
+          travel_to(current_date) do
+            expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.payment_due_date }
+              .to(DateTime.parse("23 Jun 2022"))
+          end
+        end
+      end
+    end
   end
 end

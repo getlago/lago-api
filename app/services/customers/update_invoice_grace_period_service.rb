@@ -16,10 +16,10 @@ module Customers
         customer.invoice_grace_period = grace_period
         customer.save!
 
-        grace_period_diff = customer.applicable_invoice_grace_period.to_i - old_applicable_grace_period
-
         # NOTE: Update issuing_date on draft invoices.
         customer.invoices.draft.find_each do |invoice|
+          grace_period_diff = grace_period_diff(invoice, old_applicable_grace_period)
+
           invoice.issuing_date = invoice.issuing_date + grace_period_diff.days
           invoice.payment_due_date = grace_period_payment_due_date(invoice)
           invoice.save!
@@ -40,6 +40,13 @@ module Customers
 
     def grace_period_payment_due_date(invoice)
       invoice.issuing_date + customer.applicable_net_payment_term.days
+    end
+
+    def grace_period_diff(invoice, old_grace_period)
+      recurring = invoice.invoice_subscriptions.first&.recurring?
+      issuing_date_service = Invoices::IssuingDateService.new(customer:, recurring:)
+
+      issuing_date_service.grace_period_diff(old_grace_period)
     end
   end
 end

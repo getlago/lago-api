@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -10,6 +10,7 @@ module Invoices
       @charge_in_advance = charge_in_advance
       @skip_charges = skip_charges
       @invoice_id = invoice_id
+      @recurring = invoicing_reason.to_sym == :subscription_periodic
 
       super
     end
@@ -43,16 +44,18 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id
+    attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring
 
     delegate :organization, to: :customer
 
     # NOTE: accounting date must be in customer timezone
     def issuing_date
-      date = datetime.in_time_zone(customer.applicable_timezone).to_date
+      issuing_date_service = Invoices::IssuingDateService.new(customer:, recurring:)
+
+      date = issuing_date_service.base_date(datetime)
       return date if !grace_period? || charge_in_advance
 
-      date + customer.applicable_invoice_grace_period.days
+      date + issuing_date_service.grace_period.days
     end
 
     def grace_period?
