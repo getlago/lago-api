@@ -7,24 +7,21 @@ class SupersetAuthService < BaseService
     @organization = organization
     @user = user
     @cookies = []
-    @access_token = nil
     @csrf_token = nil
 
     super()
   end
 
   def call
-    # Step 1: Login to get access token
-    login_result = login_to_superset
-    return result unless login_result[:success]
-
-    @access_token = login_result[:access_token]
-
-    # Step 2: Get CSRF token
+    # Step 1: Get CSRF token (unauthenticated)
     csrf_result = get_csrf_token
     return result unless csrf_result[:success]
 
     @csrf_token = csrf_result[:csrf_token]
+
+    # Step 2: Login via HTML form to create session
+    login_result = login_to_superset
+    return result unless login_result[:success]
 
     # Step 3: Fetch all dashboards
     dashboards_result = fetch_dashboards
@@ -57,43 +54,33 @@ class SupersetAuthService < BaseService
 
   private
 
-  attr_reader :organization, :user, :cookies, :access_token, :csrf_token
+  attr_reader :organization, :user, :cookies, :csrf_token
 
   def login_to_superset
-    uri = URI.join(superset_base_url, "/api/v1/security/login")
+    uri = URI.join(superset_base_url, "/login/")
     http = create_http_client(uri)
 
     request = Net::HTTP::Post.new(uri.path)
-    request["Content-Type"] = "application/json"
+    request["Content-Type"] = "application/x-www-form-urlencoded"
+    request["Referer"] = "#{superset_base_url}/login/"
+    request["Cookie"] = cookies.join("; ")
 
-    body = {
+    form_data = URI.encode_www_form({
+      csrf_token: csrf_token,
       username: superset_username,
-      password: superset_password,
-      provider: "db",
-      refresh: true
-    }
-    request.body = body.to_json
+      password: superset_password
+    })
+    request.body = form_data
 
     response = http.request(request)
     store_cookies(response)
 
-    unless response.is_a?(Net::HTTPSuccess)
-      result.service_failure!(code: "login_failed", message: "Failed to login to Superset: #{response.body}")
+    unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
+      result.service_failure!(code: "login_failed", message: "Failed to login to Superset: #{response.code} #{response.message}")
       return {success: false}
     end
 
-    parsed_response = JSON.parse(response.body)
-    access_token = parsed_response["access_token"]
-
-    unless access_token
-      result.service_failure!(code: "no_access_token", message: "No access token received from Superset")
-      return {success: false}
-    end
-
-    {success: true, access_token: access_token}
-  rescue JSON::ParserError => e
-    result.service_failure!(code: "invalid_response", message: "Invalid JSON response from Superset login: #{e.message}")
-    {success: false}
+    {success: true}
   end
 
   def get_csrf_token
@@ -101,10 +88,7 @@ class SupersetAuthService < BaseService
     http = create_http_client(uri)
 
     request = Net::HTTP::Get.new(uri.path)
-    request["Authorization"] = "Bearer #{access_token}"
-    request["Content-Type"] = "application/json"
-    request["Referer"] = "#{superset_base_url}/"
-    request["Cookie"] = cookies.join("; ")
+    request["Accept"] = "application/json"
 
     response = http.request(request)
     store_cookies(response)
@@ -133,9 +117,8 @@ class SupersetAuthService < BaseService
     http = create_http_client(uri)
 
     request = Net::HTTP::Get.new(uri.path)
-    request["Authorization"] = "Bearer #{access_token}"
-    request["Content-Type"] = "application/json"
-    request["Referer"] = "#{superset_base_url}/"
+    request["Accept"] = "application/json"
+    request["X-CSRFToken"] = csrf_token
     request["Cookie"] = cookies.join("; ")
 
     response = http.request(request)
@@ -159,9 +142,8 @@ class SupersetAuthService < BaseService
     http = create_http_client(uri)
 
     request = Net::HTTP::Get.new(uri.path)
-    request["Authorization"] = "Bearer #{access_token}"
-    request["Content-Type"] = "application/json"
-    request["Referer"] = "#{superset_base_url}/"
+    request["Accept"] = "application/json"
+    request["X-CSRFToken"] = csrf_token
     request["Cookie"] = cookies.join("; ")
 
     response = http.request(request)
@@ -182,10 +164,8 @@ class SupersetAuthService < BaseService
     http = create_http_client(uri)
 
     request = Net::HTTP::Post.new(uri.path)
-    request["Authorization"] = "Bearer #{access_token}"
     request["Content-Type"] = "application/json"
     request["X-CSRFToken"] = csrf_token
-    request["Referer"] = "#{superset_base_url}/"
     request["Cookie"] = cookies.join("; ")
 
     body = {allowed_domains: []}
@@ -213,14 +193,11 @@ class SupersetAuthService < BaseService
   end
 
   def ensure_embedded_config(dashboard_id)
-    # Check if embedded config exists
     embedded_config = get_embedded_config(dashboard_id)
     return {success: false} unless embedded_config[:success]
 
-    # If exists, return the UUID
     return {success: true, uuid: embedded_config[:uuid]} if embedded_config[:exists]
 
-    # If not exists, create it
     create_embedded_config(dashboard_id)
   end
 
@@ -229,10 +206,8 @@ class SupersetAuthService < BaseService
     http = create_http_client(uri)
 
     request = Net::HTTP::Post.new(uri.path)
-    request["Authorization"] = "Bearer #{access_token}"
     request["Content-Type"] = "application/json"
     request["X-CSRFToken"] = csrf_token
-    request["Referer"] = "#{superset_base_url}/"
     request["Cookie"] = cookies.join("; ")
 
     body = {
@@ -250,7 +225,6 @@ class SupersetAuthService < BaseService
     end
 
     parsed_response = JSON.parse(response.body)
-    # Superset can return the token in different keys depending on version
     guest_token = parsed_response["token"] || parsed_response["result"] || parsed_response["access_token"]
 
     unless guest_token
