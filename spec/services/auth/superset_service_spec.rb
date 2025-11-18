@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe SupersetAuthService do
+RSpec.describe Auth::SupersetService do
   subject(:service) { described_class.new(organization:, user:) }
 
   let(:organization) { create(:organization, name: "Test Org") }

@@ -9833,6 +9833,7 @@ type SupersetDashboard {
   embeddedId: String!
   guestToken: String!
   id: String!
+  supersetUrl: String!
 }
 
 """

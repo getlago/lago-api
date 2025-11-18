@@ -44,7 +44,7 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
   end
 
   before do
-    allow(SupersetAuthService).to receive(:call).and_return(result)
+    allow(Auth::SupersetService).to receive(:call).and_return(result)
   end
 
   it_behaves_like "requires current user"
@@ -74,7 +74,7 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
     expect(dashboards_response[1]["embeddedId"]).to eq("embedded-uuid-2")
     expect(dashboards_response[1]["guestToken"]).to eq("guest-token-2")
 
-    expect(SupersetAuthService).to have_received(:call).with(
+    expect(Auth::SupersetService).to have_received(:call).with(
       organization: organization,
       user: nil
     )
