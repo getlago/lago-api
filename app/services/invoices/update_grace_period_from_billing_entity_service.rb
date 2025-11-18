@@ -20,7 +20,7 @@ module Invoices
       # Idempotency! if the applied_grace_period is already the same, we should not update the dates
       return result if invoice.applied_grace_period == new_grace_period
 
-      grace_period_diff = new_grace_period - old_grace_period
+      grace_period_diff = grace_period_diff(old_grace_period)
 
       invoice.issuing_date = invoice.issuing_date + grace_period_diff.days
       invoice.applied_grace_period = new_grace_period
@@ -33,5 +33,12 @@ module Invoices
     private
 
     attr_reader :invoice, :old_grace_period
+
+    def grace_period_diff(old_grace_period)
+      recurring = invoice.invoice_subscriptions.first&.recurring?
+      issuing_date_service = Invoices::IssuingDateService.new(customer: invoice.customer, recurring:)
+
+      issuing_date_service.grace_period_diff(old_grace_period)
+    end
   end
 end

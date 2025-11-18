@@ -6,9 +6,10 @@ RSpec.describe Invoices::UpdateGracePeriodFromBillingEntityService do
   subject { described_class.new(invoice:, old_grace_period:) }
 
   let(:invoice) do
-    create(:invoice, :draft, issuing_date:, payment_due_date:, applied_grace_period: 12)
+    create(:invoice, :draft, customer:, issuing_date:, payment_due_date:, applied_grace_period: 12)
   end
 
+  let(:customer) { create(:customer) }
   let(:issuing_date) { Time.current + old_grace_period.days }
   let(:payment_due_date) { issuing_date }
 
@@ -86,6 +87,48 @@ RSpec.describe Invoices::UpdateGracePeriodFromBillingEntityService do
 
     it "changes the payment_due_date by 3 days" do
       expect { subject.call }.to change(invoice, :payment_due_date).by(-3)
+    end
+  end
+
+  context "with issuing date preferences" do
+    let(:billing_entity) do
+      create(
+        :billing_entity,
+        subscription_invoice_issuing_date_anchor: "current_period_end",
+        subscription_invoice_issuing_date_adjustment:
+      )
+    end
+
+    let(:customer) { create(:customer, billing_entity:) }
+    let(:recurring) { true }
+
+    before do
+      create(:invoice_subscription, invoice:, recurring:)
+    end
+
+    context "with keep_anchor" do
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+      it "does not change the issuing_date" do
+        expect { subject.call }.not_to change { invoice.reload.issuing_date }
+      end
+    end
+
+    context "with align_with_finalization_date" do
+      let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+      it "updates the issuing_date" do
+        expect { subject.call }.to change(invoice, :issuing_date).by(-12)
+      end
+    end
+
+    context "when invoice is not recurring" do
+      let(:recurring) { false }
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+      it "ignores all issuing date preferences" do
+        expect { subject.call }.to change(invoice, :issuing_date).by(-12)
+      end
     end
   end
 end
