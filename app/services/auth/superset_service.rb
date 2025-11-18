@@ -174,22 +174,15 @@ module Auth
 
       response = http.request(request)
 
-      unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "create_embedded_failed", message: "Failed to create embedded config for dashboard #{dashboard_id}: #{response.body}")
-        return {success: false}
-      end
+      return {success: false} unless response.is_a?(Net::HTTPSuccess)
 
       parsed_response = JSON.parse(response.body)
       uuid = parsed_response["result"]&.[]("uuid")
 
-      unless uuid
-        result.service_failure!(code: "no_embedded_uuid", message: "No embedded UUID received for dashboard #{dashboard_id}")
-        return {success: false}
-      end
+      return {success: false} unless uuid
 
       {success: true, uuid: uuid}
-    rescue JSON::ParserError => e
-      result.service_failure!(code: "invalid_response", message: "Invalid JSON response from create embedded config: #{e.message}")
+    rescue JSON::ParserError
       {success: false}
     end
 
@@ -220,22 +213,15 @@ module Auth
 
       response = http.request(request)
 
-      unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "guest_token_failed", message: "Failed to get guest token for dashboard #{dashboard_id}: #{response.body}")
-        return {success: false}
-      end
+      return {success: false} unless response.is_a?(Net::HTTPSuccess)
 
       parsed_response = JSON.parse(response.body)
       guest_token = parsed_response["token"] || parsed_response["result"] || parsed_response["access_token"]
 
-      unless guest_token
-        result.service_failure!(code: "no_guest_token", message: "No guest token received for dashboard #{dashboard_id}")
-        return {success: false}
-      end
+      return {success: false} unless guest_token
 
       {success: true, guest_token: guest_token}
-    rescue JSON::ParserError => e
-      result.service_failure!(code: "invalid_response", message: "Invalid JSON response from Superset guest token: #{e.message}")
+    rescue JSON::ParserError
       {success: false}
     end
 
