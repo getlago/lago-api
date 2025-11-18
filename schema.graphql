@@ -9840,6 +9840,8 @@ type Subscription {
   nextSubscriptionType: NextSubscriptionTypeEnum
   onTerminationCreditNote: OnTerminationCreditNoteEnum
   onTerminationInvoice: OnTerminationInvoiceEnum!
+  paymentMethod: PaymentMethod
+  paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
