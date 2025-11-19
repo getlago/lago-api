@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Superset::DashboardsResolver do
-  let(:required_permission) { "analytic:view" }
+  let(:required_permission) { "analytics:view" }
   let(:query) do
     <<~GQL
       query {

@@ -14,7 +14,7 @@ module Resolvers
       type [Types::Superset::Dashboard::Object], null: false
 
       def resolve
-        result = Auth::SupersetService.call(
+        result = ::Auth::SupersetService.call(
           organization: current_organization,
           user: nil
         )

@@ -250,15 +250,11 @@ module Auth
     end
 
     def guest_user_info
-      if user.present?
-        user
-      else
-        {
-          first_name: organization.name || "Guest",
-          last_name: "User",
-          username: "guest_#{organization.id}"
-        }
-      end
+      user.presence || {
+        first_name: organization.name || "Guest",
+        last_name: "User",
+        username: "guest_#{organization.id}"
+      }
     end
 
     def superset_base_url
