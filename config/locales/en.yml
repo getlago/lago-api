@@ -15,6 +15,7 @@ en:
         invalid_aggregation_type_or_charge_model: invalid_aggregation_type_or_charge_model
         invalid_amount: invalid_amount
         invalid_billable_metric_or_charge_model: invalid_billable_metric_or_charge_model
+        invalid_charge_model: invalid_charge_model
         invalid_content_type: invalid_content_type
         invalid_date: invalid_date
         invalid_date_range: invalid_date_range
