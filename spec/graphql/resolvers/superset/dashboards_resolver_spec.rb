@@ -49,7 +49,7 @@ RSpec.describe Resolvers::Superset::DashboardsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "analytic:view"
+  it_behaves_like "requires permission", "analytics:view"
 
   it "returns a list of Superset dashboards" do
     graphql_result = execute_graphql(
