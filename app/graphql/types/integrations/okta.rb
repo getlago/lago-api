@@ -9,6 +9,7 @@ module Types
       field :client_secret, ObfuscatedStringType, null: true
       field :code, String, null: false
       field :domain, String, null: false
+      field :host, String, null: true
       field :id, ID, null: false
       field :name, String, null: false
       field :organization_name, String, null: false

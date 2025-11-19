@@ -7959,6 +7959,7 @@ type OktaIntegration {
   clientSecret: ObfuscatedString
   code: String!
   domain: String!
+  host: String
   id: ID!
   name: String!
   organizationName: String!
