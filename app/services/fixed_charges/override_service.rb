@@ -35,7 +35,7 @@ module FixedCharges
         FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
           fixed_charge: new_fixed_charge,
           subscription:,
-          apply_units_immediately: true
+          apply_units_immediately: !!params[:apply_units_immediately]
         )
 
         if params.key?(:tax_codes)
