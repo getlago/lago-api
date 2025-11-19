@@ -887,10 +887,6 @@ GEM
     ruby-lsp-rails (0.3.30)
       ruby-lsp (>= 0.23.0, < 0.24.0)
     ruby-next-core (1.1.2)
-    ruby-prof (1.7.2)
-      base64
-    ruby-prof (1.7.2-x64-mingw-ucrt)
-      base64
     ruby-progressbar (1.13.0)
     sass-rails (6.0.0)
       sassc-rails (~> 2.1, >= 2.1.1)
@@ -999,6 +995,7 @@ GEM
     useragent (0.16.11)
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
+    vernier (1.8.1)
     version_gem (1.1.4)
     waterdrop (2.8.11)
       karafka-core (>= 2.4.9, < 3.0.0)
@@ -1120,7 +1117,6 @@ DEPENDENCIES
   rubocop-rspec
   rubocop-thread_safety
   ruby-lsp-rails
-  ruby-prof (~> 1.0)
   sass-rails
   scenic
   sentry-rails
@@ -1142,6 +1138,7 @@ DEPENDENCIES
   tzinfo-data
   uglifier
   valvat
+  vernier (~> 1.0)
   webmock
   with_advisory_lock
   yabeda

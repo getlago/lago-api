@@ -81,10 +81,10 @@ Sidekiq.configure_server do |config|
     end
   end
 
-  if Rails.env.development? && ENV["SIDEKIQ_RUBY_PROF_ENABLED"] == "true"
-    require "sidekiq/ruby_prof_middleware"
+  if Rails.env.development? && ENV["SIDEKIQ_PROFILING_ENABLED"] == "true"
+    require "sidekiq/profiling_middleware"
     config.server_middleware do |chain|
-      chain.prepend(Sidekiq::RubyProfMiddleware, dir: "tmp/ruby_prof", min_percent: 5, printers: [:graph_html, :stack])
+      chain.prepend(Sidekiq::ProfilingMiddleware, dir: "tmp/profiling")
     end
   end
 end
