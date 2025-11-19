@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "analytic:view"
+      REQUIRED_PERMISSION = "analytics:view"
 
       graphql_name "SupersetDashboards"
       description "Query all Superset dashboards with embedded configuration and guest tokens"
