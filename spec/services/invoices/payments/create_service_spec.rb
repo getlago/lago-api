@@ -290,7 +290,7 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
-      context "when payable_payment_status is pending" do
+      context "when error_code is `amount_too_small`" do
         let(:result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")

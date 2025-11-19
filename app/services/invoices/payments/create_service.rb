@@ -66,8 +66,8 @@ module Invoices
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
 
-        if e.result.payment.payable_payment_status&.to_sym != :pending
-          # Avoid notification for amount_too_small errors
+        ignored_error_code = %w[amount_too_small]
+        unless ignored_error_code.include? e.result.error_code
           deliver_error_webhook(e)
         end
 
