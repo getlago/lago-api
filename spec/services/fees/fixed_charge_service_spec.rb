@@ -714,6 +714,48 @@ RSpec.describe Fees::FixedChargeService do
         end
       end
 
+      context "with adjusted units set to zero" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            fixed_charge:,
+            properties:,
+            fee_type: :fixed_charge,
+            adjusted_units: true,
+            adjusted_amount: false,
+            units: 0
+          )
+        end
+
+        it "creates and persists a fee with zero units" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 0,
+            precise_amount_cents: 0.0,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 0,
+            payment_status: "pending"
+          )
+          # Fee should be persisted despite zero units
+          expect(result.fee.persisted?).to be(true)
+        end
+
+        it "updates the adjusted fee with the new fee_id" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(adjusted_fee.reload.fee_id).to eq(result.fee.id)
+        end
+      end
+
       context "with invoice NOT in draft status" do
         before { invoice.finalized! }
 
