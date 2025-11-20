@@ -142,7 +142,7 @@ group :development, :test do
   gem "rubocop-rspec", require: false
   gem "rubocop-thread_safety", require: false
 
-  gem "vernier", "~> 1.0"
+  gem "vernier", "~> 1.0", require: false
 end
 
 group :test do

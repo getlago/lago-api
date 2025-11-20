@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require_relative "../../../dev/sidekiq/profiling_middleware"
 
 RSpec.describe Sidekiq::ProfilingMiddleware do
   subject(:middleware) { described_class.new(**options) }
