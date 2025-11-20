@@ -33,14 +33,10 @@ RSpec.describe Sidekiq::ProfilingMiddleware do
   describe "#call" do
     let(:block) { -> { test_method_to_profile } }
 
-    it "returns the block result" do
+    it "generates profile files" do
       result = middleware.call(instance, job_hash, queue, &block)
 
-      expect(result).to eq("result_from_test_method")
-    end
-
-    fit "generates profile files" do
-      middleware.call(instance, job_hash, queue, &block)
+      expect(result).to eq(200_000)
 
       profile_dir = "#{test_dir}/TestJob"
 
@@ -65,7 +61,9 @@ RSpec.describe Sidekiq::ProfilingMiddleware do
       end
 
       it "generates profile files with wrapped job name" do
-        middleware.call(instance, job_hash, queue, &block)
+        result = middleware.call(instance, job_hash, queue, &block)
+
+        expect(result).to eq(200_000)
 
         profile_dir = "#{test_dir}/MyWrappedJob"
 
