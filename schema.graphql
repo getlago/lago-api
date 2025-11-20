@@ -5960,6 +5960,7 @@ Invoice
 type Invoice {
   activityLogs: [ActivityLog!]
   allChargesHaveFees: Boolean!
+  allFixedChargesHaveFees: Boolean!
   appliedTaxes: [InvoiceAppliedTax!]
   associatedActiveWalletPresent: Boolean!
   availableToCreditAmountCents: BigInt!
