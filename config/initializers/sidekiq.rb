@@ -81,6 +81,13 @@ Sidekiq.configure_server do |config|
       end
     end
   end
+
+  if Rails.env.development? && ENV["SIDEKIQ_PROFILING_ENABLED"] == "true"
+    require "sidekiq/profiling_middleware"
+    config.server_middleware do |chain|
+      chain.prepend(Sidekiq::ProfilingMiddleware, dir: "tmp/profiling")
+    end
+  end
 end
 
 Sidekiq.configure_client do |config|
