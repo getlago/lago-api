@@ -42,11 +42,19 @@ module Subscriptions
         db: ENV["LAGO_REDIS_STORE_DB"],
         ssl: true,
         ssl_params: {
-          verify_mode: OpenSSL::SSL::VERIFY_PEER
+          verify_mode:
         },
         timeout: 5.0,
         reconnect_attempts: 3
       )
+    end
+
+    def verify_mode
+      if Rails.env.development?
+        OpenSSL::SSL::VERIFY_NONE
+      else
+        OpenSSL::SSL::VERIFY_PEER
+      end
     end
   end
 end
