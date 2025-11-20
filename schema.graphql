@@ -5997,6 +5997,7 @@ type Invoice {
   payments: [Payment!]
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
+  readyForPaymentProcessing: Boolean!
   refundableAmountCents: BigInt!
   regeneratedInvoiceId: String
   selfBilled: Boolean!
