@@ -271,6 +271,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_credit_notes_metadata;
 DROP TRIGGER IF EXISTS validate_item_metadata_value ON public.item_metadata;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
@@ -597,6 +598,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_notes_metadata_fk;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
@@ -1880,7 +1882,8 @@ CREATE TABLE public.credit_notes (
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
-    xml_file character varying
+    xml_file character varying,
+    metadata_id uuid
 );
 
 
@@ -6396,6 +6399,13 @@ CREATE INDEX index_credit_note_items_on_organization_id ON public.credit_note_it
 
 
 --
+-- Name: index_credit_notes_metadata_fk; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_credit_notes_metadata_fk ON public.credit_notes USING btree (metadata_id, id, organization_id) WHERE (metadata_id IS NOT NULL);
+
+
+--
 -- Name: index_credit_notes_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8559,6 +8569,14 @@ CREATE TRIGGER validate_item_metadata_value BEFORE INSERT OR UPDATE ON public.it
 
 
 --
+-- Name: credit_notes fk_credit_notes_metadata; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_notes
+    ADD CONSTRAINT fk_credit_notes_metadata FOREIGN KEY (metadata_id, id, organization_id) REFERENCES public.item_metadata(id, owner_id, organization_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: payment_methods fk_rails_00e7a45b0b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10672,6 +10690,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251126135708'),
 ('20251126134516'),
 ('20251125174110'),
+('20251125114258'),
 ('20251125114057'),
 ('20251121143459'),
 ('20251121113600'),

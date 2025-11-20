@@ -13,6 +13,7 @@ RSpec.describe CreditNote do
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:organization) }
+  it { is_expected.to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy) }
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
@@ -453,4 +454,110 @@ RSpec.describe CreditNote do
       end
     end
   end
+
+  describe "#ensure_metadata_consistency" do
+    let(:organization) { create(:organization) }
+    let(:invoice) { create(:invoice, organization:) }
+    let(:customer) { invoice.customer }
+
+    context "when metadata is consistent" do
+      it "creates credit note with metadata in the same transaction" do
+        credit_note = nil
+        metadata = nil
+
+        expect do
+          described_class.transaction do
+            credit_note = create(:credit_note, invoice:, customer:, organization:)
+            metadata = create(:item_metadata, owner: credit_note, organization:, value: {"key" => "value"})
+            credit_note.update!(metadata_id: metadata.id)
+          end
+        end.to change(described_class, :count).by(1).and change(Metadata::ItemMetadata, :count).by(1)
+
+        expect(credit_note.reload.metadata).to eq(metadata)
+        expect(metadata.reload.owner_id).to eq(credit_note.id)
+      end
+
+      it "is valid when metadata belongs to credit note and same organization" do
+        credit_note = create(:credit_note, :with_metadata, invoice:, customer:, organization:)
+
+        expect(credit_note).to be_valid
+        expect(credit_note.metadata.owner_id).to eq(credit_note.id)
+        expect(credit_note.metadata.organization_id).to eq(credit_note.organization_id)
+      end
+    end
+
+    context "when metadata organization does not match credit note organization" do
+      it "adds an error" do
+        credit_note = create(:credit_note, invoice:, customer:, organization:)
+        other_organization = create(:organization)
+
+        # Create metadata with correct owner/organization, then manually change organization_id
+        # to simulate inconsistent state for validation testing
+        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"key" => "value"})
+        credit_note.metadata_id = metadata.id
+
+        # Manually set the metadata's organization to a different one (in-memory only)
+        # to test the validation logic
+        allow(credit_note).to receive(:metadata).and_return(
+          Metadata::ItemMetadata.new(
+            id: metadata.id,
+            owner: credit_note,
+            organization: other_organization,
+            value: {"key" => "value"}
+          )
+        )
+
+        expect(credit_note).not_to be_valid
+        expect(credit_note.errors[:metadata])
+          .to include("must belong to the same organization as the credit note")
+      end
+    end
+  end
+
+  # rubocop:disable Rails/SkipsModelValidations
+  describe "database constraints" do
+    let(:organization) { create(:organization) }
+    let(:invoice) { create(:invoice, organization:) }
+    let(:customer) { invoice.customer }
+
+    it "forbids reference to non-existent metadata" do
+      credit_note = create(:credit_note, invoice:, customer:, organization:)
+      invalid_uuid = SecureRandom.uuid
+
+      expect do
+        credit_note.update_columns(metadata_id: invalid_uuid)
+        ActiveRecord::Base.connection.execute("SET CONSTRAINTS fk_credit_notes_metadata IMMEDIATE")
+      end.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
+    it "forbids metadata belonging to different credit note" do
+      credit_note = create(:credit_note, invoice:, customer:, organization:)
+      other_credit_note = create(:credit_note, organization:)
+      metadata = create(:item_metadata, owner: other_credit_note, organization:)
+
+      expect do
+        credit_note.update_columns(metadata_id: metadata.id)
+        ActiveRecord::Base.connection.execute("SET CONSTRAINTS fk_credit_notes_metadata IMMEDIATE")
+      end.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
+    it "forbids metadata from different organization" do
+      credit_note = create(:credit_note, invoice:, customer:, organization:)
+      other_organization = create(:organization)
+
+      # Create metadata with mismatched organization, bypassing validation
+      metadata = Metadata::ItemMetadata.new(
+        owner: credit_note,
+        organization: other_organization,
+        value: {"key" => "value"}
+      )
+      metadata.save!(validate: false)
+
+      expect do
+        credit_note.update_columns(metadata_id: metadata.id)
+        ActiveRecord::Base.connection.execute("SET CONSTRAINTS fk_credit_notes_metadata IMMEDIATE")
+      end.to raise_error(ActiveRecord::StatementInvalid)
+    end
+  end
+  # rubocop:enable Rails/SkipsModelValidations
 end

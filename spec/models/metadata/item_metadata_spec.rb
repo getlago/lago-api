@@ -15,7 +15,24 @@ RSpec.describe Metadata::ItemMetadata do
   it { is_expected.to belong_to(:owner) }
 
   describe "validations" do
-    it { is_expected.to validate_presence_of(:value) }
+    describe "of value not being nil" do
+      context "when value is nil" do
+        let(:value) { nil }
+
+        it "adds an error" do
+          expect(item_metadata).not_to be_valid
+          expect(item_metadata.errors[:value]).to be_present
+        end
+      end
+
+      context "when value is an empty hash" do
+        let(:value) { {} }
+
+        it "is valid" do
+          expect(item_metadata).to be_valid
+        end
+      end
+    end
 
     describe "of owner uniqueness" do
       context "when owner is nil" do

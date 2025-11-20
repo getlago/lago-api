@@ -14,6 +14,10 @@ class CreditNote < ApplicationRecord
   belongs_to :organization
 
   has_one :billing_entity, through: :invoice
+  has_one :metadata,
+    class_name: "Metadata::ItemMetadata",
+    as: :owner,
+    dependent: :destroy
 
   has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items
@@ -67,6 +71,7 @@ class CreditNote < ApplicationRecord
   validates :credit_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :refund_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :balance_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validate :ensure_metadata_consistency
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[number id]
@@ -181,53 +186,64 @@ class CreditNote < ApplicationRecord
 
     self.number = "#{invoice.number}-CN#{formatted_sequential_id}"
   end
+
+  def ensure_metadata_consistency
+    return unless metadata
+
+    if metadata.organization_id != organization_id
+      errors.add(:metadata, "must belong to the same organization as the credit note")
+    end
+  end
 end
 
 # == Schema Information
 #
 # Table name: credit_notes
 #
-#  id                                      :uuid             not null, primary key
-#  balance_amount_cents                    :bigint           default(0), not null
-#  balance_amount_currency                 :string           default("0"), not null
-#  coupons_adjustment_amount_cents         :bigint           default(0), not null
-#  credit_amount_cents                     :bigint           default(0), not null
-#  credit_amount_currency                  :string           not null
-#  credit_status                           :integer
-#  description                             :text
-#  file                                    :string
-#  issuing_date                            :date             not null
-#  number                                  :string           not null
-#  precise_coupons_adjustment_amount_cents :decimal(30, 5)   default(0.0), not null
-#  precise_taxes_amount_cents              :decimal(30, 5)   default(0.0), not null
-#  reason                                  :integer          not null
-#  refund_amount_cents                     :bigint           default(0), not null
-#  refund_amount_currency                  :string
-#  refund_status                           :integer
-#  refunded_at                             :datetime
-#  status                                  :integer          default("finalized"), not null
-#  taxes_amount_cents                      :bigint           default(0), not null
-#  taxes_rate                              :float            default(0.0), not null
-#  total_amount_cents                      :bigint           default(0), not null
-#  total_amount_currency                   :string           not null
-#  voided_at                               :datetime
-#  xml_file                                :string
-#  created_at                              :datetime         not null
-#  updated_at                              :datetime         not null
-#  customer_id                             :uuid             not null
-#  invoice_id                              :uuid             not null
-#  organization_id                         :uuid             not null
-#  sequential_id                           :integer          not null
+#  id                                                 :uuid             not null, primary key
+#  balance_amount_cents                               :bigint           default(0), not null
+#  balance_amount_currency                            :string           default("0"), not null
+#  coupons_adjustment_amount_cents                    :bigint           default(0), not null
+#  credit_amount_cents                                :bigint           default(0), not null
+#  credit_amount_currency                             :string           not null
+#  credit_status                                      :integer
+#  description                                        :text
+#  file                                               :string
+#  issuing_date                                       :date             not null
+#  number                                             :string           not null
+#  precise_coupons_adjustment_amount_cents            :decimal(30, 5)   default(0.0), not null
+#  precise_taxes_amount_cents                         :decimal(30, 5)   default(0.0), not null
+#  reason                                             :integer          not null
+#  refund_amount_cents                                :bigint           default(0), not null
+#  refund_amount_currency                             :string
+#  refund_status                                      :integer
+#  refunded_at                                        :datetime
+#  status                                             :integer          default("finalized"), not null
+#  taxes_amount_cents                                 :bigint           default(0), not null
+#  taxes_rate                                         :float            default(0.0), not null
+#  total_amount_cents                                 :bigint           default(0), not null
+#  total_amount_currency                              :string           not null
+#  voided_at                                          :datetime
+#  xml_file                                           :string
+#  created_at                                         :datetime         not null
+#  updated_at                                         :datetime         not null
+#  customer_id                                        :uuid             not null
+#  invoice_id                                         :uuid             not null
+#  metadata_id(Reference to the credit note metadata) :uuid
+#  organization_id                                    :uuid             not null
+#  sequential_id                                      :integer          not null
 #
 # Indexes
 #
+#  index_credit_notes_metadata_fk         (metadata_id,id,organization_id) UNIQUE WHERE (metadata_id IS NOT NULL)
 #  index_credit_notes_on_customer_id      (customer_id)
 #  index_credit_notes_on_invoice_id       (invoice_id)
 #  index_credit_notes_on_organization_id  (organization_id)
 #
 # Foreign Keys
 #
-#  fk_rails_...  (customer_id => customers.id)
-#  fk_rails_...  (invoice_id => invoices.id)
-#  fk_rails_...  (organization_id => organizations.id)
+#  fk_credit_notes_metadata  ([metadata_id, id, organization_id] => item_metadata[id, owner_id, organization_id])
+#  fk_rails_...              (customer_id => customers.id)
+#  fk_rails_...              (invoice_id => invoices.id)
+#  fk_rails_...              (organization_id => organizations.id)
 #

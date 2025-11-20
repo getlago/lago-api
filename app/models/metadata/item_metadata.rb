@@ -6,8 +6,9 @@ module Metadata
     belongs_to :owner, polymorphic: true
 
     validates :owner_id, uniqueness: {scope: :owner_type}
-    validates :value, presence: true
+    validates :value, exclusion: {in: [nil], message: :blank}
     validate :value_correctness
+    validate :owner_consistency
 
     private
 
@@ -31,6 +32,14 @@ module Metadata
         if val.present? && !(val.is_a?(String) && val.length <= 255)
           errors.add(:value, "value for key '#{key}' must be empty or a String up to 255 characters")
         end
+      end
+    end
+
+    def owner_consistency
+      return if owner.blank?
+
+      if owner.organization_id != organization_id
+        errors.add(:owner, "must belong to the same organization as the metadata")
       end
     end
   end
