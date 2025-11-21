@@ -1,29 +1,8 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
-  def api_call(perform_jobs: true, raise_on_error: true)
-    yield
-
-    if raise_on_error && response.status >= 400
-      request = response.request
-      message_parts = ["API call failed:",
-        "- Method: #{request.method}",
-        "- Path: #{request.path}",
-        "- Request body: #{request.body.read}",
-        "- HTTP status: #{response.status}",
-        "- Response body: #{response.body}"]
-      message = message_parts.join("\n")
-      raise message
-    end
-
-    perform_all_enqueued_jobs if perform_jobs
-    json.with_indifferent_access
-  end
-
-  def clock_job
-    yield
-    perform_all_enqueued_jobs
-  end
+  include CommonScenarioHelper
+  include WalletScenarioHelper
 
   ### Organizations
 
@@ -218,28 +197,6 @@ module ScenariosHelper
       countryCode: vat_number[0..1].upcase,
       vatNumber: vat_number.upcase
     })
-  end
-
-  ### Wallets
-
-  def create_wallet(params, as: :json, **kwargs)
-    api_call(**kwargs) do
-      post_with_token(organization, "/api/v1/wallets", {wallet: params})
-    end
-    parse_result(as, Wallet, :wallet)
-  end
-
-  def create_wallet_transaction(params, as: :json, **kwargs)
-    api_call(**kwargs) do
-      post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
-    end
-    parse_result(as, WalletTransaction, :wallet_transactions)
-  end
-
-  def recalculate_wallet_balances
-    Clock::RefreshLifetimeUsagesJob.perform_later
-    Clock::RefreshWalletsOngoingBalanceJob.perform_later
-    perform_all_enqueued_jobs
   end
 
   ### Events
