@@ -3,11 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService do
-  subject { described_class.new(billing_entity:, old_issuing_date_settings:) }
+  subject { described_class.new(billing_entity:, previous_issuing_date_settings:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
-  let(:old_issuing_date_settings) do
+  let(:previous_issuing_date_settings) do
     {
       subscription_invoice_issuing_date_anchor: "current_period_end",
       subscription_invoice_issuing_date_adjustment: "keep_anchor",
@@ -30,7 +30,7 @@ RSpec.describe Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService do
     it "enqueues 1 job for the draft invoice" do
       expect { subject.call }
         .to enqueue_job(Invoices::UpdateIssuingDateFromBillingEntityJob)
-        .with(draft_invoice, old_issuing_date_settings)
+        .with(draft_invoice, previous_issuing_date_settings)
     end
   end
 

@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityJob do
-  subject { described_class.perform_now(invoice, old_issuing_date_settings) }
+  subject { described_class.perform_now(invoice, previous_issuing_date_settings) }
 
   let(:invoice) { create(:invoice) }
-  let(:old_issuing_date_settings) do
+  let(:previous_issuing_date_settings) do
     {
       subscription_invoice_issuing_date_anchor: "current_period_end",
       subscription_invoice_issuing_date_adjustment: "keep_anchor",
@@ -14,16 +14,12 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityJob do
     }
   end
 
-  before do
-    allow(Invoices::UpdateIssuingDateFromBillingEntityService)
-      .to receive(:call)
-      .with(invoice:, old_issuing_date_settings:)
-      .and_call_original
-  end
-
   it "calls the service" do
-    subject
+    expect(Invoices::UpdateIssuingDateFromBillingEntityService)
+      .to receive(:call)
+      .with(invoice:, previous_issuing_date_settings:)
+      .and_call_original
 
-    expect(Invoices::UpdateIssuingDateFromBillingEntityService).to have_received(:call).with(invoice:, old_issuing_date_settings:)
+    subject
   end
 end

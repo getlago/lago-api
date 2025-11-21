@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
-  subject { described_class.new(invoice:, old_issuing_date_settings:) }
+  subject { described_class.new(invoice:, previous_issuing_date_settings:) }
 
   let(:invoice) do
     create(:invoice, :draft, customer:, issuing_date:, payment_due_date:, applied_grace_period: 12)
@@ -13,7 +13,7 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   let(:issuing_date) { Time.current + old_grace_period.days }
   let(:payment_due_date) { issuing_date }
 
-  let(:old_issuing_date_settings) do
+  let(:previous_issuing_date_settings) do
     {
       subscription_invoice_issuing_date_anchor: "next_period_start",
       subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",

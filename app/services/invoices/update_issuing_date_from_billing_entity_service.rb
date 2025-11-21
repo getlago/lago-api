@@ -4,9 +4,9 @@ module Invoices
   class UpdateIssuingDateFromBillingEntityService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(invoice:, old_issuing_date_settings:)
+    def initialize(invoice:, previous_issuing_date_settings:)
       @invoice = invoice
-      @old_issuing_date_settings = old_issuing_date_settings
+      @previous_issuing_date_settings = previous_issuing_date_settings
       super
     end
 
@@ -24,14 +24,14 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :old_issuing_date_settings
+    attr_reader :invoice, :previous_issuing_date_settings
 
     def issuing_date_adjustment
       recurring = invoice.invoice_subscriptions.first&.recurring?
 
       old_issuing_date_adjustment = Invoices::IssuingDateService.new(
         customer: invoice.customer,
-        billing_entity: old_issuing_date_settings,
+        billing_entity: previous_issuing_date_settings,
         recurring:
       ).issuing_date_adjustment
 

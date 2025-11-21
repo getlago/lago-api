@@ -32,7 +32,7 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
       )
     end
 
-    context "with premium feature" do
+    context "with premium feature", :premium do
       around { |test| lago_premium!(&test) }
 
       it "updates invoice issuing date settings on billing_entity" do
@@ -46,9 +46,12 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
       end
 
       it "updates issuing_date and payment_due_date on draft invoices" do
-        expect { perform_enqueued_jobs { update_service.call } }
-          .to change { invoice_draft.reload.issuing_date }.to(DateTime.parse("25 Jun 2022"))
-          .and change { invoice_draft.reload.payment_due_date }.to(DateTime.parse("30 Jun 2022"))
+        expect { update_service.call }.to enqueue_job(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob).with(
+          billing_entity,
+          subscription_invoice_issuing_date_anchor: "next_period_start",
+          subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
+          invoice_grace_period: 9
+        )
       end
     end
 
