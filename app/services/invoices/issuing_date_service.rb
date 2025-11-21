@@ -23,7 +23,11 @@ module Invoices
     end
 
     def current_period_end_align_with_finalization_date
-      grace_period
+      if align_with_finalization_date? && grace_period.zero?
+        -1
+      else
+        grace_period
+      end
     end
 
     def next_period_start_keep_anchor
@@ -44,6 +48,10 @@ module Invoices
 
     def adjustment
       customer[:subscription_invoice_issuing_date_adjustment] || billing_entity[:subscription_invoice_issuing_date_adjustment]
+    end
+
+    def align_with_finalization_date?
+      adjustment == "align_with_finalization_date"
     end
   end
 end

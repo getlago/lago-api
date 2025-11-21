@@ -19,7 +19,7 @@ module Customers
       if customer.changed? && customer.save!
         # NOTE: Update issuing_date on draft invoices.
         customer.invoices.draft.find_each do |invoice|
-          invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment
+          invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment(invoice)
           invoice.payment_due_date = grace_period_payment_due_date(invoice)
           invoice.save!
         end
@@ -57,22 +57,22 @@ module Customers
       end
     end
 
-    def issuing_date_adjustment
+    def issuing_date_adjustment(invoice)
       recurring = invoice.invoice_subscriptions.first&.recurring?
 
       old_issuing_date_adjustment = Invoices::IssuingDateService.new(
         customer: old_issuing_date_settings,
-        billing_entity: billing_entity,
+        billing_entity: customer.billing_entity,
         recurring:
       ).issuing_date_adjustment
 
       new_issuing_date_adjustment = Invoices::IssuingDateService.new(
         customer: customer,
-        billing_entity: billing_entity,
+        billing_entity: customer.billing_entity,
         recurring:
       ).issuing_date_adjustment
 
-      old_issuing_date_adjustment - new_issuing_date_adjustment
+      new_issuing_date_adjustment - old_issuing_date_adjustment
     end
 
     def grace_period_payment_due_date(invoice)

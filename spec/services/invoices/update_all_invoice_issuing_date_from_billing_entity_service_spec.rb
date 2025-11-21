@@ -2,17 +2,23 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService do
-  subject { described_class.new(billing_entity:, old_grace_period:) }
+RSpec.describe Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService do
+  subject { described_class.new(billing_entity:, old_issuing_date_settings:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
-  let(:old_grace_period) { 12 }
+  let(:old_issuing_date_settings) do
+    {
+      subscription_invoice_issuing_date_anchor: "current_period_end",
+      subscription_invoice_issuing_date_adjustment: "keep_anchor",
+      invoice_grace_period: 3
+    }
+  end
 
   context "when billing entity does not have invoices" do
     it "enqueues zero jobs" do
       expect { subject.call }
-        .not_to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
+        .not_to enqueue_job(Invoices::UpdateIssuingDateFromBillingEntityJob)
     end
   end
 
@@ -23,8 +29,8 @@ RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService do
 
     it "enqueues 1 job for the draft invoice" do
       expect { subject.call }
-        .to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
-        .with(draft_invoice, old_grace_period)
+        .to enqueue_job(Invoices::UpdateIssuingDateFromBillingEntityJob)
+        .with(draft_invoice, old_issuing_date_settings)
     end
   end
 
@@ -35,7 +41,7 @@ RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService do
 
     it "enqueues zero jobs" do
       expect { subject.call }
-        .not_to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
+        .not_to enqueue_job(Invoices::UpdateIssuingDateFromBillingEntityJob)
     end
   end
 end

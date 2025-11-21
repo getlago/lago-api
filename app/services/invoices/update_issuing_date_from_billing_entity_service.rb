@@ -15,7 +15,7 @@ module Invoices
       return result unless invoice.draft?
 
       invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment.days
-      invoice.applied_grace_period = new_grace_period
+      invoice.applied_grace_period = invoice.customer.applicable_invoice_grace_period
       invoice.payment_due_date = invoice.issuing_date + invoice.customer.applicable_net_payment_term.days
       invoice.save!
 
@@ -36,12 +36,12 @@ module Invoices
       ).issuing_date_adjustment
 
       new_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer: customer,
-        billing_entity: billing_entity,
+        customer: invoice.customer,
+        billing_entity: invoice.billing_entity,
         recurring:
       ).issuing_date_adjustment
 
-      old_issuing_date_adjustment - new_issuing_date_adjustment
+      new_issuing_date_adjustment - old_issuing_date_adjustment
     end
   end
 end

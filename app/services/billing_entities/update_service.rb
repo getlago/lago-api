@@ -92,8 +92,6 @@ module BillingEntities
     def assign_premium_attributes
       return unless License.premium?
 
-      billing = params[:billing_configuration]&.to_h || {}
-
       billing_entity.timezone = params[:timezone] if params.key?(:timezone)
       billing_entity.email_settings = params[:email_settings] if params.key?(:email_settings)
     end

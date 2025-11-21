@@ -18,7 +18,7 @@ module BillingEntities
     def call
       set_issuing_date_settings
 
-      if billind_entity.changed? && billind_entity.save!
+      if billing_entity.changed? && billing_entity.save!
         Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob.perform_later(billing_entity, old_issuing_date_settings)
       end
 
@@ -28,21 +28,21 @@ module BillingEntities
 
     private
 
-    attr_reader :billing_entity, :grace_period
+    attr_reader :billing_entity, :params, :old_issuing_date_settings
 
     def set_issuing_date_settings
       billing_configuration = params[:billing_configuration]&.to_h || {}
 
       if billing_configuration.key?(:subscription_invoice_issuing_date_anchor)
-        customer.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
+        billing_entity.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
       end
 
       if billing_configuration.key?(:subscription_invoice_issuing_date_adjustment)
-        customer.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
+        billing_entity.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
       end
 
       if License.premium? && billing_configuration.key?(:invoice_grace_period)
-        customer.invoice_grace_period = billing_configuration[:invoice_grace_period]
+        billing_entity.invoice_grace_period = billing_configuration[:invoice_grace_period]
       end
     end
   end

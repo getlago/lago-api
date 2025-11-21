@@ -126,7 +126,7 @@ RSpec.describe BillingEntities::UpdateService do
         let(:invoice_grace_period) { 2 }
 
         before do
-          allow(Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob).to receive(:perform_later)
+          allow(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob).to receive(:perform_later)
         end
 
         it "triggers async updates grace_period of invoices" do
@@ -134,7 +134,12 @@ RSpec.describe BillingEntities::UpdateService do
           result = update_service.call
 
           expect(result.billing_entity.invoice_grace_period).to eq(2)
-          expect(Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob).to have_received(:perform_later).with(billing_entity, old_invoice_grace_period)
+          expect(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob).to have_received(:perform_later).with(
+            billing_entity,
+            invoice_grace_period: old_invoice_grace_period,
+            subscription_invoice_issuing_date_anchor: "next_period_start",
+            subscription_invoice_issuing_date_adjustment: "align_with_finalization_date"
+          )
         end
       end
 
