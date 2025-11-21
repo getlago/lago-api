@@ -50,12 +50,10 @@ module Invoices
 
     # NOTE: accounting date must be in customer timezone
     def issuing_date
-      issuing_date_service = Invoices::IssuingDateService.new(customer:, recurring:)
-
-      date = issuing_date_service.base_date(datetime)
+      date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      date + issuing_date_service.grace_period.days
+      date + customer.invoice_issuing_date_adjustment(recurring).days
     end
 
     def grace_period?

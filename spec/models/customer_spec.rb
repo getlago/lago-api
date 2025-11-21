@@ -658,6 +658,14 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#invoice_issuing_date_adjustment" do
+    before { subject.invoice_grace_period = 3 }
+
+    it "returns invoice grace period adjustment" do
+      expect(subject.invoice_issuing_date_adjustment(true)).to eq(3)
+    end
+  end
+
   describe "#applicable_net_payment_term" do
     subject(:applicable_net_payment_term) { customer.applicable_net_payment_term }
 

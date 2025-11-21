@@ -740,13 +740,13 @@ RSpec.describe Customers::UpsertFromApiService do
       end
 
       before do
-        allow(Customers::UpdateInvoiceGracePeriodService).to receive(:call)
+        allow(Customers::UpdateInvoiceIssuingDateSettingsService).to receive(:call)
       end
 
-      it "calls UpdateInvoiceGracePeriodService" do
+      it "calls UpdateInvoiceIssuingDateSettingsService" do
         result
 
-        expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
+        expect(Customers::UpdateInvoiceIssuingDateSettingsService).to have_received(:call).with(customer:, params: create_args)
       end
     end
 

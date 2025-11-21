@@ -175,15 +175,11 @@ class Customer < ApplicationRecord
   end
 
   def applicable_subscription_invoice_issuing_date_anchor
-    return subscription_invoice_issuing_date_anchor if subscription_invoice_issuing_date_anchor.present?
-
-    billing_entity.subscription_invoice_issuing_date_anchor
+    subscription_invoice_issuing_date_anchor || billing_entity.subscription_invoice_issuing_date_anchor
   end
 
   def applicable_subscription_invoice_issuing_date_adjustment
-    return subscription_invoice_issuing_date_adjustment if subscription_invoice_issuing_date_adjustment.present?
-
-    billing_entity.subscription_invoice_issuing_date_adjustment
+    subscription_invoice_issuing_date_adjustment || billing_entity.subscription_invoice_issuing_date_adjustment
   end
 
   def applicable_net_payment_term
@@ -208,6 +204,10 @@ class Customer < ApplicationRecord
     return InvoiceCustomSection.none if skip_invoice_custom_sections?
 
     manual_selected_invoice_custom_sections.order(:name).presence || billing_entity.selected_invoice_custom_sections.order(:name)
+  end
+
+  def invoice_issuing_date_adjustment(recurring = true)
+    Invoices::IssuingDateService.new(customer: self, recurring:).grace_period_adjustment
   end
 
   def editable?

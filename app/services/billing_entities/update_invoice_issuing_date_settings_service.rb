@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module BillingEntities
-  class UpdateInvoiceGracePeriodService < BaseService
+  class UpdateInvoiceIssuingDateSettingsService < BaseService
     Result = BaseResult[:billing_entity]
 
     def initialize(billing_entity:, grace_period:)

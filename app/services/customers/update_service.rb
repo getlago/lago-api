@@ -78,28 +78,14 @@ module Customers
         if billing_configuration.key?(:document_locale)
           customer.document_locale = billing_configuration[:document_locale]
         end
-
-        if billing_configuration.key?(:subscription_invoice_issuing_date_anchor)
-          customer.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
-        end
-
-        if billing_configuration.key?(:subscription_invoice_issuing_date_adjustment)
-          customer.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
-        end
-      end
-
-      if License.premium? && args.key?(:invoice_grace_period)
-        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: args[:invoice_grace_period])
       end
 
       if args.key?(:billing_configuration)
         billing = args[:billing_configuration]
         customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-
-        if License.premium? && billing.key?(:invoice_grace_period)
-          Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-        end
       end
+
+      Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
 
       if args.key?(:net_payment_term)
         Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
