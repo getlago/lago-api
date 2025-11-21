@@ -224,10 +224,6 @@ class Customer < ApplicationRecord
     manual_selected_invoice_custom_sections.order(:name).presence || billing_entity.selected_invoice_custom_sections.order(:name)
   end
 
-  def invoice_issuing_date_adjustment(recurring = true)
-    Invoices::IssuingDateService.new(customer: self, recurring:).grace_period_adjustment
-  end
-
   def editable?
     subscriptions.none? &&
       applied_add_ons.none? &&

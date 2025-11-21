@@ -4,20 +4,22 @@ module BillingEntities
   class UpdateInvoiceIssuingDateSettingsService < BaseService
     Result = BaseResult[:billing_entity]
 
-    def initialize(billing_entity:, grace_period:)
+    def initialize(billing_entity:, params:)
       @billing_entity = billing_entity
-      @grace_period = grace_period.to_i
+      @params = params
+      @old_issuing_date_settings = {
+        invoice_grace_period: billing_entity.invoice_grace_period,
+        subscription_invoice_issuing_date_anchor: billing_entity.subscription_invoice_issuing_date_anchor,
+        subscription_invoice_issuing_date_adjustment: billing_entity.subscription_invoice_issuing_date_adjustment
+      }
       super
     end
 
     def call
-      old_grace_period = billing_entity.invoice_grace_period.to_i
+      set_issuing_date_settings
 
-      if grace_period != old_grace_period
-        billing_entity.invoice_grace_period = grace_period
-        billing_entity.save!
-
-        Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob.perform_later(billing_entity, old_grace_period)
+      if billind_entity.changed? && billind_entity.save!
+        Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob.perform_later(billing_entity, old_issuing_date_settings)
       end
 
       result.billing_entity = billing_entity
@@ -27,5 +29,21 @@ module BillingEntities
     private
 
     attr_reader :billing_entity, :grace_period
+
+    def set_issuing_date_settings
+      billing_configuration = params[:billing_configuration]&.to_h || {}
+
+      if billing_configuration.key?(:subscription_invoice_issuing_date_anchor)
+        customer.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
+      end
+
+      if billing_configuration.key?(:subscription_invoice_issuing_date_adjustment)
+        customer.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
+      end
+
+      if License.premium? && billing_configuration.key?(:invoice_grace_period)
+        customer.invoice_grace_period = billing_configuration[:invoice_grace_period]
+      end
+    end
   end
 end
