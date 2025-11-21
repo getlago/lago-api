@@ -24,6 +24,7 @@ require "simplecov"
 require "money-rails/test_helpers"
 require "active_storage_validations/matchers"
 require "karafka/testing/rspec/helpers"
+require "super_diff/rspec-rails"
 
 DatabaseCleaner.allow_remote_database_url = true
 
