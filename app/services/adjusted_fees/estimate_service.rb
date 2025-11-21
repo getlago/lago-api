@@ -14,7 +14,8 @@ module AdjustedFees
 
     def call
       fee = find_or_initialize_fee
-      return result unless result.success?
+      return result if result.failure?
+
       return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(fee.charge)
 
       adjusted_fee = initialize_adjusted_fee(fee, params)
@@ -122,7 +123,7 @@ module AdjustedFees
     end
 
     # TODO: Consider if prorated fixed charges should also have
-    # graduated charge model disabled when units are adjusted, 
+    # graduated charge model disabled when units are adjusted,
     # as is currently done for charges.
     def disabled_charge_model?(charge)
       return false unless charge

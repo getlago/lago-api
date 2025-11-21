@@ -29,6 +29,7 @@ module Fees
       return result if already_billed?
 
       init_fee
+      return result if result.failure?
       return result if current_usage
 
       if context != :invoice_preview && should_persist_fee?
@@ -62,7 +63,11 @@ module Fees
           boundaries:,
           properties: fixed_charge.properties
         )
-        return result.fail_with_error!(adjustment_result.error) unless adjustment_result.success?
+
+        unless adjustment_result.success?
+          result.fail_with_error!(adjustment_result.error)
+          return
+        end
 
         result.fee = adjustment_result.fee
         return
