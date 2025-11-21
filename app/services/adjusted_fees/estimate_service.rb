@@ -3,6 +3,7 @@
 module AdjustedFees
   class EstimateService < BaseService
     Result = BaseResult[:fee, :adjusted_fee]
+
     def initialize(invoice:, params:)
       @invoice = invoice
       @organization = invoice.organization
@@ -12,16 +13,16 @@ module AdjustedFees
     end
 
     def call
-      fee = find_or_create_fee
-      return result.not_found_failure!(resource: "fee") if fee.blank?
+      fee = find_or_initialize_fee
+      return result unless result.success?
+      return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(fee.charge)
 
-      charge = fee.charge
-      return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(charge)
-
-      adjusted_fee = create_adjusted_fee(fee, charge, params)
+      adjusted_fee = initialize_adjusted_fee(fee, params)
 
       estimated_fee = if fee.fee_type == "subscription"
         adjust_subscription_fee(fee, adjusted_fee)
+      elsif fee.fee_type == "fixed_charge"
+        init_from_fixed_charge_fee(adjusted_fee)
       else
         init_from_charge_fee(adjusted_fee)
       end
@@ -47,6 +48,17 @@ module AdjustedFees
         adjusted_fee:,
         boundaries: adjusted_fee.properties,
         properties:
+      )
+
+      result.fee.id = SecureRandom.uuid
+      result.fee
+    end
+
+    def init_from_fixed_charge_fee(adjusted_fee)
+      result = Fees::InitFromAdjustedFixedChargeFeeService.call(
+        adjusted_fee:,
+        boundaries: adjusted_fee.properties,
+        properties: adjusted_fee.fixed_charge.properties
       )
 
       result.fee.id = SecureRandom.uuid
@@ -82,7 +94,7 @@ module AdjustedFees
       fee
     end
 
-    def create_adjusted_fee(fee, charge, params)
+    def initialize_adjusted_fee(fee, params)
       unit_precise_amount_cents = if params[:unit_precise_amount].present?
         params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
       else
@@ -93,7 +105,8 @@ module AdjustedFees
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
-        charge:,
+        charge: fee.charge,
+        fixed_charge: fee.fixed_charge,
         adjusted_units: params[:units].present? && params[:unit_precise_amount].blank?,
         adjusted_amount: params[:units].present? && params[:unit_precise_amount].present?,
         invoice_display_name: params[:invoice_display_name],
@@ -108,25 +121,32 @@ module AdjustedFees
       )
     end
 
+    # TODO: Consider if prorated fixed charges should also have
+    # graduated charge model disabled when units are adjusted, 
+    # as is currently done for charges.
     def disabled_charge_model?(charge)
-      unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
+      return false unless charge
 
-      charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
+      unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
+      return false unless unit_adjustment
+
+      charge.percentage? || (charge.prorated? && charge.graduated?)
     end
 
     def customer
       @customer ||= invoice.customer
     end
 
-    def find_or_create_fee
+    def find_or_initialize_fee
       return find_existing_fee if params.key?(:fee_id)
 
-      create_empty_fee
+      initialize_fee
     end
 
     def find_existing_fee
       fee = invoice.fees.find_by(id: params[:fee_id])
-      if fee.blank?
+
+      unless fee
         result.not_found_failure!(resource: "fee")
         return
       end
@@ -134,14 +154,16 @@ module AdjustedFees
       fee
     end
 
-    def create_empty_fee
+    def initialize_fee
+      return initialize_fee_for_fixed_charge if params[:fixed_charge_id].present?
+
       subscription = invoice.subscriptions.includes(plan: {charges: :filters}).find_by(id: params[:invoice_subscription_id])
       unless subscription
         result.not_found_failure!(resource: "subscription")
         return
       end
 
-      charge = subscription.plan.charges.find { |c| c.id == params[:charge_id] }
+      charge = subscription.plan.charges.find_by(id: params[:charge_id])
       unless charge
         result.not_found_failure!(resource: "charge")
         return
@@ -149,7 +171,6 @@ module AdjustedFees
 
       if params[:charge_filter_id].present?
         charge_filter = charge.filters.find_by(id: params[:charge_filter_id])
-
         unless charge_filter
           result.not_found_failure!(resource: "charge_filter")
           return
@@ -161,10 +182,30 @@ module AdjustedFees
         charge_id: charge.id,
         charge_filter_id: params[:charge_filter_id]
       )
-      fee || create_fee(subscription, charge)
+      fee || initialize_empty_fee(subscription, charge, :charge)
     end
 
-    def create_fee(subscription, charge)
+    def initialize_fee_for_fixed_charge
+      subscription = invoice.subscriptions.includes(plan: :fixed_charges).find_by(id: params[:invoice_subscription_id])
+      unless subscription
+        result.not_found_failure!(resource: "subscription")
+        return
+      end
+
+      fixed_charge = subscription.plan.fixed_charges.find_by(id: params[:fixed_charge_id])
+      unless fixed_charge
+        result.not_found_failure!(resource: "fixed_charge")
+        return
+      end
+
+      fee = invoice.fees.find_by(
+        subscription_id: subscription.id,
+        fixed_charge_id: fixed_charge.id
+      )
+      fee || initialize_empty_fee(subscription, fixed_charge, :fixed_charge)
+    end
+
+    def initialize_empty_fee(subscription, invoiceable, fee_type)
       invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
 
       boundaries = {
@@ -178,11 +219,12 @@ module AdjustedFees
         billing_entity_id: invoice.billing_entity_id,
         invoice:,
         subscription:,
-        invoiceable: charge,
-        charge:,
+        invoiceable:,
+        charge: ((fee_type == :charge) ? invoiceable : nil),
         charge_filter_id: params[:charge_filter_id],
+        fixed_charge: ((fee_type == :fixed_charge) ? invoiceable : nil),
         grouped_by: {},
-        fee_type: :charge,
+        fee_type:,
         payment_status: :pending,
         events_count: 0,
         amount_currency: invoice.currency,
