@@ -119,7 +119,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "with premium features" do
+    context "with premium features", :premium do
       around { |test| lago_premium!(&test) }
 
       let(:timezone) { "Europe/Paris" }
@@ -134,21 +134,15 @@ RSpec.describe Organizations::UpdateService do
       context "when updating invoice grace period" do
         let(:customer) { create(:customer, organization:) }
 
-        let(:invoice_to_be_finalized) do
+        let!(:invoice_to_be_finalized) do
           create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("19 Jun 2022").to_date, organization:)
         end
 
-        let(:invoice_to_not_be_finalized) do
+        let!(:invoice_to_not_be_finalized) do
           create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("21 Jun 2022").to_date, organization:)
         end
 
         let(:invoice_grace_period) { 2 }
-
-        before do
-          invoice_to_be_finalized
-          invoice_to_not_be_finalized
-          allow(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob).to receive(:perform_later)
-        end
 
         it "triggers async updates grace_period of invoices on default billing entity" do
           current_date = DateTime.parse("22 Jun 2022")
@@ -160,7 +154,7 @@ RSpec.describe Organizations::UpdateService do
             expect(result.organization.invoice_grace_period).to eq(2)
             expect(result.organization.default_billing_entity.invoice_grace_period).to eq(2)
             expect(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob)
-              .to have_received(:perform_later)
+              .to have_been_enqueued
               .with(
                 organization.default_billing_entity,
                 subscription_invoice_issuing_date_anchor: "next_period_start",

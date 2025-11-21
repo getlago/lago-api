@@ -34,10 +34,9 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
     before do
       invoice_to_be_finalized
       invoice_to_not_be_finalized
-      allow(Invoices::FinalizeJob).to receive(:perform_later)
     end
 
-    context "with premium feature" do
+    context "with premium feature", :premium do
       around { |test| lago_premium!(&test) }
 
       it "updates invoice issuing date settings on customer" do
@@ -57,8 +56,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
           result = update_service.call
 
           expect(result.customer.invoice_grace_period).to eq(2)
-          expect(Invoices::FinalizeJob).not_to have_received(:perform_later).with(invoice_to_not_be_finalized)
-          expect(Invoices::FinalizeJob).to have_received(:perform_later).with(invoice_to_be_finalized)
+          expect(Invoices::FinalizeJob).not_to have_been_enqueued.with(invoice_to_not_be_finalized)
+          expect(Invoices::FinalizeJob).to have_been_enqueued.with(invoice_to_be_finalized)
         end
       end
 
@@ -99,7 +98,7 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
           travel_to(current_date) do
             update_service.call
 
-            expect(Invoices::FinalizeJob).not_to have_received(:perform_later)
+            expect(Invoices::FinalizeJob).not_to have_been_enqueued
           end
         end
 

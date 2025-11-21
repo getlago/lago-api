@@ -2,9 +2,9 @@
 
 module Invoices
   class IssuingDateService
-    def initialize(customer:, billing_entity: nil, recurring: false)
-      @customer = customer
-      @billing_entity = billing_entity || customer.try(:billing_entity) || {}
+    def initialize(customer_settings:, billing_entity_settings: nil, recurring: false)
+      @customer_settings = customer_settings
+      @billing_entity_settings = billing_entity_settings || customer_settings.try(:billing_entity_settings) || {}
       @recurring = recurring
     end
 
@@ -16,7 +16,7 @@ module Invoices
 
     private
 
-    attr_reader :customer, :billing_entity, :recurring
+    attr_reader :customer_settings, :billing_entity_settings, :recurring
 
     def current_period_end_keep_anchor
       -1
@@ -36,15 +36,15 @@ module Invoices
     end
 
     def grace_period
-      customer[:invoice_grace_period] || billing_entity[:invoice_grace_period] || 0
+      customer_settings[:invoice_grace_period] || billing_entity_settings[:invoice_grace_period] || 0
     end
 
     def anchor
-      customer[:subscription_invoice_issuing_date_anchor] || billing_entity[:subscription_invoice_issuing_date_anchor]
+      customer_settings[:subscription_invoice_issuing_date_anchor] || billing_entity_settings[:subscription_invoice_issuing_date_anchor]
     end
 
     def adjustment
-      customer[:subscription_invoice_issuing_date_adjustment] || billing_entity[:subscription_invoice_issuing_date_adjustment]
+      customer_settings[:subscription_invoice_issuing_date_adjustment] || billing_entity_settings[:subscription_invoice_issuing_date_adjustment]
     end
 
     def align_with_finalization_date?

@@ -10,8 +10,8 @@ module Invoices
       end
     end
 
-    def perform(billing_entity, old_issuing_date_settings)
-      Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService.call!(billing_entity:, old_issuing_date_settings:)
+    def perform(billing_entity, previous_issuing_date_settings)
+      Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService.call!(billing_entity:, previous_issuing_date_settings:)
     end
   end
 end

@@ -5,7 +5,7 @@ module Customers
     def initialize(customer:, params:)
       @customer = customer
       @params = params
-      @old_issuing_date_settings = {
+      @previous_issuing_date_settings = {
         invoice_grace_period: customer.invoice_grace_period,
         subscription_invoice_issuing_date_anchor: customer.subscription_invoice_issuing_date_anchor,
         subscription_invoice_issuing_date_adjustment: customer.subscription_invoice_issuing_date_adjustment
@@ -25,7 +25,7 @@ module Customers
         end
 
         customer.invoices.ready_to_be_finalized.find_each do |invoice|
-          Invoices::FinalizeJob.perform_later(invoice)
+          Invoices::FinalizeJob.perform_after_commit(invoice)
         end
       end
 
@@ -35,7 +35,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :params, :old_issuing_date_settings
+    attr_reader :customer, :params, :previous_issuing_date_settings
 
     def set_issuing_date_settings
       billing_configuration = params[:billing_configuration]&.to_h || {}
@@ -61,7 +61,7 @@ module Customers
       recurring = invoice.invoice_subscriptions.first&.recurring?
 
       old_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer: old_issuing_date_settings,
+        customer: previous_issuing_date_settings,
         billing_entity: customer.billing_entity,
         recurring:
       ).issuing_date_adjustment
