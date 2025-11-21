@@ -23,11 +23,8 @@ module Invoices
     end
 
     def current_period_end_align_with_finalization_date
-      if align_with_finalization_date? && grace_period.zero?
-        -1
-      else
-        grace_period
-      end
+      # Fall back to the current period end date if the grace period is zero
+      grace_period.zero? ? -1 : grace_period
     end
 
     def next_period_start_keep_anchor
