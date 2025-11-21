@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
-  subject { described_class.new(invoice:, old_grace_period:) }
+  subject { described_class.new(invoice:, old_issuing_date_settings:) }
 
   let(:invoice) do
     create(:invoice, :draft, customer:, issuing_date:, payment_due_date:, applied_grace_period: 12)
@@ -13,11 +13,26 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   let(:issuing_date) { Time.current + old_grace_period.days }
   let(:payment_due_date) { issuing_date }
 
+  let(:old_issuing_date_settings) do
+    {
+      subscription_invoice_issuing_date_anchor: "next_period_start",
+      subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
+      invoice_grace_period: old_grace_period
+    }
+  end
+
+  let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+  let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
   let(:old_grace_period) { 12 }
   let(:new_grace_period) { 1 }
 
   before do
-    invoice.billing_entity.update! invoice_grace_period: new_grace_period
+    invoice.billing_entity.update!(
+      subscription_invoice_issuing_date_anchor:,
+      subscription_invoice_issuing_date_adjustment:,
+      invoice_grace_period: new_grace_period
+    )
   end
 
   shared_examples "does not change invoice dates" do
@@ -45,14 +60,6 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   context "when invoice is not draft" do
     before do
       invoice.finalized!
-    end
-
-    it_behaves_like "does not change invoice dates"
-  end
-
-  context "when new grace period is equal to the already applied one" do
-    before do
-      invoice.update applied_grace_period: new_grace_period
     end
 
     it_behaves_like "does not change invoice dates"
@@ -91,43 +98,80 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   end
 
   context "with issuing date preferences" do
-    let(:billing_entity) do
-      create(
-        :billing_entity,
-        subscription_invoice_issuing_date_anchor: "current_period_end",
-        subscription_invoice_issuing_date_adjustment:
-      )
-    end
-
-    let(:customer) { create(:customer, billing_entity:) }
     let(:recurring) { true }
 
     before do
       create(:invoice_subscription, invoice:, recurring:)
     end
 
-    context "with keep_anchor" do
+    context "with current_period_end + keep_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
       let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+      let(:new_grace_period) { 2 }
 
-      it "does not change the issuing_date" do
-        expect { subject.call }.not_to change { invoice.reload.issuing_date }
+      it "updates issuing_date" do
+        expect { subject.call }.to change(invoice, :issuing_date).by(-13)
       end
     end
 
-    context "with align_with_finalization_date" do
+    context "with current_period_end + align_with_finalization_date" do
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
       let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+      let(:new_grace_period) { 2 }
 
-      it "updates the issuing_date" do
+      it "updates issuing_date" do
+        expect { subject.call }.to change(invoice, :issuing_date).by(-10)
+      end
+    end
+
+    context "with next_period_start + keep_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+      let(:new_grace_period) { 2 }
+
+      it "updates issuing_date" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-12)
+      end
+    end
+
+    context "with next_period_start + align_with_finalization_date" do
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+      let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+      let(:new_grace_period) { 2 }
+
+      it "updates issuing_date" do
+        expect { subject.call }.to change(invoice, :issuing_date).by(-10)
+      end
+    end
+
+    context "with preferences set on the customer level " do
+      let(:customer) do
+        create(
+          :customer,
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
+          invoice_grace_period: 12
+        )
+      end
+
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+      let(:new_grace_period) { 2 }
+
+      it "ignores billing_entity issuing date preferences" do
+        expect { subject.call }.not_to change(invoice, :issuing_date)
       end
     end
 
     context "when invoice is not recurring" do
       let(:recurring) { false }
+
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
       let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+      let(:new_grace_period) { 2 }
 
       it "ignores all issuing date preferences" do
-        expect { subject.call }.to change(invoice, :issuing_date).by(-12)
+        expect { subject.call }.to change(invoice, :issuing_date).by(-10)
       end
     end
   end

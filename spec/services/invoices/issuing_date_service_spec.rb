@@ -10,68 +10,79 @@ RSpec.describe Invoices::IssuingDateService do
       :customer,
       subscription_invoice_issuing_date_anchor:,
       subscription_invoice_issuing_date_adjustment:,
-      invoice_grace_period: 3
+      invoice_grace_period:
     )
   end
 
   let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
   let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+  let(:invoice_grace_period) { 3 }
 
   describe "#issuing_date_adjustment" do
-    context "when recurring = true" do
-      let(:recurring) { true }
+    let(:recurring) { true }
 
-      context "with current_period_end + keep_anchor" do
+    context "with current_period_end + keep_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+      it "returns -1" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
+      end
+    end
+
+    context "with current_period_end + align_with_finalization_date" do
+      context "when invoice_grace_period > 0" do
         let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
-        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+        it "returns invoice_grace_period" do
+          expect(issuing_date_service.issuing_date_adjustment).to eq(3)
+        end
+      end
+
+      context "when invoice_grace_period is 0" do
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+        let(:invoice_grace_period) { 0 }
 
         it "returns -1" do
           expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
         end
       end
+    end
 
-      context "with current_period_end + align_with_finalization_date" do
-        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
-        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+    context "with next_period_start + keep_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
 
-        it "returns grace_period" do
-          expect(issuing_date_service.issuing_date_adjustment).to eq(3)
-        end
+      it "returns 0" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(0)
+      end
+    end
+
+    context "with next_period_start + align_with_finalization_date" do
+      let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+      let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+      it "returns grace_period" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(3)
+      end
+    end
+
+    context "with no preferences set on the customer level " do
+      let(:billing_entity) do
+        build(
+          :billing_entity,
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor",
+          invoice_grace_period: 3
+        )
       end
 
-      context "with next_period_start + keep_anchor" do
-        let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
-        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+      let(:customer) { build(:customer, billing_entity:) }
 
-        it "returns 0" do
-          expect(issuing_date_service.issuing_date_adjustment).to eq(0)
-        end
-      end
-
-      context "with next_period_start + align_with_finalization_date" do
-        let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
-        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
-
-        it "returns grace_period" do
-          expect(issuing_date_service.issuing_date_adjustment).to eq(3)
-        end
-      end
-
-      context "with no preferences set on the customer level " do
-        let(:billing_entity) do
-          build(
-            :billing_entity,
-            subscription_invoice_issuing_date_anchor: "current_period_end",
-            subscription_invoice_issuing_date_adjustment: "keep_anchor",
-            invoice_grace_period: 3
-          )
-        end
-
-        let(:customer) { build(:customer, billing_entity:) }
-
-        it "returns value based on billing entity settings" do
-          expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
-        end
+      it "returns value based on billing entity settings" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
       end
     end
 
@@ -96,8 +107,6 @@ RSpec.describe Invoices::IssuingDateService do
         )
       end
 
-      let(:recurring) { true }
-
       it "returns value based on customer hash" do
         expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
       end
@@ -115,8 +124,6 @@ RSpec.describe Invoices::IssuingDateService do
           recurring:
         )
       end
-
-      let(:recurring) { true }
 
       it "returns value based on billing entity hash" do
         expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
