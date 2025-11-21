@@ -136,8 +136,9 @@ module Invoices
       recurring = !terminated && persisted_subscriptions
 
       date = billing_time.in_time_zone(customer.applicable_timezone).to_date
+      issuing_date_service = Invoices::IssuingDateService.new(customer:, recurring:)
 
-      @issuing_date = date + customer.invoice_issuing_date_adjustment(recurring).days
+      @issuing_date = date + issuing_date_service.issuing_date_adjustment.days
     end
 
     def payment_due_date

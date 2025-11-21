@@ -17,7 +17,7 @@ RSpec.describe Invoices::IssuingDateService do
   let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
   let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
 
-  describe "#grace_period_adjustment" do
+  describe "#issuing_date_adjustment" do
     context "when recurring = true" do
       let(:recurring) { true }
 
@@ -26,7 +26,7 @@ RSpec.describe Invoices::IssuingDateService do
         let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
 
         it "returns -1" do
-          expect(issuing_date_service.grace_period_adjustment).to eq(-1)
+          expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
         end
       end
 
@@ -35,7 +35,7 @@ RSpec.describe Invoices::IssuingDateService do
         let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
 
         it "returns grace_period" do
-          expect(issuing_date_service.grace_period_adjustment).to eq(3)
+          expect(issuing_date_service.issuing_date_adjustment).to eq(3)
         end
       end
 
@@ -44,7 +44,7 @@ RSpec.describe Invoices::IssuingDateService do
         let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
 
         it "returns 0" do
-          expect(issuing_date_service.grace_period_adjustment).to eq(0)
+          expect(issuing_date_service.issuing_date_adjustment).to eq(0)
         end
       end
 
@@ -53,7 +53,7 @@ RSpec.describe Invoices::IssuingDateService do
         let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
 
         it "returns grace_period" do
-          expect(issuing_date_service.grace_period_adjustment).to eq(3)
+          expect(issuing_date_service.issuing_date_adjustment).to eq(3)
         end
       end
 
@@ -70,7 +70,7 @@ RSpec.describe Invoices::IssuingDateService do
         let(:customer) { build(:customer, billing_entity:) }
 
         it "returns value based on billing entity settings" do
-          expect(issuing_date_service.grace_period_adjustment).to eq(-1)
+          expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
         end
       end
     end
@@ -79,7 +79,47 @@ RSpec.describe Invoices::IssuingDateService do
       let(:recurring) { false }
 
       it "returns invoice_grace_period" do
-        expect(issuing_date_service.grace_period_adjustment).to eq(3)
+        expect(issuing_date_service.issuing_date_adjustment).to eq(3)
+      end
+    end
+
+    context "with customer as a hash" do
+      subject(:issuing_date_service) do
+        described_class.new(
+          customer: {
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
+            invoice_grace_period: 3
+          },
+          billing_entity: customer.billing_entity,
+          recurring:
+        )
+      end
+
+      let(:recurring) { true }
+
+      it "returns value based on customer hash" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
+      end
+    end
+
+    context "with billing_entity as a hash" do
+      subject(:issuing_date_service) do
+        described_class.new(
+          customer: customer,
+          billing_entity: {
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
+            invoice_grace_period: 3
+          },
+          recurring:
+        )
+      end
+
+      let(:recurring) { true }
+
+      it "returns value based on billing entity hash" do
+        expect(issuing_date_service.issuing_date_adjustment).to eq(-1)
       end
     end
   end

@@ -53,7 +53,8 @@ module Invoices
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      date + customer.invoice_issuing_date_adjustment(recurring).days
+      issuing_date_service = Invoices::IssuingDateService.new(customer:, recurring:)
+      date + issuing_date_service.issuing_date_adjustment.days
     end
 
     def grace_period?

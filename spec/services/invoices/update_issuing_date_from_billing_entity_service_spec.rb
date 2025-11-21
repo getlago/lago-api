@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::UpdateGracePeriodFromBillingEntityService do
+RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   subject { described_class.new(invoice:, old_grace_period:) }
 
   let(:invoice) do

@@ -55,12 +55,7 @@ module BillingEntities
 
         handle_eu_tax_management if params.key?(:eu_tax_management)
 
-        if License.premium? && billing.key?(:invoice_grace_period)
-          BillingEntities::UpdateInvoiceGracePeriodService.call(
-            billing_entity:,
-            grace_period: billing[:invoice_grace_period]
-          )
-        end
+        BillingEntities::UpdateInvoiceIssuingDateSettingsService.call(billing_entity:, params:)
 
         if params.key?(:net_payment_term)
           # note: this service only assigns new net_payment_term to the billing_entity but doesn't save it
@@ -101,8 +96,6 @@ module BillingEntities
 
       billing_entity.timezone = params[:timezone] if params.key?(:timezone)
       billing_entity.email_settings = params[:email_settings] if params.key?(:email_settings)
-      billing_entity.subscription_invoice_issuing_date_anchor = billing[:subscription_invoice_issuing_date_anchor] if billing[:subscription_invoice_issuing_date_anchor]
-      billing_entity.subscription_invoice_issuing_date_adjustment = billing[:subscription_invoice_issuing_date_adjustment] if billing[:subscription_invoice_issuing_date_adjustment]
     end
 
     def handle_base64_logo
