@@ -61,14 +61,14 @@ module Customers
       recurring = invoice.invoice_subscriptions.first&.recurring?
 
       old_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer: previous_issuing_date_settings,
-        billing_entity: customer.billing_entity,
+        customer_settings: previous_issuing_date_settings,
+        billing_entity_settings: customer.billing_entity,
         recurring:
       ).issuing_date_adjustment
 
       new_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer: customer,
-        billing_entity: customer.billing_entity,
+        customer_settings: customer,
+        billing_entity_settings: customer.billing_entity,
         recurring:
       ).issuing_date_adjustment
 

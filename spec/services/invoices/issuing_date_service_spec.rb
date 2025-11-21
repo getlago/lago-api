@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::IssuingDateService do
-  subject(:issuing_date_service) { described_class.new(customer:, recurring:) }
+  subject(:issuing_date_service) { described_class.new(customer_settings: customer, recurring:) }
 
   let(:customer) do
     build(
@@ -97,12 +97,12 @@ RSpec.describe Invoices::IssuingDateService do
     context "with customer as a hash" do
       subject(:issuing_date_service) do
         described_class.new(
-          customer: {
+          customer_settings: {
             subscription_invoice_issuing_date_anchor: "current_period_end",
             subscription_invoice_issuing_date_adjustment: "keep_anchor",
             invoice_grace_period: 3
           },
-          billing_entity: customer.billing_entity,
+          billing_entity_settings: customer.billing_entity,
           recurring:
         )
       end
@@ -115,8 +115,8 @@ RSpec.describe Invoices::IssuingDateService do
     context "with billing_entity as a hash" do
       subject(:issuing_date_service) do
         described_class.new(
-          customer: customer,
-          billing_entity: {
+          customer_settings: customer,
+          billing_entity_settings: {
             subscription_invoice_issuing_date_anchor: "current_period_end",
             subscription_invoice_issuing_date_adjustment: "keep_anchor",
             invoice_grace_period: 3
