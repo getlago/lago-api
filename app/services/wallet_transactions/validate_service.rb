@@ -9,6 +9,7 @@ module WalletTransactions
       valid_voided_credits_amount? if args[:voided_credits] && result.current_wallet
       valid_metadata? if args[:metadata]
       valid_name? if args[:name]
+      valid_payment_method?
 
       if errors?
         result.validation_failure!(errors:)
@@ -85,6 +86,15 @@ module WalletTransactions
         add_error(field: :name, error_code: "too_long")
         return false
       end
+
+      false
+    end
+
+    def valid_payment_method?
+      return true if args[:payment_method].blank?
+      return true if PaymentMethods::ValidateService.new(result, **args).valid?
+
+      add_error(field: :payment_method, error_code: "invalid_payment_method")
 
       false
     end
