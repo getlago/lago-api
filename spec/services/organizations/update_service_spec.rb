@@ -133,16 +133,20 @@ RSpec.describe Organizations::UpdateService do
 
       context "when updating invoice grace period" do
         let(:customer) { create(:customer, organization:) }
+        let(:invoice_grace_period) { 2 }
 
-        let!(:invoice_to_be_finalized) do
+        let(:invoice_to_be_finalized) do
           create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("19 Jun 2022").to_date, organization:)
         end
 
-        let!(:invoice_to_not_be_finalized) do
+        let(:invoice_to_not_be_finalized) do
           create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("21 Jun 2022").to_date, organization:)
         end
 
-        let(:invoice_grace_period) { 2 }
+        before do
+          invoice_to_be_finalized
+          invoice_to_not_be_finalized
+        end
 
         it "triggers async updates grace_period of invoices on default billing entity" do
           current_date = DateTime.parse("22 Jun 2022")

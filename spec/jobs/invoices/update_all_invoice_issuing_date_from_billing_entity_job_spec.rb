@@ -14,12 +14,15 @@ RSpec.describe Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityJob do
     }
   end
 
-  it "calls the service" do
-    expect(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService)
-      .to receive(:call)
-      .with(billing_entity:, old_issuing_date_settings:)
-      .and_call_original
+  before do
+    allow(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService).to receive(:call).and_call_original
+  end
 
+  it "calls the service" do
     subject
+
+    expect(Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService)
+      .to have_received(:call)
+      .with(billing_entity:, previous_issuing_date_settings:)
   end
 end
