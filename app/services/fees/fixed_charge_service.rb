@@ -29,6 +29,7 @@ module Fees
       return result if already_billed?
 
       init_fee
+      return result if result.failure?
       return result if current_usage
 
       if context != :invoice_preview && should_persist_fee?
