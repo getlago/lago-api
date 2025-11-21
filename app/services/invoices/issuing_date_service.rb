@@ -4,7 +4,7 @@ module Invoices
   class IssuingDateService
     def initialize(customer_settings:, billing_entity_settings: nil, recurring: false)
       @customer_settings = customer_settings
-      @billing_entity_settings = billing_entity_settings || customer_settings.try(:billing_entity_settings) || {}
+      @billing_entity_settings = billing_entity_settings || customer_settings.try(:billing_entity) || {}
       @recurring = recurring
     end
 
