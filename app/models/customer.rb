@@ -115,6 +115,9 @@ class Customer < ApplicationRecord
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 
+  scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
+  scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
+
   scope :falling_back_to_default_dunning_campaign, -> {
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
   }
@@ -296,6 +299,7 @@ end
 #  account_type                                 :enum             default("customer"), not null
 #  address_line1                                :string
 #  address_line2                                :string
+#  awaiting_wallet_refresh                      :boolean          default(FALSE), not null
 #  city                                         :string
 #  country                                      :string
 #  currency                                     :string
@@ -348,6 +352,7 @@ end
 #
 #  index_customers_on_account_type                     (account_type)
 #  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
+#  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
 #  index_customers_on_billing_entity_id                (billing_entity_id)
 #  index_customers_on_deleted_at                       (deleted_at)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)

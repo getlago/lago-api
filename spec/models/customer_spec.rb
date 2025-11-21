@@ -265,6 +265,48 @@ RSpec.describe Customer do
     it { is_expected.to validate_inclusion_of(:customer_type).in_array(described_class::CUSTOMER_TYPES.keys) }
   end
 
+  describe ".awaiting_wallet_refresh" do
+    subject { described_class.awaiting_wallet_refresh }
+
+    let!(:scoped) { create(:customer, awaiting_wallet_refresh: true) }
+
+    before { create(:customer) }
+
+    it "returns only customers awaiting wallet refresh" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".with_active_wallets" do
+    subject { described_class.with_active_wallets }
+
+    let!(:scoped) { create(:wallet).customer }
+
+    before do
+      create(:customer)
+      create(:wallet, :terminated)
+    end
+
+    it "returns customers that have at least one active wallet" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".falling_back_to_default_dunning_campaign" do
+    subject { described_class.falling_back_to_default_dunning_campaign }
+
+    let!(:scoped) { create(:customer) }
+
+    before do
+      create(:customer, exclude_from_dunning_campaign: true)
+      create(:customer, applied_dunning_campaign: create(:dunning_campaign))
+    end
+
+    it "returns customers that have no dunning campaign but should" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
   describe "#display_name" do
     subject(:customer) { build_stubbed(:customer, name:, legal_name:, firstname:, lastname:) }
 
