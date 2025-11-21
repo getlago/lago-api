@@ -16,16 +16,18 @@ module Customers
     def call
       set_issuing_date_settings
 
-      if customer.changed? && customer.save!
-        # NOTE: Update issuing_date on draft invoices.
-        customer.invoices.draft.find_each do |invoice|
-          invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment(invoice)
-          invoice.payment_due_date = grace_period_payment_due_date(invoice)
-          invoice.save!
-        end
+      ActiveRecord::Base.transaction do
+        if customer.changed? && customer.save!
+          # NOTE: Update issuing_date on draft invoices.
+          customer.invoices.draft.find_each do |invoice|
+            invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment(invoice)
+            invoice.payment_due_date = grace_period_payment_due_date(invoice)
+            invoice.save!
+          end
 
-        customer.invoices.ready_to_be_finalized.find_each do |invoice|
-          Invoices::FinalizeJob.perform_after_commit(invoice)
+          customer.invoices.ready_to_be_finalized.find_each do |invoice|
+            Invoices::FinalizeJob.perform_after_commit(invoice)
+          end
         end
       end
 
