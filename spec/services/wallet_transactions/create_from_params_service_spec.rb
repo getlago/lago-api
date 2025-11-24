@@ -92,6 +92,24 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       expect(Utils::ActivityLog).to have_received(:produce).thrice.with(an_instance_of(WalletTransaction), "wallet_transaction.created")
     end
 
+    context "when rounding is applied" do
+      let(:paid_credits) { "0" }
+      let(:granted_credits) { "10.000000" }
+      let(:voided_credits) { "4.28444999" }
+
+      it "creates wallet transactions with rounded values" do
+        transaction = subject.wallet_transactions.find(&:voided?)
+
+        expect(transaction.credit_amount).to eq(4.28444)
+        expect(transaction.amount).to eq(4.28)
+
+        wallet.reload
+
+        expect(wallet.credits_balance).to eq(15.71556)
+        expect(wallet.balance.to_d).to eq(15.72)
+      end
+    end
+
     context "with metadata parameter" do
       let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
       let(:params) do
