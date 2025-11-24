@@ -8274,6 +8274,8 @@ type Permissions {
   creditNotesView: Boolean!
   creditNotesVoid: Boolean!
   customerSettingsUpdateGracePeriod: Boolean!
+  customerSettingsUpdateIssuingDateAdjustment: Boolean!
+  customerSettingsUpdateIssuingDateAnchor: Boolean!
   customerSettingsUpdateLang: Boolean!
   customerSettingsUpdatePaymentTerms: Boolean!
   customerSettingsUpdateTaxRates: Boolean!
