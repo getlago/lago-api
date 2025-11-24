@@ -134,7 +134,12 @@ module Invoices
     end
 
     def grace_period?
-      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+      align_with_finalization_date =
+        customer.applicable_subscription_invoice_issuing_date_adjustment == "align_with_finalization_date"
+
+      grace_period = customer.applicable_invoice_grace_period.positive?
+
+      @grace_period ||= align_with_finalization_date && grace_period
     end
 
     def set_invoice_generated_status
