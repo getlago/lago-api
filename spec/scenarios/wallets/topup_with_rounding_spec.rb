@@ -56,6 +56,7 @@ describe "Wallet Transaction with rounding" do
 
     wallet.reload
     expect(wallet.credits_balance).to eq 17.97
+    expect(wallet.balance_cents).to eq 1797
   end
 
   it "does not apply rounding handling granted_credits" do
@@ -85,5 +86,6 @@ describe "Wallet Transaction with rounding" do
 
     wallet.reload
     expect(wallet.credits_balance).to eq 17.96999
+    expect(wallet.balance.to_d).to eq 17.97
   end
 end
