@@ -91,6 +91,9 @@ module Auth
 
       request = Net::HTTP::Get.new(uri.path)
       request["Accept"] = "application/json"
+      request["Origin"] = superset_base_url
+      request["Referer"] = "#{superset_base_url}/"
+      request["Cookie"] = cookies.join("; ")
 
       response = http.request(request)
       store_cookies(response)
@@ -121,6 +124,8 @@ module Auth
       request = Net::HTTP::Get.new(uri.path)
       request["Accept"] = "application/json"
       request["X-CSRFToken"] = csrf_token
+      request["Origin"] = superset_base_url
+      request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
       response = http.request(request)
@@ -146,6 +151,8 @@ module Auth
       request = Net::HTTP::Get.new(uri.path)
       request["Accept"] = "application/json"
       request["X-CSRFToken"] = csrf_token
+      request["Origin"] = superset_base_url
+      request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
       response = http.request(request)
@@ -168,6 +175,8 @@ module Auth
       request = Net::HTTP::Post.new(uri.path)
       request["Content-Type"] = "application/json"
       request["X-CSRFToken"] = csrf_token
+      request["Origin"] = superset_base_url
+      request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
       body = {allowed_domains: []}
@@ -203,6 +212,8 @@ module Auth
       request = Net::HTTP::Post.new(uri.path)
       request["Content-Type"] = "application/json"
       request["X-CSRFToken"] = csrf_token
+      request["Origin"] = superset_base_url
+      request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
       body = {
