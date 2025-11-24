@@ -140,7 +140,8 @@ RSpec.describe Invoices::Payments::StripeService do
       PaymentProviders::StripeProvider::StripePayment.new(
         id: "ch_123456",
         status: "succeeded",
-        metadata: {}
+        metadata: {},
+        error_code: nil
       )
     end
 
@@ -172,7 +173,8 @@ RSpec.describe Invoices::Payments::StripeService do
         PaymentProviders::StripeProvider::StripePayment.new(
           id: "ch_123456",
           status: "canceled",
-          metadata: {}
+          metadata: {},
+          error_code: nil
         )
       end
 
@@ -232,7 +234,8 @@ RSpec.describe Invoices::Payments::StripeService do
         PaymentProviders::StripeProvider::StripePayment.new(
           id: "ch_123456",
           status: "succeeded",
-          metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"}
+          metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"},
+          error_code: nil
         )
       end
 
@@ -265,7 +268,8 @@ RSpec.describe Invoices::Payments::StripeService do
           PaymentProviders::StripeProvider::StripePayment.new(
             id: "ch_123456",
             status: "succeeded",
-            metadata: {lago_invoice_id: "invalid", payment_type: "one-time"}
+            metadata: {lago_invoice_id: "invalid", payment_type: "one-time"},
+            error_code: nil
           )
         end
 
@@ -306,7 +310,8 @@ RSpec.describe Invoices::Payments::StripeService do
           PaymentProviders::StripeProvider::StripePayment.new(
             id: "ch_123456",
             status: "succeeded",
-            metadata: {lago_invoice_id: SecureRandom.uuid}
+            metadata: {lago_invoice_id: SecureRandom.uuid},
+            error_code: nil
           )
         end
 
@@ -328,7 +333,8 @@ RSpec.describe Invoices::Payments::StripeService do
             PaymentProviders::StripeProvider::StripePayment.new(
               id: "ch_123456",
               status: "succeeded",
-              metadata: {lago_invoice_id: invoice.id}
+              metadata: {lago_invoice_id: invoice.id},
+              error_code: nil
             )
           end
 

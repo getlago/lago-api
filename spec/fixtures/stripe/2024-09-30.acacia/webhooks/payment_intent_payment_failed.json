@@ -1,7 +1,7 @@
 {
   "id": "evt_3SVvxMQ8iJWBZFaM1z5wZ6Za",
   "object": "event",
-  "api_version": "2025-04-30.basil",
+  "api_version": "2024-09-30.acacia",
   "created": 1763737745,
   "data": {
     "object": {
@@ -26,6 +26,7 @@
       "customer": "cus_TSOWyTkxXlWiTc",
       "description": "Hooli - Invoice HOO-156A-030-005",
       "excluded_payment_method_types": null,
+      "invoice": null,
       "last_payment_error": {
         "code": "authentication_required",
         "decline_code": "authentication_not_handled",
