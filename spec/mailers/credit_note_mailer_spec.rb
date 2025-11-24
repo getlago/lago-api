@@ -35,14 +35,14 @@ RSpec.describe CreditNoteMailer do
       before do
         credit_note.file = nil
 
-        allow(CreditNotes::GenerateService).to receive(:call)
+        allow(CreditNotes::GeneratePdfService).to receive(:call)
       end
 
       it "calls the credit note pdf generate service" do
         mailer = credit_note_mailer.with(credit_note:).created
 
         expect(mailer.to).not_to be_nil
-        expect(CreditNotes::GenerateService).to have_received(:call)
+        expect(CreditNotes::GeneratePdfService).to have_received(:call)
       end
     end
 

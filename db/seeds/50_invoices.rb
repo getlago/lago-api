@@ -4,10 +4,10 @@
 Subscription.all.find_each do |subscription|
   invoice_count = (Time.current - subscription.subscription_at).fdiv(1.month).round
 
-  (0..invoice_count).each do |offset|
+  (1..invoice_count).each do |offset|
     Invoices::SubscriptionService.call(
       subscriptions: [subscription],
-      timestamp: Time.current - offset.months + 1.day,
+      timestamp: subscription.subscription_at + offset.months,
       invoicing_reason: :subscription_periodic
     )
   end

@@ -40,5 +40,8 @@ RSpec.describe Types::Subscriptions::Object do
     expect(subject).to have_field(:fees).of_type("[Fee!]")
 
     expect(subject).to have_field(:lifetime_usage).of_type("SubscriptionLifetimeUsage")
+
+    expect(subject).to have_field(:payment_method).of_type("PaymentMethod")
+    expect(subject).to have_field(:payment_method_type).of_type("PaymentMethodTypeEnum")
   end
 end

@@ -16,6 +16,16 @@ class BillingEntity < ApplicationRecord
 
   EINVOICING_COUNTRIES = %w[FR].map(&:upcase)
 
+  SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS = {
+    current_period_end: "current_period_end",
+    next_period_start: "next_period_start"
+  }.freeze
+
+  SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS = {
+    keep_anchor: "keep_anchor",
+    align_with_finalization_date: "align_with_finalization_date"
+  }.freeze
+
   belongs_to :organization
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 
@@ -65,6 +75,9 @@ class BillingEntity < ApplicationRecord
   }.freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
+
+  enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: true
+  enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: true
 
   default_scope -> { kept }
   scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
@@ -164,39 +177,41 @@ end
 #
 # Table name: billing_entities
 #
-#  id                           :uuid             not null, primary key
-#  address_line1                :string
-#  address_line2                :string
-#  archived_at                  :datetime
-#  city                         :string
-#  code                         :string           not null
-#  country                      :string
-#  default_currency             :string           default("USD"), not null
-#  deleted_at                   :datetime
-#  document_locale              :string           default("en"), not null
-#  document_number_prefix       :string
-#  document_numbering           :enum             default("per_customer"), not null
-#  einvoicing                   :boolean          default(FALSE), not null
-#  email                        :string
-#  email_settings               :string           default([]), not null, is an Array
-#  eu_tax_management            :boolean          default(FALSE)
-#  finalize_zero_amount_invoice :boolean          default(TRUE), not null
-#  invoice_footer               :text
-#  invoice_grace_period         :integer          default(0), not null
-#  legal_name                   :string
-#  legal_number                 :string
-#  logo                         :string
-#  name                         :string           not null
-#  net_payment_term             :integer          default(0), not null
-#  state                        :string
-#  tax_identification_number    :string
-#  timezone                     :string           default("UTC"), not null
-#  vat_rate                     :float            default(0.0), not null
-#  zipcode                      :string
-#  created_at                   :datetime         not null
-#  updated_at                   :datetime         not null
-#  applied_dunning_campaign_id  :uuid
-#  organization_id              :uuid             not null
+#  id                                           :uuid             not null, primary key
+#  address_line1                                :string
+#  address_line2                                :string
+#  archived_at                                  :datetime
+#  city                                         :string
+#  code                                         :string           not null
+#  country                                      :string
+#  default_currency                             :string           default("USD"), not null
+#  deleted_at                                   :datetime
+#  document_locale                              :string           default("en"), not null
+#  document_number_prefix                       :string
+#  document_numbering                           :enum             default("per_customer"), not null
+#  einvoicing                                   :boolean          default(FALSE), not null
+#  email                                        :string
+#  email_settings                               :string           default([]), not null, is an Array
+#  eu_tax_management                            :boolean          default(FALSE)
+#  finalize_zero_amount_invoice                 :boolean          default(TRUE), not null
+#  invoice_footer                               :text
+#  invoice_grace_period                         :integer          default(0), not null
+#  legal_name                                   :string
+#  legal_number                                 :string
+#  logo                                         :string
+#  name                                         :string           not null
+#  net_payment_term                             :integer          default(0), not null
+#  state                                        :string
+#  subscription_invoice_issuing_date_adjustment :enum             default("align_with_finalization_date"), not null
+#  subscription_invoice_issuing_date_anchor     :enum             default("next_period_start"), not null
+#  tax_identification_number                    :string
+#  timezone                                     :string           default("UTC"), not null
+#  vat_rate                                     :float            default(0.0), not null
+#  zipcode                                      :string
+#  created_at                                   :datetime         not null
+#  updated_at                                   :datetime         not null
+#  applied_dunning_campaign_id                  :uuid
+#  organization_id                              :uuid             not null
 #
 # Indexes
 #

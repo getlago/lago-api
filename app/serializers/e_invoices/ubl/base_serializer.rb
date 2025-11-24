@@ -16,6 +16,10 @@ module EInvoices
         "xmlns" => "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2"
       }.merge(COMMON_NAMESPACES).freeze
 
+      RECEIPTS_NAMESPACES = {
+        "xmlns" => "urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2"
+      }.merge(COMMON_NAMESPACES).freeze
+
       DATEFORMAT = "%Y-%m-%d"
     end
   end

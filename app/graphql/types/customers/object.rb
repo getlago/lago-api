@@ -154,7 +154,9 @@ module Types
       def billing_configuration
         {
           id: "#{object&.id}-c0nf",
-          document_locale: object&.document_locale
+          document_locale: object&.document_locale,
+          subscription_invoice_issuing_date_anchor: object&.subscription_invoice_issuing_date_anchor,
+          subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment
         }
       end
 

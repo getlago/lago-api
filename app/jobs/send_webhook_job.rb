@@ -18,7 +18,6 @@ class SendWebhookJob < ApplicationJob
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
-    "invoice.add_on_added" => Webhooks::Invoices::AddOnCreatedService,
     "invoice.paid_credit_added" => Webhooks::Invoices::PaidCreditAddedService,
     "invoice.generated" => Webhooks::Invoices::GeneratedService,
     "invoice.drafted" => Webhooks::Invoices::DraftedService,
@@ -74,6 +73,20 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.updated" => Webhooks::WalletTransactions::UpdatedService,
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
+
+  # This is a placeholder object to know which arguments were provided.
+  UNDEFINED = Object.new.freeze
+  private_constant :UNDEFINED
+
+  # Override the default perform_later to avoid creating webhooks if no webhook endpoints are present.
+  #
+  # This will prevent enqueueing jobs only to return early from the jobs.
+  def self.perform_later(webhook_type, object, options = UNDEFINED, webhook_id = UNDEFINED)
+    return if (webhook_id.nil? || webhook_id == UNDEFINED) && object.organization.webhook_endpoints.none?
+
+    args = [webhook_type, object, options, webhook_id].filter { |arg| arg != UNDEFINED }
+    super(*args)
+  end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)

@@ -74,7 +74,7 @@ RSpec.describe PaymentReceipts::CreateService do
 
             context "when payment is succeeded" do
               let(:payable_payment_status) { "succeeded" }
-              let(:payment_receipt) { build(:payment_receipt) }
+              let(:payment_receipt) { build(:payment_receipt, organization:) }
 
               before do
                 allow(PaymentReceipt).to receive(:new).and_return(payment_receipt)
@@ -95,7 +95,7 @@ RSpec.describe PaymentReceipts::CreateService do
                   billing_entity.email_settings << "payment_receipt.created"
                   billing_entity.save!
                   described_class.call(payment:)
-                end.to have_enqueued_job(PaymentReceipts::GeneratePdfAndNotifyJob).with(payment_receipt:, email: true)
+                end.to have_enqueued_job(PaymentReceipts::GenerateDocumentsJob).with(payment_receipt:, notify: true)
               end
 
               it "produces an activity log" do

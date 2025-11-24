@@ -63,6 +63,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
@@ -294,6 +295,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
@@ -954,6 +956,8 @@ DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
 DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
+DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_anchors;
+DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1106,6 +1110,26 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: subscription_invoice_issuing_date_adjustments; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_invoice_issuing_date_adjustments AS ENUM (
+    'keep_anchor',
+    'align_with_finalization_date'
+);
+
+
+--
+-- Name: subscription_invoice_issuing_date_anchors; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_invoice_issuing_date_anchors AS ENUM (
+    'current_period_end',
+    'next_period_start'
 );
 
 
@@ -1543,7 +1567,9 @@ CREATE TABLE public.billing_entities (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     applied_dunning_campaign_id uuid,
-    einvoicing boolean DEFAULT false NOT NULL
+    einvoicing boolean DEFAULT false NOT NULL,
+    subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors DEFAULT 'next_period_start'::public.subscription_invoice_issuing_date_anchors NOT NULL,
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments DEFAULT 'align_with_finalization_date'::public.subscription_invoice_issuing_date_adjustments NOT NULL
 );
 
 
@@ -1795,7 +1821,8 @@ CREATE TABLE public.credit_notes (
     precise_coupons_adjustment_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    xml_file character varying
 );
 
 
@@ -1945,6 +1972,8 @@ CREATE TABLE public.customers (
     account_type public.customer_account_type DEFAULT 'customer'::public.customer_account_type NOT NULL,
     billing_entity_id uuid NOT NULL,
     payment_receipt_counter bigint DEFAULT 0 NOT NULL,
+    subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
+    subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -3325,7 +3354,9 @@ CREATE TABLE public.wallet_transactions (
     organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     priority integer DEFAULT 50 NOT NULL,
-    name character varying(255)
+    name character varying(255),
+    payment_method_id uuid,
+    payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL
 );
 
 
@@ -7998,6 +8029,13 @@ CREATE INDEX index_wallet_transactions_on_organization_id ON public.wallet_trans
 
 
 --
+-- Name: index_wallet_transactions_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_on_payment_method_id ON public.wallet_transactions USING btree (payment_method_id);
+
+
+--
 -- Name: index_wallet_transactions_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9690,6 +9728,14 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: wallet_transactions fk_rails_c29bf4ff0f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_c29bf4ff0f FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+
+
+--
 -- Name: active_storage_attachments fk_rails_c3b3935057; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10128,10 +10174,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251112112544'),
 ('20251110191233'),
+('20251107102548'),
 ('20251106093323'),
 ('20251106092231'),
 ('20251106091730'),
+('20251106072629'),
+('20251029140035'),
 ('20251024200950'),
 ('20251024130659'),
 ('20251023154344'),

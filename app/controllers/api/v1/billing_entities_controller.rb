@@ -93,6 +93,8 @@ module Api
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
+            :subscription_invoice_issuing_date_anchor,
+            :subscription_invoice_issuing_date_adjustment,
             :document_locale
           ]
         )
@@ -124,6 +126,8 @@ module Api
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
+            :subscription_invoice_issuing_date_anchor,
+            :subscription_invoice_issuing_date_adjustment,
             :document_locale
           ],
           tax_codes: [],

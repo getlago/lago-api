@@ -89,6 +89,18 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice do
         expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
         expect(credit_note.applied_taxes.first.tax_id).to eq(tax.id)
       end
+
+      # this scenario is possible with multiple progressive billing invoices, when on latest progressive billing invice we try to refund
+      # sum of all PB invoices
+      context "when called with amount higher then sum of creditable amounts on fees" do
+        let(:amount) { 130 }
+
+        it "fails with error" do
+          result = credit_service.call
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("creditable_amount_is_less_than_requested")
+        end
+      end
     end
   end
 end

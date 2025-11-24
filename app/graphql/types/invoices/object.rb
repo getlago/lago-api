@@ -33,6 +33,7 @@ module Types
       field :fees_amount_cents, GraphQL::Types::BigInt, null: false
       field :prepaid_credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :progressive_billing_credit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :ready_for_payment_processing, Boolean, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
@@ -45,6 +46,7 @@ module Types
       field :payment_overdue, Boolean, null: false
 
       field :all_charges_have_fees, Boolean, null: false, method: :all_charges_have_fees?
+      field :all_fixed_charges_have_fees, Boolean, null: false, method: :all_fixed_charges_have_fees?
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

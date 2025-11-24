@@ -120,5 +120,21 @@ RSpec.describe IntegrationCollectionMappings::CreateService do
         expect(result.error.message).to eq("integration_not_found")
       end
     end
+
+    context "with invalid currencies format" do
+      let(:create_args) do
+        {
+          mapping_type: :currencies,
+          integration_id: integration.id,
+          currencies: {yolo: true}
+        }
+      end
+
+      it "returns validation errors for invalid currencies format" do
+        result = service_call
+
+        expect(result.error.messages[:currencies]).to eq ["invalid_format"]
+      end
+    end
   end
 end

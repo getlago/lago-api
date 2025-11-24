@@ -140,5 +140,79 @@ RSpec.describe WalletTransactions::ValidateService do
         expect(result.error.messages[:name]).to eq(["invalid_value"])
       end
     end
+
+    context "with payment method" do
+      let(:payment_method) { create(:payment_method, customer:, organization:) }
+      let(:payment_method_params) do
+        {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        }
+      end
+      let(:args) do
+        {
+          wallet_id:,
+          customer_id: customer.external_id,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          voided_credits:,
+          payment_method: payment_method_params,
+          **((name == :undefined) ? {} : {name:})
+        }
+      end
+
+      context "when provider payment method is valid" do
+        before do
+          result.payment_method = payment_method
+        end
+
+        it "returns true and result has no errors" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "when manual payment method is valid" do
+        let(:payment_method_params) do
+          {
+            payment_method_type: "manual"
+          }
+        end
+
+        it "returns true and result has no errors" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "with invalid payment method type" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: payment_method.id,
+            payment_method_type: "invalid"
+          }
+        end
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
+      context "with invalid payment method reference" do
+        let(:payment_method_params) do
+          {
+            payment_method_id: "invalid",
+            payment_method_type: "provider"
+          }
+        end
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
   end
 end

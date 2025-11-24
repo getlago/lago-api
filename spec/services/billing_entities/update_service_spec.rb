@@ -11,6 +11,8 @@ RSpec.describe BillingEntities::UpdateService do
   let(:timezone) { nil }
   let(:email_settings) { [] }
   let(:invoice_grace_period) { 0 }
+  let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+  let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
   let(:logo) { nil }
   let(:country) { "fr" }
   let(:einvoicing) { true }
@@ -36,7 +38,9 @@ RSpec.describe BillingEntities::UpdateService do
       billing_configuration: {
         invoice_footer: "invoice footer",
         document_locale: "fr",
-        invoice_grace_period:
+        invoice_grace_period:,
+        subscription_invoice_issuing_date_anchor:,
+        subscription_invoice_issuing_date_adjustment:
       }
     }
   end
@@ -112,6 +116,8 @@ RSpec.describe BillingEntities::UpdateService do
         result = update_service.call
 
         expect(result.billing_entity.timezone).to eq("Europe/Paris")
+        expect(result.billing_entity.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+        expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
       end
 
       context "when updating invoice grace period" do

@@ -8,6 +8,7 @@ RSpec.describe Integrations::Okta::UpdateService do
   let(:membership) { create(:membership) }
   let(:domain) { "foo.bar" }
   let(:organization_name) { "Footest" }
+  let(:host) { "test.com" }
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration:, params: update_args) }
@@ -17,7 +18,8 @@ RSpec.describe Integrations::Okta::UpdateService do
     let(:update_args) do
       {
         domain:,
-        organization_name:
+        organization_name:,
+        host:
       }
     end
 

@@ -90,6 +90,8 @@ gem "sentry-rails"
 gem "sentry-ruby"
 gem "sentry-sidekiq"
 
+gem "datadog", require: false
+
 # Storage
 gem "aws-sdk-s3", require: false
 gem "google-cloud-storage", require: false
@@ -141,6 +143,9 @@ group :development, :test do
   gem "rubocop-performance", require: false
   gem "rubocop-rspec", require: false
   gem "rubocop-thread_safety", require: false
+
+  gem "vernier", "~> 1.0", require: false
+  gem "super_diff", "~> 0.16.0"
 end
 
 group :test do

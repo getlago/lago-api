@@ -43,6 +43,8 @@ RSpec.describe V1::BillingEntitySerializer do
     expect(billing_entity_serialized.fetch("finalize_zero_amount_invoice")).to eq(billing_entity.finalize_zero_amount_invoice)
     expect(billing_entity_serialized.fetch("invoice_footer")).to eq(billing_entity.invoice_footer)
     expect(billing_entity_serialized.fetch("invoice_grace_period")).to eq(billing_entity.invoice_grace_period)
+    expect(billing_entity_serialized.fetch("subscription_invoice_issuing_date_adjustment")).to eq(billing_entity.subscription_invoice_issuing_date_adjustment)
+    expect(billing_entity_serialized.fetch("subscription_invoice_issuing_date_anchor")).to eq(billing_entity.subscription_invoice_issuing_date_anchor)
     expect(billing_entity_serialized.fetch("document_locale")).to eq(billing_entity.document_locale)
     expect(billing_entity_serialized.fetch("is_default")).to eq(billing_entity.organization.default_billing_entity.id == billing_entity.id)
     expect(billing_entity_serialized.fetch("eu_tax_management")).to eq(billing_entity.eu_tax_management)
