@@ -63,6 +63,7 @@ module Auth
 
       request = Net::HTTP::Post.new(uri.path)
       request["Content-Type"] = "application/x-www-form-urlencoded"
+      request["Origin"] = superset_base_url
       request["Referer"] = "#{superset_base_url}/login/"
       request["Cookie"] = cookies.join("; ")
 
@@ -227,7 +228,14 @@ module Auth
 
     def create_http_client(uri)
       http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == "https"
+
+      if uri.scheme == "https"
+        http.use_ssl = true
+        if Rails.env.development? || Rails.env.test?
+          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        end
+      end
+
       http.read_timeout = 30
       http.open_timeout = 30
       http
