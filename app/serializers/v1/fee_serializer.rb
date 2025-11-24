@@ -9,6 +9,7 @@ module V1
         lago_id: model.id,
         lago_charge_id: model.charge_id,
         lago_charge_filter_id: model.charge_filter_id,
+        lago_fixed_charge_id: model.fixed_charge_id,
         lago_invoice_id: model.invoice_id,
         lago_true_up_fee_id: model.true_up_fee&.id,
         lago_true_up_parent_fee_id: model.true_up_parent_fee_id,
@@ -55,8 +56,8 @@ module V1
         pricing_unit_details:
       }
 
-      payload.merge!(date_boundaries) if model.charge? || model.subscription? || model.add_on?
-      payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
+      payload.merge!(date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge?
+      payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance? && model.charge?
       payload.merge!(applied_taxes) if include?(:applied_taxes)
 
       payload
@@ -93,12 +94,24 @@ module V1
     end
 
     def from_date
-      property = model.charge? ? "charges_from_datetime" : "from_datetime"
+      property = if model.charge?
+        "charges_from_datetime"
+      elsif model.fixed_charge?
+        "fixed_charges_from_datetime"
+      else
+        "from_datetime"
+      end
       model.properties[property]&.to_datetime&.iso8601
     end
 
     def to_date
-      property = model.charge? ? "charges_to_datetime" : "to_datetime"
+      property = if model.charge?
+        "charges_to_datetime"
+      elsif model.fixed_charge?
+        "fixed_charges_to_datetime"
+      else
+        "to_datetime"
+      end
       model.properties[property]&.to_datetime&.iso8601
     end
 
@@ -117,7 +130,7 @@ module V1
     end
 
     def pay_in_advance
-      if model.charge?
+      if model.charge? || model.fixed_charge?
         model.pay_in_advance
       elsif model.subscription?
         model.subscription&.plan&.pay_in_advance

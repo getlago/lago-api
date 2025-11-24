@@ -171,6 +171,69 @@ RSpec.describe ::V1::FeeSerializer do
     end
   end
 
+  context "when fee is fixed_charge" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, customer:, plan:) }
+    let(:add_on) { create(:add_on, organization:) }
+    let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
+    let(:from_datetime) { "2024-03-30T00:00:00+00:00" }
+    let(:to_datetime) { "2024-04-29T23:59:59+00:00" }
+
+    let(:fee) do
+      create(
+        :fixed_charge_fee,
+        subscription:,
+        fixed_charge:,
+        properties: {
+          fixed_charges_from_datetime: Time.zone.parse(from_datetime),
+          fixed_charges_to_datetime: Time.zone.parse(to_datetime)
+        }
+      )
+    end
+
+    it "serializes the fee with fixed_charge date boundaries" do
+      expect(result["fee"]["lago_fixed_charge_id"]).to eq(fixed_charge.id)
+      expect(result["fee"]["from_date"]).not_to be_nil
+      expect(result["fee"]["to_date"]).not_to be_nil
+      expect(result["fee"]["from_date"]).to eq(from_datetime)
+      expect(result["fee"]["to_date"]).to eq(to_datetime)
+      expect(result["fee"]["item"]).to include(
+        "type" => "fixed_charge",
+        "code" => fixed_charge.add_on.code,
+        "name" => fixed_charge.add_on.name
+      )
+      expect(result["fee"]["pay_in_advance"]).to eq(false)
+    end
+
+    context "with pay_in_advance fixed charge" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
+      let(:fee) do
+        create(
+          :fixed_charge_fee,
+          subscription:,
+          fixed_charge:,
+          pay_in_advance: true,
+          properties: {
+            fixed_charges_from_datetime: Time.zone.parse(from_datetime),
+            fixed_charges_to_datetime: Time.zone.parse(to_datetime)
+          }
+        )
+      end
+
+      it "serializes pay_in_advance fixed charge with date boundaries" do
+        expect(result["fee"]["lago_fixed_charge_id"]).to eq(fixed_charge.id)
+        expect(result["fee"]["from_date"]).not_to be_nil
+        expect(result["fee"]["to_date"]).not_to be_nil
+        expect(result["fee"]["from_date"]).to eq(from_datetime)
+        expect(result["fee"]["to_date"]).to eq(to_datetime)
+        expect(result["fee"]["pay_in_advance"]).to eq(true)
+        expect(result["fee"]["event_transaction_id"]).to be_nil
+      end
+    end
+  end
+
   context "when fee is one_off" do
     let(:fee) { create(:one_off_fee) }
 
