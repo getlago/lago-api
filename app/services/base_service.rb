@@ -174,6 +174,7 @@ class BaseService
   end
 
   use(Middlewares::LogTracerMiddleware)
+  use(Middlewares::DatadogMiddleware) if ENV["DD_AGENT_HOST"].present?
 
   def self.call(*, **, &)
     new(*, **).call_with_middlewares(&)
