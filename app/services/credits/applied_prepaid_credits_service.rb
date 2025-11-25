@@ -28,6 +28,7 @@ module Credits
       ApplicationRecord.transaction do
         wallet_transaction = create_wallet_transaction(amount_cents)
         result.wallet_transaction = wallet_transaction
+        amount_cents = wallet_transaction.amount_cents
 
         with_optimistic_lock_retry(wallet) do
           Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)

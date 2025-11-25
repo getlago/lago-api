@@ -1749,15 +1749,18 @@ RSpec.describe Invoices::CalculateFeesService do
       it "updates the invoice accordingly" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.fees_amount_cents).to eq(20_000)
-          expect(result.invoice.taxes_amount_cents).to eq(1_550)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500)
-          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_050)
-          expect(result.invoice.progressive_billing_credit_amount_cents).to eq(3_000)
-          expect(result.invoice.total_amount_cents).to eq(9_727) # 17_050 - 1_000 (credit note) - 6_323 (wallet)
-        end
+        expect(result).to be_success
+
+        invoice = result.invoice
+        expect(invoice.fees_amount_cents).to eq(20_000)
+        expect(invoice.progressive_billing_credit_amount_cents).to eq(3_000)
+        expect(invoice.coupons_amount_cents).to eq(1_500)
+        expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500) # 20_000 - 1_500 - 3_000
+        expect(invoice.taxes_amount_cents).to eq(1_550)
+        expect(invoice.sub_total_including_taxes_amount_cents).to eq(17_050) # 15_500 + 1_550
+        expect(invoice.prepaid_credit_amount_cents).to eq(6_323)
+        expect(invoice.credit_notes_amount_cents).to eq(1_000)
+        expect(invoice.total_amount_cents).to eq(9_727) # 17_050 - 1_000 - 6_323
       end
     end
   end
