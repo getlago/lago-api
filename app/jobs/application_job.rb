@@ -5,7 +5,7 @@ class ApplicationJob < ActiveJob::Base
 
   # This is a generic error to trigger the retry of any job
   # The max attempt is set to avoid infinite loops
-  retry_on RetryJobError, attempts: 20
+  retry_on RetriableError, wait: :polynomially_longer, attempts: 20
 
   # This method is used to perform a job after a commit.
   #

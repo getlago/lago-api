@@ -66,11 +66,11 @@ module Invoices
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
 
-        deliver_error_webhook(e) unless skip_error_webhook(e)
+        deliver_error_webhook(e) unless skip_error_webhook?(e)
 
         update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
 
-        raise RetryJobError if e.result.should_retry
+        raise RetriableError if e.result.should_retry
 
         # Some errors should be investigated and need to be raised
         raise if e.result.reraise
@@ -133,7 +133,7 @@ module Invoices
         )
       end
 
-      def skip_error_webhook(e)
+      def skip_error_webhook?(e)
         return true if e.result.payment.payable_payment_status&.to_sym == :pending
 
         [
