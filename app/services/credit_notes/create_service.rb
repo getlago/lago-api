@@ -12,6 +12,7 @@ module CreditNotes
       @description = args[:description]
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
+      @metadata_value = args[:metadata]
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
       @context = args[:context]
@@ -26,6 +27,7 @@ module CreditNotes
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.new(
+          id: SecureRandom.uuid,
           organization_id: invoice.organization_id,
           customer: invoice.customer,
           invoice:,
@@ -41,6 +43,15 @@ module CreditNotes
           credit_status: "available",
           status: invoice.voided? ? "finalized" : invoice.status # credit notes dont have void state
         )
+
+        if metadata_value
+          credit_note.metadata = Metadata::ItemMetadata.new(
+            id: SecureRandom.uuid,
+            organization_id: credit_note.organization_id,
+            value: metadata_value
+          )
+          credit_note.metadata.save! if context != :preview
+        end
 
         credit_note.save! if context != :preview
 
@@ -106,6 +117,7 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
+      :metadata_value,
       :automatic,
       :context
 
