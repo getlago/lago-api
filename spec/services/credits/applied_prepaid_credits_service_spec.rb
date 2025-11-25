@@ -195,6 +195,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet.credits_balance).to eq(9.56)
       end
 
+      context "when precise fees have decimals" do
+        let(:amount_cents) { 110.1 }
+
+        let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 40.1, taxes_precise_amount_cents: 4, charge:) }
+
+        it "rounds the decimals" do
+          expect(result).to be_success
+          expect(result.prepaid_credit_amount_cents).to eq(44)
+        end
+      end
+
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 10_000 }
         let(:fee1) { create(:fee, invoice:, subscription:, precise_amount_cents: 6_000, taxes_precise_amount_cents: 600) }
