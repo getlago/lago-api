@@ -546,6 +546,7 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customers_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_customers_on_awaiting_wallet_refresh;
 DROP INDEX IF EXISTS public.index_customers_on_applied_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_customers_on_account_type;
 DROP INDEX IF EXISTS public.index_customers_invoice_custom_sections_on_organization_id;
@@ -1975,6 +1976,7 @@ CREATE TABLE public.customers (
     payment_receipt_counter bigint DEFAULT 0 NOT NULL,
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
+    awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -6288,6 +6290,13 @@ CREATE INDEX index_customers_on_applied_dunning_campaign_id ON public.customers 
 
 
 --
+-- Name: index_customers_on_awaiting_wallet_refresh; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_awaiting_wallet_refresh ON public.customers USING btree (awaiting_wallet_refresh);
+
+
+--
 -- Name: index_customers_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10184,6 +10193,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20251121143459'),
+('20251121113600'),
 ('20251112112544'),
 ('20251110191233'),
 ('20251107102548'),
@@ -11044,3 +11054,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
