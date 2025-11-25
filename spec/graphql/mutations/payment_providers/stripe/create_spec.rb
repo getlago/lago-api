@@ -10,11 +10,12 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
     <<-GQL
       mutation($input: AddStripePaymentProviderInput!) {
         addStripePaymentProvider(input: $input) {
-          id,
-          secretKey,
-          code,
-          name,
+          id
+          secretKey
+          code
+          name
           successRedirectUrl
+          supports3ds
         }
       }
     GQL
@@ -42,7 +43,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
           secretKey: secret_key,
           code:,
           name:,
-          successRedirectUrl: success_redirect_url
+          successRedirectUrl: success_redirect_url,
+          supports3ds: true
         }
       }
     )
@@ -55,6 +57,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
       expect(result_data["code"]).to eq(code)
       expect(result_data["name"]).to eq(name)
       expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
+      expect(result_data["supports3ds"]).to eq(true)
     end
   end
 end
