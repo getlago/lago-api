@@ -136,6 +136,8 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
 
   context "when invoice payment requires 3DS" do
     it "create a pending payment and send webhook with `next_action`" do
+      provider.update! supports_3ds: true
+
       customer = create_customer
       stripe_customer = customer.payment_provider_customers.sole
       webhooks_sent.clear

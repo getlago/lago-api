@@ -39,7 +39,7 @@ module PaymentProviders
             #       For now we keep it as pending, the user can still update it manually
             prepare_failed_result(e, payable_payment_status: :pending)
           when StripeProvider::NEED_3DS_ERROR_CODE
-            prepare_failed_result(e, should_retry: true)
+            prepare_failed_result(e, should_retry: payment_provider.supports_3ds)
           else
             prepare_failed_result(e)
           end
