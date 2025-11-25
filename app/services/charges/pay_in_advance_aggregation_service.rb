@@ -19,7 +19,8 @@ module Charges
         boundaries: {
           from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
-          charges_duration: boundaries.charges_duration
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: event.timestamp
         },
         filters: aggregation_filters
       )
