@@ -1,7 +1,7 @@
 {
   "id": "evt_3SVCroQ8iJWBZFaM2GyG1PVP",
   "object": "event",
-  "api_version": "2020-08-27",
+  "api_version": "2024-09-30.acacia",
   "created": 1763738710,
   "data": {
     "object": {
@@ -19,13 +19,6 @@
       "canceled_at": 1763738710,
       "cancellation_reason": "duplicate",
       "capture_method": "automatic_async",
-      "charges": {
-        "object": "list",
-        "data": [],
-        "has_more": false,
-        "total_count": 0,
-        "url": "/v1/charges?payment_intent=pi_3SVCroQ8iJWBZFaM22iaIuU3"
-      },
       "client_secret": "pi_3SVCroQ8iJWBZFaM22iaIuU3_secret_wMcPlg3I0vg6axAwII8B1HOVv",
       "confirmation_method": "automatic",
       "created": 1763564420,

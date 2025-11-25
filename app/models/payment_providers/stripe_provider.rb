@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class StripeProvider < BaseProvider
-    StripePayment = Data.define(:id, :status, :metadata)
+    StripePayment = Data.define(:id, :status, :metadata, :error_code)
 
     SUCCESS_REDIRECT_URL = "https://stripe.com/"
 

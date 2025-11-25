@@ -366,6 +366,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
+DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type_and_error_code;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
@@ -3147,7 +3148,8 @@ CREATE TABLE public.payments (
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
     organization_id uuid NOT NULL,
-    customer_id uuid
+    customer_id uuid,
+    error_code character varying
 );
 
 
@@ -7539,6 +7541,13 @@ CREATE UNIQUE INDEX index_payments_on_payable_id_and_payable_type ON public.paym
 
 
 --
+-- Name: index_payments_on_payable_id_and_payable_type_and_error_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_payable_id_and_payable_type_and_error_code ON public.payments USING btree (payable_id, payable_type, error_code);
+
+
+--
 -- Name: index_payments_on_payable_type_and_payable_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10174,6 +10183,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251121143459'),
 ('20251112112544'),
 ('20251110191233'),
 ('20251107102548'),
@@ -11034,4 +11044,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

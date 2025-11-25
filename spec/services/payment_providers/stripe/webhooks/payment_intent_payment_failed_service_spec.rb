@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  ["2020-08-27", "2025-04-30.basil"].each do |version|
+  ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |version|
     context "when payment intent event" do
       let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version:) }
 
@@ -20,11 +20,13 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
-        create(:payment, provider_payment_id: event.data.object.id)
+        invoice = create(:invoice, organization:)
+        payment = create(:payment, payable: invoice, provider_payment_id: event.data.object.id)
 
         result = event_service.call
 
         expect(result).to be_success
+        expect(payment.reload.error_code).to eq("authentication_required")
       end
     end
 

@@ -177,6 +177,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         expect(result.error_code).to eq("card_declined")
         expect(result.payment.status).to eq("failed")
         expect(result.payment.payable_payment_status).to eq("failed")
+        expect(result.payment.error_code).to eq("card_declined")
         expect(payment.reload.provider_payment_id).to eq("pi_declined")
       end
     end
@@ -212,6 +213,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
         expect(result.payment.status).to eq("failed")
         expect(result.payment.payable_payment_status).to eq("failed")
+        expect(result.payment.error_code).to be_nil
       end
     end
 

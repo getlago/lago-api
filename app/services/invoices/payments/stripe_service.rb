@@ -36,6 +36,7 @@ module Invoices
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
         payment.payable_payment_status = payable_payment_status
+        payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
         update_invoice_payment_status(
