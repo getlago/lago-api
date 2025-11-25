@@ -432,6 +432,7 @@ input AddStripePaymentProviderInput {
   name: String!
   secretKey: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 enum AdjustedFeeTypeEnum {
@@ -9821,6 +9822,7 @@ type StripeProvider {
   name: String!
   secretKey: ObfuscatedString
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 type Subscription {
@@ -10903,6 +10905,7 @@ input UpdateAdyenPaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
@@ -11022,6 +11025,7 @@ input UpdateCashfreePaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
@@ -11233,6 +11237,7 @@ input UpdateFlutterwavePaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
@@ -11248,6 +11253,7 @@ input UpdateGocardlessPaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
@@ -11370,6 +11376,7 @@ input UpdateMoneyhashPaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
@@ -11545,6 +11552,7 @@ input UpdateStripePaymentProviderInput {
   id: ID!
   name: String
   successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """
