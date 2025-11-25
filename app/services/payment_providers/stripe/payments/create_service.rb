@@ -10,7 +10,6 @@ module PaymentProviders
           @metadata = metadata
           @invoice = payment.payable
           @provider_customer = payment.payment_provider_customer
-
           super
         end
 
@@ -34,13 +33,16 @@ module PaymentProviders
         # identified processing errors should mark it as failed to allow reprocess via a new payment
         # other should be reprocessed
         rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
-          # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
-          #       For now we keep it as pending, the user can still update it manually
-          if e.code == "amount_too_small"
-            return prepare_failed_result(e, payable_payment_status: :pending)
+          case e.code
+          when StripeProvider::AMOUNT_TOO_SMALL_ERROR_CODE
+            # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
+            #       For now we keep it as pending, the user can still update it manually
+            prepare_failed_result(e, payable_payment_status: :pending)
+          when StripeProvider::NEED_3DS_ERROR_CODE
+            prepare_failed_result(e, should_retry: payment_provider.supports_3ds)
+          else
+            prepare_failed_result(e)
           end
-
-          prepare_failed_result(e)
         rescue ::Stripe::IdempotencyError => e
           prepare_failed_result(e, payable_payment_status: :pending)
         rescue ::Stripe::RateLimitError => e
@@ -58,6 +60,10 @@ module PaymentProviders
         attr_reader :payment, :reference, :metadata, :invoice, :provider_customer
 
         delegate :payment_provider, to: :provider_customer
+
+        def payable_had_authentication_error?
+          @had_authentication_error ||= payment.payable.payments.where(error_code: StripeProvider::NEED_3DS_ERROR_CODE).exists?
+        end
 
         def handle_requires_action(payment)
           SendWebhookJob.perform_later("payment.requires_action", payment)
@@ -147,6 +153,13 @@ module PaymentProviders
             payload[:payment_method] = stripe_payment_method
           end
 
+          # NOTE: if the payable had 3ds errors before, if so, we remove the off_session flag to handle 3ds
+          #       ideally, we want to ensure that the error happened with the same payment method
+          if payable_had_authentication_error?
+            payload.delete :off_session
+            payload.delete :error_on_requires_action
+          end
+
           payload
         end
 
@@ -216,10 +229,11 @@ module PaymentProviders
           invoice.customer.country != "IN"
         end
 
-        def prepare_failed_result(error, reraise: false, payable_payment_status: :failed)
+        def prepare_failed_result(error, reraise: false, payment_status: :failed, payable_payment_status: :failed, should_retry: false)
           result.error_message = error.message
           result.error_code = error.code
           result.reraise = reraise
+          result.should_retry = should_retry
 
           # stripe may return us a Stripe::CardError error if payment_intent was created, but it's processing failed, in this case error would contain payment_intent id
           payment.update!(
