@@ -1,7 +1,7 @@
 FROM ruby:3.4.7-slim
 
 WORKDIR /app
-ENV POSTGRES_VERSION=14
+ENV POSTGRES_VERSION=15
 
 RUN apt update -qq && \
   apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev -y && \
