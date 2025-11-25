@@ -168,6 +168,14 @@ module Fees
     end
 
     def aggregator
+      if context == :invoice_preview && !subscription.persisted?
+        return FixedChargeEvents::Aggregations::PreviewAggregationService.new(
+          fixed_charge:,
+          subscription:,
+          boundaries:
+        )
+      end
+
       if fixed_charge.prorated?
         return FixedChargeEvents::Aggregations::ProratedAggregationService.new(fixed_charge:, subscription:, boundaries:)
       end

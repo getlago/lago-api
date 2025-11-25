@@ -66,6 +66,43 @@ RSpec.describe Fees::FixedChargeService do
         expect(result.fee.amount_cents).to eq(0)
       end
 
+      context "with preview context and non-persisted subscription" do
+        let(:context) { :invoice_preview }
+        let(:subscription) do
+          Subscription.new(
+            organization_id: organization.id,
+            customer:,
+            plan: create(:plan, organization:),
+            subscription_at: Time.current,
+            started_at: Time.current,
+            billing_time: "calendar"
+          )
+        end
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            units: 8,
+            properties: {amount: "12.5"}
+          )
+        end
+        let(:invoice) { Invoice.new(customer:, organization:) }
+
+        it "creates fee with default units from fixed_charge" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            invoice: invoice,
+            fixed_charge_id: fixed_charge.id,
+            units: 8,
+            amount_cents: 10000, # $12.5 * 8 units = $100
+            precise_amount_cents: 10000.0
+          )
+        end
+      end
+
       context "with an event" do
         let(:event) do
           create(
