@@ -197,12 +197,18 @@ module Invoices
     end
 
     def add_fixed_charge_fees
-      subscriptions.select(&:persisted?).each do |subscription|
+      subscriptions.each do |subscription|
         boundaries = boundaries(subscription)
 
         next unless fixed_charge_boundaries_valid?(boundaries)
 
-        subscription.fixed_charges.find_each do |fixed_charge|
+        fixed_charges = if subscription.persisted?
+          subscription.fixed_charges
+        else
+          subscription.plan.fixed_charges.kept
+        end
+
+        fixed_charges.find_each do |fixed_charge|
           next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
 
           fee_result = Fees::FixedChargeService.call(
