@@ -67,17 +67,6 @@ class BillableMetric < ApplicationRecord
     %w[name code]
   end
 
-  # by default rails would return " Validation failed: Field name value_is_mandatory", which is confusing
-  # as model also has "name" attribute. This method overrides the default behavior to return "field_name" instead.
-  def self.human_attribute_name(attr, options = {})
-    case attr.to_s
-    when "field_name"
-      "field_name"
-    else
-      super
-    end
-  end
-
   def attached_to_subscriptions?
     plans.joins(:subscriptions).exists?
   end

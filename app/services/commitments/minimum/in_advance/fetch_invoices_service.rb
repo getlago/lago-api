@@ -39,9 +39,6 @@ module Commitments
             current_usage: true
           )
 
-          # This will be deleted in main, but when we add fixed_charges boundaries, it cannot be OR, becuase
-          # then monthly fixed_charges inovice is also shown for the previous period (because charges boundaries will be the
-          # previous yearly period)
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
