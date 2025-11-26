@@ -7,14 +7,13 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
     subject { described_class.perform_now }
 
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:wallet) { create(:wallet, customer:, ready_to_be_refreshed: true) }
-    let(:customer_without_wallet) { create(:customer, organization:) }
+    let(:customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
+    let(:wallet) { create(:wallet, customer:) }
+    let(:customer_without_wallet) { create(:customer, organization:, awaiting_wallet_refresh: true) }
 
     let(:customer_with_terminated_wallet) do
-      create(:customer, organization:) do |customer|
-        create(:wallet, customer:)
-        create(:wallet, customer:, ready_to_be_refreshed: true, status: :terminated)
+      create(:customer, organization:, awaiting_wallet_refresh: true) do |customer|
+        create(:wallet, customer:, status: :terminated)
       end
     end
 

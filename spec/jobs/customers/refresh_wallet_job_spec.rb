@@ -6,18 +6,18 @@ RSpec.describe Customers::RefreshWalletJob do
   describe "#perform" do
     subject { described_class.perform_now(customer) }
 
-    let(:customer) { create(:customer) }
+    let(:customer) { create(:customer, awaiting_wallet_refresh:) }
     let(:organization) { customer.organization }
     let(:result) { BaseService::Result.new }
 
     before do
-      create(:wallet, customer:, organization:, ready_to_be_refreshed:)
+      create(:wallet, customer:, organization:)
 
       allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
     context "when customer is not awaiting wallet refresh" do
-      let(:ready_to_be_refreshed) { false }
+      let(:awaiting_wallet_refresh) { false }
 
       it "does not call the Customers::RefreshWalletsService service" do
         subject
@@ -26,7 +26,7 @@ RSpec.describe Customers::RefreshWalletJob do
     end
 
     context "when customer is awaiting wallet refresh" do
-      let(:ready_to_be_refreshed) { true }
+      let(:awaiting_wallet_refresh) { true }
 
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
