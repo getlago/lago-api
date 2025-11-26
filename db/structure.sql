@@ -2554,6 +2554,7 @@ CREATE VIEW public.exports_customers AS
     c.slug,
     c.created_at,
     c.updated_at,
+    c.deleted_at,
     c.country,
     c.address_line1,
     c.address_line2,
@@ -10192,6 +10193,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251125174110'),
 ('20251121143459'),
 ('20251121113600'),
 ('20251112112544'),
