@@ -900,6 +900,7 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP VIEW IF EXISTS public.exports_coupons;
 DROP VIEW IF EXISTS public.exports_charges;
+DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
@@ -2309,6 +2310,33 @@ CREATE VIEW public.exports_billable_metrics AS
           WHERE ((bmf.billable_metric_id = bm.id) AND (bmf.deleted_at IS NULL))), '[]'::json) AS filters
    FROM public.billable_metrics bm
   WHERE (bm.deleted_at IS NULL);
+
+
+--
+-- Name: exports_billing_entities; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_billing_entities AS
+ SELECT bi.organization_id,
+    bi.id AS lago_id,
+    bi.code,
+    bi.name,
+    bi.legal_name,
+    bi.legal_number,
+    bi.email,
+    bi.address_line1,
+    bi.address_line2,
+    bi.city,
+    bi.zipcode,
+    bi.state,
+    bi.country,
+    bi.vat_rate,
+    bi.timezone,
+    bi.created_at,
+    bi.updated_at,
+    bi.archived_at,
+    bi.deleted_at
+   FROM public.billing_entities bi;
 
 
 --
@@ -10193,6 +10221,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251126135708'),
 ('20251125174110'),
 ('20251121143459'),
 ('20251121113600'),
