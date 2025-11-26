@@ -122,7 +122,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         context "with fixed charges for non-persisted subscription" do
           let(:add_on) { create(:add_on, organization:) }
 
-          context "with standard charge model" do
+          context "with pay in adavnace and standard charge model" do
             let(:fixed_charge) do
               create(
                 :fixed_charge,
@@ -161,7 +161,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             end
           end
 
-          context "with volume charge model" do
+          context "with volume charge model (pay_in_arrears)" do
+            let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false) }
             let(:fixed_charge) do
               create(
                 :fixed_charge,
@@ -182,7 +183,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
 
             before { fixed_charge }
 
-            it "calculates volume pricing using default units" do
+            it "includes volume charge for non-persisted subscription" do
               travel_to(timestamp) do
                 result = preview_service.call
 
@@ -197,9 +198,89 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(fixed_charge_fee.units).to eq(18)
                 # 18 units falls in second tier: $15 flat + (18 * $2) = $51
                 expect(fixed_charge_fee.amount_cents).to eq(5100)
+              end
+            end
+          end
 
-                # Total: subscription (6) + fixed charge (5100) = 5106
-                expect(result.invoice.fees_amount_cents).to eq(5106)
+          context "with pay_in_arrears fixed charge" do
+            let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false) }
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "standard",
+                pay_in_advance: false,
+                units: 5,
+                properties: {amount: "20"}
+              )
+            end
+
+            before { fixed_charge }
+
+            it "includes pay_in_arrears fixed charge for non-persisted subscription" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+                expect(fixed_charge_fee.units).to eq(5)
+                expect(fixed_charge_fee.amount_cents).to eq(10000) # $20 * 5 units = $100
+
+                # Total: subscription fee + fixed charge
+                expect(result.invoice.fees_amount_cents).to eq(10006)
+              end
+            end
+          end
+
+          context "with prorated fixed charge" do
+            let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+            let(:timestamp) { Time.zone.parse("15 Mar 2024") } # Mid-month start
+            let(:subscription) do
+              build(
+                :subscription,
+                customer:,
+                plan:,
+                billing_time: "calendar",
+                subscription_at: timestamp,
+                started_at: timestamp,
+                created_at: timestamp
+              )
+            end
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "standard",
+                prorated: true,
+                pay_in_advance: true,
+                units: 100,
+                properties: {amount: "10"}
+              )
+            end
+
+            before { fixed_charge }
+
+            it "prorates fixed charge based on billing period" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                # Units remain full value (100) - proration happens to amount
+                expect(fixed_charge_fee.units).to eq(100)
+                expect(fixed_charge_fee.amount_cents).to eq(54_839)
               end
             end
           end
