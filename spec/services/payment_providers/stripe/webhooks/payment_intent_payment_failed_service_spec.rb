@@ -88,4 +88,29 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
       end
     end
   end
+
+  context "when last_payment_error does not have code" do
+    let(:event_json) do
+      get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version: "2025-04-30.basil") do |h|
+        h["data"]["object"]["last_payment_error"] = {message: "error"}
+      end
+    end
+
+    it "updates the payment status and save the payment method" do
+      expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
+        .with(
+          organization_id: organization.id,
+          status: "failed",
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment
+        ).and_call_original
+
+      invoice = create(:invoice, organization:)
+      payment = create(:payment, payable: invoice, provider_payment_id: event.data.object.id)
+
+      result = event_service.call
+
+      expect(result).to be_success
+      expect(payment.reload.error_code).to be_nil
+    end
+  end
 end

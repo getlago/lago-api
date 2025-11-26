@@ -67,7 +67,7 @@ module PaymentProviders
               id: event.data.object.id,
               status: event.data.object.status,
               metadata:,
-              error_code: event.data.object["last_payment_error"]&.code
+              error_code: event.data.object.to_hash.dig(:last_payment_error, :code)
             )
           ).raise_if_error!
         end
