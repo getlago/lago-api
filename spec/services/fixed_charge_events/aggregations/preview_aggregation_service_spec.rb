@@ -97,4 +97,59 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
       expect(result.full_units_number).to eq(5)
     end
   end
+
+  context "when fixed_charge is prorated" do
+    let(:fixed_charge) do
+      create(
+        :fixed_charge,
+        plan:,
+        add_on:,
+        charge_model: "standard",
+        prorated: true,
+        units: 100,
+        properties: {amount: "10"}
+      )
+    end
+    let(:fixed_charges_from_datetime) { Time.zone.parse("2024-06-01 00:00:00") }
+    let(:fixed_charges_to_datetime) { Time.zone.parse("2024-12-31 23:59:59") }
+    let(:boundaries) do
+      {
+        fixed_charges_from_datetime:,
+        fixed_charges_to_datetime:,
+        fixed_charges_duration: 365 # Full year
+      }
+    end
+
+    it "returns prorated units based on billing period" do
+      expect(result).to be_success
+
+      # Billing period: June 1 - Dec 31 = 214 days
+      # Full period: 365 days
+      # Prorated units: 100 * (214 / 365) ≈ 58.63
+      expect(result.aggregation).to be_within(0.01).of(58.63)
+      expect(result.full_units_number).to eq(100)
+    end
+
+    context "with partial month billing period" do
+      let(:fixed_charges_from_datetime) { Time.zone.parse("2024-03-15 00:00:00") }
+      let(:fixed_charges_to_datetime) { Time.zone.parse("2024-03-31 23:59:59") }
+      let(:boundaries) do
+        {
+          fixed_charges_from_datetime:,
+          fixed_charges_to_datetime:,
+          fixed_charges_duration: 31 # Full month (March)
+        }
+      end
+
+      it "returns prorated units for partial period" do
+        expect(result).to be_success
+
+        # Billing period: March 15-31 = 17 days
+        # Full period: 31 days (March)
+        # Prorated units: 100 * (17 / 31) ≈ 54.84
+        expect(result.aggregation).to be_within(0.01).of(54.84)
+        expect(result.full_units_number).to eq(100)
+      end
+    end
+  end
 end
