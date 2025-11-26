@@ -75,7 +75,7 @@ module Api
 
         if result.success?
           response[:subscription] = ::V1::SubscriptionSerializer.new(
-            result.subscription, includes: %i[plan]
+            result.subscription, includes: %i[plan entitlements]
           ).serialize
 
           render(json: response)
@@ -139,7 +139,7 @@ module Api
           )
         return not_found_error(resource: "subscription") unless subscription
 
-        render_subscription(subscription)
+        render_subscription(subscription, includes: %i[plan entitlements])
       end
 
       def index
@@ -224,12 +224,12 @@ module Api
         ]
       end
 
-      def render_subscription(subscription)
+      def render_subscription(subscription, includes: %i[plan])
         render(
           json: ::V1::SubscriptionSerializer.new(
             subscription,
             root_name: "subscription",
-            includes: %i[plan]
+            includes:
           )
         )
       end
