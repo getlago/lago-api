@@ -18,4 +18,4 @@ SELECT
     updated_at,
     archived_at,
     deleted_at
-FROM billing_entities AS bi;
+FROM billing_entities AS be;

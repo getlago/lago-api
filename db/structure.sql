@@ -2317,26 +2317,26 @@ CREATE VIEW public.exports_billable_metrics AS
 --
 
 CREATE VIEW public.exports_billing_entities AS
- SELECT bi.organization_id,
-    bi.id AS lago_id,
-    bi.code,
-    bi.name,
-    bi.legal_name,
-    bi.legal_number,
-    bi.email,
-    bi.address_line1,
-    bi.address_line2,
-    bi.city,
-    bi.zipcode,
-    bi.state,
-    bi.country,
-    bi.vat_rate,
-    bi.timezone,
-    bi.created_at,
-    bi.updated_at,
-    bi.archived_at,
-    bi.deleted_at
-   FROM public.billing_entities bi;
+ SELECT be.organization_id,
+    be.id AS lago_id,
+    be.code,
+    be.name,
+    be.legal_name,
+    be.legal_number,
+    be.email,
+    be.address_line1,
+    be.address_line2,
+    be.city,
+    be.zipcode,
+    be.state,
+    be.country,
+    be.vat_rate,
+    be.timezone,
+    be.created_at,
+    be.updated_at,
+    be.archived_at,
+    be.deleted_at
+   FROM public.billing_entities be;
 
 
 --
@@ -2347,9 +2347,11 @@ CREATE VIEW public.exports_charges AS
  SELECT c.organization_id,
     c.id AS lago_id,
     c.billable_metric_id AS lago_billable_metric_id,
+    c.plan_id AS lago_plan_id,
     c.invoice_display_name,
     c.created_at,
     c.updated_at,
+    c.deleted_at,
         CASE c.charge_model
             WHEN 0 THEN 'standard'::text
             WHEN 1 THEN 'graduated'::text
@@ -10222,6 +10224,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20251126135708'),
+('20251126134516'),
 ('20251125174110'),
 ('20251121143459'),
 ('20251121113600'),
