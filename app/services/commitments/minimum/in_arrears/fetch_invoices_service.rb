@@ -23,9 +23,7 @@ module Commitments
         end
 
         def fetch_invoices
-          # TODO: Re-enable fixed charges for minimum commitments
-          # unless plan.charges_or_fixed_charges_billed_in_monthly_split_intervals?
-          unless plan.charges_billed_in_monthly_split_intervals?
+          unless plan.charges_or_fixed_charges_billed_in_monthly_split_intervals?
             return Invoice.where(id: invoice_subscription.invoice_id)
           end
 
