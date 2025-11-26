@@ -139,9 +139,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -162,9 +160,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -181,9 +177,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -204,9 +198,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -227,9 +219,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -246,9 +236,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
                 end
@@ -289,9 +277,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -312,9 +298,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -331,9 +315,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -354,9 +336,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -377,9 +357,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -396,9 +374,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -424,9 +400,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -447,9 +421,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -466,9 +438,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -489,9 +459,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -512,9 +480,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -531,9 +497,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -575,9 +539,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -598,9 +560,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -617,9 +577,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -640,9 +598,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -663,9 +619,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -682,9 +636,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -725,9 +677,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -748,9 +698,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(8_850)
-                  expect(service_call.amount_cents).to eq(9_000)
+                  expect(service_call.amount_cents).to eq(8_850)
                 end
               end
 
@@ -767,9 +715,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -790,9 +736,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -813,9 +757,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(8_850)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(8_850)
                 end
               end
 
@@ -832,9 +774,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
             end
@@ -860,9 +800,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -883,9 +821,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(8_850)
-                  expect(service_call.amount_cents).to eq(9_000)
+                  expect(service_call.amount_cents).to eq(8_850)
                 end
               end
 
@@ -902,9 +838,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -925,9 +859,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
 
@@ -948,9 +880,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(8_850)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(8_850)
                 end
               end
 
@@ -967,9 +897,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                 end
 
                 it "returns result with amount cents" do
-                  # TODO: include fixed charge in min commitment calculations
-                  # expect(service_call.amount_cents).to eq(9_350)
-                  expect(service_call.amount_cents).to eq(9_500)
+                  expect(service_call.amount_cents).to eq(9_350)
                 end
               end
             end
@@ -1010,9 +938,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1033,9 +959,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1052,9 +976,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1075,9 +997,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1098,9 +1018,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1117,9 +1035,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -1161,9 +1077,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1184,9 +1098,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1203,9 +1115,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1226,9 +1136,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1249,9 +1157,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1268,9 +1174,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -1312,9 +1216,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1335,9 +1237,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1354,9 +1254,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1377,9 +1275,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -1400,9 +1296,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -1419,9 +1313,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -1468,9 +1360,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -1491,9 +1381,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1510,9 +1398,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -1533,9 +1419,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -1556,9 +1440,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1575,9 +1457,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
                 end
@@ -1641,9 +1521,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1664,9 +1542,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(8_500)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -1683,9 +1559,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1706,9 +1580,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1729,9 +1601,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -1748,9 +1618,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
                 end
@@ -1775,9 +1643,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(8_973)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -1798,9 +1664,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_323)
-                      expect(service_call.amount_cents).to eq(8_473)
+                      expect(service_call.amount_cents).to eq(8_323)
                     end
                   end
 
@@ -1817,9 +1681,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(8_973)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -1840,9 +1702,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(8_973)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -1863,9 +1723,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_323)
-                      expect(service_call.amount_cents).to eq(8_973)
+                      expect(service_call.amount_cents).to eq(8_323)
                     end
                   end
 
@@ -1882,9 +1740,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(8_973)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
                 end
@@ -1948,9 +1804,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -1971,9 +1825,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(8_700)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -1990,9 +1842,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2013,9 +1863,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2036,9 +1884,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -2055,9 +1901,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
                 end
@@ -2082,9 +1926,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(9_173)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -2105,9 +1947,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_323)
-                      expect(service_call.amount_cents).to eq(8_673)
+                      expect(service_call.amount_cents).to eq(8_323)
                     end
                   end
 
@@ -2124,9 +1964,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(9_173)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -2147,9 +1985,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(9_173)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
 
@@ -2170,9 +2006,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_323)
-                      expect(service_call.amount_cents).to eq(9_173)
+                      expect(service_call.amount_cents).to eq(8_323)
                     end
                   end
 
@@ -2189,9 +2023,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_823)
-                      expect(service_call.amount_cents).to eq(9_173)
+                      expect(service_call.amount_cents).to eq(8_823)
                     end
                   end
                 end
@@ -2235,9 +2067,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -2258,9 +2088,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2277,9 +2105,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -2300,9 +2126,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
 
@@ -2323,9 +2147,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2342,9 +2164,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(9_350)
-                      expect(service_call.amount_cents).to eq(9_500)
+                      expect(service_call.amount_cents).to eq(9_350)
                     end
                   end
                 end
@@ -2408,9 +2228,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2431,9 +2249,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(8_500)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -2450,9 +2266,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2473,9 +2287,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2496,9 +2308,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -2515,9 +2325,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_000)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
                 end
@@ -2542,9 +2350,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(8_945)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2565,9 +2371,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_295)
-                      expect(service_call.amount_cents).to eq(8_445)
+                      expect(service_call.amount_cents).to eq(8_295)
                     end
                   end
 
@@ -2584,9 +2388,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(8_945)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2607,9 +2409,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(8_945)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2630,9 +2430,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_295)
-                      expect(service_call.amount_cents).to eq(8_945)
+                      expect(service_call.amount_cents).to eq(8_295)
                     end
                   end
 
@@ -2649,9 +2447,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(8_945)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
                 end
@@ -2715,9 +2511,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2738,9 +2532,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(8_700)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -2757,9 +2549,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2780,9 +2570,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
 
@@ -2803,9 +2591,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_350)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_350)
                     end
                   end
 
@@ -2822,9 +2608,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_850)
-                      expect(service_call.amount_cents).to eq(9_200)
+                      expect(service_call.amount_cents).to eq(8_850)
                     end
                   end
                 end
@@ -2849,9 +2633,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(9_145)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2872,9 +2654,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_295)
-                      expect(service_call.amount_cents).to eq(8_645)
+                      expect(service_call.amount_cents).to eq(8_295)
                     end
                   end
 
@@ -2891,9 +2671,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(9_145)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2914,9 +2692,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(9_145)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
 
@@ -2937,9 +2713,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_295)
-                      expect(service_call.amount_cents).to eq(9_145)
+                      expect(service_call.amount_cents).to eq(8_295)
                     end
                   end
 
@@ -2956,9 +2730,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(8_795)
-                      expect(service_call.amount_cents).to eq(9_145)
+                      expect(service_call.amount_cents).to eq(8_795)
                     end
                   end
                 end
@@ -3001,9 +2773,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3024,9 +2794,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3043,9 +2811,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3066,9 +2832,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3089,9 +2853,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3108,9 +2870,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -3152,9 +2912,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3175,9 +2933,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3194,9 +2950,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3217,9 +2971,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3240,9 +2992,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3259,9 +3009,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -3303,9 +3051,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3326,9 +3072,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_000)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3345,9 +3089,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3368,9 +3110,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
 
@@ -3391,9 +3131,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(8_850)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(8_850)
                   end
                 end
 
@@ -3410,9 +3148,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                   end
 
                   it "returns result with amount cents" do
-                    # TODO: include fixed charge in min commitment calculations
-                    # expect(service_call.amount_cents).to eq(9_350)
-                    expect(service_call.amount_cents).to eq(9_500)
+                    expect(service_call.amount_cents).to eq(9_350)
                   end
                 end
               end
@@ -3667,9 +3403,7 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
                     end
 
                     it "returns result with amount cents" do
-                      # TODO: include fixed charge in min commitment calculations
-                      # expect(service_call.amount_cents).to eq(514)
-                      expect(service_call.amount_cents).to eq(1_714)
+                      expect(service_call.amount_cents).to eq(514)
                     end
                   end
                 end

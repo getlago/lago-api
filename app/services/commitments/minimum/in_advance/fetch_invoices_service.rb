@@ -23,9 +23,7 @@ module Commitments
         end
 
         def fetch_invoices
-          # TODO: Re-enable fixed charges for minimum commitments
-          # unless plan.charges_or_fixed_charges_billed_in_monthly_split_intervals?
-          unless plan.charges_billed_in_monthly_split_intervals?
+          unless plan.charges_or_fixed_charges_billed_in_monthly_split_intervals?
             return Invoice.where(id: invoice_subscription.invoice_id)
           end
 
@@ -42,14 +40,12 @@ module Commitments
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
-              "charges_from_datetime >= ? AND charges_to_datetime <= ?",
-              # TODO: Re-enable fixed charges for minimum commitments
-              # "(charges_from_datetime >= ? AND charges_to_datetime <= ?)" \
-              # "OR (fixed_charges_from_datetime >= ? AND fixed_charges_to_datetime <= ?)",
+              "(charges_from_datetime >= ? AND charges_to_datetime <= ?)" \
+              "OR (fixed_charges_from_datetime >= ? AND fixed_charges_to_datetime <= ?)",
+              ds.previous_beginning_of_period,
+              ds.end_of_period,
               ds.previous_beginning_of_period,
               ds.end_of_period
-              # ds.previous_beginning_of_period,
-              # ds.end_of_period
             ).select(:invoice_id)
 
           Invoice.where(id: invoice_ids_query)
