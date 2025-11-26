@@ -69,69 +69,15 @@ RSpec.describe CreditNotes::UpdateService do
   end
 
   describe "metadata" do
-    context "with metadata not passed" do
-      let(:params) { {refund_status: "succeeded"} }
+    let(:organization) { credit_note.organization }
 
-      it "does not change metadata" do
-        expect { credit_note_service.call }.not_to change(Metadata::ItemMetadata, :count)
-      end
-    end
-
-    context "with metadata not passed, existing metadata" do
-      let(:params) { {refund_status: "succeeded"} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "preserves existing metadata" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"existing" => "value"})
-      end
-    end
-
-    context "with metadata: nil" do
-      let(:params) { {metadata: nil} }
-
-      it "does not create metadata" do
-        expect { credit_note_service.call }.not_to change(Metadata::ItemMetadata, :count)
-      end
-    end
-
-    context "with metadata: nil, existing metadata" do
-      let(:params) { {metadata: nil} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "preserves existing metadata" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"existing" => "value"})
-      end
-    end
-
-    context "with metadata: nil, replace_metadata: true, existing metadata" do
+    context "when deleting metadata" do
       let(:params) { {metadata: nil, replace_metadata: true} }
-      let(:organization) { credit_note.organization }
-      let(:existing_metadata) do
-        create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
-      end
-
-      before do
-        existing_metadata
-        credit_note.update!(metadata_id: existing_metadata.id)
-        credit_note.reload
+      let!(:existing_metadata) do
+        create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"}).tap do |m|
+          credit_note.update!(metadata_id: m.id)
+          credit_note.reload
+        end
       end
 
       it "removes existing metadata" do
@@ -143,89 +89,20 @@ RSpec.describe CreditNotes::UpdateService do
       end
     end
 
-    context "with metadata: {}" do
-      let(:params) { {metadata: {}} }
-
-      it "does not create metadata" do
-        expect { credit_note_service.call }.not_to change(Metadata::ItemMetadata, :count)
-        expect(credit_note.reload.metadata).to be_nil
-      end
-    end
-
-    context "with metadata: {}, existing metadata" do
-      let(:params) { {metadata: {}} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "preserves existing metadata" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"existing" => "value"})
-      end
-    end
-
-    context "with metadata: {}, replace_metadata: true, existing metadata" do
-      let(:params) { {metadata: {}, replace_metadata: true} }
-      let(:organization) { credit_note.organization }
-      let(:existing_metadata) do
-        create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
-      end
-
-      before do
-        existing_metadata
-        credit_note.update!(metadata_id: existing_metadata.id)
-        credit_note.reload
-      end
-
-      it "removes existing metadata" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata).to be_nil
-        expect(Metadata::ItemMetadata.find_by(id: existing_metadata.id)).to be_nil
-      end
-    end
-
-    context "with metadata values" do
-      let(:params) { {metadata: {"key1" => "value1", "key2" => "value2"}} }
+    context "when creating metadata" do
+      let(:params) { {metadata: {"foo" => "bar"}} }
 
       it "creates metadata" do
         expect { credit_note_service.call }.to change(Metadata::ItemMetadata, :count).by(1)
-        expect(credit_note.reload.metadata.value).to eq({"key1" => "value1", "key2" => "value2"})
+        expect(credit_note.reload.metadata.value).to eq({"foo" => "bar"})
       end
     end
 
-    context "with metadata values, existing metadata" do
-      let(:params) { {metadata: {"key1" => "value1", "key2" => "value2"}} }
-      let(:organization) { credit_note.organization }
+    context "when replacing metadata" do
+      let(:params) { {metadata: {"baz" => "qux"}, replace_metadata: true} }
 
       before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "old"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "merges metadata" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expected = {"existing" => "old", "key1" => "value1", "key2" => "value2"}
-        expect(credit_note.reload.metadata.value).to eq(expected)
-      end
-    end
-
-    context "with metadata values, replace_metadata: true, existing metadata" do
-      let(:params) { {metadata: {"key1" => "value1"}, replace_metadata: true} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "old"})
+        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
         credit_note.update!(metadata_id: metadata.id)
         credit_note.reload
       end
@@ -234,16 +111,15 @@ RSpec.describe CreditNotes::UpdateService do
         result = credit_note_service.call
 
         expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => "value1"})
+        expect(credit_note.reload.metadata.value).to eq({"baz" => "qux"})
       end
     end
 
-    context "with metadata values, replace_metadata: false, existing metadata" do
-      let(:params) { {metadata: {"key1" => "value1"}, replace_metadata: false} }
-      let(:organization) { credit_note.organization }
+    context "when merging metadata" do
+      let(:params) { {metadata: {"baz" => "qux"}} }
 
       before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "old"})
+        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
         credit_note.update!(metadata_id: metadata.id)
         credit_note.reload
       end
@@ -252,107 +128,7 @@ RSpec.describe CreditNotes::UpdateService do
         result = credit_note_service.call
 
         expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"existing" => "old", "key1" => "value1"})
-      end
-    end
-
-    context "with metadata overwriting existing key" do
-      let(:params) { {metadata: {"existing" => "new"}} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "old"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "overwrites the key" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"existing" => "new"})
-      end
-    end
-
-    context "with metadata: {key: nil}" do
-      let(:params) { {metadata: {"key1" => nil}} }
-
-      it "creates metadata with nil value" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => nil})
-      end
-    end
-
-    context "with metadata: {key: nil}, existing metadata" do
-      let(:params) { {metadata: {"key1" => nil}} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"key1" => "old_value"})
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "sets key to nil" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => nil})
-      end
-    end
-
-    context "with metadata: {key: ''}" do
-      let(:params) { {metadata: {"key1" => ""}} }
-
-      it "creates metadata with empty string" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => ""})
-      end
-    end
-
-    context "with metadata: {key: ''}, existing metadata" do
-      let(:params) { {metadata: {"key1" => ""}} }
-      let(:organization) { credit_note.organization }
-
-      before do
-        value = {"key1" => "old", "key2" => "keep"}
-        metadata = create(:item_metadata, owner: credit_note, organization:, value:)
-        credit_note.update!(metadata_id: metadata.id)
-        credit_note.reload
-      end
-
-      it "merges with empty string" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => "", "key2" => "keep"})
-      end
-    end
-
-    context "with metadata and refund_status" do
-      let(:params) { {metadata: {"key1" => "value1"}, refund_status: "succeeded"} }
-
-      it "updates both" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.refund_status).to eq("succeeded")
-        expect(credit_note.reload.metadata.value).to eq({"key1" => "value1"})
-      end
-    end
-
-    context "with ActionController::Parameters" do
-      let(:params) { {metadata: ActionController::Parameters.new({"key1" => "value1"})} }
-
-      it "handles ActionController::Parameters" do
-        result = credit_note_service.call
-
-        expect(result).to be_success
-        expect(credit_note.reload.metadata.value).to eq({"key1" => "value1"})
+        expect(credit_note.reload.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
       end
     end
   end

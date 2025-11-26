@@ -27,7 +27,6 @@ module CreditNotes
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.new(
-          id: SecureRandom.uuid,
           organization_id: invoice.organization_id,
           customer: invoice.customer,
           invoice:,
@@ -44,16 +43,11 @@ module CreditNotes
           status: invoice.voided? ? "finalized" : invoice.status # credit notes dont have void state
         )
 
-        if metadata_value
-          credit_note.metadata = Metadata::ItemMetadata.new(
-            id: SecureRandom.uuid,
-            organization_id: credit_note.organization_id,
-            value: metadata_value
-          )
-          credit_note.metadata.save! if context != :preview
-        end
+        update_metadata!
 
-        credit_note.save! if context != :preview
+        # Added for visibility of what's going on
+        # (it is expected, though, that the `update_metadata!` saves the credit note by itself)
+        credit_note.save! if context != :preview && credit_note.changed?
 
         create_items
         result.raise_if_error!
@@ -274,6 +268,11 @@ module CreditNotes
       return nil unless invoice.credit? && associated_wallet.present?
 
       WalletCredit.from_amount_cents(wallet: associated_wallet, amount_cents: credit_note.refund_amount_cents)
+    end
+
+    def update_metadata!
+      value = metadata_value&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
+      Metadata::UpdateItemService.call!(credit_note, value:, replace: true, preview: context == :preview)
     end
   end
 end
