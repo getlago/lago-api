@@ -172,17 +172,28 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           )
         end
 
+        # { DateTime.new(2025, 3, 01) }
         travel_to((subscription_time + 12.months).beginning_of_month) do
           perform_billing
         end
 
+        # { DateTime.new(2025, 01, 01) }
         travel_to((subscription_time + 1.year).beginning_of_year) do
           perform_billing
         end
       end
 
       it "creates an invoice with minimum commitment fee" do
+        # { DateTime.new(2025, 01, 01) }
         travel_to((subscription_time + 1.year).beginning_of_year) do
+          # The problem is that we have a uniqueness on charges_from_datetime and charges_to_datetime
+          # AND fixed_charges_from_datetime and fixed_charges_to_datetime
+          # as result, we're trying to create an invoice with different charge boundaries, but fixed_charge boundaries
+          # already exist
+          # we need to create a lot of tests with sub and all charges billed yearly
+          # sub yearly and fixed charges billed monthly
+          # sub yearly and charges billed monthly
+          # sub yearly and charges and fixed_charges billed monthly
           aggregate_failures do
             expect(invoice.fees.commitment.count).to eq(1)
             expect(invoice.fees.commitment.sum(:amount_cents)).to eq(808_186)
