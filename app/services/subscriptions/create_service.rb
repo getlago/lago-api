@@ -100,7 +100,7 @@ module Subscriptions
 
     def should_be_billed_today?(sub)
       sub.active? && sub.subscription_at.today? &&
-        sub.should_be_billed_when_started? &&
+        sub.billed_on_activation? &&
         !sub.in_trial_period?
     end
 

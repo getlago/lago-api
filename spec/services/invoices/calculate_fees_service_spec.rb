@@ -1825,7 +1825,7 @@ RSpec.describe Invoices::CalculateFeesService do
       context "when fixed_charge is pay in advance" do
         let(:fixed_charge_pay_in_advance) { true }
 
-        it "creates a subscription fee, does not create charge fee, creates fixed charge fee" do
+        it "does not create a subscription fee, does not create charge fee, creates fixed charge fee" do
           result = invoice_service.call
 
           expect(result.invoice.fees.subscription.count).to eq(0)

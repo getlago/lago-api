@@ -723,12 +723,12 @@ RSpec.describe Subscription do
     end
   end
 
-  describe "#should_be_billed_when_started?" do
+  describe "#billed_on_activation?" do
     context "when plan is not pay in advance" do
       let(:plan) { create(:plan) }
 
       it "returns false" do
-        expect(subscription.should_be_billed_when_started?).to be(false)
+        expect(subscription.billed_on_activation?).to be(false)
       end
 
       context "when plan has fixed_charges" do
@@ -738,14 +738,14 @@ RSpec.describe Subscription do
         before { fixed_charge }
 
         it "returns false" do
-          expect(subscription.should_be_billed_when_started?).to be(false)
+          expect(subscription.billed_on_activation?).to be(false)
         end
 
         context "when fixed_charge is pay_in_advance" do
           let(:pay_in_advance) { true }
 
           it "return true" do
-            expect(subscription.should_be_billed_when_started?).to be(true)
+            expect(subscription.billed_on_activation?).to be(true)
           end
         end
       end
@@ -755,7 +755,7 @@ RSpec.describe Subscription do
       let(:plan) { create(:plan, :pay_in_advance) }
 
       it "returns true" do
-        expect(subscription.should_be_billed_when_started?).to be(true)
+        expect(subscription.billed_on_activation?).to be(true)
       end
 
       context "when plan has fixed_charges" do
@@ -765,14 +765,14 @@ RSpec.describe Subscription do
         before { fixed_charge }
 
         it "returns true" do
-          expect(subscription.should_be_billed_when_started?).to be(true)
+          expect(subscription.billed_on_activation?).to be(true)
         end
 
         context "when fixed_charge is pay_in_advance" do
           let(:pay_in_advance) { true }
 
           it "return true" do
-            expect(subscription.should_be_billed_when_started?).to be(true)
+            expect(subscription.billed_on_activation?).to be(true)
           end
         end
       end

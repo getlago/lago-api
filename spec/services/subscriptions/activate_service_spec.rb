@@ -23,7 +23,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         .with(an_instance_of(Subscription), "subscription.started").exactly(3).times
     end
 
-    context "when plan is not pay in advance has fixed charges" do
+    context "when plan is not pay in advance and has fixed charges" do
       let(:plan) { create(:plan) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
