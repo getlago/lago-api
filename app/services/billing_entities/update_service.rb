@@ -55,7 +55,7 @@ module BillingEntities
 
         handle_eu_tax_management if params.key?(:eu_tax_management)
 
-        BillingEntities::UpdateInvoiceIssuingDateSettingsService.call(billing_entity:, params:)
+        BillingEntities::UpdateInvoiceIssuingDateSettingsService.call(billing_entity:, params: billing)
 
         if params.key?(:net_payment_term)
           # note: this service only assigns new net_payment_term to the billing_entity but doesn't save it

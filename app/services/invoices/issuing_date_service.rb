@@ -46,9 +46,5 @@ module Invoices
     def adjustment
       customer_settings[:subscription_invoice_issuing_date_adjustment] || billing_entity_settings[:subscription_invoice_issuing_date_adjustment]
     end
-
-    def align_with_finalization_date?
-      adjustment == "align_with_finalization_date"
-    end
   end
 end
