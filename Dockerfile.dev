@@ -2,6 +2,7 @@ FROM ruby:3.4.7-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=14
+ENV BUNDLE_PATH=/app/vendor/bundle
 
 RUN apt update -qq && \
   apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev -y && \
@@ -9,9 +10,9 @@ RUN apt update -qq && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
 RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_arm64.tar.xz -o pdfcpu.tar.xz \
-    && tar -xf pdfcpu.tar.xz \
-    && install -m 755 pdfcpu_0.11.0_Linux_arm64/pdfcpu /usr/local/bin/ \
-    && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_arm64
+  && tar -xf pdfcpu.tar.xz \
+  && install -m 755 pdfcpu_0.11.0_Linux_arm64/pdfcpu /usr/local/bin/ \
+  && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_arm64
 
 ENV BUNDLER_VERSION='2.6.8'
 ENV PATH="$PATH:/root/.cargo/bin/"

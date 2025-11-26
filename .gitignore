@@ -44,3 +44,5 @@ LAGO_VERSION
 .vscode
 .zed
 .idea
+
+/vendor/bundle
