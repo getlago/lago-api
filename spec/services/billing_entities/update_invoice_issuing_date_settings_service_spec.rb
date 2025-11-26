@@ -12,11 +12,9 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
   let(:customer) { create(:customer, organization:, net_payment_term: 5) }
   let(:params) do
     {
-      billing_configuration: {
-        subscription_invoice_issuing_date_anchor: "current_period_end",
-        subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
-        invoice_grace_period: 15
-      }
+      subscription_invoice_issuing_date_anchor: "current_period_end",
+      subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
+      invoice_grace_period: 15
     }
   end
 

@@ -31,18 +31,16 @@ module BillingEntities
     attr_reader :billing_entity, :params, :previous_issuing_date_settings
 
     def set_issuing_date_settings
-      billing_configuration = params[:billing_configuration]&.to_h || {}
-
-      if billing_configuration.key?(:subscription_invoice_issuing_date_anchor)
-        billing_entity.subscription_invoice_issuing_date_anchor = billing_configuration[:subscription_invoice_issuing_date_anchor]
+      if params.key?(:subscription_invoice_issuing_date_anchor)
+        billing_entity.subscription_invoice_issuing_date_anchor = params[:subscription_invoice_issuing_date_anchor]
       end
 
-      if billing_configuration.key?(:subscription_invoice_issuing_date_adjustment)
-        billing_entity.subscription_invoice_issuing_date_adjustment = billing_configuration[:subscription_invoice_issuing_date_adjustment]
+      if params.key?(:subscription_invoice_issuing_date_adjustment)
+        billing_entity.subscription_invoice_issuing_date_adjustment = params[:subscription_invoice_issuing_date_adjustment]
       end
 
-      if License.premium? && billing_configuration.key?(:invoice_grace_period)
-        billing_entity.invoice_grace_period = billing_configuration[:invoice_grace_period]
+      if License.premium? && params.key?(:invoice_grace_period)
+        billing_entity.invoice_grace_period = params[:invoice_grace_period]
       end
     end
   end
