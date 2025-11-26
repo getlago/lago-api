@@ -2319,9 +2319,11 @@ CREATE VIEW public.exports_charges AS
  SELECT c.organization_id,
     c.id AS lago_id,
     c.billable_metric_id AS lago_billable_metric_id,
+    c.plan_id AS lago_plan_id,
     c.invoice_display_name,
     c.created_at,
     c.updated_at,
+    c.deleted_at,
         CASE c.charge_model
             WHEN 0 THEN 'standard'::text
             WHEN 1 THEN 'graduated'::text
@@ -10193,6 +10195,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251126134516'),
 ('20251125174110'),
 ('20251121143459'),
 ('20251121113600'),
