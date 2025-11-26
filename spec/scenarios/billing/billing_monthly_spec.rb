@@ -144,7 +144,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(last_invoice.fees.fixed_charge.count).to eq(0)
       expect(last_invoice.fees.charge.count).to eq(0)
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.total_amount_cents).to eq((26.0 / 29 * 5_000_000).ceil)
+      expect(last_invoice.total_amount_cents).to eq((5_000_000 * 26.0 / 29).ceil)
 
       # check invoice_subscription
       last_invoice_inv_sub = last_invoice.invoice_subscriptions.first
@@ -176,9 +176,28 @@ describe "Billing Monthly Scenarios with all charges types" do
       # we should create invoices for received pay_in_advance charges:
       expect(subscription.reload.invoices.count).to eq(4)
       last_invoices = subscription.invoices.order(:created_at).last(2)
-      expect(last_invoices.map { |inv| inv.fees.charge.count }.uniq).to eq([1])
-      expect(last_invoices.map { |inv| inv.fees.charge.map(&:charge_id) }).to match_array([[charge_metered_not_prorated_in_advance.id], [charge_recurring_prorated_in_advance.id]])
-      expect(last_invoices.map { |inv| inv.total_amount_cents }.sort).to match_array([100000, 50000000])
+      expected_invoices_data = [
+        {
+          charge_count: 1,
+          charge_ids: [charge_metered_not_prorated_in_advance.id],
+          total_amount_cents: 100_000
+        },
+        {
+          charge_count: 1,
+          charge_ids: [charge_recurring_prorated_in_advance.id],
+          total_amount_cents: 50_000_000
+        }
+      ]
+
+      actual_invoices_data = last_invoices.map do |invoice|
+        {
+          charge_count: invoice.fees.charge.count,
+          charge_ids: invoice.fees.charge.pluck(:charge_id),
+          total_amount_cents: invoice.total_amount_cents
+        }
+      end
+
+      expect(actual_invoices_data).to match_array(expected_invoices_data)
 
       billing_time = DateTime.new(2024, 4, 1)
       travel_to(billing_time) do
@@ -190,24 +209,26 @@ describe "Billing Monthly Scenarios with all charges types" do
       # 0 is only for now!
       expect(last_invoice.fees.fixed_charge.count).to eq(0)
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
-      # ewhich we're chargin in_advance
+      # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(3)
       expect(last_invoice.fees.charge.map(&:charge_id)).to match_array([charge_metered_not_prorated_in_arrears.id, charge_recurring_prorated_in_arrears.id, charge_recurring_prorated_in_advance.id])
 
-      # check amounts by charges
-      metered_not_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_metered_not_prorated_in_arrears.id }
-      recurring_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_arrears.id }
-      recurring_prorated_advance_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_advance.id }
-      expect(metered_not_prorated_fee.amount_cents).to eq(10_000)
-      # this should be 500000 * 10 * 17/31,
-      # prorated_fee_amount = 2_741_935 - this is math correct, but service returns 2_741_940 because of rounding (10 * 17 / 31)...
-      prorated_fee_amount = 2_741_940
-      expect(recurring_prorated_fee.amount_cents).to eq(prorated_fee_amount)
-      expect(recurring_prorated_advance_fee.amount_cents).to eq(50_000_000)
+      # Note: prorated_fee_amount should be 500000 * 10 * 17/31,
+      # prorated_fee_amount = 2_741_935 - this is math correct, but service returns 2_741_940 because of rounding (10 * 17 / 31).
+      expected_charge_fees = [
+        {charge_id: charge_metered_not_prorated_in_arrears.id, amount_cents: 10_000},
+        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: 2_741_940},
+        {charge_id: charge_recurring_prorated_in_advance.id, amount_cents: 50_000_000}
+      ]
 
-      expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
-      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 50_000_000 + 10_000 + prorated_fee_amount)
+      actual_charge_fees = last_invoice.fees.charge.map do |fee|
+        {
+          charge_id: fee.charge_id,
+          amount_cents: fee.amount_cents
+        }
+      end
+
+      expect(actual_charge_fees).to match_array(expected_charge_fees)
 
       # travel to several dates in the next month and send usages
       [DateTime.new(2024, 4, 10), DateTime.new(2024, 4, 30)].each do |date|
@@ -231,9 +252,38 @@ describe "Billing Monthly Scenarios with all charges types" do
       # we should create invoices for received pay_in_advance charges:
       expect(subscription.reload.invoices.count).to eq(9)
       last_invoices = subscription.invoices.order(:created_at).last(4)
-      expect(last_invoices.map { |inv| inv.fees.charge.count }.uniq).to eq([1])
-      expect(last_invoices.map { |inv| inv.fees.charge.map(&:charge_id) }.uniq).to match_array([[charge_metered_not_prorated_in_advance.id], [charge_recurring_prorated_in_advance.id]])
-      expect(last_invoices.map { |inv| inv.total_amount_cents }.sort).to match_array([200000, 200000, 100000000, 100000000])
+      expected_invoices_data = [
+        {
+          charge_count: 1,
+          charge_ids: [charge_metered_not_prorated_in_advance.id],
+          total_amount_cents: 200_000
+        },
+        {
+          charge_count: 1,
+          charge_ids: [charge_recurring_prorated_in_advance.id],
+          total_amount_cents: 100_000_000
+        },
+        {
+          charge_count: 1,
+          charge_ids: [charge_metered_not_prorated_in_advance.id],
+          total_amount_cents: 200_000
+        },
+        {
+          charge_count: 1,
+          charge_ids: [charge_recurring_prorated_in_advance.id],
+          total_amount_cents: 100_000_000
+        }
+      ]
+
+      actual_invoices_data = last_invoices.map do |invoice|
+        {
+          charge_count: invoice.fees.charge.count,
+          charge_ids: invoice.fees.charge.pluck(:charge_id),
+          total_amount_cents: invoice.total_amount_cents
+        }
+      end
+
+      expect(actual_invoices_data).to match_array(expected_invoices_data)
 
       billing_time = DateTime.new(2024, 5, 1)
       travel_to(billing_time) do
@@ -245,23 +295,32 @@ describe "Billing Monthly Scenarios with all charges types" do
       # 0 is only for now!
       expect(last_invoice.fees.fixed_charge.count).to eq(0)
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
-      # ewhich we're chargin in_advance
+      # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(3)
       expect(last_invoice.fees.charge.map(&:charge_id)).to match_array([charge_metered_not_prorated_in_arrears.id, charge_recurring_prorated_in_arrears.id, charge_recurring_prorated_in_advance.id])
 
       # check amounts by charges
-      metered_not_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_metered_not_prorated_in_arrears.id }
-      recurring_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_arrears.id }
-      recurring_prorated_advance_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_advance.id }
-      expect(metered_not_prorated_fee.amount_cents).to eq(40_000)
-      # this should be current usage: 500000 * 20 * 21/30 + 500000 * 20 * 1/30 + persisted usage:  500000 * 10
+      # prorated amount is: current usage: 500000 * 20 * 21/30 + 500000 * 20 * 1/30 + persisted usage:  500000 * 10
       prorated_fee_amount = 7_333_335 + 5000000 # 12_333_333
-      expect(recurring_prorated_fee.amount_cents).to eq(prorated_fee_amount)
-      # 200_000_000 new usage + 50_000_000 accumulatedfrom previous month
-      expect(recurring_prorated_advance_fee.amount_cents).to eq(250_000_000)
+
+      expected_charge_fees = [
+        {charge_id: charge_metered_not_prorated_in_arrears.id, amount_cents: 40_000},
+        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: prorated_fee_amount},
+        # 200_000_000 new usage + 50_000_000 accumulatedfrom previous month
+        {charge_id: charge_recurring_prorated_in_advance.id, amount_cents: 250_000_000}
+      ]
+
+      actual_charge_fees = last_invoice.fees.charge.map do |fee|
+        {
+          charge_id: fee.charge_id,
+          amount_cents: fee.amount_cents
+        }
+      end
+
+      expect(actual_charge_fees).to match_array(expected_charge_fees)
 
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 40_000 + prorated_fee_amount)
 
       # month without any events
@@ -274,22 +333,35 @@ describe "Billing Monthly Scenarios with all charges types" do
       # 0 is only for now!
       expect(last_invoice.fees.fixed_charge.count).to eq(0)
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
-      # ewhich we're chargin in_advance
+      # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(2)
       expect(last_invoice.fees.charge.map(&:charge_id)).to match_array([charge_recurring_prorated_in_arrears.id, charge_recurring_prorated_in_advance.id])
 
       # check amounts by charges
-      metered_not_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_metered_not_prorated_in_arrears.id }
-      recurring_prorated_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_arrears.id }
-      recurring_prorated_advance_fee = last_invoice.fees.charge.find { |fee| fee.charge_id == charge_recurring_prorated_in_advance.id }
-      expect(metered_not_prorated_fee).to eq(nil)
-      # 50000 * (10 + 20 + 20) = 2500000
-      expect(recurring_prorated_fee.amount_cents).to eq(25_000_000)
-      # 200_000_000 new usage + 50_000_000 accumulatedfrom previous month
-      expect(recurring_prorated_advance_fee.amount_cents).to eq(250_000_000)
+      expected_charge_fees = [
+        {
+          charge_id: charge_recurring_prorated_in_arrears.id,
+          # 50_000 * (10 + 20 + 20) = 25_000_000
+          amount_cents: 25_000_000
+        },
+        {
+          charge_id: charge_recurring_prorated_in_advance.id,
+          # 200_000_000 new usage + 50_000_000 accumulated from previous month
+          amount_cents: 250_000_000
+        }
+      ]
+
+      actual_charge_fees = last_invoice.fees.charge.map do |fee|
+        {
+          charge_id: fee.charge_id,
+          amount_cents: fee.amount_cents
+        }
+      end
+
+      expect(actual_charge_fees).to match_array(expected_charge_fees)
 
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
+      expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000)
     end
   end
