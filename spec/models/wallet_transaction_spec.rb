@@ -15,6 +15,8 @@ RSpec.describe WalletTransaction do
     it { is_expected.to belong_to(:invoice).optional }
     it { is_expected.to belong_to(:credit_note).optional }
     it { is_expected.to belong_to(:organization) }
+    it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("WalletTransaction::AppliedInvoiceCustomSection").dependent(:destroy) }
+    it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
   end
 
   describe "enums" do

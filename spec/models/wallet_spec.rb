@@ -7,6 +7,11 @@ RSpec.describe Wallet do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "associations" do
+    it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy) }
+    it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+  end
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end

@@ -39,6 +39,8 @@ RSpec.describe Subscription do
       expect(subject).to belong_to(:previous_subscription).optional
       expect(subject).to belong_to(:organization)
       expect(subject).to have_one(:billing_entity).through(:customer)
+      expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Subscription::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_many(:next_subscriptions).class_name("Subscription").with_foreign_key(:previous_subscription_id)
       expect(subject).to have_many(:events)
       expect(subject).to have_many(:invoice_subscriptions)
