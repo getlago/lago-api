@@ -10,6 +10,13 @@ class WalletTransaction < ApplicationRecord
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
 
+  has_many :applied_invoice_custom_sections,
+    class_name: "WalletTransaction::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+
   STATUSES = [
     :pending,
     :settled,
@@ -83,6 +90,7 @@ end
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
 #  settled_at                          :datetime
+#  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  source                              :integer          default("manual"), not null
 #  status                              :integer          not null
 #  transaction_status                  :integer          default("purchased"), not null

@@ -19,6 +19,13 @@ class Wallet < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
+  has_many :applied_invoice_custom_sections,
+    class_name: "Wallet::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+
   monetize :balance_cents
   monetize :consumed_amount_cents
   monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
@@ -124,6 +131,7 @@ end
 #  priority                            :integer          default(50), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
+#  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  status                              :integer          not null
 #  terminated_at                       :datetime
 #  created_at                          :datetime         not null
