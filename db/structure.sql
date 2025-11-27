@@ -869,6 +869,7 @@ DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
 DROP TABLE IF EXISTS public.wallet_transactions;
+DROP VIEW IF EXISTS public.exports_usage_thresholds;
 DROP VIEW IF EXISTS public.exports_taxes;
 DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
@@ -3363,6 +3364,22 @@ CREATE VIEW public.exports_taxes AS
     tx.created_at,
     tx.updated_at
    FROM public.taxes tx;
+
+
+--
+-- Name: exports_usage_thresholds; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_usage_thresholds AS
+ SELECT ut.organization_id,
+    ut.plan_id,
+    ut.id AS lago_id,
+    ut.amount_cents,
+    ut.recurring,
+    ut.threshold_display_name,
+    ut.created_at,
+    ut.updated_at AS deleted_at
+   FROM public.usage_thresholds ut;
 
 
 --
@@ -10223,6 +10240,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251127123135'),
 ('20251126135708'),
 ('20251126134516'),
 ('20251125174110'),
