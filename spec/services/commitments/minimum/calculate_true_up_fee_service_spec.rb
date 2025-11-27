@@ -3776,6 +3776,369 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
         context "when subscription is calendar" do
           let(:billing_time) { :calendar }
 
+          context "when plan has yearly interval" do
+            let(:interval) { :yearly }
+            let(:commitment_amount_cents) { 10_000 }
+            let(:subscription_at) { DateTime.parse("2023-03-15T00:00:00") }
+
+            # Year 1 (partial): Mar 15, 2023 - Dec 31, 2023 (subscription started mid-year)
+            # Year 2 (full): Jan 1, 2024 - Dec 31, 2024
+            # Commitment is evaluated at year 2, looking at year 1's fees
+
+            context "when there is no previous invoice subscription" do
+              # First invoice of subscription - no commitment fee should be charged
+              let(:from_datetime) { DateTime.parse("2023-03-15T00:00:00") }
+              let(:to_datetime) { DateTime.parse("2023-12-31T23:59:59.999") }
+              let(:charges_from_datetime) { DateTime.parse("2023-03-15T00:00:00") }
+              let(:charges_to_datetime) { DateTime.parse("2023-12-31T23:59:59.999") }
+              let(:fixed_charges_from_datetime) { DateTime.parse("2023-03-15T00:00:00") }
+              let(:fixed_charges_to_datetime) { DateTime.parse("2023-12-31T23:59:59.999") }
+              let(:timestamp) { DateTime.parse("2024-01-01T10:00:00") }
+
+              context "with charge fees" do
+                before do
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 2000,
+                    properties: {
+                      charges_from_datetime: invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: invoice_subscription.charges_to_datetime
+                    }
+                  )
+
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: false,
+                    charge: create(:standard_charge),
+                    amount_cents: 1500,
+                    properties: {
+                      charges_from_datetime: invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: invoice_subscription.charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns zero (no commitment evaluation on first invoice)" do
+                  expect(service_call.amount_cents).to eq(0)
+                end
+              end
+
+              context "with fixed charge fees" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 2000,
+                    properties: {
+                      fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+                      fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
+                    }
+                  )
+
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: false,
+                    fixed_charge:,
+                    amount_cents: 1500,
+                    properties: {
+                      fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+                      fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns zero (no commitment evaluation on first invoice)" do
+                  expect(service_call.amount_cents).to eq(0)
+                end
+              end
+            end
+
+            context "when there is a previous invoice subscription" do
+              # Second invoice - commitment for year 1 is evaluated
+              # Previous period (year 1): Mar 15, 2023 - Dec 31, 2023 (292 days out of 365)
+              # Current period (year 2): Jan 1, 2024 - Dec 31, 2024
+
+              let(:previous_invoice_subscription) do
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  from_datetime: DateTime.parse("2023-03-15T00:00:00"),
+                  to_datetime: DateTime.parse("2023-12-31T23:59:59.999"),
+                  charges_from_datetime: DateTime.parse("2023-03-15T00:00:00"),
+                  charges_to_datetime: DateTime.parse("2023-12-31T23:59:59.999"),
+                  fixed_charges_from_datetime: DateTime.parse("2023-03-15T00:00:00"),
+                  fixed_charges_to_datetime: DateTime.parse("2023-12-31T23:59:59.999"),
+                  timestamp: DateTime.parse("2023-03-15T10:00:00")
+                )
+              end
+
+              let(:from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+              let(:to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+              let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+              let(:charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+              let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+              let(:fixed_charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+              let(:timestamp) { DateTime.parse("2024-01-01T10:00:00") }
+
+              # Proration: 292 days (Mar 15 - Dec 31) / 365 days (full year) = 292/365 ≈ 0.8
+              # Prorated commitment: 10000 * 292/365 = 8000
+
+              # Subscription fee on previous invoice (500) - common to all scenarios
+              before do
+                create(
+                  :fee,
+                  subscription: previous_invoice_subscription.subscription,
+                  invoice: previous_invoice_subscription.invoice,
+                  amount_cents: 500,
+                  properties: {
+                    from_datetime: previous_invoice_subscription.from_datetime,
+                    to_datetime: previous_invoice_subscription.to_datetime
+                  }
+                )
+              end
+
+              context "when fees total amount is greater or equal than the prorated commitment" do
+                before do
+                  # In-advance charge (4000) + arrears charge (4000) = 8000 + 500 sub = 8500 >= 8000
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 4000,
+                    properties: {
+                      charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: previous_invoice_subscription.charges_to_datetime
+                    }
+                  )
+
+                  create(
+                    :charge_fee,
+                    invoice: invoice_subscription.invoice,
+                    subscription:,
+                    pay_in_advance: false,
+                    charge: create(:standard_charge),
+                    amount_cents: 4000,
+                    properties: {
+                      charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: previous_invoice_subscription.charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns zero" do
+                  # fees = 500 (subscription) + 4000 (in-advance) + 4000 (arrears) = 8500 >= 8000
+                  expect(service_call.amount_cents).to eq(0)
+                end
+              end
+
+              context "when fees total amount is smaller than the prorated commitment" do
+                before do
+                  # In-advance charge (1500) + arrears charge (1000) = 2500 + 500 sub = 3000 < 8000
+                  create(
+                    :charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    charge: create(:standard_charge, :pay_in_advance),
+                    amount_cents: 1500,
+                    properties: {
+                      charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: previous_invoice_subscription.charges_to_datetime
+                    }
+                  )
+
+                  create(
+                    :charge_fee,
+                    invoice: invoice_subscription.invoice,
+                    subscription:,
+                    pay_in_advance: false,
+                    charge: create(:standard_charge),
+                    amount_cents: 1000,
+                    properties: {
+                      charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
+                      charges_to_datetime: previous_invoice_subscription.charges_to_datetime
+                    }
+                  )
+                end
+
+                # Base true_up: 8000 - 3000 = 5000
+
+                it "returns true-up amount" do
+                  expect(service_call.amount_cents).to eq(5000)
+                end
+
+                context "with an in-advance charge for the next period" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 1000,
+                      properties: {
+                        charges_from_datetime: charges_from_datetime + 1.year,
+                        charges_to_datetime: charges_to_datetime + 1.year
+                      }
+                    )
+                  end
+
+                  it "does not count it" do
+                    expect(service_call.amount_cents).to eq(5000)
+                  end
+                end
+
+                context "with an in-advance charge for the previous period" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 1000,
+                      properties: {
+                        charges_from_datetime: previous_invoice_subscription.charges_from_datetime,
+                        charges_to_datetime: previous_invoice_subscription.charges_to_datetime
+                      }
+                    )
+                  end
+
+                  it "counts it" do
+                    # 8000 - (3000 + 1000) = 4000
+                    expect(service_call.amount_cents).to eq(4000)
+                  end
+                end
+
+                context "with an in-advance charge from another period (no dates)" do
+                  before do
+                    create(
+                      :charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      charge: create(:standard_charge, :pay_in_advance),
+                      amount_cents: 1000
+                    )
+                  end
+
+                  it "does not count it" do
+                    expect(service_call.amount_cents).to eq(5000)
+                  end
+                end
+
+                context "with an in-advance fixed charge for the next period" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 1000,
+                      properties: {
+                        fixed_charges_from_datetime: fixed_charges_from_datetime + 1.year,
+                        fixed_charges_to_datetime: fixed_charges_to_datetime + 1.year
+                      }
+                    )
+                  end
+
+                  it "does not count it" do
+                    expect(service_call.amount_cents).to eq(5000)
+                  end
+                end
+
+                context "with an in-advance fixed charge for the previous period" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 1000,
+                      properties: {
+                        fixed_charges_from_datetime: previous_invoice_subscription.fixed_charges_from_datetime,
+                        fixed_charges_to_datetime: previous_invoice_subscription.fixed_charges_to_datetime
+                      }
+                    )
+                  end
+
+                  it "counts it" do
+                    # 8000 - (3000 + 1000) = 4000
+                    expect(service_call.amount_cents).to eq(4000)
+                  end
+                end
+
+                context "with an in-advance fixed charge from another period (no dates)" do
+                  before do
+                    create(
+                      :fixed_charge_fee,
+                      invoice: nil,
+                      subscription:,
+                      pay_in_advance: true,
+                      fixed_charge: fixed_charge_pay_in_advance,
+                      amount_cents: 1000
+                    )
+                  end
+
+                  it "does not count it" do
+                    expect(service_call.amount_cents).to eq(5000)
+                  end
+                end
+              end
+
+              context "with fixed charge fees only" do
+                before do
+                  create(
+                    :fixed_charge_fee,
+                    invoice: nil,
+                    subscription:,
+                    pay_in_advance: true,
+                    fixed_charge: fixed_charge_pay_in_advance,
+                    amount_cents: 1500,
+                    properties: {
+                      fixed_charges_from_datetime: previous_invoice_subscription.fixed_charges_from_datetime,
+                      fixed_charges_to_datetime: previous_invoice_subscription.fixed_charges_to_datetime
+                    }
+                  )
+
+                  create(
+                    :fixed_charge_fee,
+                    invoice: invoice_subscription.invoice,
+                    subscription:,
+                    pay_in_advance: false,
+                    fixed_charge:,
+                    amount_cents: 1000,
+                    properties: {
+                      fixed_charges_from_datetime: previous_invoice_subscription.fixed_charges_from_datetime,
+                      fixed_charges_to_datetime: previous_invoice_subscription.fixed_charges_to_datetime
+                    }
+                  )
+                end
+
+                it "returns true-up amount" do
+                  # fees = 500 (subscription) + 1500 (in-advance) + 1000 (arrears) = 3000
+                  # true_up = 8000 - 3000 = 5000
+                  expect(service_call.amount_cents).to eq(5000)
+                end
+              end
+            end
+          end
+
           context "when plan has weekly interval" do
             let(:interval) { :weekly }
             let(:commitment_amount_cents) { 3_000 }
