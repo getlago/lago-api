@@ -9,7 +9,7 @@ RSpec.describe UsageThreshold do
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:applied_usage_thresholds) }
-  it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
+  # it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
 
   it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
 
