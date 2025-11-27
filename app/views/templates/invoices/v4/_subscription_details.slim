@@ -228,7 +228,9 @@
                         .body-1 = I18n.l(breakdown.date, format: :default)
                         .body-3 = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
                       td.body-1 width="80%"
-                        - if breakdown.action.to_sym == :add
+                        - if breakdown.amount.zero?
+                          | #{breakdown.amount} #{fee.item_name}
+                        - elsif breakdown.action.to_sym == :add
                           | +#{breakdown.amount} #{fee.item_name}
                         - elsif breakdown.action.to_sym == :remove
                           | #{breakdown.amount.negative? ? '' : '-'}#{breakdown.amount} #{fee.item_name}
@@ -249,7 +251,9 @@
                         .body-1 = breakdown.date.strftime('%b %d, %Y')
                         .body-3 = I18n.t('invoice.breakdown_for_days', breakdown_duration: breakdown.duration, breakdown_total_duration: breakdown.total_duration)
                       td.body-1 width="80%"
-                        - if breakdown.action.to_sym == :add
+                        - if breakdown.amount.zero?
+                          | #{breakdown.amount} #{fee.item_name}
+                        - elsif breakdown.action.to_sym == :add
                           | +#{breakdown.amount} #{fee.item_name}
                         - elsif breakdown.action.to_sym == :remove
                           | #{breakdown.amount.negative? ? '' : '-'}#{breakdown.amount} #{fee.item_name}
