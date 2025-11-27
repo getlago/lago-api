@@ -3395,7 +3395,8 @@ CREATE VIEW public.exports_usage_thresholds AS
     ut.recurring,
     ut.threshold_display_name,
     ut.created_at,
-    ut.updated_at AS deleted_at
+    ut.updated_at,
+    ut.deleted_at
    FROM public.usage_thresholds ut;
 
 
@@ -10240,6 +10241,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251127145819'),
 ('20251127123135'),
 ('20251126135708'),
 ('20251126134516'),
@@ -11106,3 +11108,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
