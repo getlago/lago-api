@@ -11,7 +11,7 @@ class CreateSubscriptionsInvoiceCustomSections < ActiveRecord::Migration[8.0]
 
       t.index %i[subscription_id invoice_custom_section_id],
         unique: true,
-        name: 'index_subscriptions_invoice_custom_sections_unique'
+        name: "index_subscriptions_invoice_custom_sections_unique"
     end
   end
 end

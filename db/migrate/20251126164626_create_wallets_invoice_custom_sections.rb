@@ -11,7 +11,7 @@ class CreateWalletsInvoiceCustomSections < ActiveRecord::Migration[8.0]
 
       t.index %i[wallet_id invoice_custom_section_id],
         unique: true,
-        name: 'index_wallets_invoice_custom_sections_unique'
+        name: "index_wallets_invoice_custom_sections_unique"
     end
   end
 end

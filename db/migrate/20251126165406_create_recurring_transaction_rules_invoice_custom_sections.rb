@@ -11,7 +11,7 @@ class CreateRecurringTransactionRulesInvoiceCustomSections < ActiveRecord::Migra
 
       t.index %i[recurring_transaction_rule_id invoice_custom_section_id],
         unique: true,
-        name: 'index_rtr_invoice_custom_sections_unique'
+        name: "index_rtr_invoice_custom_sections_unique"
     end
   end
 end
