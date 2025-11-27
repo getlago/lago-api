@@ -827,7 +827,6 @@ DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
-DROP TABLE IF EXISTS public.usage_thresholds;
 DROP TABLE IF EXISTS public.usage_monitoring_triggered_alerts;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
@@ -869,6 +868,8 @@ DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
 DROP TABLE IF EXISTS public.wallet_transactions;
+DROP VIEW IF EXISTS public.exports_usage_thresholds;
+DROP TABLE IF EXISTS public.usage_thresholds;
 DROP VIEW IF EXISTS public.exports_taxes;
 DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
@@ -3366,6 +3367,39 @@ CREATE VIEW public.exports_taxes AS
 
 
 --
+-- Name: usage_thresholds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_thresholds (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    plan_id uuid NOT NULL,
+    threshold_display_name character varying,
+    amount_cents bigint NOT NULL,
+    recurring boolean DEFAULT false NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: exports_usage_thresholds; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_usage_thresholds AS
+ SELECT ut.organization_id,
+    ut.plan_id AS lago_plan_id,
+    ut.id AS lago_id,
+    ut.amount_cents,
+    ut.recurring,
+    ut.threshold_display_name,
+    ut.created_at,
+    ut.updated_at AS deleted_at
+   FROM public.usage_thresholds ut;
+
+
+--
 -- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4175,23 +4209,6 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     triggered_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: usage_thresholds; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.usage_thresholds (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    plan_id uuid NOT NULL,
-    threshold_display_name character varying,
-    amount_cents bigint NOT NULL,
-    recurring boolean DEFAULT false NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
 );
 
 
@@ -10223,6 +10240,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251127123135'),
 ('20251126135708'),
 ('20251126134516'),
 ('20251125174110'),
@@ -11088,4 +11106,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
