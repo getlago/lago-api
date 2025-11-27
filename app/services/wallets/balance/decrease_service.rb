@@ -4,7 +4,7 @@ module Wallets
   module Balance
     class DecreaseService < BaseService
       def initialize(wallet:, wallet_transaction:)
-        @wallet = wallet
+        @wallet = wallet.reload
         @wallet_transaction = wallet_transaction
 
         super

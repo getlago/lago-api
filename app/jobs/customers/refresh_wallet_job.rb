@@ -11,7 +11,7 @@ module Customers
     retry_on Net::ReadTimeout, Integrations::Aggregator::BadGatewayError, wait: :polynomially_longer, attempts: 6
 
     def perform(customer)
-      return unless customer.awaiting_wallet_refresh?
+      return unless customer.wallets.active.exists?(ready_to_be_refreshed: true)
 
       Customers::RefreshWalletsService.call!(customer:)
     end
