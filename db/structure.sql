@@ -3389,7 +3389,7 @@ CREATE TABLE public.usage_thresholds (
 
 CREATE VIEW public.exports_usage_thresholds AS
  SELECT ut.organization_id,
-    ut.plan_id,
+    ut.plan_id AS lago_plan_id,
     ut.id AS lago_id,
     ut.amount_cents,
     ut.recurring,

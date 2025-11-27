@@ -1,6 +1,6 @@
 SELECT
     organization_id,
-    plan_id,
+    plan_id AS lago_plan_id,
     id AS lago_id,
     amount_cents,
     recurring,
