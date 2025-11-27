@@ -23,7 +23,7 @@ module Wallets
           last_consumed_credit_at: Time.current
         )
 
-        Wallets::Balance::RefreshOngoingService.call(wallet:, include_generating_invoices: true)
+        Customers::RefreshWalletsService.call(customer: wallet.customer, include_generating_invoices: true)
 
         after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
 
