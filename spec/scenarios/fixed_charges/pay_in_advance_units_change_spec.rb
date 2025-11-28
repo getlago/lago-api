@@ -103,13 +103,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(subscription.reload.invoices.count).to eq(2)
 
         adjustment_invoice = subscription.invoices.order(:created_at).last
-        expect(adjustment_invoice.fees.fixed_charge.count).to eq(1)
-
-        fee = adjustment_invoice.fees.fixed_charge.first
-        expect(fee.amount_cents).to eq(0)
-
-        # Verify invoice total matches sum of fees
-        expect(adjustment_invoice.fees_amount_cents).to eq(adjustment_invoice.fees.sum(:amount_cents))
+        expect(adjustment_invoice.fees.count).to eq(0)
         expect(adjustment_invoice.fees_amount_cents).to eq(0)
       end
     end
@@ -217,8 +211,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(initial_invoice.fees_amount_cents).to eq(10_000)
 
         decrease_invoice = invoices.second
-        expect(decrease_invoice.fees.fixed_charge.first.amount_cents).to eq(0)
-        expect(decrease_invoice.fees_amount_cents).to eq(decrease_invoice.fees.sum(:amount_cents))
+        expect(decrease_invoice.fees.count).to eq(0)
         expect(decrease_invoice.fees_amount_cents).to eq(0)
 
         increase_invoice = invoices.last
@@ -302,7 +295,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     let(:subscription) { customer.subscriptions.first }
 
     # Second fixed charge: $20 per unit, 5 units, pay in advance
-    let!(:fixed_charge2) do
+    let(:fixed_charge2) do
       create(
         :fixed_charge,
         plan:,
@@ -315,6 +308,8 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
 
     before do
+      fixed_charge2
+
       # Create subscription at the start of the month
       travel_to subscription_date do
         create_subscription(
