@@ -11,7 +11,14 @@ module Invoices
     end
 
     def perform(billing_entity, old_grace_period)
-      Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService.call!(billing_entity:, old_grace_period:)
+      Invoices::UpdateAllInvoiceIssuingDateFromBillingEntityService.call!(
+        billing_entity:,
+        previous_issuing_date_settings: {
+          invoice_grace_period: old_grace_period,
+          subscription_invoice_issuing_date_anchor: "next_period_start",
+          subscription_invoice_issuing_date_adjustment: "align_with_finalization_date"
+        }
+      )
     end
   end
 end

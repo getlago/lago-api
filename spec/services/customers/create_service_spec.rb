@@ -125,7 +125,7 @@ RSpec.describe Customers::CreateService do
     end
   end
 
-  context "with premium features" do
+  context "with premium features", :premium do
     around { |test| lago_premium!(&test) }
 
     let(:create_args) do

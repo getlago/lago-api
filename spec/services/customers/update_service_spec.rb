@@ -142,7 +142,7 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
-    context "with premium features" do
+    context "with premium features", :premium do
       around { |test| lago_premium!(&test) }
 
       let(:update_args) do

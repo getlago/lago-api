@@ -220,13 +220,9 @@ module Customers
 
       billing = params[:billing_configuration]
 
-      if License.premium? && billing.key?(:invoice_grace_period)
-        Customers::UpdateInvoiceGracePeriodService.call(customer:, grace_period: billing[:invoice_grace_period])
-      end
+      Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params:)
 
       customer.document_locale = billing[:document_locale] if billing.key?(:document_locale)
-      customer.subscription_invoice_issuing_date_anchor = billing[:subscription_invoice_issuing_date_anchor] if billing.key?(:subscription_invoice_issuing_date_anchor)
-      customer.subscription_invoice_issuing_date_adjustment = billing[:subscription_invoice_issuing_date_adjustment] if billing.key?(:subscription_invoice_issuing_date_adjustment)
 
       if new_customer || should_create_billing_configuration?(billing, customer)
         create_billing_configuration(customer, billing)
