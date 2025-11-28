@@ -34,6 +34,18 @@ module Api
           end
         end
 
+        def destroy_key
+          return not_found_error(resource: "metadata") unless credit_note.metadata
+
+          result = Metadata::DeleteItemKeyService.call(item: credit_note.metadata, key: params[:key])
+
+          if result.success?
+            render_metadata
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         def metadata
