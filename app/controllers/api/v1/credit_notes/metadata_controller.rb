@@ -14,6 +14,16 @@ module Api
           end
         end
 
+        def update
+          result = Metadata::UpdateItemService.call(credit_note, value:)
+
+          if result.success?
+            render_metadata
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         def value
