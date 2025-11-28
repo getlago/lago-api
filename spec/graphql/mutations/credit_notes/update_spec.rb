@@ -62,4 +62,41 @@ RSpec.describe Mutations::CreditNotes::Update do
       expect_not_found(result)
     end
   end
+
+  context "with metadata" do
+    let(:mutation) do
+      <<~GQL
+        mutation($input: UpdateCreditNoteInput!) {
+          updateCreditNote(input: $input) {
+            id
+            metadata { key value }
+          }
+        }
+      GQL
+    end
+
+    let!(:existing_metadata) do
+      create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
+    end
+
+    before { credit_note.update!(metadata_id: existing_metadata.id) }
+
+    it "replaces metadata (not merges)" do
+      result = execute_graphql(
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: credit_note.id,
+            refundStatus: "succeeded",
+            metadata: [{key: "new", value: "data"}]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCreditNote"]
+      expect(result_data["metadata"]).to eq([{"key" => "new", "value" => "data"}])
+    end
+  end
 end
