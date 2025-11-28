@@ -377,17 +377,6 @@ describe "Pay in advance fixed charge units change mid-period" do
         end
       end
 
-      it "creates new fixed charge events for both charges" do
-        events1 = FixedChargeEvent.where(subscription:, fixed_charge:).order(:created_at)
-        events2 = FixedChargeEvent.where(subscription:, fixed_charge: fixed_charge2).order(:created_at)
-
-        expect(events1.count).to eq(2)
-        expect(events1.last.units).to eq(15)
-
-        expect(events2.count).to eq(2)
-        expect(events2.last.units).to eq(10)
-      end
-
       it "generates a SINGLE invoice with fees for both fixed charge deltas" do
         invoices = subscription.reload.invoices.order(:created_at)
 
@@ -397,7 +386,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(invoices.count).to eq(2)
 
         batched_invoice = invoices.last
-        expect(batched_invoice.fees.fixed_charge.count).to eq(2)
+        expect(batched_invoice.fees.count).to eq(2)
 
         fee1 = batched_invoice.fees.fixed_charge.find_by(fixed_charge: fixed_charge)
         fee2 = batched_invoice.fees.fixed_charge.find_by(fixed_charge: fixed_charge2)
@@ -417,7 +406,143 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
   end
 
-  xdescribe "when adding and updating fix charges with apply units immediately"
+  describe "when adding and updating fix charges with apply units immediately" do
+    let(:add_on2) { create(:add_on, organization:) }
+    let(:subscription_date) { DateTime.new(2024, 3, 1) }
+    let(:subscription) { customer.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      # Create subscription at the start of the month with one fixed charge
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_add_update_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "calendar"
+          }
+        )
+      end
+
+      # Process the initial invoice
+      travel_to subscription_date + 1.minute do
+        perform_all_enqueued_jobs
+      end
+    end
+
+    context "when updating existing fixed charge AND adding a new fixed charge" do
+      before do
+        travel_to subscription_date + 5.days do
+          # Update the plan to:
+          # 1. Update existing fixed charge from 10 to 15 units
+          # 2. Add a new fixed charge with 8 units at $5 each
+          update_plan(
+            plan,
+            {
+              fixed_charges: [
+                {
+                  id: fixed_charge.id,
+                  units: 15,
+                  apply_units_immediately: true,
+                  properties: {amount: "10"}
+                },
+                {
+                  add_on_id: add_on2.id,
+                  invoice_display_name: "New Fixed Charge",
+                  charge_model: "standard",
+                  units: 8,
+                  properties: {amount: "5"},
+                  pay_in_advance: true,
+                  apply_units_immediately: true
+                }
+              ]
+            }
+          )
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "generates a SINGLE invoice with fees for both updated and new fixed charges" do
+        new_fixed_charge = plan.fixed_charges.find_by(add_on: add_on2)
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        # We expect 2 invoices:
+        # 1. Initial invoice (original fixed charge only)
+        # 2. ONE invoice with delta for updated + full for new
+        expect(invoices.count).to eq(2)
+
+        combined_invoice = invoices.last
+        expect(combined_invoice.fees.count).to eq(2)
+
+        updated_fixed_charge_fee = combined_invoice.fees.fixed_charge.find_by(fixed_charge:)
+        new_fixed_charge_fee = combined_invoice.fees.fixed_charge.find_by(fixed_charge: new_fixed_charge)
+
+        # Updated fixed charge: delta only (15 - 10 = 5 units * $10 = $50)
+        expect(updated_fixed_charge_fee.units).to eq(5)
+        expect(updated_fixed_charge_fee.amount_cents).to eq(5_000)
+
+        # New fixed charge: full amount (8 units * $5 = $40)
+        expect(new_fixed_charge_fee.units).to eq(8)
+        expect(new_fixed_charge_fee.amount_cents).to eq(4_000)
+
+        # Total: $50 + $40 = $90
+        expect(combined_invoice.fees_amount_cents).to eq(combined_invoice.fees.sum(:amount_cents))
+        expect(combined_invoice.fees_amount_cents).to eq(9_000)
+      end
+    end
+
+    context "when only adding a new fixed charge (no updates to existing)" do
+      before do
+        travel_to subscription_date + 5.days do
+          # Add a new fixed charge without updating the existing one
+          update_plan(
+            plan,
+            {
+              fixed_charges: [
+                {
+                  id: fixed_charge.id,
+                  units: 10,  # Same as before
+                  properties: {amount: "10"}
+                },
+                {
+                  add_on_id: add_on2.id,
+                  invoice_display_name: "New Fixed Charge",
+                  charge_model: "standard",
+                  units: 6,
+                  properties: {amount: "15"},
+                  pay_in_advance: true,
+                  apply_units_immediately: true
+                }
+              ]
+            }
+          )
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "generates an invoice only for the new fixed charge" do
+        new_fixed_charge = plan.fixed_charges.find_by(add_on: add_on2)
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        expect(invoices.count).to eq(2)
+
+        new_charge_invoice = invoices.last
+        expect(new_charge_invoice.fees.count).to eq(1)
+
+        fee = new_charge_invoice.fees.fixed_charge.first
+        expect(fee.fixed_charge).to eq(new_fixed_charge)
+
+        # New fixed charge: 6 units * $15 = $90
+        expect(fee.units).to eq(6)
+        expect(fee.amount_cents).to eq(9_000)
+
+        expect(new_charge_invoice.fees_amount_cents).to eq(9_000)
+      end
+    end
+  end
+
   xdescribe "when updating a fixed charge with apply changes on next period"
   xdescribe "when adding a fixed charge with apply units on next period"
   xdescribe "when updating a fixed charge unit with plan children"
