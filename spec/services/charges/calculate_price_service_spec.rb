@@ -42,6 +42,28 @@ RSpec.describe Charges::CalculatePriceService do
       end
     end
 
+    context "when charge has pricing_group_keys but no grouped data" do
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          properties: {
+            pricing_group_keys: ["region"],
+            amount: "10"
+          }
+        )
+      end
+
+      it "calculates using base pricing without grouped service" do
+        result = calculate_price_service.call
+
+        expect(result.charge_amount_cents).to eq(50)
+        expect(result.subscription_amount_cents).to eq(1000)
+        expect(result.total_amount_cents).to eq(1050)
+      end
+    end
+
     context "when there is a graduated charge" do
       let(:charge) do
         create(
