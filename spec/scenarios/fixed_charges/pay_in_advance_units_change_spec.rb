@@ -289,7 +289,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
   end
 
-  xdescribe "when multiple fixed charges are updated at once via plan update" do
+  describe "when multiple fixed charges are updated at once via plan update" do
     let(:add_on2) { create(:add_on, organization:) }
     let(:subscription_date) { DateTime.new(2024, 3, 1) }
     let(:subscription) { customer.subscriptions.first }
@@ -302,12 +302,12 @@ describe "Pay in advance fixed charge units change mid-period" do
         add_on: add_on2,
         units: 5,
         properties: {amount: "20"},
-        prorated: false,
         pay_in_advance: true
       )
     end
 
     before do
+      fixed_charge
       fixed_charge2
 
       # Create subscription at the start of the month
@@ -393,7 +393,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
         # We expect 2 invoices:
         # 1. Initial invoice (both fixed charges)
-        # 2. ONE batched invoice with both deltas
+        # 2. ONE invoice with both fixed charges units deltas
         expect(invoices.count).to eq(2)
 
         batched_invoice = invoices.last
