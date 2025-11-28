@@ -154,7 +154,7 @@ module Api
       end
 
       def update_params
-        params.require(:credit_note).permit(:refund_status)
+        params.require(:credit_note).permit(:refund_status, metadata: {})
       end
 
       def estimate_params
