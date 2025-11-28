@@ -160,11 +160,10 @@ module Plans
       return unless cascade_needed?
 
       old_parent_attrs = fixed_charge.attributes
-      # TODO: pass timestamp to create fixed charge events at the same time
-      # TODO: kick off inovice generation for in advance fixed charges created after update
       FixedCharges::UpdateChildrenJob.perform_later(
         params: payload_fixed_charge.deep_stringify_keys,
-        old_parent_attrs:
+        old_parent_attrs:,
+        timestamp:
       )
     end
 
