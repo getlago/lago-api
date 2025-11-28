@@ -45,7 +45,7 @@ module Api
         if result.success?
           render(
             json: ::V1::CreditNoteSerializer.new(
-              credit_note,
+              result.credit_note,
               root_name: "credit_note",
               includes: %i[items applied_taxes]
             )

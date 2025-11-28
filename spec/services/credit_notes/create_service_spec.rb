@@ -107,6 +107,34 @@ RSpec.describe CreditNotes::CreateService do
       expect(item2.amount_currency).to eq(invoice.currency)
     end
 
+    it "creates a credit note without metadata" do
+      result = create_service.call
+
+      expect(result).to be_success
+      expect(result.credit_note.reload.metadata).to be_nil
+      expect(Metadata::ItemMetadata.count).to eq(0)
+    end
+
+    context "with metadata" do
+      let(:args) { {metadata: {"key1" => "value1", "key2" => "value2"}} }
+
+      it "creates a credit note with metadata" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        credit_note = result.credit_note.reload
+        expect(credit_note.metadata).to be_present
+        expect(credit_note.metadata.value).to eq({"key1" => "value1", "key2" => "value2"})
+        expect(credit_note.metadata.organization_id).to eq(organization.id)
+        expect(credit_note.metadata.owner).to eq(credit_note)
+      end
+
+      it "creates ItemMetadata record" do
+        expect { create_service.call }.to change(Metadata::ItemMetadata, :count).by(1)
+      end
+    end
+
     it "enqueues SegmentTrackJob after commit" do
       expect { subject }.to have_enqueued_job_after_commit(SegmentTrackJob).with do |params|
         expect(params).to match(membership_id: CurrentContext.membership,
@@ -653,6 +681,27 @@ RSpec.describe CreditNotes::CreateService do
 
       it "does not send an email" do
         expect { subject }.not_to have_enqueued_job(SendEmailJob)
+      end
+
+      it "does not persist any metadata" do
+        expect { subject }.not_to change(Metadata::ItemMetadata, :count)
+      end
+
+      context "with metadata" do
+        let(:args) { {metadata: {"key1" => "value1"}} }
+
+        it "does not persist metadata" do
+          expect { subject }.not_to change(Metadata::ItemMetadata, :count)
+        end
+
+        it "builds metadata as new record" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.credit_note.metadata).to be_present
+          expect(result.credit_note.metadata).to be_new_record
+          expect(result.credit_note.metadata.value).to eq({"key1" => "value1"})
+        end
       end
     end
 

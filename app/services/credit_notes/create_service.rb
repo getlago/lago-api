@@ -12,6 +12,7 @@ module CreditNotes
       @description = args[:description]
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
+      @metadata_value = args[:metadata]
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
       @context = args[:context]
@@ -42,7 +43,11 @@ module CreditNotes
           status: invoice.voided? ? "finalized" : invoice.status # credit notes dont have void state
         )
 
-        credit_note.save! if context != :preview
+        update_metadata!
+
+        # Added for visibility of what's going on
+        # (it is expected, though, that the `update_metadata!` saves the credit note by itself)
+        credit_note.save! if context != :preview && credit_note.changed?
 
         create_items
         result.raise_if_error!
@@ -106,6 +111,7 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
+      :metadata_value,
       :automatic,
       :context
 
@@ -262,6 +268,11 @@ module CreditNotes
       return nil unless invoice.credit? && associated_wallet.present?
 
       WalletCredit.from_amount_cents(wallet: associated_wallet, amount_cents: credit_note.refund_amount_cents)
+    end
+
+    def update_metadata!
+      value = metadata_value&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
+      Metadata::UpdateItemService.call!(credit_note, value:, replace: true, preview: context == :preview)
     end
   end
 end
