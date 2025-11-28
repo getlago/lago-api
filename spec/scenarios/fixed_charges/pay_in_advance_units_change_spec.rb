@@ -425,4 +425,6 @@ describe "Pay in advance fixed charge units change mid-period" do
   xdescribe "when adding and updating fix charges with apply units immediately"
   xdescribe "when updating a fixed charge with apply changes on next period"
   xdescribe "when adding a fixed charge with apply units on next period"
+  xdescribe "when updating a fixed charge unit with plan children"
+  xdescribe "when adding a fixed charge unit with plan children"
 end
