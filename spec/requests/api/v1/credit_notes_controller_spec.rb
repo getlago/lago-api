@@ -94,6 +94,40 @@ RSpec.describe Api::V1::CreditNotesController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "with metadata" do
+      before do
+        create(
+          :item_metadata,
+          owner: credit_note,
+          organization:,
+          value: {"foo" => "bar", "bar" => "", "baz" => nil, "" => "qux"}
+        )
+      end
+
+      it "returns metadata" do
+        subject
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", bar: "", baz: nil, "": "qux")
+      end
+    end
+
+    context "without metadata" do
+      it "returns nil" do
+        subject
+        expect(json[:credit_note][:metadata]).to be_nil
+      end
+    end
+
+    context "with empty metadata" do
+      before do
+        create(:item_metadata, owner: credit_note, organization:, value: {})
+      end
+
+      it "returns empty hash" do
+        subject
+        expect(json[:credit_note][:metadata]).to eq({})
+      end
+    end
   end
 
   describe "PUT /api/v1/credit_notes/:id" do
