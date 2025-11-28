@@ -145,6 +145,7 @@ module Api
             :description,
             :credit_amount_cents,
             :refund_amount_cents,
+            metadata: {},
             items: [
               :fee_id,
               :amount_cents
