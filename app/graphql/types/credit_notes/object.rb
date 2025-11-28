@@ -51,8 +51,13 @@ module Types
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :external_integration_id, String, null: true
       field :integration_syncable, GraphQL::Types::Boolean, null: false
+      field :metadata, [Types::Metadata::Object], null: true
       field :tax_provider_id, String, null: true
       field :tax_provider_syncable, GraphQL::Types::Boolean, null: false
+
+      def metadata
+        object.metadata&.value&.map { |key, value| {key:, value:} }
+      end
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
