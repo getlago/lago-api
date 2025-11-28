@@ -40,6 +40,7 @@ module CreditNoteIndex
             :file_attachment,
             :xml_file_attachment,
             :error_details,
+            :metadata,
             invoice: :billing_entity
           ),
           ::V1::CreditNoteSerializer,
