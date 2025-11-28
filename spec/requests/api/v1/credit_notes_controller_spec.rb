@@ -406,6 +406,48 @@ RSpec.describe Api::V1::CreditNotesController do
         expect(json[:error_details][:base]).to eq(["total_amount_must_be_positive"])
       end
     end
+
+    context "with metadata" do
+      let(:create_params) do
+        {
+          invoice_id:,
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
+          credit_amount_cents: 10,
+          refund_amount_cents: 5,
+          items: [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: 5}],
+          metadata: {foo: "bar", baz: "qux"}
+        }
+      end
+
+      it "creates credit note with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", baz: "qux")
+      end
+    end
+
+    context "with empty metadata" do
+      let(:create_params) do
+        {
+          invoice_id:,
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
+          credit_amount_cents: 10,
+          refund_amount_cents: 5,
+          items: [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: 5}],
+          metadata: {}
+        }
+      end
+
+      it "creates credit note with empty metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq({})
+      end
+    end
   end
 
   describe "PUT /api/v1/credit_notes/:id/void" do

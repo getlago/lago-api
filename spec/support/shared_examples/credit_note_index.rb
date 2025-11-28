@@ -289,8 +289,7 @@ RSpec.shared_examples "a credit note index endpoint" do
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|
         credit_note = create(:credit_note, invoice:, customer:)
-        metadata = create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
-        credit_note.update!(metadata_id: metadata.id)
+        create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
       end
     end
 
