@@ -91,6 +91,9 @@ Rails.application.routes.draw do
         post :download_xml, on: :member
         put :void, on: :member
         post :estimate, on: :collection
+        scope module: :credit_notes do
+          resource :metadata, only: %i[create]
+        end
       end
       get :events_enriched, to: "events#index_enriched"
       resources :events, only: %i[create show index] do
