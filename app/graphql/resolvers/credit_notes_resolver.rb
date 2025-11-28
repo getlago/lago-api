@@ -30,32 +30,21 @@ module Resolvers
 
     type Types::CreditNotes::Object.collection_type, null: false
 
-    def resolve(args)
-      result = CreditNotesQuery.call(
+    FILTER_KEYS = %i[
+      amount_from amount_to billing_entity_ids credit_status currency customer_external_id
+      customer_id invoice_number issuing_date_from issuing_date_to reason refund_status self_billed
+    ].freeze
+
+    def resolve(**args)
+      includes = [:customer, :items]
+
+      CreditNotesQuery.call(
         organization: current_organization,
         search_term: args[:search_term],
-        filters: {
-          amount_from: args[:amount_from],
-          amount_to: args[:amount_to],
-          billing_entity_ids: args[:billing_entity_ids],
-          credit_status: args[:credit_status],
-          currency: args[:currency],
-          customer_external_id: args[:customer_external_id],
-          customer_id: args[:customer_id],
-          invoice_number: args[:invoice_number],
-          issuing_date_from: args[:issuing_date_from],
-          issuing_date_to: args[:issuing_date_to],
-          reason: args[:reason],
-          refund_status: args[:refund_status],
-          self_billed: args[:self_billed]
-        },
-        pagination: {
-          page: args[:page],
-          limit: args[:limit]
-        }
-      )
-
-      result.credit_notes
+        includes:,
+        filters: args.slice(*FILTER_KEYS),
+        pagination: args.slice(:page, :limit)
+      ).credit_notes
     end
   end
 end

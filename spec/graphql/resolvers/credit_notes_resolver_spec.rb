@@ -285,4 +285,27 @@ RSpec.describe Resolvers::CreditNotesResolver do
       expect(result["data"]["creditNotes"]["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  it "does not trigger N+1 queries for metadata", :with_bullet do
+    credit_notes = create_list(:credit_note, 3, customer:)
+    credit_notes.each do |credit_note|
+      create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
+    end
+
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: <<~GQL
+        query {
+          creditNotes(limit: 5) {
+            collection {
+              id
+              metadata { key value }
+            }
+          }
+        }
+      GQL
+    )
+  end
 end
