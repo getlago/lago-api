@@ -893,5 +893,204 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
   end
 
-  xdescribe "when adding a fixed charge unit with plan children"
+  describe "when adding multiple fixed charges with children plans" do
+    let(:add_on2) { create(:add_on, organization:) }
+    let(:add_on3) { create(:add_on, organization:) }
+    let(:subscription_date) { DateTime.new(2024, 3, 1) }
+
+    # Parent plan setup
+    let(:parent_plan) { plan }
+    let(:parent_subscription) { customer.subscriptions.first }
+
+    # Second customer for child subscription
+    let(:customer2) { create(:customer, organization:, timezone: "UTC") }
+    let(:child_subscription) { customer2.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      # Create parent subscription
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_parent_#{customer.external_id}",
+            plan_code: parent_plan.code,
+            billing_time: "calendar"
+          }
+        )
+
+        # Create child subscription using plan_overrides (creates a child plan)
+        create_subscription(
+          {
+            external_customer_id: customer2.external_id,
+            external_id: "sub_child_#{customer2.external_id}",
+            plan_code: parent_plan.code,
+            billing_time: "calendar",
+            plan_overrides: {
+              name: "Child Plan Override",
+              fixed_charges: [{
+                id: fixed_charge.id,
+                units: 20
+              }]
+            }
+          }
+        )
+      end
+
+      # Process initial invoices
+      travel_to subscription_date + 1.minute do
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "generates initial invoices for both parent and child subscriptions" do
+      expect(parent_subscription.invoices.count).to eq(1)
+      expect(child_subscription.invoices.count).to eq(1)
+
+      parent_invoice = parent_subscription.invoices.first
+      child_invoice = child_subscription.invoices.first
+
+      expect(parent_invoice.fees.fixed_charge.count).to eq(1)
+      expect(parent_invoice.fees.fixed_charge.first.units).to eq(10)
+
+      expect(child_invoice.fees.fixed_charge.count).to eq(1)
+      expect(child_invoice.fees.fixed_charge.first.units).to eq(20)
+    end
+
+    context "when update parent plan with new fixed charges with apply_units_immediately and cascade" do
+      let(:fixed_charge2) { parent_plan.fixed_charges.find_by(add_on: add_on2) }
+      let(:fixed_charge3) { parent_plan.fixed_charges.find_by(add_on: add_on3) }
+      let(:child_fixed_charge2) { child_subscription.fixed_charges.find_by(parent: fixed_charge2) }
+      let(:child_fixed_charge3) { child_subscription.fixed_charges.find_by(parent: fixed_charge3) }
+
+      before do
+        travel_to subscription_date + 5.days do
+          # Update parent plan with cascade
+          update_plan(
+            parent_plan,
+            {
+              cascade_updates: true,
+              fixed_charges: [
+                {
+                  add_on_id: add_on2.id,
+                  invoice_display_name: "New Fixed Charge",
+                  charge_model: "standard",
+                  units: 8,
+                  properties: {amount: "5"},
+                  pay_in_advance: true,
+                  apply_units_immediately: true
+                },
+                {
+                  add_on_id: add_on3.id,
+                  invoice_display_name: "New Fixed Charge 2",
+                  charge_model: "standard",
+                  units: 33,
+                  properties: {amount: "2"},
+                  pay_in_advance: true,
+                  apply_units_immediately: true
+                }
+              ]
+            }
+          )
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "updates the child fixed charges units" do
+        expect(child_fixed_charge2.reload.units).to eq(8)
+        expect(child_fixed_charge3.reload.units).to eq(33)
+      end
+
+      it "creates fixed charge events for both parent and child subscriptions" do
+        # Parent events
+        parent_events_2 = FixedChargeEvent.where(subscription: parent_subscription, fixed_charge: fixed_charge2).order(:timestamp)
+        expect(parent_events_2.count).to eq(1)
+        expect(parent_events_2.last.units).to eq(8)
+
+        parent_events_3 = FixedChargeEvent.where(subscription: parent_subscription, fixed_charge: fixed_charge3).order(:timestamp)
+        expect(parent_events_3.count).to eq(1)
+        expect(parent_events_3.last.units).to eq(33)
+
+        # Child events
+        child_events_2 = FixedChargeEvent.where(subscription: child_subscription, fixed_charge: child_fixed_charge2).order(:timestamp)
+        expect(child_events_2.count).to eq(1)
+        expect(child_events_2.last.units).to eq(8)
+
+        child_events_3 = FixedChargeEvent.where(subscription: child_subscription, fixed_charge: child_fixed_charge3).order(:timestamp)
+        expect(child_events_3.count).to eq(1)
+        expect(child_events_3.last.units).to eq(33)
+      end
+
+      it "generates a single delta invoices for each, parent and child subscriptions" do
+        # Parent should have 2 invoices (initial + delta for both fixed charges)
+        parent_invoices = parent_subscription.reload.invoices.order(:created_at)
+        expect(parent_invoices.count).to eq(2)
+
+        parent_delta_invoice = parent_invoices.last
+        expect(parent_delta_invoice.fees.count).to eq(2)
+
+        parent_fixed_charge_fee_2 = parent_delta_invoice.fees.fixed_charge.find_by(fixed_charge: fixed_charge2)
+        parent_fixed_charge_fee_3 = parent_delta_invoice.fees.fixed_charge.find_by(fixed_charge: fixed_charge3)
+
+        expect(parent_fixed_charge_fee_2.units).to eq(8)
+        expect(parent_fixed_charge_fee_2.amount_cents).to eq(4000)
+        expect(parent_fixed_charge_fee_3.units).to eq(33)
+        expect(parent_fixed_charge_fee_3.amount_cents).to eq(6600)
+
+        # Child should also have 2 invoices (initial + delta for both fixed charges)
+        child_invoices = child_subscription.reload.invoices.order(:created_at)
+        expect(child_invoices.count).to eq(2)
+
+        child_delta_invoice = child_invoices.last
+        expect(child_delta_invoice.fees.count).to eq(2)
+
+        child_fixed_charge_fee_2 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
+        child_fixed_charge_fee_3 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge3)
+
+        expect(child_fixed_charge_fee_2.units).to eq(8)
+        expect(child_fixed_charge_fee_2.amount_cents).to eq(4000)
+        expect(child_fixed_charge_fee_3.units).to eq(33)
+        expect(child_fixed_charge_fee_3.amount_cents).to eq(6600)
+      end
+    end
+
+    context "when parent plan fixed charge is created WITHOUT cascade" do
+      before do
+        travel_to subscription_date + 5.days do
+          # Update parent plan WITHOUT cascade
+          update_plan(
+            parent_plan,
+            {
+              cascade_updates: false,
+              fixed_charges: [{
+                add_on_id: add_on2.id,
+                invoice_display_name: "New Fixed Charge",
+                charge_model: "standard",
+                units: 8,
+                properties: {amount: "5"},
+                pay_in_advance: true,
+                apply_units_immediately: true
+              }]
+            }
+          )
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "does NOT update the child fixed charge units" do
+        expect(child_subscription.fixed_charges.count).to eq(1)
+      end
+
+      it "generates delta invoice only for parent subscription" do
+        # Parent should have 2 invoices
+        parent_invoices = parent_subscription.reload.invoices.order(:created_at)
+        expect(parent_invoices.count).to eq(2)
+
+        # Child should still have only 1 invoice (initial only)
+        child_invoices = child_subscription.reload.invoices.order(:created_at)
+        expect(child_invoices.count).to eq(1)
+      end
+    end
+  end
 end
