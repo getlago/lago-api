@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
+ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_cdaf36dc89;
@@ -270,6 +271,8 @@ ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_credit_notes_metadata;
+DROP TRIGGER IF EXISTS validate_item_metadata_value ON public.item_metadata;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
@@ -422,6 +425,10 @@ DROP INDEX IF EXISTS public.index_lifetime_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_item_metadata_on_value;
+DROP INDEX IF EXISTS public.index_item_metadata_on_owner_type_and_owner_id;
+DROP INDEX IF EXISTS public.index_item_metadata_on_organization_id;
+DROP INDEX IF EXISTS public.index_item_metadata_for_fk;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
@@ -591,6 +598,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_notes_metadata_fk;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
@@ -779,6 +787,7 @@ ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS pass
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS lifetime_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS item_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoices_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS invoices_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS invoices_payment_requests_pkey;
@@ -883,6 +892,7 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
+DROP TABLE IF EXISTS public.item_metadata;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -990,6 +1000,7 @@ DROP TABLE IF EXISTS public.add_ons;
 DROP TABLE IF EXISTS public.active_storage_variant_records;
 DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
+DROP FUNCTION IF EXISTS public.validate_item_metadata_value();
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
@@ -1272,6 +1283,15 @@ CREATE FUNCTION public.set_payment_receipt_number() RETURNS trigger
           RETURN NEW;
         END;
         $$;
+
+
+--
+-- Name: validate_item_metadata_value(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.validate_item_metadata_value() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$ DECLARE key_count integer; key_name text; key_value text; key_length integer; val_length integer; val_type text; BEGIN IF jsonb_typeof(NEW.value) != 'object' THEN RAISE EXCEPTION 'metadata value must be a JSON object'; END IF; SELECT count(*) INTO key_count FROM jsonb_object_keys(NEW.value); IF key_count > 50 THEN RAISE EXCEPTION 'metadata cannot have more than 50 keys (found %)', key_count; END IF; FOR key_name IN SELECT jsonb_object_keys(NEW.value) LOOP key_length := length(key_name); key_value := NEW.value->>key_name; val_length := length(key_value); val_type := jsonb_typeof(NEW.value->key_name); IF key_length > 40 THEN RAISE EXCEPTION 'metadata key length cannot exceed 40 characters (key "%" has % characters)', key_name, key_length; END IF; IF val_type NOT IN ('null', 'string') THEN RAISE EXCEPTION 'metadata values must be nulls or strings (key "%" has type %)', key_name, val_type; END IF; IF val_length > 255 THEN RAISE EXCEPTION 'metadata value length cannot exceed 255 characters (key "%" has value with % characters)', key_name, val_length; END IF; END LOOP; RETURN NEW; END; $$;
 
 
 SET default_tablespace = '';
@@ -1862,7 +1882,8 @@ CREATE TABLE public.credit_notes (
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
-    xml_file character varying
+    xml_file character varying,
+    metadata_id uuid
 );
 
 
@@ -3880,6 +3901,21 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
+-- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    owner_type character varying NOT NULL,
+    owner_id uuid NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -4997,6 +5033,14 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.invoices_taxes
     ADD CONSTRAINT invoices_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_metadata item_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_metadata
+    ADD CONSTRAINT item_metadata_pkey PRIMARY KEY (id);
 
 
 --
@@ -6355,6 +6399,13 @@ CREATE INDEX index_credit_note_items_on_organization_id ON public.credit_note_it
 
 
 --
+-- Name: index_credit_notes_metadata_fk; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_credit_notes_metadata_fk ON public.credit_notes USING btree (metadata_id, id, organization_id) WHERE (metadata_id IS NOT NULL);
+
+
+--
 -- Name: index_credit_notes_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7538,6 +7589,34 @@ CREATE INDEX index_invoices_taxes_on_tax_id ON public.invoices_taxes USING btree
 
 
 --
+-- Name: index_item_metadata_for_fk; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_item_metadata_for_fk ON public.item_metadata USING btree (id, owner_id, organization_id);
+
+
+--
+-- Name: index_item_metadata_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_item_metadata_on_organization_id ON public.item_metadata USING btree (organization_id);
+
+
+--
+-- Name: index_item_metadata_on_owner_type_and_owner_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_item_metadata_on_owner_type_and_owner_id ON public.item_metadata USING btree (owner_type, owner_id);
+
+
+--
+-- Name: index_item_metadata_on_value; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_item_metadata_on_value ON public.item_metadata USING gin (value);
+
+
+--
 -- Name: index_lifetime_usages_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8480,6 +8559,21 @@ CREATE OR REPLACE VIEW public.flat_filters AS
 --
 
 CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_receipts FOR EACH ROW EXECUTE FUNCTION public.set_payment_receipt_number();
+
+
+--
+-- Name: item_metadata validate_item_metadata_value; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER validate_item_metadata_value BEFORE INSERT OR UPDATE ON public.item_metadata FOR EACH ROW EXECUTE FUNCTION public.validate_item_metadata_value();
+
+
+--
+-- Name: credit_notes fk_credit_notes_metadata; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_notes
+    ADD CONSTRAINT fk_credit_notes_metadata FOREIGN KEY (metadata_id, id, organization_id) REFERENCES public.item_metadata(id, owner_id, organization_id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -10235,6 +10329,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: item_metadata fk_rails_d0b1714507; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_metadata
+    ADD CONSTRAINT fk_rails_d0b1714507 FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10588,6 +10690,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251126135708'),
 ('20251126134516'),
 ('20251125174110'),
+('20251125114258'),
+('20251125114057'),
 ('20251121143459'),
 ('20251121113600'),
 ('20251112112544'),

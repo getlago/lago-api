@@ -42,5 +42,14 @@ FactoryBot.define do
     trait :with_items do
       items { create_pair(:credit_note_item) }
     end
+
+    trait :with_metadata do
+      after(:create) do |credit_note|
+        credit_note.create_metadata!(
+          organization: credit_note.organization,
+          value: {"key" => "value"}
+        )
+      end
+    end
   end
 end
