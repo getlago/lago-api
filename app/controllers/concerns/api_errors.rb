@@ -101,6 +101,17 @@ module ApiErrors
     )
   end
 
+  def service_error(code:, message:)
+    render(
+      json: {
+        status: 422,
+        error: code,
+        message: message
+      },
+      status: :unprocessable_entity
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure
@@ -119,6 +130,8 @@ module ApiErrors
       too_many_provider_requests_error(error: error_result.error)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
+    when BaseService::ServiceFailure
+      service_error(code: error_result.error.code, message: error_result.error.error_message)
     else
       raise(error_result.error)
     end
