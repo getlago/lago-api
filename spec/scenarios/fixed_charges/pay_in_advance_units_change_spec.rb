@@ -543,8 +543,140 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
   end
 
-  xdescribe "when updating a fixed charge with apply changes on next period"
-  xdescribe "when adding a fixed charge with apply units on next period"
+  describe "when updating fixed charge with apply changes on next period" do
+    let(:subscription_date) { DateTime.new(2024, 3, 1) }
+    let(:subscription) { customer.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      # Create subscription at the start of the month
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_next_period_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "calendar"
+          }
+        )
+      end
+
+      # Process the initial invoice
+      travel_to subscription_date + 1.minute do
+        perform_all_enqueued_jobs
+      end
+
+      travel_to subscription_date + 5.days do
+        # Update the fixed charge units WITHOUT apply_units_immediately
+        update_plan(
+          plan,
+          {
+            fixed_charges: [{
+              id: fixed_charge.id,
+              units: 15,
+              # No apply_units_immediately - changes apply next period
+              properties: {amount: "10"}
+            }]
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "does NOT generate a new invoice mid-period" do
+      invoices = subscription.reload.invoices.order(:created_at)
+
+      # Only the initial invoice should exist
+      expect(invoices.count).to eq(1)
+
+      initial_invoice = invoices.first
+      expect(initial_invoice.fees.fixed_charge.count).to eq(1)
+      expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
+      expect(initial_invoice.fees_amount_cents).to eq(10_000)
+    end
+
+    it "creates a fixed charge event for the updated charge at next billing period" do
+      events = FixedChargeEvent.where(subscription:, fixed_charge:).order(:timestamp)
+
+      expect(events.count).to eq(2)
+      expect(events.first.units).to eq(10)
+      expect(events.first.timestamp).to be < subscription_date.end_of_month
+      expect(events.last.units).to eq(15)
+      expect(events.last.timestamp).to be > subscription_date.end_of_month
+    end
+  end
+
+  describe "when adding fixed charge with apply changes on next period" do
+    let(:add_on2) { create(:add_on, organization:) }
+    let(:subscription_date) { DateTime.new(2024, 3, 1) }
+    let(:subscription) { customer.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      # Create subscription at the start of the month
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_next_period_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "calendar"
+          }
+        )
+      end
+
+      # Process the initial invoice
+      travel_to subscription_date + 1.minute do
+        perform_all_enqueued_jobs
+      end
+
+      travel_to subscription_date + 5.days do
+        # Add a new fixed charge without apply_units_immediately
+        update_plan(
+          plan,
+          {
+            fixed_charges: [
+              {
+                id: fixed_charge.id,
+                units: 10,  # No change to existing
+                properties: {amount: "10"}
+              },
+              {
+                add_on_id: add_on2.id,
+                invoice_display_name: "New Fixed Charge",
+                charge_model: "standard",
+                units: 8,
+                properties: {amount: "5"},
+                pay_in_advance: true
+                # No apply_units_immediately
+              }
+            ]
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "does NOT generate a new invoice mid-period" do
+      invoices = subscription.reload.invoices.order(:created_at)
+
+      # Only the initial invoice should exist
+      expect(invoices.count).to eq(1)
+    end
+
+    it "creates a fixed charge event for the new charge at next billing period" do
+      new_fixed_charge = plan.fixed_charges.find_by(add_on: add_on2)
+      events = FixedChargeEvent.where(subscription:, fixed_charge: new_fixed_charge).order(:timestamp)
+
+      expect(events.count).to eq(1)
+      expect(events.first.units).to eq(8)
+      # Event should be scheduled for next billing period
+      expect(events.first.timestamp).to be > subscription_date.end_of_month
+    end
+  end
+
   xdescribe "when updating a fixed charge unit with plan children"
   xdescribe "when adding a fixed charge unit with plan children"
 end
