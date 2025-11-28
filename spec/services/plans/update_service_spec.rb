@@ -1460,6 +1460,66 @@ RSpec.describe Plans::UpdateService do
             )
           end
         end
+
+        context "with plan having active subscriptions" do
+          let(:subscription) { create(:subscription, :active, plan:) }
+
+          before { subscription }
+
+          it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+            expect { plans_service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when fixed charge params are pay in advance" do
+          let(:fixed_charges_args) do
+            [
+              {
+                add_on_id: add_on.id,
+                charge_model: "standard",
+                invoice_display_name: "fixed_charge1",
+                units: 2,
+                pay_in_advance: true,
+                properties: {amount: "150"},
+                tax_codes: [tax1.code]
+              }
+            ]
+          end
+
+          it "creates fixed charge with pay in advance" do
+            result = plans_service.call
+
+            expect(result).to be_success
+            expect(result.plan.fixed_charges.count).to eq(1)
+            expect(result.plan.fixed_charges.first).to be_pay_in_advance
+          end
+
+          context "with plan having active subscriptions" do
+            let(:subscription) { create(:subscription, :active, plan:) }
+
+            before { subscription }
+
+            it "enqueues a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+              freeze_time do
+                expect { plans_service.call }
+                  .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+                  .with(subscription, Time.current.to_i)
+              end
+            end
+          end
+
+          context "without active subscriptions" do
+            let(:subscription) { create(:subscription, :pending, plan:) }
+
+            before { subscription }
+
+            it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob" do
+              expect { plans_service.call }
+                .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            end
+          end
+        end
       end
 
       context "when plan has fixed_charges" do
