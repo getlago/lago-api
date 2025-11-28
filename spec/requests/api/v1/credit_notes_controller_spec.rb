@@ -171,6 +171,56 @@ RSpec.describe Api::V1::CreditNotesController do
         expect(response).to have_http_status(:unprocessable_content)
       end
     end
+
+    context "with metadata" do
+      before do
+        create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
+      end
+
+      context "when adding new keys" do
+        let(:update_params) { {metadata: {new: "data"}} }
+
+        it "merges metadata (not replaces)" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "value", new: "data")
+        end
+      end
+
+      context "when updating existing keys" do
+        let(:update_params) { {metadata: {existing: "updated"}} }
+
+        it "updates the key value" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "updated")
+        end
+      end
+
+      context "with empty metadata" do
+        let(:update_params) { {metadata: {}} }
+
+        it "keeps existing metadata unchanged" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "value")
+        end
+      end
+    end
+
+    context "without existing metadata" do
+      let(:update_params) { {metadata: {foo: "bar", baz: "qux"}} }
+
+      it "creates new metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", baz: "qux")
+      end
+    end
   end
 
   describe "POST /api/v1/credit_notes/:id/download_pdf" do
