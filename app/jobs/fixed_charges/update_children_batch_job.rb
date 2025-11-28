@@ -4,7 +4,7 @@ module FixedCharges
   class UpdateChildrenBatchJob < ApplicationJob
     queue_as :low_priority
 
-    def perform(child_ids:, params:, old_parent_attrs:)
+    def perform(child_ids:, params:, old_parent_attrs:, timestamp:)
       Rails.logger.info("FixedCharges::UpdateChildrenBatchJob - Started the execution for parent fixed charge with ID: #{old_parent_attrs["id"]}")
 
       fixed_charge = FixedCharge.find_by(id: old_parent_attrs["id"])
@@ -13,7 +13,8 @@ module FixedCharges
         fixed_charge:,
         params:,
         old_parent_attrs:,
-        child_ids:
+        child_ids:,
+        timestamp:
       )
 
       Rails.logger.info("FixedCharges::UpdateChildrenBatchJob - Ended the execution for parent fixed charge with ID: #{old_parent_attrs["id"]}")
