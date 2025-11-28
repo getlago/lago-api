@@ -24,6 +24,7 @@ RSpec.describe FixedCharges::UpdateChildrenJob do
   end
 
   let(:old_parent_attrs) { fixed_charge.attributes }
+  let(:timestamp) { Time.current.to_i }
 
   before do
     subscription_1
@@ -35,13 +36,14 @@ RSpec.describe FixedCharges::UpdateChildrenJob do
   end
 
   it "calls the batch job for active/pending subscriptions only" do
-    described_class.perform_now(params:, old_parent_attrs:)
+    described_class.perform_now(params:, old_parent_attrs:, timestamp:)
 
     expect(FixedCharges::UpdateChildrenBatchJob).to have_received(:perform_later)
       .with(
         child_ids: [child_fixed_charge_1.id],
         params:,
-        old_parent_attrs:
+        old_parent_attrs:,
+        timestamp:
       )
       .once
   end
@@ -50,7 +52,7 @@ RSpec.describe FixedCharges::UpdateChildrenJob do
     let(:old_parent_attrs) { {"id" => "non-existent-id"} }
 
     it "does not call the batch job" do
-      described_class.perform_now(params:, old_parent_attrs:)
+      described_class.perform_now(params:, old_parent_attrs:, timestamp:)
 
       expect(FixedCharges::UpdateChildrenBatchJob).not_to have_received(:perform_later)
     end
@@ -62,7 +64,7 @@ RSpec.describe FixedCharges::UpdateChildrenJob do
     end
 
     it "does not call the batch job" do
-      described_class.perform_now(params:, old_parent_attrs:)
+      described_class.perform_now(params:, old_parent_attrs:, timestamp:)
 
       expect(FixedCharges::UpdateChildrenBatchJob).not_to have_received(:perform_later)
     end
