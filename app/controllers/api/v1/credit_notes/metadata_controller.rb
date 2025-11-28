@@ -14,6 +14,16 @@ module Api
           end
         end
 
+        def update
+          result = ::CreditNotes::UpdateService.call(credit_note:, partial_metadata: true, metadata:)
+
+          if result.success?
+            render_metadata
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         def metadata
