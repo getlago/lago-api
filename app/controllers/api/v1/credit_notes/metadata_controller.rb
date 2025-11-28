@@ -24,6 +24,16 @@ module Api
           end
         end
 
+        def destroy
+          result = ::CreditNotes::UpdateService.call(credit_note:, metadata: nil)
+
+          if result.success?
+            render_metadata
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         def metadata

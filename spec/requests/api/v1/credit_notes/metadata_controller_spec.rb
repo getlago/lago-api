@@ -171,4 +171,43 @@ RSpec.describe Api::V1::CreditNotes::MetadataController do
       end
     end
   end
+
+  describe "DELETE /api/v1/credit_notes/:id/metadata" do
+    subject { delete_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/metadata") }
+
+    let(:credit_note_id) { credit_note.id }
+
+    it_behaves_like "requires API permission", "credit_note", "write"
+
+    context "when credit note is not found" do
+      let(:credit_note_id) { SecureRandom.uuid }
+
+      it "returns not found error" do
+        subject
+        expect(response).to be_not_found_error("credit_note")
+      end
+    end
+
+    context "when credit note has metadata" do
+      before { create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"}) }
+
+      it "deletes all metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:metadata]).to be_nil
+        expect(credit_note.reload.metadata).to be_nil
+      end
+    end
+
+    context "when credit note has no metadata" do
+      it "returns success with nil metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:metadata]).to be_nil
+        expect(credit_note.reload.metadata).to be_nil
+      end
+    end
+  end
 end
