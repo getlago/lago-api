@@ -210,4 +210,53 @@ RSpec.describe Api::V1::CreditNotes::MetadataController do
       end
     end
   end
+
+  describe "DELETE /api/v1/credit_notes/:id/metadata/:key" do
+    subject { delete_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/metadata/#{key}") }
+
+    let(:credit_note_id) { credit_note.id }
+    let(:key) { "foo" }
+
+    it_behaves_like "requires API permission", "credit_note", "write"
+
+    context "when credit note is not found" do
+      let(:credit_note_id) { SecureRandom.uuid }
+
+      it "returns not found error" do
+        subject
+        expect(response).to be_not_found_error("credit_note")
+      end
+    end
+
+    context "when credit note has no metadata" do
+      it "returns not found error" do
+        subject
+        expect(response).to be_not_found_error("metadata")
+      end
+    end
+
+    context "when key exists in metadata" do
+      before { create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar", "baz" => "qux"}) }
+
+      it "deletes the key" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:metadata]).to eq(baz: "qux")
+        expect(credit_note.reload.metadata.value).to eq("baz" => "qux")
+      end
+    end
+
+    context "when key does not exist in metadata" do
+      before { create(:item_metadata, owner: credit_note, organization:, value: {"baz" => "qux"}) }
+
+      it "returns success without changing metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:metadata]).to eq(baz: "qux")
+        expect(credit_note.reload.metadata.value).to eq("baz" => "qux")
+      end
+    end
+  end
 end

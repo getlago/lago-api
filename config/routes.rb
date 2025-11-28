@@ -92,7 +92,9 @@ Rails.application.routes.draw do
         put :void, on: :member
         post :estimate, on: :collection
         scope module: :credit_notes do
-          resource :metadata, only: %i[create update destroy]
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
         end
       end
       get :events_enriched, to: "events#index_enriched"
