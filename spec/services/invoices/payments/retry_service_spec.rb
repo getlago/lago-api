@@ -90,5 +90,32 @@ RSpec.describe Invoices::Payments::RetryService do
         expect(result.error.code).to eq("payment_processor_is_currently_handling_payment")
       end
     end
+
+    context "when customer does not have payment method" do
+      before do
+        customer.update(payment_provider: nil, payment_provider_code: nil)
+      end
+
+      it "returns an error" do
+        result = retry_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({base: ["no_linked_payment_provider"]})
+      end
+
+      it "sends invoice.payment_failure webhook" do
+        expect { retry_service.call }
+          .to enqueue_job(SendWebhookJob)
+          .with(
+            "invoice.payment_failure",
+            invoice,
+            provider_error: {
+              error_message: "no linked_payment provider",
+              error_code: "no_linked_payment_provider"
+            }
+          ).on_queue(webhook_queue)
+      end
+    end
   end
 end
