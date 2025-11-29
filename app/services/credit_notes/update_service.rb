@@ -2,6 +2,7 @@
 
 module CreditNotes
   class UpdateService < BaseService
+    use Middlewares::Yabeda::CountErrorsMiddleware
     use Middlewares::Yabeda::DurationMiddleware
 
     def initialize(credit_note:, partial_metadata: false, **params)
