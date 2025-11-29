@@ -159,8 +159,10 @@ class BaseService
     existing_middleware = middlewares.map(&:first)
 
     if !existing_middleware.include?(middleware_class) || on_conflict == :append
-      operation = name.underscore.tr("/", "_")
-      middleware_class.on_use(operation:)
+      if name
+        operation = name.underscore.tr("/", "_")
+        middleware_class.on_use(operation:)
+      end
       return self.middlewares += [[middleware_class, args, kwargs]]
     end
 
