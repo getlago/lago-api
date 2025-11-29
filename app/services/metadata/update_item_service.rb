@@ -27,6 +27,7 @@ module Metadata
   # without persisting them to the database. The owner's `metadata` and `metadata_id`
   # attributes are modified in memory, but nothing is saved.
   class UpdateItemService < BaseService
+    use Middlewares::Yabeda::CountErrorsMiddleware
     use Middlewares::Yabeda::DurationMiddleware
 
     Result = BaseResult[:owner, :value, :replace, :preview]
