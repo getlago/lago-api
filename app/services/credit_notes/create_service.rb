@@ -2,6 +2,9 @@
 
 module CreditNotes
   class CreateService < BaseService
+    use Middlewares::Yabeda::CountErrorsMiddleware
+    use Middlewares::Yabeda::DurationMiddleware
+
     Result = BaseResult[:credit_note]
 
     def initialize(invoice:, **args)
