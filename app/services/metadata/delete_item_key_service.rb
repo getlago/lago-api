@@ -4,6 +4,7 @@ module Metadata
   # Remove a key from an existing metadata.
   # Return an error result if the metadata has already been deleted.
   class DeleteItemKeyService < BaseService
+    use Middlewares::Yabeda::CountErrorsMiddleware
     use Middlewares::Yabeda::DurationMiddleware
 
     Result = BaseResult[:item, :metadata_changed]

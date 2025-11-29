@@ -21,6 +21,7 @@ module Metadata
   # and its `result` contains the updated metadata item
   # to check if the operation was successful.
   class UpdateItemService < BaseService
+    use Middlewares::Yabeda::CountErrorsMiddleware
     use Middlewares::Yabeda::DurationMiddleware
 
     Result = BaseResult[:metadata, :metadata_changed]
