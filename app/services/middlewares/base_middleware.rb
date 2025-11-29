@@ -2,6 +2,10 @@
 
 module Middlewares
   class BaseMiddleware
+    # Hook called when middleware is registered via `use`.
+    # Override in subclasses to perform setup (e.g., register metrics).
+    def self.on_use(**) = nil
+
     def initialize(service_instance, next_middleware, *args, **kwargs)
       @service_instance = service_instance
       @next_middleware = next_middleware

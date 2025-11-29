@@ -2,6 +2,8 @@
 
 module CreditNotes
   class UpdateService < BaseService
+    use Middlewares::Yabeda::DurationMiddleware
+
     def initialize(credit_note:, partial_metadata: false, **params)
       @params = params&.with_indifferent_access
       @credit_note = credit_note
