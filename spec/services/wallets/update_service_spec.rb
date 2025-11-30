@@ -45,11 +45,11 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
-    it "calls Wallets::Balance::RefreshOngoingService" do
-      allow(Wallets::Balance::RefreshOngoingService).to receive(:call)
+    it "calls Customers::RefreshWalletsService" do
+      allow(Customers::RefreshWalletsService).to receive(:call)
       subject
 
-      expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet:)
+      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
     end
 

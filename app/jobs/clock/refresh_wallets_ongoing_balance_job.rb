@@ -7,8 +7,8 @@ module Clock
     def perform
       return unless License.premium?
 
-      Wallet.active.ready_to_be_refreshed.find_each do |wallet|
-        Wallets::RefreshOngoingBalanceJob.perform_later(wallet)
+      Customer.with_active_wallets.where(wallets: {ready_to_be_refreshed: true}).find_each do |customer|
+        Customers::RefreshWalletJob.perform_later(customer)
       end
     end
   end
