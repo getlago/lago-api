@@ -218,7 +218,11 @@ module Auth
 
       body = {
         resources: [{id: dashboard_id.to_s, type: "dashboard"}],
-        rls: [],
+        rls: [
+          {
+            clause: "organization_id = '#{organization.id}'"
+          }
+        ],
         user: guest_user_info
       }
       request.body = body.to_json
