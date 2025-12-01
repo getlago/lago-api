@@ -64,6 +64,17 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    context "when invoice is one-off" do
+      let(:invoice) { create(:invoice, :draft, invoice_type: :one_off, organization:, customer:) }
+
+      it "returns a forbidden failure" do
+        result = finalize_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+    end
+
     it "marks the invoice as finalized" do
       expect { finalize_service.call }
         .to change(invoice, :status).from("draft").to("finalized")

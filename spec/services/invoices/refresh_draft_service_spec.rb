@@ -48,6 +48,17 @@ RSpec.describe Invoices::RefreshDraftService do
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
+    context "when invoice is one-off" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type: :one_off) }
+
+      it "returns a forbidden failure" do
+        result = refresh_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+    end
+
     context "when invoice is ready to be finalized" do
       let(:invoice) do
         create(:invoice, status:, organization:, customer:, ready_to_be_refreshed: true)

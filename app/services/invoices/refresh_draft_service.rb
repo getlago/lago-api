@@ -26,6 +26,8 @@ module Invoices
     end
 
     def call
+      return result.forbidden_failure! if invoice.one_off?
+
       result.invoice = invoice
       return result unless invoice.draft?
 
