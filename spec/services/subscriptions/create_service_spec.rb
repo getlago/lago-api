@@ -352,6 +352,35 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription.fixed_charge_events.count).to eq(0)
         end
       end
+
+      context "with invoice custom sections" do
+        let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
+          }
+        end
+
+        before {
+          CurrentContext.source = "api"
+          section_1
+        }
+
+        it "attach to subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          subscription = result.subscription.reload
+          expect(subscription.applied_invoice_custom_sections.count).to be(1)
+          expect(subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
+        end
+      end
     end
 
     context "when customer does not exists in API context" do
@@ -971,6 +1000,35 @@ RSpec.describe Subscriptions::CreateService do
               expect(result.subscription).to be_active
               expect(result.subscription.next_subscription).to be_present
               expect(result.subscription.lifetime_usage).to be_present
+            end
+          end
+
+          context "with invoice custom sections" do
+            let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+
+            let(:params) do
+              {
+                external_customer_id:,
+                plan_code:,
+                name:,
+                external_id:,
+                billing_time:,
+                subscription_at:,
+                subscription_id:,
+                invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
+              }
+            end
+
+            before { section_1 }
+
+            it "attach to new subscription" do
+              result = create_service.call
+
+              expect(result).to be_success
+
+              next_subscription = result.subscription.next_subscription.reload
+              expect(next_subscription.applied_invoice_custom_sections.count).to be(1)
+              expect(next_subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
             end
           end
 

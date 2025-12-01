@@ -43,7 +43,10 @@ module Subscriptions
             .or(editable_subscriptions.where(external_id:))
             .first
 
-          result.subscription = handle_subscription
+          subscription = handle_subscription
+          InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
+
+          result.subscription = subscription
         end
       end
 
@@ -191,6 +194,8 @@ module Subscriptions
         new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         new_sub.save!
       end
+
+      InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)

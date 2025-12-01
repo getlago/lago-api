@@ -32,6 +32,7 @@ module V1
       payload.merge!(entitlements) if include?(:entitlements)
       payload = payload.merge(plan:) if include?(:plan)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
+      payload = payload.merge(applied_invoice_custom_sections:) if include?(:applied_invoice_custom_sections)
 
       payload
     end
@@ -63,6 +64,14 @@ module V1
 
     def dates_service
       @dates_service ||= ::Subscriptions::DatesService.new_instance(model, Time.current, current_usage: true)
+    end
+
+    def applied_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applied_invoice_custom_sections,
+        ::V1::AppliedInvoiceCustomSectionSerializer,
+        collection_name: "applied_invoice_custom_sections"
+      ).serialize
     end
   end
 end

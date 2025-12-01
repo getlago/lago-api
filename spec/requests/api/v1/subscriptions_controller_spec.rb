@@ -8,6 +8,7 @@ RSpec.describe Api::V1::SubscriptionsController do
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
   let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
   let(:commitment_amount_cents) { 1234 }
+  let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
   around { |test| lago_premium!(&test) }
 
@@ -28,6 +29,9 @@ RSpec.describe Api::V1::SubscriptionsController do
         billing_time: "anniversary",
         subscription_at:,
         ending_at:,
+        invoice_custom_section: {
+          invoice_custom_section_codes: [section_1.code]
+        },
         plan_overrides: {
           amount_cents: 100,
           name: "overridden name",
@@ -434,6 +438,65 @@ RSpec.describe Api::V1::SubscriptionsController do
         expect(subscription.fixed_charge_events.first.timestamp).to be_within(5.seconds).of(Time.current)
       end
     end
+
+    context "with invoice_custom_section" do
+      let(:skip_invoice_custom_sections) { false }
+      let(:custom_section_codes) { ["section_code_1"] }
+      let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+      let(:params) do
+        {
+          external_customer_id: 123,
+          plan_code:,
+          name: 456,
+          external_id: 789,
+          invoice_custom_section: {
+            skip_invoice_custom_sections:,
+            invoice_custom_section_codes: custom_section_codes
+          }
+        }
+      end
+
+      context "when skip_invoice_custom_sections is true" do
+        let(:skip_invoice_custom_sections) { true }
+
+        it "create the subscription without custom sections" do
+          subject
+
+          subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+          expect(subscription.skip_invoice_custom_sections).to be_truthy
+          expect(subscription.applied_invoice_custom_sections.count).to be_zero
+        end
+      end
+
+      context "when skip_invoice_custom_sections is false" do
+        let(:skip_invoice_custom_sections) { false }
+
+        context "without invoice_custom_section_codes" do
+          let(:custom_section_codes) { [] }
+
+          it "create the subscription without custom sections" do
+            subject
+
+            subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+            expect(subscription.skip_invoice_custom_sections).to be_falsey
+            expect(subscription.applied_invoice_custom_sections.count).to be_zero
+          end
+        end
+
+        context "with invoice_custom_section_codes" do
+          let(:custom_section_codes) { [section_1.code] }
+
+          it "create the subscription with custom sections" do
+            subject
+
+            subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+            expect(subscription.skip_invoice_custom_sections).to be_falsey
+            expect(subscription.applied_invoice_custom_sections.count).to eq(1)
+            expect(subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
+          end
+        end
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -611,6 +674,10 @@ RSpec.describe Api::V1::SubscriptionsController do
       {
         name: "subscription name new",
         subscription_at: "2022-09-05T12:23:12Z",
+        invoice_custom_section: {
+          skip_invoice_custom_sections: false,
+          invoice_custom_section_codes: [section_1.code]
+        },
         plan_overrides: {
           name: "Override",
           invoice_display_name: "Override plan",
@@ -1071,6 +1138,51 @@ RSpec.describe Api::V1::SubscriptionsController do
       it "returns an not found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when update invoice_custom_section is sent" do
+      context "with skip" do
+        let(:update_params) do
+          {
+            invoice_custom_section: {
+              skip_invoice_custom_sections: true
+            }
+          }
+        end
+
+        before { subscription.update(skip_invoice_custom_sections: false) }
+
+        it "updates skip_invoice_custom_sections" do
+          subject
+
+          subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+          expect(subscription.skip_invoice_custom_sections).to be_truthy
+        end
+      end
+
+      context "without skipping" do
+        context "with sections" do
+          let(:update_params) do
+            {
+              invoice_custom_section: {
+                skip_invoice_custom_sections: false,
+                invoice_custom_section_codes: [section_1.code]
+              }
+            }
+          end
+
+          before { subscription.update(skip_invoice_custom_sections: true) }
+
+          it "updates skip_invoice_custom_sections" do
+            subject
+
+            subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+            expect(subscription.skip_invoice_custom_sections).to be_falsey
+            expect(subscription.applied_invoice_custom_sections.count).to eq(1)
+            expect(subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
+          end
+        end
       end
     end
 
