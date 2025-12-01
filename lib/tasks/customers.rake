@@ -32,8 +32,6 @@ namespace :customers do
     raise "Customer should not have any credit notes" if cust.credit_notes.any?
     raise "Metadata is not implemented" if cust.metadata.any?
     raise "Invoice custom sections are not implemented" if cust.applied_invoice_custom_sections.any?
-    # progressively billed usage cannot be shared and we're risking to trigger again the tresholds
-    raise "Customer has progressive billing invoices" if cust.invoices.progressive_billing.any?
 
     ActiveRecord::Base.transaction do
       cust.discard
