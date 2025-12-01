@@ -8,6 +8,10 @@ RSpec.describe WalletTransaction do
     it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
     it { is_expected.to validate_length_of(:name).is_at_most(255).is_at_least(1).allow_nil }
     it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
+    it { is_expected.to validate_presence_of(:status) }
+    it { is_expected.to validate_presence_of(:transaction_type) }
+    it { is_expected.to validate_presence_of(:source) }
+    it { is_expected.to validate_presence_of(:transaction_status) }
   end
 
   describe "associations" do
