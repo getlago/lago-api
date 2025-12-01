@@ -37,6 +37,39 @@ RSpec.describe Customer do
     expect(customer.finalize_zero_amount_invoice).to eq "inherit"
   end
 
+  describe "normalizations" do
+    it "strips null bytes from address and shipping address attributes" do
+      normalized_customer = build(
+        :customer,
+        address_line1: "Foo\u0000Bar",
+        address_line2: "Bar\u0000Baz",
+        city: "Baz\u0000Qux",
+        zipcode: "Qux\u0000Quux",
+        state: "Quux\u0000Quuux",
+        country: "Quuux\u0000Quuuux",
+        shipping_address_line1: "Baz\u0000Qux",
+        shipping_address_line2: "Qux\u0000Quux",
+        shipping_city: "Quux\u0000Quuux",
+        shipping_zipcode: "Quuux\u0000Quuuux",
+        shipping_state: "Quuuux\u0000Quuuuux",
+        shipping_country: "Quuuuux\u0000Quuuuuux"
+      )
+
+      expect(normalized_customer.address_line1).to eq("FooBar")
+      expect(normalized_customer.address_line2).to eq("BarBaz")
+      expect(normalized_customer.city).to eq("BazQux")
+      expect(normalized_customer.zipcode).to eq("QuxQuux")
+      expect(normalized_customer.state).to eq("QuuxQuuux")
+      expect(normalized_customer.country).to eq("QuuuxQuuuux")
+      expect(normalized_customer.shipping_address_line1).to eq("BazQux")
+      expect(normalized_customer.shipping_address_line2).to eq("QuxQuux")
+      expect(normalized_customer.shipping_city).to eq("QuuxQuuux")
+      expect(normalized_customer.shipping_zipcode).to eq("QuuuxQuuuux")
+      expect(normalized_customer.shipping_state).to eq("QuuuuxQuuuuux")
+      expect(normalized_customer.shipping_country).to eq("QuuuuuxQuuuuuux")
+    end
+  end
+
   describe "validations" do
     subject(:customer) do
       described_class.new(organization:, external_id:)

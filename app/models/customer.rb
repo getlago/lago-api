@@ -135,6 +135,23 @@ class Customer < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
 
+  [
+    :address_line1,
+    :address_line2,
+    :city,
+    :zipcode,
+    :state,
+    :country,
+    :shipping_address_line1,
+    :shipping_address_line2,
+    :shipping_city,
+    :shipping_zipcode,
+    :shipping_state,
+    :shipping_country
+  ].each do |attribute|
+    normalizes attribute, with: ->(value) { value.delete("\u0000") }
+  end
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]
   end
