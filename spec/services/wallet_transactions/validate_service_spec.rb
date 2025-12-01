@@ -66,27 +66,27 @@ RSpec.describe WalletTransactions::ValidateService do
       :voided_credits,
       :granted_credits,
       :paid_credits
-    ].each do |amount|
-      context "with #{amount} >= 10^25" do
-        let(amount) { 10**25 }
+    ].each do |attr|
+      context "with #{attr} >= 10^25" do
+        let(attr) { 10**25 }
 
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[amount]).to eq(["invalid_#{amount}", "invalid_amount"])
+          expect(result.error.messages[attr]).to eq(["invalid_#{attr}", "invalid_amount"])
         end
       end
 
-      context "with #{amount} < 0" do
-        let(amount) { "-1.00" }
+      context "with #{attr} < 0" do
+        let(attr) { "-1.00" }
 
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[amount]).to eq(["invalid_#{amount}", "invalid_amount"])
+          expect(result.error.messages[attr]).to eq(["invalid_#{attr}", "invalid_amount"])
         end
       end
 
-      context "with #{amount} < 10^25" do
-        let(amount) { (10**25 - 1).to_s }
+      context "with #{attr} < 10^25" do
+        let(attr) { (10**25 - 1).to_s }
         let(:wallet) { create(:wallet, customer:, credits_balance: 10**25 - 1) }
 
         it "returns true and result has no errors" do
@@ -95,8 +95,8 @@ RSpec.describe WalletTransactions::ValidateService do
         end
       end
 
-      context "with #{amount} = 0" do
-        let(amount) { "0.00" }
+      context "with #{attr} = 0" do
+        let(attr) { "0.00" }
 
         it "returns true and result has no errors" do
           expect(validate_service).to be_valid

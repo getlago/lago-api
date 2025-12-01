@@ -149,6 +149,7 @@ class Customer < ApplicationRecord
     :shipping_state,
     :shipping_country
   ].each do |attribute|
+    # NOTE: Null byte injection. Prevent 500 errors.
     normalizes attribute, with: ->(value) { value.delete("\u0000") }
   end
 

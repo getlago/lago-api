@@ -64,14 +64,22 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
-    context "when invoice is one-off" do
-      let(:invoice) { create(:invoice, :draft, invoice_type: :one_off, organization:, customer:) }
+    [
+      :one_off,
+      :add_on,
+      :credit,
+      :advance_charges,
+      :progressive_billing
+    ].each do |invoice_type|
+      context "when invoice is #{invoice_type}" do
+        let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type:) }
 
-      it "returns a forbidden failure" do
-        result = finalize_service.call
+        it "returns a forbidden failure" do
+          result = finalize_service.call
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
       end
     end
 
