@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsersService do
   subject(:user_service) { described_class.new }
 
-  describe "register" do
+  describe "#register" do
     it "calls SegmentIdentifyJob" do
       allow(SegmentIdentifyJob).to receive(:perform_later)
       result = user_service.register("email", "password", "organization_name")
@@ -78,7 +78,7 @@ RSpec.describe UsersService do
     end
   end
 
-  describe "register_from_invite" do
+  describe "#register_from_invite" do
     let(:email) { Faker::Internet.email }
 
     context "when user already exists" do
@@ -111,7 +111,7 @@ RSpec.describe UsersService do
     end
   end
 
-  describe "login" do
+  describe "#login" do
     subject(:result) { described_class.new.login(email, password) }
 
     let!(:membership) { create(:membership, :revoked) }
@@ -214,6 +214,30 @@ RSpec.describe UsersService do
 
             expect(SegmentIdentifyJob).not_to have_received(:perform_later)
           end
+        end
+      end
+
+      context "when email contains \u0000" do
+        let(:email) { "email\u0000" }
+        let(:password) { user.password }
+
+        it "fails with invalid email or password error" do
+          expect(result).to be_failure
+          expect(result.user).to be nil
+          expect(result.token).to be nil
+          expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
+        end
+      end
+
+      context "when password contains \u0000" do
+        let(:email) { user.email }
+        let(:password) { "password\u0000" }
+
+        it "fails with invalid email or password error" do
+          expect(result).to be_failure
+          expect(result.user).to be nil
+          expect(result.token).to be nil
+          expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
         end
       end
     end

@@ -2,6 +2,10 @@
 
 class UsersService < BaseService
   def login(email, password)
+    if email.include?("\u0000") || password.include?("\u0000")
+      return result.single_validation_failure!(error_code: "incorrect_login_or_password")
+    end
+
     result.user = User.find_by(email:)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships.active.any?
