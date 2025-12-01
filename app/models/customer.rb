@@ -41,7 +41,7 @@ class Customer < ApplicationRecord
   attribute :customer_type, :string
   enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   attribute :account_type, :string
-  enum :account_type, ACCOUNT_TYPES, suffix: :account
+  enum :account_type, ACCOUNT_TYPES, suffix: :account, validate: true
 
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}

@@ -84,7 +84,7 @@ RSpec.describe Api::V1::BillableMetricsController do
         }
       end
 
-      fit "creates a billable_metric with filters" do
+      it "creates a billable_metric with filters" do
         subject
 
         expect(response).to have_http_status(:success)

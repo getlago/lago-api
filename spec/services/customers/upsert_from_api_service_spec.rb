@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpsertFromApiService do
   subject(:result) { described_class.call(organization:, params: create_args) }
 
-  let(:billing_entity) { create :billing_entity }
-  let(:organization) { billing_entity.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:membership) { create(:membership, organization:) }
   let(:external_id) { SecureRandom.uuid }
 
@@ -444,6 +444,17 @@ RSpec.describe Customers::UpsertFromApiService do
         it "doesn't update customer to partner" do
           expect(result).to be_success
           expect(result.customer).to be_customer_account
+        end
+      end
+
+      context "with invalid account_type" do
+        before { create_args.merge!(account_type: "invalid") }
+
+        it "fails to create customer" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:account_type)
+          expect(result.error.messages[:account_type]).to include("value_is_invalid")
         end
       end
     end

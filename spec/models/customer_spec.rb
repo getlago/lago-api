@@ -29,6 +29,10 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:manual_selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :manual) }
   it { is_expected.to have_many(:system_generated_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :system_generated) }
 
+  describe "enums" do
+    it { is_expected.to define_enum_for(:account_type).with_values(described_class::ACCOUNT_TYPES).backed_by_column_of_type(:enum).with_suffix(:account).validating }
+  end
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
