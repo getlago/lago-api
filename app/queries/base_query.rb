@@ -27,7 +27,7 @@ class BaseQuery < BaseService
 
     unless validation_result.success?
       errors = validation_result.errors.to_h
-      result.validation_failure!(errors:)
+      result.validation_failure!(errors: errors[:filters]) # TO BE DISCUSSED
     end
 
     result

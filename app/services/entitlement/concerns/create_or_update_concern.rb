@@ -13,7 +13,7 @@ module Entitlement
             return value
           end
 
-          raise BaseService::ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_not_in_select_options"]})
+          raise BaseService::ValidationFailure.from_errors(result, {"#{privilege.code}_privilege_value": ["value_not_in_select_options"]})
         end
 
         if privilege.value_type == "boolean" && [true, false, "true", "false"].include?(value)
@@ -26,7 +26,7 @@ module Entitlement
         end
         return value if privilege.value_type == "string" && value.is_a?(String)
 
-        raise BaseService::ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_is_invalid"]})
+        raise BaseService::ValidationFailure.from_errors(result, {"#{privilege.code}_privilege_value": ["value_is_invalid"]})
       end
     end
   end

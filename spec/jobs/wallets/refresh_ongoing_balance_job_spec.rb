@@ -25,7 +25,7 @@ RSpec.describe Wallets::RefreshOngoingBalanceJob do
   end
 
   context "when refresh wallet failed" do
-    let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: "error"}) }
+    let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: ["error"]}) }
 
     before do
       allow(Wallets::Balance::RefreshOngoingService).to receive(:call).with(wallet:).and_return(result)
