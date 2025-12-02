@@ -41,6 +41,7 @@ module Types
       field :total_due_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_paid_amount_cents, GraphQL::Types::BigInt, null: false
 
+      field :expected_finalization_date, GraphQL::Types::ISO8601Date, null: false
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_overdue, Boolean, null: false

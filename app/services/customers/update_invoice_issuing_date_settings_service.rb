@@ -21,6 +21,7 @@ module Customers
           # NOTE: Update issuing_date on draft invoices.
           customer.invoices.draft.find_each do |invoice|
             invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment(invoice)
+            invoice.expected_finalization_date = invoice.expected_finalization_date + grace_period_adjustment(invoice)
             invoice.payment_due_date = grace_period_payment_due_date(invoice)
             invoice.save!
           end
@@ -60,21 +61,37 @@ module Customers
     end
 
     def issuing_date_adjustment(invoice)
-      recurring = invoice.invoice_subscriptions.first&.recurring?
-
-      old_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer_settings: previous_issuing_date_settings,
-        billing_entity_settings: customer.billing_entity,
-        recurring:
-      ).issuing_date_adjustment
-
-      new_issuing_date_adjustment = Invoices::IssuingDateService.new(
-        customer_settings: customer,
-        billing_entity_settings: customer.billing_entity,
-        recurring:
-      ).issuing_date_adjustment
+      new_issuing_date_adjustment = new_issuing_date_service(invoice).issuing_date_adjustment
+      old_issuing_date_adjustment = old_issuing_date_service(invoice).issuing_date_adjustment
 
       new_issuing_date_adjustment - old_issuing_date_adjustment
+    end
+
+    def grace_period_adjustment(invoice)
+      new_grace_period = new_issuing_date_service(invoice).grace_period
+      old_grace_period = old_issuing_date_service(invoice).grace_period
+
+      new_grace_period - old_grace_period
+    end
+
+    def old_issuing_date_service(invoice)
+      Invoices::IssuingDateService.new(
+        customer_settings: previous_issuing_date_settings,
+        billing_entity_settings: customer.billing_entity,
+        recurring: recurring(invoice)
+      )
+    end
+
+    def new_issuing_date_service(invoice)
+      Invoices::IssuingDateService.new(
+        customer_settings: customer,
+        billing_entity_settings: customer.billing_entity,
+        recurring: recurring(invoice)
+      )
+    end
+
+    def recurring(invoice)
+      invoice.invoice_subscriptions.first&.recurring?
     end
 
     def grace_period_payment_due_date(invoice)

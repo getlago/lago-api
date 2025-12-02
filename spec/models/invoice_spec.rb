@@ -209,7 +209,7 @@ RSpec.describe Invoice do
   end
 
   describe "ready_to_be_finalized" do
-    let(:invoice) { create(:invoice, status: :draft, issuing_date: Time.current - 1.day) }
+    let(:invoice) { create(:invoice, status: :draft, expected_finalization_date: Time.current - 1.day) }
 
     before { invoice }
 
@@ -238,7 +238,7 @@ RSpec.describe Invoice do
     before { invoices }
 
     it "returns only the invoices that are ready for refresh" do
-      expect(described_class.ready_to_be_finalized.pluck(:id)).to include(invoices[0].id)
+      expect(described_class.ready_to_be_refreshed.pluck(:id)).to include(invoices[0].id)
     end
   end
 

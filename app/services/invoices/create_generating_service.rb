@@ -29,6 +29,7 @@ module Invoices
           timezone: customer.applicable_timezone,
           status: :generating,
           issuing_date:,
+          expected_finalization_date:,
           payment_due_date:,
           net_payment_term: customer.applicable_net_payment_term,
           skip_charges:,
@@ -55,6 +56,13 @@ module Invoices
 
       issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
       date + issuing_date_service.issuing_date_adjustment.days
+    end
+
+    def expected_finalization_date
+      date = datetime.in_time_zone(customer.applicable_timezone).to_date
+      return date if !grace_period? || charge_in_advance
+
+      date + customer.applicable_invoice_grace_period.days
     end
 
     def grace_period?

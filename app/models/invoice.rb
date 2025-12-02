@@ -121,7 +121,7 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized, -> { draft.where("issuing_date <= ?", Time.current.to_date) }
+  scope :ready_to_be_finalized, -> { draft.where("expected_finalization_date <= ?", Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
@@ -594,6 +594,7 @@ end
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
+#  expected_finalization_date              :date
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  finalized_at                            :datetime
