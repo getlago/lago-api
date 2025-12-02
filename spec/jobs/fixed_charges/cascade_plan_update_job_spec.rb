@@ -3,141 +3,59 @@
 require "rails_helper"
 
 RSpec.describe FixedCharges::CascadePlanUpdateJob do
-  let(:organization) { create(:organization) }
-  let(:parent_plan) { create(:plan, organization:) }
-  let(:child_plan) { create(:plan, organization:, parent: parent_plan) }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:timestamp) { Time.current.to_i }
-
-  let(:parent_fixed_charge) do
-    create(:fixed_charge, plan: parent_plan, add_on:, units: 10, pay_in_advance: true, properties: {amount: "10"})
-  end
-
-  let(:child_fixed_charge) do
-    create(
-      :fixed_charge,
-      plan: child_plan,
-      add_on:,
-      parent: parent_fixed_charge,
-      units: 10,
-      pay_in_advance: true,
-      properties: {amount: "10"}
-    )
-  end
-
-  let(:cascade_payloads) do
-    [{
-      id: parent_fixed_charge.id,
-      charge_model: "standard",
-      units: 15,
-      apply_units_immediately: true,
-      properties: {amount: "10"}
-    }]
-  end
-
-  before do
-    child_fixed_charge
-    allow(FixedCharges::CascadePlanUpdateService).to receive(:call!)
-      .and_call_original
-  end
-
-  it "calls the cascade plan update service with correct parameters" do
+  subject(:perform) do
     described_class.perform_now(
-      parent_plan_id: parent_plan.id,
-      child_plan_id: child_plan.id,
-      cascade_payloads:,
-      timestamp:
-    )
-
-    expect(FixedCharges::CascadePlanUpdateService).to have_received(:call!).with(
-      child_plan: child_plan,
-      child_fixed_charges: [child_fixed_charge],
-      cascade_payloads:,
+      plan:,
+      cascade_fixed_charges_payload:,
       timestamp:
     )
   end
 
-  context "when parent plan has multiple fixed charges being updated" do
-    let(:parent_fixed_charge2) do
-      create(:fixed_charge, plan: parent_plan, add_on:, units: 5, pay_in_advance: true, properties: {amount: "20"})
-    end
-
-    let(:child_fixed_charge2) do
-      create(
-        :fixed_charge,
-        plan: child_plan,
-        add_on:,
-        parent: parent_fixed_charge2,
-        units: 5,
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:timestamp) { Time.current.to_i }
+  let(:cascade_fixed_charges_payload) do
+    [
+      {
+        action: :create,
+        add_on_id: "addon_id",
+        charge_model: "standard",
+        units: 10,
         pay_in_advance: true,
-        properties: {amount: "20"}
-      )
+        properties: {amount: "10"}
+      }
+    ]
+  end
+
+  context "when no children plans" do
+    it "does not queue a job" do
+      expect { perform }.not_to have_enqueued_job(FixedCharges::CascadeChildPlanUpdateJob)
+    end
+  end
+
+  context "when plan has children plans but no active/pending subscriptions" do
+    before do
+      create(:subscription, :terminated, plan: create(:plan, organization:, parent: plan))
     end
 
-    let(:cascade_payloads) do
-      [
-        {
-          id: parent_fixed_charge.id,
-          charge_model: "standard",
-          units: 15,
-          apply_units_immediately: true,
-          properties: {amount: "10"}
-        },
-        {
-          id: parent_fixed_charge2.id,
-          charge_model: "standard",
-          units: 8,
-          apply_units_immediately: true,
-          properties: {amount: "20"}
-        }
-      ]
+    it "does not queue a job" do
+      expect { perform }.not_to have_enqueued_job(FixedCharges::CascadeChildPlanUpdateJob)
     end
+  end
+
+  context "when plan has children plans with active/pending subscriptions" do
+    let(:child_plan_1) { create(:plan, organization:, parent: plan) }
+    let(:child_plan_2) { create(:plan, organization:, parent: plan) }
 
     before do
-      child_fixed_charge2
+      create(:subscription, :active, plan: child_plan_1)
+      create(:subscription, :pending, plan: child_plan_2)
     end
 
-    it "includes all corresponding child fixed charges" do
-      described_class.perform_now(
-        parent_plan_id: parent_plan.id,
-        child_plan_id: child_plan.id,
-        cascade_payloads:,
-        timestamp:
-      )
-
-      expect(FixedCharges::CascadePlanUpdateService).to have_received(:call!).with(
-        child_plan: child_plan,
-        child_fixed_charges: match_array([child_fixed_charge, child_fixed_charge2]),
-        cascade_payloads:,
-        timestamp:
-      )
-    end
-  end
-
-  context "when no child fixed charges exist for the cascade payloads" do
-    let(:other_parent_fixed_charge) do
-      create(:fixed_charge, plan: parent_plan, add_on:, units: 10, pay_in_advance: true, properties: {amount: "10"})
-    end
-
-    let(:cascade_payloads) do
-      [{
-        id: other_parent_fixed_charge.id, # This parent has no child in child_plan
-        charge_model: "standard",
-        units: 15,
-        apply_units_immediately: true,
-        properties: {amount: "10"}
-      }]
-    end
-
-    it "does not call the service when no child fixed charges are found" do
-      described_class.perform_now(
-        parent_plan_id: parent_plan.id,
-        child_plan_id: child_plan.id,
-        cascade_payloads:,
-        timestamp:
-      )
-
-      expect(FixedCharges::CascadePlanUpdateService).not_to have_received(:call!)
+    it "queues a job for each child plan" do
+      expect { perform }
+        .to have_enqueued_job(FixedCharges::CascadeChildPlanUpdateJob).with(plan: child_plan_1, cascade_fixed_charges_payload:, timestamp:)
+        .and have_enqueued_job(FixedCharges::CascadeChildPlanUpdateJob).with(plan: child_plan_2, cascade_fixed_charges_payload:, timestamp:)
     end
   end
 end
