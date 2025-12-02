@@ -14,10 +14,10 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService do
   let(:plan) { create(:plan, organization: customer.organization) }
   let(:subscriptions) { create_list(:subscription, 1, plan:) }
 
-  let(:usage_thresold) { create(:usage_threshold, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:) }
 
   before do
-    usage_thresold
+    usage_threshold
     lifetime_usage
   end
 
@@ -52,7 +52,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService do
     end
 
     context "when the invoice has no plan usage thresholds" do
-      let(:usage_thresold) { nil }
+      let(:usage_threshold) { nil }
 
       it "does not flags the lifetime usage" do
         expect(flag_service.call).to be_success
