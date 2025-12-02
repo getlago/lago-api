@@ -11,6 +11,7 @@ module Types
       argument :subscription_id, ID, required: false
 
       argument :customer_id, ID, required: true
+      argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :plan_id, ID, required: true
       argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
 

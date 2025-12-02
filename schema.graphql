@@ -3113,6 +3113,7 @@ input CreateSubscriptionInput {
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planId: ID!
@@ -6091,6 +6092,11 @@ type InvoiceCustomSectionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+input InvoiceCustomSectionsReferenceInput {
+  invoiceCustomSectionIds: [ID!]
+  skipInvoiceCustomSections: Boolean
 }
 
 enum InvoiceExportTypeEnum {
@@ -9850,6 +9856,8 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
   subscriptionAt: ISO8601DateTime
