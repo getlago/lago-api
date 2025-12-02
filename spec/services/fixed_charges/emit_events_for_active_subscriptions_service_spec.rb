@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
-  subject(:service) { described_class.new(fixed_charge:, subscription:) }
+  subject(:service) do
+    described_class.new(fixed_charge:, subscription:)
+  end
 
   let(:subscription) { nil }
 
@@ -115,6 +117,89 @@ RSpec.describe FixedCharges::EmitEventsForActiveSubscriptionsService do
         result
 
         expect(FixedChargeEvent.where(subscription: other_subscription, fixed_charge:)).not_to exist
+      end
+    end
+
+    context "when apply_units_immediately is true" do
+      subject(:service) do
+        described_class.new(fixed_charge:, subscription:, apply_units_immediately: true)
+      end
+
+      it "creates fixed charge events for all active subscriptions with timestamp current Time" do
+        expect { result }.to change(FixedChargeEvent, :count).by(2)
+
+        event_1 = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
+        event_2 = FixedChargeEvent.find_by(subscription: active_subscription_2, fixed_charge:)
+
+        expect(event_1).to be_present
+        expect(event_1.organization).to eq(active_subscription_1.organization)
+        expect(event_1.units).to eq(fixed_charge.units)
+        expect(event_1.timestamp).to be_within(1.second).of(Time.current)
+
+        expect(event_2).to be_present
+        expect(event_2.organization).to eq(active_subscription_2.organization)
+        expect(event_2.units).to eq(fixed_charge.units)
+        expect(event_2.timestamp).to be_within(1.second).of(Time.current)
+      end
+
+      context "when passing timestamp as datetime object" do
+        subject(:service) do
+          described_class.new(
+            fixed_charge:,
+            subscription:,
+            apply_units_immediately: true,
+            timestamp:
+          )
+        end
+
+        let(:timestamp) { 2.days.ago }
+
+        it "creates fixed charge events for all active subscriptions" do
+          expect { result }.to change(FixedChargeEvent, :count).by(2)
+
+          event_1 = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
+          event_2 = FixedChargeEvent.find_by(subscription: active_subscription_2, fixed_charge:)
+
+          expect(event_1).to be_present
+          expect(event_1.organization).to eq(active_subscription_1.organization)
+          expect(event_1.units).to eq(fixed_charge.units)
+          expect(event_1.timestamp).to eq(Time.zone.at(timestamp.to_i))
+
+          expect(event_2).to be_present
+          expect(event_2.organization).to eq(active_subscription_2.organization)
+          expect(event_2.units).to eq(fixed_charge.units)
+          expect(event_2.timestamp).to eq(Time.zone.at(timestamp.to_i))
+        end
+      end
+
+      context "when passing timestamp as integer" do
+        subject(:service) do
+          described_class.new(
+            fixed_charge:,
+            subscription:,
+            apply_units_immediately: true,
+            timestamp:
+          )
+        end
+
+        let(:timestamp) { 2.weeks.ago.to_i }
+
+        it "creates fixed charge events for all active subscriptions" do
+          expect { result }.to change(FixedChargeEvent, :count).by(2)
+
+          event_1 = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
+          event_2 = FixedChargeEvent.find_by(subscription: active_subscription_2, fixed_charge:)
+
+          expect(event_1).to be_present
+          expect(event_1.organization).to eq(active_subscription_1.organization)
+          expect(event_1.units).to eq(fixed_charge.units)
+          expect(event_1.timestamp).to eq(Time.zone.at(timestamp))
+
+          expect(event_2).to be_present
+          expect(event_2.organization).to eq(active_subscription_2.organization)
+          expect(event_2.units).to eq(fixed_charge.units)
+          expect(event_2.timestamp).to eq(Time.zone.at(timestamp))
+        end
       end
     end
   end
