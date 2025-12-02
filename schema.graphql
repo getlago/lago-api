@@ -5976,6 +5976,7 @@ type Invoice {
   currency: CurrencyEnum
   customer: Customer!
   errorDetails: [ErrorDetail!]
+  expectedFinalizationDate: ISO8601Date!
   externalHubspotIntegrationId: String
   externalIntegrationId: String
   externalSalesforceIntegrationId: String
