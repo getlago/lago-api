@@ -11,6 +11,8 @@ module PaymentProviderCustomers
     end
 
     def create
+      return result unless customer
+
       result.stripe_customer = stripe_customer
       return result if stripe_customer.provider_customer_id? || !stripe_payment_provider
 

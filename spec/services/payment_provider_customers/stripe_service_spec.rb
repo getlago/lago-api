@@ -15,6 +15,20 @@ RSpec.describe PaymentProviderCustomers::StripeService do
   end
 
   describe "#create" do
+    context "when customer is deleted" do
+      before do
+        customer.discard!
+        stripe_customer.reload
+      end
+
+      it "returns a deleted_customer failure" do
+        result = stripe_service.create
+
+        expect(result).to be_success
+        expect(result.stripe_customer).to be_nil
+      end
+    end
+
     context "when customer name is present" do
       let(:customer_name) { "Big inc" }
 
