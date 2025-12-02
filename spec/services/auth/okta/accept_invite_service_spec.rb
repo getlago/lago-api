@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
-  subject(:service) { described_class.new(invite_token:, code: "code", state:) }
+  subject(:service) { described_class.new(invite_token:, code:, state:) }
 
   let(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
@@ -12,6 +12,7 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
   let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
+  let(:code) { "code" }
   let(:state) { SecureRandom.uuid }
 
   around { |test| lago_premium!(&test) }
@@ -22,7 +23,7 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
 
     organization.enable_okta_authentication!
 
-    Rails.cache.write(state, "foo@bar.com")
+    Rails.cache.write(state, "foo@bar.com") if state.present?
 
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
     allow(lago_http_client).to receive(:post_url_encoded).and_return(okta_token_response)
@@ -41,6 +42,28 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
 
         decoded = Auth::TokenService.decode(token: result.token)
         expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
+      end
+    end
+
+    context "when code is not provided" do
+      let(:code) { nil }
+
+      it "returns an error" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({base: ["code_not_found"]})
+      end
+    end
+
+    context "when state is not provided" do
+      let(:state) { nil }
+
+      it "returns an error" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({base: ["state_not_found"]})
       end
     end
 

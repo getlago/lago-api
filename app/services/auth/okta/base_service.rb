@@ -5,7 +5,13 @@ module Auth
     class BaseService < BaseService
       private
 
+      def check_code
+        raise ValidationError, "code_not_found" if code.blank?
+      end
+
       def check_state
+        raise ValidationError, "state_not_found" if state.blank?
+
         email = Rails.cache.read(state)
         raise ValidationError, "state_not_found" if email.blank?
 

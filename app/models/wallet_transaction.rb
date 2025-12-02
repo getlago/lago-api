@@ -46,6 +46,7 @@ class WalletTransaction < ApplicationRecord
   enum :transaction_type, TRANSACTION_TYPES
   enum :source, SOURCES
 
+  validates :status, :transaction_type, :source, :transaction_status, presence: true
   validates :priority, presence: true, inclusion: {in: 1..50}
   validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
   validates :invoice_requires_successful_payment, exclusion: [nil]

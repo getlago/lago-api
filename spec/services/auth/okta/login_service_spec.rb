@@ -3,17 +3,18 @@
 require "rails_helper"
 
 RSpec.describe Auth::Okta::LoginService, cache: :memory do
-  let(:service) { described_class.new(code: "code", state:) }
+  let(:service) { described_class.new(code:, state:) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo") }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
   let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
   let(:state) { SecureRandom.uuid }
+  let(:code) { "code" }
 
   before do
     okta_integration
 
-    Rails.cache.write(state, "foo@bar.com")
+    Rails.cache.write(state, "foo@bar.com") if state.present?
 
     if okta_integration
       okta_integration.organization.premium_integrations << "okta"
@@ -40,18 +41,24 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
     end
 
-    context "when state is not found" do
-      before do
-        Rails.cache.clear
-      end
+    context "when code is not provided" do
+      let(:code) { nil }
 
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("state_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({base: ["code_not_found"]})
+      end
+    end
+
+    context "when state is not provided" do
+      let(:state) { nil }
+
+      it "returns error" do
+        result = service.call
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({base: ["state_not_found"]})
       end
     end
 
