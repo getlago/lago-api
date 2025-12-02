@@ -150,30 +150,62 @@ RSpec.describe FixedCharge do
   end
 
   describe "#equal_properties?" do
-    let(:fixed_charge1) { build(:fixed_charge, properties: {amount: 100}) }
+    subject(:equal_properties?) { fixed_charge1.equal_properties?(fixed_charge2) }
+
+    let(:fixed_charge1) do
+      build(:fixed_charge, :standard, units: 2, properties: {amount: 100})
+    end
 
     context "when charge model is not the same" do
-      let(:fixed_charge2) { build(:fixed_charge, :volume) }
-
-      it "returns false" do
-        expect(fixed_charge1.equal_properties?(fixed_charge2)).to be false
+      let(:fixed_charge2) do
+        build(
+          :fixed_charge,
+          charge_model: :volume,
+          properties: fixed_charge1.properties,
+          units: fixed_charge1.units
+        )
       end
+
+      it { is_expected.to be false }
     end
 
-    context "when charge model is the same and properties are different" do
-      let(:fixed_charge2) { build(:fixed_charge, properties: {amount: 200}) }
-
-      it "returns false if properties are not the same" do
-        expect(fixed_charge1.equal_properties?(fixed_charge2)).to be false
+    context "when properties are different" do
+      let(:fixed_charge2) do
+        build(
+          :fixed_charge,
+          charge_model: fixed_charge1.charge_model,
+          properties: {amount: 200},
+          units: fixed_charge1.units
+        )
       end
+
+      it { is_expected.to be false }
     end
 
-    context "when charge model and properties are the same" do
-      let(:fixed_charge2) { build(:fixed_charge, properties: {amount: 100}) }
-
-      it "returns true if both charge model and properties are the same" do
-        expect(fixed_charge1.equal_properties?(fixed_charge2)).to be true
+    context "when units are different" do
+      let(:fixed_charge2) do
+        build(
+          :fixed_charge,
+          charge_model: fixed_charge1.charge_model,
+          properties: fixed_charge1.properties,
+          units: 99999
+        )
       end
+
+      it { is_expected.to be false }
+    end
+
+    context "when charge model, properties and units are the same" do
+      let(:fixed_charge2) do
+        build(
+          :fixed_charge,
+          charge_model: fixed_charge1.charge_model,
+          properties: fixed_charge1.properties,
+          units: fixed_charge1.units
+        )
+      end
+
+      it { is_expected.to be true }
     end
   end
 
