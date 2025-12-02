@@ -44,7 +44,9 @@ class FixedCharge < ApplicationRecord
   validate :validate_properties
 
   def equal_properties?(fixed_charge)
-    charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
+    charge_model == fixed_charge.charge_model &&
+      properties == fixed_charge.properties &&
+      units == fixed_charge.units
   end
 
   # When upgrading a subscription with fixed_charges paid_in_advance,
@@ -58,6 +60,7 @@ class FixedCharge < ApplicationRecord
   end
 
   private
+
   def validate_pay_in_advance
     return unless pay_in_advance?
 
