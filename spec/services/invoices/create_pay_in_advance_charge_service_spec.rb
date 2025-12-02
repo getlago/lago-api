@@ -35,7 +35,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     billing_entity.update!(email_settings:)
   end
 
-  describe "call" do
+  describe "#call" do
     let(:aggregation_result) do
       BaseService::Result.new.tap do |result|
         result.aggregation = 9
@@ -64,7 +64,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         .with(charge:, aggregation_result:, properties: Hash)
         .and_return(charge_result)
 
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
@@ -125,7 +124,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -283,13 +282,103 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
     end
 
+    context "when customer has a wallet" do
+      context "when the wallet has a positive balance" do
+        let!(:wallet) { create(:wallet, customer:, balance_cents: 100, credits_balance: 100) }
+
+        it "uses the prepaid credits" do
+          allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
+
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.total_amount_cents).to eq(0)
+          expect(result.invoice.prepaid_credit_amount_cents).to eq(12)
+
+          expect(Credits::AppliedPrepaidCreditsService).to have_received(:call).with(
+            invoice: result.invoice,
+            wallets: [wallet],
+            max_wallet_decrease_attempts: 1
+          )
+        end
+      end
+
+      context "when the wallet has a zero balance" do
+        before { create(:wallet, customer:, balance_cents: 0) }
+
+        it "does not create a credit note" do
+          allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
+
+          result = invoice_service.call
+
+          expect(Credits::AppliedPrepaidCreditsService).not_to have_received(:call)
+
+          expect(result).to be_success
+          expect(result.invoice.total_amount_cents).to eq(12)
+        end
+      end
+    end
+
+    context "when there is a concurrent lock", transaction: false do
+      let(:lock_released_after) { 0.1.seconds }
+
+      before do
+        stub_const("Invoices::CreatePayInAdvanceChargeService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+      end
+
+      around do |test|
+        customer_id = customer.id
+        queue = Queue.new
+        thread = start_lock_thread(queue, customer_id)
+        test.run
+      ensure
+        stop_thread(thread, queue) if thread
+      end
+
+      def start_lock_thread(queue, customer_id)
+        Thread.start do
+          start_time = Time.zone.now
+          ApplicationRecord.transaction do
+            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
+              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
+                sleep 0.01
+              end
+            end
+          end
+        end
+      end
+
+      def stop_thread(thread, queue)
+        queue.push(true)
+        thread.join
+      end
+
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 2.seconds }
+
+        it "raises a WithAdvisoryLock::FailedToAcquireLock error" do
+          expect { invoice_service.call }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+
+          expect(customer.invoices.count).to eq(0)
+        end
+      end
+
+      context "when the lock is acquired" do
+        it "creates the invoice" do
+          expect { invoice_service.call }.to change(Invoice, :count).by(1)
+        end
+      end
+    end
+
     it_behaves_like "applies invoice_custom_sections" do
       let(:service_call) { invoice_service.call }
     end
 
     context "when an error occurs" do
       context "with a stale object error" do
-        before { create(:wallet, customer:, balance_cents: 100) }
+        before do
+          create(:wallet, customer:, balance_cents: 100)
+        end
 
         it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
