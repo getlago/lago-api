@@ -147,17 +147,19 @@ RSpec.describe FixedCharges::UpdateService do
           context "when equal_properties is true" do
             let(:cascade_options) { {cascade: true, equal_properties: true} }
 
-            it "updates properties" do
+            it "updates properties and units" do
               expect(result).to be_success
               expect(result.fixed_charge.properties).to eq({"amount" => "200"})
+              expect(result.fixed_charge.units).to eq(5)
             end
           end
 
           context "when equal_properties is false" do
-            it "does not update properties" do
+            it "does not update properties nor units" do
               original_properties = fixed_charge.properties
               expect(result).to be_success
               expect(result.fixed_charge.properties).to eq(original_properties)
+              expect(result.fixed_charge.units).to eq(10)
             end
           end
         end
