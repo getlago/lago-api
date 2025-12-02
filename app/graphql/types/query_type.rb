@@ -110,5 +110,6 @@ module Types
     field :data_api_usages_aggregated_amounts, resolver: Resolvers::DataApi::Usages::AggregatedAmountsResolver
     field :data_api_usages_forecasted, resolver: Resolvers::DataApi::Usages::ForecastedResolver
     field :data_api_usages_invoiced, resolver: Resolvers::DataApi::Usages::InvoicedResolver
+    field :superset_dashboards, resolver: Resolvers::Superset::DashboardsResolver
   end
 end
