@@ -132,8 +132,13 @@ module Invoices
     def issuing_date
       return @issuing_date if defined?(@issuing_date)
 
+      terminated = subscription_context == :terminated
+      recurring = !terminated && !first_subscription.plan.pay_in_advance?
+
       date = billing_time.in_time_zone(customer.applicable_timezone).to_date
-      @issuing_date = date + customer.applicable_invoice_grace_period.days
+      issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
+
+      @issuing_date = date + issuing_date_service.issuing_date_adjustment.days
     end
 
     def payment_due_date

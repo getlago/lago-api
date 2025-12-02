@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Invoices::CreateGeneratingService do
   subject(:create_service) do
-    described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:)
+    described_class.new(customer:, invoice_type:, currency:, datetime:, charge_in_advance:, invoicing_reason:)
   end
 
   let(:customer) { create(:customer) }
@@ -12,6 +12,7 @@ RSpec.describe Invoices::CreateGeneratingService do
   let(:currency) { "EUR" }
   let(:datetime) { Time.current }
   let(:charge_in_advance) { false }
+  let(:invoicing_reason) { "subscription_starting" }
   let(:recurring) { false }
 
   describe "call" do
@@ -144,6 +145,96 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.self_billed).to eq(true)
+        end
+      end
+    end
+
+    context "with issuing date preferences" do
+      let(:customer) do
+        create(
+          :customer,
+          subscription_invoice_issuing_date_anchor:,
+          subscription_invoice_issuing_date_adjustment:,
+          invoice_grace_period: 3
+        )
+      end
+
+      let(:invoice_type) { :subscription }
+      let(:invoicing_reason) { "subscription_periodic" }
+
+      context "with current_period_end + keep_anchor" do
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        it "sets issuing_date to the current billing period end date" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+        end
+      end
+
+      context "with current_period_end + align_with_finalization_date" do
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+        it "sets issuing_date to the current billing period end date + grace period" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
+        end
+      end
+
+      context "with next_period_start + keep_anchor" do
+        let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        it "sets issuing_date to the next billing period start date" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date)
+        end
+      end
+
+      context "with next_period_start + align_with_finalization_date" do
+        let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+        let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+        it "sets issuing_date to the next billing period start date + grace period" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
+        end
+      end
+
+      context "with no preferences set on the customer level " do
+        let(:billing_entity) do
+          create(
+            :billing_entity,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
+            invoice_grace_period: 3
+          )
+        end
+
+        let(:customer) { create(:customer, billing_entity:) }
+
+        it "uses billing_entity preferences" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+        end
+      end
+
+      context "when invoice is not recurring" do
+        let(:invoicing_reason) { "subscription_starting" }
+
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+        it "ignores all issuing date preferences" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
         end
       end
     end

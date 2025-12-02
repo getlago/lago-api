@@ -308,6 +308,32 @@ RSpec.describe Invoices::SubscriptionService do
 
         expect { invoice_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
       end
+
+      context "with keep_anchor as issuing_date adjustment" do
+        before do
+          customer.update!(subscription_invoice_issuing_date_adjustment: "keep_anchor")
+        end
+
+        context "with a recurring invoice" do
+          let(:invoicing_reason) { :subscription_periodic }
+
+          it "creates a finalized invoice" do
+            result = invoice_service.call
+            expect(result).to be_success
+            expect(result.invoice).to be_finalized
+          end
+        end
+
+        context "with a non-recurring invoice" do
+          let(:invoicing_reason) { :subscription_starting }
+
+          it "creates an invoice as draft" do
+            result = invoice_service.call
+            expect(result).to be_success
+            expect(result.invoice).to be_draft
+          end
+        end
+      end
     end
 
     context "when invoice already exists" do
