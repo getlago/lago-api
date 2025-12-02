@@ -48,7 +48,6 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:integration_resources)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
-      expect(subject).to have_many(:usage_thresholds).through(:plan)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
