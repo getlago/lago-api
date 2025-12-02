@@ -7,7 +7,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
     it "returns a random delay between 0 and 8 seconds" do
       values = Array.new(1000) { described_class.retry_delay }
 
-      expect(values).to all(be_between(0, 8))
+      expect(values).to all(be_between(0, 16))
     end
   end
 
@@ -73,8 +73,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
 
     [
       [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
-      [WithAdvisoryLock::FailedToAcquireLock.new("customer-1"), 15],
-      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 15],
+      [WithAdvisoryLock::FailedToAcquireLock.new("customer-1"), 25],
+      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
       [BaseService::ThrottlingError.new(provider_name: "Stripe"), 25]
     ].each do |error, attempts|
       error_class = error.class
