@@ -16,7 +16,7 @@ module DataExports
       export_result = data_export.export_class.call(data_export_part:).raise_if_error!
       file = export_result.csv_file
       data_export_part.update!(csv_lines: file.read, completed: true)
-      # Explicitely close and unlink the file
+      # Explicitly close and unlink the file
       file.close
       File.unlink(file.path)
 
