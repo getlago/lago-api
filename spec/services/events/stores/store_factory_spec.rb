@@ -47,19 +47,6 @@ RSpec.describe Events::Stores::StoreFactory do
         it "returns an instance of a Clickhouse store" do
           expect(store_instance).to be_a(Events::Stores::ClickhouseStore)
         end
-
-        context "when current usage and clickhouse_live_aggregation", :premium do
-          let(:current_usage) { true }
-
-          before do
-            organization.premium_integrations << "clickhouse_live_aggregation"
-            organization.save!
-          end
-
-          it "returns an instance of an Aggregated Clickhouse store" do
-            expect(store_instance).to be_a(Events::Stores::AggregatedClickhouseStore)
-          end
-        end
       end
     end
   end

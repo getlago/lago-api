@@ -13,11 +13,7 @@ module Events
         event_store = Events::Stores::PostgresStore
 
         if supports_clickhouse? && organization.clickhouse_events_store?
-          event_store = if current_usage && organization.clickhouse_live_aggregation_enabled?
-            Events::Stores::AggregatedClickhouseStore
-          else
-            Events::Stores::ClickhouseStore
-          end
+          event_store = Events::Stores::ClickhouseStore
         end
 
         event_store
