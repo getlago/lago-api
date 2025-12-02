@@ -64,7 +64,7 @@ module DataExports
         pagination: nil,
         search_term:,
         filters:
-      ).invoices.pluck(:id)
+      ).invoices.distinct.pluck(:id)
     end
 
     def credit_note_ids
@@ -76,7 +76,7 @@ module DataExports
         pagination: nil,
         search_term:,
         filters:
-      ).credit_notes.pluck(:id)
+      ).credit_notes.distinct.pluck(:id)
     end
   end
 end
