@@ -1607,13 +1607,7 @@ RSpec.describe Plans::UpdateService do
           it "schedules job to update fixed_charges of children plans" do
             expect do
               plans_service.call
-            end.to have_enqueued_job(FixedCharges::UpdateChildrenJob).exactly(1).times
-          end
-
-          it "schedules job to create fixed_charges of children plans" do
-            expect do
-              plans_service.call
-            end.to have_enqueued_job(FixedCharges::CreateChildrenJob).exactly(1).times
+            end.to have_enqueued_job(FixedCharges::CascadePlanUpdateJob).exactly(1).times
           end
 
           it "schedules job to delete fixed_charges of children plans" do
