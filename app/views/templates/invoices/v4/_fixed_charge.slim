@@ -1,0 +1,63 @@
+table.invoice-resume-table width="100%"
+  tr
+    td.body-2 = I18n.t('invoice.item')
+    td.body-2 = I18n.t('invoice.units')
+    td.body-2 = I18n.t('invoice.unit_price')
+    td.body-2 = I18n.t('invoice.tax_rate')
+    td.body-2 = I18n.t('invoice.amount')
+  - fees.order(:succeeded_at, :created_at).each do |fee|
+    - if fee.charge?
+      - next
+    tr.fee
+      td.body-1
+        = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
+      td.body-2 = RoundingHelper.round_decimal_part(fee.units)
+      td.body-2 = FeeDisplayHelper.format_precise_unit_amount(fee)
+      td.body-2 == TaxHelper.applied_taxes(fee)
+      td.body-2 = FeeDisplayHelper.format_amount(fee)
+
+table.total-table width="100%"
+  - if coupons_amount_cents.positive?
+    - credits.coupon_kind.order(created_at: :asc).each do |credit|
+      tr
+        td.body-2
+        td.body-2 #{credit.invoice_coupon_display_name}
+        td.body-2 = '-' +  MoneyHelper.format(credit.amount)
+  tr
+    td.body-2
+    td.body-2 = I18n.t('invoice.sub_total_without_tax')
+    td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
+  - if applied_taxes.present?
+    - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+      tr
+        - if applied_tax.applied_on_whole_invoice?
+          td.body-2
+          td.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
+          td.body-2
+        - else
+          td.body-2
+          td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
+          td.body-2 = MoneyHelper.format(applied_tax.amount)
+  - else
+    tr
+      td.body-2
+      td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+      td.body-2 = MoneyHelper.format(0.to_money(currency))
+  tr
+    td.body-2
+    td.body-2 = I18n.t('invoice.sub_total_with_tax')
+    td.body-2 = MoneyHelper.format(sub_total_including_taxes_amount)
+  - if credits.credit_note_kind.any?
+    tr
+      td.body-2
+      td.body-2 = I18n.t('invoice.credit_notes')
+      td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
+  - if wallet_transactions.exists?
+    tr
+      td.body-2
+      td.body-2 = I18n.t('invoice.prepaid_credits')
+      td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
+  tr
+    td.body-2
+    td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
+    td.body-1 = MoneyHelper.format(total_amount)
