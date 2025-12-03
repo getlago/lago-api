@@ -84,7 +84,7 @@ RSpec.describe Subscriptions::CreateService do
         let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
 
         it "enqueues a job to bill the subscription" do
-          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+          expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
@@ -415,7 +415,7 @@ RSpec.describe Subscriptions::CreateService do
         let(:pay_in_advance) { true }
 
         it "enqueues a job to bill the subscription" do
-          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+          expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
 
