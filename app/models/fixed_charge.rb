@@ -49,10 +49,14 @@ class FixedCharge < ApplicationRecord
       units == fixed_charge.units
   end
 
-  def included_in_next_subscription?(subscription)
-    return false if subscription.next_subscription.nil?
+  # When upgrading a subscription with fixed_charges paid_in_advance,
+  # this exact charge might have already been paid at the beginning of billing period.
+  # in case of prorating, we need to deduct the prorated amount (remaining of the billing_period)
+  # that was already paid from the new price.
+  def matching_fixed_charge_prev_subscription(subscription)
+    return nil if subscription.previous_subscription.nil?
 
-    subscription.next_subscription.plan.fixed_charges.exists?(add_on_id:)
+    subscription.previous_subscription.plan.fixed_charges.find_by(add_on_id:)
   end
 
   private

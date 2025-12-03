@@ -78,6 +78,16 @@ module Fees
 
       units = amount_result.full_units_number
 
+      if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
+        already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
+        if already_paid_fee
+          current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
+          prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
+          amount_cents -= prorated_for_current_period
+          precise_amount_cents -= prorated_for_current_period.to_d
+        end
+      end
+
       new_fee = Fee.new(
         invoice:,
         organization_id: organization.id,
