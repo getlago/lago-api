@@ -85,7 +85,6 @@ RSpec.describe Mutations::CreditNotes::Update do
         variables: {
           input: {
             id: credit_note.id,
-            refundStatus: "succeeded",
             metadata: [{key: "new", value: "data"}]
           }
         }
