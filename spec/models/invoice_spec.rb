@@ -224,6 +224,14 @@ RSpec.describe Invoice do
         expect(described_class.ready_to_be_finalized.pluck(:id)).not_to include(invoice.id)
       end
     end
+
+    context "when expected_finalization_date is nil" do
+      let(:invoice) { create(:invoice, status: :draft, issuing_date: Time.current + 1.day) }
+
+      it "returns all invoices that are ready for finalization" do
+        expect(described_class.ready_to_be_finalized.pluck(:id)).to include(invoice.id)
+      end
+    end
   end
 
   describe "ready_to_be_refreshed" do
@@ -2112,6 +2120,28 @@ RSpec.describe Invoice do
       let(:status) { (Invoice::STATUS.keys - Invoice::MANUALLY_PAYABLE_INVOICE_STATUS).sample }
 
       it { expect(subject).to be false }
+    end
+  end
+
+  describe "#expected_finalization_date" do
+    subject { invoice.expected_finalization_date }
+
+    let(:invoice) { build(:invoice, issuing_date: Time.current, expected_finalization_date:) }
+
+    context "when expected_finalization_date is present" do
+      let(:expected_finalization_date) { Time.current.to_date + 1.day }
+
+      it "returns expected_finalization_date value" do
+        expect(subject).to eq(expected_finalization_date)
+      end
+    end
+
+    context "when expected_finalization_date is blank" do
+      let(:expected_finalization_date) { nil }
+
+      it "returns issuing_date value" do
+        expect(subject).to eq(invoice.issuing_date)
+      end
     end
   end
 end

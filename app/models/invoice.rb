@@ -121,7 +121,7 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized, -> { draft.where("expected_finalization_date <= ?", Time.current.to_date) }
+  scope :ready_to_be_finalized, -> { draft.where("COALESCE(expected_finalization_date, issuing_date) <= ?", Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
@@ -438,6 +438,12 @@ class Invoice < ApplicationRecord
 
   def allow_manual_payment?
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
+  end
+
+  # A safeguard while we're populating the expected finalization date.
+  # We can drop it once fill_expected_finalization_date has been run.
+  def expected_finalization_date
+    read_attribute(:expected_finalization_date) || issuing_date
   end
 
   private
