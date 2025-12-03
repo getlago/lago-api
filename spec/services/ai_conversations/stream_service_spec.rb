@@ -21,6 +21,7 @@ describe AiConversations::StreamService, type: :service do
 
     allow(mcp_client_mock).to receive(:setup!)
     allow(mistral_agent_mock).to receive(:setup!)
+    allow(mistral_agent_mock).to receive(:conversation_id).and_return(nil)
     allow(LagoApiSchema.subscriptions).to receive(:trigger)
   end
 
@@ -51,7 +52,7 @@ describe AiConversations::StreamService, type: :service do
       end
 
       it "ignores nil chunks" do
-        allow(mistral_agent_mock).to receive(:chat) do |msg, &block|
+        allow(mistral_agent_mock).to receive(:chat) do |_msg, &block|
           block.call("text")
           block.call(nil)
           block.call("more")
@@ -76,6 +77,47 @@ describe AiConversations::StreamService, type: :service do
           {id: ai_conversation.id},
           {chunk: nil, done: true}
         )
+      end
+
+      it "passes conversation_id to the mistral agent" do
+        allow(mistral_agent_mock).to receive(:chat)
+
+        service.call
+
+        expect(LagoMcpClient::Mistral::Agent).to have_received(:new).with(
+          client: mcp_client_mock,
+          conversation_id: ai_conversation.mistral_conversation_id
+        )
+      end
+
+      context "when mistral agent returns a new conversation_id" do
+        let(:ai_conversation) { create(:ai_conversation, mistral_conversation_id: nil) }
+        let(:new_conversation_id) { "new-mistral-conv-456" }
+
+        before do
+          allow(mistral_agent_mock).to receive(:chat)
+          allow(mistral_agent_mock).to receive(:conversation_id).and_return(new_conversation_id)
+        end
+
+        it "saves the conversation_id to the ai_conversation" do
+          expect { service.call }.to change { ai_conversation.reload.mistral_conversation_id }
+            .from(nil).to(new_conversation_id)
+        end
+      end
+
+      context "when mistral agent returns the same conversation_id" do
+        let(:existing_conversation_id) { "existing-conv-123" }
+        let(:ai_conversation) { create(:ai_conversation, mistral_conversation_id: existing_conversation_id) }
+
+        before do
+          allow(mistral_agent_mock).to receive(:chat)
+          allow(mistral_agent_mock).to receive(:conversation_id).and_return(existing_conversation_id)
+        end
+
+        it "does not update the ai_conversation" do
+          expect(ai_conversation).not_to receive(:update!)
+          service.call
+        end
       end
     end
 
