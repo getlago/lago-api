@@ -7,7 +7,7 @@ module Types
 
       argument :id, ID, required: true
       argument :metadata, [Types::Metadata::Input], required: false, **Types::Metadata::Input::ARGUMENT_OPTIONS
-      argument :refund_status, Types::CreditNotes::RefundStatusTypeEnum, required: true
+      argument :refund_status, Types::CreditNotes::RefundStatusTypeEnum, required: false
     end
   end
 end

@@ -57591,13 +57591,9 @@
               "name": "refundStatus",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CreditNoteRefundStatusEnum",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "CreditNoteRefundStatusEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

@@ -11088,7 +11088,7 @@ input UpdateCreditNoteInput {
   clientMutationId: String
   id: ID!
   metadata: [MetadataInput!]
-  refundStatus: CreditNoteRefundStatusEnum!
+  refundStatus: CreditNoteRefundStatusEnum
 }
 
 """
