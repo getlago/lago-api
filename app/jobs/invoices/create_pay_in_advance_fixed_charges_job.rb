@@ -2,7 +2,13 @@
 
 module Invoices
   class CreatePayInAdvanceFixedChargesJob < ApplicationJob
-    queue_as "billing"
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
+        :billing
+      else
+        :default
+      end
+    end
 
     def perform(subscription, timestamp)
       Invoices::CreatePayInAdvanceFixedChargesService.call!(
