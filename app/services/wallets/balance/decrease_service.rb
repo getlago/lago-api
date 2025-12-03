@@ -3,7 +3,7 @@
 module Wallets
   module Balance
     class DecreaseService < BaseService
-      def initialize(wallet:, wallet_transaction:, skip_refresh: true)
+      def initialize(wallet:, wallet_transaction:, skip_refresh: false)
         @wallet = wallet.reload
         @wallet_transaction = wallet_transaction
         @skip_refresh = skip_refresh
