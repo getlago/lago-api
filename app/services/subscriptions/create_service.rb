@@ -99,9 +99,7 @@ module Subscriptions
     end
 
     def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? &&
-        sub.billed_on_activation? &&
-        !sub.in_trial_period?
+      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
     end
 
     def create_subscription
@@ -134,6 +132,13 @@ module Subscriptions
           subscriptions: [new_subscription],
           timestamp: new_subscription.started_at + 1.second
         )
+
+        after_commit do
+          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
+            new_subscription,
+            new_subscription.started_at + 1.second
+          ) if plan.fixed_charges.pay_in_advance.any? && !should_be_billed_today?(new_subscription)
+        end
       end
 
       if should_be_billed_today?(new_subscription)
