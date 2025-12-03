@@ -24,11 +24,11 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
 
   describe "#call" do
     let(:invoice_to_be_finalized) do
-      create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("19 Jun 2022").to_date, organization:)
+      create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("19 Jun 2022").to_date, expected_finalization_date: DateTime.parse("19 Jun 2022").to_date, organization:)
     end
 
     let(:invoice_to_not_be_finalized) do
-      create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("21 Jun 2022").to_date, organization:)
+      create(:invoice, status: :draft, customer:, issuing_date: DateTime.parse("21 Jun 2022").to_date, expected_finalization_date: DateTime.parse("21 Jun 2022").to_date, organization:)
     end
 
     before do
@@ -157,6 +157,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
               .to(DateTime.parse("20 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
+              .to(DateTime.parse("23 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("20 Jun 2022"))
           end
@@ -173,6 +175,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
 
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
               .to(DateTime.parse("23 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("23 Jun 2022"))
@@ -195,6 +199,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
                 invoice_to_not_be_finalized.reload.payment_due_date
               ]
             }
+
+            expect(invoice_to_not_be_finalized.expected_finalization_date).to eq(DateTime.parse("23 Jun 2022"))
           end
         end
       end
@@ -209,6 +215,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
 
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
               .to(DateTime.parse("23 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("23 Jun 2022"))
@@ -229,6 +237,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
               .to(DateTime.parse("17 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
+              .to(DateTime.parse("20 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("17 Jun 2022"))
           end
@@ -266,6 +276,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
               .to(DateTime.parse("19 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
+              .to(DateTime.parse("22 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("19 Jun 2022"))
           end
@@ -284,6 +296,8 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
 
           travel_to(current_date) do
             expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+              .to(DateTime.parse("23 Jun 2022"))
+              .and change { invoice_to_not_be_finalized.reload.expected_finalization_date }
               .to(DateTime.parse("23 Jun 2022"))
               .and change { invoice_to_not_be_finalized.reload.payment_due_date }
               .to(DateTime.parse("23 Jun 2022"))

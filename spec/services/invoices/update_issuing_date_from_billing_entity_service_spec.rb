@@ -6,11 +6,12 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
   subject { described_class.new(invoice:, previous_issuing_date_settings:) }
 
   let(:invoice) do
-    create(:invoice, :draft, customer:, issuing_date:, payment_due_date:, applied_grace_period: 12)
+    create(:invoice, :draft, customer:, issuing_date:, expected_finalization_date:, payment_due_date:, applied_grace_period: 12)
   end
 
   let(:customer) { create(:customer) }
   let(:issuing_date) { Time.current + old_grace_period.days }
+  let(:expected_finalization_date) { Time.current + old_grace_period.days }
   let(:payment_due_date) { issuing_date }
 
   let(:previous_issuing_date_settings) do
@@ -72,6 +73,10 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       expect { subject.call }.to change(invoice, :issuing_date).by(3)
     end
 
+    it "changes the expected_finalization_date by 3 days" do
+      expect { subject.call }.to change(invoice, :expected_finalization_date).by(3)
+    end
+
     it "changes the applied_grace_to 15" do
       expect { subject.call }.to change(invoice, :applied_grace_period).to(15)
     end
@@ -86,6 +91,10 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
 
     it "changes the issuing_date by 3 days" do
       expect { subject.call }.to change(invoice, :issuing_date).by(-3)
+    end
+
+    it "changes the expected_finalization_date by 3 days" do
+      expect { subject.call }.to change(invoice, :expected_finalization_date).by(-3)
     end
 
     it "changes the applied_grace_to 9" do
@@ -109,8 +118,9 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
       let(:new_grace_period) { 2 }
 
-      it "updates issuing_date" do
+      it "updates issuing_date and expected_finalization_date" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-13)
+          .and change(invoice, :expected_finalization_date).by(-10)
       end
     end
 
@@ -119,8 +129,9 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
       let(:new_grace_period) { 2 }
 
-      it "updates issuing_date" do
+      it "updates issuing_date and expected_finalization_date" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-10)
+          .and change(invoice, :expected_finalization_date).by(-10)
       end
     end
 
@@ -129,8 +140,9 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
       let(:new_grace_period) { 2 }
 
-      it "updates issuing_date" do
+      it "updates issuing_date and expected_finalization_date" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-12)
+          .and change(invoice, :expected_finalization_date).by(-10)
       end
     end
 
@@ -139,8 +151,9 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
       let(:new_grace_period) { 2 }
 
-      it "updates issuing_date" do
+      it "updates issuing_date and expected_finalization_date" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-10)
+          .and change(invoice, :expected_finalization_date).by(-10)
       end
     end
 
@@ -161,6 +174,10 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       it "ignores billing_entity issuing date preferences" do
         expect { subject.call }.not_to change(invoice, :issuing_date)
       end
+
+      it "ignores billing_entity inovice_grace_period" do
+        expect { subject.call }.not_to change(invoice, :expected_finalization_date)
+      end
     end
 
     context "when invoice is not recurring" do
@@ -172,6 +189,10 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
 
       it "ignores all issuing date preferences" do
         expect { subject.call }.to change(invoice, :issuing_date).by(-10)
+      end
+
+      it "applies new invoice_grace_period to expected_finalization_date" do
+        expect { subject.call }.to change(invoice, :expected_finalization_date).by(-10)
       end
     end
   end

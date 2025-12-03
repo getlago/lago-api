@@ -40,6 +40,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:total_paid_amount_cents).of_type("BigInt!")
 
     expect(subject).to have_field(:issuing_date).of_type("ISO8601Date!")
+    expect(subject).to have_field(:expected_finalization_date).of_type("ISO8601Date!")
     expect(subject).to have_field(:payment_due_date).of_type("ISO8601Date!")
     expect(subject).to have_field(:payment_overdue).of_type("Boolean!")
     expect(subject).to have_field(:ready_for_payment_processing).of_type("Boolean!")
