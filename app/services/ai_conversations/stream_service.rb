@@ -17,6 +17,7 @@ module AiConversations
 
       setup_clients!
       stream_response
+      save_conversation_id!
       notify_completion
     rescue => e
       handle_error(e)
@@ -38,6 +39,13 @@ module AiConversations
         trigger_subscription(chunk:, done: false)
         sleep CHUNK_DELAY
       end
+    end
+
+    def save_conversation_id!
+      return if mistral_agent.conversation_id.blank?
+      return if ai_conversation.mistral_conversation_id == mistral_agent.conversation_id
+
+      ai_conversation.update!(mistral_conversation_id: mistral_agent.conversation_id)
     end
 
     def notify_completion
@@ -75,7 +83,10 @@ module AiConversations
     end
 
     def mistral_agent
-      @mistral_agent ||= LagoMcpClient::Mistral::Agent.new(client: mcp_client)
+      @mistral_agent ||= LagoMcpClient::Mistral::Agent.new(
+        client: mcp_client,
+        conversation_id: ai_conversation.mistral_conversation_id
+      )
     end
 
     def lago_api_key
