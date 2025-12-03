@@ -101,6 +101,10 @@ module Api
           applies_to: [
             fee_types: [],
             billable_metric_codes: []
+          ],
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
           ]
         )
       end
@@ -139,6 +143,10 @@ module Api
           applies_to: [
             fee_types: [],
             billable_metric_codes: []
+          ],
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
           ]
         )
       end
