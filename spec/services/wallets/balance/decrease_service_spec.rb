@@ -24,7 +24,9 @@ RSpec.describe Wallets::Balance::DecreaseService do
   end
 
   describe ".call" do
-    subject(:result) { described_class.call!(wallet:, wallet_transaction:) }
+    subject(:result) { described_class.call!(wallet:, wallet_transaction:, skip_refresh:) }
+
+    let(:skip_refresh) { false }
 
     it "updates wallet balance" do
       expect { subject }
@@ -51,6 +53,15 @@ RSpec.describe Wallets::Balance::DecreaseService do
     it "calls Customers::RefreshWalletsService" do
       subject
       expect(Customers::RefreshWalletsService).to have_received(:call).with(customer: wallet.customer, include_generating_invoices: true)
+    end
+
+    context "when skip refresh flag is set" do
+      let(:skip_refresh) { true }
+
+      it "does not call Customers::RefreshWalletsService" do
+        subject
+        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+      end
     end
 
     context "when wallet is stale" do
