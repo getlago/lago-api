@@ -49,6 +49,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService do
   end
 
   let(:events) do
+    # total_usage_amount_cents: 1100 = 300 + 300 + 500
     create_list(
       :event,
       2,
@@ -242,5 +243,142 @@ RSpec.describe Wallets::Balance::RefreshOngoingService do
         expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve"])
       end
     end
+
+    context "when there are draft invoices" do
+      let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 500) }
+
+      before { draft_invoice }
+
+      it "includes draft invoices in ongoing usage balance" do
+        expect { refresh_service.call }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1600)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-600)
+      end
+
+      context "with billable metric limitations" do
+        let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+        let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
+        let(:second_charge) do
+          create(:standard_charge, plan: second_subscription.plan, billable_metric: billable_metric2, properties: {amount: "5"})
+        end
+        let(:events) do
+          create_list(:event, 2, organization: wallet.organization, subscription: first_subscription, customer: first_subscription.customer, code: billable_metric.code, timestamp:) +
+            [create(:event, organization: wallet.organization, subscription: second_subscription, customer: second_subscription.customer, code: billable_metric2.code, timestamp:)]
+        end
+        # total_amount_cents: 550 = limited_fee (300 + 30) + non_limited_fee (200 + 20)
+        let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 550) }
+        let(:limited_fee) { create_draft_charge_fee(draft_invoice, first_charge, first_subscription, amount: 300, taxes: 30) }
+        let(:non_limited_fee) { create_draft_charge_fee(draft_invoice, second_charge, second_subscription, amount: 200, taxes: 20) }
+
+        before do
+          wallet_target
+          limited_fee
+          non_limited_fee
+        end
+
+        it "only includes fees matching billable metric limitations" do
+          # Current usage: 600 (limited to billable_metric), Draft: 330 (limited_fee only)
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(930)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(70)
+        end
+      end
+
+      context "with fee type limitations" do
+        let(:wallet) { create_wallet_with_limitations(allowed_fee_types: ["subscription"]) }
+        # total_amount_cents: 550 = subscription_fee (100 + 10) + charge_fee (400 + 40)
+        let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 550) }
+        let(:subscription_fee) { create_draft_fee(draft_invoice, first_subscription, fee_type: "subscription", amount: 100, taxes: 10) }
+        let(:charge_fee) { create_draft_charge_fee(draft_invoice, first_charge, first_subscription, amount: 400, taxes: 40) }
+
+        before do
+          subscription_fee
+          charge_fee
+        end
+
+        it "only includes fees matching fee type limitations" do
+          # Current usage: 1100, Draft: 110 (subscription fee only)
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1210)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(-210)
+        end
+      end
+
+      context "with coupons applied to fees" do
+        let(:wallet) { create_wallet_with_limitations(allowed_fee_types: ["charge"]) }
+        # total_amount_cents: 432 = charge_fee (400 + 32 taxes), coupon reduces the applicable amount
+        let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 432) }
+        let(:charge_fee_with_coupon) { create_draft_charge_fee(draft_invoice, first_charge, first_subscription, amount: 400, taxes: 32, coupons: 100) }
+
+        before { charge_fee_with_coupon }
+
+        it "deducts coupons from fee amounts" do
+          # Current usage: 1100, Draft: 332 (400 - 100 coupon + 32 taxes)
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1432)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(-432)
+        end
+      end
+
+      context "with credit notes applied to fees" do
+        let(:wallet) { create_wallet_with_limitations(allowed_fee_types: ["charge"]) }
+        # total_amount_cents: 440 = charge_fee (400 + 40 taxes), credit note reduces the applicable amount
+        let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 440) }
+        let(:charge_fee) { create_draft_charge_fee(draft_invoice, first_charge, first_subscription, amount: 400, taxes: 40, credit_notes: 50) }
+
+        before { charge_fee }
+
+        it "deducts credit notes from fee amounts" do
+          # Current usage: 1100, Draft: 390 (400 + 40 taxes - 50 credit note)
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1490)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(-490)
+        end
+      end
+    end
+  end
+
+  def create_wallet_with_limitations(allowed_fee_types: [])
+    create(
+      :wallet,
+      customer:,
+      depleted_ongoing_balance:,
+      balance_cents: 1000,
+      ongoing_balance_cents: 800,
+      ongoing_usage_balance_cents: 200,
+      credits_balance: 10.0,
+      credits_ongoing_balance: 8.0,
+      credits_ongoing_usage_balance: 2.0,
+      allowed_fee_types:
+    )
+  end
+
+  def create_draft_fee(invoice, subscription, fee_type:, amount:, taxes:)
+    create(
+      :fee,
+      invoice:,
+      subscription:,
+      fee_type:,
+      amount_cents: amount,
+      precise_amount_cents: amount,
+      taxes_amount_cents: taxes,
+      taxes_precise_amount_cents: taxes,
+      precise_coupons_amount_cents: 0
+    )
+  end
+
+  def create_draft_charge_fee(invoice, charge, subscription, amount:, taxes:, coupons: 0, credit_notes: 0)
+    create(
+      :charge_fee,
+      invoice:,
+      charge:,
+      subscription:,
+      amount_cents: amount,
+      precise_amount_cents: amount,
+      taxes_amount_cents: taxes,
+      taxes_precise_amount_cents: taxes,
+      precise_coupons_amount_cents: coupons,
+      precise_credit_notes_amount_cents: credit_notes
+    )
   end
 end
