@@ -106,6 +106,12 @@ module ScenariosHelper
     parse_result(as, Subscription, :subscription)
   end
 
+  def update_subscription(subscription, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}", {subscription: params})
+    end
+  end
+
   def terminate_subscription(subscription, params: {}, **kwargs)
     api_call(**kwargs) do
       delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}?#{params.to_query}")
