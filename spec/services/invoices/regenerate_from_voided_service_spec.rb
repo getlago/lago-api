@@ -8,7 +8,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
   end
 
   let(:voided_invoice) { original_invoice }
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 1000, pay_in_advance: true) }
@@ -46,7 +46,10 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
   let(:original_fee) { original_invoice.fees.first }
 
   describe "#call" do
-    before { original_invoice }
+    before do
+      stub_request(:post, organization.webhook_endpoints.first.webhook_url).to_return(status: 200, body: "")
+      original_invoice
+    end
 
     it "regenerates invoice with adjusted display name, units and unit amount" do
       regenerated_fee = regenerate_result.invoice.fees.first

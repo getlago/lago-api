@@ -9,6 +9,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
+      return result.forbidden_failure! unless invoice.subscription?
       return result unless invoice.draft?
       drafted_issuing_date = invoice.issuing_date
 
@@ -47,7 +48,7 @@ module Invoices
           track_credit_note_created(credit_note)
           SendWebhookJob.perform_later("credit_note.created", credit_note)
           Utils::ActivityLog.produce(credit_note, "credit_note.created")
-          CreditNotes::GeneratePdfJob.perform_later(credit_note)
+          CreditNotes::GenerateDocumentsJob.perform_later(credit_note)
         end
       end
 

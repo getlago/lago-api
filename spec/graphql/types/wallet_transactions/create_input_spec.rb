@@ -14,6 +14,7 @@ RSpec.describe Types::WalletTransactions::CreateInput do
     expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
     expect(subject).to accept_argument(:metadata).of_type("[WalletTransactionMetadataInput!]")
     expect(subject).to accept_argument(:paid_credits).of_type("String")
+    expect(subject).to accept_argument(:payment_method).of_type("PaymentMethodReferenceInput")
     expect(subject).to accept_argument(:priority).of_type("Int")
     expect(subject).to accept_argument(:voided_credits).of_type("String")
   end

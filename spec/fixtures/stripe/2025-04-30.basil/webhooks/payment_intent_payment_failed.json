@@ -1,13 +1,13 @@
 {
-  "id": "evt_3RWGX8Q8iJWBZFaM0sGXuIkJ",
+  "id": "evt_3SVvxMQ8iJWBZFaM1z5wZ6Za",
   "object": "event",
   "api_version": "2025-04-30.basil",
-  "created": 1749040506,
+  "created": 1763737745,
   "data": {
     "object": {
-      "id": "pi_3RWGX8Q8iJWBZFaM0ZSHRgfm",
+      "id": "pi_3SVvxMQ8iJWBZFaM1Lao8ehu",
       "object": "payment_intent",
-      "amount": 4620,
+      "amount": 11880,
       "amount_capturable": 0,
       "amount_details": {
         "tip": {}
@@ -19,32 +19,33 @@
       "canceled_at": null,
       "cancellation_reason": null,
       "capture_method": "automatic_async",
-      "client_secret": "pi_3RWGX8Q8iJWBZFaM0ZSHRgfm_secret_yT4NUtiy34Yx2LU7ykhSy5YGq",
+      "client_secret": "pi_3SVvxMQ8iJWBZFaM1Lao8ehu_secret_fwMspul9uxTskxWVJekMXcffk",
       "confirmation_method": "automatic",
-      "created": 1749040506,
-      "currency": "eur",
-      "customer": "cus_SR8o2vcGRkVb6v",
-      "description": "Heller, Corwin and DuBuque - Invoice HEL-A764-001-001",
+      "created": 1763737744,
+      "currency": "usd",
+      "customer": "cus_TSOWyTkxXlWiTc",
+      "description": "Hooli - Invoice HOO-156A-030-005",
+      "excluded_payment_method_types": null,
       "last_payment_error": {
         "code": "authentication_required",
         "decline_code": "authentication_not_handled",
         "doc_url": "https://stripe.com/docs/error-codes/authentication-required",
         "message": "This payment required an authentication action to complete, but `error_on_requires_action` was set. When you're ready, you can upgrade your integration to handle actions at https://stripe.com/docs/payments/payment-intents/upgrade-to-handle-actions.",
         "payment_method": {
-          "id": "pm_1RWGX7Q8iJWBZFaMLTMvnUDU",
+          "id": "pm_1SVTn7Q8iJWBZFaMgjl33y0O",
           "object": "payment_method",
-          "allow_redisplay": "unspecified",
+          "allow_redisplay": "always",
           "billing_details": {
             "address": {
               "city": null,
-              "country": null,
+              "country": "FR",
               "line1": null,
               "line2": null,
               "postal_code": null,
               "state": null
             },
-            "email": null,
-            "name": null,
+            "email": "gagerg@sfsefs.csrkgjsdbrgjdrbg",
+            "name": "awdawd",
             "phone": null,
             "tax_id": null
           },
@@ -55,14 +56,14 @@
               "address_postal_code_check": null,
               "cvc_check": "pass"
             },
-            "country": "DE",
+            "country": "IE",
             "display_brand": "visa",
-            "exp_month": 6,
-            "exp_year": 2026,
-            "fingerprint": "Kimrq0v3wE9PFZiL",
+            "exp_month": 2,
+            "exp_year": 2029,
+            "fingerprint": "eumCxi1ZFoTDYqvg",
             "funding": "credit",
             "generated_from": null,
-            "last4": "3184",
+            "last4": "3220",
             "networks": {
               "available": [
                 "visa"
@@ -75,26 +76,26 @@
             },
             "wallet": null
           },
-          "created": 1749040505,
-          "customer": "cus_SR8o2vcGRkVb6v",
+          "created": 1763629477,
+          "customer": "cus_TSOWyTkxXlWiTc",
           "livemode": false,
           "metadata": {},
           "type": "card"
         },
         "type": "card_error"
       },
-      "latest_charge": "ch_3RWGX8Q8iJWBZFaM0IWum1a6",
+      "latest_charge": "ch_3SVvxMQ8iJWBZFaM1YEcxCs2",
       "livemode": false,
       "metadata": {
         "invoice_type": "one_off",
-        "lago_customer_id": "2c0f0f00-c378-4915-8ea4-c26304e1968a",
-        "lago_payment_id": "051587cf-a31c-4150-a735-ee346392a6cf",
+        "lago_customer_id": "8adce609-5e68-4f3b-acf2-cdc9ee6609fd",
+        "lago_payment_id": "6a20520f-2047-4170-8282-a628197dd9ff",
         "lago_payable_type": "Invoice",
-        "lago_billing_entity_id": "ef90d428-b463-4667-a70b-962b85f4a764",
-        "lago_payable_id": "0dbe1733-571d-4bc4-8c80-565fae583143",
-        "invoice_issuing_date": "2025-06-04",
-        "lago_invoice_id": "0dbe1733-571d-4bc4-8c80-565fae583143",
-        "lago_organization_id": "b1c8abc0-daaa-4faa-a8e2-f9b9a9087def"
+        "lago_billing_entity_id": "516ab92d-1975-4cca-a688-1bf23d22156a",
+        "lago_payable_id": "7fd56270-c904-422c-b48c-c2eced9b569f",
+        "invoice_issuing_date": "2025-11-21",
+        "lago_invoice_id": "7fd56270-c904-422c-b48c-c2eced9b569f",
+        "lago_organization_id": "11111111-2222-3333-4444-555555555555"
       },
       "next_action": null,
       "on_behalf_of": null,
@@ -125,10 +126,10 @@
     }
   },
   "livemode": false,
-  "pending_webhooks": 1,
+  "pending_webhooks": 3,
   "request": {
-    "id": "req_tJcP2KRNCIPE0Y",
-    "idempotency_key": "payment-051587cf-a31c-4150-a735-ee346392a6cf"
+    "id": "req_ugAfLhYwxZ3saC",
+    "idempotency_key": "payment-6a20520f-2047-4170-8282-a628197dd9ff"
   },
   "type": "payment_intent.payment_failed"
 }

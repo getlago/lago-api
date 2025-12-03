@@ -8,7 +8,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  ["2020-08-27", "2025-04-30.basil"].each do |version|
+  ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |version|
     context "when payment intent event" do
       let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version:) }
 
@@ -20,11 +20,13 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
             stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
-        create(:payment, provider_payment_id: event.data.object.id)
+        invoice = create(:invoice, organization:)
+        payment = create(:payment, payable: invoice, provider_payment_id: event.data.object.id)
 
         result = event_service.call
 
         expect(result).to be_success
+        expect(payment.reload.error_code).to eq("authentication_required")
       end
     end
 
@@ -84,6 +86,31 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
       it do
         expect { event_service.call }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
       end
+    end
+  end
+
+  context "when last_payment_error does not have code" do
+    let(:event_json) do
+      get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version: "2025-04-30.basil") do |h|
+        h["data"]["object"]["last_payment_error"] = {message: "error"}
+      end
+    end
+
+    it "updates the payment status and save the payment method" do
+      expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
+        .with(
+          organization_id: organization.id,
+          status: "failed",
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment
+        ).and_call_original
+
+      invoice = create(:invoice, organization:)
+      payment = create(:payment, payable: invoice, provider_payment_id: event.data.object.id)
+
+      result = event_service.call
+
+      expect(result).to be_success
+      expect(payment.reload.error_code).to be_nil
     end
   end
 end

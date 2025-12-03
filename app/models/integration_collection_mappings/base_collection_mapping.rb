@@ -19,6 +19,7 @@ module IntegrationCollectionMappings
       tax
       prepaid_credit
       credit_note account
+      currencies
     ].freeze
 
     enum :mapping_type, MAPPING_TYPES, validate: true

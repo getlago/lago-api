@@ -182,7 +182,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
       PaymentProviders::StripeProvider::StripePayment.new(
         id: "ch_123456",
         status: "succeeded",
-        metadata: {}
+        metadata: {},
+        error_code: nil
       )
     end
 
@@ -340,7 +341,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
             lago_payable_id: payment_request.id,
             lago_payable_type: "PaymentRequest",
             payment_type: "one-time"
-          }
+          },
+          error_code: nil
         )
       end
 
@@ -372,7 +374,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
               lago_payable_id: "invalid",
               lago_payable_type: "PaymentRequest",
               payment_type: "one-time"
-            }
+            },
+            error_code: nil
           )
         end
 
@@ -402,7 +405,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
             lago_payable_id: payment_request.id,
             lago_payable_type: "PaymentRequest",
             payment_type: "one-time"
-          }
+          },
+          error_code: nil
         )
       end
 
@@ -451,7 +455,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
             metadata: {
               lago_payable_id: SecureRandom.uuid,
               lago_payable_type: "PaymentRequest"
-            }
+            },
+            error_code: nil
           )
         end
 
@@ -468,7 +473,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
               metadata: {
                 lago_payable_id: payment_request.id,
                 lago_payable_type: "PaymentRequest"
-              }
+              },
+              error_code: nil
             )
           end
 
@@ -539,7 +545,8 @@ RSpec.describe PaymentRequests::Payments::StripeService do
           metadata: {
             lago_payable_id: payment_request.id,
             lago_payable_type: "PaymentRequest"
-          }
+          },
+          error_code: nil
         )
       end
 

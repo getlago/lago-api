@@ -68,6 +68,41 @@ RSpec.describe Api::V1::BillableMetricsController do
         expect(json[:billable_metric][:weighted_interval]).to eq("seconds")
       end
     end
+
+    context "with filters" do
+      let(:create_params) do
+        {
+          name: "BM1",
+          code: "BM1_code",
+          aggregation_type: "count_agg",
+          filters: [
+            {
+              key: "key",
+              values: ["value1", "value2"]
+            }
+          ]
+        }
+      end
+
+      it "creates a billable_metric with filters" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:billable_metric][:lago_id]).to be_present
+        expect(json[:billable_metric][:filters]).to eq([{key: "key", values: ["value1", "value2"]}])
+      end
+    end
+
+    context "with invalid input" do
+      let(:create_params) { "BL" }
+
+      it "returns bad_request error" do
+        subject
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq({status: 400, error: "BadRequest: param is missing or the value is empty or invalid: billable_metric"})
+      end
+    end
   end
 
   describe "PUT /api/v1/billable_metrics/:code" do

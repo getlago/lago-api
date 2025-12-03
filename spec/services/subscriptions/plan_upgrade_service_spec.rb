@@ -70,6 +70,35 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       expect(result.subscription.plan.id).to eq(plan.id)
       expect(result.subscription.previous_subscription_id).to eq(subscription.id)
       expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+      expect(result.subscription.payment_method_id).to eq(nil)
+      expect(result.subscription.payment_method_type).to eq("provider")
+    end
+
+    context "with payment method" do
+      let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
+      let(:params) do
+        {
+          name: subscription_name,
+          payment_method: {
+            payment_method_id: payment_method.id,
+            payment_method_type: "provider"
+          }
+        }
+      end
+
+      before { payment_method }
+
+      it "creates a new subscription" do
+        expect(result).to be_success
+        expect(result.subscription.id).not_to eq(subscription.id)
+        expect(result.subscription).to be_active
+        expect(result.subscription.name).to eq(subscription_name)
+        expect(result.subscription.plan.id).to eq(plan.id)
+        expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+        expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+        expect(result.subscription.payment_method_id).to eq(payment_method.id)
+        expect(result.subscription.payment_method_type).to eq("provider")
+      end
     end
 
     context "when new plan has fixed charges" do

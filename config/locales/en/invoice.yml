@@ -34,6 +34,8 @@ en:
     document_tax_name: Tax invoice
     due_date: Due %{date}
     e_invoicing:
+      credit_card: Credit Card Payment
+      credit_card_information: Credit card payment received on %{date}
       discount_reason: Discount %{tax_rate} portion
       payment_information: "%{payment_label} of %{currency} %{amount} applied"
       standard_payment: Standard payment

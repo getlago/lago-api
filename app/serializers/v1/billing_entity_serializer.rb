@@ -29,6 +29,8 @@ module V1
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         invoice_footer: model.invoice_footer,
         invoice_grace_period: model.invoice_grace_period,
+        subscription_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
+        subscription_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
         document_locale: model.document_locale,
         is_default: model.organization.default_billing_entity&.id == model.id,
         eu_tax_management: model.eu_tax_management,

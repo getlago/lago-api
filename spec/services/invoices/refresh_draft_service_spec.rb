@@ -48,6 +48,25 @@ RSpec.describe Invoices::RefreshDraftService do
       allow(Invoices::CalculateFeesService).to receive(:call).and_call_original
     end
 
+    [
+      :one_off,
+      :add_on,
+      :credit,
+      :advance_charges,
+      :progressive_billing
+    ].each do |invoice_type|
+      context "when invoice is #{invoice_type}" do
+        let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type:) }
+
+        it "returns a forbidden failure" do
+          result = refresh_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+    end
+
     context "when invoice is ready to be finalized" do
       let(:invoice) do
         create(:invoice, status:, organization:, customer:, ready_to_be_refreshed: true)

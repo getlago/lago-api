@@ -120,7 +120,7 @@ module Api
       private
 
       def create_params
-        params.require(:customer).permit(
+        params.expect(customer: [
           :account_type,
           :external_id,
           :name,
@@ -148,16 +148,20 @@ module Api
           :skip_invoice_custom_sections,
           :billing_entity_code,
           integration_customers: [
-            :id,
-            :external_customer_id,
-            :integration_type,
-            :integration_code,
-            :subsidiary_id,
-            :sync_with_provider,
-            :targeted_object
+            [
+              :id,
+              :external_customer_id,
+              :integration_type,
+              :integration_code,
+              :subsidiary_id,
+              :sync_with_provider,
+              :targeted_object
+            ]
           ],
           billing_configuration: [
             :invoice_grace_period,
+            :subscription_invoice_issuing_date_anchor,
+            :subscription_invoice_issuing_date_adjustment,
             :payment_provider,
             :payment_provider_code,
             :provider_customer_id,
@@ -167,10 +171,12 @@ module Api
             provider_payment_methods: []
           ],
           metadata: [
-            :id,
-            :key,
-            :value,
-            :display_in_invoice
+            [
+              :id,
+              :key,
+              :value,
+              :display_in_invoice
+            ]
           ],
           shipping_address: [
             :address_line1,
@@ -182,7 +188,7 @@ module Api
           ],
           tax_codes: [],
           invoice_custom_section_codes: []
-        )
+        ])
       end
 
       def render_customer(customer)

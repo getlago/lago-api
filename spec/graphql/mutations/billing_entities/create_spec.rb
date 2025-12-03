@@ -36,6 +36,8 @@ RSpec.describe Mutations::BillingEntities::Create do
             invoiceFooter,
             invoiceGracePeriod,
             documentLocale,
+            subscriptionInvoiceIssuingDateAnchor,
+            subscriptionInvoiceIssuingDateAdjustment
           }
         }
       }
@@ -68,7 +70,9 @@ RSpec.describe Mutations::BillingEntities::Create do
       billingConfiguration: {
         invoiceFooter: "invoice footer",
         documentLocale: "es",
-        invoiceGracePeriod: 10
+        invoiceGracePeriod: 10,
+        subscriptionInvoiceIssuingDateAnchor: "current_period_end",
+        subscriptionInvoiceIssuingDateAdjustment: "keep_anchor"
       }
     }
   end
@@ -158,6 +162,8 @@ RSpec.describe Mutations::BillingEntities::Create do
         expect(result_data["billingConfiguration"]["invoiceFooter"]).to eq("invoice footer")
         expect(result_data["billingConfiguration"]["documentLocale"]).to eq("es")
         expect(result_data["billingConfiguration"]["invoiceGracePeriod"]).to eq(10)
+        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
       end
     end
   end

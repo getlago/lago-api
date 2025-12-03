@@ -38,6 +38,7 @@ Sidekiq.configure_server do |config|
   config.super_fetch! if Sidekiq.pro?
   config.redis = redis_config
   config.logger = nil
+  config.average_scheduled_poll_interval = ENV.fetch("LAGO_SIDEKIQ_AVERAGE_SCHEDULED_POLL_INTERVAL", 5).to_f
   config[:max_retries] = 0
   config[:dead_max_jobs] = ENV.fetch("LAGO_SIDEKIQ_MAX_DEAD_JOBS", 100_000).to_i
   config.on(:startup) do
@@ -78,6 +79,12 @@ Sidekiq.configure_server do |config|
           socket.close
         end
       end
+    end
+  end
+
+  if Rails.env.development? && ENV["SIDEKIQ_PROFILING_ENABLED"] == "true"
+    config.server_middleware do |chain|
+      chain.prepend(Sidekiq::ProfilingMiddleware, dir: "tmp/profiling")
     end
   end
 end

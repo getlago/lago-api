@@ -52,6 +52,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
     it "returns a success", :aggregate_failures do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
+      create(:entitlement, organization:, plan:)
 
       freeze_time do
         subject
@@ -73,6 +74,13 @@ RSpec.describe Api::V1::SubscriptionsController do
           next_plan_code: nil,
           downgrade_plan_date: nil
         )
+        expect(json[:subscription][:entitlements]).to contain_exactly({
+          code: "feature_1",
+          name: "Feature Name",
+          description: "Feature Description",
+          privileges: [],
+          overrides: {}
+        })
         expect(json[:subscription][:plan]).to include(
           amount_cents: 100,
           name: "overridden name",
@@ -1117,6 +1125,7 @@ RSpec.describe Api::V1::SubscriptionsController do
     include_examples "requires API permission", "subscription", "read"
 
     it "returns a subscription" do
+      create(:entitlement, :subscription, organization:, subscription:)
       subject
 
       expect(response).to have_http_status(:success)
@@ -1124,6 +1133,13 @@ RSpec.describe Api::V1::SubscriptionsController do
         lago_id: subscription.id,
         external_id: subscription.external_id
       )
+      expect(json[:subscription][:entitlements]).to contain_exactly({
+        code: "feature_1",
+        name: "Feature Name",
+        description: "Feature Description",
+        privileges: [],
+        overrides: {}
+      })
     end
 
     context "when subscription does not exist" do

@@ -8,6 +8,10 @@ RSpec.describe WalletTransaction do
     it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
     it { is_expected.to validate_length_of(:name).is_at_most(255).is_at_least(1).allow_nil }
     it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
+    it { is_expected.to validate_presence_of(:status) }
+    it { is_expected.to validate_presence_of(:transaction_type) }
+    it { is_expected.to validate_presence_of(:source) }
+    it { is_expected.to validate_presence_of(:transaction_status) }
   end
 
   describe "associations" do
@@ -15,6 +19,8 @@ RSpec.describe WalletTransaction do
     it { is_expected.to belong_to(:invoice).optional }
     it { is_expected.to belong_to(:credit_note).optional }
     it { is_expected.to belong_to(:organization) }
+    it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("WalletTransaction::AppliedInvoiceCustomSection").dependent(:destroy) }
+    it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
   end
 
   describe "enums" do

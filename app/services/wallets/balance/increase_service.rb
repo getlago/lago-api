@@ -14,23 +14,24 @@ module Wallets
       end
 
       def call
-        credits_amount = wallet_transaction.credit_amount
+        transaction_credits_amount = wallet_transaction.credit_amount
+        transaction_amount_cents = wallet_transaction.amount_cents
 
         currency = wallet.currency_for_balance
         update_params = {
-          balance_cents: ((wallet.credits_balance + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
-          credits_balance: wallet.credits_balance + credits_amount,
+          balance_cents: wallet.balance_cents + transaction_amount_cents,
+          credits_balance: wallet.credits_balance + transaction_credits_amount,
           last_balance_sync_at: Time.current
         }
 
         if reset_consumed_credits
-          update_params[:consumed_credits] = [0.0, wallet.consumed_credits - credits_amount].max
-          update_params[:consumed_amount_cents] = [0, ((wallet.consumed_credits - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor].max
+          update_params[:consumed_credits] = [0.0, wallet.consumed_credits - transaction_credits_amount].max
+          update_params[:consumed_amount_cents] = [0, ((wallet.consumed_credits - transaction_credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor].max
         end
 
         wallet.update!(update_params)
 
-        Wallets::Balance::RefreshOngoingService.call(wallet:)
+        Customers::RefreshWalletsService.call(customer: wallet.customer)
 
         after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
 

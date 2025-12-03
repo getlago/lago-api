@@ -7,6 +7,7 @@ RSpec.describe Integrations::Okta::CreateService do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:domain) { "foo.bar" }
+  let(:host) { "test.com" }
 
   describe "#call" do
     subject(:service_call) { service.call(**create_args) }
@@ -17,7 +18,8 @@ RSpec.describe Integrations::Okta::CreateService do
         client_id: "cl1",
         client_secret: "secret",
         domain:,
-        organization_name: "Foobar"
+        organization_name: "Foobar",
+        host:
       }
     end
 

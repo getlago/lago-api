@@ -10,6 +10,8 @@ module Types
       argument :id, ID, required: true
       argument :name, String, required: false
       argument :success_redirect_url, String, required: false
+
+      argument :supports_3ds, Boolean, required: false
     end
   end
 end

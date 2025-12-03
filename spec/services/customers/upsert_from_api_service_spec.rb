@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpsertFromApiService do
   subject(:result) { described_class.call(organization:, params: create_args) }
 
-  let(:billing_entity) { create :billing_entity }
-  let(:organization) { billing_entity.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:membership) { create(:membership, organization:) }
   let(:external_id) { SecureRandom.uuid }
 
@@ -19,7 +19,9 @@ RSpec.describe Customers::UpsertFromApiService do
       lastname: "Last",
       tax_identification_number: "123456789",
       billing_configuration: {
-        document_locale: "fr"
+        document_locale: "fr",
+        subscription_invoice_issuing_date_anchor: "current_period_end",
+        subscription_invoice_issuing_date_adjustment: "keep_anchor"
       },
       shipping_address: {
         address_line1: "line1",
@@ -57,6 +59,8 @@ RSpec.describe Customers::UpsertFromApiService do
     billing = create_args[:billing_configuration]
     expect(customer.document_locale).to eq(billing[:document_locale])
     expect(customer.invoice_grace_period).to be_nil
+    expect(result.customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+    expect(result.customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
     expect(customer.skip_invoice_custom_sections).to eq(false)
 
     shipping_address = create_args[:shipping_address]
@@ -86,7 +90,9 @@ RSpec.describe Customers::UpsertFromApiService do
       currency: create_args[:currency],
       timezone: nil,
       document_locale: billing[:document_locale],
-      invoice_grace_period: nil
+      invoice_grace_period: nil,
+      subscription_invoice_issuing_date_anchor: "current_period_end",
+      subscription_invoice_issuing_date_adjustment: "keep_anchor"
     )
   end
 
@@ -408,9 +414,7 @@ RSpec.describe Customers::UpsertFromApiService do
     it "creates a new customer" do
       expect(result).to be_success
       expect(result.customer.timezone).to eq(create_args[:timezone])
-
-      billing = create_args[:billing_configuration]
-      expect(result.customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+      expect(result.customer.invoice_grace_period).to eq(3)
     end
 
     context "with revenue share feature enabled and account_type 'partner'" do
@@ -440,6 +444,17 @@ RSpec.describe Customers::UpsertFromApiService do
         it "doesn't update customer to partner" do
           expect(result).to be_success
           expect(result.customer).to be_customer_account
+        end
+      end
+
+      context "with invalid account_type" do
+        before { create_args.merge!(account_type: "invalid") }
+
+        it "fails to create customer" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:account_type)
+          expect(result.error.messages[:account_type]).to include("value_is_invalid")
         end
       end
     end

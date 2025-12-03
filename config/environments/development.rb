@@ -8,6 +8,10 @@ Rails.application.configure do
     Bullet.rails_logger = true
   end
 
+  config.autoload_paths += %W[
+    #{config.root}/dev
+  ]
+
   # Settings specified here will take precedence over those in config/application.rb.
   config.middleware.use(ActionDispatch::Cookies)
   config.middleware.use(ActionDispatch::Session::CookieStore, key: "_lago_dev")

@@ -1,59 +1,64 @@
 {
-  "id": "evt_3ReJRxFVEM9lDzyM2KeeBI2H",
+  "id": "evt_3SVCroQ8iJWBZFaM2GyG1PVP",
   "object": "event",
-  "api_version": "2025-05-28.basil",
-  "created": 1750958405,
+  "api_version": "2025-04-30.basil",
+  "created": 1763738710,
   "data": {
     "object": {
-      "id": "pi_3ReJRxFVEM9lDzyM2Jr1Zl9L",
+      "id": "pi_3SVCroQ8iJWBZFaM22iaIuU3",
       "object": "payment_intent",
-      "amount": 410000,
+      "amount": 23040,
       "amount_capturable": 0,
       "amount_details": {
-        "tip": {
-        }
+        "tip": {}
       },
       "amount_received": 0,
       "application": null,
       "application_fee_amount": null,
       "automatic_payment_methods": null,
-      "canceled_at": 1750958405,
-      "cancellation_reason": null,
+      "canceled_at": 1763738710,
+      "cancellation_reason": "duplicate",
       "capture_method": "automatic_async",
-      "client_secret": "pi_3ReJRxFVEM9lDzyM2Jr1Zl9L_secret_kZmTD2mQpBB2p0zOYLff89gbg",
+      "client_secret": "pi_3SVCroQ8iJWBZFaM22iaIuU3_secret_wMcPlg3I0vg6axAwII8B1HOVv",
       "confirmation_method": "automatic",
-      "created": 1750958341,
+      "created": 1763564420,
       "currency": "usd",
-      "customer": "cus_SZSMR33xjdtWkr",
-      "description": "miguel - Invoice MIG-9823-202506-024",
+      "customer": "cus_TOlZpKcK7V4tSl",
+      "description": "Hooli - Invoice HOO-156A-028-011",
+      "excluded_payment_method_types": null,
       "last_payment_error": null,
       "latest_charge": null,
       "livemode": false,
       "metadata": {
-        "invoice_type": "subscription",
-        "lago_customer_id": "1e45239c-84f7-4e3d-b2ca-477c993d5002",
-        "lago_payment_id": "6e3c1b20-3d31-4e5a-ac30-994ec5d7e49b",
+        "invoice_type": "one_off",
+        "lago_customer_id": "edde4cc9-a9d7-4e33-bc12-a81476684bf2",
+        "lago_payment_id": "8f1e4ee4-301b-4332-8815-f699878a853c",
         "lago_payable_type": "Invoice",
-        "lago_billing_entity_id": "e1a39714-0608-41bf-86d8-74140c109823",
-        "lago_payable_id": "695572ae-150a-436b-b384-743e9a0ad611",
-        "invoice_issuing_date": "2025-06-26",
-        "lago_invoice_id": "695572ae-150a-436b-b384-743e9a0ad611",
-        "lago_organization_id": "e1a39714-0608-41bf-86d8-74140c109823"
+        "lago_billing_entity_id": "516ab92d-1975-4cca-a688-1bf23d22156a",
+        "lago_payable_id": "b5757d8a-347a-4149-a5fa-3fd9f5154a04",
+        "invoice_issuing_date": "2025-11-19",
+        "lago_invoice_id": "b5757d8a-347a-4149-a5fa-3fd9f5154a04",
+        "lago_organization_id": "11111111-2222-3333-4444-555555555555"
       },
       "next_action": null,
       "on_behalf_of": null,
-      "payment_method": "pm_1ReJRxFVEM9lDzyM3chPi6Wl",
+      "payment_method": "pm_1SRyLyQ8iJWBZFaMEvqtm6U6",
       "payment_method_configuration_details": null,
       "payment_method_options": {
-        "customer_balance": {
-          "bank_transfer": {
-            "type": "us_bank_transfer"
-          },
-          "funding_type": "bank_transfer"
+        "card": {
+          "installments": null,
+          "mandate_options": null,
+          "network": null,
+          "request_three_d_secure": "automatic"
+        },
+        "us_bank_account": {
+          "mandate_options": {},
+          "verification_method": "automatic"
         }
       },
       "payment_method_types": [
-        "customer_balance"
+        "card",
+        "us_bank_account"
       ],
       "processing": null,
       "receipt_email": null,
@@ -71,8 +76,8 @@
   "livemode": false,
   "pending_webhooks": 5,
   "request": {
-    "id": "req_1CgEFQz0GbM3WM",
-    "idempotency_key": "25fa8939-2034-4655-8481-f2c61c4b8f1f"
+    "id": "req_Eo1OhTrnHDS81N",
+    "idempotency_key": "0b7e3cfb-5084-4f1b-abd8-b4172e5df135"
   },
   "type": "payment_intent.canceled"
 }

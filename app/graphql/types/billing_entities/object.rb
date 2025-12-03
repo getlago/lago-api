@@ -55,7 +55,9 @@ module Types
           id: "#{object&.id}-c1nf", # Each nested object needs ID so that appollo cache system can work properly
           document_locale: object&.document_locale,
           invoice_footer: object&.invoice_footer,
-          invoice_grace_period: object&.invoice_grace_period
+          invoice_grace_period: object&.invoice_grace_period,
+          subscription_invoice_issuing_date_anchor: object&.subscription_invoice_issuing_date_anchor,
+          subscription_invoice_issuing_date_adjustment: object&.subscription_invoice_issuing_date_adjustment
         }
       end
     end

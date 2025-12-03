@@ -13,6 +13,7 @@ module Types
       argument :metadata, [Types::WalletTransactions::MetadataInput], required: false
       argument :name, String, required: false
       argument :paid_credits, String, required: false
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :priority, Integer, required: false
       argument :voided_credits, String, required: false
     end

@@ -29,6 +29,24 @@ RSpec.describe Payment do
       .backed_by_column_of_type(:enum)
   end
 
+  describe "attributes" do
+    describe "amount_currency" do
+      before { payment.update(amount_currency: "BRL") }
+
+      it "aliases to currency" do
+        expect(payment.currency).to eq("BRL")
+      end
+    end
+  end
+
+  describe "delegations" do
+    describe "billing_entity" do
+      it "delegates to customer" do
+        expect(payment.billing_entity).to be(payment.customer.billing_entity)
+      end
+    end
+  end
+
   describe "validations" do
     let(:errors) { payment.errors }
 
@@ -411,6 +429,36 @@ RSpec.describe Payment do
       it "returns the payment method type" do
         expect(payment_method).to eq("Bank Transfer")
       end
+    end
+  end
+
+  describe "#card_last_digits" do
+    subject { payment.card_last_digits }
+
+    context "when provider_payment_method_data is empty" do
+      let(:payment) { build(:payment, provider_payment_method_data: {}) }
+
+      it { is_expected.to be_nil }
+    end
+
+    context "when provider_payment_method_data type is not card" do
+      let(:payment) do
+        build(:payment, provider_payment_method_data: {"type" => "link"})
+      end
+
+      it { is_expected.to be_nil }
+    end
+
+    context "when provider_payment_method_data type is card" do
+      let(:payment) do
+        build(:payment, provider_payment_method_data: {
+          "type" => "card",
+          "brand" => "visa",
+          "last4" => "1234"
+        })
+      end
+
+      it { is_expected.to eq("**** 1234") }
     end
   end
 

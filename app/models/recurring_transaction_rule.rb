@@ -7,6 +7,13 @@ class RecurringTransactionRule < ApplicationRecord
   belongs_to :organization
   belongs_to :payment_method, optional: true
 
+  has_many :applied_invoice_custom_sections,
+    class_name: "RecurringTransactionRule::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+
   validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
 
   STATUSES = [
@@ -100,6 +107,7 @@ end
 #  method                              :integer          default("fixed"), not null
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  payment_method_type                 :enum             default("provider"), not null
+#  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  started_at                          :datetime
 #  status                              :integer          default("active")
 #  target_ongoing_balance              :decimal(30, 5)

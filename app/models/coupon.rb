@@ -58,6 +58,8 @@ class Coupon < ApplicationRecord
 
   validates :percentage_rate, presence: true, if: :percentage?
 
+  validates :reusable, exclusion: [nil]
+
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
     lambda {

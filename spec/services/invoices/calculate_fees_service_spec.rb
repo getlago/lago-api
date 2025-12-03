@@ -366,28 +366,6 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
 
-      context "when charge is pay_in_arrears and not invoiceable" do
-        let(:charge) do
-          create(
-            :standard_charge,
-            plan: subscription.plan,
-            organization:,
-            charge_model: "standard",
-            invoiceable: false
-          )
-        end
-
-        it "does not create a charge fee" do
-          result = invoice_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(Fee.charge.count).to eq(0)
-          end
-        end
-      end
-
       context "when plan has fixed charges" do
         # when pay_in_advance is true, the fixed charge fee is created, but with period of the next month
         context "when fixed charge is pay_in_advance" do
@@ -2489,8 +2467,9 @@ RSpec.describe Invoices::CalculateFeesService do
         expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(255_00)
         expect(result.invoice.taxes_amount_cents).to eq(25_50)
         expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(280_50)
-
-        expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 10_00 (credit note) - 66_35 (wallet)
+        expect(result.invoice.prepaid_credit_amount_cents).to eq(66_35)
+        expect(result.invoice.credit_notes_amount_cents).to eq(10_00)
+        expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 66_35 (prepaid credit) - 10_00 (credit note)
       end
     end
 

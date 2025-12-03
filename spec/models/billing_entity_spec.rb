@@ -178,6 +178,34 @@ RSpec.describe BillingEntity do
 
       expect(billing_entity).not_to be_valid
     end
+
+    it "validates subscription_invoice_issuing_date_anchor" do
+      billing_entity.subscription_invoice_issuing_date_anchor = nil
+      expect(billing_entity).not_to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_anchor = "invalid"
+      expect(billing_entity).not_to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_anchor = "current_period_end"
+      expect(billing_entity).to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_anchor = "next_period_start"
+      expect(billing_entity).to be_valid
+    end
+
+    it "validates subscription_invoice_issuing_date_adjustments" do
+      billing_entity.subscription_invoice_issuing_date_adjustment = nil
+      expect(billing_entity).not_to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_adjustment = "invalid"
+      expect(billing_entity).not_to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_adjustment = "keep_anchor"
+      expect(billing_entity).to be_valid
+
+      billing_entity.subscription_invoice_issuing_date_adjustment = "align_with_finalization_date"
+      expect(billing_entity).to be_valid
+    end
   end
 
   context "when validate einvoicing" do

@@ -352,10 +352,8 @@ module Invoices
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
-    def wallet
-      return @wallet if @wallet
-
-      @wallet = customer.wallets.active.first
+    def wallets
+      @wallets ||= customer.wallets.active.with_positive_balance
     end
 
     def should_create_credit_note_credit?
@@ -371,10 +369,9 @@ module Invoices
 
     def should_create_applied_prepaid_credit?
       return false if not_in_finalizing_process?
-      return false unless wallet&.active?
       return false unless invoice.total_amount_cents&.positive?
 
-      wallet.balance.positive?
+      wallets.any?
     end
 
     def create_credit_note_credit
@@ -385,9 +382,7 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
-      prepaid_credit_result.raise_if_error!
-
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 

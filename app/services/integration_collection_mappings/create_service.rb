@@ -36,6 +36,7 @@ module IntegrationCollectionMappings
       integration_collection_mapping.tax_nexus = params[:tax_nexus] if params.key?(:tax_nexus)
       integration_collection_mapping.tax_code = params[:tax_code] if params.key?(:tax_code)
       integration_collection_mapping.tax_type = params[:tax_type] if params.key?(:tax_type)
+      integration_collection_mapping.currencies = params[:currencies] if params.key?(:currencies)
 
       integration_collection_mapping.save!
 

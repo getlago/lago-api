@@ -11,7 +11,6 @@ RSpec.describe Coupon do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
 
-  it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0).allow_nil }
 
   specify do
@@ -21,6 +20,9 @@ RSpec.describe Coupon do
   end
 
   describe "validations" do
+    it { is_expected.to validate_presence_of(:name) }
+    it { is_expected.to validate_exclusion_of(:reusable).in_array([nil]) }
+
     describe "of amount cents" do
       subject { coupon }
 

@@ -7,8 +7,46 @@ RSpec.describe Wallet do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "associations" do
+    it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy) }
+    it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+  end
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
+  describe ".with_positive_balance" do
+    subject { described_class.with_positive_balance }
+
+    let(:scoped) { create(:wallet, balance_cents: rand(1..1000)) }
+
+    before do
+      create(:wallet, balance_cents: 0)
+      create(:wallet, balance_cents: -rand(1..1000))
+    end
+
+    it "returns wallets with positive balance cents" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".in_application_order" do
+    subject { described_class.in_application_order }
+
+    let!(:wallet_10_newer) { create(:wallet, priority: 10, created_at: 1.day.ago) }
+    let!(:wallet_5) { create(:wallet, priority: 5, created_at: 1.second.ago) }
+    let!(:wallet_10_older) { create(:wallet, priority: 10, created_at: 3.days.ago) }
+    let!(:wallet_50) { create(:wallet, created_at: 2.seconds.ago) }
+
+    it "orders by priority first then by created_at" do
+      expect(subject.to_a).to eq([
+        wallet_5,
+        wallet_10_older,
+        wallet_10_newer,
+        wallet_50
+      ])
+    end
   end
 
   describe "validations" do

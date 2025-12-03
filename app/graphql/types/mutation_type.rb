@@ -97,6 +97,7 @@ module Types
 
     field :create_credit_note, mutation: Mutations::CreditNotes::Create
     field :download_credit_note, mutation: Mutations::CreditNotes::Download
+    field :download_xml_credit_note, mutation: Mutations::CreditNotes::DownloadXml
     field :retry_tax_reporting, mutation: Mutations::CreditNotes::RetryTaxReporting
     field :update_credit_note, mutation: Mutations::CreditNotes::Update
     field :void_credit_note, mutation: Mutations::CreditNotes::Void
@@ -119,6 +120,7 @@ module Types
     field :void_invoice, mutation: Mutations::Invoices::Void
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
+    field :download_xml_payment_receipt, mutation: Mutations::PaymentReceipts::DownloadXml
 
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate

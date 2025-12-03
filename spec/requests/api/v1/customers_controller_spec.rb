@@ -85,6 +85,8 @@ RSpec.describe Api::V1::CustomersController do
           name: "Foo Bar",
           billing_configuration: {
             invoice_grace_period: 3,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
             payment_provider: "stripe",
             payment_provider_code: stripe_provider.code,
             provider_customer_id: "stripe_id",
@@ -120,6 +122,8 @@ RSpec.describe Api::V1::CustomersController do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
@@ -141,6 +145,8 @@ RSpec.describe Api::V1::CustomersController do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
         end
@@ -162,6 +168,8 @@ RSpec.describe Api::V1::CustomersController do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
@@ -183,6 +191,8 @@ RSpec.describe Api::V1::CustomersController do
           expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
           expect(billing[:provider_customer_id]).to eq("stripe_id")
           expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
+          expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
         end
@@ -209,6 +219,38 @@ RSpec.describe Api::V1::CustomersController do
         expect(json[:customer][:lago_id]).to be_present
         expect(json[:customer][:external_id]).to eq(create_params[:external_id])
         expect(json[:customer][:account_type]).to eq(create_params[:account_type])
+      end
+    end
+
+    context "with integration_customers" do
+      let!(:integration) { create(:netsuite_integration, organization:, code: "netsuite") }
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar",
+          integration_customers: [
+            {
+              integration_type: "netsuite",
+              integration_code: "netsuite",
+              sync_with_provider: true
+            }
+          ]
+        }
+      end
+
+      it "creates customer with integration customer and returns a success" do
+        expect do
+          subject
+        end.to have_enqueued_job(IntegrationCustomers::CreateJob).with(
+          integration_customer_params: {
+            integration_type: "netsuite",
+            integration_code: "netsuite",
+            sync_with_provider: true
+          },
+          integration:,
+          customer: a_kind_of(Customer)
+        )
+        expect(response).to have_http_status(:success)
       end
     end
 
@@ -285,14 +327,38 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
-    context "with invalid params" do
-      let(:create_params) do
-        {name: "Foo Bar", currency: "invalid"}
-      end
+    [
+      {
+        params: "customer",
+        expected_status: :bad_request,
+        expected_response: {status: 400, error: "BadRequest: param is missing or the value is empty or invalid: customer"}
+      },
+      {
+        params: {name: "Foo Bar", currency: "invalid"},
+        expected_status: :unprocessable_content,
+        expected_response: {
+          status: 422,
+          code: "validation_errors",
+          error: "Unprocessable Entity",
+          error_details: {
+            currency: [
+              "value_is_invalid"
+            ],
+            external_id: [
+              "value_is_mandatory"
+            ]
+          }
+        }
+      }
+    ].each do |test|
+      context "with invalid params" do
+        let(:create_params) { test[:params] }
 
-      it "returns an unprocessable_entity" do
-        subject
-        expect(response).to have_http_status(:unprocessable_content)
+        it "returns an unprocessable_entity" do
+          subject
+          expect(response).to have_http_status(test[:expected_status])
+          expect(json).to eq(test[:expected_response])
+        end
       end
     end
 

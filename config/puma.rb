@@ -16,6 +16,16 @@ threads min_threads_count, max_threads_count
 worker_timeout 3600 if ENV.fetch("RAILS_ENV", "development") == "development"
 worker_timeout 12 if ENV.fetch("RAILS_ENV", "production") == "production"
 
+worker_shutdown_timeout 30
+on_worker_boot do
+  $shutdown_requested = false # rubocop:disable Style/GlobalVars
+end
+
+on_worker_shutdown do
+  $shutdown_requested = true # rubocop:disable Style/GlobalVars
+  sleep 5  # let k8s remove from endpoints
+end
+
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
 #
 port ENV.fetch("PORT", 3000)
@@ -34,6 +44,17 @@ pidfile ENV.fetch("PIDFILE", "tmp/pids/server.pid")
 # processes).
 #
 workers ENV.fetch("WEB_CONCURRENCY", 0)
+
+# Ensure we flush and close Karafka producer when puma is shutting down
+if ENV.fetch("WEB_CONCURRENCY", 0).to_i > 0
+  on_worker_shutdown do
+    ::Karafka.producer.close
+  end
+else
+  on_stopped do
+    ::Karafka.producer.close
+  end
+end
 
 # Use the `preload_app!` method when specifying a `workers` number.
 # This directive tells Puma to first boot the application and load code

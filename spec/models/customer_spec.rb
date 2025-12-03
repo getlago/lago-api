@@ -29,12 +29,49 @@ RSpec.describe Customer do
   it { is_expected.to have_many(:manual_selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :manual) }
   it { is_expected.to have_many(:system_generated_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :system_generated) }
 
+  describe "enums" do
+    it { is_expected.to define_enum_for(:account_type).with_values(described_class::ACCOUNT_TYPES).backed_by_column_of_type(:enum).with_suffix(:account).validating }
+  end
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
 
   it "sets the default value to inherit" do
     expect(customer.finalize_zero_amount_invoice).to eq "inherit"
+  end
+
+  describe "normalizations" do
+    it "strips null bytes from address and shipping address attributes" do
+      normalized_customer = build(
+        :customer,
+        address_line1: "Foo\u0000Bar",
+        address_line2: "Bar\u0000Baz",
+        city: "Baz\u0000Qux",
+        zipcode: "Qux\u0000Quux",
+        state: "Quux\u0000Quuux",
+        country: "Quuux\u0000Quuuux",
+        shipping_address_line1: "Baz\u0000Qux",
+        shipping_address_line2: "Qux\u0000Quux",
+        shipping_city: "Quux\u0000Quuux",
+        shipping_zipcode: "Quuux\u0000Quuuux",
+        shipping_state: "Quuuux\u0000Quuuuux",
+        shipping_country: "Quuuuux\u0000Quuuuuux"
+      )
+
+      expect(normalized_customer.address_line1).to eq("FooBar")
+      expect(normalized_customer.address_line2).to eq("BarBaz")
+      expect(normalized_customer.city).to eq("BazQux")
+      expect(normalized_customer.zipcode).to eq("QuxQuux")
+      expect(normalized_customer.state).to eq("QuuxQuuux")
+      expect(normalized_customer.country).to eq("QuuuxQuuuux")
+      expect(normalized_customer.shipping_address_line1).to eq("BazQux")
+      expect(normalized_customer.shipping_address_line2).to eq("QuxQuux")
+      expect(normalized_customer.shipping_city).to eq("QuuxQuuux")
+      expect(normalized_customer.shipping_zipcode).to eq("QuuuxQuuuux")
+      expect(normalized_customer.shipping_state).to eq("QuuuuxQuuuuux")
+      expect(normalized_customer.shipping_country).to eq("QuuuuuxQuuuuuux")
+    end
   end
 
   describe "validations" do
@@ -234,7 +271,77 @@ RSpec.describe Customer do
       end
     end
 
+    it "validates subscription_invoice_issuing_date_anchor" do
+      customer.subscription_invoice_issuing_date_anchor = nil
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "invalid"
+      expect(customer).not_to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "current_period_end"
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_anchor = "next_period_start"
+      expect(customer).to be_valid
+    end
+
+    it "validates subscription_invoice_issuing_date_adjustments" do
+      customer.subscription_invoice_issuing_date_adjustment = nil
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "invalid"
+      expect(customer).not_to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "keep_anchor"
+      expect(customer).to be_valid
+
+      customer.subscription_invoice_issuing_date_adjustment = "align_with_finalization_date"
+      expect(customer).to be_valid
+    end
+
     it { is_expected.to validate_inclusion_of(:customer_type).in_array(described_class::CUSTOMER_TYPES.keys) }
+  end
+
+  describe ".awaiting_wallet_refresh" do
+    subject { described_class.awaiting_wallet_refresh }
+
+    let!(:scoped) { create(:customer, awaiting_wallet_refresh: true) }
+
+    before { create(:customer) }
+
+    it "returns only customers awaiting wallet refresh" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".with_active_wallets" do
+    subject { described_class.with_active_wallets }
+
+    let!(:scoped) { create(:wallet).customer }
+
+    before do
+      create(:customer)
+      create(:wallet, :terminated)
+    end
+
+    it "returns customers that have at least one active wallet" do
+      expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".falling_back_to_default_dunning_campaign" do
+    subject { described_class.falling_back_to_default_dunning_campaign }
+
+    let!(:scoped) { create(:customer) }
+
+    before do
+      create(:customer, exclude_from_dunning_campaign: true)
+      create(:customer, applied_dunning_campaign: create(:dunning_campaign))
+    end
+
+    it "returns customers that have no dunning campaign but should" do
+      expect(subject).to contain_exactly(scoped)
+    end
   end
 
   describe "#display_name" do

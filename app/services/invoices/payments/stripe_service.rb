@@ -36,12 +36,18 @@ module Invoices
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
         payment.payable_payment_status = payable_payment_status
+        payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
-        update_invoice_payment_status(
-          payment_status: payable_payment_status,
-          processing: status == "processing"
-        )
+        if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
+          # We don't update the invoice status because it's likely the webhook of a failed payment
+          # but there is already a retry in progress with 3DSecure authentication
+        else
+          update_invoice_payment_status(
+            payment_status: payable_payment_status,
+            processing: status == "processing"
+          )
+        end
 
         result
       rescue ActiveRecord::RecordInvalid => e

@@ -59,6 +59,13 @@ RSpec.describe WalletTransactions::CreateService do
       let(:credit_amount) { 1000 }
       let(:credit_note) { create(:credit_note) }
       let(:invoice) { create(:invoice) }
+      let(:payment_method) { create(:payment_method, customer:, organization:) }
+      let(:payment_method_params) do
+        {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        }
+      end
 
       let(:transaction_params) do
         {
@@ -72,7 +79,8 @@ RSpec.describe WalletTransactions::CreateService do
           credit_note_id: credit_note.id,
           invoice_id: invoice.id,
           priority: 25,
-          name: "Custom Transaction Name"
+          name: "Custom Transaction Name",
+          payment_method: payment_method_params
         }
       end
 
@@ -95,6 +103,8 @@ RSpec.describe WalletTransactions::CreateService do
         expect(wallet_transaction.credit_amount).to eq(credit_amount)
         expect(wallet_transaction.priority).to eq 25
         expect(wallet_transaction.name).to eq("Custom Transaction Name")
+        expect(wallet_transaction.payment_method_id).to eq(payment_method.id)
+        expect(wallet_transaction.payment_method_type).to eq("provider")
       end
     end
   end

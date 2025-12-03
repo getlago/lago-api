@@ -64,6 +64,25 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    [
+      :one_off,
+      :add_on,
+      :credit,
+      :advance_charges,
+      :progressive_billing
+    ].each do |invoice_type|
+      context "when invoice is #{invoice_type}" do
+        let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type:) }
+
+        it "returns a forbidden failure" do
+          result = finalize_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+    end
+
     it "marks the invoice as finalized" do
       expect { finalize_service.call }
         .to change(invoice, :status).from("draft").to("finalized")
@@ -226,10 +245,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         expect(Utils::ActivityLog).to have_produced("credit_note.created").with(result.invoice.credit_notes.first)
       end
 
-      it "enqueues CreditNotes::GeneratePdfJob" do
+      it "enqueues CreditNotes::GenerateDocumentsJob" do
         expect do
           finalize_service.call
-        end.to have_enqueued_job(CreditNotes::GeneratePdfJob)
+        end.to have_enqueued_job(CreditNotes::GenerateDocumentsJob)
       end
     end
 

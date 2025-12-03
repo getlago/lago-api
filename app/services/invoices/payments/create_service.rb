@@ -66,12 +66,11 @@ module Invoices
       rescue BaseService::ServiceFailure => e
         result.payment = e.result.payment
 
-        if e.result.payment.payable_payment_status&.to_sym != :pending
-          # Avoid notification for amount_too_small errors
-          deliver_error_webhook(e)
-        end
+        deliver_error_webhook(e) unless skip_error_webhook?(e)
 
         update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
+
+        raise RetriableError if e.result.should_retry
 
         # Some errors should be investigated and need to be raised
         raise if e.result.reraise
@@ -132,6 +131,15 @@ module Invoices
           params:,
           webhook_notification: payment_status.to_sym == :succeeded
         )
+      end
+
+      def skip_error_webhook?(e)
+        return true if e.result.payment.payable_payment_status&.to_sym == :pending
+
+        [
+          ::PaymentProviders::StripeProvider::AMOUNT_TOO_SMALL_ERROR_CODE,
+          ::PaymentProviders::StripeProvider::NEED_3DS_ERROR_CODE
+        ].include?(e.result.error_code)
       end
 
       def deliver_error_webhook(e)

@@ -4,6 +4,9 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :fees_taxes, :invoice_id]
 
+    ACQUIRE_LOCK_TIMEOUT = 5.seconds
+    private_constant :ACQUIRE_LOCK_TIMEOUT
+
     def initialize(charge:, event:, timestamp:)
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
@@ -17,34 +20,35 @@ module Invoices
       fees = fee_result.fees
       return result if fees.none?
 
-      ActiveRecord::Base.transaction do
-        create_generating_invoice
-        fees.each { |f| f.update!(invoice:) }
+      ApplicationRecord.transaction do
+        # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
+        ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
+          create_generating_invoice
+          fees.each { |f| f.update!(invoice:) }
 
-        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
+          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+          Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
-        if tax_error?(fee_result)
-          invoice.failed!
-          invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-          create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
-          Utils::ActivityLog.produce(invoice, "invoice.failed")
+          if tax_error?(fee_result)
+            invoice.failed!
+            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+            create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+            Utils::ActivityLog.produce(invoice, "invoice.failed")
+            next
+          end
 
-          # rubocop:disable Rails/TransactionExitStatement
-          return fee_result
-          # rubocop:enable Rails/TransactionExitStatement
+          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+          create_credit_note_credit
+          create_applied_prepaid_credit if should_create_applied_prepaid_credit?
+          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+          Invoices::TransitionToFinalStatusService.call(invoice:)
+          invoice.save!
         end
-
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-        create_credit_note_credit
-        create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        Invoices::TransitionToFinalStatusService.call(invoice:)
-        invoice.save!
       end
+      return fee_result if tax_error?(fee_result)
 
       result.invoice = invoice
 
@@ -61,7 +65,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, WithAdvisoryLock::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -73,6 +77,10 @@ module Invoices
 
     delegate :subscription, to: :event
     delegate :customer, to: :subscription
+
+    def customer_lock_key
+      "customer-#{customer.id}"
+    end
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -88,7 +96,6 @@ module Invoices
           .raise_if_error!
       end
       invoice_result.raise_if_error!
-
       @invoice = invoice_result.invoice
     end
 
@@ -111,17 +118,12 @@ module Invoices
       License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
     end
 
-    def wallet
-      return @wallet if @wallet
-
-      @wallet = customer.wallets.active.first
+    def wallets
+      @wallets ||= customer.wallets.active.with_positive_balance
     end
 
     def should_create_applied_prepaid_credit?
-      return false unless wallet&.active?
-      return false unless invoice.total_amount_cents&.positive?
-
-      wallet.balance.positive?
+      invoice.total_amount_cents&.positive? && wallets.any?
     end
 
     def create_credit_note_credit
@@ -132,9 +134,8 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
-      prepaid_credit_result.raise_if_error!
-
+      # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:, max_wallet_decrease_attempts: 1)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 

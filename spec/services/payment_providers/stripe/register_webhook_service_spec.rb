@@ -92,5 +92,21 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
           )
       end
     end
+
+    context "when overriding version" do
+      subject(:provider_service) { described_class.new(payment_provider, version: "YYYY-MM-DD.name") }
+
+      let(:expected_request_body) do
+        {
+          enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
+          url:,
+          api_version: "YYYY-MM-DD.name"
+        }
+      end
+
+      it "registers a webhook on stripe" do
+        expect(provider_service.call).to be_success
+      end
+    end
   end
 end

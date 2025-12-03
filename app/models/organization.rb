@@ -122,7 +122,6 @@ class Organization < ApplicationRecord
     analytics_dashboards
     forecasted_usage
     projected_usage
-    clickhouse_live_aggregation
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
@@ -233,6 +232,11 @@ class Organization < ApplicationRecord
 
   def postgres_events_store?
     !clickhouse_events_store?
+  end
+
+  # This is added to have a common interface for all organization-related models to access the organization.
+  def organization
+    self
   end
 
   private
