@@ -309,8 +309,12 @@ RSpec.describe Subscriptions::UpdateService do
 
               before { fixed_charge_2 }
 
-              it "schedules BillSubscriptionJob" do
-                expect { update_service.call }.to have_enqueued_job(BillSubscriptionJob)
+              it "does not schedule a BillSubscriptionJob" do
+                expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+              end
+
+              it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
+                expect { update_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
               end
             end
           end
