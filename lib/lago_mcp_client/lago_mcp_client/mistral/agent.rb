@@ -32,12 +32,17 @@ module LagoMcpClient
 
       def process_conversation(user_message, max_iterations)
         response = send_message(user_message) { |chunk| yield chunk }
+        Rails.logger.info("[MistralAgent] Initial response: tool_calls=#{response['tool_calls']&.size || 0}")
 
-        max_iterations.times do
+        max_iterations.times do |i|
           break unless has_tool_calls?(response)
 
+          Rails.logger.info("[MistralAgent] Iteration #{i + 1}: executing #{response['tool_calls'].size} tool(s)")
           tool_results = execute_tools(response["tool_calls"])
+          Rails.logger.info("[MistralAgent] Tool results: #{tool_results.map { |r| {id: r[:tool_call_id], content_size: r[:content]&.size} }}")
+
           response = send_tool_results(tool_results) { |chunk| yield chunk }
+          Rails.logger.info("[MistralAgent] Response after tools: outputs=#{response['outputs']&.size || 0}, tool_calls=#{response['tool_calls']&.size || 0}")
         end
 
         extract_final_content(response)
@@ -65,7 +70,8 @@ module LagoMcpClient
           {
             tool_call_id: result[:tool_call_id],
             result: result[:content],
-            type: "function.result"
+            type: "function.result",
+            object: "entry"
           }
         end
 

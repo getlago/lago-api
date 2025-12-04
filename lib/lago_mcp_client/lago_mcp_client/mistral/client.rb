@@ -79,6 +79,7 @@ module LagoMcpClient
               event_block, buffer = buffer.split("\n\n", 2)
               process_sse_event(event_block) do |data|
                 conversation_id ||= data["conversation_id"]
+                Rails.logger.debug("[MistralSSE] Event type: #{data['type']}, keys: #{data.keys}")
 
                 # Handle root-level event types (delta events)
                 case data["type"]
@@ -91,20 +92,41 @@ module LagoMcpClient
                 when "conversation.response.done"
                   conversation_id ||= data["conversation_id"]
                   Rails.logger.debug("Conversation done: #{conversation_id}")
+                when "function.call", "function.call.delta"
+                  # Handle function calls at root level (delta events accumulate)
+                  tool_call_id = data["tool_call_id"]
+                  existing = tool_calls.find { |tc| tc["id"] == tool_call_id }
+
+                  if existing
+                    # Accumulate arguments for streaming deltas
+                    existing["function"]["arguments"] = (existing["function"]["arguments"] || "") + (data["arguments"] || "")
+                  else
+                    Rails.logger.info("[MistralSSE] Function call detected: #{data['name']} (id: #{tool_call_id})")
+                    tool_calls << {
+                      "id" => tool_call_id,
+                      "type" => "function",
+                      "function" => {
+                        "name" => data["name"],
+                        "arguments" => data["arguments"] || ""
+                      }
+                    }
+                  end
                 end
 
                 # Handle outputs array (tool calls, final messages)
                 data["outputs"]&.each do |output|
+                  Rails.logger.debug("[MistralSSE] Output type: #{output['type']}")
                   case output["type"]
                   when "message.output"
                     outputs << output
-                  when "tool.call"
+                  when "tool.call", "function.call"
+                    Rails.logger.info("[MistralSSE] Tool call in outputs: #{output['name'] || output['function']}")
                     tool_calls << {
-                      "id" => output["tool_call_id"],
+                      "id" => output["tool_call_id"] || output["id"],
                       "type" => "function",
                       "function" => {
-                        "name" => output["name"],
-                        "arguments" => output["arguments"]
+                        "name" => output["name"] || output.dig("function", "name"),
+                        "arguments" => output["arguments"] || output.dig("function", "arguments")
                       }
                     }
                   end
