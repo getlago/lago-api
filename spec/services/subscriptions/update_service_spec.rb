@@ -506,6 +506,41 @@ RSpec.describe Subscriptions::UpdateService do
             expect(subscription.plan.name).to eq("new name")
             expect(subscription.plan_id).to eq(plan.id)
           end
+
+          context "when Plans::UpdateService fails" do
+            let(:failed_result) { BaseResult.new.validation_failure!(errors: {name: ["invalid_name"]}) }
+
+            before do
+              allow(Plans::UpdateService).to receive(:call!).and_raise(
+                BaseService::FailedResult.new(failed_result, "Failed to update plan")
+              )
+            end
+
+            it "returns the error from Plans::UpdateService" do
+              result = update_service.call
+
+              expect(result).to be_failure
+              expect(result.error.result.error.messages).to eq({name: ["invalid_name"]})
+            end
+          end
+
+          context "when Plans::OverrideService fails" do
+            let(:plan) { create(:plan, organization: membership.organization) }
+            let(:failed_result) { BaseResult.new.validation_failure!(errors: {amount_cents: ["invalid_amount"]}) }
+
+            before do
+              allow(Plans::OverrideService).to receive(:call!).and_raise(
+                BaseService::FailedResult.new(failed_result, "Failed to override plan")
+              )
+            end
+
+            it "returns the error from Plans::OverrideService" do
+              result = update_service.call
+
+              expect(result).to be_failure
+              expect(result.error.result.error.messages).to eq({amount_cents: ["invalid_amount"]})
+            end
+          end
         end
       end
 
@@ -594,6 +629,24 @@ RSpec.describe Subscriptions::UpdateService do
             )
           end
         end
+
+        it "does not enqueue billing job" do
+          expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+          expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        context "when at least one fixed_charge is pay in advance" do
+          let(:fixed_charge2) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+          before { fixed_charge2 }
+
+          it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
+            expect { update_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
       end
 
       context "with fixed charge overrides and apply_units_immediately false" do
@@ -664,6 +717,20 @@ RSpec.describe Subscriptions::UpdateService do
               [fc1_override.id, 15, be_within(1.second).of(next_billing_period_start)],
               [fc2_override.id, fixed_charge2.units, be_within(1.second).of(next_billing_period_start)]
             )
+          end
+        end
+
+        it "does not schedule a Invoices::CreatePayInAdvanceFixedChargesJob" do
+          expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        context "when at least one fixed_charge is pay in advance" do
+          let(:fixed_charge2) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+          before { fixed_charge2 }
+
+          it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
+            expect { update_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           end
         end
       end
