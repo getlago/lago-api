@@ -2,10 +2,9 @@
 
 module Wallets
   class FindApplicableOnFeesService < BaseService
-    def initialize(allocation_rules:, fee:, first_match: false)
+    def initialize(allocation_rules:, fee:)
       @allocation_rules = allocation_rules
       @fee = fee
-      @first_match = first_match
       super
     end
 
@@ -26,10 +25,10 @@ module Wallets
 
     private
 
-    attr_reader :allocation_rules, :fee, :first_match
+    attr_reader :allocation_rules, :fee
 
     def result_with(wallets)
-      result.applicable_wallets = first_match ? wallets.first : wallets
+      result.applicable_wallets = wallets.first
       result
     end
   end

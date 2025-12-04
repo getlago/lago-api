@@ -78,9 +78,9 @@ module Wallets
         fees.each do |fee|
           key = fee.id || fee.object_id
 
-          applicable_wallets = Wallets::FindApplicableOnFeesService.call!(
-            allocation_rules:, fee:, first_match: true
-          ).applicable_wallets
+          applicable_wallets = Wallets::FindApplicableOnFeesService
+            .call!(allocation_rules:, fee:)
+            .applicable_wallets
 
           fee_wallet[key] = applicable_wallets.presence
         end
