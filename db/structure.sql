@@ -301,6 +301,8 @@ DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
+DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_status_and_timestamps;
+DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
@@ -8385,6 +8387,20 @@ CREATE UNIQUE INDEX index_webhook_endpoints_on_webhook_url_and_organization_id O
 
 
 --
+-- Name: index_webhooks_on_endpoint_and_timestamps; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_on_endpoint_and_timestamps ON public.webhooks USING btree (webhook_endpoint_id, updated_at, created_at);
+
+
+--
+-- Name: index_webhooks_on_endpoint_status_and_timestamps; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_on_endpoint_status_and_timestamps ON public.webhooks USING btree (webhook_endpoint_id, status, updated_at);
+
+
+--
 -- Name: index_webhooks_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10577,6 +10593,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251204142205'),
 ('20251202141759'),
 ('20251128102055'),
 ('20251127145819'),
