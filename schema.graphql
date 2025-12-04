@@ -2719,6 +2719,7 @@ input CreateCustomerWalletInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String!
   ignorePaidTopUpLimitsOnCreation: Boolean
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
@@ -11173,6 +11174,7 @@ input UpdateCustomerWalletInput {
   clientMutationId: String
   expirationAt: ISO8601DateTime
   id: ID!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidTopUpMaxAmountCents: BigInt
@@ -11589,6 +11591,7 @@ input UpdateSubscriptionInput {
   clientMutationId: String
   endingAt: ISO8601DateTime
   id: ID!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
@@ -11730,6 +11733,8 @@ type Wallet {
   priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!

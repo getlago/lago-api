@@ -22,6 +22,8 @@ module Types
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::CreateInput], required: false
       argument :transaction_name, String, required: false
 
+      argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
+
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
 
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
