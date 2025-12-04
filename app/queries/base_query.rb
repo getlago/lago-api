@@ -1,12 +1,20 @@
 # frozen_string_literal: true
 
-class BaseQuery < BaseService
+class BaseQuery
   # nil values force Kaminari to apply its default values for page and limit.
   DEFAULT_PAGINATION_PARAMS = {page: nil, limit: nil}
   DEFAULT_ORDER = {created_at: :desc}
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters
+
+  def self.call(*, **, &)
+    new(*, **).call(&)
+  end
+
+  def self.call!(*, **, &)
+    call(*, **, &).raise_if_error!
+  end
 
   def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @organization = organization
@@ -15,12 +23,21 @@ class BaseQuery < BaseService
     @search_term = search_term.to_s.strip
     @order = order
 
-    super
+    @result = self.class::Result.new
+    @source = CurrentContext&.source
   end
+
+  def call(**args, &block)
+    raise NotImplementedError
+  end
+
+  protected
+
+  attr_writer :result
 
   private
 
-  attr_reader :organization, :pagination_params, :filters, :search_term, :order
+  attr_reader :result, :source, :organization, :pagination_params, :filters, :search_term, :order
 
   def validate_filters
     validation_result = filters_contract.call(filters.to_h)
