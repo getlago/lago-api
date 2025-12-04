@@ -36,6 +36,77 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
     )
   end
 
+  context "when filter values hash is empty" do
+    let(:filters_params) do
+      [
+        {
+          values: {},
+          invoice_display_name: "Invalid filter",
+          properties: {amount: "10"}
+        }
+      ]
+    end
+
+    before { card_location_filter }
+
+    it "returns a validation failure" do
+      expect(service).not_to be_success
+      expect(service.error).to be_a(BaseService::ValidationFailure)
+      expect(service.error.messages[:filters]).to include("values_must_not_be_empty")
+    end
+
+    it "does not create any filters" do
+      expect { service }.not_to change(ChargeFilter, :count)
+    end
+  end
+
+  context "when filter keys do not exist in billable metric" do
+    let(:filters_params) do
+      [
+        {
+          values: {
+            "non_existent_key" => ["value1"]
+          },
+          invoice_display_name: "Invalid filter",
+          properties: {amount: "10"}
+        }
+      ]
+    end
+
+    before { card_location_filter }
+
+    it "returns a not found failure" do
+      expect(service).not_to be_success
+      expect(service.error).to be_a(BaseService::NotFoundFailure)
+      expect(service.error.resource).to eq("billable_metric_filter")
+    end
+
+    it "does not create any filters" do
+      expect { service }.not_to change(ChargeFilter, :count)
+    end
+  end
+
+  context "when some filter keys exist and some do not" do
+    let(:filters_params) do
+      [
+        {
+          values: {
+            card_location_filter.key => ["domestic"],
+            "non_existent_key" => ["value1"]
+          },
+          invoice_display_name: "Mixed filter",
+          properties: {amount: "10"}
+        }
+      ]
+    end
+
+    it "returns a not found failure" do
+      expect(service).not_to be_success
+      expect(service.error).to be_a(BaseService::NotFoundFailure)
+      expect(service.error.resource).to eq("billable_metric_filter")
+    end
+  end
+
   context "when filter params is empty" do
     it "does not create any filters" do
       expect { service }.not_to change(ChargeFilter, :count)

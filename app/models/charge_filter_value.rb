@@ -11,7 +11,7 @@ class ChargeFilterValue < ApplicationRecord
   belongs_to :billable_metric_filter, -> { with_discarded }
   belongs_to :organization
 
-  validates :values, presence: true
+  validates :values, presence: true, length: {minimum: 1}
   validate :validate_values
 
   # NOTE: Ensure filters are keeping the initial ordering

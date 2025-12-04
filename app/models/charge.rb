@@ -43,6 +43,7 @@ class Charge < ApplicationRecord
 
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
+  validates :invoice_display_name, length: {maximum: 255}, allow_nil: true
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
 

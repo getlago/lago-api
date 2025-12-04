@@ -7,11 +7,20 @@ RSpec.describe UsageThreshold do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:applied_usage_thresholds) }
-  it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:organization)
+      expect(subject).to have_many(:applied_usage_thresholds)
+      expect(subject).to have_many(:invoices).through(:applied_usage_thresholds)
+    end
+  end
 
-  it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
+  describe "validations" do
+    it do
+      expect(subject).to validate_numericality_of(:amount_cents).is_greater_than(0)
+      expect(subject).to validate_length_of(:threshold_display_name).is_at_most(255).allow_nil
+    end
+  end
 
   describe "default scope" do
     let!(:deleted_usage_threshold) { create(:usage_threshold, :deleted) }

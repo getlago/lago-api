@@ -7,11 +7,14 @@ RSpec.describe Charge do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:filters).dependent(:destroy) }
-
-  it { is_expected.to have_one(:applied_pricing_unit) }
-  it { is_expected.to have_one(:pricing_unit).through(:applied_pricing_unit) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:organization)
+      expect(subject).to have_many(:filters).dependent(:destroy)
+      expect(subject).to have_one(:applied_pricing_unit)
+      expect(subject).to have_one(:pricing_unit).through(:applied_pricing_unit)
+    end
+  end
 
   describe "#validate_graduated" do
     subject(:charge) do
@@ -645,6 +648,8 @@ RSpec.describe Charge do
 
   describe "validations" do
     subject { charge.valid? }
+
+    it { is_expected.to validate_length_of(:invoice_display_name).is_at_most(255).allow_nil }
 
     describe "#validate_invoiceable_unless_pay_in_advance" do
       let(:charge) { build_stubbed(:standard_charge, pay_in_advance:, invoiceable:) }

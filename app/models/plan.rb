@@ -46,9 +46,14 @@ class Plan < ApplicationRecord
 
   monetize :amount_cents
 
-  validates :name, :code, presence: true
+  validates :name, presence: true, length: {maximum: 255}
+  validates :code, presence: true, length: {maximum: 255}
+  validates :description, length: {maximum: 600}, allow_nil: true
+  validates :invoice_display_name, length: {maximum: 255}, allow_nil: true
+  validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :amount_currency, inclusion: {in: currency_list}
   validates :pay_in_advance, inclusion: {in: [true, false]}
+  validates :trial_period, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validate :validate_code_unique
 
   default_scope -> { kept }

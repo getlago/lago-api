@@ -16,6 +16,7 @@ class Commitment < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than: 0}, allow_nil: false
   validates :commitment_type, uniqueness: {scope: :plan_id}
+  validates :invoice_display_name, length: {maximum: 255}, allow_nil: true
 
   def invoice_name
     invoice_display_name.presence || I18n.t("commitment.minimum.name")

@@ -102,7 +102,7 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(
+        params.expect(plan: [
           :name,
           :invoice_display_name,
           :code,
@@ -120,9 +120,9 @@ module Api
             :id,
             :invoice_display_name,
             :amount_cents,
-            {tax_codes: []}
+            tax_codes: []
           ],
-          charges: [
+          charges: [[
             :id,
             :invoice_display_name,
             :billable_metric_id,
@@ -132,27 +132,19 @@ module Api
             :invoiceable,
             :regroup_paid_fees,
             :min_amount_cents,
-            {
-              properties: {}
-            },
-            {
-              filters: [
-                :invoice_display_name,
-                {
-                  properties: {},
-                  values: {}
-                }
-              ]
-            },
-            {tax_codes: []},
-            {
-              applied_pricing_unit: [
-                :code,
-                :conversion_rate
-              ]
-            }
-          ],
-          fixed_charges: [
+            properties: {},
+            filters: [
+              [:invoice_display_name,
+                properties: {},
+                values: {}]
+            ],
+            tax_codes: [],
+            applied_pricing_unit: [
+              [:code,
+                :conversion_rate]
+            ]
+          ]],
+          fixed_charges: [[
             :id,
             :invoice_display_name,
             :units,
@@ -161,16 +153,16 @@ module Api
             :charge_model,
             :pay_in_advance,
             :prorated,
-            {properties: {}},
-            {tax_codes: []}
-          ],
-          usage_thresholds: [
+            properties: {},
+            tax_codes: []
+          ]],
+          usage_thresholds: [[
             :id,
             :threshold_display_name,
             :amount_cents,
             :recurring
-          ]
-        )
+          ]]
+        ])
       end
 
       def render_plan(plan)

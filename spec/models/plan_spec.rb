@@ -36,13 +36,43 @@ RSpec.describe Plan do
 
   it_behaves_like "paper_trail traceable"
 
-  describe "Validations" do
+  describe "validations" do
+    it do
+      expect(plan).to validate_presence_of(:name)
+      expect(plan).to validate_presence_of(:code)
+      expect(plan).to validate_length_of(:name).is_at_most(255)
+      expect(plan).to validate_length_of(:code).is_at_most(255)
+      expect(plan).to validate_length_of(:description).is_at_most(600).allow_nil
+      expect(plan).to validate_length_of(:invoice_display_name).is_at_most(255).allow_nil
+      expect(plan).to validate_numericality_of(:amount_cents).is_greater_than_or_equal_to(0)
+      expect(plan).to validate_numericality_of(:trial_period).is_greater_than_or_equal_to(0).allow_nil
+      expect(plan).to validate_inclusion_of(:pay_in_advance).in_array([true, false])
+    end
+
     it "requires the pay_in_advance" do
       plan.pay_in_advance = nil
       expect(plan).not_to be_valid
 
       plan.pay_in_advance = true
       expect(plan).to be_valid
+    end
+
+    context "when trial_period is negative" do
+      let(:plan) { build(:plan, trial_period: -1) }
+
+      it "is invalid" do
+        expect(plan).not_to be_valid
+        expect(plan.errors[:trial_period]).to be_present
+      end
+    end
+
+    context "when amount_cents is negative" do
+      let(:plan) { build(:plan, amount_cents: -100) }
+
+      it "is invalid" do
+        expect(plan).not_to be_valid
+        expect(plan.errors[:amount_cents]).to be_present
+      end
     end
   end
 

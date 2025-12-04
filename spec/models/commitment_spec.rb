@@ -3,37 +3,24 @@
 require "rails_helper"
 
 RSpec.describe Commitment do
-  it { is_expected.to belong_to(:plan) }
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
-  it { is_expected.to have_many(:taxes) }
+  subject(:commitment) { build(:commitment) }
 
-  it { is_expected.to validate_numericality_of(:amount_cents) }
-
-  describe "#invoice_name" do
-    subject(:commitment_invoice_name) { commitment.invoice_name }
-
-    context "when invoice display name is blank" do
-      let(:commitment) { build_stubbed(:commitment, invoice_display_name: [nil, ""].sample) }
-
-      it "returns name" do
-        expect(commitment_invoice_name).to eq("Minimum commitment")
-      end
-    end
-
-    context "when invoice display name is present" do
-      let(:commitment) { build_stubbed(:commitment) }
-
-      it "returns invoice display name" do
-        expect(commitment_invoice_name).to eq(commitment.invoice_display_name)
-      end
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:plan)
+      expect(subject).to belong_to(:organization)
+      expect(subject).to have_many(:applied_taxes).dependent(:destroy)
+      expect(subject).to have_many(:taxes)
     end
   end
 
   describe "validations" do
-    subject(:commitment) { build(:commitment) }
+    it do
+      expect(subject).to validate_numericality_of(:amount_cents).is_greater_than(0)
+      expect(subject).to validate_length_of(:invoice_display_name).is_at_most(255).allow_nil
+    end
 
-    describe "of commitment type uniqueness" do
+    describe "commitment type uniqueness" do
       let(:errors) { commitment.errors }
 
       context "when it is unique in scope of plan" do
@@ -58,6 +45,26 @@ RSpec.describe Commitment do
         it "adds an error" do
           expect(errors.where(:commitment_type, :taken)).to be_present
         end
+      end
+    end
+  end
+
+  describe "#invoice_name" do
+    subject(:commitment_invoice_name) { commitment.invoice_name }
+
+    context "when invoice display name is blank" do
+      let(:commitment) { build_stubbed(:commitment, invoice_display_name: [nil, ""].sample) }
+
+      it "returns name" do
+        expect(commitment_invoice_name).to eq("Minimum commitment")
+      end
+    end
+
+    context "when invoice display name is present" do
+      let(:commitment) { build_stubbed(:commitment) }
+
+      it "returns invoice display name" do
+        expect(commitment_invoice_name).to eq(commitment.invoice_display_name)
       end
     end
   end

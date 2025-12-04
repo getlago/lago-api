@@ -25,6 +25,9 @@ module ChargeFilters
         return result
       end
 
+      return result.validation_failure!(errors: {filters: ["values_must_not_be_empty"]}) if empty_filter_values?
+      return result.not_found_failure!(resource: "billable_metric_filter") if invalid_filter_keys?
+
       # We only care about order when you have less than 100 filters.
       touch = filters_params.size < 100
 
@@ -162,6 +165,18 @@ module ChargeFilters
       elsif filter.pricing_group_keys.present?
         filter.properties.delete("pricing_group_keys")
         filter.properties.delete("grouped_by")
+      end
+    end
+
+    def empty_filter_values?
+      filters_params.any? { |filter_param| filter_param[:values].blank? }
+    end
+
+    def invalid_filter_keys?
+      billable_metric_filter_keys = charge.billable_metric.filters.pluck(:key)
+
+      filters_params.any? do |filter_param|
+        filter_param[:values].keys.any? { |key| billable_metric_filter_keys.exclude?(key.to_s) }
       end
     end
   end

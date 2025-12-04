@@ -16,6 +16,7 @@ class ChargeFilter < ApplicationRecord
   has_one :billable_metric, through: :charge
 
   validate :validate_properties
+  validates :invoice_display_name, length: {maximum: 255}, allow_nil: true
 
   # NOTE: Ensure filters are keeping the initial ordering
   default_scope -> { kept.order(updated_at: :asc) }

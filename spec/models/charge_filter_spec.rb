@@ -7,10 +7,18 @@ RSpec.describe ChargeFilter do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:charge) }
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:values).dependent(:destroy) }
-  it { is_expected.to have_many(:fees) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:charge)
+      expect(subject).to belong_to(:organization)
+      expect(subject).to have_many(:values).dependent(:destroy)
+      expect(subject).to have_many(:fees)
+    end
+  end
+
+  describe "validations" do
+    it { is_expected.to validate_length_of(:invoice_display_name).is_at_most(255).allow_nil }
+  end
 
   describe "#validate_properties" do
     subject(:charge_filter) { build(:charge_filter, charge:, properties: charge_properties) }

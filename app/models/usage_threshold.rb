@@ -17,6 +17,7 @@ class UsageThreshold < ApplicationRecord
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_cents, uniqueness: {scope: %i[plan_id recurring deleted_at]}, if: -> { deleted_at.nil? }
   validates :recurring, uniqueness: {scope: %i[plan_id deleted_at]}, if: -> { recurring? && deleted_at.nil? }
+  validates :threshold_display_name, length: {maximum: 255}, allow_nil: true
 
   scope :recurring, -> { where(recurring: true) }
   scope :not_recurring, -> { where(recurring: false) }
