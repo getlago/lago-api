@@ -840,8 +840,8 @@ describe "Pay in advance fixed charge units change mid-period" do
         child_delta_invoice = child_invoices.last
         expect(child_delta_invoice.fees.count).to eq(2)
 
-        child_fixed_charge_fee_1 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge1)
-        child_fixed_charge_fee_2 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
+        child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge1)
+        child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
 
         expect(parent_fixed_charge_fee_1.units).to eq(15)  # 25 - 10 = 15
         expect(parent_fixed_charge_fee_1.amount_cents).to eq(15_000)
@@ -1172,7 +1172,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     end
   end
 
-  describe "when updating subscription with plan_overrides creates child fixed charge", :focus do
+  describe "when updating subscription with plan_overrides creates child fixed charge" do
     # Regression test: When a subscription is updated with plan_overrides,
     # it creates a new child plan with new fixed charges (different IDs).
     # The delta billing should correctly find the previous fee from the parent
@@ -1228,7 +1228,9 @@ describe "Pay in advance fixed charge units change mid-period" do
                 fixed_charges: [{
                   id: parent_fixed_charge.id,
                   units: 15,
-                  apply_units_immediately: true
+                  apply_units_immediately: true,
+                  charge_model: "standard",
+                  properties: {amount: "10"}
                 }]
               }
             }
@@ -1298,7 +1300,9 @@ describe "Pay in advance fixed charge units change mid-period" do
                 fixed_charges: [{
                   id: parent_fixed_charge.id,
                   units: 3,
-                  apply_units_immediately: true
+                  apply_units_immediately: true,
+                  charge_model: "standard",
+                  properties: {amount: "10"}
                 }]
               }
             }
@@ -1339,7 +1343,9 @@ describe "Pay in advance fixed charge units change mid-period" do
                 fixed_charges: [{
                   id: parent_fixed_charge.id,
                   units: 3,
-                  apply_units_immediately: true
+                  apply_units_immediately: true,
+                  charge_model: "standard",
+                  properties: {amount: "10"}
                 }]
               }
             }
@@ -1361,7 +1367,9 @@ describe "Pay in advance fixed charge units change mid-period" do
                 fixed_charges: [{
                   id: child_fixed_charge.id,
                   units: 15,
-                  apply_units_immediately: true
+                  apply_units_immediately: true,
+                  charge_model: "standard",
+                  properties: {amount: "10"}
                 }]
               }
             }

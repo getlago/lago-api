@@ -34,40 +34,41 @@ module Subscriptions
 
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
-      subscription.name = params[:name] if params.key?(:name)
-      subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+      ActiveRecord::Base.transaction do
+        subscription.name = params[:name] if params.key?(:name)
+        subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
 
-      if pay_in_advance? && params.key?(:on_termination_credit_note)
-        subscription.on_termination_credit_note = params[:on_termination_credit_note]
-      end
+        if pay_in_advance? && params.key?(:on_termination_credit_note)
+          subscription.on_termination_credit_note = params[:on_termination_credit_note]
+        end
 
-      if params.key?(:on_termination_invoice)
-        subscription.on_termination_invoice = params[:on_termination_invoice]
-      end
+        if params.key?(:on_termination_invoice)
+          subscription.on_termination_invoice = params[:on_termination_invoice]
+        end
 
-      if params.key?(:payment_method)
-        subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
-      end
+        if params.key?(:payment_method)
+          subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+          subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+        end
 
-      if params.key?(:plan_overrides)
-        plan_result = handle_plan_override
-        return plan_result unless plan_result.success?
+        subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
 
-        subscription.plan = plan_result.plan
-      end
+        if subscription.starting_in_the_future? && params.key?(:subscription_at)
+          subscription.subscription_at = params[:subscription_at]
 
-      if subscription.starting_in_the_future? && params.key?(:subscription_at)
-        subscription.subscription_at = params[:subscription_at]
+          process_subscription_at_change(subscription)
+        else
+          subscription.save!
 
-        process_subscription_at_change(subscription)
-      else
-        subscription.save!
+          if subscription.active? && subscription.fixed_charges.pay_in_advance.any? && subscription.plan_id_previously_changed?
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
+          end
 
-        SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+          SendWebhookJob.perform_after_commit("subscription.updated", subscription)
 
-        if subscription.should_sync_hubspot_subscription?
-          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
+          if subscription.should_sync_hubspot_subscription?
+            Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
+          end
         end
       end
 
@@ -75,6 +76,8 @@ module Subscriptions
 
       result.subscription = subscription
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
@@ -95,16 +98,14 @@ module Subscriptions
           subscriptions: [subscription],
           timestamp: subscription.started_at + 1.second
         )
+
+        if subscription.plan.pay_in_advance? && subscription.subscription_at.today?
+          BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+        elsif subscription.fixed_charges.pay_in_advance.any?
+          Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
+        end
       else
         subscription.save!
-      end
-
-      return unless subscription.subscription_at.today?
-
-      if subscription.plan.pay_in_advance?
-        BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
-      elsif subscription.fixed_charges.pay_in_advance.any?
-        Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
       end
     end
 
@@ -112,12 +113,12 @@ module Subscriptions
       current_plan = subscription.plan
 
       if current_plan.parent_id
-        Plans::UpdateService.call(
+        Plans::UpdateService.call!(
           plan: current_plan,
           params: params[:plan_overrides].to_h.with_indifferent_access
         )
       else
-        Plans::OverrideService.call(
+        Plans::OverrideService.call!(
           plan: current_plan,
           params: params[:plan_overrides].to_h.with_indifferent_access,
           subscription:
