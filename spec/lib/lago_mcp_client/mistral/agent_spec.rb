@@ -3,22 +3,24 @@
 require "rails_helper"
 
 RSpec.describe LagoMcpClient::Mistral::Agent do
+  subject(:agent) { described_class.new(client: mcp_client, conversation_id:) }
+
   let(:mcp_client) { instance_double("McpClient") }
   let(:mistral_client) { instance_double(LagoMcpClient::Mistral::Client) }
-  let(:run_context) { instance_double(LagoMcpClient::RunContext) }
-  let(:agent) { described_class.new(client: mcp_client) }
+  let(:mcp_context) { instance_double(LagoMcpClient::RunContext) }
+  let(:conversation_id) { nil }
 
   before do
     allow(LagoMcpClient::Mistral::Client).to receive(:new).and_return(mistral_client)
-    allow(LagoMcpClient::RunContext).to receive(:new).with(client: mcp_client).and_return(run_context)
+    allow(LagoMcpClient::RunContext).to receive(:new).with(client: mcp_client).and_return(mcp_context)
   end
 
   describe "#setup!" do
-    before { allow(run_context).to receive(:setup!) }
+    before { allow(mcp_context).to receive(:setup!) }
 
     it "calls setup! on the MCP context" do
       agent.setup!
-      expect(run_context).to have_received(:setup!)
+      expect(mcp_context).to have_received(:setup!)
     end
 
     it "returns self" do
@@ -28,12 +30,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
 
   describe "#chat" do
     let(:user_message) { "Hello, assistant!" }
-    let(:model_tools) { [{"type" => "function", "function" => {"name" => "test_tool"}}] }
     let(:chunks) { [] }
-
-    before do
-      allow(run_context).to receive(:to_model_tools).and_return(model_tools)
-    end
 
     context "when no block is given" do
       it "raises an ArgumentError" do
@@ -42,43 +39,87 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       end
     end
 
-    context "when streaming without tool calls" do
-      let(:chunk1) { {"choices" => [{"delta" => {"content" => "Hello"}}]} }
-      let(:chunk2) { {"choices" => [{"delta" => {"content" => " there"}}]} }
-      let(:response) { {"choices" => [{"message" => {"content" => "Hello there"}}]} }
+    context "when starting a new conversation" do
+      let(:conversation_id) { nil }
+      let(:new_conversation_id) { "conv_new_456" }
+      let(:response) do
+        {
+          "conversation_id" => new_conversation_id,
+          "outputs" => [{"content" => "Hello there!"}]
+        }
+      end
 
       before do
-        allow(mistral_client).to receive(:chat_completion) do |**args, &block|
-          block&.call(chunk1)
-          block&.call(chunk2)
+        allow(mistral_client).to receive(:start_conversation) do |**_args, &block|
+          block&.call("chunk1")
+          block&.call("chunk2")
           response
         end
       end
 
-      it "appends user message to history" do
+      it "calls start_conversation on mistral client" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        history = agent.instance_variable_get(:@conversation_history)
-        expect(history.first).to eq({role: "user", content: user_message})
+
+        expect(mistral_client).to have_received(:start_conversation).with(
+          inputs: user_message,
+          stream: true
+        )
       end
 
       it "yields streaming chunks" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        expect(chunks).to include(chunk1, chunk2)
+        expect(chunks).to eq(["chunk1", "chunk2"])
       end
 
-      it "appends assistant message to history" do
+      it "stores the new conversation_id" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        history = agent.instance_variable_get(:@conversation_history)
-        expect(history.last).to eq({role: "assistant", content: "Hello there"})
+        expect(agent.conversation_id).to eq(new_conversation_id)
       end
 
       it "returns the final content" do
         result = agent.chat(user_message) { |chunk| chunks << chunk }
-        expect(result).to eq("Hello there")
+        expect(result).to eq("Hello there!")
       end
     end
 
-    context "when streaming with tool calls" do
+    context "when continuing an existing conversation" do
+      let(:conversation_id) { "conv_existing_789" }
+      let(:response) do
+        {
+          "outputs" => [{"content" => "Continued response"}]
+        }
+      end
+
+      before do
+        allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
+          block&.call("chunk")
+          response
+        end
+      end
+
+      it "calls append_to_conversation on mistral client" do
+        agent.chat(user_message) { |chunk| chunks << chunk }
+
+        expect(mistral_client).to have_received(:append_to_conversation).with(
+          conversation_id: conversation_id,
+          inputs: [{role: "user", content: user_message}],
+          stream: true
+        )
+      end
+
+      it "returns the final content" do
+        result = agent.chat(user_message) { |chunk| chunks << chunk }
+        expect(result).to eq("Continued response")
+      end
+
+      it "keeps the same conversation_id" do
+        agent.chat(user_message) { |chunk| chunks << chunk }
+        expect(agent.conversation_id).to eq(conversation_id)
+      end
+    end
+
+    context "when response contains tool calls" do
+      let(:conversation_id) { "conv_with_tools" }
       let(:tool_call_id) { "call_123" }
       let(:tool_calls) do
         [
@@ -89,66 +130,64 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
           }
         ]
       end
-      let(:first_response) do
+      let(:initial_response) do
         {
-          "choices" => [
-            {
-              "message" => {
-                "content" => "",
-                "tool_calls" => tool_calls
-              }
-            }
-          ]
+          "tool_calls" => tool_calls,
+          "outputs" => []
         }
       end
-      let(:tool_results) do
+      let(:tool_result) do
         [
           {
-            "role" => "tool",
-            "content" => "{\"content\":[{\"text\":\"Tool result\"}]}",
-            "tool_call_id" => tool_call_id
+            tool_call_id: tool_call_id,
+            content: '{"content":[{"text":"Tool result text"}]}'
           }
         ]
       end
       let(:final_response) do
         {
-          "choices" => [
-            {
-              "message" => {
-                "content" => "Task completed successfully"
-              }
-            }
-          ]
+          "outputs" => [{"content" => "Task completed successfully"}]
         }
       end
 
       before do
-        allow(mistral_client).to receive(:chat_completion)
-          .and_return(first_response, final_response)
-        allow(run_context).to receive(:process_tool_calls)
+        call_count = 0
+        allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
+          call_count += 1
+          block&.call("chunk#{call_count}")
+          (call_count == 1) ? initial_response : final_response
+        end
+
+        allow(mcp_context).to receive(:process_tool_calls)
           .with(tool_calls)
-          .and_return(tool_results)
+          .and_return(tool_result)
       end
 
-      it "processes tool calls" do
+      it "processes tool calls via mcp_context" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        expect(run_context).to have_received(:process_tool_calls).with(tool_calls)
+        expect(mcp_context).to have_received(:process_tool_calls).with(tool_calls)
       end
 
-      it "appends assistant message with tool_calls to history" do
+      it "sends tool results back to the conversation" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        history = agent.instance_variable_get(:@conversation_history)
 
-        assistant_msg = history.find { |msg| msg[:role] == "assistant" && msg[:tool_calls] }
-        expect(assistant_msg).to include(role: "assistant", content: "", tool_calls:)
+        expect(mistral_client).to have_received(:append_to_conversation).with(
+          conversation_id: conversation_id,
+          inputs: [
+            {
+              tool_call_id: tool_call_id,
+              result: "Tool result text",
+              type: "function.result",
+              object: "entry"
+            }
+          ],
+          stream: true
+        )
       end
 
-      it "appends tool results to history" do
+      it "makes two API calls (initial + after tool execution)" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        history = agent.instance_variable_get(:@conversation_history)
-
-        tool_msg = history.find { |msg| msg[:role] == "tool" }
-        expect(tool_msg).to include(role: "tool", content: "Tool result", tool_call_id:)
+        expect(mistral_client).to have_received(:append_to_conversation).twice
       end
 
       it "returns final assistant response" do
@@ -156,20 +195,9 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
         expect(result).to eq("Task completed successfully")
       end
 
-      it "makes two API calls (initial + after tool execution)" do
+      it "yields chunks from both API calls" do
         agent.chat(user_message) { |chunk| chunks << chunk }
-        expect(mistral_client).to have_received(:chat_completion).twice
-      end
-    end
-
-    context "when response is nil or invalid" do
-      before do
-        allow(mistral_client).to receive(:chat_completion).and_return(nil)
-      end
-
-      it "returns 'No response received'" do
-        result = agent.chat(user_message) { |chunk| chunks << chunk }
-        expect(result).to eq("No response received")
+        expect(chunks).to eq(["chunk1", "chunk2"])
       end
     end
   end

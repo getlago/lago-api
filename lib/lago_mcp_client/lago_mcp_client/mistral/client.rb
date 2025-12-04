@@ -90,7 +90,24 @@ module LagoMcpClient
                   end
                 when "conversation.response.done"
                   conversation_id ||= data["conversation_id"]
-                  Rails.logger.debug("Conversation done: #{conversation_id}")
+                when "function.call", "function.call.delta"
+                  # Handle function calls at root level (delta events accumulate)
+                  tool_call_id = data["tool_call_id"]
+                  existing = tool_calls.find { |tc| tc["id"] == tool_call_id }
+
+                  if existing
+                    # Accumulate arguments for streaming deltas
+                    existing["function"]["arguments"] = (existing["function"]["arguments"] || "") + (data["arguments"] || "")
+                  else
+                    tool_calls << {
+                      "id" => tool_call_id,
+                      "type" => "function",
+                      "function" => {
+                        "name" => data["name"],
+                        "arguments" => data["arguments"] || ""
+                      }
+                    }
+                  end
                 end
 
                 # Handle outputs array (tool calls, final messages)
@@ -98,13 +115,13 @@ module LagoMcpClient
                   case output["type"]
                   when "message.output"
                     outputs << output
-                  when "tool.call"
+                  when "tool.call", "function.call"
                     tool_calls << {
-                      "id" => output["tool_call_id"],
+                      "id" => output["tool_call_id"] || output["id"],
                       "type" => "function",
                       "function" => {
-                        "name" => output["name"],
-                        "arguments" => output["arguments"]
+                        "name" => output["name"] || output.dig("function", "name"),
+                        "arguments" => output["arguments"] || output.dig("function", "arguments")
                       }
                     }
                   end
@@ -120,8 +137,6 @@ module LagoMcpClient
           "tool_calls" => tool_calls.empty? ? nil : tool_calls
         }
       rescue => e
-        Rails.logger.error("Mistral streaming error: #{e.message}")
-        Rails.logger.error(e.backtrace.join("\n"))
         raise "Mistral Conversations API streaming error: #{e.message}"
       end
 

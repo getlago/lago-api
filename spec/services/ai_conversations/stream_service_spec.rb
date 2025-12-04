@@ -115,8 +115,10 @@ describe AiConversations::StreamService, type: :service do
         end
 
         it "does not update the ai_conversation" do
-          expect(ai_conversation).not_to receive(:update!)
+          allow(ai_conversation).to receive(:update!)
           service.call
+
+          expect(ai_conversation).not_to have_received(:update!)
         end
       end
     end

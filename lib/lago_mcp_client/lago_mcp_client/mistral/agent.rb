@@ -33,7 +33,7 @@ module LagoMcpClient
       def process_conversation(user_message, max_iterations)
         response = send_message(user_message) { |chunk| yield chunk }
 
-        max_iterations.times do
+        max_iterations.times do |i|
           break unless has_tool_calls?(response)
 
           tool_results = execute_tools(response["tool_calls"])
@@ -65,7 +65,8 @@ module LagoMcpClient
           {
             tool_call_id: result[:tool_call_id],
             result: result[:content],
-            type: "function.result"
+            type: "function.result",
+            object: "entry"
           }
         end
 
