@@ -64,7 +64,7 @@ module Wallets
     end
 
     def wallets
-      @wallets ||= customer.active_wallets_in_application_order
+      @wallets ||= customer.wallets.active.in_application_order
         .includes(wallet_targets: :billable_metric)
     end
 
