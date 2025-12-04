@@ -88,6 +88,10 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
     end
   end
 
+  let(:allocation_rules) do
+    Wallets::BuildAllocationRulesService.call!(customer:).allocation_rules
+  end
+
   let(:include_generating_invoices) { false }
 
   before do
@@ -98,7 +102,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
   end
 
   describe ".call" do
-    subject(:result) { described_class.call(wallet:, usage_amount_cents:) }
+    subject(:result) { described_class.call(wallet:, usage_amount_cents:, allocation_rules:) }
 
     it "updates wallet ongoing balance" do
       expect { subject }
