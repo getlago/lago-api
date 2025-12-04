@@ -32,14 +32,14 @@ RSpec.describe WebhooksQuery do
     expect(returned_ids).to include(webhook_other_type.id)
   end
 
-  context "when webhooks have the same values for the ordering criteria" do
+  context "when ordering by second criteria" do
     let(:webhook_failed) do
       create(
         :webhook,
         :failed,
         webhook_endpoint:,
         id: "00000000-0000-0000-0000-000000000000",
-        created_at: webhook_succeeded.created_at,
+        created_at: webhook_succeeded.created_at + 1.second,
         updated_at: webhook_succeeded.updated_at
       )
     end

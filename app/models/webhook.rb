@@ -86,8 +86,10 @@ end
 #
 # Indexes
 #
-#  index_webhooks_on_organization_id      (organization_id)
-#  index_webhooks_on_webhook_endpoint_id  (webhook_endpoint_id)
+#  index_webhooks_on_endpoint_and_timestamps         (webhook_endpoint_id,updated_at,created_at)
+#  index_webhooks_on_endpoint_status_and_timestamps  (webhook_endpoint_id,status,updated_at)
+#  index_webhooks_on_organization_id                 (organization_id)
+#  index_webhooks_on_webhook_endpoint_id             (webhook_endpoint_id)
 #
 # Foreign Keys
 #
