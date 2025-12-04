@@ -150,6 +150,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         perform_finalize_refresh
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("finalized")
+        # recalculate_wallet_balances
         wallet.reload
         expect(wallet.credits_balance).to eq 4
         expect(wallet.balance_cents).to eq 400
@@ -495,6 +496,477 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         expect(wallet.credits_ongoing_balance).to eq 23
         expect(wallet.ongoing_usage_balance_cents).to eq 0
         expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+    end
+  end
+
+  describe "multiple wallets" do
+    let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+
+    before do
+      stub_const("Wallets::ValidateService::MAXIMUM_WALLETS_PER_CUSTOMER", 5)
+    end
+
+    # local helper to ingest usage for a specific billable metric
+    def ingest_bm_event(subscription, bm, amount)
+      create_event({
+        transaction_id: SecureRandom.uuid,
+        code: bm.code,
+        external_subscription_id: subscription.external_id,
+        properties: {bm.field_name => amount}
+      })
+      perform_usage_update
+    end
+
+    # helper to ingest usage with arbitrary extra properties (eg. filters)
+    def ingest_bm_event_with_filter(subscription, bm, amount, filter_value)
+      create_event({
+        transaction_id: SecureRandom.uuid,
+        code: bm.code,
+        external_subscription_id: subscription.external_id,
+        properties: {bm.field_name => amount, filter: filter_value}
+      })
+      perform_usage_update
+    end
+
+    def expect_wallet_numbers(wallet, balance_cents:, ongoing_balance_cents:)
+      wallet.reload
+      expect(wallet.balance_cents).to eq(balance_cents)
+      expect(wallet.ongoing_balance_cents).to eq(ongoing_balance_cents)
+      # derived credits helpers
+      expect(wallet.credits_balance).to eq(balance_cents.to_f / 100.0 / wallet.rate_amount)
+      expect(wallet.credits_ongoing_balance).to eq(ongoing_balance_cents.to_f / 100.0 / wallet.rate_amount)
+    end
+
+    context "wallets limited to 1 billable metric" do
+      it "applies each metric usage to its corresponding wallet by priority" do
+        # four billable metrics and charges at $1 per unit
+        bm_storage = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_seats = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_api = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_sms = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        create(:charge, plan:, billable_metric: bm_storage, charge_model: "standard", properties: {"amount" => "1"})
+        create(:charge, plan:, billable_metric: bm_seats, charge_model: "standard", properties: {"amount" => "1"})
+        create(:charge, plan:, billable_metric: bm_api, charge_model: "standard", properties: {"amount" => "1"})
+        create(:charge, plan:, billable_metric: bm_sms, charge_model: "standard", properties: {"amount" => "1"})
+
+        time_0 = DateTime.new(2022, 12, 1)
+        wallets = []
+        travel_to time_0 do
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        # current usage: 10, 20, 30, 40
+        travel_to time_0 + 5.days do
+          ingest_bm_event(subscription, bm_storage, 10)
+          ingest_bm_event(subscription, bm_seats, 20)
+          ingest_bm_event(subscription, bm_api, 30)
+          ingest_bm_event(subscription, bm_sms, 40)
+
+          recalculate_wallet_balances
+
+          expect_wallet_numbers(wallets[0], balance_cents: 1000, ongoing_balance_cents: 0)
+          expect_wallet_numbers(wallets[1], balance_cents: 2000, ongoing_balance_cents: 0)
+          expect_wallet_numbers(wallets[2], balance_cents: 3000, ongoing_balance_cents: 0)
+          expect_wallet_numbers(wallets[3], balance_cents: 4000, ongoing_balance_cents: 0)
+        end
+      end
+    end
+
+    context "wallets limited to 2 billable metrics" do
+      it "applies usage once per metric following wallets priority" do
+        bm_storage = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_seats = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_api = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_sms = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        [bm_storage, bm_seats, bm_api, bm_sms].each do |bm|
+          create(:charge, plan:, billable_metric: bm, charge_model: "standard", properties: {"amount" => "1"})
+        end
+
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code, bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code, bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code, bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code, bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_bm_event(subscription, bm_storage, 10)
+          ingest_bm_event(subscription, bm_seats, 20)
+          ingest_bm_event(subscription, bm_api, 30)
+          ingest_bm_event(subscription, bm_sms, 40)
+
+          recalculate_wallet_balances
+
+          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
+          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -2000)
+          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: -1000)
+          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
+          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: -1000)
+          # W4: sms and storage already applied -> nothing -> stays 40
+          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+        end
+      end
+    end
+
+    context "wallets limited to 2 billable metrics with filtered events" do
+      it "applies usage once per metric even when events include filters" do
+        bm_storage = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_seats = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_api = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_sms = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        [bm_storage, bm_seats, bm_api, bm_sms].each do |bm|
+          create(:charge, plan:, billable_metric: bm, charge_model: "standard", properties: {"amount" => "1"})
+        end
+
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code, bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code, bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code, bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code, bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          # For each billable metric, send two events with a "filter" value to simulate
+          # the scratch scenario (filter_01 and filter_02) while keeping totals equal
+          # to 10, 20, 30, 40 respectively.
+          ingest_bm_event_with_filter(subscription, bm_storage, 7, "filter_01")
+          ingest_bm_event_with_filter(subscription, bm_storage, 3, "filter_02")
+
+          ingest_bm_event_with_filter(subscription, bm_seats, 17, "filter_01")
+          ingest_bm_event_with_filter(subscription, bm_seats, 3, "filter_02")
+
+          ingest_bm_event_with_filter(subscription, bm_api, 27, "filter_01")
+          ingest_bm_event_with_filter(subscription, bm_api, 3, "filter_02")
+
+          ingest_bm_event_with_filter(subscription, bm_sms, 37, "filter_01")
+          ingest_bm_event_with_filter(subscription, bm_sms, 3, "filter_02")
+
+          recalculate_wallet_balances
+
+          # Same expectations as the unfiltered variant: distribution is once per
+          # metric following wallet priority.
+          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -2000)
+          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: -1000)
+          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: -1000)
+          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+        end
+      end
+    end
+
+    context "wallets limited to charges (fee types)" do
+      it "applies all charges to the first wallet limited to charge type" do
+        bm_storage = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_seats = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_api = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_sms = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        [bm_storage, bm_seats, bm_api, bm_sms].each do |bm|
+          create(:charge, plan:, billable_metric: bm, charge_model: "standard", properties: {"amount" => "1"})
+        end
+
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_bm_event(subscription, bm_storage, 10)
+          ingest_bm_event(subscription, bm_seats, 20)
+          ingest_bm_event(subscription, bm_api, 30)
+          ingest_bm_event(subscription, bm_sms, 40)
+
+          recalculate_wallet_balances
+
+          # Total usage = 100; first wallet takes it all
+          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -9000)
+          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: 2000)
+          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: 3000)
+          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+        end
+      end
+    end
+
+    context "wallets with no limitation" do
+      it "apply unrestricted rule to first wallet only" do
+        bm_storage = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_seats = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_api = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        bm_sms = create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg")
+        [bm_storage, bm_seats, bm_api, bm_sms].each do |bm|
+          create(:charge, plan:, billable_metric: bm, charge_model: "standard", properties: {"amount" => "1"})
+        end
+
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_bm_event(subscription, bm_storage, 10)
+          ingest_bm_event(subscription, bm_seats, 20)
+          ingest_bm_event(subscription, bm_api, 30)
+          ingest_bm_event(subscription, bm_sms, 40)
+
+          recalculate_wallet_balances
+
+          # Total usage = 100; first (unrestricted) wallet takes it all
+          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -9000)
+          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: 2000)
+          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: 3000)
+          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+        end
       end
     end
   end

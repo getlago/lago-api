@@ -1014,14 +1014,6 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
-DROP EXTENSION IF EXISTS pg_stat_statements;
---
--- Name: pg_stat_statements; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
-
-
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -3554,9 +3546,9 @@ CREATE TABLE public.wallets (
     organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone,
+    priority integer DEFAULT 50 NOT NULL,
     paid_top_up_min_amount_cents bigint,
     paid_top_up_max_amount_cents bigint,
-    priority integer DEFAULT 50 NOT NULL,
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL

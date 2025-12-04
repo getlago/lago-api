@@ -60,17 +60,18 @@ module Credits
           next if total_amount_cents <= 0
 
           wallet_transaction = create_wallet_transaction(wallet, total_amount_cents)
-          result.wallet_transactions << wallet_transaction
           amount_cents = wallet_transaction.amount_cents
 
           with_optimistic_lock_retry(wallet) do
-            Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)
+            Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:, skip_refresh: true)
           end
 
+          result.wallet_transactions << wallet_transaction
           result.prepaid_credit_amount_cents += amount_cents
           invoice.prepaid_credit_amount_cents += amount_cents
         end
-        # Customer::RefreshActiveWalletsService.call(customer:) #end of transcttion or not
+
+        Customers::RefreshWalletsService.call(customer:, include_generating_invoices: true)
         invoice.save! if invoice.changed?
       end
 
@@ -83,12 +84,13 @@ module Credits
     private
 
     attr_accessor :invoice, :wallets, :max_wallet_decrease_attempts
+
     delegate :customer, to: :invoice
 
     def schedule_webhook_notifications(wallet_transactions)
       wallet_transactions.each do |wt|
-        Utils::ActivityLog.produce(wt, "wallet_transaction.created")
-        SendWebhookJob.perform_later("wallet_transaction.created", wt)
+        Utils::ActivityLog.produce_after_commit(wt, "wallet_transaction.created")
+        SendWebhookJob.perform_after_commit("wallet_transaction.created", wt)
       end
     end
 

@@ -64,25 +64,27 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
   describe "#initialize" do
     context "when max_wallet_decrease_attempts is less than 1" do
       it "raises an error" do
-        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 0) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 0) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
       end
     end
 
     context "when max_wallet_decrease_attempts is greater than 6" do
       it "raises an error" do
-        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 7) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 7) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
       end
     end
 
     context "when max_wallet_decrease_attempts is between 1 and 6" do
       it "does not raise an error" do
-        expect { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 6) }.not_to raise_error
+        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 6) }.not_to raise_error
       end
     end
   end
 
   describe "#call" do
-    subject(:result) { described_class.call(invoice:, wallets: [wallet]) }
+    subject(:result) do
+      described_class.call(invoice:, wallets: customer.wallets.active.in_application_order)
+    end
 
     it "calculates prepaid credit" do
       expect(result).to be_success
@@ -106,11 +108,13 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(wallet.balance_cents).to eq(900)
       expect(wallet.credits_balance).to eq(9.0)
 
-      [normal_wallet,
+      [
+        normal_wallet,
         limited_charge_wallet,
         priority_limited_charge_wallet,
         limited_subscription_wallet,
-        priority_limited_subscription_wallet].each do |w|
+        priority_limited_subscription_wallet
+      ].each do |w|
         expect(w.reload.balance_cents).to eq(1000)
       end
     end
@@ -121,9 +125,9 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     it "produces an activity log" do
-      wallet_transaction = result.wallet_transaction
+      wallet_transaction = result.wallet_transactions.first
 
-      expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").with(wallet_transaction)
+      expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
     end
 
     context "when priority wallet credits are less than invoice amount" do
@@ -315,23 +319,37 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet_priority_limited_subscription.credits_balance).to eq(9.34)
         expect(wallet_priority_limited_bm.balance_cents).to eq(956)
         expect(wallet_priority_limited_bm.credits_balance).to eq(9.56)
-        [normal_wallet,
+
+        [
+          normal_wallet,
           limited_bm_wallet,
           priority_limited_charge_wallet,
           priority_wallet,
-          limited_charge_wallet].each do |w|
+          limited_charge_wallet
+        ].each do |w|
           expect(w.reload.balance_cents).to eq(1000)
         end
       end
 
       context "when precise fees have decimals" do
-        let(:amount_cents) { 110.1 }
+        let(:amount_cents) { 114.4 }
+        let(:subscription_fees) { [fee2] }
 
-        let(:fee2) { create(:charge_fee, invoice:, subscription:, precise_amount_cents: 40.1, taxes_precise_amount_cents: 4, charge:) }
+        let(:fee2) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 44,
+            precise_amount_cents: 44,
+            taxes_precise_amount_cents: 4.4,
+            charge:
+          )
+        end
 
         it "rounds the decimals" do
           expect(result).to be_success
-          expect(result.prepaid_credit_amount_cents).to eq(44)
+          expect(result.prepaid_credit_amount_cents).to eq(114)
         end
       end
 
@@ -410,12 +428,13 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         it "raises an error and rolls back the transaction" do
           expect { subject }.to raise_error(ActiveRecord::StaleObjectError)
 
-          expect(wallet.wallet_transactions.count).to eq(0)
+          transaction_count = customer.wallets.map { |w| w.wallet_transactions.count }.sum
+          expect(transaction_count).to eq(0)
         end
       end
 
       context "when max attempts is specified" do
-        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, wallets: [wallet], max_wallet_decrease_attempts: 3) }
+        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 3) }
 
         context "when decrease attempts failed" do
           before do
@@ -425,7 +444,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
           it "retries the operation" do
             expect { applied_prepaid_credits_service.call }.to raise_error(ActiveRecord::StaleObjectError)
 
-            expect(wallet.wallet_transactions.count).to eq(0)
+            transaction_count = customer.wallets.map { |w| w.wallet_transactions.count }.sum
+            expect(transaction_count).to eq(0)
           end
         end
 
