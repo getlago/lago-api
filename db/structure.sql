@@ -2597,6 +2597,7 @@ CREATE TABLE public.organizations (
     authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     audit_logs_period integer DEFAULT 30,
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
+    pre_filter_events boolean DEFAULT false NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10736,6 +10737,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251210133246'),
 ('20251210133225'),
 ('20251204142205'),
+('20251204101451'),
 ('20251202141759'),
 ('20251201094057'),
 ('20251201084648'),
