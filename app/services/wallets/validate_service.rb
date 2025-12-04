@@ -2,7 +2,7 @@
 
 module Wallets
   class ValidateService < BaseValidator
-    MAXIMUM_WALLETS_PER_CUSTOMER = 1
+    MAXIMUM_WALLETS_PER_CUSTOMER = 5
 
     def valid?
       valid_customer?
