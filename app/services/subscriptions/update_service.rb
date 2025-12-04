@@ -97,9 +97,13 @@ module Subscriptions
         subscription.save!
       end
 
-      return unless subscription.should_be_billed_when_started? && subscription.subscription_at.today?
+      return unless subscription.subscription_at.today?
 
-      BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+      if subscription.plan.pay_in_advance?
+        BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+      elsif subscription.fixed_charges.pay_in_advance.any?
+        Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, Time.current.to_i)
+      end
     end
 
     def handle_plan_override

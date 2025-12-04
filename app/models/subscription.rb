@@ -263,10 +263,6 @@ class Subscription < ApplicationRecord
 
     InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
   end
-
-  def should_be_billed_when_started?
-    plan.pay_in_advance? || plan.fixed_charges.pay_in_advance.any?
-  end
 end
 
 # == Schema Information

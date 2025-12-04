@@ -725,10 +725,7 @@ describe "Pay in advance fixed charge units change mid-period" do
             billing_time: "calendar",
             plan_overrides: {
               name: "Child Plan Override",
-              fixed_charges: [{
-                id: fixed_charge.id,
-                units: 20
-              }]
+              amount_cents: 5000
             }
           }
         )
@@ -758,7 +755,7 @@ describe "Pay in advance fixed charge units change mid-period" do
       child_fixed_charge_fee_1 = child_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge_1)
       child_fixed_charge_fee_2 = child_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge_2)
 
-      expect(child_fixed_charge_fee_1.units).to eq(20)
+      expect(child_fixed_charge_fee_1.units).to eq(10)
       expect(child_fixed_charge_fee_2.units).to eq(5)
     end
 
@@ -846,10 +843,10 @@ describe "Pay in advance fixed charge units change mid-period" do
         child_fixed_charge_fee_1 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge1)
         child_fixed_charge_fee_2 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
 
-        expect(child_fixed_charge_fee_1.units).to eq(5)  # 25 - 20 = 5
-        expect(child_fixed_charge_fee_1.amount_cents).to eq(5_000)
-        expect(child_fixed_charge_fee_2.units).to eq(10)  # 15 - 5 = 10
-        expect(child_fixed_charge_fee_2.amount_cents).to eq(20_000)
+        expect(parent_fixed_charge_fee_1.units).to eq(15)  # 25 - 10 = 15
+        expect(parent_fixed_charge_fee_1.amount_cents).to eq(15_000)
+        expect(parent_fixed_charge_fee_2.units).to eq(10)  # 15 - 5 = 10
+        expect(parent_fixed_charge_fee_2.amount_cents).to eq(20_000)
       end
     end
 
@@ -878,7 +875,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         child_fixed_charge1 = child_subscription.fixed_charges.find_by(parent: fixed_charge)
 
         expect(fixed_charge.reload.units).to eq(15)
-        expect(child_fixed_charge1.reload.units).to eq(20)  # Unchanged
+        expect(child_fixed_charge1.reload.units).to eq(10) # Unchanged
       end
 
       it "generates delta invoice only for parent subscription" do
@@ -889,6 +886,90 @@ describe "Pay in advance fixed charge units change mid-period" do
         # Child should still have only 1 invoice (initial only)
         child_invoices = child_subscription.reload.invoices.order(:created_at)
         expect(child_invoices.count).to eq(1)
+      end
+    end
+  end
+
+  describe "when fixed charge was overridden on subscription creation" do
+    let(:subscription_date) { DateTime.new(2024, 3, 1) }
+    let(:subscription) { customer.subscriptions.first }
+
+    # Parent plan setup
+    let(:parent_plan) { plan }
+
+    before do
+      fixed_charge
+
+      travel_to subscription_date do
+        # Create child subscription using plan_overrides (creates a child plan)
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_child_#{customer.external_id}",
+            plan_code: parent_plan.code,
+            billing_time: "calendar",
+            plan_overrides: {
+              name: "Child Plan Override",
+              fixed_charges: [
+                {
+                  id: fixed_charge.id,
+                  units: 50
+                }
+              ]
+            }
+          }
+        )
+
+        # Process initial invoices
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "generates initial invoice with overridden fixed charge units" do
+      expect(subscription.invoices.count).to eq(1)
+      initial_invoice = subscription.invoices.first
+
+      expect(initial_invoice.fees.fixed_charge.count).to eq(1)
+      fee = initial_invoice.fees.fixed_charge.first
+
+      # 50 units * $10 = $500 = 50000 cents
+      expect(fee.units).to eq(50)
+      expect(fee.amount_cents).to eq(50_000)
+
+      # Verify invoice total matches sum of fees
+      expect(initial_invoice.fees_amount_cents).to eq(50_000)
+    end
+
+    context "when parent plan fixed charge is updated with apply_units_immediately and cascade" do
+      let(:child_fixed_charge) { subscription.fixed_charges.find_by(parent: fixed_charge) }
+
+      before do
+        travel_to subscription_date + 5.days do
+          # Update parent plan with cascade
+          update_plan(
+            parent_plan,
+            {
+              cascade_updates: true,
+              fixed_charges: [{
+                id: fixed_charge.id,
+                units: 30,
+                apply_units_immediately: true,
+                properties: {amount: "10"},
+                charge_model: "standard"
+              }]
+            }
+          )
+
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "does not update the child fixed charge units" do
+        expect(child_fixed_charge.reload.units).to eq(50)
+      end
+
+      it "does not generate a new invoice" do
+        expect(subscription.invoices.count).to eq(1)
       end
     end
   end
@@ -929,10 +1010,7 @@ describe "Pay in advance fixed charge units change mid-period" do
             billing_time: "calendar",
             plan_overrides: {
               name: "Child Plan Override",
-              fixed_charges: [{
-                id: fixed_charge.id,
-                units: 20
-              }]
+              amount_cents: 5000
             }
           }
         )
@@ -955,7 +1033,7 @@ describe "Pay in advance fixed charge units change mid-period" do
       expect(parent_invoice.fees.fixed_charge.first.units).to eq(10)
 
       expect(child_invoice.fees.fixed_charge.count).to eq(1)
-      expect(child_invoice.fees.fixed_charge.first.units).to eq(20)
+      expect(child_invoice.fees.fixed_charge.first.units).to eq(10)
     end
 
     context "when update parent plan with new fixed charges with apply_units_immediately and cascade" do
@@ -1090,6 +1168,235 @@ describe "Pay in advance fixed charge units change mid-period" do
         # Child should still have only 1 invoice (initial only)
         child_invoices = child_subscription.reload.invoices.order(:created_at)
         expect(child_invoices.count).to eq(1)
+      end
+    end
+  end
+
+  describe "when updating subscription with plan_overrides creates child fixed charge", :focus do
+    # Regression test: When a subscription is updated with plan_overrides,
+    # it creates a new child plan with new fixed charges (different IDs).
+    # The delta billing should correctly find the previous fee from the parent
+    # fixed charge, not just by the new fixed charge ID.
+    let(:subscription_date) { DateTime.new(2024, 12, 1) }
+    let(:current_date) { DateTime.new(2024, 12, 3) }
+    let(:subscription) { customer.subscriptions.first }
+
+    # Fixed charge: $10 per unit, 5 units, pay in advance
+    let(:parent_fixed_charge) { fixed_charge }
+
+    before do
+      parent_fixed_charge
+
+      # Create subscription on Dec 3rd with subscription_at Dec 1st (in the past)
+      travel_to current_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_override_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "calendar",
+            subscription_at: subscription_date.iso8601
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "generates initial invoice for 10 units with full period boundaries (Dec 1-31)" do
+      expect(subscription.invoices.count).to eq(1)
+      initial_invoice = subscription.invoices.first
+
+      expect(initial_invoice.fees.fixed_charge.count).to eq(1)
+      fee = initial_invoice.fees.fixed_charge.first
+
+      # 10 units * $10 = $100 = 10000 cents
+      expect(fee.units).to eq(10)
+      expect(fee.amount_cents).to eq(10_000)
+
+      # Fee boundaries should be Dec 1 - Dec 31 (full period)
+      expect(fee.properties["fixed_charges_from_datetime"]).to eq("2024-12-01T00:00:00.000Z")
+      expect(fee.properties["fixed_charges_to_datetime"]).to eq("2024-12-31T23:59:59.999Z")
+    end
+
+    context "when subscription is updated with plan_overrides to increase units to 15 with apply_units_immediately" do
+      before do
+        travel_to current_date + 1.hour do
+          update_subscription(
+            subscription,
+            {
+              plan_overrides: {
+                fixed_charges: [{
+                  id: parent_fixed_charge.id,
+                  units: 15,
+                  apply_units_immediately: true
+                }]
+              }
+            }
+          )
+
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "creates a child plan with overridden fixed charge" do
+        child_plan = subscription.reload.plan
+        expect(child_plan.parent_id).to eq(plan.id)
+
+        child_fixed_charge = child_plan.fixed_charges.first
+        expect(child_fixed_charge.parent_id).to eq(parent_fixed_charge.id)
+        expect(child_fixed_charge.units).to eq(15)
+      end
+
+      it "creates a fixed charge event for the child fixed charge" do
+        child_fixed_charge = subscription.reload.plan.fixed_charges.first
+        events = FixedChargeEvent.where(subscription:, fixed_charge: child_fixed_charge).order(:created_at)
+
+        expect(events.count).to eq(1)
+        expect(events.first.units).to eq(15)
+      end
+
+      it "generates a delta invoice for only 5 units (15 - 10), not 15 units" do
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        # Should have 2 invoices:
+        # 1. Initial invoice (10 units, $100)
+        # 2. Delta invoice (5 units, $50) - NOT 15 units
+        expect(invoices.count).to eq(2)
+
+        initial_invoice = invoices.first
+        expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
+        expect(initial_invoice.fees.fixed_charge.first.amount_cents).to eq(10_000)
+
+        delta_invoice = invoices.last
+        expect(delta_invoice.fees.fixed_charge.count).to eq(1)
+
+        delta_fee = delta_invoice.fees.fixed_charge.first
+        # KEY ASSERTION: Should only be 10 units (delta), not 15 units (full amount)
+        # The bug is that it was generating 15 units because it couldn't find the
+        # previous fee since the fixed charge IDs are different (parent vs child)
+        expect(delta_fee.units).to eq(5)  # 15 - 10 = 5
+        expect(delta_fee.amount_cents).to eq(5_000)  # 5 * $10 = $50
+      end
+
+      it "has correct boundaries on the delta fee (same period as initial)" do
+        delta_invoice = subscription.reload.invoices.order(:created_at).last
+        delta_fee = delta_invoice.fees.fixed_charge.first
+
+        # Same billing period boundaries as initial fee
+        expect(delta_fee.properties["fixed_charges_from_datetime"]).to eq("2024-12-01T00:00:00.000Z")
+        expect(delta_fee.properties["fixed_charges_to_datetime"]).to eq("2024-12-31T23:59:59.999Z")
+      end
+    end
+
+    context "when subscription is updated to decrease units (10 -> 3) via plan_overrides" do
+      before do
+        travel_to current_date + 1.hour do
+          update_subscription(
+            subscription,
+            {
+              plan_overrides: {
+                fixed_charges: [{
+                  id: parent_fixed_charge.id,
+                  units: 3,
+                  apply_units_immediately: true
+                }]
+              }
+            }
+          )
+
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "generates a zero-fee invoice for decrease (no refund on pay-in-advance)" do
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        # Should have 2 invoices:
+        # 1. Initial invoice (10 units, $100)
+        # 2. Decrease invoice (0 fee - no refund, no extra charge)
+        expect(invoices.count).to eq(2)
+
+        initial_invoice = invoices.first
+        expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
+
+        # The decrease invoice should NOT have any fees with positive units
+        # because we already paid for 10 units and are decreasing to 3
+        decrease_invoice = invoices.last
+        # Bug: the code incorrectly creates a fee with 3 units (the new child fixed charge units)
+        # because it can't find the previous parent fee to calculate delta
+        expect(decrease_invoice.fees.fixed_charge.count).to eq(0)
+      end
+    end
+
+    context "when subscription is updated twice via plan_overrides (10 -> 3 -> 15)" do
+      before do
+        # First update: decrease from 10 to 3 (no refund expected)
+        travel_to current_date + 1.hour do
+          update_subscription(
+            subscription,
+            {
+              plan_overrides: {
+                fixed_charges: [{
+                  id: parent_fixed_charge.id,
+                  units: 3,
+                  apply_units_immediately: true
+                }]
+              }
+            }
+          )
+
+          perform_all_enqueued_jobs
+        end
+
+        # Second update: increase from 3 to 15
+        # Should only charge for delta from max paid (10), not from current (3)
+        travel_to current_date + 2.hours do
+          # After first override, the subscription has a child plan
+          child_fixed_charge = subscription.reload.plan.fixed_charges.first
+
+          update_subscription(
+            subscription,
+            {
+              plan_overrides: {
+                fixed_charges: [{
+                  id: child_fixed_charge.id,
+                  units: 15,
+                  apply_units_immediately: true
+                }]
+              }
+            }
+          )
+
+          perform_all_enqueued_jobs
+        end
+      end
+
+      it "generates correct invoices respecting previously paid units" do
+        invoices = subscription.reload.invoices.order(:created_at)
+
+        # When fixed properly:
+        # - Initial invoice (10 units, $100)
+        # - Decrease invoice (0 fee - no refund)
+        # - Increase invoice (5 units delta: 15 - 10, NOT 15 - 3)
+        #
+        # Bug behavior: generates wrong fee amounts because it can't find
+        # fees from parent fixed charge when calculating delta
+        expect(invoices.count).to eq(3)
+
+        initial_invoice = invoices.first
+        expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
+        expect(initial_invoice.fees.fixed_charge.first.amount_cents).to eq(10_000)
+
+        # Decrease invoice should have no fees (no refund)
+        decrease_invoice = invoices.second
+        expect(decrease_invoice.fees.count).to eq(0)
+
+        # Increase invoice: should charge for 5 units only (15 - 10)
+        # NOT 12 units (15 - 3), because we already paid for 10 units
+        increase_invoice = invoices.last
+        increase_fee = increase_invoice.fees.fixed_charge.first
+        expect(increase_fee.units).to eq(5)  # 15 - 10 = 5
+        expect(increase_fee.amount_cents).to eq(5_000)
       end
     end
   end
