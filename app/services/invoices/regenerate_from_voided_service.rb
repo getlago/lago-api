@@ -79,12 +79,12 @@ module Invoices
     end
 
     def wallets
-      @wallets ||= voided_invoice.customer.wallets.active.with_positive_balance
+      @wallets ||= voided_invoice.customer.wallets.active.includes(:wallet_targets)
+        .with_positive_balance.in_application_order
     end
 
     def create_applied_prepaid_credit
       prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice: regenerated_invoice, wallets:)
-
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 

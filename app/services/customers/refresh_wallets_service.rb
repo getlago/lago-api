@@ -2,7 +2,7 @@
 
 module Customers
   class RefreshWalletsService < BaseService
-    Result = BaseResult[:usage_amount_cents, :wallets]
+    Result = BaseResult[:usage_amount_cents, :wallets, :allocation_rules]
 
     def initialize(customer:, include_generating_invoices: false)
       @customer = customer
@@ -27,11 +27,18 @@ module Customers
         }
       end
 
+      allocation_rules = Wallets::BuildAllocationRulesService.call!(customer:).allocation_rules
+
       customer.wallets.active.find_each do |wallet|
-        Wallets::Balance::RefreshOngoingUsageService.call!(wallet:, usage_amount_cents:)
+        Wallets::Balance::RefreshOngoingUsageService.call!(
+          wallet:,
+          usage_amount_cents:,
+          allocation_rules:
+        )
       end
 
       result.usage_amount_cents = usage_amount_cents
+      result.allocation_rules = allocation_rules
       result.wallets = customer.wallets.active.reload
       result
     rescue BaseService::FailedResult => e
