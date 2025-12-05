@@ -4,10 +4,11 @@ module Subscriptions
   class ProgressiveBilledAmount < BaseService
     Result = BaseResult[:progressive_billed_amount, :progressive_billing_invoice, :to_credit_amount, :total_billed_amount_cents]
 
-    def initialize(subscription:, timestamp: Time.current, include_generating_invoices: false)
+    def initialize(subscription:, timestamp: Time.current, include_generating_invoices: false, wallet: nil)
       @subscription = subscription
       @timestamp = timestamp
       @include_generating_invoices = include_generating_invoices
+      @wallet = wallet
 
       super
     end
@@ -40,8 +41,8 @@ module Subscriptions
       # but progressively billed fees include previously progressively paid fees, so we need to get
       # sub_total_excluding_taxes_amount_cents and taxes_amount_cents from fees to get the exact billed amount
       total_billed_amount_cents = invoice_subscriptions.sum do |invoice_subscription|
-        invoice_subscription.invoice.fees.sum(&:taxes_amount_cents) +
-          invoice_subscription.invoice.fees.sum(&:sub_total_excluding_taxes_amount_cents)
+        fees = filtered_fees(invoice_subscription.invoice.fees)
+        fees.sum(&:taxes_amount_cents) + fees.sum(&:sub_total_excluding_taxes_amount_cents)
       end
       result.total_billed_amount_cents = total_billed_amount_cents
 
@@ -63,6 +64,13 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :timestamp, :include_generating_invoices
+    attr_reader :subscription, :timestamp, :include_generating_invoices, :wallet
+
+    def filtered_fees(fees)
+      return fees unless wallet&.limited_to_billable_metrics?
+
+      billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id)
+      fees.select { |fee| fee.charge&.billable_metric_id.in?(billable_metric_ids) }
+    end
   end
 end

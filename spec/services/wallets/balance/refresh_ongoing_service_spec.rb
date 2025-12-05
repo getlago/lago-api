@@ -198,6 +198,74 @@ RSpec.describe Wallets::Balance::RefreshOngoingService do
             .and change(wallet, :credits_ongoing_balance).from(8.0).to(0.1)
         end
       end
+
+      context "when there are wallet billable metric limitations" do
+        let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+        let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
+        let(:second_charge) do
+          create(
+            :standard_charge,
+            plan: second_subscription.plan,
+            billable_metric: billable_metric2,
+            properties: {amount: "5"}
+          )
+        end
+        let(:events) do
+          create_list(
+            :event,
+            2,
+            organization: wallet.organization,
+            subscription: first_subscription,
+            customer: first_subscription.customer,
+            code: billable_metric.code,
+            timestamp:
+          ).push(
+            create(
+              :event,
+              organization: wallet.organization,
+              subscription: second_subscription,
+              customer: second_subscription.customer,
+              code: billable_metric2.code,
+              timestamp:
+            )
+          )
+        end
+        let(:fee) do
+          create(:charge_fee, charge: first_charge, subscription: first_subscription, precise_coupons_amount_cents: 0,
+            invoice: invoice, amount_cents: 100, taxes_amount_cents: 10)
+        end
+
+        before { wallet_target }
+
+        it "deducts only fees matching wallet limitations from the ongoing usage" do
+          # Total usage filtered by wallet limitation: 600 (2 events * 3 = 6 units * 100 cents)
+          # Progressive billed amount matching limitation: 110 (fee amount 100 + taxes 10)
+          # Ongoing usage = 600 - 110 = 490
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(490)
+            .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(4.9)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(510)
+            .and change(wallet, :credits_ongoing_balance).from(8.0).to(5.1)
+        end
+
+        context "when progressive billing invoice has fees not matching wallet limitations" do
+          let(:fee) do
+            create(:charge_fee, charge: second_charge, subscription: second_subscription, precise_coupons_amount_cents: 0,
+              invoice: invoice, amount_cents: 100, taxes_amount_cents: 10)
+          end
+
+          it "does not deduct fees not matching wallet limitations" do
+            # Total usage filtered by wallet limitation: 600 (2 events * 3 = 6 units * 100 cents)
+            # Progressive billed amount matching limitation: 0 (fee is for billable_metric2, not in wallet targets)
+            # Ongoing usage = 600 - 0 = 600
+            expect { refresh_service.call }
+              .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(600)
+              .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(6.0)
+              .and change(wallet, :ongoing_balance_cents).from(800).to(400)
+              .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.0)
+          end
+        end
+      end
     end
 
     context "when recalculated ongoing balance is less than 0" do

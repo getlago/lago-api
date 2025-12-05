@@ -467,4 +467,76 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to eq(140)
     end
   end
+
+  context "with wallet billable metric limitations" do
+    subject(:service) { described_class.new(subscription:, timestamp:, wallet:) }
+
+    let(:wallet) { create(:wallet, customer:) }
+    let(:billable_metric1) { create(:billable_metric, organization:) }
+    let(:billable_metric2) { create(:billable_metric, organization:) }
+    let(:wallet_target) { create(:wallet_target, wallet:, billable_metric: billable_metric1) }
+    let(:charge1) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric1) }
+    let(:charge2) { create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric2) }
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:fee1) { create(:charge_fee, invoice:, subscription:, charge: charge1, amount_cents: 100, taxes_amount_cents: 10) }
+    let(:fee2) { create(:charge_fee, invoice:, subscription:, charge: charge2, amount_cents: 50, taxes_amount_cents: 5) }
+
+    before do
+      wallet_target
+      fee1
+      fee2
+      invoice.update!(invoice_type:, fees_amount_cents: 150, total_amount_cents: 165)
+    end
+
+    it "only includes fees matching wallet billable metric limitations" do
+      result = service.call
+      expect(result.progressive_billing_invoice).to eq(invoice)
+      expect(result.total_billed_amount_cents).to eq(110)
+    end
+
+    context "when wallet has no billable metric limitations" do
+      let(:wallet) { create(:wallet, customer:) }
+
+      before { wallet_target.destroy! }
+
+      it "includes all fees" do
+        result = service.call
+        expect(result.progressive_billing_invoice).to eq(invoice)
+        expect(result.total_billed_amount_cents).to eq(165)
+      end
+    end
+
+    context "when no wallet is provided" do
+      subject(:service) { described_class.new(subscription:, timestamp:) }
+
+      it "includes all fees" do
+        result = service.call
+        expect(result.progressive_billing_invoice).to eq(invoice)
+        expect(result.total_billed_amount_cents).to eq(165)
+      end
+    end
+
+    context "with multiple progressive billing invoices" do
+      let(:invoice_subscription2) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+      let(:invoice2) { invoice_subscription2.invoice }
+      let(:fee3) { create(:charge_fee, invoice: invoice2, subscription:, charge: charge1, amount_cents: 200, taxes_amount_cents: 20) }
+      let(:fee4) { create(:charge_fee, invoice: invoice2, subscription:, charge: charge2, amount_cents: 100, taxes_amount_cents: 10) }
+
+      before do
+        fee3
+        fee4
+        invoice.update!(issuing_date: timestamp - 2.days)
+        invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 300, total_amount_cents: 330)
+      end
+
+      it "only includes fees matching wallet limitations from all invoices" do
+        result = service.call
+        # invoice1: fee1 (charge1) = 100 + 10 = 110
+        # invoice2: fee3 (charge1) = 200 + 20 = 220
+        # Total = 330
+        expect(result.total_billed_amount_cents).to eq(330)
+      end
+    end
+  end
 end

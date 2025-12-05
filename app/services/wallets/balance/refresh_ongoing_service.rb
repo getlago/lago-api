@@ -14,7 +14,7 @@ module Wallets
           customer_usage_result = ::Invoices::CustomerUsageService.call(customer:, subscription:)
           return customer_usage_result if customer_usage_result.failure?
           invoice = customer_usage_result.invoice
-          progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription:, include_generating_invoices:).total_billed_amount_cents
+          progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription:, include_generating_invoices:, wallet:).total_billed_amount_cents
 
           {
             total_usage_amount_cents: invoice.total_amount_cents,
