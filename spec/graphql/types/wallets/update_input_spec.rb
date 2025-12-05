@@ -15,6 +15,7 @@ RSpec.describe Types::Wallets::UpdateInput do
     expect(subject).to accept_argument(:paid_top_up_min_amount_cents).of_type("BigInt")
 
     expect(subject).to accept_argument(:recurring_transaction_rules).of_type("[UpdateRecurringTransactionRuleInput!]")
+    expect(subject).to accept_argument(:invoice_custom_section).of_type("InvoiceCustomSectionsReferenceInput")
 
     expect(subject).to accept_argument(:applies_to).of_type("AppliesToInput")
 

@@ -160,6 +160,10 @@ module Api
             :billing_time,
             :subscription_at,
             :ending_at,
+            invoice_custom_section: [
+              :skip_invoice_custom_sections,
+              {invoice_custom_section_codes: []}
+            ],
             plan_overrides:
           )
       end
@@ -171,6 +175,10 @@ module Api
           :ending_at,
           :on_termination_credit_note,
           :on_termination_invoice,
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
+          ],
           plan_overrides:
         )
       end

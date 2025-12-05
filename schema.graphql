@@ -2719,6 +2719,7 @@ input CreateCustomerWalletInput {
   expirationAt: ISO8601DateTime
   grantedCredits: String!
   ignorePaidTopUpLimitsOnCreation: Boolean
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
@@ -3113,6 +3114,7 @@ input CreateSubscriptionInput {
   customerId: ID!
   endingAt: ISO8601DateTime
   externalId: String
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planId: ID!
@@ -6090,6 +6092,11 @@ type InvoiceCustomSectionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+input InvoiceCustomSectionsReferenceInput {
+  invoiceCustomSectionIds: [ID!]
+  skipInvoiceCustomSections: Boolean
 }
 
 enum InvoiceExportTypeEnum {
@@ -9848,6 +9855,8 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
   status: StatusTypeEnum
   subscriptionAt: ISO8601DateTime
@@ -11163,6 +11172,7 @@ input UpdateCustomerWalletInput {
   clientMutationId: String
   expirationAt: ISO8601DateTime
   id: ID!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidTopUpMaxAmountCents: BigInt
@@ -11579,6 +11589,7 @@ input UpdateSubscriptionInput {
   clientMutationId: String
   endingAt: ISO8601DateTime
   id: ID!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
@@ -11720,6 +11731,8 @@ type Wallet {
   priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!

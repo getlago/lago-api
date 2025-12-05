@@ -7,6 +7,7 @@ RSpec.describe Api::V1::WalletsController do
   let(:customer) { create(:customer, organization:, currency: "EUR") }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
+  let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
   before { subscription }
 
@@ -421,6 +422,50 @@ RSpec.describe Api::V1::WalletsController do
         expect(limitations[:billable_metric_codes]).to eq([bm.code])
       end
     end
+
+    context "with invoice_custom_section" do
+      let(:invoice_custom_section) { nil }
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          invoice_custom_section:
+        }
+      end
+
+      context "when skip_invoice_custom_sections is true" do
+        let(:invoice_custom_section) {
+          {skip_invoice_custom_sections: true}
+        }
+
+        it "set skip_invoice_custom_sections" do
+          subject
+
+          wallet = Wallet.find(json[:wallet][:lago_id])
+          expect(wallet.skip_invoice_custom_sections).to be_truthy
+        end
+      end
+
+      context "when skip_invoice_custom_sections is false" do
+        let(:invoice_custom_section) {
+          {
+            skip_invoice_custom_sections: false,
+            invoice_custom_section_codes: [section_1.code]
+          }
+        }
+
+        it "creates with an attached section" do
+          subject
+
+          wallet = Wallet.find(json[:wallet][:lago_id])
+          expect(wallet.skip_invoice_custom_sections).to be_falsey
+          expect(wallet.applied_invoice_custom_sections.count).to be(1)
+          expect(wallet.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
+        end
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
@@ -498,6 +543,47 @@ RSpec.describe Api::V1::WalletsController do
         expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with invoice_custom_section" do
+      let(:invoice_custom_section) { nil }
+      let(:update_params) do
+        {
+          name: "wallet1",
+          invoice_custom_section:
+        }
+      end
+
+      context "when skip_invoice_custom_sections is true" do
+        let(:invoice_custom_section) {
+          {skip_invoice_custom_sections: true}
+        }
+
+        it "set skip_invoice_custom_sections" do
+          subject
+          wallet.reload
+
+          expect(wallet.skip_invoice_custom_sections).to be_truthy
+        end
+      end
+
+      context "when skip_invoice_custom_sections is false" do
+        let(:invoice_custom_section) {
+          {
+            skip_invoice_custom_sections: false,
+            invoice_custom_section_codes: [section_1.code]
+          }
+        }
+
+        it "creates with an attached section" do
+          subject
+
+          wallet.reload
+          expect(wallet.skip_invoice_custom_sections).to be_falsey
+          expect(wallet.applied_invoice_custom_sections.count).to be(1)
+          expect(wallet.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
+        end
       end
     end
 

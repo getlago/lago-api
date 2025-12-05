@@ -13,10 +13,10 @@ module InvoiceCustomSections
       return result unless params.key?(:invoice_custom_section)
 
       ActiveRecord::Base.transaction do
-        if skip_flag.present?
-          handle_explicit_skip_flag
-        else
+        if skip_flag.nil?
           handle_implicit_skip_flag
+        else
+          handle_explicit_skip_flag
         end
       end
 

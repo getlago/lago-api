@@ -107,6 +107,24 @@ RSpec.describe ::V1::SubscriptionSerializer do
     end
   end
 
+  context "when including applied_invoice_custom_sections" do
+    subject(:serializer) do
+      described_class.new(
+        subscription,
+        root_name: "subscription",
+        includes: %i[applied_invoice_custom_sections]
+      )
+    end
+
+    before { create(:subscription_applied_invoice_custom_section, subscription:) }
+
+    it "serializes the object" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]["applied_invoice_custom_sections"]).to be_present
+    end
+  end
+
   context "when terminated with credit note" do
     let(:plan) { create(:plan, :pay_in_advance) }
     let(:subscription) { create(:subscription, :terminated, plan:, on_termination_credit_note: :credit) }

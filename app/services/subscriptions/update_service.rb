@@ -71,6 +71,8 @@ module Subscriptions
         end
       end
 
+      InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
+
       result.subscription = subscription
       result
     rescue ActiveRecord::RecordInvalid => e

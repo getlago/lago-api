@@ -50,6 +50,7 @@ module Wallets
         wallet.save!
       end
 
+      InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.updated", wallet)
       Customers::RefreshWalletsService.call(customer: wallet.customer)
 
