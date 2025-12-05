@@ -94,6 +94,40 @@ RSpec.describe Api::V1::CreditNotesController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "with metadata" do
+      before do
+        create(
+          :item_metadata,
+          owner: credit_note,
+          organization:,
+          value: {"foo" => "bar", "bar" => "", "baz" => nil, "" => "qux"}
+        )
+      end
+
+      it "returns metadata" do
+        subject
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", bar: "", baz: nil, "": "qux")
+      end
+    end
+
+    context "without metadata" do
+      it "returns nil" do
+        subject
+        expect(json[:credit_note][:metadata]).to be_nil
+      end
+    end
+
+    context "with empty metadata" do
+      before do
+        create(:item_metadata, owner: credit_note, organization:, value: {})
+      end
+
+      it "returns empty hash" do
+        subject
+        expect(json[:credit_note][:metadata]).to eq({})
+      end
+    end
   end
 
   describe "PUT /api/v1/credit_notes/:id" do
@@ -135,6 +169,56 @@ RSpec.describe Api::V1::CreditNotesController do
       it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
+
+    context "with metadata" do
+      before do
+        create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"})
+      end
+
+      context "when adding new keys" do
+        let(:update_params) { {metadata: {new: "data"}} }
+
+        it "merges metadata (not replaces)" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "value", new: "data")
+        end
+      end
+
+      context "when updating existing keys" do
+        let(:update_params) { {metadata: {existing: "updated"}} }
+
+        it "updates the key value" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "updated")
+        end
+      end
+
+      context "with empty metadata" do
+        let(:update_params) { {metadata: {}} }
+
+        it "keeps existing metadata unchanged" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_note][:metadata]).to eq(existing: "value")
+        end
+      end
+    end
+
+    context "without existing metadata" do
+      let(:update_params) { {metadata: {foo: "bar", baz: "qux"}} }
+
+      it "creates new metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", baz: "qux")
       end
     end
   end
@@ -370,6 +454,48 @@ RSpec.describe Api::V1::CreditNotesController do
         subject
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:base]).to eq(["total_amount_must_be_positive"])
+      end
+    end
+
+    context "with metadata" do
+      let(:create_params) do
+        {
+          invoice_id:,
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
+          credit_amount_cents: 10,
+          refund_amount_cents: 5,
+          items: [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: 5}],
+          metadata: {foo: "bar", baz: "qux"}
+        }
+      end
+
+      it "creates credit note with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq(foo: "bar", baz: "qux")
+      end
+    end
+
+    context "with empty metadata" do
+      let(:create_params) do
+        {
+          invoice_id:,
+          reason: "duplicated_charge",
+          description: "Duplicated charge",
+          credit_amount_cents: 10,
+          refund_amount_cents: 5,
+          items: [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: 5}],
+          metadata: {}
+        }
+      end
+
+      it "creates credit note with empty metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_note][:metadata]).to eq({})
       end
     end
   end

@@ -5,7 +5,7 @@ module Api
     class CreditNotesController < Api::BaseController
       include CreditNoteIndex
       def create
-        result = CreditNotes::CreateService.call(
+        result = ::CreditNotes::CreateService.call(
           invoice: current_organization.invoices.visible.find_by(id: input_params[:invoice_id]),
           **input_params
         )
@@ -40,12 +40,12 @@ module Api
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: "credit_note") unless credit_note
 
-        result = CreditNotes::UpdateService.new(credit_note:, **update_params).call
+        result = ::CreditNotes::UpdateService.new(credit_note:, partial_metadata: true, **update_params).call
 
         if result.success?
           render(
             json: ::V1::CreditNoteSerializer.new(
-              credit_note,
+              result.credit_note,
               root_name: "credit_note",
               includes: %i[items applied_taxes]
             )
@@ -68,7 +68,7 @@ module Api
           )
         end
 
-        CreditNotes::GeneratePdfJob.perform_later(credit_note)
+        ::CreditNotes::GeneratePdfJob.perform_later(credit_note)
 
         head(:ok)
       end
@@ -86,7 +86,7 @@ module Api
           )
         end
 
-        CreditNotes::GenerateXmlJob.perform_later(credit_note)
+        ::CreditNotes::GenerateXmlJob.perform_later(credit_note)
 
         head(:ok)
       end
@@ -95,7 +95,7 @@ module Api
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
         return not_found_error(resource: "credit_note") unless credit_note
 
-        result = CreditNotes::VoidService.new(credit_note:).call
+        result = ::CreditNotes::VoidService.new(credit_note:).call
 
         if result.success?
           render(
@@ -118,7 +118,7 @@ module Api
       end
 
       def estimate
-        result = CreditNotes::EstimateService.call(
+        result = ::CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.visible.find_by(id: estimate_params[:invoice_id]),
           items: estimate_params[:items]
         )
@@ -145,6 +145,7 @@ module Api
             :description,
             :credit_amount_cents,
             :refund_amount_cents,
+            metadata: {},
             items: [
               :fee_id,
               :amount_cents
@@ -153,7 +154,7 @@ module Api
       end
 
       def update_params
-        params.require(:credit_note).permit(:refund_status)
+        params.require(:credit_note).permit(:refund_status, metadata: {})
       end
 
       def estimate_params

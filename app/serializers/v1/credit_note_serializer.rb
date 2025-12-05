@@ -30,7 +30,8 @@ module V1
         updated_at: model.updated_at.iso8601,
         file_url: model.file_url,
         xml_url: model.xml_url,
-        self_billed: model.invoice.self_billed
+        self_billed: model.invoice.self_billed,
+        metadata: model.metadata&.value
       }
 
       payload.merge!(customer) if include?(:customer)

@@ -8,9 +8,12 @@ RSpec.describe Webhooks::CreditNotes::GeneratedService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
-  let(:credit_note) { create(:credit_note, customer:, invoice:) }
+  let(:credit_note) { create(:credit_note, :with_metadata, customer:, invoice:) }
 
-  describe ".call" do
-    it_behaves_like "creates webhook", "credit_note.generated", "credit_note", {"customer" => Hash}
+  describe ".call", :with_bullet do
+    it_behaves_like "creates webhook", "credit_note.generated", "credit_note", {
+      "customer" => Hash,
+      "metadata" => {"key" => "value"}
+    }
   end
 end
