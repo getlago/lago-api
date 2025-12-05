@@ -379,6 +379,49 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           end
         end
       end
+
+      context "with issuing date settings set up" do
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            billing_entity:,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "align_with_finalization_date",
+            invoice_grace_period: 3
+          )
+        end
+
+        context "with a recurring invoice" do
+          before do
+            invoice.invoice_subscriptions.first.update(recurring: true)
+          end
+
+          it "uses only anchor to update the issuing date" do
+            invoice.customer.update(timezone: "America/New_York")
+
+            freeze_time do
+              current_date = Time.current.in_time_zone("America/New_York").to_date
+
+              expect { pull_taxes_service.call }
+                .to change { invoice.reload.issuing_date }.to(current_date - 1.day)
+            end
+          end
+        end
+
+        context "with a non-recurring invoice" do
+          it "ignores issuing date settings" do
+            invoice.customer.update(timezone: "America/New_York")
+
+            freeze_time do
+              current_date = Time.current.in_time_zone("America/New_York").to_date
+
+              expect { pull_taxes_service.call }
+                .to change { invoice.reload.issuing_date }.to(current_date)
+            end
+          end
+        end
+      end
     end
 
     context "when failed to fetch taxes" do

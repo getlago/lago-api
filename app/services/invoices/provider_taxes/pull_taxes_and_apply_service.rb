@@ -115,7 +115,14 @@ module Invoices
       end
 
       def issuing_date
-        @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
+        return @issuing_date if defined?(@issuing_date)
+
+        date = Time.current.in_time_zone(customer.applicable_timezone).to_date
+        recurring = invoice.invoice_subscriptions.first&.recurring?
+
+        issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
+
+        @issuing_date = date + issuing_date_service.tax_issuing_date_adjustment.days
       end
 
       def payment_due_date

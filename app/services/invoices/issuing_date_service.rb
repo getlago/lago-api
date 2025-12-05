@@ -14,6 +14,12 @@ module Invoices
       send("#{anchor}_#{adjustment}")
     end
 
+    def tax_issuing_date_adjustment
+      return 0 unless recurring
+
+      (anchor == "current_period_end") ? -1 : 0
+    end
+
     def grace_period
       customer_settings[:invoice_grace_period] || billing_entity_settings[:invoice_grace_period] || 0
     end
