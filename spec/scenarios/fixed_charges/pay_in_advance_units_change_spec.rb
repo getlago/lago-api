@@ -1178,7 +1178,6 @@ describe "Pay in advance fixed charge units change mid-period" do
     # The delta billing should correctly find the previous fee from the parent
     # fixed charge, not just by the new fixed charge ID.
     let(:subscription_date) { DateTime.new(2024, 12, 1) }
-    let(:current_date) { DateTime.new(2024, 12, 3) }
     let(:subscription) { customer.subscriptions.first }
 
     # Fixed charge: $10 per unit, 5 units, pay in advance
@@ -1187,8 +1186,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     before do
       parent_fixed_charge
 
-      # Create subscription on Dec 3rd with subscription_at Dec 1st (in the past)
-      travel_to current_date do
+      travel_to subscription_date do
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -1220,7 +1218,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
     context "when subscription is updated with plan_overrides to increase units to 15 with apply_units_immediately" do
       before do
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1292,7 +1290,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
     context "when subscription is updated to decrease units (10 -> 3) via plan_overrides" do
       before do
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1335,7 +1333,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     context "when subscription is updated twice via plan_overrides (10 -> 3 -> 15)" do
       before do
         # First update: decrease from 10 to 3 (no refund expected)
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1356,7 +1354,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
         # Second update: increase from 3 to 15
         # Should only charge for delta from max paid (10), not from current (3)
-        travel_to current_date + 2.hours do
+        travel_to subscription_date + 2.hours do
           # After first override, the subscription has a child plan
           child_fixed_charge = subscription.reload.plan.fixed_charges.first
 
