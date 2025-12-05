@@ -6,6 +6,8 @@ class Organization < ApplicationRecord
   include Currencies
   include Organizations::AuthenticationMethods
 
+  self.ignored_columns += [:clickhouse_aggregation]
+
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
