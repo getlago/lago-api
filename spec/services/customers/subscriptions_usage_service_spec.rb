@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe Customers::RefreshWalletsService do
+require "rails_helper"
+
+RSpec.describe Customers::SubscriptionsUsageService do
   describe "#call" do
     subject(:result) { described_class.call(customer:, include_generating_invoices:) }
 
@@ -18,20 +20,7 @@ RSpec.describe Customers::RefreshWalletsService do
     end
 
     before do
-      create(
-        :wallet,
-        customer:,
-        balance_cents: 1000,
-        ongoing_balance_cents: 1000,
-        ongoing_usage_balance_cents: 0,
-        credits_balance: 10.0,
-        credits_ongoing_balance: 10.0,
-        credits_ongoing_usage_balance: 0
-      )
-
-      create(:wallet, :terminated, customer:)
-
-      subscriptions.map do |subscription|
+      subscriptions.each do |subscription|
         create(
           :standard_charge,
           plan: subscription.plan,
@@ -74,28 +63,17 @@ RSpec.describe Customers::RefreshWalletsService do
       )
     end
 
-    it "calls Wallets::Balance::RefreshOngoingUsageService for each active wallet" do
-      allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_call_original
-
-      subject
-
-      expect(Wallets::Balance::RefreshOngoingUsageService)
-        .to have_received(:call!)
-        .exactly(customer.wallets.active.count).times
-    end
-
-    it "refreshes the wallet balances" do
+    it "returns aggregated usage amounts" do
       expect(result).to be_success
-      expect(result.wallets).to match_array(customer.wallets.active)
-
-      wallet = result.wallets.first
-      expect(wallet.ongoing_usage_balance_cents).to eq 900
-      expect(wallet.credits_ongoing_usage_balance).to eq 9.0
-      expect(wallet.ongoing_balance_cents).to eq 100
-      expect(wallet.credits_ongoing_balance).to eq 1.0
+      expect(result.billed_usage_amount_cents).to eq(100)
     end
 
-    describe "current usage calculation" do
+    it "returns fees from all subscriptions" do
+      expect(result.fees).to be_present
+      expect(result.fees.size).to eq(4) # 2 charges per subscription
+    end
+
+    context "with progressive billing invoices" do
       let(:charges_to_datetime) { 1.week.from_now }
       let(:charges_from_datetime) { 1.week.ago }
 
@@ -124,27 +102,32 @@ RSpec.describe Customers::RefreshWalletsService do
       context "when generating invoices are included" do
         let(:include_generating_invoices) { true }
 
-        it "refreshes wallet balances including generating invoices" do
-          expect(result).to be_success
-
-          wallet = result.wallets.first
-          expect(wallet.ongoing_usage_balance_cents).to eq(680)
+        it "includes generating invoices in billed amount" do
+          expect(result.billed_usage_amount_cents).to eq(320)
         end
       end
 
       context "when generating invoices are excluded" do
         let(:include_generating_invoices) { false }
 
-        it "refreshes wallet balances excluding generating invoices" do
-          expect(result).to be_success
-
-          wallet = result.wallets.first
-          expect(wallet.ongoing_usage_balance_cents).to eq(900)
+        it "excludes generating invoices from billed amount" do
+          expect(result.billed_usage_amount_cents).to eq(100)
         end
       end
     end
 
-    context "when failed to calculate current usage" do
+    context "when customer has no active subscriptions" do
+      it "returns zero amounts and empty fees" do
+        customer_without_subscriptions = create(:customer)
+        result = described_class.call(customer: customer_without_subscriptions)
+
+        expect(result).to be_success
+        expect(result.fees).to be_empty
+        expect(result.billed_usage_amount_cents).to eq(0)
+      end
+    end
+
+    context "when CustomerUsageService fails" do
       before do
         create(:anrok_customer, customer:)
 
@@ -158,7 +141,7 @@ RSpec.describe Customers::RefreshWalletsService do
           )
       end
 
-      it "fails with an error" do
+      it "returns the failure result" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve"])

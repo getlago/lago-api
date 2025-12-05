@@ -65,28 +65,12 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
     )
   end
 
-  let(:usage_amount_cents) do
-    customer.active_subscriptions.map do |subscription|
-      invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:).invoice
-
-      progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount
-        .call(subscription:, include_generating_invoices:)
-        .total_billed_amount_cents
-
-      paid_in_advance_fees = invoice.fees.select { |f| f.charge.pay_in_advance? && f.charge.invoiceable? }
-
-      billed_usage_amount_cents = progressive_billed_total +
-        paid_in_advance_fees.sum(&:amount_cents) +
-        paid_in_advance_fees.sum(&:taxes_amount_cents)
-
-      {
-        total_usage_amount_cents: invoice.total_amount_cents,
-        billed_usage_amount_cents:,
-        invoice:,
-        subscription:
-      }
-    end
+  let(:usage_result) do
+    Customers::SubscriptionsUsageService.call!(customer:, include_generating_invoices:)
   end
+
+  let(:fees) { usage_result.fees }
+  let(:billed_usage_amount_cents) { usage_result.billed_usage_amount_cents }
 
   let(:include_generating_invoices) { false }
 
@@ -98,7 +82,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
   end
 
   describe ".call" do
-    subject(:result) { described_class.call(wallet:, usage_amount_cents:) }
+    subject(:result) { described_class.call(wallet:, fees:, billed_usage_amount_cents:) }
 
     it "updates wallet ongoing balance" do
       expect { subject }
