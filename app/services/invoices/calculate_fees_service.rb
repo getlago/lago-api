@@ -113,7 +113,7 @@ module Invoices
     def create_charges_fees(subscription, boundaries)
       return unless charge_boundaries_valid?(boundaries)
 
-      filters = event_filters(subscription, boundaries)
+      filters = event_filters(subscription, boundaries).charges
 
       subscription
         .plan
@@ -126,8 +126,14 @@ module Invoices
         .find_each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 
-          bypass_aggregation = !filters.charge_ids.include?(charge.id)
-          Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, context:, bypass_aggregation:).raise_if_error!
+          Fees::ChargeService.call!(
+            invoice:,
+            charge:,
+            subscription:,
+            boundaries:,
+            context:,
+            filtered_aggregations: filters[charge.id] || []
+          )
         end
     end
 

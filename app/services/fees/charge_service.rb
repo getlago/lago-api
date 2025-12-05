@@ -9,7 +9,7 @@ module Fees
       boundaries:,
       context: nil,
       cache_middleware: nil,
-      bypass_aggregation: false,
+      filtered_aggregations: nil,
       apply_taxes: false,
       calculate_projected_usage: false,
       with_zero_units_filters: true
@@ -29,7 +29,7 @@ module Fees
       )
 
       # Allow the service to ignore events aggregation
-      @bypass_aggregation = bypass_aggregation
+      @filtered_aggregations = filtered_aggregations
 
       super(nil)
     end
@@ -68,7 +68,8 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -305,6 +306,9 @@ module Fees
     end
 
     def aggregator(charge_filter:)
+      aggregate = true
+      aggregate = filtered_aggregations.include?(charge_filter&.id) unless filtered_aggregations.nil?
+
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
         current_usage:,
@@ -316,7 +320,7 @@ module Fees
           max_timestamp: boundaries.max_timestamp
         },
         filters: aggregation_filters(charge_filter:),
-        bypass_aggregation:
+        bypass_aggregation: !aggregate
       )
     end
 
