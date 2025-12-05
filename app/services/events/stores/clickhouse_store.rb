@@ -134,6 +134,14 @@ module Events
         end
       end
 
+      def distinct_charges_and_filters
+        ::Clickhouse::EventsEnrichedExpanded
+          .where(subscription_id: subscription.id)
+          .where(organization_id: subscription.organization_id)
+          .where(timestamp: from_datetime..to_datetime)
+          .pluck("DISTINCT(charge_filter_id)", "charge_id").map(&:reverse)
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = events(force_from:, ordered: true)
