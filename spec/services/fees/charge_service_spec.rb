@@ -4,15 +4,24 @@ require "rails_helper"
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice:, charge:, subscription:, boundaries:, context:, apply_taxes:)
+    described_class.new(
+      invoice:,
+      charge:,
+      subscription:,
+      boundaries:,
+      context:,
+      apply_taxes:,
+      filtered_aggregations:
+    )
   end
 
   around { |test| lago_premium!(&test) }
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let(:customer) { create(:customer, organization:) }
+  let(:organization) { create(:organization) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
+  let(:filtered_aggregations) { nil }
 
   let(:subscription) do
     create(
@@ -2645,6 +2654,143 @@ RSpec.describe Fees::ChargeService do
           taxes_precise_amount_cents: 400.0
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
+      end
+    end
+
+    context "with filtered_aggregations" do
+      let(:organization) { create(:organization, premium_integrations: ["zero_amount_fees"]) }
+      let(:filtered_aggregations) { [] }
+
+      let(:region_filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us asia])
+      end
+
+      let(:eu_charge_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+      let(:us_charge_filter) { create(:charge_filter, charge:, properties: {amount: "30"}) }
+      let(:asia_charge_filter) { create(:charge_filter, charge:, properties: {amount: "40"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_charge_filter, billable_metric_filter: region_filter, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_charge_filter, billable_metric_filter: region_filter, values: ["us"])
+        create(:charge_filter_value, charge_filter: asia_charge_filter, billable_metric_filter: region_filter, values: ["asia"])
+
+        # Events for each region
+        create(
+          :event,
+          organization:,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {region: "eu"}
+        )
+        create(
+          :event,
+          organization:,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {region: "us"}
+        )
+        create(
+          :event,
+          organization:,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {region: "asia"}
+        )
+        # Event without filter
+        create(
+          :event,
+          organization:,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {}
+        )
+      end
+
+      context "when filtered_aggregations includes only specific filter IDs" do
+        let(:filtered_aggregations) { [eu_charge_filter.id, us_charge_filter.id] }
+
+        it "only aggregates events for the specified filters" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
+          us_fee = result.fees.find { |f| f.charge_filter_id == us_charge_filter.id }
+          asia_fee = result.fees.find { |f| f.charge_filter_id == asia_charge_filter.id }
+          default_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+          expect(eu_fee).to have_attributes(units: 1, amount_cents: 2_000)
+          expect(us_fee).to have_attributes(units: 1, amount_cents: 3_000)
+          expect(asia_fee).to have_attributes(units: 0, amount_cents: 0)
+          expect(default_fee).to have_attributes(units: 0, amount_cents: 0)
+        end
+      end
+
+      context "when filtered_aggregations is an empty array" do
+        let(:filtered_aggregations) { [] }
+
+        it "bypasses aggregation for all filters" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees).to all(have_attributes(units: 0, amount_cents: 0))
+        end
+      end
+
+      context "when filtered_aggregations includes nil for default bucket" do
+        let(:filtered_aggregations) { [nil] }
+
+        it "only aggregates events for the default bucket" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          default_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+          eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
+
+          expect(default_fee).to have_attributes(units: 1, amount_cents: 2_000)
+          expect(eu_fee).to have_attributes(units: 0, amount_cents: 0)
+        end
+      end
+
+      context "when filtered_aggregations is nil (default behavior)" do
+        let(:filtered_aggregations) { nil }
+
+        it "aggregates events for all filters" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
+          us_fee = result.fees.find { |f| f.charge_filter_id == us_charge_filter.id }
+          asia_fee = result.fees.find { |f| f.charge_filter_id == asia_charge_filter.id }
+          default_fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+          expect(eu_fee.units).to eq(1)
+          expect(us_fee.units).to eq(1)
+          expect(asia_fee.units).to eq(1)
+          expect(default_fee.units).to eq(1)
+        end
+      end
+
+      context "with recurring billable metric" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+        let(:filtered_aggregations) { [] }
+
+        before do
+          # Create events with proper value field for weighted_sum
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu", value: 10})
+        end
+
+        it "always aggregates regardless of filtered_aggregations" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          # Recurring metrics ignore bypass_aggregation flag, so fees should have data
+          aggregated_fees = result.fees.select { |f| f.units != 0 || f.events_count != 0 }
+          expect(aggregated_fees).not_to be_empty
+        end
       end
     end
   end
