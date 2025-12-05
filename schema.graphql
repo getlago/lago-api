@@ -3059,6 +3059,7 @@ input CreateRecurringTransactionRuleInput {
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
   paidCredits: String
@@ -9457,6 +9458,8 @@ type RecurringTransactionRule {
   lagoId: ID!
   method: RecurringTransactionMethodEnum!
   paidCredits: String!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -11520,6 +11523,7 @@ input UpdateRecurringTransactionRuleInput {
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   lagoId: ID
   method: RecurringTransactionMethodEnum
