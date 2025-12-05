@@ -97,10 +97,12 @@ module Subscriptions
           timestamp: subscription.started_at + 1.second
         )
 
-        if subscription.plan.pay_in_advance? && subscription.subscription_at.today?
-          BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
-        elsif subscription.fixed_charges.pay_in_advance.any?
-          Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
+        if subscription.subscription_at.today?
+          if subscription.plan.pay_in_advance?
+            BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+          elsif subscription.fixed_charges.pay_in_advance.any?
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_after_commit(subscription, subscription.started_at + 1.second)
+          end
         end
       else
         subscription.save!

@@ -417,7 +417,7 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
 
-      context "when ubscription_at is current date" do
+      context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
           expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
         end
@@ -438,6 +438,16 @@ RSpec.describe Subscriptions::CreateService do
           expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
         end
       end
+
+      context "when plan has pay in advance fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        before { fixed_charge }
+
+        it "does not enqueue a job to bill the pay in advance fixed charges" do
+          expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+      end
     end
 
     context "when plan is not pay_in_advance, subscription_at is current date and there are fixed charges" do
@@ -453,6 +463,14 @@ RSpec.describe Subscriptions::CreateService do
 
         it "enqueues a job to bill the subscription" do
           expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        context "when plan has a trial period" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+
+          it "does not enqueue a job to bill the pay in advance fixed charges" do
+            expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
         end
       end
 
@@ -571,6 +589,16 @@ RSpec.describe Subscriptions::CreateService do
           expect(subscription.lifetime_usage).to be_present
           expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
           expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
+        end
+      end
+
+      context "when plan has pay in advance fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        before { fixed_charge }
+
+        it "does not enqueue a job to bill the pay in advance fixed charges" do
+          expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
