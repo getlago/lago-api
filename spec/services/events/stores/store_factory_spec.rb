@@ -3,11 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Events::Stores::StoreFactory do
-  subject(:store_instance) { described_class.new_instance(organization:, current_usage:, **arguments) }
+  subject(:store_instance) { described_class.new_instance(organization:, **arguments) }
 
   let(:organization) { create(:organization, clickhouse_events_store:) }
   let(:clickhouse_events_store) { false }
-  let(:current_usage) { false }
 
   let(:arguments) do
     time = Time.current

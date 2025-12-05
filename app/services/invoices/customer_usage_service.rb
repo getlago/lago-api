@@ -91,7 +91,7 @@ module Invoices
     def compute_charge_fees
       fees = []
 
-      received_event_codes = distinct_event_codes(subscription, boundaries)
+      filters = event_filters(subscription, boundaries)
 
       subscription
         .plan
@@ -99,7 +99,7 @@ module Invoices
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .find_each do |charge|
-        bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+        bypass_aggregation = !filters.charge_ids.include?(charge.id)
         fees += charge_usage(charge, bypass_aggregation)
       end
 
@@ -215,16 +215,10 @@ module Invoices
       @customer_provider_taxation ||= invoice.customer.tax_customer
     end
 
-    def distinct_event_codes(subscription, boundaries)
-      Events::Stores::StoreFactory.new_instance(
-        organization: subscription.organization,
-        current_usage: true,
-        subscription:,
-        boundaries: {
-          from_datetime: boundaries.charges_from_datetime,
-          to_datetime: boundaries.charges_to_datetime
-        }
-      ).distinct_codes
+    def event_filters(subscription, boundaries)
+      Events::BillingPeriodFilterService.call!(
+        subscription:, boundaries:
+      )
     end
   end
 end
