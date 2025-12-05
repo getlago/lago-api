@@ -533,8 +533,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       end
     end
 
-
-    describe '#distinct_charges_and_filters' do
+    describe "#distinct_charges_and_filters" do
       let(:charge) { create(:standard_charge, organization:, billable_metric:) }
       let(:charge_filter) { create(:charge_filter, charge:) }
 
