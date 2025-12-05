@@ -21,6 +21,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
+      expect(result.invoice_subscriptions).to be_empty
     end
   end
 
@@ -39,6 +40,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
+      expect(result.invoice_subscriptions).to be_empty
     end
   end
 
@@ -58,6 +60,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.to_credit_amount).to eq(20)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -77,6 +80,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.to_credit_amount).to eq(20)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -96,6 +100,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
+      expect(result.invoice_subscriptions).to be_empty
     end
 
     context "when passing include_generating_invoices: true" do
@@ -107,6 +112,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.total_billed_amount_cents).to eq(20)
         expect(result.progressive_billing_invoice).to eq(invoice)
         expect(result.to_credit_amount).to eq(20)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
   end
@@ -127,6 +133,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
+      expect(result.invoice_subscriptions).to be_empty
     end
   end
 
@@ -151,6 +158,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to eq(40)
       expect(result.progressive_billing_invoice).to eq(invoice2)
       expect(result.to_credit_amount).to eq(40)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription, invoice_subscription2)
     end
   end
 
@@ -175,6 +183,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.total_billed_amount_cents).to eq(40)
       expect(result.progressive_billing_invoice).to eq(invoice2)
       expect(result.to_credit_amount).to eq(40)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription, invoice_subscription2)
     end
   end
 
@@ -196,6 +205,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(invoice)
         expect(result.to_credit_amount).to eq(0)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
 
       context "when credit note is consumed" do
@@ -206,6 +216,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
           expect(result.progressive_billed_amount).to eq(20)
           expect(result.progressive_billing_invoice).to eq(invoice)
           expect(result.to_credit_amount).to eq(0)
+          expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
         end
       end
     end
@@ -218,6 +229,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(invoice)
         expect(result.to_credit_amount).to eq(10)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
   end
@@ -249,6 +261,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(result.to_credit_amount).to eq(0)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
 
@@ -260,6 +273,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(result.to_credit_amount).to eq(10)
+        expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
   end
@@ -281,6 +295,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to be_zero
       expect(result.total_billed_amount_cents).to be_zero
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -301,6 +316,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(70)
       expect(result.total_billed_amount_cents).to eq(84)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -326,6 +342,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(80)
       expect(result.total_billed_amount_cents).to eq(120)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription1, invoice_subscription2)
     end
   end
 
@@ -348,6 +365,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(50)
       expect(result.total_billed_amount_cents).to eq(80)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -370,6 +388,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(60)
       expect(result.total_billed_amount_cents).to eq(80)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -392,6 +411,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to be_zero
       expect(result.total_billed_amount_cents).to eq(40)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -416,6 +436,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(70)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 
@@ -441,6 +462,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(100)
       expect(result.total_billed_amount_cents).to eq(150)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription1, invoice_subscription2)
     end
   end
 
@@ -465,6 +487,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billed_amount).to eq(180)
       expect(result.to_credit_amount).to eq(140)
       expect(result.total_billed_amount_cents).to eq(140)
+      expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
   end
 end

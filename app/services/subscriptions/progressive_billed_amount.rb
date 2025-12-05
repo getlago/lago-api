@@ -2,7 +2,13 @@
 
 module Subscriptions
   class ProgressiveBilledAmount < BaseService
-    Result = BaseResult[:progressive_billed_amount, :progressive_billing_invoice, :to_credit_amount, :total_billed_amount_cents]
+    Result = BaseResult[
+      :progressive_billed_amount,
+      :progressive_billing_invoice,
+      :to_credit_amount,
+      :total_billed_amount_cents,
+      :invoice_subscriptions
+    ]
 
     def initialize(subscription:, timestamp: Time.current, include_generating_invoices: false)
       @subscription = subscription
@@ -34,6 +40,7 @@ module Subscriptions
         .where(subscription: subscription)
         .order("invoices.issuing_date" => :desc, "invoices.created_at" => :desc)
 
+      result.invoice_subscriptions = invoice_subscriptions
       return result if invoice_subscriptions.blank?
 
       # Note: included in scope generating invoice won't have values, so we have to iterate through the fees,
