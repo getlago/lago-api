@@ -9,6 +9,7 @@ module Queries
       optional(:timestamp_from)
       optional(:timestamp_to)
       optional(:enriched).value(:bool)
+      optional(:transaction_id).maybe(:string)
     end
 
     rule("timestamp_from_started_at", "timestamp_from") do
