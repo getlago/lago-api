@@ -61,6 +61,10 @@ module Wallets
           Wallets::RecurringTransactionRules::CreateService.call!(wallet:, wallet_params: params)
         end
 
+        if params[:invoice_custom_section].present?
+          InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
+        end
+
         billable_metrics.each do |bm|
           WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
         end
@@ -68,7 +72,6 @@ module Wallets
 
       result.wallet = wallet
 
-      InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.created", wallet)
 
       WalletTransactions::CreateJob.perform_later(

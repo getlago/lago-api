@@ -16,6 +16,8 @@ module Types
         field :invoice_requires_successful_payment, Boolean, null: false
         field :method, Types::Wallets::RecurringTransactionRules::MethodEnum, null: false, resolver_method: :resolver_method
         field :paid_credits, String, null: false
+        field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+        field :skip_invoice_custom_sections, Boolean
         field :started_at, GraphQL::Types::ISO8601DateTime, null: true
         field :target_ongoing_balance, String, null: true
         field :threshold_credits, String, null: true

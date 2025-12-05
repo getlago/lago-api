@@ -20,5 +20,7 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::Object do
     expect(subject).to have_field(:invoice_requires_successful_payment).of_type("Boolean!")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:transaction_metadata).of_type("[TransactionMetadata!]")
+    expect(subject).to have_field(:selected_invoice_custom_sections).of_type("[InvoiceCustomSection!]")
+    expect(subject).to have_field(:skip_invoice_custom_sections).of_type("Boolean")
   end
 end

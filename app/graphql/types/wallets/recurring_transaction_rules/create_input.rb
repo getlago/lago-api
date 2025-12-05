@@ -10,6 +10,7 @@ module Types
         argument :granted_credits, String, required: false
         argument :ignore_paid_top_up_limits, Boolean, required: false
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false
+        argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
         argument :invoice_requires_successful_payment, Boolean, required: false
         argument :method, Types::Wallets::RecurringTransactionRules::MethodEnum, required: false
         argument :paid_credits, String, required: false

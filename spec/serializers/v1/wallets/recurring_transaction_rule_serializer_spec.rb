@@ -26,7 +26,8 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "invoice_requires_successful_payment" => recurring_transaction_rule.invoice_requires_successful_payment,
       "transaction_metadata" => recurring_transaction_rule.transaction_metadata,
       "transaction_name" => "Recurring Transaction Rule",
-      "ignore_paid_top_up_limits" => recurring_transaction_rule.ignore_paid_top_up_limits
+      "ignore_paid_top_up_limits" => recurring_transaction_rule.ignore_paid_top_up_limits,
+      "applied_invoice_custom_sections" => recurring_transaction_rule.applied_invoice_custom_sections
     )
   end
 end

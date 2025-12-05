@@ -20,5 +20,6 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::UpdateInput do
     expect(subject).to accept_argument(:trigger).of_type("RecurringTransactionTriggerEnum")
     expect(subject).to accept_argument(:lago_id).of_type("ID")
     expect(subject).to accept_argument(:transaction_metadata).of_type("[CreateTransactionMetadataInput!]")
+    expect(subject).to accept_argument(:invoice_custom_section).of_type("InvoiceCustomSectionsReferenceInput")
   end
 end

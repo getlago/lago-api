@@ -337,6 +337,57 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           end
         end
       end
+
+      context "with invoice_custom_section" do
+        let(:rule_params) do
+          {
+            interval: "monthly",
+            method: "target",
+            started_at: "2024-05-30T12:48:26Z",
+            target_ongoing_balance: "100.0",
+            trigger: "interval",
+            invoice_custom_section:
+          }
+        end
+
+        context "when skip" do
+          let(:invoice_custom_section) do
+            {skip_invoice_custom_sections: true}
+          end
+
+          it "creates the rule skipping sections" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            expect(wallet.recurring_transaction_rules.first).to have_attributes(
+              skip_invoice_custom_sections: true
+            )
+          end
+        end
+
+        context "when attaching sections" do
+          let(:invoice_custom_section) do
+            {invoice_custom_section_codes: ["section_code_1", "section_code_2"]}
+          end
+
+          let(:section_1) { create(:invoice_custom_section, organization: wallet.organization, code: "section_code_1") }
+          let(:section_2) { create(:invoice_custom_section, organization: wallet.organization, code: "section_code_2") }
+
+          before do
+            CurrentContext.source = "api"
+
+            section_1
+            section_2
+          end
+
+          it "creates the rule skipping sections" do
+            expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+
+            sections = wallet.recurring_transaction_rules.first.applied_invoice_custom_sections
+            expect(sections.count).to eq(2)
+            expect(sections.pluck(:invoice_custom_section_id)).to include(section_1.id, section_2.id)
+          end
+        end
+      end
     end
   end
 end

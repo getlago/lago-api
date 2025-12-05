@@ -32,6 +32,11 @@ module Wallets
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
           if recurring_rule
+            if rule_attributes.key?(:invoice_custom_section)
+              InvoiceCustomSections::AttachToResourceService.call(resource: recurring_rule, params: rule_attributes)
+              rule_attributes.delete(:invoice_custom_section)
+            end
+
             recurring_rule.update!(rule_attributes)
           else
             unless rule_attributes.key?(:invoice_requires_successful_payment)

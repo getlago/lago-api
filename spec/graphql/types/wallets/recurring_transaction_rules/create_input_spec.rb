@@ -19,5 +19,6 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::CreateInput do
     expect(subject).to accept_argument(:threshold_credits).of_type("String")
     expect(subject).to accept_argument(:trigger).of_type("RecurringTransactionTriggerEnum!")
     expect(subject).to accept_argument(:transaction_metadata).of_type("[CreateTransactionMetadataInput!]")
+    expect(subject).to accept_argument(:invoice_custom_section).of_type("InvoiceCustomSectionsReferenceInput")
   end
 end

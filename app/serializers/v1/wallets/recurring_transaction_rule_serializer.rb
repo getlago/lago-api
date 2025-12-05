@@ -21,7 +21,17 @@ module V1
           transaction_metadata: model.transaction_metadata,
           transaction_name: model.transaction_name,
           ignore_paid_top_up_limits: model.ignore_paid_top_up_limits
-        }
+        }.merge(applied_invoice_custom_sections)
+      end
+
+      private
+
+      def applied_invoice_custom_sections
+        ::CollectionSerializer.new(
+          model.applied_invoice_custom_sections,
+          ::V1::AppliedInvoiceCustomSectionSerializer,
+          collection_name: "applied_invoice_custom_sections"
+        ).serialize
       end
     end
   end
