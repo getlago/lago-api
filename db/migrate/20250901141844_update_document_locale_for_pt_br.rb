@@ -11,6 +11,9 @@ class UpdateDocumentLocaleForPtBr < ActiveRecord::Migration[8.0]
     attribute :subscription_invoice_issuing_date_adjustment, :string, default: "keep_anchor"
   end
 
+  class Organization < ApplicationRecord
+  end
+
   def up
     Organization.where(document_locale: "pt_BR").update(document_locale: "pt-BR")
     BillingEntity.where(document_locale: "pt_BR").update(document_locale: "pt-BR")
