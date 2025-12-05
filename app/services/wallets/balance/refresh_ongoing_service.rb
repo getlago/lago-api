@@ -90,7 +90,7 @@ module Wallets
       end
 
       def credits_ongoing_balance
-        ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
+        wallet.credits_balance - credits_ongoing_usage_balance
       end
 
       def calculate_total_usage_with_limitation(usage_amount_cents)

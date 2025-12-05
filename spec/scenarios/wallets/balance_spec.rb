@@ -498,4 +498,148 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       end
     end
   end
+
+  context "with fractional rate_amount" do
+    # This test verifies that credits_ongoing_balance is calculated consistently
+    # with credits_balance when using a fractional rate_amount.
+    #
+    # The bug: When rate_amount is fractional (e.g., 1.75), there can be rounding
+    # discrepancies between balance_cents and credits_balance * rate_amount * 100.
+    # The old implementation derived credits_ongoing_balance from balance_cents,
+    # which could produce values inconsistent with credits_balance.
+    #
+    # The fix: Calculate credits_ongoing_balance as credits_balance - credits_ongoing_usage_balance
+    # to ensure consistency.
+    let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
+
+    before { charge }
+
+    it "maintains consistency between credits_balance and credits_ongoing_balance" do
+      time_0 = DateTime.new(2022, 11, 30)
+
+      # Create a wallet with rate_amount = 1.75 and 65 credits
+      # 65 credits × $1.75 = $113.75 = 11375 cents
+      wallet = create_wallet_with_defaults(rate_amount: "1.75", granted_credits: "65")
+      expect(wallet.credits_balance).to eq 65
+      expect(wallet.balance_cents).to eq 11375
+
+      # Create a subscription with $1 monthly fee
+      time_1 = time_0 + 1.day
+      travel_to time_1 do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+      subscription = customer.subscriptions.first
+
+      # Ingest $7 usage
+      # 700 / 100 / 1.75 = 4.0 credits ongoing usage
+      travel_to time_1 + 5.days do
+        ingest_event(subscription, 7)
+        recalculate_wallet_balances
+        wallet.reload
+
+        # Verify exact values
+        expect(wallet.credits_balance).to eq 65
+        expect(wallet.balance_cents).to eq 11375
+        expect(wallet.ongoing_usage_balance_cents).to eq 700
+        expect(wallet.credits_ongoing_usage_balance).to eq 4.0
+        expect(wallet.ongoing_balance_cents).to eq 10675
+        expect(wallet.credits_ongoing_balance).to eq 61.0
+      end
+
+      # Billing creates draft invoice: $1 subscription + $7 usage = $8 = 800 cents
+      # 800 / 100 / 1.75 = 4.571428... credits ongoing usage
+      time_2 = time_1 + 1.month
+      travel_to time_2 do
+        perform_billing
+        recalculate_wallet_balances
+        wallet.reload
+
+        expect(wallet.credits_balance).to eq 65
+        expect(wallet.balance_cents).to eq 11375
+        expect(wallet.ongoing_usage_balance_cents).to eq 800
+        expect(wallet.credits_ongoing_usage_balance).to be_within(0.00001).of(4.57142)
+        expect(wallet.ongoing_balance_cents).to eq 10575
+        expect(wallet.credits_ongoing_balance).to be_within(0.00001).of(60.42857)
+      end
+
+      # After invoice finalization, wallet is debited $8 = 800 cents
+      # credits consumed = 800 / 100 / 1.75 = 4.571428... credits
+      # new credits_balance = 65 - 4.571428... = 60.428571...
+      # new balance_cents = 11375 - 800 = 10575
+      travel_to time_2 + 10.days do
+        perform_finalize_refresh
+        wallet.reload
+
+        expect(wallet.wallet_transactions.outbound.count).to eq 1
+        expect(wallet.wallet_transactions.outbound.first.amount_cents).to eq 800
+
+        expect(wallet.credits_balance).to be_within(0.0001).of(60.428571428571)
+        expect(wallet.balance_cents).to eq 10575
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+        expect(wallet.ongoing_balance_cents).to eq 10575
+        expect(wallet.credits_ongoing_balance).to be_within(0.0001).of(60.428571428571)
+      end
+    end
+
+    it "calculates credits_ongoing_balance from credits_balance when cents/credits are misaligned" do
+      # This test verifies that credits_ongoing_balance is calculated consistently
+      # from credits_balance even when balance_cents has a rounding discrepancy.
+      #
+      # We simulate the misalignment by directly calling the refresh service
+      # after manually setting up a wallet with misaligned cents/credits values.
+
+      time_0 = DateTime.new(2022, 11, 30)
+
+      # Create wallet and subscription
+      wallet = create_wallet_with_defaults(rate_amount: "1.75", granted_credits: "65")
+      expect(wallet.credits_balance).to eq 65
+      expect(wallet.balance_cents).to eq 11375
+
+      time_1 = time_0 + 1.day
+      travel_to time_1 do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+      subscription = customer.subscriptions.first
+
+      # Generate $8 usage to create the fractional credit scenario
+      travel_to time_1 + 5.days do
+        ingest_event(subscription, 8)
+        recalculate_wallet_balances
+        wallet.reload
+
+        # 800 cents / 100 / 1.75 = 4.571428... credits usage
+        expect(wallet.credits_ongoing_usage_balance).to be_within(0.00001).of(4.57142)
+
+        # Simulate a 1-cent rounding error by directly updating balance_cents
+        # This represents accumulated rounding errors in production
+        wallet.update_columns(balance_cents: 10574) # 1 cent less than 10575
+
+        # Call the refresh service directly to trigger recalculation
+        # (bypassing the job's ready_to_be_refreshed check)
+        Wallets::Balance::RefreshOngoingService.call(wallet: wallet.reload)
+        wallet.reload
+
+        # The key assertion: credits_ongoing_balance should equal
+        # credits_balance - credits_ongoing_usage_balance (the fixed calculation)
+        # NOT ongoing_balance_cents / 100 / rate_amount (the buggy calculation)
+        #
+        # With bug:  credits_ongoing_balance = (10574 - 800) / 100 / 1.75 = 55.85142857...
+        # With fix:  credits_ongoing_balance = 65 - 4.57142... = 60.42857...
+        expect(wallet.credits_ongoing_balance).to be_within(0.00001).of(60.42857)
+      end
+    end
+  end
 end

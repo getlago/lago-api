@@ -242,5 +242,116 @@ RSpec.describe Wallets::Balance::RefreshOngoingService do
         expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve"])
       end
     end
+
+    context "when wallet has fractional rate_amount" do
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          rate_amount: "1.75",
+          balance_cents: 10575,
+          ongoing_balance_cents: 10575,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: BigDecimal("60.42857142857142857"),
+          credits_ongoing_balance: BigDecimal("60.42857142857142857"),
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      let(:first_charge) do
+        create(
+          :standard_charge,
+          plan: first_subscription.plan,
+          billable_metric:,
+          properties: {amount: "1.5"}
+        )
+      end
+
+      let(:second_charge) do
+        create(
+          :standard_charge,
+          plan: second_subscription.plan,
+          billable_metric:,
+          properties: {amount: "2"}
+        )
+      end
+
+      it "calculates credits_ongoing_balance consistently with credits_balance" do
+        refresh_service.call
+        wallet.reload
+
+        # credits_ongoing_balance should be calculated as:
+        # credits_balance - credits_ongoing_usage_balance
+        # NOT as: ongoing_balance_cents / 100 / rate_amount
+        # This ensures consistency when rate_amount is fractional
+        expected_credits_ongoing_balance = wallet.credits_balance - wallet.credits_ongoing_usage_balance
+        expect(wallet.credits_ongoing_balance).to eq(expected_credits_ongoing_balance)
+      end
+    end
+
+    context "when wallet has fractional rate_amount with cents/credits misalignment" do
+      # This test reproduces the bug from the issue report:
+      # When balance_cents doesn't perfectly align with credits_balance * rate_amount * 100
+      # (e.g., due to rounding during transactions), the old implementation would calculate
+      # credits_ongoing_balance from ongoing_balance_cents, producing inconsistent results.
+      #
+      # Example from bug report:
+      # - Customer has 65 credits at rate_amount=1.75 ($113.75)
+      # - After spending $8, balance_cents=10574 (due to rounding) but credits_balance=60.42857...
+      # - Old: credits_ongoing_balance = 10574/100/1.75 = 60.42285... (wrong)
+      # - New: credits_ongoing_balance = 60.42857... - 0 = 60.42857... (correct)
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          rate_amount: "1.75",
+          # Simulate misalignment: balance_cents is 10574 but credits_balance is 60.42857...
+          # (10574 / 100 / 1.75 = 60.42285... which differs from credits_balance)
+          balance_cents: 10574,
+          ongoing_balance_cents: 10574,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: BigDecimal("60.42857142857142857"),
+          credits_ongoing_balance: BigDecimal("60.42857142857142857"),
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      let(:first_charge) do
+        create(
+          :standard_charge,
+          plan: first_subscription.plan,
+          billable_metric:,
+          properties: {amount: "1.5"}
+        )
+      end
+
+      let(:second_charge) do
+        create(
+          :standard_charge,
+          plan: second_subscription.plan,
+          billable_metric:,
+          properties: {amount: "2"}
+        )
+      end
+
+      it "calculates credits_ongoing_balance from credits_balance, not from cents" do
+        refresh_service.call
+        wallet.reload
+
+        # The buggy calculation (from cents):
+        # ongoing_balance_cents = 10574 - 800 = 9774 (with 800 cents usage from charges)
+        # buggy_credits_ongoing = 9774 / 100 / 1.75 = 55.85142857...
+        buggy_credits_ongoing = wallet.ongoing_balance_cents.to_f / 100 / wallet.rate_amount.to_f
+
+        # The correct calculation (from credits):
+        # credits_ongoing_balance = credits_balance - credits_ongoing_usage_balance
+        # = 60.42857... - 4.57142... = 55.85714...
+        correct_credits_ongoing = wallet.credits_balance - wallet.credits_ongoing_usage_balance
+
+        # Verify the fix: wallet should have the correct value, not the buggy one
+        expect(wallet.credits_ongoing_balance).to eq(correct_credits_ongoing)
+        expect(wallet.credits_ongoing_balance).not_to eq(buggy_credits_ongoing)
+      end
+    end
   end
 end
