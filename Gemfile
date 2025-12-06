@@ -21,6 +21,7 @@ group :"sidekiq-pro", optional: true do
   source "https://gems.contribsys.com/" do
     gem "sidekiq-pro"
   end
+  gem "dogstatsd-ruby"
 end
 gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"

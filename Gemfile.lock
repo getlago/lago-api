@@ -227,6 +227,7 @@ GEM
     discard (1.4.0)
       activerecord (>= 4.2, < 9.0)
     docile (1.4.1)
+    dogstatsd-ruby (5.7.1)
     dotenv (3.1.7)
     drb (2.2.3)
     dry-configurable (1.2.0)
@@ -1092,6 +1093,7 @@ DEPENDENCIES
   datadog
   debug
   discard (~> 1.2)
+  dogstatsd-ruby
   dotenv
   dry-validation
   event_stream_parser

@@ -33,9 +33,42 @@ if ENV["LAGO_SIDEKIQ_WEB"] == "true"
   Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: "_interslice_session")
 end
 
+def configure_sidekiq_pro_metrics(config)
+  statsd_endpoint = ENV.fetch("LAGO_SIDEKIQ_STATSD_ENDPOINT", nil)
+  if statsd_endpoint.nil?
+    Rails.logger.warn "LAGO_SIDEKIQ_STATSD_ENDPOINT not set, Sidekiq Pro metrics will not be reported"
+    return
+  end
+
+  statsd_host, statsd_port = statsd_endpoint.split(":")
+  if statsd_host.empty? || statsd_port.nil? || statsd_port.empty?
+    Rails.logger.error "LAGO_SIDEKIQ_STATSD_ENDPOINT invalid format, expected host:port, got: #{statsd_endpoint}"
+    return
+  end
+
+  require "datadog/statsd"
+
+  config.dogstatsd = -> {
+    Datadog::Statsd.new(statsd_host, statsd_port.to_i,
+      tags: ["env:#{config[:environment]}", "service:sidekiq"],
+      namespace: Rails.application.name)
+  }
+
+  config.server_middleware do |chain|
+    require "sidekiq/middleware/server/statsd"
+    chain.add Sidekiq::Middleware::Server::Statsd
+  end
+end
+
 Sidekiq.configure_server do |config|
-  # Super fetch is only available in Sidekiq Pro. See https://github.com/sidekiq/sidekiq/wiki/Reliability.
-  config.super_fetch! if Sidekiq.pro?
+  if Sidekiq.pro?
+    # Super fetch is only available in Sidekiq Pro. See https://github.com/sidekiq/sidekiq/wiki/Reliability.
+    config.super_fetch!
+    # https://github.com/sidekiq/sidekiq/wiki/Pro-Metrics#enabling-metrics
+    # As of Sidekiq Pro 8.0, this is the recommended Statsd tag/namespace configuration.
+    # Read more about global tags: https://docs.datadoghq.com/getting_started/tagging/unified_service_tagging/
+    configure_sidekiq_pro_metrics(config)
+  end
   config.redis = redis_config
   config.logger = nil
   config.average_scheduled_poll_interval = ENV.fetch("LAGO_SIDEKIQ_AVERAGE_SCHEDULED_POLL_INTERVAL", 5).to_f
