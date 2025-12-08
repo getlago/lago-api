@@ -42,6 +42,7 @@ RSpec.describe Invoices::CreateGeneratingService do
 
         expect(result.invoice.timezone).to eq("America/Los_Angeles")
         expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
+        expect(result.invoice.expected_finalization_date.to_s).to eq("2022-11-24")
       end
     end
 
@@ -82,6 +83,7 @@ RSpec.describe Invoices::CreateGeneratingService do
         expect(result.invoice.currency).to eq(currency)
         expect(result.invoice.timezone).to eq(customer.applicable_timezone)
         expect(result.invoice.issuing_date).to eq(datetime.to_date)
+        expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
         expect(result.invoice.payment_due_date).to eq(datetime.to_date)
         expect(result.invoice.net_payment_term).to eq(customer.applicable_net_payment_term)
 
@@ -106,6 +108,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date.to_s).to eq(datetime.to_date.to_s)
+          expect(result.invoice.expected_finalization_date.to_s).to eq(datetime.to_date.to_s)
         end
       end
 
@@ -118,6 +121,7 @@ RSpec.describe Invoices::CreateGeneratingService do
 
           expect(result.invoice.timezone).to eq("America/Los_Angeles")
           expect(result.invoice.issuing_date.to_s).to eq("2022-11-27")
+          expect(result.invoice.expected_finalization_date.to_s).to eq("2022-11-27")
         end
       end
     end
@@ -170,6 +174,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
 
@@ -181,6 +186,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
 
@@ -192,6 +198,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
 
@@ -203,6 +210,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
 
@@ -222,6 +230,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
 
@@ -235,6 +244,7 @@ RSpec.describe Invoices::CreateGeneratingService do
           result = create_service.call
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
     end

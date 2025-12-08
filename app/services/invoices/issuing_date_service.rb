@@ -14,6 +14,10 @@ module Invoices
       send("#{anchor}_#{adjustment}")
     end
 
+    def grace_period
+      customer_settings[:invoice_grace_period] || billing_entity_settings[:invoice_grace_period] || 0
+    end
+
     private
 
     attr_reader :customer_settings, :billing_entity_settings, :recurring
@@ -33,10 +37,6 @@ module Invoices
 
     def next_period_start_align_with_finalization_date
       grace_period
-    end
-
-    def grace_period
-      customer_settings[:invoice_grace_period] || billing_entity_settings[:invoice_grace_period] || 0
     end
 
     def anchor
