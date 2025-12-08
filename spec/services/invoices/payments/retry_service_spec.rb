@@ -90,5 +90,19 @@ RSpec.describe Invoices::Payments::RetryService do
         expect(result.error.code).to eq("payment_processor_is_currently_handling_payment")
       end
     end
+
+    context "when no payment provider" do
+      let(:payment_provider) { nil }
+
+      it "delivers an error webhook" do
+        expect { retry_service.call }
+          .to enqueue_job(SendWebhookJob)
+          .with(
+            "invoice.payment_failure",
+            invoice,
+            error_details: {code: "customer_must_have_payment_provider"}
+          ).on_queue(webhook_queue)
+      end
+    end
   end
 end
