@@ -148,6 +148,14 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
           it "returns the payload body" do
             expect(subject).to eq payload_body
           end
+
+          context "when city name is too long" do
+            let(:customer) { create(:customer, email:, phone:, state: nil, city: "Lorem ipsum dolor sit amet, consectetur adipiscing elit") }
+
+            it "returns the payload body with truncated city name" do
+              expect(subject["lines"].first["lineItems"].first["subObject"]["city"]).to eq("Lorem ipsum dolor sit amet, consectetur adipiscing")
+            end
+          end
         end
 
         context "when billing address is not present" do
