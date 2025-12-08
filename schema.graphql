@@ -2742,6 +2742,7 @@ input CreateCustomerWalletTransactionInput {
   clientMutationId: String
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
   name: String
@@ -11804,7 +11805,9 @@ type WalletTransaction {
   metadata: [WalletTransactionMetadataObject!]
   name: String
   priority: Int!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
   settledAt: ISO8601DateTime
+  skipInvoiceCustomSections: Boolean
   source: WalletTransactionSourceEnum!
   status: WalletTransactionStatusEnum!
   transactionStatus: WalletTransactionTransactionStatusEnum!

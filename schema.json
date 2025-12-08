@@ -11506,6 +11506,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceCustomSection",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "InvoiceCustomSectionsReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceRequiresSuccessfulPayment",
               "description": null,
               "type": {
@@ -62994,12 +63006,44 @@
               "deprecationReason": null
             },
             {
+              "name": "selectedInvoiceCustomSections",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "InvoiceCustomSection",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "settledAt",
               "description": null,
               "args": [],
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "skipInvoiceCustomSections",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "isDeprecated": false,
