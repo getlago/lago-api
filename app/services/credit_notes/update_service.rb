@@ -47,8 +47,7 @@ module CreditNotes
     # @return [Boolean] if the metadata was changed in any way
     def update_metadata!
       value = params[:metadata]&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
-      service = Metadata::UpdateItemService.new(owner: credit_note, value:, partial: partial_metadata.present?)
-      result = service.call!
+      Metadata::UpdateItemService.call!(owner: credit_note, value:, partial: partial_metadata.present?)
       @metadata_changed = result.metadata_changed
     end
 
