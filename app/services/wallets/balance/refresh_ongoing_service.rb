@@ -103,7 +103,7 @@ module Wallets
 
           applicable_wallets = Wallets::FindApplicableOnFeesService
             .call!(allocation_rules:, fee:)
-            .applicable_wallets
+            .top_priority_wallet
 
           fee_wallet[key] = applicable_wallets.presence
         end

@@ -31,7 +31,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns matching by billable metric wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
 
@@ -41,7 +41,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns matching by fee type wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
 
@@ -51,7 +51,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns unrestricted wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
     end
@@ -74,7 +74,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns matching by fee type wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
 
@@ -84,7 +84,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns unrestricted wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
     end
@@ -109,7 +109,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns matching by fee type wallet" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to eq matching_wallet_id
+          expect(result.top_priority_wallet).to eq matching_wallet_id
         end
       end
 
@@ -118,7 +118,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
         it "returns nil" do
           expect(result).to be_success
-          expect(result.applicable_wallets).to be nil
+          expect(result.top_priority_wallet).to be nil
         end
       end
     end
@@ -136,7 +136,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
 
       it "returns nil" do
         expect(result).to be_success
-        expect(result.applicable_wallets).to be_nil
+        expect(result.top_priority_wallet).to be_nil
       end
     end
   end

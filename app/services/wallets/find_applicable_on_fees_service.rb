@@ -2,6 +2,8 @@
 
 module Wallets
   class FindApplicableOnFeesService < BaseService
+    Result = BaseResult[:top_priority_wallet]
+
     def initialize(allocation_rules:, fee:)
       @allocation_rules = allocation_rules
       @fee = fee
@@ -28,7 +30,7 @@ module Wallets
     attr_reader :allocation_rules, :fee
 
     def result_with(wallets)
-      result.applicable_wallets = wallets.first
+      result.top_priority_wallet = wallets.first
       result
     end
   end

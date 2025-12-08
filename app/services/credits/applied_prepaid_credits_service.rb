@@ -35,12 +35,8 @@ module Credits
 
           ordered_remaining_amounts.each do |fee_key, remaining_amount|
             next if remaining_amount <= 0
-            target_match = wallet_targets_array.include?(fee_key)
-            type_match = wallet_types_array.include?(fee_key.first)
-            unrestricted_wallet = wallet_targets_array.empty? && wallet_types_array.empty?
-            should_apply_wallet_on_this_fee = target_match || type_match || unrestricted_wallet
 
-            next unless should_apply_wallet_on_this_fee
+            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array)
 
             used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
             remaining_wallet_balance = wallet.balance_cents - used_amount
@@ -145,6 +141,14 @@ module Credits
 
         raise
       end
+    end
+
+    def applicable_fee?(fee_key:, targets:, types:)
+      target_match = targets.include?(fee_key)
+      type_match = types.include?(fee_key.first)
+      unrestricted_wallet = targets.empty? && types.empty?
+
+      target_match || type_match || unrestricted_wallet
     end
   end
 end

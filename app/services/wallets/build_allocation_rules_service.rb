@@ -3,6 +3,8 @@
 # app/services/wallets/build_allocation_rules_service.rb
 module Wallets
   class BuildAllocationRulesService < BaseService
+    Result = BaseResult[:allocation_rules]
+
     def initialize(customer:)
       @customer = customer
       super
