@@ -55,8 +55,14 @@ module Wallets
 
       def ongoing_usage_balance_cents
         @ongoing_usage_balance_cents ||= total_usage_amount_cents +
-          wallet.customer.invoices.draft.sum(:total_amount_cents) -
+          draft_invoices_amount_cents -
           total_billed_usage_amount_cents
+      end
+
+      def draft_invoices_amount_cents
+        customer.invoices.draft.includes(:fees).sum do |invoice|
+          CalculateApplicableFeesService.call(wallet:, invoice:).total_amount_cents
+        end
       end
 
       def credits_ongoing_usage_balance
