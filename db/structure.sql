@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
+ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_cdaf36dc89;
@@ -424,6 +425,9 @@ DROP INDEX IF EXISTS public.index_lifetime_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_item_metadata_on_value;
+DROP INDEX IF EXISTS public.index_item_metadata_on_owner_type_and_owner_id;
+DROP INDEX IF EXISTS public.index_item_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
@@ -781,6 +785,7 @@ ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS pass
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS lifetime_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS item_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoices_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS invoices_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS invoices_payment_requests_pkey;
@@ -885,6 +890,7 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
+DROP TABLE IF EXISTS public.item_metadata;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -3882,6 +3888,22 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
+-- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    owner_type character varying NOT NULL,
+    owner_id uuid NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
+);
+
+
+--
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -4999,6 +5021,14 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.invoices_taxes
     ADD CONSTRAINT invoices_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: item_metadata item_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_metadata
+    ADD CONSTRAINT item_metadata_pkey PRIMARY KEY (id);
 
 
 --
@@ -7537,6 +7567,27 @@ CREATE INDEX index_invoices_taxes_on_organization_id ON public.invoices_taxes US
 --
 
 CREATE INDEX index_invoices_taxes_on_tax_id ON public.invoices_taxes USING btree (tax_id);
+
+
+--
+-- Name: index_item_metadata_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_item_metadata_on_organization_id ON public.item_metadata USING btree (organization_id);
+
+
+--
+-- Name: index_item_metadata_on_owner_type_and_owner_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_item_metadata_on_owner_type_and_owner_id ON public.item_metadata USING btree (owner_type, owner_id);
+
+
+--
+-- Name: index_item_metadata_on_value; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_item_metadata_on_value ON public.item_metadata USING gin (value);
 
 
 --
@@ -10251,6 +10302,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: item_metadata fk_rails_d0b1714507; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_metadata
+    ADD CONSTRAINT fk_rails_d0b1714507 FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10595,6 +10654,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20251204142205'),
 ('20251202141759'),
+('20251201094057'),
 ('20251128102055'),
 ('20251127145819'),
 ('20251127123135'),
