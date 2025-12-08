@@ -163,4 +163,42 @@ RSpec.describe Mutations::CreditNotes::Create do
       expect_unprocessable_entity(result)
     end
   end
+
+  context "with metadata" do
+    let(:mutation) do
+      <<~GQL
+        mutation($input: CreateCreditNoteInput!) {
+          createCreditNote(input: $input) {
+            id
+            metadata { key value }
+          }
+        }
+      GQL
+    end
+
+    it "creates credit note with metadata" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            reason: "duplicated_charge",
+            invoiceId: invoice.id,
+            creditAmountCents: 10,
+            refundAmountCents: 5,
+            items: [{feeId: fee1.id, amountCents: 10}, {feeId: fee2.id, amountCents: 5}],
+            metadata: [{key: "foo", value: "bar"}, {key: "baz", value: "qux"}]
+          }
+        }
+      )
+
+      result_data = result["data"]["createCreditNote"]
+      expect(result_data["metadata"]).to match_array([
+        {"key" => "foo", "value" => "bar"},
+        {"key" => "baz", "value" => "qux"}
+      ])
+    end
+  end
 end
