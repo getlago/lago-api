@@ -16,7 +16,7 @@ jobs:
       matrix:
         platform:
           - version: linux/amd64
-            runner: linux/amd64
+            runner: ubuntu-latest
           - version: linux/arm64
             runner: linux-arm64
     name: Build ${{ matrix.platform.version }} Image
