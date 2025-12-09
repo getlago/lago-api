@@ -6,40 +6,72 @@ module Credits
 
     def initialize(invoice:, wallets:, max_wallet_decrease_attempts: DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS)
       @invoice = invoice
-      @wallet = wallets.first
+      @wallets = wallets
       @max_wallet_decrease_attempts = max_wallet_decrease_attempts
       raise ArgumentError, "max_wallet_decrease_attempts must be between 1 and #{DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS} (inclusive)" if max_wallet_decrease_attempts < 1 || max_wallet_decrease_attempts > DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS
 
       super(nil)
     end
 
-    activity_loggable(
-      action: "wallet_transaction.created",
-      record: -> { result.wallet_transaction }
-    )
-
     def call
-      if already_applied?
+      if wallets_already_applied?
         return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
       end
 
-      amount_cents = compute_amount
+      result.prepaid_credit_amount_cents ||= 0
+      result.wallet_transactions ||= []
 
-      ApplicationRecord.transaction do
-        wallet_transaction = create_wallet_transaction(amount_cents)
-        result.wallet_transaction = wallet_transaction
-        amount_cents = wallet_transaction.amount_cents
+      ActiveRecord::Base.transaction do
+        ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
+        wallets.each do |wallet|
+          wallet.reload
+          wallet_fee_transactions = []
+          wallet_targets_array = wallet.wallet_targets.map do |wt|
+            if wt&.billable_metric_id
+              ["charge", wt.billable_metric_id]
+            end
+          end
+          wallet_types_array = wallet.allowed_fee_types
 
-        with_optimistic_lock_retry(wallet) do
-          Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)
+          ordered_remaining_amounts.each do |fee_key, remaining_amount|
+            next if remaining_amount <= 0
+
+            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array)
+
+            used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
+            remaining_wallet_balance = wallet.balance_cents - used_amount
+            next if remaining_wallet_balance <= 0
+
+            transaction_amount = [remaining_amount, remaining_wallet_balance].min
+            next if transaction_amount <= 0
+
+            ordered_remaining_amounts[fee_key] -= transaction_amount
+            wallet_fee_transactions << {
+              fee_key: fee_key,
+              amount_cents: transaction_amount
+            }
+          end
+
+          total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
+          next if total_amount_cents <= 0
+
+          wallet_transaction = create_wallet_transaction(wallet, total_amount_cents)
+          amount_cents = wallet_transaction.amount_cents
+
+          with_optimistic_lock_retry(wallet) do
+            Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:, skip_refresh: true)
+          end
+
+          result.wallet_transactions << wallet_transaction
+          result.prepaid_credit_amount_cents += amount_cents
+          invoice.prepaid_credit_amount_cents += amount_cents
         end
+
+        Customers::RefreshWalletsService.call(customer:, include_generating_invoices: true)
+        invoice.save! if invoice.changed?
       end
 
-      result.prepaid_credit_amount_cents = amount_cents
-      invoice.prepaid_credit_amount_cents += amount_cents
-
-      SendWebhookJob.perform_after_commit("wallet_transaction.created", result.wallet_transaction)
-
+      schedule_webhook_notifications(result.wallet_transactions)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -47,11 +79,40 @@ module Credits
 
     private
 
-    attr_accessor :invoice, :wallet, :max_wallet_decrease_attempts
+    attr_accessor :invoice, :wallets, :max_wallet_decrease_attempts
 
-    delegate :balance_cents, to: :wallet
+    delegate :customer, to: :invoice
 
-    def create_wallet_transaction(amount_cents)
+    def schedule_webhook_notifications(wallet_transactions)
+      wallet_transactions.each do |wt|
+        Utils::ActivityLog.produce_after_commit(wt, "wallet_transaction.created")
+        SendWebhookJob.perform_after_commit("wallet_transaction.created", wt)
+      end
+    end
+
+    def calculate_amounts_for_fees_by_type_and_bm
+      remaining = Hash.new(0)
+
+      invoice.fees.includes(:charge).find_each do |fee|
+        cap = fee.sub_total_excluding_taxes_amount_cents +
+          fee.taxes_precise_amount_cents -
+          fee.precise_credit_notes_amount_cents
+
+        next if cap <= 0
+        key = [fee.fee_type, fee.charge&.billable_metric_id]
+        remaining[key] += cap
+      end
+
+      remaining.sort_by { |_, v| -v }.to_h
+    end
+
+    def wallets_already_applied?
+      return false unless invoice
+
+      WalletTransaction.exists?(invoice_id: invoice.id, wallet_id: wallets.map(&:id))
+    end
+
+    def create_wallet_transaction(wallet, amount_cents)
       wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
 
       result = WalletTransactions::CreateService.call!(
@@ -82,45 +143,12 @@ module Credits
       end
     end
 
-    def already_applied?
-      invoice&.wallet_transactions&.exists?
-    end
+    def applicable_fee?(fee_key:, targets:, types:)
+      target_match = targets.include?(fee_key)
+      type_match = types.include?(fee_key.first)
+      unrestricted_wallet = targets.empty? && types.empty?
 
-    def compute_amount
-      if wallet.limited_to_billable_metrics? && billable_metric_limited_fees
-        bm_limited_fees = billable_metric_limited_fees
-        remaining_fees = invoice.fees - bm_limited_fees
-        remaining_fees = remaining_fees.reject { |fee| fee.fee_type == "charge" }
-      else
-        bm_limited_fees = []
-        remaining_fees = invoice.fees
-      end
-
-      fee_type_limited_fees = if wallet.limited_fee_types?
-        remaining_fees.filter { |fee| wallet.allowed_fee_types.include?(fee.fee_type) }
-      elsif wallet.limited_to_billable_metrics? && billable_metric_limited_fees
-        []
-      else
-        remaining_fees
-      end
-
-      if wallet.limited_fee_types? || wallet.limited_to_billable_metrics?
-        [balance_cents, limited_fees_total(bm_limited_fees + fee_type_limited_fees)].min
-      else
-        [balance_cents, invoice.total_amount_cents].min
-      end
-    end
-
-    def billable_metric_limited_fees
-      @billable_metric_limited_fees ||= invoice.fees
-        .joins(charge: :billable_metric)
-        .where(billable_metric: {id: wallet.wallet_targets.pluck(:billable_metric_id)})
-    end
-
-    def limited_fees_total(applicable_fees)
-      applicable_fees.sum do |f|
-        f.sub_total_excluding_taxes_precise_amount_cents + f.taxes_precise_amount_cents - f.precise_credit_notes_amount_cents
-      end
+      target_match || type_match || unrestricted_wallet
     end
   end
 end

@@ -150,6 +150,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         perform_finalize_refresh
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("finalized")
+        # recalculate_wallet_balances
         wallet.reload
         expect(wallet.credits_balance).to eq 4
         expect(wallet.balance_cents).to eq 400

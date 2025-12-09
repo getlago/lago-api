@@ -3,9 +3,10 @@
 module Wallets
   module Balance
     class RefreshOngoingUsageService < BaseService
-      def initialize(wallet:, usage_amount_cents:)
+      def initialize(wallet:, usage_amount_cents:, allocation_rules:)
         @wallet = wallet
         @usage_amount_cents = usage_amount_cents
+        @allocation_rules = allocation_rules
 
         super
       end
@@ -27,7 +28,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents
+      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents, :allocation_rules
 
       delegate :customer, to: :wallet
 
@@ -71,18 +72,31 @@ module Wallets
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
+      def assign_wallet_per_fee(fees)
+        fee_wallet = {}
+
+        fees.each do |fee|
+          key = fee.id || fee.object_id
+
+          applicable_wallets = Wallets::FindApplicableOnFeesService
+            .call!(allocation_rules:, fee:)
+            .top_priority_wallet
+
+          fee_wallet[key] = applicable_wallets.presence
+        end
+
+        fee_wallet
+      end
+
       def calculate_total_usage_with_limitation
-        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } unless wallet.limited_to_billable_metrics?
-
-        # current usage fees are not persisted so we can't use join
         all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
-        charge_ids = Charge.where(id: all_fees.map(&:charge_id)).where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
+        return 0 if all_fees.empty?
 
-        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } if charge_ids.empty?
+        wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
 
-        all_fees
-          .select { |f| charge_ids.include?(f.charge_id) }
-          .sum { |f| f.amount_cents + f.taxes_amount_cents }
+        all_fees.sum do |f|
+          (wallets_applicable_on_fees[(f.id || f.object_id)] == wallet.id) ? (f.amount_cents + f.taxes_amount_cents) : 0
+        end
       end
     end
   end
