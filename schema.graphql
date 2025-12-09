@@ -932,6 +932,16 @@ enum BillingTimeEnum {
   calendar
 }
 
+type BraintreeProvider {
+  code: String!
+  id: ID!
+  merchantId: String
+  name: String!
+  privateKey: ObfuscatedString
+  publicKey: ObfuscatedString
+  successRedirectUrl: String
+}
+
 type CashfreeProvider {
   clientId: String
   clientSecret: String
@@ -8156,7 +8166,7 @@ enum PaymentMethodTypeEnum {
   provider
 }
 
-union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
+union PaymentProvider = AdyenProvider | BraintreeProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
 PaymentProviderCollection type
@@ -8671,6 +8681,7 @@ enum ProviderPaymentMethodsEnum {
 
 enum ProviderTypeEnum {
   adyen
+  braintree
   cashfree
   flutterwave
   gocardless
