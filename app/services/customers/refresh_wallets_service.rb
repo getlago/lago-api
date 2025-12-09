@@ -36,7 +36,6 @@ module Customers
         )
       end
 
-      byebug
       result.usage_amount_cents = usage_amount_cents
       result.allocation_rules = allocation_rules
       result.wallets = customer.wallets.active.reload
