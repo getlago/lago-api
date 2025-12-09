@@ -398,7 +398,16 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
     let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
-    before { [charge, usage_threshold, usage_threshold2, usage_threshold3, tax] }
+    before do
+      [
+        charge,
+        usage_threshold,
+        usage_threshold2,
+        usage_threshold3,
+        tax,
+        another_charge
+      ]
+    end
 
     it "recalculates wallet's balance" do
       # Create a wallet with 1000$
