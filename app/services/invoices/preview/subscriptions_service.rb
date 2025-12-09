@@ -74,7 +74,19 @@ module Invoices
       end
 
       def customer_subscriptions
-        @customer_subscriptions ||= customer
+        return @customer_subscriptions if defined?(@customer_subscriptions)
+
+        if external_ids.size == 1
+          subs = customer.subscriptions.where(external_id: external_ids)
+
+          if subs.count == 1 && subscription_starting_in_future?(subs.first)
+            @customer_subscriptions = subs
+
+            return @customer_subscriptions
+          end
+        end
+
+        @customer_subscriptions = customer
           .subscriptions
           .active
           .where(external_id: external_ids)
@@ -110,6 +122,14 @@ module Invoices
           .end_of_period + 1.day
 
         subscription.ending_at.in_time_zone(customer.applicable_timezone) <= next_billing_day
+      end
+
+      def subscription_starting_in_future?(subscription)
+        return false unless subscription&.subscription_at
+        return false unless subscription&.pending?
+        return false unless subscription&.previous_subscription.nil?
+
+        subscription.subscription_at > Time.current
       end
     end
   end

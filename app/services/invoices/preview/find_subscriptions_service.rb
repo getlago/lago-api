@@ -21,6 +21,16 @@ module Invoices
               sub,
               (sub.next_subscription if sub.next_subscription.plan.pay_in_advance?)
             ].compact
+          elsif subscriptions.size == 1 && subscription.pending?
+            duplicate = subscription.dup
+
+            duplicate.assign_attributes(
+              status: :active,
+              started_at: subscription.subscription_at,
+              created_at: subscription.subscription_at
+            )
+
+            duplicate
           else
             subscription
           end

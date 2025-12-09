@@ -239,6 +239,89 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
             end
           end
         end
+
+        context "when subscription is pending" do
+          let(:pending_subscription) do
+            create(
+              :subscription,
+              customer:,
+              status: :pending,
+              subscription_at:
+            )
+          end
+          let(:external_ids) { [pending_subscription.external_id] }
+          let(:params) do
+            {
+              subscriptions: {
+                external_ids:
+              }
+            }
+          end
+
+          context "when subscription is starting in the future" do
+            let(:subscription_at) { Time.current + 2.days }
+
+            it "returns pending subscription for preview" do
+              expect(result).to be_success
+              expect(subject.first).to have_attributes(
+                status: "active",
+                plan_id: pending_subscription.plan_id,
+                subscription_at: pending_subscription.subscription_at,
+                billing_time: pending_subscription.billing_time,
+                customer_id: pending_subscription.customer_id,
+                external_id: pending_subscription.external_id
+              )
+              expect(subject.first.subscription_at.to_i).to eq(subscription_at.to_i)
+            end
+          end
+
+          context "when subscription is not starting in the future" do
+            let(:subscription_at) { Time.current - 1.day }
+
+            it "fails with subscription not found error" do
+              expect(result).to be_failure
+              expect(result.error.error_code).to eq("subscription_not_found")
+            end
+          end
+
+          context "when subscription_at is exactly now" do
+            let(:subscription_at) { Time.current }
+
+            it "fails with subscription not found error" do
+              expect(result).to be_failure
+              expect(result.error.error_code).to eq("subscription_not_found")
+            end
+          end
+
+          context "when multiple pending subscriptions with same external_id exist" do
+            let(:subscription_at) { Time.current + 2.days }
+            let(:external_id) { SecureRandom.uuid }
+
+            before do
+              create(
+                :subscription,
+                customer:,
+                external_id:,
+                status: :pending,
+                subscription_at: Time.current + 2.days
+              )
+              create(
+                :subscription,
+                customer:,
+                external_id:,
+                status: :pending,
+                subscription_at: Time.current + 3.days
+              )
+            end
+
+            let(:external_ids) { [external_id] }
+
+            it "fails with subscription not found error when count is not 1" do
+              expect(result).to be_failure
+              expect(result.error.error_code).to eq("subscription_not_found")
+            end
+          end
+        end
       end
 
       context "when external_ids are not provided" do

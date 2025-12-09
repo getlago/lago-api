@@ -1047,6 +1047,144 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with pending subscription starting in the future" do
+        let(:customer) { create(:customer, organization:, billing_entity:) }
+        let(:timestamp) { Time.zone.parse("15 Mar 2024") }
+        let(:future_start) { Time.zone.parse("1 Apr 2024") }
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: false) }
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            pay_in_advance: false,
+            invoiceable: true,
+            properties: {amount: "10"}
+          )
+        end
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            status: :active,
+            subscription_at: future_start,
+            started_at: future_start,
+            billing_time: "calendar",
+            created_at: future_start
+          )
+        end
+        let(:subscriptions) { [subscription] }
+
+        before do
+          charge
+          organization.update!(premium_integrations: ["preview"])
+        end
+
+        it "creates preview invoice for pending subscription with subscription fee only" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.organization).to eq(organization)
+            expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+            expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+            expect(result.invoice.invoice_type).to eq("subscription")
+            expect(result.invoice.issuing_date.to_s).to eq("2024-05-01")
+
+            subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+            expect(subscription_fee).to be_present
+            expect(subscription_fee.amount_cents).to eq(1000)
+            expect(subscription_fee.units).to eq(1.0)
+
+            charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+            expect(charge_fees).to be_empty
+
+            expect(result.invoice.fees_amount_cents).to eq(1000)
+            expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+            expect(result.invoice.taxes_amount_cents).to eq(500)
+            expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+            expect(result.invoice.total_amount_cents).to eq(1500)
+          end
+        end
+
+        context "with in advance billing in the future" do
+          let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: true) }
+
+          it "creates preview invoice for pending subscription with subscription fee only" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+              expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+
+              subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+              expect(subscription_fee).to be_present
+              expect(subscription_fee.amount_cents).to eq(1000)
+              expect(subscription_fee.units).to eq(1.0)
+
+              charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+              expect(charge_fees).to be_empty
+
+              expect(result.invoice.fees_amount_cents).to eq(1000)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+              expect(result.invoice.taxes_amount_cents).to eq(500)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+              expect(result.invoice.total_amount_cents).to eq(1500)
+            end
+          end
+        end
+
+        context "with in advance billing in the future and anniversary interval" do
+          let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: true) }
+          let(:future_start) { Time.zone.parse("8 Apr 2024") }
+          let(:subscription) do
+            build(
+              :subscription,
+              customer:,
+              plan:,
+              status: :active,
+              subscription_at: future_start,
+              started_at: future_start,
+              billing_time: "anniversary",
+              created_at: future_start
+            )
+          end
+
+          it "creates preview invoice for pending subscription with subscription fee only" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+              expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-08")
+
+              subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+              expect(subscription_fee).to be_present
+              expect(subscription_fee.amount_cents).to eq(1000)
+              expect(subscription_fee.units).to eq(1.0)
+
+              charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+              expect(charge_fees).to be_empty
+
+              expect(result.invoice.fees_amount_cents).to eq(1000)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+              expect(result.invoice.taxes_amount_cents).to eq(500)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+              expect(result.invoice.total_amount_cents).to eq(1500)
+            end
+          end
+        end
+      end
+
       context "with issuing date preferences" do
         let(:customer) do
           create(

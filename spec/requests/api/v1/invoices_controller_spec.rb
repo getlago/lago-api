@@ -897,6 +897,27 @@ RSpec.describe Api::V1::InvoicesController do
       )
     end
 
+    context "with exact time" do
+      let(:timestamp) { Time.zone.parse("15 Mar 2024") }
+
+      it "creates a preview invoice" do
+        travel_to(timestamp) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            billing_entity_code: organization.default_billing_entity.code,
+            invoice_type: "subscription",
+            issuing_date: "2024-04-15",
+            fees_amount_cents: 100,
+            taxes_amount_cents: 20,
+            total_amount_cents: 120,
+            currency: "EUR"
+          )
+        end
+      end
+    end
+
     context "when sending billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
@@ -977,6 +998,44 @@ RSpec.describe Api::V1::InvoicesController do
           total_amount_cents: 240,
           currency: "EUR"
         )
+      end
+
+      context "with exact time" do
+        let(:timestamp) { Time.zone.parse("15 Mar 2024") }
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            billing_time: "anniversary",
+            subscription_at: timestamp - 1.month - 5.days,
+            started_at: timestamp - 1.month - 5.days
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            billing_time: "anniversary",
+            subscription_at: timestamp - 1.month - 5.days,
+            started_at: timestamp - 1.month - 5.days
+          )
+        end
+
+        it "creates a preview invoice" do
+          travel_to(timestamp) do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:invoice]).to include(
+              invoice_type: "subscription",
+              issuing_date: "2024-04-10",
+              fees_amount_cents: 200,
+              taxes_amount_cents: 40,
+              total_amount_cents: 240,
+              currency: "EUR"
+            )
+          end
+        end
       end
     end
 
@@ -1073,6 +1132,99 @@ RSpec.describe Api::V1::InvoicesController do
         subject
         expect(response).to have_http_status(:bad_request)
         expect(json[:error]).to eq "subscriptions_must_be_an_object"
+      end
+    end
+
+    context "with pending subscription starting in the future" do
+      let(:timestamp) { Time.zone.parse("15 Mar 2024") }
+      let(:future_start) { Time.zone.parse("1 Apr 2024") }
+      let(:customer) { create(:customer, organization:, external_id: "pending_customer") }
+      let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false) }
+      let(:pending_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          status: :pending,
+          subscription_at: future_start,
+          billing_time: "calendar"
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {
+            external_id: customer.external_id
+          },
+          subscriptions: {
+            external_ids: [pending_subscription.external_id]
+          }
+        }
+      end
+
+      before { pending_subscription }
+
+      it "creates preview invoice for pending subscription with arrears billing" do
+        travel_to(timestamp) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            invoice_type: "subscription",
+            issuing_date: "2024-05-01",
+            fees_amount_cents: 100,
+            taxes_amount_cents: 20,
+            total_amount_cents: 120
+          )
+        end
+      end
+
+      context "with in advance billing" do
+        let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+
+        it "creates preview invoice for pending subscription" do
+          travel_to(timestamp) do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:invoice]).to include(
+              invoice_type: "subscription",
+              issuing_date: "2024-04-01",
+              fees_amount_cents: 100,
+              taxes_amount_cents: 20,
+              total_amount_cents: 120
+            )
+          end
+        end
+      end
+
+      context "with anniversary billing" do
+        let(:future_start) { Time.zone.parse("8 Apr 2024") }
+        let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            status: :pending,
+            subscription_at: future_start,
+            billing_time: "anniversary"
+          )
+        end
+
+        it "creates preview invoice for pending subscription" do
+          travel_to(timestamp) do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:invoice]).to include(
+              invoice_type: "subscription",
+              issuing_date: "2024-04-08",
+              fees_amount_cents: 100,
+              taxes_amount_cents: 20,
+              total_amount_cents: 120
+            )
+          end
+        end
       end
     end
   end
