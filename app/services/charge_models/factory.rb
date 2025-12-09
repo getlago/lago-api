@@ -28,6 +28,10 @@ module ChargeModels
       end
     end
 
+    # The has_aggregator param determines whether to use prorated charge models.
+    # When forecasting (no aggregator available), prorated graduated charges fall back to
+    # the non-prorated GraduatedService since per-event aggregation data is not available.
+    # This allows forecasting to work for all charge types without failing on nil aggregator.
     def self.charge_model_class(chargeable:, has_aggregator: true)
       case chargeable.charge_model.to_sym
       when :standard

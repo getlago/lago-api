@@ -44,6 +44,12 @@ RSpec.describe ChargeModels::Factory do
 
           it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
         end
+
+        context "when charge is prorated, but we are forecasting amounts" do
+          let(:charge) { build(:graduated_charge, prorated: true) }
+
+          it { expect(result).to be_a(ChargeModels::GraduatedService) }
+        end
       end
 
       context "with graduated_percentage charge model" do
