@@ -77,7 +77,7 @@ module Wallets
         fees = draft_invoices_fees
 
         fees.sum do |fee|
-          fee.amount_cents + fee.taxes_amount_cents
+          fee.amount_cents + fee.taxes_amount_cents - fee.precise_coupons_amount_cents
         end
       end
 
