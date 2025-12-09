@@ -25,6 +25,10 @@ module Webhooks
       current_organization.webhook_endpoints.each do |webhook_endpoint|
         webhook = create_webhook(webhook_endpoint, payload)
         SendHttpWebhookJob.perform_later(webhook)
+      rescue ActiveRecord::InvalidForeignKey
+        # The webhook endpoint was deleted while the transaction was in progress
+        Rails.logger.error("SendWebhookJob failed for deleted webhook endpoint #{webhook_endpoint.id}")
+        next
       end
     end
 
