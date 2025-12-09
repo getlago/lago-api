@@ -40,6 +40,7 @@ RSpec.describe ChargeModels::Factory do
 
         context "when charge is prorated" do
           let(:charge) { build(:graduated_charge, prorated: true) }
+          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregator = [BaseService::Result.new] } }
 
           it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
         end
