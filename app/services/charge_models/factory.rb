@@ -5,7 +5,11 @@ module ChargeModels
     def self.new_instance(chargeable:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
       raise NotImplementedError, "Chargeable: #{chargeable.class.name} is not implemented" unless chargeable.is_a?(Charge) || chargeable.is_a?(FixedCharge)
 
-      charge_model_class = charge_model_class(chargeable:)
+      charge_model_class = charge_model_class(
+        chargeable: chargeable,
+        has_aggregator: aggregation_result.respond_to?(:aggregator) && !aggregation_result.aggregator.nil?
+      )
+
       common_args = {
         charge: chargeable,
         aggregation_result:,
@@ -24,12 +28,16 @@ module ChargeModels
       end
     end
 
-    def self.charge_model_class(chargeable:)
+    # The has_aggregator param determines whether to use prorated charge models.
+    # When forecasting (no aggregator available), prorated graduated charges fall back to
+    # the non-prorated GraduatedService since per-event aggregation data is not available.
+    # This allows forecasting to work for all charge types without failing on nil aggregator.
+    def self.charge_model_class(chargeable:, has_aggregator: true)
       case chargeable.charge_model.to_sym
       when :standard
         ChargeModels::StandardService
       when :graduated
-        if chargeable.prorated?
+        if chargeable.prorated? && has_aggregator
           ChargeModels::ProratedGraduatedService
         else
           ChargeModels::GraduatedService

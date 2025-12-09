@@ -40,8 +40,15 @@ RSpec.describe ChargeModels::Factory do
 
         context "when charge is prorated" do
           let(:charge) { build(:graduated_charge, prorated: true) }
+          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregator = [BaseService::Result.new] } }
 
           it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
+        end
+
+        context "when charge is prorated, but we are forecasting amounts" do
+          let(:charge) { build(:graduated_charge, prorated: true) }
+
+          it { expect(result).to be_a(ChargeModels::GraduatedService) }
         end
       end
 
