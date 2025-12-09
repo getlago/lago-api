@@ -126,7 +126,7 @@ module Customers
 
       result.customer = customer.reload
 
-      IntegrationCustomers::CreateOrUpdateService.call(
+      IntegrationCustomers::CreateOrUpdateBatchService.call(
         integration_customers: params[:integration_customers],
         customer: result.customer,
         new_customer:
