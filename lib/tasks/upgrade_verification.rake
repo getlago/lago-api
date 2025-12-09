@@ -16,7 +16,7 @@ namespace :upgrade do
     Customer
       .joins(:wallets)
       .where(wallets: {status: :active, ready_to_be_refreshed: true})
-      .update_all(awaiting_wallet_refresh: false) # rubocop:disable Rails/SkipsModelValidations
+      .update_all(awaiting_wallet_refresh: true) # rubocop:disable Rails/SkipsModelValidations
 
     puts "\n#### All good, ready to Upgrade! ✅ ####"
   end

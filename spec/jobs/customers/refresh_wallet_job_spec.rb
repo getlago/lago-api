@@ -11,8 +11,6 @@ RSpec.describe Customers::RefreshWalletJob do
     let(:result) { BaseService::Result.new }
 
     before do
-      create(:wallet, customer:, organization:)
-
       allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
