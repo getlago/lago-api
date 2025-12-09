@@ -101,6 +101,7 @@ FactoryBot.define do
       flow_id { SecureRandom.uuid[0..19] }
     end
   end
+
   factory :flutterwave_provider, class: "PaymentProviders::FlutterwaveProvider" do
     organization
     type { "PaymentProviders::FlutterwaveProvider" }
@@ -118,6 +119,20 @@ FactoryBot.define do
       secret_key { "FLWSECK-#{SecureRandom.uuid}" }
       success_redirect_url { Faker::Internet.url }
       webhook_secret { SecureRandom.hex(32) }
+    end
+  end
+
+  factory :braintree_provider, class: "PaymentProviders::BraintreeProvider" do
+    organization
+    type { "PaymentProviders::BraintreeProvider" }
+    name { "Braintree" }
+    code { "braintree_#{SecureRandom.uuid}" }
+    secrets do
+      {public_key:, private_key:}.to_json
+    end
+
+    settings do
+      {merchant_id:, success_redirect_url:}
     end
   end
 end

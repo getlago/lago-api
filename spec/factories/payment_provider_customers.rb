@@ -36,11 +36,20 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+
   factory :flutterwave_customer, class: "PaymentProviderCustomers::FlutterwaveCustomer" do
     customer
     organization { customer.organization }
     payment_provider { association(:flutterwave_provider, organization: organization) }
 
     provider_customer_id { SecureRandom.uuid }
+  end
+
+  factory :braintree_customer, class: "PaymentProviderCustomers::BraintreeCustomer" do
+    customer
+    organization { customer.organization }
+    payment_provider { association(:braintree_provider, organization: organization) }
+    provider_customer_id { SecureRandom.uuid }
+    provider_payment_methods { %w[credit_card paypal] }
   end
 end

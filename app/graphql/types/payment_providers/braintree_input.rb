@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class BraintreeInput < BaseInputObject
-      descripion "Braintree input arguments"
+      description "Braintree input arguments"
 
       argument :code, String, required: true
       argument :merchant_id, String, required: true
