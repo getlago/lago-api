@@ -159,12 +159,13 @@ RSpec.describe Invoices::CreateGeneratingService do
           :customer,
           subscription_invoice_issuing_date_anchor:,
           subscription_invoice_issuing_date_adjustment:,
-          invoice_grace_period: 3
+          invoice_grace_period:
         )
       end
 
       let(:invoice_type) { :subscription }
       let(:invoicing_reason) { "subscription_periodic" }
+      let(:invoice_grace_period) { 3 }
 
       context "with current_period_end + keep_anchor" do
         let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
@@ -175,6 +176,17 @@ RSpec.describe Invoices::CreateGeneratingService do
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
           expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
+        end
+
+        context "with no invoice_grace_period" do
+          let(:invoice_grace_period) { 0 }
+
+          it "sets issuing_date to the current billing period end date" do
+            result = create_service.call
+
+            expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+            expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
+          end
         end
       end
 
@@ -188,6 +200,17 @@ RSpec.describe Invoices::CreateGeneratingService do
           expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
           expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
+
+        context "with no invoice_grace_period" do
+          let(:invoice_grace_period) { 0 }
+
+          it "sets issuing_date to the current billing period end date" do
+            result = create_service.call
+
+            expect(result.invoice.issuing_date).to eq(datetime.to_date - 1.day)
+            expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
+          end
+        end
       end
 
       context "with next_period_start + keep_anchor" do
@@ -200,6 +223,17 @@ RSpec.describe Invoices::CreateGeneratingService do
           expect(result.invoice.issuing_date).to eq(datetime.to_date)
           expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
+
+        context "with no invoice_grace_period" do
+          let(:invoice_grace_period) { 0 }
+
+          it "sets issuing_date to the next billing period start date" do
+            result = create_service.call
+
+            expect(result.invoice.issuing_date).to eq(datetime.to_date)
+            expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
+          end
+        end
       end
 
       context "with next_period_start + align_with_finalization_date" do
@@ -211,6 +245,17 @@ RSpec.describe Invoices::CreateGeneratingService do
 
           expect(result.invoice.issuing_date).to eq(datetime.to_date + 3.days)
           expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
+        end
+
+        context "with no invoice_grace_period" do
+          let(:invoice_grace_period) { 0 }
+
+          it "sets issuing_date to the next billing period start date" do
+            result = create_service.call
+
+            expect(result.invoice.issuing_date).to eq(datetime.to_date)
+            expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
+          end
         end
       end
 
