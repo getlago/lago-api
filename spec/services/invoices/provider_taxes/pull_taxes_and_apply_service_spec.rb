@@ -152,15 +152,50 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           .to change(invoice.error_details.tax_error, :count).from(1).to(0)
       end
 
-      it "updates the issuing date and payment due date" do
-        invoice.customer.update(timezone: "America/New_York")
+      context "with a non-recurring invoice" do
+        let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment: "keep_anchor") }
 
-        freeze_time do
-          current_date = Time.current.in_time_zone("America/New_York").to_date
+        it "updates the issuing date and payment due date" do
+          invoice.customer.update(timezone: "America/New_York")
 
-          expect { pull_taxes_service.call }
-            .to change { invoice.reload.issuing_date }.to(current_date)
-            .and change { invoice.reload.payment_due_date }.to(current_date)
+          freeze_time do
+            current_date = Time.current.in_time_zone("America/New_York").to_date
+
+            expect { pull_taxes_service.call }
+              .to change { invoice.reload.issuing_date }.to(current_date)
+              .and change { invoice.reload.payment_due_date }.to(current_date)
+          end
+        end
+      end
+
+      context "with a recurring invoice" do
+        let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment:) }
+
+        before do
+          invoice.invoice_subscriptions.first.update(recurring: true)
+          invoice.customer.update(timezone: "America/New_York")
+        end
+
+        context "with issuing date adjustment set to keep_anchor" do
+          let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+          it "does not update the issuing date" do
+            expect { pull_taxes_service.call }.not_to change { invoice.reload.issuing_date }
+          end
+        end
+
+        context "with issuing date adjustment set to align_with_finalization_date" do
+          let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+          it "updates the issuing date and payment due date" do
+            freeze_time do
+              current_date = Time.current.in_time_zone("America/New_York").to_date
+
+              expect { pull_taxes_service.call }
+                .to change { invoice.reload.issuing_date }.to(current_date)
+                .and change { invoice.reload.payment_due_date }.to(current_date)
+            end
+          end
         end
       end
 

@@ -115,7 +115,17 @@ module Invoices
       end
 
       def issuing_date
-        @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
+        @issuing_date ||=
+          if issuing_date_keep_anchor?
+            invoice.issuing_date
+          else
+            Time.current.in_time_zone(customer.applicable_timezone).to_date
+          end
+      end
+
+      def issuing_date_keep_anchor?
+        invoice.invoice_subscriptions.first&.recurring? &&
+          customer.applicable_subscription_invoice_issuing_date_adjustment == "keep_anchor"
       end
 
       def payment_due_date

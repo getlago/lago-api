@@ -10653,10 +10653,10 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20251201084648'),
 ('20251204142205'),
 ('20251202141759'),
 ('20251201094057'),
+('20251201084648'),
 ('20251128102055'),
 ('20251127145819'),
 ('20251127123135'),
