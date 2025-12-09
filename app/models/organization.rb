@@ -73,6 +73,7 @@ class Organization < ApplicationRecord
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
   has_many :cashfree_payment_providers, class_name: "PaymentProviders::CashfreeProvider"
   has_many :adyen_payment_providers, class_name: "PaymentProviders::AdyenProvider"
+  has_many :braintree_payment_providers, class_name: "PaymentProviders::BraintreeProvider"
 
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"

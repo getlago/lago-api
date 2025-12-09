@@ -10,7 +10,8 @@ module Types
         Types::PaymentProviders::Stripe,
         Types::PaymentProviders::Cashfree,
         Types::PaymentProviders::Flutterwave,
-        Types::PaymentProviders::Moneyhash
+        Types::PaymentProviders::Moneyhash,
+        Types::PaymentProviders::Braintree
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -26,6 +27,8 @@ module Types
           Types::PaymentProviders::Flutterwave
         when "PaymentProviders::MoneyhashProvider"
           Types::PaymentProviders::Moneyhash
+        when "PaymentProviders::BraintreeProvider"
+          Types::PaymentProviders::Braintree
         else
           raise "Unexpected Payment provider type: #{object.inspect}"
         end
