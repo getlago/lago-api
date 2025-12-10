@@ -16,6 +16,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
   let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
+  let(:billable_metric3) { create(:billable_metric, aggregation_type: "count_agg") }
 
   let(:first_charge) do
     create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"})
@@ -40,7 +41,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
   let(:wallet) { create(:wallet, wallet_attrs) }
   let(:wallet2) { create(:wallet, wallet_attrs) }
-
   let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
   let(:wallet_target2) { create(:wallet_target, wallet: wallet2, billable_metric: billable_metric2) }
 
@@ -59,6 +59,15 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         subscription:,
         customer:,
         code: billable_metric2.code,
+        timestamp:
+      )
+    ).push(
+      create(
+        :event,
+        organization:,
+        subscription:,
+        customer:,
+        code: billable_metric3.code,
         timestamp:
       )
     )
@@ -184,8 +193,8 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # wallet 1
       # 1000 - 3000(from events) = -2000 #untouched
       # wallet 2
-      # 1000 - 500(from event) - 110(from draft invoice) = 390
-      # = 400 # progressive billing invoice
+      # 1000 - 500(from event) - 110(from draft invoice) + 70 (already paid)
+      # = 540 # progressive billing invoice
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
         expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
