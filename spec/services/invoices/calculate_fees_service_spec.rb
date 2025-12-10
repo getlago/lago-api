@@ -2465,7 +2465,7 @@ RSpec.describe Invoices::CalculateFeesService do
       end
     end
 
-    # it is very dangerous! consider moving to a separate PR
+    # TODO: this should not be the case when we merge everything, as we're going to bill this case differently
     context "when subscription that is started" do
       let(:subscription) { create(:subscription, plan:, started_at:, customer:) }
       let(:date_service) do
