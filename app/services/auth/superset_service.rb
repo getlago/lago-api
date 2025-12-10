@@ -267,7 +267,7 @@ module Auth
         response = http_client.request(request)
         store_cookies(response)
         response
-      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout => e
+      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout
         retry if attempt < max_retries
         raise
       end
@@ -299,15 +299,15 @@ module Auth
 
     def ensure_superset_configured
       missing_vars = []
-      missing_vars << "SUPERSET_URL" unless ENV["SUPERSET_URL"].present?
-      missing_vars << "SUPERSET_USERNAME" unless ENV["SUPERSET_USERNAME"].present?
-      missing_vars << "SUPERSET_PASSWORD" unless ENV["SUPERSET_PASSWORD"].present?
+      missing_vars << "SUPERSET_URL" if ENV["SUPERSET_URL"].blank?
+      missing_vars << "SUPERSET_USERNAME" if ENV["SUPERSET_USERNAME"].blank?
+      missing_vars << "SUPERSET_PASSWORD" if ENV["SUPERSET_PASSWORD"].blank?
 
       return if missing_vars.empty?
 
       result.service_failure!(
         code: "superset_missing_configuration",
-        message: "Superset configuration is incomplete. Missing: #{missing_vars.join(', ')}"
+        message: "Superset configuration is incomplete. Missing: #{missing_vars.join(", ")}"
       )
     end
 
