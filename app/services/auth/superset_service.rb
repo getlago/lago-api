@@ -14,6 +14,9 @@ module Auth
     end
 
     def call
+      ensure_superset_configured
+      return result unless result.success?
+
       # Step 1: Get CSRF token (unauthenticated)
       csrf_result = get_csrf_token
       return result unless csrf_result[:success]
@@ -48,9 +51,13 @@ module Auth
       result.dashboards = processed_dashboards
       result
     rescue URI::InvalidURIError => e
-      result.service_failure!(code: "invalid_superset_url", message: "Invalid Superset URL: #{e.message}")
+      result.service_failure!(code: "superset_invalid_url", message: "Invalid Superset URL: #{e.message}")
+    rescue Net::OpenTimeout, Net::ReadTimeout => e
+      result.service_failure!(code: "superset_timeout", message: "Superset request timed out: #{e.message}")
+    rescue JSON::ParserError => e
+      result.service_failure!(code: "superset_invalid_response", message: "Invalid JSON response from Superset: #{e.message}")
     rescue => e
-      result.service_failure!(code: "superset_auth_error", message: "Superset authentication failed: #{e.message}")
+      result.service_failure!(code: "superset_error", message: "Superset operation failed: #{e.message}")
     end
 
     private
@@ -74,11 +81,10 @@ module Auth
       })
       request.body = form_data
 
-      response = http.request(request)
-      store_cookies(response)
+      response = http_request_with_retry(request, http)
 
       unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
-        result.service_failure!(code: "login_failed", message: "Failed to login to Superset: #{response.code} #{response.message}")
+        result.service_failure!(code: "superset_login_failed", message: "Failed to login to Superset: #{response.code} #{response.message}")
         return {success: false}
       end
 
@@ -95,11 +101,10 @@ module Auth
       request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
-      response = http.request(request)
-      store_cookies(response)
+      response = http_request_with_retry(request, http)
 
       unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "csrf_failed", message: "Failed to get CSRF token: #{response.body}")
+        result.service_failure!(code: "superset_csrf_failed", message: "Failed to get CSRF token: #{response.body}")
         return {success: false}
       end
 
@@ -107,14 +112,11 @@ module Auth
       csrf_token = parsed_response["result"]
 
       unless csrf_token
-        result.service_failure!(code: "no_csrf_token", message: "No CSRF token received from Superset")
+        result.service_failure!(code: "superset_no_csrf_token", message: "No CSRF token received from Superset")
         return {success: false}
       end
 
       {success: true, csrf_token: csrf_token}
-    rescue JSON::ParserError => e
-      result.service_failure!(code: "invalid_response", message: "Invalid JSON response from Superset CSRF: #{e.message}")
-      {success: false}
     end
 
     def fetch_dashboards
@@ -128,10 +130,10 @@ module Auth
       request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
-      response = http.request(request)
+      response = http_request_with_retry(request, http)
 
       unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "fetch_dashboards_failed", message: "Failed to fetch dashboards: #{response.body}")
+        result.service_failure!(code: "superset_fetch_dashboards_failed", message: "Failed to fetch dashboards: #{response.body}")
         return {success: false}
       end
 
@@ -139,9 +141,6 @@ module Auth
       dashboards = parsed_response["result"] || []
 
       {success: true, dashboards: dashboards}
-    rescue JSON::ParserError => e
-      result.service_failure!(code: "invalid_response", message: "Invalid JSON response from Superset dashboards: #{e.message}")
-      {success: false}
     end
 
     def get_embedded_config(dashboard_id)
@@ -155,7 +154,7 @@ module Auth
       request["Referer"] = "#{superset_base_url}/"
       request["Cookie"] = cookies.join("; ")
 
-      response = http.request(request)
+      response = http_request_with_retry(request, http)
 
       if response.is_a?(Net::HTTPSuccess)
         parsed_response = JSON.parse(response.body)
@@ -182,7 +181,7 @@ module Auth
       body = {allowed_domains: []}
       request.body = body.to_json
 
-      response = http.request(request)
+      response = http_request_with_retry(request, http)
 
       return {success: false} unless response.is_a?(Net::HTTPSuccess)
 
@@ -227,7 +226,7 @@ module Auth
       }
       request.body = body.to_json
 
-      response = http.request(request)
+      response = http_request_with_retry(request, http)
 
       return {success: false} unless response.is_a?(Net::HTTPSuccess)
 
@@ -241,6 +240,10 @@ module Auth
       {success: false}
     end
 
+    # We use Net::HTTP directly instead of LagoHttpClient because Superset
+    # requires session-based authentication with cookie management across multiple
+    # requests. LagoHttpClient is designed for stateless API calls and doesn't
+    # provide cookie jar functionality or response object access for GET requests.
     def create_http_client(uri)
       http = Net::HTTP.new(uri.host, uri.port)
 
@@ -254,6 +257,20 @@ module Auth
       http.read_timeout = 30
       http.open_timeout = 30
       http
+    end
+
+    def http_request_with_retry(request, http_client, max_retries: 3)
+      attempt = 0
+
+      begin
+        attempt += 1
+        response = http_client.request(request)
+        store_cookies(response)
+        response
+      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout => e
+        retry if attempt < max_retries
+        raise
+      end
     end
 
     def store_cookies(response)
@@ -280,16 +297,30 @@ module Auth
       }
     end
 
+    def ensure_superset_configured
+      missing_vars = []
+      missing_vars << "SUPERSET_URL" unless ENV["SUPERSET_URL"].present?
+      missing_vars << "SUPERSET_USERNAME" unless ENV["SUPERSET_USERNAME"].present?
+      missing_vars << "SUPERSET_PASSWORD" unless ENV["SUPERSET_PASSWORD"].present?
+
+      return if missing_vars.empty?
+
+      result.service_failure!(
+        code: "superset_missing_configuration",
+        message: "Superset configuration is incomplete. Missing: #{missing_vars.join(', ')}"
+      )
+    end
+
     def superset_base_url
-      ENV["SUPERSET_URL"] || raise("SUPERSET_URL environment variable not set")
+      ENV["SUPERSET_URL"]
     end
 
     def superset_username
-      ENV["SUPERSET_USERNAME"] || raise("SUPERSET_USERNAME environment variable not set")
+      ENV["SUPERSET_USERNAME"]
     end
 
     def superset_password
-      ENV["SUPERSET_PASSWORD"] || raise("SUPERSET_PASSWORD environment variable not set")
+      ENV["SUPERSET_PASSWORD"]
     end
   end
 end

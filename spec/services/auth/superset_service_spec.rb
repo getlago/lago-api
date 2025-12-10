@@ -223,7 +223,7 @@ RSpec.describe Auth::SupersetService do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq("login_failed")
+        expect(result.error.code).to eq("superset_login_failed")
         expect(result.error.error_message).to include("Failed to login to Superset")
       end
     end
@@ -244,7 +244,7 @@ RSpec.describe Auth::SupersetService do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq("fetch_dashboards_failed")
+        expect(result.error.code).to eq("superset_fetch_dashboards_failed")
         expect(result.error.error_message).to include("Failed to fetch dashboards")
       end
     end
@@ -304,8 +304,9 @@ RSpec.describe Auth::SupersetService do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq("superset_auth_error")
-        expect(result.error.error_message).to include("SUPERSET_URL environment variable not set")
+        expect(result.error.code).to eq("superset_missing_configuration")
+        expect(result.error.error_message).to include("Superset configuration is incomplete")
+        expect(result.error.error_message).to include("SUPERSET_URL")
       end
     end
   end
