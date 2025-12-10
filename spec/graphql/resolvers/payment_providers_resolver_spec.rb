@@ -29,6 +29,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
               code
               __typename
             }
+            ... on BraintreeProvider {
+              id
+              code
+              __typename
+            }
           }
           metadata { currentPage, totalCount }
         }
@@ -42,12 +47,14 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
   let(:cashfree_provider) { create(:cashfree_provider, organization:) }
   let(:gocardless_provider) { create(:gocardless_provider, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
+  let(:braintree_provider) { create(:braintree_provider, organization:) }
 
   before do
     adyen_provider
     cashfree_provider
     gocardless_provider
     stripe_provider
+    braintree_provider
   end
 
   it_behaves_like "requires current user"
@@ -76,6 +83,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
                 __typename
               }
               ... on StripeProvider {
+                id
+                code
+                __typename
+              }
+              ... on BraintreeProvider {
                 id
                 code
                 __typename
@@ -133,6 +145,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
                 code
                 __typename
               }
+              ... on BraintreeProvider {
+                id
+                code
+                __typename
+              }
             }
             metadata { currentPage, totalCount }
           }
@@ -162,17 +179,21 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
       stripe_provider_result = payment_providers_response["collection"].find do |record|
         record["__typename"] == "StripeProvider"
       end
+      braintree_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "BraintreeProvider"
+      end
 
       aggregate_failures do
-        expect(payment_providers_response["collection"].count).to eq(4)
+        expect(payment_providers_response["collection"].count).to eq(5)
 
         expect(adyen_provider_result["id"]).to eq(adyen_provider.id)
         expect(cashfree_provider_result["id"]).to eq(cashfree_provider.id)
         expect(gocardless_provider_result["id"]).to eq(gocardless_provider.id)
         expect(stripe_provider_result["id"]).to eq(stripe_provider.id)
+        expect(braintree_provider_result["id"]).to eq(braintree_provider.id)
 
         expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
-        expect(payment_providers_response["metadata"]["totalCount"]).to eq(4)
+        expect(payment_providers_response["metadata"]["totalCount"]).to eq(5)
       end
     end
   end
@@ -196,6 +217,9 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
               ... on StripeProvider {
                 successRedirectUrl
               }
+              ... on BraintreeProvider {
+                merchantId
+              }
             }
             metadata { currentPage, totalCount }
           }
@@ -217,9 +241,10 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
         expect(cashfree_provider.client_secret).to be_a String
         expect(gocardless_provider.access_token).to be_a String
         expect(stripe_provider.success_redirect_url).to be_a String
+        expect(braintree_provider.merchant_id).to be_a String
 
         payment_providers_response = result["data"]["paymentProviders"]["collection"]
-        expect(payment_providers_response.map(&:values)).to contain_exactly([nil], [nil, nil], [nil], [nil])
+        expect(payment_providers_response.map(&:values)).to contain_exactly([nil], [nil, nil], [nil], [nil], [nil])
       end
     end
 
@@ -237,7 +262,8 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
           [adyen_provider.live_prefix],
           [cashfree_provider.client_id, cashfree_provider.client_secret],
           [true],
-          [stripe_provider.success_redirect_url]
+          [stripe_provider.success_redirect_url],
+          [braintree_provider.merchant_id]
         )
       end
     end

@@ -55,6 +55,7 @@ module Types
     field :update_add_on, mutation: Mutations::AddOns::Update
 
     field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Create
+    field :add_braintree_payment_provider, mutation: Mutations::PaymentProviders::Braintree::Create
     field :add_cashfree_payment_provider, mutation: Mutations::PaymentProviders::Cashfree::Create
     field :add_flutterwave_payment_provider, mutation: Mutations::PaymentProviders::Flutterwave::Create
     field :add_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless::Create
@@ -62,6 +63,7 @@ module Types
     field :add_stripe_payment_provider, mutation: Mutations::PaymentProviders::Stripe::Create
 
     field :update_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Update
+    field :update_braintree_payment_provider, mutation: Mutations::PaymentProviders::Braintree::Update
     field :update_cashfree_payment_provider, mutation: Mutations::PaymentProviders::Cashfree::Update
     field :update_flutterwave_payment_provider, mutation: Mutations::PaymentProviders::Flutterwave::Update
     field :update_gocardless_payment_provider, mutation: Mutations::PaymentProviders::Gocardless::Update

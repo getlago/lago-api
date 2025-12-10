@@ -323,6 +323,22 @@ input AddAdyenPaymentProviderInput {
 }
 
 """
+Braintree input arguments
+"""
+input AddBraintreePaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  merchantId: String!
+  name: String!
+  privateKey: String!
+  publicKey: String!
+  successRedirectUrl: String
+}
+
+"""
 Cashfree input arguments
 """
 input AddCashfreePaymentProviderInput {
@@ -6417,6 +6433,16 @@ type Mutation {
   ): AdyenProvider
 
   """
+  Add Braintree payment prodiver
+  """
+  addBraintreePaymentProvider(
+    """
+    Parameters for AddBraintreePaymentProvider
+    """
+    input: AddBraintreePaymentProviderInput!
+  ): BraintreeProvider
+
+  """
   Add or update Cashfree payment provider
   """
   addCashfreePaymentProvider(
@@ -7605,6 +7631,16 @@ type Mutation {
     """
     input: UpdateBillingEntityInput!
   ): BillingEntity
+
+  """
+  Update Braintree payment provider
+  """
+  updateBraintreePaymentProvider(
+    """
+    Parameters for UpdateBraintreePaymentProvider
+    """
+    input: UpdateBraintreePaymentProviderInput!
+  ): BraintreeProvider
 
   """
   Update Cashfree payment provider
@@ -11046,6 +11082,22 @@ input UpdateBillingEntityInput {
   taxIdentificationNumber: String
   timezone: TimezoneEnum
   zipcode: String
+}
+
+"""
+Update input arguments
+"""
+input UpdateBraintreePaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  flowId: String
+  id: ID!
+  name: String
+  successRedirectUrl: String
+  supports3ds: Boolean
 }
 
 """

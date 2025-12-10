@@ -128,11 +128,11 @@ FactoryBot.define do
     name { "Braintree" }
     code { "braintree_#{SecureRandom.uuid}" }
     secrets do
-      {public_key:, private_key:}.to_json
+      {public_key: SecureRandom.uuid, private_key: SecureRandom.uuid}.to_json
     end
 
     settings do
-      {merchant_id:, success_redirect_url:}
+      {merchant_id: "merchant", success_redirect_url:}
     end
   end
 end
