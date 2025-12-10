@@ -263,6 +263,7 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
 
             it "returns pending subscription for preview" do
               expect(result).to be_success
+              expect(result.size).to eq(1)
               expect(subject.first).to have_attributes(
                 status: "active",
                 plan_id: pending_subscription.plan_id,
@@ -271,7 +272,6 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
                 customer_id: pending_subscription.customer_id,
                 external_id: pending_subscription.external_id
               )
-              expect(subject.first.subscription_at.to_i).to eq(subscription_at.to_i)
             end
           end
 

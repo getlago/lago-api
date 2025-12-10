@@ -76,20 +76,15 @@ module Invoices
       def customer_subscriptions
         return @customer_subscriptions if defined?(@customer_subscriptions)
 
-        if external_ids.size == 1
-          subs = customer.subscriptions.where(external_id: external_ids)
+        scope = customer.subscriptions.where(external_id: external_ids)
 
-          if subs.count == 1 && subscription_starting_in_future?(subs.first)
-            @customer_subscriptions = subs
+        if external_ids.size == 1 && scope.count == 1 && subscription_starting_in_future?(scope.first)
+          @customer_subscriptions = scope
 
-            return @customer_subscriptions
-          end
+          return @customer_subscriptions
         end
 
-        @customer_subscriptions = customer
-          .subscriptions
-          .active
-          .where(external_id: external_ids)
+        @customer_subscriptions = scope.active
       end
 
       def current_subscription
