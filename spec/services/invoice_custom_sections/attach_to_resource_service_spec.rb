@@ -137,6 +137,19 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
           expect(resource.skip_invoice_custom_sections).to be_falsey
           expect(resource.applied_invoice_custom_sections.count).to be_zero
         end
+
+        context "when the record skip flag is previously true" do
+          before { resource.update(skip_invoice_custom_sections: true) }
+
+          it "updates the skip attribute" do
+            result = subject
+            resource.reload
+
+            expect(result.success?).to be(true)
+            expect(resource.skip_invoice_custom_sections).to be_falsey
+            expect(resource.applied_invoice_custom_sections.count).to be_zero
+          end
+        end
       end
 
       context "without skip flag" do
@@ -247,6 +260,78 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
                 expect(resource.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id, section_3.id, section_4.id)
               end
             end
+
+            context "when zero sections are passed" do
+              let(:external_params) {
+                {invoice_custom_section_codes: []}
+              }
+
+              before do
+                CurrentContext.source = "api"
+                [section_1, section_2, section_3].each do |section|
+                  resource.applied_invoice_custom_sections.create(
+                    invoice_custom_section: section,
+                    organization:
+                  )
+                end
+              end
+
+              it "remove all sections" do
+                subject
+                resource.reload
+
+                expect(resource.skip_invoice_custom_sections).to be_falsey
+                expect(resource.applied_invoice_custom_sections.count).to be_zero
+              end
+            end
+          end
+        end
+      end
+
+      context "when invoice_custom_section_codes" do
+        let(:params) do
+          {
+            invoice_custom_section: {
+              invoice_custom_section_codes:
+            }
+          }
+        end
+
+        before do
+          CurrentContext.source = "api"
+          [section_1, section_2, section_3].each do |section|
+            resource.applied_invoice_custom_sections.create(
+              invoice_custom_section: section,
+              organization:
+            )
+          end
+        end
+
+        context "when param is empty" do
+          let(:invoice_custom_section_codes) { [] }
+
+          it "does remove all sections" do
+            subject
+            resource.reload
+
+            expect(resource.skip_invoice_custom_sections).to be_falsey
+            expect(resource.applied_invoice_custom_sections.count).to be_zero
+          end
+        end
+
+        context "when param is not sent" do
+          let(:params) do
+            {
+              invoice_custom_section: {skip_invoice_custom_sections: false}
+            }
+          end
+
+          it "does not remove sections" do
+            subject
+            resource.reload
+
+            expect(resource.skip_invoice_custom_sections).to be_falsey
+            expect(resource.applied_invoice_custom_sections.count).to eq(3)
           end
         end
       end
