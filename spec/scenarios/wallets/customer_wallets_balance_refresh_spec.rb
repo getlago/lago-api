@@ -41,7 +41,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
   let(:wallet) { create(:wallet, wallet_attrs) }
   let(:wallet2) { create(:wallet, wallet_attrs) }
-  let(:wallet3) { create(:wallet, wallet_attrs.merge({ name:"wallet 3" })) }
+  let(:wallet3) { create(:wallet, wallet_attrs.merge({name: "wallet 3"})) }
   let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
   let(:wallet_target2) { create(:wallet_target, wallet: wallet2, billable_metric: billable_metric2) }
   let(:wallet_target3) { create(:wallet_target, wallet: wallet3, billable_metric: billable_metric3) }
@@ -105,12 +105,11 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     context "when there is paid in advance charges" do
       let(:third_charge) do
         create(:standard_charge, :pay_in_advance,
-               invoiceable: false,
-               plan: subscription.plan,
-               billable_metric: billable_metric3,
-               properties: { amount: "9999" })
+          invoiceable: false,
+          plan: subscription.plan,
+          billable_metric: billable_metric3,
+          properties: {amount: "9999"})
       end
-
 
       before do
         third_charge
