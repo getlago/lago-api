@@ -22,11 +22,9 @@ module Subscriptions
     attr_reader :subscription_id
 
     def flag_wallets_for_refresh
-      Wallet
-        .active
-        .joins(:customer)
-        .where(customers: {id: Subscription.where(id: subscription_id).select(:customer_id)})
-        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      Customer
+        .where(id: Subscription.where(id: subscription_id).select(:customer_id))
+        .update_all(awaiting_wallet_refresh: true) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def track_subscription_activity
