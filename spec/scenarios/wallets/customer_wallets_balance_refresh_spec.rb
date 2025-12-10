@@ -168,7 +168,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
           :charge_fee,
           charge: second_charge,
           subscription:,
-          precise_coupons_amount_cents: 0,
+          precise_coupons_amount_cents: 70, # simulate progressive billing
           invoice: draft_invoice,
           amount_cents: 100,
           taxes_amount_cents: 10
@@ -189,7 +189,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       ##
       it "updates wallet ongoing balances including progressive billing invoice" do
         expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
-        expect_wallet(wallet2, ongoing_usage: 610, credits_usage: 6.1, ongoing: 390, credits: 3.9)
+        expect_wallet(wallet2, ongoing_usage: 540, credits_usage: 5.4, ongoing: 460, credits: 4.6)
       end
     end
   end
