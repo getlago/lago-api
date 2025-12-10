@@ -861,6 +861,12 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     end
 
     context "when wallet has no limitations" do
+      let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 10_00, recurring: false) }
+
+      before do
+        usage_threshold
+      end
+
       it "apply unrestricted rule to first wallet only" do
         time_0 = DateTime.new(2022, 12, 1)
         w1 = w2 = w3 = w4 = nil
@@ -923,9 +929,9 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
           recalculate_wallet_balances
 
-          # Total usage = 100
+          # Total usage = 100 - 10(progressive billing already billed) = 90
           # First (unrestricted) wallet takes it all
-          expect_wallet(w1, balance: 1000, balance_usage: 100_00, ongoing_balance: -9000, credits: 10, credits_usage: 100, ongoing_credits: -90)
+          expect_wallet(w1, balance: 0, balance_usage: 9000, ongoing_balance: -9000, credits: 0, credits_usage: 90, ongoing_credits: -90)
           expect_wallet(w2, balance: 2000, balance_usage: 0, ongoing_balance: 2000, credits: 20, credits_usage: 0, ongoing_credits: 20)
           expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
           expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
