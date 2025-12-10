@@ -19,15 +19,17 @@ module FixedChargeEvents
         )
         sql_result = ActiveRecord::Base.connection.select_one(sql)
         result.aggregation = sql_result["aggregation"]
+        result.full_units_number = events_in_range.last.try(:units) || 0
         result
       end
 
       # we need this for prorated charge_model to be correctly applied
       def per_event_aggregation(grouped_by_values: nil)
-        units_count = result.aggregation
+        prorated_units_count = result.aggregation
+        full_units_count = result.full_units_number
         PerEventAggregationResult.new.tap do |result|
-          result.event_aggregation = [units_count]
-          result.event_prorated_aggregation = [units_count]
+          result.event_aggregation = [full_units_count]
+          result.event_prorated_aggregation = [prorated_units_count]
         end
       end
 

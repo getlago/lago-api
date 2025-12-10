@@ -9,9 +9,9 @@ module Subscriptions
     end
 
     def call
-      # we need more tests :see_no_evil
+      # TODO: check that it's rewritten with later Ancor's work
       ending_trial_subscriptions.each do |subscription|
-        if subscription.should_be_billed_when_started? &&
+        if subscription.plan_pay_in_advance &&
             !subscription.was_already_billed_today &&
             !already_billed_on_day_one?(subscription)
           BillSubscriptionJob.perform_later(
@@ -41,7 +41,7 @@ module Subscriptions
     # during the customer trial period
     # Unfortunately, this introduces an N+1 query
     def already_billed_on_day_one?(subscription)
-      Fee.where(fee_type: [:subscription, :fixed_charge]).where(
+      Fee.subscription.where(
         invoice_id: subscription.invoice_subscriptions.select("invoices.id").joins(:invoice).where(
           "invoices.invoice_type" => :subscription,
           "invoices.status" => %i[draft finalized],
@@ -59,7 +59,6 @@ module Subscriptions
           plans.pay_in_advance AS plan_pay_in_advance,
           already_billed_today.invoiced_count > 0 AS was_already_billed_today,
           #{trial_end_date} as trial_end_utc_date_from_query,
-          CASE WHEN pay_in_advance_fixed_charges.fixed_charge_id IS NOT NULL THEN true ELSE false END AS has_pay_in_advance_fixed_charges,
           subscriptions.*
         FROM
           subscriptions
@@ -68,11 +67,6 @@ module Subscriptions
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
-          LEFT JOIN (
-            SELECT DISTINCT plan_id, id as fixed_charge_id
-            FROM fixed_charges
-            WHERE pay_in_advance = true AND deleted_at IS NULL
-          ) pay_in_advance_fixed_charges ON pay_in_advance_fixed_charges.plan_id = plans.id
         WHERE
           subscriptions.status = 1
           AND plans.trial_period > 0

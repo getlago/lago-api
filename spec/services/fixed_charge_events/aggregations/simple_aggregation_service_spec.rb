@@ -11,7 +11,11 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
   let(:fixed_charges_to_datetime) { Time.current }
   let(:events) { [] }
   let(:boundaries) do
-    {fixed_charges_from_datetime:, fixed_charges_to_datetime:, fixed_charges_duration: 10}
+    {
+      "fixed_charges_from_datetime" => fixed_charges_from_datetime,
+      "fixed_charges_to_datetime" => fixed_charges_to_datetime,
+      "fixed_charges_duration" => 10
+    }
   end
 
   before { events }
@@ -97,7 +101,8 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
   context "when having a lot of events issued for this and following billing periods" do
     let(:events_matrix) do
       [
-        {units: 10, timestamp: Date.new(2025, 1, 1), created_at: Date.new(2025, 1, 1)}, # 1 Jan for 1 Jan
+        {units: 30, timestamp: Date.new(2024, 1, 1), created_at: Date.new(2025, 1, 1)}, # 1 Jan this year for 1 Jan last year
+        {units: 10, timestamp: Date.new(2025, 1, 1), created_at: Date.new(2025, 1, 9)}, # 9 Jan for 1 Jan
         {units: 5, timestamp: Date.new(2025, 2, 1), created_at: Date.new(2025, 1, 5)}, # 5 Jan for 1 Feb
         {units: 77, timestamp: Date.new(2025, 1, 22), created_at: Date.new(2025, 1, 7)}, # 7 Jan for 22 Jan
         {units: 7, timestamp: Date.new(2025, 1, 20), created_at: Date.new(2025, 1, 10)}, # 10 Jan for 20 Jan
@@ -109,6 +114,18 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
     let(:events) do
       events_matrix.map do |event|
         create(:fixed_charge_event, fixed_charge:, subscription:, **event)
+      end
+    end
+
+    context "when billing period is December last year" do # event is created after billed billing period for timestamp before the billing period
+      let(:fixed_charges_from_datetime) { Date.new(2024, 12, 1) }
+      let(:fixed_charges_to_datetime) { Date.new(2024, 12, 31) }
+      let(:fixed_charges_duration) { 31 }
+
+      it "returns the simple aggregation" do
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(30)
       end
     end
 
@@ -142,6 +159,35 @@ RSpec.describe FixedChargeEvents::Aggregations::SimpleAggregationService do
         result = subject.call
         expect(result).to be_success
         expect(result.aggregation).to eq(70)
+      end
+    end
+  end
+
+  context "when an override was created after subscription started" do
+    let(:parent_charge) { create(:fixed_charge) }
+    let(:fixed_charge) { create(:fixed_charge, parent: parent_charge) }
+    let(:parent_event) { create(:fixed_charge_event, fixed_charge: parent_charge, subscription:, units: 10, timestamp: 12.days.ago, created_at: 10.days.ago) }
+
+    before { parent_event }
+
+    context "when there are only events for the parent charge" do
+      it "returns the simple aggregation" do
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(10)
+      end
+    end
+
+    context "when there are events for the parent and child charges" do
+      let(:child_event) { create(:fixed_charge_event, fixed_charge:, subscription:, units: 5, timestamp: 8.days.ago, created_at: 10.days.ago) }
+
+      before { child_event }
+
+      it "returns the simple aggregation" do
+        result = subject.call
+        expect(result).to be_success
+        expect(result.aggregation).to eq(5)
+        expect(result.full_units_number).to eq(5)
       end
     end
   end

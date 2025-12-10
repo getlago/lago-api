@@ -160,7 +160,6 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(subscription.reload.invoices.count).to eq(2)
       last_invoice = subscription.invoices.order(:created_at).last
 
-      # yet fixed_charge is 0, will be 4...
       expect(last_invoice.fees.fixed_charge.count).to eq(4)
       # we have in arrears prorated, in arrears prorated, 2 in advance (sp we're charging full amount)
       expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000, 200_000, 200_000])
@@ -264,9 +263,10 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       # Note: prorated_fee_amount should be 500000 * 10 * 17/31,
       # prorated_fee_amount = 2_741_935 - this is math correct, but service returns 2_741_940 because of rounding (10 * 17 / 31).
+      prorated_fee_amount = 2_741_940
       expected_charge_fees = [
         {charge_id: charge_metered_not_prorated_in_arrears.id, amount_cents: 10_000},
-        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: 2_741_940},
+        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: prorated_fee_amount},
         {charge_id: charge_recurring_prorated_in_advance.id, amount_cents: 50_000_000}
       ]
       actual_charge_fees = last_invoice.fees.charge.map do |fee|

@@ -333,15 +333,6 @@ module Invoices
     end
 
     def should_create_fixed_charge_fees?(subscription, boundaries)
-      fee_count = subscription.fees
-        .fixed_charge
-        .includes(:invoice)
-        .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
-        .where.not(invoice_id: invoice.id)
-        .where.not(invoice_id: invoice.voided_invoice_id)
-        .count
-
-      return false if fee_count > 0 && subscription.plan.fixed_charges.pay_in_advance.count == fee_count
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
 
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
@@ -352,7 +343,7 @@ module Invoices
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
-    def wallet
+    def wallets
       @wallets ||= customer.wallets.active.includes(:wallet_targets)
         .with_positive_balance.in_application_order
     end

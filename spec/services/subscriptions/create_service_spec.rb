@@ -446,7 +446,7 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
 
-      context "when ubscription_at is current date" do
+      context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
           expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
         end
