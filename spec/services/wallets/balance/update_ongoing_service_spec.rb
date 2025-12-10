@@ -15,8 +15,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
       ongoing_usage_balance_cents: 200,
       credits_balance: 10.0,
       credits_ongoing_balance: 8.0,
-      credits_ongoing_usage_balance: 2.0,
-      ready_to_be_refreshed: true
+      credits_ongoing_usage_balance: 2.0
     )
   end
 
@@ -26,7 +25,6 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
       credits_ongoing_usage_balance: 5.5,
       ongoing_balance_cents: 450,
       credits_ongoing_balance: 4.5,
-      ready_to_be_refreshed: false,
       depleted_ongoing_balance:
     }
   end
@@ -49,7 +47,6 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
             .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
             .and change(wallet, :ongoing_balance_cents).from(800).to(450)
             .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
-            .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
             .and change(wallet, :last_ongoing_balance_sync_at).from(nil).to(Time.current)
             .and not_change(wallet, :last_balance_sync_at)
 
@@ -81,7 +78,6 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
             .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
             .and change(wallet, :ongoing_balance_cents).from(800).to(450)
             .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
-            .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
             .and change(wallet, :last_ongoing_balance_sync_at).from(nil).to(Time.current)
             .and not_change(wallet, :last_balance_sync_at)
 
