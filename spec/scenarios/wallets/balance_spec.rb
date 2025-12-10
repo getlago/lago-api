@@ -461,7 +461,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached
       travel_to time_0 + 10.days do
         ingest_event(subscription, 10)
-        # ingest_event(subscription, 10, another_billable_metric.code)
         perform_usage_update
         expect(customer.invoices.count).to eq(1)
         expect(subscription.invoices.count).to eq(1)
@@ -482,7 +481,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # units = 20
       # sub3 total = 10 * 20 = 200 + 10% tax = 330 - second threshold is reached
       travel_to time_0 + 15.days do
-        # ingest_event(subscription, 30, another_billable_metric.code)
         ingest_event(subscription, 30)
         perform_usage_update
         expect(customer.invoices.count).to eq(2)
@@ -502,7 +500,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
       # recurring threshold is reached
       travel_to time_0 + 20.days do
-        # ingest_event(subscription, 20, another_billable_metric.code)
         ingest_event(subscription, 20)
         perform_usage_update
         expect(subscription.invoices.count).to eq(3)
@@ -522,12 +519,14 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
   end
 
   describe "multiple wallets" do
-    def expect_wallet_numbers(wallet, balance_cents:, ongoing_balance_cents:)
+    def expect_wallet(wallet, balance:, credits:, balance_usage:, credits_usage:, ongoing_balance:, ongoing_credits:)
       wallet.reload
-      expect(wallet.balance_cents).to eq(balance_cents)
-      expect(wallet.ongoing_balance_cents).to eq(ongoing_balance_cents)
-      expect(wallet.credits_balance).to eq(balance_cents.to_f / 100.0 / wallet.rate_amount)
-      expect(wallet.credits_ongoing_balance).to eq(ongoing_balance_cents.to_f / 100.0 / wallet.rate_amount)
+      expect(wallet.balance_cents).to eq balance
+      expect(wallet.credits_balance).to eq credits
+      expect(wallet.ongoing_usage_balance_cents).to eq balance_usage
+      expect(wallet.credits_ongoing_usage_balance).to eq credits_usage
+      expect(wallet.ongoing_balance_cents).to eq ongoing_balance
+      expect(wallet.credits_ongoing_balance).to eq ongoing_credits
     end
 
     let(:bm_storage) { create(:sum_billable_metric, name: "Storage", organization:, field_name: "total") }
@@ -600,7 +599,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         end
         subscription = customer.subscriptions.first
 
-        # current usage: 10, 20, 30, 40
         travel_to time_0 + 5.days do
           ingest_event(subscription, 10, bm_storage.code)
           ingest_event(subscription, 20, bm_seats.code)
@@ -609,10 +607,10 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
           recalculate_wallet_balances
 
-          expect_wallet_numbers(wallets[0], balance_cents: 1000, ongoing_balance_cents: 0)
-          expect_wallet_numbers(wallets[1], balance_cents: 2000, ongoing_balance_cents: 0)
-          expect_wallet_numbers(wallets[2], balance_cents: 3000, ongoing_balance_cents: 0)
-          expect_wallet_numbers(wallets[3], balance_cents: 4000, ongoing_balance_cents: 0)
+          expect_wallet(wallets[0], balance: 1000, balance_usage: 1000, ongoing_balance: 0, credits: 10, credits_usage: 10, ongoing_credits: 0)
+          expect_wallet(wallets[1], balance: 2000, balance_usage: 2000, ongoing_balance: 0, credits: 20, credits_usage: 20, ongoing_credits: 0)
+          expect_wallet(wallets[2], balance: 3000, balance_usage: 3000, ongoing_balance: 0, credits: 30, credits_usage: 30, ongoing_credits: 0)
+          expect_wallet(wallets[3], balance: 4000, balance_usage: 4000, ongoing_balance: 0, credits: 40, credits_usage: 40, ongoing_credits: 0)
         end
       end
     end
@@ -685,13 +683,13 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
           recalculate_wallet_balances
 
           # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
-          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -2000)
+          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
           # W2: seats already applied, applies API 30 -> 20 - 30 = -10
-          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: -1000)
+          expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
           # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
-          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: -1000)
+          expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
           # W4: sms and storage already applied -> nothing -> stays 40
-          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
         end
       end
     end
@@ -773,12 +771,14 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
           recalculate_wallet_balances
 
-          # Same expectations as the unfiltered variant: distribution is once per
-          # metric following wallet priority.
-          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -2000)
-          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: -1000)
-          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: -1000)
-          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
+          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
+          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
+          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
+          expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
+          # W4: sms and storage already applied -> nothing -> stays 40
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
         end
       end
     end
@@ -795,7 +795,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
             currency: "EUR",
             granted_credits: "10",
             priority: 1,
-            applies_to: {fee_types: ["charge"]},
+            applies_to: {fee_types: ["subscription"]},
             invoice_requires_successful_payment: false
           }, as: :model)
 
@@ -850,11 +850,12 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
           recalculate_wallet_balances
 
-          # Total usage = 100; first wallet takes it all
-          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -9000)
-          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: 2000)
-          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: 3000)
-          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+          # Total usage = 100
+          # Second wallet takes it all, cause 1st limited to subscription fee only
+          expect_wallet(w1, balance: 1000, balance_usage: 0, ongoing_balance: 1000, credits: 10, credits_usage: 0, ongoing_credits: 10)
+          expect_wallet(w2, balance: 2000, balance_usage: 100_00, ongoing_balance: -8000, credits: 20, credits_usage: 100, ongoing_credits: -80)
+          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
         end
       end
     end
@@ -922,11 +923,12 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
           recalculate_wallet_balances
 
-          # Total usage = 100; first (unrestricted) wallet takes it all
-          expect_wallet_numbers(w1, balance_cents: 1000, ongoing_balance_cents: -9000)
-          expect_wallet_numbers(w2, balance_cents: 2000, ongoing_balance_cents: 2000)
-          expect_wallet_numbers(w3, balance_cents: 3000, ongoing_balance_cents: 3000)
-          expect_wallet_numbers(w4, balance_cents: 4000, ongoing_balance_cents: 4000)
+          # Total usage = 100
+          # First (unrestricted) wallet takes it all
+          expect_wallet(w1, balance: 1000, balance_usage: 100_00, ongoing_balance: -9000, credits: 10, credits_usage: 100, ongoing_credits: -90)
+          expect_wallet(w2, balance: 2000, balance_usage: 0, ongoing_balance: 2000, credits: 20, credits_usage: 0, ongoing_credits: 20)
+          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
         end
       end
     end
