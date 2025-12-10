@@ -127,12 +127,11 @@ RSpec.describe Customers::RefreshWalletsService do
         it "returns current usage for customer including generating invoices" do
           expect(result).to be_success
 
-          expect(result.usage_amount_cents).to match_array(
-            [
-              hash_including(total_usage_amount_cents: 400, billed_usage_amount_cents: 210),
-              hash_including(total_usage_amount_cents: 600, billed_usage_amount_cents: 110)
-            ]
-          )
+          wallet = result.wallets.first
+          expect(wallet.ongoing_usage_balance_cents).to eq 680
+          expect(wallet.credits_ongoing_usage_balance).to eq 6.8
+          expect(wallet.ongoing_balance_cents).to eq 320
+          expect(wallet.credits_ongoing_balance).to eq 3.2
         end
       end
 
@@ -142,12 +141,11 @@ RSpec.describe Customers::RefreshWalletsService do
         it "returns current usage for customer excluding generating invoices" do
           expect(result).to be_success
 
-          expect(result.usage_amount_cents).to match_array(
-            [
-              hash_including(total_usage_amount_cents: 400, billed_usage_amount_cents: 100),
-              hash_including(total_usage_amount_cents: 600, billed_usage_amount_cents: 0)
-            ]
-          )
+          wallet = result.wallets.first
+          expect(wallet.ongoing_usage_balance_cents).to eq 900
+          expect(wallet.credits_ongoing_usage_balance).to eq 9.0
+          expect(wallet.ongoing_balance_cents).to eq 100
+          expect(wallet.credits_ongoing_balance).to eq 1.0
         end
       end
     end

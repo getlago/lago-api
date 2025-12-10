@@ -69,19 +69,12 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
     customer.active_subscriptions.map do |subscription|
       invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:).invoice
 
-      progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount
+      billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
         .call(subscription:, include_generating_invoices:)
-        .total_billed_amount_cents
-
-      paid_in_advance_fees = invoice.fees.select { |f| f.charge.pay_in_advance? && f.charge.invoiceable? }
-
-      billed_usage_amount_cents = progressive_billed_total +
-        paid_in_advance_fees.sum(&:amount_cents) +
-        paid_in_advance_fees.sum(&:taxes_amount_cents)
+        .invoice_subscriptions
 
       {
-        total_usage_amount_cents: invoice.total_amount_cents,
-        billed_usage_amount_cents:,
+        billed_progressive_invoice_subscriptions:,
         invoice:,
         subscription:
       }

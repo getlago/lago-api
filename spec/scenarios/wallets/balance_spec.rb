@@ -12,10 +12,10 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
   around { |test| lago_premium!(&test) }
 
-  def ingest_event(subscription, amount)
+  def ingest_event(subscription, amount, billable_metric_code = nil)
     create_event({
       transaction_id: SecureRandom.uuid,
-      code: billable_metric.code,
+      code: billable_metric_code || billable_metric.code,
       external_subscription_id: subscription.external_id,
       properties: {billable_metric.field_name => amount}
     })
@@ -44,7 +44,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     expect(transaction.metadata).to eq(metadata)
   end
 
-  def create_wallet_with_defaults(granted_credits: "10", rate_amount: "1", transaction_metadata: [])
+  def create_wallet_with_defaults(granted_credits: "10", rate_amount: "1", transaction_metadata: [], applies_to: {})
     create_wallet({
       external_customer_id: customer.external_id,
       rate_amount: rate_amount,
@@ -52,7 +52,8 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       currency: "EUR",
       granted_credits:,
       invoice_requires_successful_payment: false, # default
-      transaction_metadata: transaction_metadata
+      transaction_metadata: transaction_metadata,
+      applies_to:
     }, as: :model)
   end
 
@@ -150,7 +151,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         perform_finalize_refresh
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("finalized")
-        # recalculate_wallet_balances
         wallet.reload
         expect(wallet.credits_balance).to eq 4
         expect(wallet.balance_cents).to eq 400
@@ -393,14 +393,32 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: false) }
     let(:usage_threshold2) { create(:usage_threshold, plan: plan, amount_cents: 500_00, recurring: false) }
     let(:usage_threshold3) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: true) }
+    let!(:another_billable_metric) { create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg") }
+    let!(:another_charge) { create(:charge, plan:, billable_metric: another_billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
 
     let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
-    before { [charge, usage_threshold, usage_threshold2, usage_threshold3, tax] }
+    before do
+      [
+        charge,
+        usage_threshold,
+        usage_threshold2,
+        usage_threshold3,
+        tax,
+        another_charge
+      ]
+    end
 
     it "recalculates wallet's balance" do
       # Create a wallet with 1000$
-      wallet = create_wallet_with_defaults(rate_amount: "10", granted_credits: "100")
+      wallet = create_wallet_with_defaults(
+        rate_amount: "10",
+        granted_credits: "100",
+        applies_to: {
+          billable_metric_codes: [billable_metric.code]
+        }
+      )
+
       expect(wallet.credits_balance).to eq 100
       expect(wallet.balance_cents).to eq 1000_00
       expect(wallet.ongoing_balance_cents).to eq 1000_00
@@ -463,6 +481,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # units = 20
       # sub3 total = 10 * 20 = 200 + 10% tax = 330 - second threshold is reached
       travel_to time_0 + 15.days do
+        # ingest_event(subscription, 30, another_billable_metric.code)
         ingest_event(subscription, 30)
         perform_usage_update
         expect(customer.invoices.count).to eq(2)
@@ -482,6 +501,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
       # recurring threshold is reached
       travel_to time_0 + 20.days do
+        # ingest_event(subscription, 20, another_billable_metric.code)
         ingest_event(subscription, 20)
         perform_usage_update
         expect(subscription.invoices.count).to eq(3)
