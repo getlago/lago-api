@@ -67,7 +67,7 @@ module Wallets
       end
 
       def draft_invoices_fees
-        fees = wallet.customer.invoices.draft.where.not(total_amount_cents: [0, nil]).flat_map(&:fees)
+        fees = wallet.customer.invoices.draft.where.not(total_amount_cents: 0).flat_map(&:fees)
         wallets_applicable_on_fees = assign_wallet_per_fee(fees)
 
         applicable_fees(fees, wallets_applicable_on_fees)
@@ -85,7 +85,7 @@ module Wallets
         paid_in_advance_fees = invoice_pay_in_advance_fees(invoice)
         # Invoice that is returned from CustomerUsageService includes the taxes in total_usage
         # so if the fees ae already paid, we should exclude fees AND their taxes
-        paid_in_advance_fees.sum(&:amount_cents) + paid_in_advance_fees.sum(&:taxes_amount_cents)
+        paid_in_advance_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
       end
 
       def wallet_update_params
@@ -149,9 +149,7 @@ module Wallets
         wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
         fees = applicable_fees(all_fees, wallets_applicable_on_fees)
 
-        fees.sum do |fee|
-          fee.amount_cents + fee.taxes_amount_cents
-        end
+        fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
       end
     end
   end
