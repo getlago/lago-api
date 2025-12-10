@@ -3515,7 +3515,8 @@ CREATE VIEW public.exports_wallet_transactions AS
     wt.created_at,
     wt.updated_at,
     wt.invoice_requires_successful_payment,
-    wt.metadata
+    wt.metadata,
+    wt.invoice_id AS lago_invoice_id
    FROM public.wallet_transactions wt;
 
 
@@ -10652,6 +10653,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251210151531'),
 ('20251204142205'),
 ('20251202141759'),
 ('20251201094057'),
@@ -11528,4 +11530,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
