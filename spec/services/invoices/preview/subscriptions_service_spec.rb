@@ -263,7 +263,7 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
 
             it "returns pending subscription for preview" do
               expect(result).to be_success
-              expect(result.size).to eq(1)
+              expect(subject.size).to eq(1)
               expect(subject.first).to have_attributes(
                 status: "active",
                 plan_id: pending_subscription.plan_id,
@@ -296,6 +296,7 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
           context "when multiple pending subscriptions with same external_id exist" do
             let(:subscription_at) { Time.current + 2.days }
             let(:external_id) { SecureRandom.uuid }
+            let(:external_ids) { [external_id] }
 
             before do
               create(
@@ -313,8 +314,6 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
                 subscription_at: Time.current + 3.days
               )
             end
-
-            let(:external_ids) { [external_id] }
 
             it "fails with subscription not found error when count is not 1" do
               expect(result).to be_failure

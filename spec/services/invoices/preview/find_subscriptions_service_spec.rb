@@ -40,7 +40,7 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
         it "returns the duplicate of subscription" do
           expect(result).to be_success
           expect(subscriptions_result.size).to eq(1)
-          expect(subscriptions_result.first.status.to_s).to eq('active')
+          expect(subscriptions_result.first.status.to_s).to eq("active")
           expect(subscriptions_result.first.persisted?).to eq(false)
           expect(subscriptions_result.first.external_id).to eq(subscriptions.first.external_id)
         end
