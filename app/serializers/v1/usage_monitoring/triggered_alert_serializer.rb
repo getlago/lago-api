@@ -9,8 +9,8 @@ module V1
           lago_organization_id: model.organization_id,
           lago_alert_id: alert.id,
           lago_subscription_id: model.subscription_id,
-          subscription_external_id: alert.subscription_external_id,
-          customer_external_id: model.subscription.customer.external_id,
+          external_subscription_id: alert.subscription_external_id,
+          external_customer_id: model.subscription.customer.external_id,
           billable_metric_code: alert.billable_metric&.code,
           alert_name: alert.name,
           alert_code: alert.code,
@@ -18,7 +18,10 @@ module V1
           current_value: model.current_value,
           previous_value: model.previous_value,
           crossed_thresholds: model.crossed_thresholds,
-          triggered_at: model.triggered_at.iso8601
+          triggered_at: model.triggered_at.iso8601,
+
+          subscription_external_id: alert.subscription_external_id, # DEPRECATED
+          customer_external_id: model.subscription.customer.external_id # DEPRECATED
         }
       end
 

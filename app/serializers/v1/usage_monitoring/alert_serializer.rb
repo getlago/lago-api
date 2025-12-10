@@ -7,7 +7,8 @@ module V1
         {
           lago_id: model.id,
           lago_organization_id: model.organization_id,
-          subscription_external_id: model.subscription_external_id,
+          subscription_external_id: model.subscription_external_id, # DEPRECATED
+          external_subscription_id: model.subscription_external_id,
           alert_type: model.alert_type,
           code: model.code,
           name: model.name,
