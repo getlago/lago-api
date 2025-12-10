@@ -62,7 +62,7 @@ module Fees
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
       precise_unit_amount = amount_result.unit_amount
 
-      units = amount_result.units
+      units = amount_result.full_units_number
 
       new_fee = Fee.new(
         invoice:,
@@ -118,12 +118,12 @@ module Fees
     end
 
     def calculate_period_ratio
-      from_date = boundaries[:fixed_charges_from_datetime].to_date
-      to_date = boundaries[:fixed_charges_to_datetime].to_date
+      from_date = boundaries["fixed_charges_from_datetime"].to_date
+      to_date = boundaries["fixed_charges_to_datetime"].to_date
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
-      charges_duration = boundaries[:fixed_charges_duration] || total_days
+      charges_duration = boundaries["fixed_charges_duration"] || total_days
 
       return 1.0 if current_date >= to_date
       return 0.0 if current_date < from_date

@@ -160,7 +160,6 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(subscription.reload.invoices.count).to eq(2)
       last_invoice = subscription.invoices.order(:created_at).last
 
-      # yet fixed_charge is 0, will be 4...
       expect(last_invoice.fees.fixed_charge.count).to eq(4)
       # we have in arrears prorated, in arrears prorated, 2 in advance (sp we're charging full amount)
       expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000, 200_000, 200_000])
