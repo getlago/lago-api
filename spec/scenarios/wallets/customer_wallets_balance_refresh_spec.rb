@@ -92,6 +92,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
     # PROGRESSIVE BILLING
     context "when there is a progressive billing invoice" do
+      let(:billable_metric3) { create(:billable_metric, aggregation_type: "count_agg") }
       let(:invoice_type) { :progressive_billing }
       let(:charges_to_datetime) { timestamp + 1.week }
       let(:charges_from_datetime) { timestamp - 1.week }
@@ -116,9 +117,24 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
           taxes_amount_cents: 10
         )
       end
+      let(:third_charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric: billable_metric3, properties: {amount: "33"})
+      end
+      let(:fee2) do
+        create(
+          :charge_fee,
+          charge: third_charge,
+          subscription:,
+          precise_coupons_amount_cents: 10,
+          invoice:,
+          amount_cents: 100,
+          taxes_amount_cents: 10
+        )
+      end
 
       before do
         fee
+        fee2
         invoice.update!(invoice_type:, fees_amount_cents: 110, total_amount_cents: 110)
       end
 
@@ -126,6 +142,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # wallet 1
       # 1000 - 3000(from events) = -2000 #untouched
       # wallet 2
+      # fee 2 is not taken into account because of the wallet restrictions
       # 1000 - 500(from event) - 100(from invoice) ( 100 + 10(tax) - 10(already paid) )
       # = 400 # progressive billing invoice
       ##
