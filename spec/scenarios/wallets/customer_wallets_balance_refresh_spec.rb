@@ -41,8 +41,10 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
   let(:wallet) { create(:wallet, wallet_attrs) }
   let(:wallet2) { create(:wallet, wallet_attrs) }
+  let(:wallet3) { create(:wallet, wallet_attrs.merge({ name:"wallet 3" })) }
   let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
   let(:wallet_target2) { create(:wallet_target, wallet: wallet2, billable_metric: billable_metric2) }
+  let(:wallet_target3) { create(:wallet_target, wallet: wallet3, billable_metric: billable_metric3) }
 
   let(:events) do
     create_list(
@@ -77,6 +79,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     before do
       wallet
       wallet2
+      wallet3
       wallet_target
       wallet_target2
       first_charge
@@ -97,6 +100,27 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     it "updates the correct ongoing balances for each wallet" do
       expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
       expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
+    end
+
+    context "when there is paid in advance charges" do
+      let(:third_charge) do
+        create(:standard_charge, :pay_in_advance,
+               invoiceable: false,
+               plan: subscription.plan,
+               billable_metric: billable_metric3,
+               properties: { amount: "9999" })
+      end
+
+
+      before do
+        third_charge
+      end
+
+      it "updates the correct ongoing balances for each wallet" do
+        expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+        expect_wallet(wallet2, ongoing_usage: 500, credits_usage: 5, ongoing: 500, credits: 5)
+        expect_wallet(wallet3, ongoing_usage: 0, credits_usage: 0, ongoing: 1000, credits: 10)
+      end
     end
 
     # PROGRESSIVE BILLING
