@@ -5,19 +5,19 @@ require "rails_helper"
 describe "Use wallet's credits and recalculate balances", transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
   let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 10) }
-  let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 1_00, pay_in_advance: false) }
-  let(:billable_metric) { create(:billable_metric, organization: organization, field_name: "total", aggregation_type: "sum_agg") }
-  let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
+  let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1_00, pay_in_advance: false) }
+  let(:billable_metric) { create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg") }
+  let(:charge) { create(:charge, plan:, billable_metric:, charge_model: "standard", properties: {"amount" => "1"}) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
 
   around { |test| lago_premium!(&test) }
 
-  def ingest_event(subscription, amount, billable_metric_code = nil)
+  def ingest_event(subscription, amount, billable_metric_code = nil, filter = nil)
     create_event({
       transaction_id: SecureRandom.uuid,
       code: billable_metric_code || billable_metric.code,
       external_subscription_id: subscription.external_id,
-      properties: {billable_metric.field_name => amount}
+      properties: {billable_metric.field_name => amount, :filter => filter}
     })
     perform_usage_update
   end
@@ -232,17 +232,17 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
   end
 
   context "with 'normal' plan, with pay in advance charges plan and with threshold usage recurring set on plan" do
-    let(:plan1) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
-    let(:charge1) { create(:charge, plan: plan1, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
+    let(:plan1) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge1) { create(:charge, plan: plan1, billable_metric:, charge_model: "standard", properties: {"amount" => "1"}) }
 
-    let(:plan2) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
-    let(:charge2) { create(:charge, :pay_in_advance, plan: plan2, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "2"}) }
+    let(:plan2) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge2) { create(:charge, :pay_in_advance, plan: plan2, billable_metric:, charge_model: "standard", properties: {"amount" => "2"}) }
 
-    let(:plan3) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
-    let(:charge3) { create(:charge, plan: plan3, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
+    let(:plan3) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge3) { create(:charge, plan: plan3, billable_metric:, charge_model: "standard", properties: {"amount" => "10"}) }
     let(:usage_threshold) { create(:usage_threshold, plan: plan3, amount_cents: 200_00, recurring: true) }
 
-    let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 10, billing_entity:) }
 
     before { [charge1, charge2, charge3, usage_threshold, tax] }
 
@@ -388,15 +388,15 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
   end
 
   context "with multiple threshold usages set on plan" do
-    let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
-    let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
-    let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: false) }
-    let(:usage_threshold2) { create(:usage_threshold, plan: plan, amount_cents: 500_00, recurring: false) }
-    let(:usage_threshold3) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: true) }
+    let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge) { create(:charge, plan:, billable_metric:, charge_model: "standard", properties: {"amount" => "10"}) }
+    let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 200_00, recurring: false) }
+    let(:usage_threshold2) { create(:usage_threshold, plan:, amount_cents: 500_00, recurring: false) }
+    let(:usage_threshold3) { create(:usage_threshold, plan:, amount_cents: 200_00, recurring: true) }
     let!(:another_billable_metric) { create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg") }
     let!(:another_charge) { create(:charge, plan:, billable_metric: another_billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
 
-    let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 10, billing_entity:) }
 
     before do
       [
@@ -481,7 +481,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # units = 20
       # sub3 total = 10 * 20 = 200 + 10% tax = 330 - second threshold is reached
       travel_to time_0 + 15.days do
-        # ingest_event(subscription, 30, another_billable_metric.code)
         ingest_event(subscription, 30)
         perform_usage_update
         expect(customer.invoices.count).to eq(2)
@@ -501,7 +500,6 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
 
       # recurring threshold is reached
       travel_to time_0 + 20.days do
-        # ingest_event(subscription, 20, another_billable_metric.code)
         ingest_event(subscription, 20)
         perform_usage_update
         expect(subscription.invoices.count).to eq(3)
@@ -516,6 +514,428 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         expect(wallet.credits_ongoing_balance).to eq 23
         expect(wallet.ongoing_usage_balance_cents).to eq 0
         expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+    end
+  end
+
+  describe "multiple wallets" do
+    def expect_wallet(wallet, balance:, credits:, balance_usage:, credits_usage:, ongoing_balance:, ongoing_credits:)
+      wallet.reload
+      expect(wallet.balance_cents).to eq balance
+      expect(wallet.credits_balance).to eq credits
+      expect(wallet.ongoing_usage_balance_cents).to eq balance_usage
+      expect(wallet.credits_ongoing_usage_balance).to eq credits_usage
+      expect(wallet.ongoing_balance_cents).to eq ongoing_balance
+      expect(wallet.credits_ongoing_balance).to eq ongoing_credits
+    end
+
+    let(:bm_storage) { create(:sum_billable_metric, name: "Storage", organization:, field_name: "total") }
+    let(:bm_seats) { create(:sum_billable_metric, name: "Seats", organization:, field_name: "total") }
+    let(:bm_api) { create(:sum_billable_metric, name: "API", organization:, field_name: "total") }
+    let(:bm_sms) { create(:sum_billable_metric, name: "SMS", organization:, field_name: "total") }
+
+    before do
+      [bm_storage, bm_seats, bm_api, bm_sms].each do |bm|
+        create(:standard_charge, plan:, billable_metric: bm, properties: {"amount" => "1"})
+      end
+    end
+
+    context "when each wallet limited to 1 billable metric" do
+      it "applies each metric usage to its corresponding wallet by priority" do
+        time_0 = DateTime.new(2022, 12, 1)
+        wallets = []
+        travel_to time_0 do
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          wallets << create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_event(subscription, 10, bm_storage.code)
+          ingest_event(subscription, 20, bm_seats.code)
+          ingest_event(subscription, 30, bm_api.code)
+          ingest_event(subscription, 40, bm_sms.code)
+
+          recalculate_wallet_balances
+
+          expect_wallet(wallets[0], balance: 1000, balance_usage: 1000, ongoing_balance: 0, credits: 10, credits_usage: 10, ongoing_credits: 0)
+          expect_wallet(wallets[1], balance: 2000, balance_usage: 2000, ongoing_balance: 0, credits: 20, credits_usage: 20, ongoing_credits: 0)
+          expect_wallet(wallets[2], balance: 3000, balance_usage: 3000, ongoing_balance: 0, credits: 30, credits_usage: 30, ongoing_credits: 0)
+          expect_wallet(wallets[3], balance: 4000, balance_usage: 4000, ongoing_balance: 0, credits: 40, credits_usage: 40, ongoing_credits: 0)
+        end
+      end
+    end
+
+    context "when each wallet limited to 2 billable metrics" do
+      it "applies usage once per metric following wallets priority" do
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code, bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code, bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code, bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code, bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_event(subscription, 10, bm_storage.code)
+          ingest_event(subscription, 20, bm_seats.code)
+          ingest_event(subscription, 30, bm_api.code)
+          ingest_event(subscription, 40, bm_sms.code)
+
+          recalculate_wallet_balances
+
+          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
+          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
+          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
+          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
+          expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
+          # W4: sms and storage already applied -> nothing -> stays 40
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+        end
+      end
+    end
+
+    context "when each wallet limited to 2 billable metrics with filtered events" do
+      it "applies usage once per metric even when events include filters" do
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {billable_metric_codes: [bm_storage.code, bm_seats.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {billable_metric_codes: [bm_seats.code, bm_api.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {billable_metric_codes: [bm_api.code, bm_sms.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {billable_metric_codes: [bm_sms.code, bm_storage.code]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          # For each billable metric, send two events with a "filter" value to simulate
+          # the scratch scenario (filter_01 and filter_02) while keeping totals equal
+          # to 10, 20, 30, 40 respectively.
+          ingest_event(subscription, 7, bm_storage.code, "filter_01")
+          ingest_event(subscription, 3, bm_storage.code, "filter_02")
+
+          ingest_event(subscription, 17, bm_seats.code, "filter_01")
+          ingest_event(subscription, 3, bm_seats.code, "filter_02")
+
+          ingest_event(subscription, 27, bm_api.code, "filter_01")
+          ingest_event(subscription, 3, bm_api.code, "filter_02")
+
+          ingest_event(subscription, 37, bm_sms.code, "filter_01")
+          ingest_event(subscription, 3, bm_sms.code, "filter_02")
+
+          recalculate_wallet_balances
+
+          # W1: storage+seats -> applies 10 + 20 = 30 -> 10 - 30 = -20
+          expect_wallet(w1, balance: 1000, balance_usage: 3000, ongoing_balance: -2000, credits: 10, credits_usage: 30, ongoing_credits: -20)
+          # W2: seats already applied, applies API 30 -> 20 - 30 = -10
+          expect_wallet(w2, balance: 2000, balance_usage: 3000, ongoing_balance: -1000, credits: 20, credits_usage: 30, ongoing_credits: -10)
+          # W3: api already applied, applies SMS 40 -> 30 - 40 = -10
+          expect_wallet(w3, balance: 3000, balance_usage: 4000, ongoing_balance: -1000, credits: 30, credits_usage: 40, ongoing_credits: -10)
+          # W4: sms and storage already applied -> nothing -> stays 40
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+        end
+      end
+    end
+
+    context "when wallets are limited to charges (fee type)" do
+      it "applies all charges to the first wallet limited to charge type" do
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            applies_to: {fee_types: ["subscription"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            applies_to: {fee_types: ["charge"]},
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_event(subscription, 10, bm_storage.code)
+          ingest_event(subscription, 20, bm_seats.code)
+          ingest_event(subscription, 30, bm_api.code)
+          ingest_event(subscription, 40, bm_sms.code)
+
+          recalculate_wallet_balances
+
+          # Total usage = 100
+          # Second wallet takes it all, cause 1st limited to subscription fee only
+          expect_wallet(w1, balance: 1000, balance_usage: 0, ongoing_balance: 1000, credits: 10, credits_usage: 0, ongoing_credits: 10)
+          expect_wallet(w2, balance: 2000, balance_usage: 100_00, ongoing_balance: -8000, credits: 20, credits_usage: 100, ongoing_credits: -80)
+          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+        end
+      end
+    end
+
+    context "when wallet has no limitations" do
+      let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 10_00, recurring: false) }
+
+      before do
+        usage_threshold
+      end
+
+      it "apply unrestricted rule to first wallet only" do
+        time_0 = DateTime.new(2022, 12, 1)
+        w1 = w2 = w3 = w4 = nil
+        travel_to time_0 do
+          w1 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W1",
+            currency: "EUR",
+            granted_credits: "10",
+            priority: 1,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w2 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W2",
+            currency: "EUR",
+            granted_credits: "20",
+            priority: 2,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w3 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W3",
+            currency: "EUR",
+            granted_credits: "30",
+            priority: 3,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+
+          w4 = create_wallet({
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "W4",
+            currency: "EUR",
+            granted_credits: "40",
+            priority: 4,
+            invoice_requires_successful_payment: false
+          }, as: :model)
+        end
+
+        travel_to time_0 + 1.day do
+          create_subscription({
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          })
+        end
+        subscription = customer.subscriptions.first
+
+        travel_to time_0 + 5.days do
+          ingest_event(subscription, 10, bm_storage.code)
+          ingest_event(subscription, 20, bm_seats.code)
+          ingest_event(subscription, 30, bm_api.code)
+          ingest_event(subscription, 40, bm_sms.code)
+
+          recalculate_wallet_balances
+
+          # Total usage = 100 - 10(progressive billing already billed) = 90
+          # First (unrestricted) wallet takes it all
+          expect_wallet(w1, balance: 0, balance_usage: 9000, ongoing_balance: -9000, credits: 0, credits_usage: 90, ongoing_credits: -90)
+          expect_wallet(w2, balance: 2000, balance_usage: 0, ongoing_balance: 2000, credits: 20, credits_usage: 0, ongoing_credits: 20)
+          expect_wallet(w3, balance: 3000, balance_usage: 0, ongoing_balance: 3000, credits: 30, credits_usage: 0, ongoing_credits: 30)
+          expect_wallet(w4, balance: 4000, balance_usage: 0, ongoing_balance: 4000, credits: 40, credits_usage: 0, ongoing_credits: 40)
+        end
       end
     end
   end
