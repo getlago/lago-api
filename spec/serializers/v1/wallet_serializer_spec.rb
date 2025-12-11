@@ -48,5 +48,7 @@ RSpec.describe ::V1::WalletSerializer do
     expect(result["wallet"]["applies_to"]["billable_metric_codes"]).to eq([wallet_target.billable_metric.code])
     expect(result["wallet"]["recurring_transaction_rules"].first["lago_id"]).to eq(recurring_transaction_rule.id)
     expect(result["wallet"]["applied_invoice_custom_sections"].first["lago_id"]).to eq(applied_invoice_custom_section.id)
+    expect(result["wallet"]["payment_method"]["payment_method_id"]).to eq(nil)
+    expect(result["wallet"]["payment_method"]["payment_method_type"]).to eq("provider")
   end
 end

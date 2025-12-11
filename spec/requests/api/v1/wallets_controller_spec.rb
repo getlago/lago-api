@@ -8,6 +8,7 @@ RSpec.describe Api::V1::WalletsController do
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+  let(:payment_method) { create(:payment_method, organization:, customer:) }
 
   before { subscription }
 
@@ -29,7 +30,11 @@ RSpec.describe Api::V1::WalletsController do
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 5_00,
         paid_top_up_max_amount_cents: 100_00,
-        ignore_paid_top_up_limits_on_creation: "true"
+        ignore_paid_top_up_limits_on_creation: "true",
+        payment_method: {
+          payment_method_type: "provider",
+          payment_method_id: payment_method.id
+        }
       }
     end
 
@@ -56,6 +61,8 @@ RSpec.describe Api::V1::WalletsController do
       expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
       expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
       expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
+      expect(json[:wallet][:payment_method][:payment_method_type]).to eq("provider")
+      expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
 
       expect(Validators::WalletTransactionAmountLimitsValidator).to have_received(:new).with(
         BaseService::LegacyResult,
@@ -206,7 +213,11 @@ RSpec.describe Api::V1::WalletsController do
             {
               trigger: "interval",
               interval: "monthly",
-              ignore_paid_top_up_limits: true
+              ignore_paid_top_up_limits: true,
+              payment_method: {
+                payment_method_type: "provider",
+                payment_method_id: payment_method.id
+              }
             }
           ]
         }
@@ -226,6 +237,8 @@ RSpec.describe Api::V1::WalletsController do
         expect(recurring_rules.first[:method]).to eq("fixed")
         expect(recurring_rules.first[:trigger]).to eq("interval")
         expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+        expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
+        expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
       end
 
       context "when invoice_requires_successful_payment is set at the wallet level but the rule level" do
@@ -487,7 +500,11 @@ RSpec.describe Api::V1::WalletsController do
         priority: 5,
         invoice_requires_successful_payment: true,
         paid_top_up_min_amount_cents: 6_00,
-        paid_top_up_max_amount_cents: 10_00
+        paid_top_up_max_amount_cents: 10_00,
+        payment_method: {
+          payment_method_type: "provider",
+          payment_method_id: payment_method.id
+        }
       }
     end
 
@@ -507,6 +524,8 @@ RSpec.describe Api::V1::WalletsController do
       expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
       expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
       expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(10_00)
+      expect(json[:wallet][:payment_method][:payment_method_type]).to eq("provider")
+      expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
 
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
     end
@@ -604,7 +623,11 @@ RSpec.describe Api::V1::WalletsController do
               granted_credits: "105",
               target_ongoing_balance: "300",
               invoice_requires_successful_payment: true,
-              ignore_paid_top_up_limits: true
+              ignore_paid_top_up_limits: true,
+              payment_method: {
+                payment_method_type: "provider",
+                payment_method_id: payment_method.id
+              }
             }
           ]
         }
@@ -629,6 +652,8 @@ RSpec.describe Api::V1::WalletsController do
         expect(recurring_rules.first[:trigger]).to eq("interval")
         expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
         expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+        expect(recurring_rules.first[:payment_method][:payment_method_type]).to eq("provider")
+        expect(recurring_rules.first[:payment_method][:payment_method_id]).to eq(payment_method.id)
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end
