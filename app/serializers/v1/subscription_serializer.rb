@@ -30,10 +30,10 @@ module V1
 
       payload = payload.merge(customer:) if include?(:customer)
       payload.merge!(entitlements) if include?(:entitlements)
+      payload.merge!(payment_method)
       payload = payload.merge(plan:) if include?(:plan)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applied_invoice_custom_sections:) if include?(:applied_invoice_custom_sections)
-      payload = payload.merge(payment_method)
 
       payload
     end

@@ -23,7 +23,7 @@ module V1
       }
 
       payload.merge!(wallet) if include?(:wallet)
-      payload = payload.merge(payment_method)
+      payload.merge!(payment_method)
 
       payload
     end
