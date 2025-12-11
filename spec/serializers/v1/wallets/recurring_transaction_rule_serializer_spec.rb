@@ -29,5 +29,7 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       "ignore_paid_top_up_limits" => recurring_transaction_rule.ignore_paid_top_up_limits,
       "applied_invoice_custom_sections" => recurring_transaction_rule.applied_invoice_custom_sections
     )
+    expect(result["recurring_transaction_rule"]["payment_method"]["payment_method_id"]).to eq(nil)
+    expect(result["recurring_transaction_rule"]["payment_method"]["payment_method_type"]).to eq("provider")
   end
 end

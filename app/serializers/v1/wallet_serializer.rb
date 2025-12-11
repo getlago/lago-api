@@ -32,6 +32,7 @@ module V1
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
+      payload.merge!(payment_method)
 
       payload
     end
@@ -51,6 +52,15 @@ module V1
         applies_to: {
           fee_types: model.allowed_fee_types,
           billable_metric_codes: model.billable_metrics.pluck(:code)
+        }
+      }
+    end
+
+    def payment_method
+      {
+        payment_method: {
+          payment_method_id: model.payment_method_id,
+          payment_method_type: model.payment_method_type
         }
       }
     end
