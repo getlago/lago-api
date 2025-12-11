@@ -223,6 +223,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_2c06a74f41;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_2b35eef34b;
+ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_2908dd8de5;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_28077d4aa2;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_27b55b8574;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS fk_rails_26be2f764d;
@@ -322,7 +323,7 @@ DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
-DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id_and_recurring;
+DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_subscription_id;
@@ -687,6 +688,10 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_usage_thresholds_subscription_recurring;
+DROP INDEX IF EXISTS public.idx_usage_thresholds_plan_recurring;
+DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_subscription_recurring;
+DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_plan_recurring;
 DROP INDEX IF EXISTS public.idx_unique_tax_code_per_organization;
 DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
@@ -735,7 +740,6 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_ba78f5f5a5;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
-DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_invoice_subscriptions_on_subscription_with_timestamps;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
 DROP INDEX IF EXISTS public.idx_events_for_distinct_codes;
@@ -3417,14 +3421,16 @@ CREATE VIEW public.exports_taxes AS
 
 CREATE TABLE public.usage_thresholds (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    plan_id uuid NOT NULL,
+    plan_id uuid,
     threshold_display_name character varying,
     amount_cents bigint NOT NULL,
     recurring boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    subscription_id uuid,
+    CONSTRAINT usage_thresholds_check_exactly_one_parent CHECK (((plan_id IS NOT NULL) <> (subscription_id IS NOT NULL)))
 );
 
 
@@ -5415,13 +5421,6 @@ CREATE INDEX idx_invoice_subscriptions_on_subscription_with_timestamps ON public
 
 
 --
--- Name: idx_on_amount_cents_plan_id_recurring_888044d66b; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_on_amount_cents_plan_id_recurring_888044d66b ON public.usage_thresholds USING btree (amount_cents, plan_id, recurring) WHERE (deleted_at IS NULL);
-
-
---
 -- Name: idx_on_billing_entity_id_724373e5ae; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5755,6 +5754,34 @@ CREATE UNIQUE INDEX idx_unique_privilege_removal_per_subscription ON public.enti
 --
 
 CREATE UNIQUE INDEX idx_unique_tax_code_per_organization ON public.taxes USING btree (code, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_usage_thresholds_on_amount_plan_recurring; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_usage_thresholds_on_amount_plan_recurring ON public.usage_thresholds USING btree (amount_cents, plan_id, recurring) WHERE ((deleted_at IS NULL) AND (plan_id IS NOT NULL));
+
+
+--
+-- Name: idx_usage_thresholds_on_amount_subscription_recurring; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_usage_thresholds_on_amount_subscription_recurring ON public.usage_thresholds USING btree (amount_cents, subscription_id, recurring) WHERE ((deleted_at IS NULL) AND (subscription_id IS NOT NULL));
+
+
+--
+-- Name: idx_usage_thresholds_plan_recurring; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_usage_thresholds_plan_recurring ON public.usage_thresholds USING btree (plan_id, recurring) WHERE ((recurring IS TRUE) AND (deleted_at IS NULL) AND (plan_id IS NOT NULL));
+
+
+--
+-- Name: idx_usage_thresholds_subscription_recurring; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_usage_thresholds_subscription_recurring ON public.usage_thresholds USING btree (subscription_id, recurring) WHERE ((recurring IS TRUE) AND (deleted_at IS NULL) AND (subscription_id IS NOT NULL));
 
 
 --
@@ -8306,10 +8333,10 @@ CREATE INDEX index_usage_thresholds_on_plan_id ON public.usage_thresholds USING 
 
 
 --
--- Name: index_usage_thresholds_on_plan_id_and_recurring; Type: INDEX; Schema: public; Owner: -
+-- Name: index_usage_thresholds_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_usage_thresholds_on_plan_id_and_recurring ON public.usage_thresholds USING btree (plan_id, recurring) WHERE ((recurring IS TRUE) AND (deleted_at IS NULL));
+CREATE INDEX index_usage_thresholds_on_subscription_id ON public.usage_thresholds USING btree (subscription_id);
 
 
 --
@@ -8932,6 +8959,14 @@ ALTER TABLE ONLY public.charge_filters
 
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT fk_rails_28077d4aa2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_thresholds fk_rails_2908dd8de5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_thresholds
+    ADD CONSTRAINT fk_rails_2908dd8de5 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -10654,6 +10689,8 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20251210151531'),
+('20251210133246'),
+('20251210133225'),
 ('20251204142205'),
 ('20251202141759'),
 ('20251201094057'),
@@ -11530,3 +11567,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

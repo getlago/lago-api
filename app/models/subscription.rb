@@ -18,6 +18,7 @@ class Subscription < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_many :fees
   has_many :daily_usages
+  has_many :usage_thresholds
   has_many :entitlements, class_name: "Entitlement::Entitlement"
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan

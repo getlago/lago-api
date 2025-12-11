@@ -58,6 +58,8 @@ module V1
       ).serialize
     end
 
+    # NOTE: This attribute is only used when sending the `subscription.usage_threshold_reached` webhook
+    #      Ideally, this shouldn't even be part of the `subscription` object
     def usage_threshold
       ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
     end
