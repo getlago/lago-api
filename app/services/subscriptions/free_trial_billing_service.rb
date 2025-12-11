@@ -9,6 +9,7 @@ module Subscriptions
     end
 
     def call
+      # TODO: check that it's rewritten with later Ancor's work
       ending_trial_subscriptions.each do |subscription|
         if subscription.plan_pay_in_advance &&
             !subscription.was_already_billed_today &&

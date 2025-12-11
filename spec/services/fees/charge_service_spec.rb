@@ -95,6 +95,19 @@ RSpec.describe Fees::ChargeService do
           )
         end
 
+        it "sets correct boundaries on the fee properties" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.first.properties).to include(
+            "charges_from_datetime" => "2022-03-15T00:00:00.000Z",
+            "charges_to_datetime" => "2022-03-31T23:59:59.999Z",
+            "charges_duration" => 31,
+            "fixed_charges_from_datetime" => nil,
+            "fixed_charges_to_datetime" => nil,
+            "fixed_charges_duration" => nil
+          )
+        end
+
         it "persists fee" do
           expect { charge_subscription_service.call }.to change(Fee, :count)
         end
