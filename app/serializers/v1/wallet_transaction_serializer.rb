@@ -24,7 +24,7 @@ module V1
 
       payload.merge!(wallet) if include?(:wallet)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
-      payload = payload.merge(payment_method)
+      payload.merge!(payment_method)
 
       payload
     end
