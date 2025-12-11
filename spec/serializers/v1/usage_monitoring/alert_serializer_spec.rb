@@ -13,7 +13,7 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
   it "serializes the object" do
     payload = result["alert"]
     expect(payload["lago_id"]).to eq(alert.id)
-    expect(payload["subscription_external_id"]).to eq("ext-id")
+    expect(payload["external_subscription_id"]).to eq("ext-id")
     expect(payload["name"]).to eq("General Alert")
     expect(payload["code"]).to eq("yolo")
     expect(payload["alert_type"]).to eq("current_usage_amount")
@@ -25,6 +25,9 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     expect(payload["previous_value"]).to eq("800.0")
     expect(payload["last_processed_at"]).to eq("2000-01-01T12:00:00Z")
     expect(payload["billable_metric"]).to be_nil
+
+    # Deprecated fields that must be kept for backward compatibility
+    expect(payload["subscription_external_id"]).to eq("ext-id")
   end
 
   context "with billable_metric_current_usage_amount alert" do
