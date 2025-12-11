@@ -30,6 +30,7 @@ module V1
 
       payload = payload.merge(customer:) if include?(:customer)
       payload.merge!(entitlements) if include?(:entitlements)
+      payload.merge!(payment_method)
       payload = payload.merge(plan:) if include?(:plan)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applied_invoice_custom_sections:) if include?(:applied_invoice_custom_sections)
@@ -74,6 +75,15 @@ module V1
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize
+    end
+
+    def payment_method
+      {
+        payment_method: {
+          payment_method_id: model.payment_method_id,
+          payment_method_type: model.payment_method_type
+        }
+      }
     end
   end
 end

@@ -43,6 +43,11 @@ RSpec.describe Api::V1::WalletTransactionsController do
 
       expect(wallet_transactions.count).to eq(2)
 
+      expect(wallet_transactions.first[:payment_method][:payment_method_type]).to eq("provider")
+      expect(wallet_transactions.first[:payment_method][:payment_method_id]).to eq(nil)
+      expect(wallet_transactions.second[:payment_method][:payment_method_type]).to eq("provider")
+      expect(wallet_transactions.second[:payment_method][:payment_method_id]).to eq(nil)
+
       paid_transaction = wallet_transactions.first
       granted_transaction = wallet_transactions.second
 

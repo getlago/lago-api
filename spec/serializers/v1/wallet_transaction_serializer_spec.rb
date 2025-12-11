@@ -32,6 +32,8 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "metadata" => wallet_transaction.metadata,
         "name" => "Custom Transaction Name"
       )
+      expect(result["wallet_transaction"]["payment_method"]["payment_method_id"]).to eq(nil)
+      expect(result["wallet_transaction"]["payment_method"]["payment_method_type"]).to eq("provider")
     end
   end
 
