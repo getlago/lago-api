@@ -16,7 +16,6 @@ module Events
 
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
           scope = scope.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
-          scope = scope.limit_by(1, "events_enriched.transaction_id")
 
           scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
@@ -34,7 +33,6 @@ module Events
 
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
         query = query.where(arel_table[:timestamp].lteq(applicable_to_datetime)) if applicable_to_datetime
-        query = query.limit_by(1, "events_enriched.transaction_id")
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
         query = arel_filters_scope(query)
