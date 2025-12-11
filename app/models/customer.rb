@@ -192,6 +192,14 @@ class Customer < ApplicationRecord
     billing_entity.invoice_grace_period || 0
   end
 
+  def applicable_subscription_invoice_issuing_date_anchor
+    subscription_invoice_issuing_date_anchor || billing_entity.subscription_invoice_issuing_date_anchor
+  end
+
+  def applicable_subscription_invoice_issuing_date_adjustment
+    subscription_invoice_issuing_date_adjustment || billing_entity.subscription_invoice_issuing_date_adjustment
+  end
+
   def applicable_net_payment_term
     return net_payment_term if net_payment_term.present?
 

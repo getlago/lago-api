@@ -17,6 +17,10 @@ module Invoices
         invoice.issuing_date = issuing_date
         refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         if invoice.tax_pending?
+          # When we need to fetch taxes, the invoice isn't finalized until taxes are pulled.
+          # So we can't show the final issuing/payment due dates yet.
+          # We'll set those in Inovoices::ProviderTaxes::PullTaxesAndApplyService
+          # once the taxes are successfully pulled.
           invoice.update!(issuing_date: drafted_issuing_date)
           # rubocop:disable Rails/TransactionExitStatement
           return refresh_result
@@ -60,7 +64,17 @@ module Invoices
     attr_accessor :invoice, :result
 
     def issuing_date
-      @issuing_date ||= Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
+      @issuing_date ||=
+        if issuing_date_keep_anchor?
+          invoice.issuing_date
+        else
+          Time.current.in_time_zone(invoice.customer.applicable_timezone).to_date
+        end
+    end
+
+    def issuing_date_keep_anchor?
+      invoice.invoice_subscriptions.first&.recurring? &&
+        invoice.customer.applicable_subscription_invoice_issuing_date_adjustment == "keep_anchor"
     end
 
     def payment_due_date

@@ -3059,6 +3059,7 @@ CREATE TABLE public.invoices (
     finalized_at timestamp without time zone,
     voided_invoice_id uuid,
     xml_file character varying,
+    expected_finalization_date date,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -10694,6 +10695,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251204142205'),
 ('20251202141759'),
 ('20251201094057'),
+('20251201084648'),
 ('20251128102055'),
 ('20251127145819'),
 ('20251127123135'),

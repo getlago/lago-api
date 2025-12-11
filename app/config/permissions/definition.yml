@@ -90,6 +90,8 @@ customer_settings:
     payment_terms: true
     grace_period: true
     lang: true
+    issuing_date_anchor: true
+    issuing_date_adjustment: true
 developers:
   manage:
   keys:

@@ -121,7 +121,7 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized, -> { draft.where("issuing_date <= ?", Time.current.to_date) }
+  scope :ready_to_be_finalized, -> { draft.where("COALESCE(expected_finalization_date, issuing_date) <= ?", Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
@@ -440,6 +440,12 @@ class Invoice < ApplicationRecord
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
   end
 
+  # A safeguard while we're populating the expected finalization date.
+  # We can drop it once fill_expected_finalization_date has been run.
+  def expected_finalization_date
+    read_attribute(:expected_finalization_date) || issuing_date
+  end
+
   private
 
   # Checks that every charge has at least one fee without a filter (charge_filter_id IS NULL)
@@ -594,6 +600,7 @@ end
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
+#  expected_finalization_date              :date
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
 #  finalized_at                            :datetime
