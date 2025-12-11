@@ -59,7 +59,6 @@ module Fees
       rounded_amount = amount_result.amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
       precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
-      # for proration this should be amount_cents / units
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
       precise_unit_amount = amount_result.unit_amount
 
@@ -72,10 +71,6 @@ module Fees
           prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
           amount_cents -= prorated_for_current_period
           precise_amount_cents -= prorated_for_current_period.to_d
-          # unit_amount_cents -= prorated_for_current_period.to_d
-          # precise_unit_amount -= prorated_for_current_period.to_d
-          # units -= current_period_duration
-          # total_aggregated_units -= current_period_duration
         end
       end
 

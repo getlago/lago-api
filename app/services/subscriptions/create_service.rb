@@ -179,7 +179,7 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      current_subscription.next_subscriptions.create!(
+      new_sub = current_subscription.next_subscriptions.create!(
         organization_id: customer.organization_id,
         customer:,
         plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
@@ -192,13 +192,12 @@ module Subscriptions
       )
 
       if params.key?(:payment_method)
-        next_subscription.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
-        next_subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
-        next_subscription.save!
+        new_sub.payment_method_type = params[:payment_method][:payment_method_type] if params[:payment_method].key?(:payment_method_type)
+        new_sub.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
+        new_sub.save!
       end
 
-      InvoiceCustomSections::AttachToResourceService.call(resource: next_subscription, params:)
-      EmitFixedChargeEventsService.call!(subscriptions: [next_subscription], timestamp: next_subscription.subscription_at)
+      InvoiceCustomSections::AttachToResourceService.call(resource: new_sub, params:)
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)

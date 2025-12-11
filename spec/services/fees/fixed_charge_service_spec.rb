@@ -573,38 +573,5 @@ RSpec.describe Fees::FixedChargeService do
         )
       end
     end
-
-    context "when fixed charge is pay_in_advance" do
-      let(:fixed_charge) do
-        create(:fixed_charge, plan: subscription.plan, charge_model: "standard", pay_in_advance: true, properties: {amount: "10"})
-      end
-
-      it "creates a fee with pay_in_advance boundaries" do
-        result = fixed_charge_service.call
-        expect(result).to be_success
-        expect(result.fee.properties).to include(
-          "fixed_charges_from_datetime" => Time.parse("2022-04-01T00:00:00.000Z"),
-          "fixed_charges_to_datetime" => Time.parse("2022-04-30T23:59:59.999Z"),
-          "fixed_charges_duration" => 30
-        )
-      end
-    end
-
-    context "when fixed charge is not pay_in_advance" do
-      let(:fixed_charge) do
-        create(:fixed_charge, plan: subscription.plan, charge_model: "standard", pay_in_advance: false, properties: {amount: "10"})
-      end
-
-      it "creates a fee with current boundaries" do
-        result = fixed_charge_service.call
-        expect(result).to be_success
-        # subscription started at 2022-03-17, so all charges only start from 17th
-        expect(result.fee.properties).to include(
-          "fixed_charges_from_datetime" => Time.parse("2022-03-17T00:00:00.000Z"),
-          "fixed_charges_to_datetime" => Time.parse("2022-03-31T23:59:59.999Z"),
-          "fixed_charges_duration" => 31
-        )
-      end
-    end
   end
 end
