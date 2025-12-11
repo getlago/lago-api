@@ -18,7 +18,6 @@ class Subscription < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_many :fees
   has_many :daily_usages
-  has_many :usage_thresholds, through: :plan
   has_many :entitlements, class_name: "Entitlement::Entitlement"
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :fixed_charges, -> { kept }, through: :plan
@@ -29,6 +28,12 @@ class Subscription < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     foreign_key: :external_subscription_id,
     primary_key: :external_id
+  has_many :applied_invoice_custom_sections,
+    class_name: "Subscription::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
 
   has_one :lifetime_usage, autosave: true
   has_one :subscription_activity, class_name: "UsageMonitoring::SubscriptionActivity"
@@ -239,8 +244,11 @@ class Subscription < ApplicationRecord
       to_datetime: dates_service.to_datetime,
       charges_from_datetime: dates_service.charges_from_datetime,
       charges_to_datetime: dates_service.charges_to_datetime,
+      fixed_charges_from_datetime: dates_service.fixed_charges_from_datetime,
+      fixed_charges_to_datetime: dates_service.fixed_charges_to_datetime,
       timestamp: datetime,
-      charges_duration: dates_service.charges_duration_in_days
+      charges_duration: dates_service.charges_duration_in_days,
+      fixed_charges_duration: dates_service.fixed_charges_duration_in_days
     )
 
     InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
@@ -251,27 +259,28 @@ end
 #
 # Table name: subscriptions
 #
-#  id                         :uuid             not null, primary key
-#  billing_time               :integer          default("calendar"), not null
-#  canceled_at                :datetime
-#  ending_at                  :datetime
-#  name                       :string
-#  on_termination_credit_note :enum
-#  on_termination_invoice     :enum             default("generate"), not null
-#  payment_method_type        :enum             default("provider"), not null
-#  started_at                 :datetime
-#  status                     :integer          not null
-#  subscription_at            :datetime
-#  terminated_at              :datetime
-#  trial_ended_at             :datetime
-#  created_at                 :datetime         not null
-#  updated_at                 :datetime         not null
-#  customer_id                :uuid             not null
-#  external_id                :string           not null
-#  organization_id            :uuid             not null
-#  payment_method_id          :uuid
-#  plan_id                    :uuid             not null
-#  previous_subscription_id   :uuid
+#  id                           :uuid             not null, primary key
+#  billing_time                 :integer          default("calendar"), not null
+#  canceled_at                  :datetime
+#  ending_at                    :datetime
+#  name                         :string
+#  on_termination_credit_note   :enum
+#  on_termination_invoice       :enum             default("generate"), not null
+#  payment_method_type          :enum             default("provider"), not null
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :integer          not null
+#  subscription_at              :datetime
+#  terminated_at                :datetime
+#  trial_ended_at               :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
+#  plan_id                      :uuid             not null
+#  previous_subscription_id     :uuid
 #
 # Indexes
 #

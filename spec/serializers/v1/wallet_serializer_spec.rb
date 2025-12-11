@@ -3,15 +3,17 @@
 require "rails_helper"
 
 RSpec.describe ::V1::WalletSerializer do
-  subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations recurring_transaction_rules]) }
+  subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations recurring_transaction_rules applied_invoice_custom_sections]) }
 
   let(:wallet) { create(:wallet, :with_top_up_limits, allowed_fee_types: %w[charge]) }
   let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
   let(:wallet_target) { create(:wallet_target, wallet:) }
+  let(:applied_invoice_custom_section) { create(:wallet_applied_invoice_custom_section, wallet:) }
 
   before do
     recurring_transaction_rule
     wallet_target
+    applied_invoice_custom_section
   end
 
   it "serializes the object" do
@@ -45,5 +47,6 @@ RSpec.describe ::V1::WalletSerializer do
     expect(result["wallet"]["applies_to"]["fee_types"]).to eq(%w[charge])
     expect(result["wallet"]["applies_to"]["billable_metric_codes"]).to eq([wallet_target.billable_metric.code])
     expect(result["wallet"]["recurring_transaction_rules"].first["lago_id"]).to eq(recurring_transaction_rule.id)
+    expect(result["wallet"]["applied_invoice_custom_sections"].first["lago_id"]).to eq(applied_invoice_custom_section.id)
   end
 end

@@ -12,8 +12,9 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
     <<-GQL
       mutation($input: UpdateStripePaymentProviderInput!) {
         updateStripePaymentProvider(input: $input) {
-          id,
+          id
           successRedirectUrl
+          supports3ds
         }
       }
     GQL
@@ -36,7 +37,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
       variables: {
         input: {
           id: stripe_provider.id,
-          successRedirectUrl: success_redirect_url
+          successRedirectUrl: success_redirect_url,
+          supports3ds: true
         }
       }
     )
@@ -44,6 +46,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update do
     result_data = result["data"]["updateStripePaymentProvider"]
 
     expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
+    expect(result_data["supports3ds"]).to eq(true)
   end
 
   context "when success redirect url is nil" do

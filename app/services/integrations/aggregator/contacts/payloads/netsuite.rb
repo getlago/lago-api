@@ -7,6 +7,7 @@ module Integrations
         class Netsuite < BasePayload
           BASE_LIMIT = 30
           ADDR1_LIMIT = 150
+          CITY_LIMIT = 50
 
           def create_body
             {
@@ -83,7 +84,7 @@ module Integrations
                       "subObject" => {
                         "addr1" => customer.address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.address_line2,
-                        "city" => customer.city,
+                        "city" => customer.city&.first(CITY_LIMIT),
                         "zip" => customer.zipcode,
                         "state" => customer.state&.first(BASE_LIMIT),
                         "country" => customer.country
@@ -104,7 +105,7 @@ module Integrations
                       "subObject" => {
                         "addr1" => customer.address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.address_line2,
-                        "city" => customer.city,
+                        "city" => customer.city&.first(CITY_LIMIT),
                         "zip" => customer.zipcode,
                         "state" => customer.state&.first(BASE_LIMIT),
                         "country" => customer.country
@@ -117,7 +118,7 @@ module Integrations
                       "subObject" => {
                         "addr1" => customer.shipping_address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.shipping_address_line2,
-                        "city" => customer.shipping_city,
+                        "city" => customer.shipping_city&.first(CITY_LIMIT),
                         "zip" => customer.shipping_zipcode,
                         "state" => customer.shipping_state&.first(BASE_LIMIT),
                         "country" => customer.shipping_country

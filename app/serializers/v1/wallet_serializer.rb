@@ -31,6 +31,7 @@ module V1
 
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
       payload.merge!(limitations) if include?(:limitations)
+      payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
 
       payload
     end
@@ -52,6 +53,14 @@ module V1
           billable_metric_codes: model.billable_metrics.pluck(:code)
         }
       }
+    end
+
+    def applied_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applied_invoice_custom_sections,
+        ::V1::AppliedInvoiceCustomSectionSerializer,
+        collection_name: "applied_invoice_custom_sections"
+      ).serialize
     end
   end
 end

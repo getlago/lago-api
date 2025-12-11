@@ -140,7 +140,8 @@ RSpec.describe Invoices::Payments::StripeService do
       PaymentProviders::StripeProvider::StripePayment.new(
         id: "ch_123456",
         status: "succeeded",
-        metadata: {}
+        metadata: {},
+        error_code: nil
       )
     end
 
@@ -172,7 +173,8 @@ RSpec.describe Invoices::Payments::StripeService do
         PaymentProviders::StripeProvider::StripePayment.new(
           id: "ch_123456",
           status: "canceled",
-          metadata: {}
+          metadata: {},
+          error_code: nil
         )
       end
 
@@ -190,6 +192,32 @@ RSpec.describe Invoices::Payments::StripeService do
           payment_status: "failed",
           ready_for_payment_processing: true
         )
+      end
+
+      context "when there is another payment in requires_action state for the invoice" do
+        it "updates the payment status but not the invoice status" do
+          # We can only have one `pending/processing` payment for an invoice
+          # in this case, we're testing a webhook arriving later when the retry with 3ds support has already started
+          # This can only happen if the first payment, was already failed.
+          payment.update!(payable_payment_status: "failed")
+          old_value = payment.payable.ready_for_payment_processing
+          create(:payment, payable: invoice, status: "requires_action")
+
+          result = stripe_service.update_payment_status(
+            organization_id: organization.id,
+            status: "failed",
+            stripe_payment:
+          )
+
+          expect(result).to be_success
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("failed")
+
+          expect(result.invoice.reload).to have_attributes(
+            payment_status: "pending",
+            ready_for_payment_processing: old_value
+          )
+        end
       end
     end
 
@@ -232,7 +260,8 @@ RSpec.describe Invoices::Payments::StripeService do
         PaymentProviders::StripeProvider::StripePayment.new(
           id: "ch_123456",
           status: "succeeded",
-          metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"}
+          metadata: {lago_invoice_id: invoice.id, payment_type: "one-time"},
+          error_code: nil
         )
       end
 
@@ -265,7 +294,8 @@ RSpec.describe Invoices::Payments::StripeService do
           PaymentProviders::StripeProvider::StripePayment.new(
             id: "ch_123456",
             status: "succeeded",
-            metadata: {lago_invoice_id: "invalid", payment_type: "one-time"}
+            metadata: {lago_invoice_id: "invalid", payment_type: "one-time"},
+            error_code: nil
           )
         end
 
@@ -306,7 +336,8 @@ RSpec.describe Invoices::Payments::StripeService do
           PaymentProviders::StripeProvider::StripePayment.new(
             id: "ch_123456",
             status: "succeeded",
-            metadata: {lago_invoice_id: SecureRandom.uuid}
+            metadata: {lago_invoice_id: SecureRandom.uuid},
+            error_code: nil
           )
         end
 
@@ -328,7 +359,8 @@ RSpec.describe Invoices::Payments::StripeService do
             PaymentProviders::StripeProvider::StripePayment.new(
               id: "ch_123456",
               status: "succeeded",
-              metadata: {lago_invoice_id: invoice.id}
+              metadata: {lago_invoice_id: invoice.id},
+              error_code: nil
             )
           end
 

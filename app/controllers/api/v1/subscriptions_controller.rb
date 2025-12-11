@@ -75,7 +75,7 @@ module Api
 
         if result.success?
           response[:subscription] = ::V1::SubscriptionSerializer.new(
-            result.subscription, includes: %i[plan]
+            result.subscription, includes: %i[plan entitlements]
           ).serialize
 
           render(json: response)
@@ -139,7 +139,7 @@ module Api
           )
         return not_found_error(resource: "subscription") unless subscription
 
-        render_subscription(subscription)
+        render_subscription(subscription, includes: %i[plan entitlements])
       end
 
       def index
@@ -160,6 +160,10 @@ module Api
             :billing_time,
             :subscription_at,
             :ending_at,
+            invoice_custom_section: [
+              :skip_invoice_custom_sections,
+              {invoice_custom_section_codes: []}
+            ],
             plan_overrides:
           )
       end
@@ -171,6 +175,10 @@ module Api
           :ending_at,
           :on_termination_credit_note,
           :on_termination_invoice,
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
+          ],
           plan_overrides:
         )
       end
@@ -224,12 +232,12 @@ module Api
         ]
       end
 
-      def render_subscription(subscription)
+      def render_subscription(subscription, includes: %i[plan])
         render(
           json: ::V1::SubscriptionSerializer.new(
             subscription,
             root_name: "subscription",
-            includes: %i[plan]
+            includes:
           )
         )
       end

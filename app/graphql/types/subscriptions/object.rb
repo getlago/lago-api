@@ -26,6 +26,9 @@ module Types
       field :current_billing_period_ending_at, GraphQL::Types::ISO8601DateTime
       field :current_billing_period_started_at, GraphQL::Types::ISO8601DateTime
 
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+      field :skip_invoice_custom_sections, Boolean
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 

@@ -22,11 +22,13 @@ RSpec.describe PaymentProviders::StripeService do
           secret_key:,
           code:,
           name:,
-          success_redirect_url:
+          success_redirect_url:,
+          supports_3ds: true
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
           .with(result.stripe_provider)
+        expect(result.stripe_provider.supports_3ds).to be(true)
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 

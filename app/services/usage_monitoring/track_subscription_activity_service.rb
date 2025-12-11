@@ -36,7 +36,7 @@ module UsageMonitoring
     def need_lifetime_usage?
       return true if organization.lifetime_usage_enabled?
 
-      organization.progressive_billing_enabled? && subscription.usage_thresholds.any?
+      organization.progressive_billing_enabled? && subscription.plan.usage_thresholds.any?
     end
 
     def has_alerts?

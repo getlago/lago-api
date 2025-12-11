@@ -281,4 +281,26 @@ RSpec.shared_examples "a credit note index endpoint" do
       end
     end
   end
+
+  context "with metadata" do
+    let(:params) { {} }
+
+    before do
+      invoices = create_list(:invoice, 3, organization:, customer:)
+      invoices.each do |invoice|
+        credit_note = create(:credit_note, invoice:, customer:)
+        create(:item_metadata, owner: credit_note, organization:, value: {"foo" => "bar"})
+      end
+    end
+
+    it "returns metadata for each credit note", :with_bullet do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:credit_notes].count).to eq(3)
+      json[:credit_notes].each do |credit_note|
+        expect(credit_note[:metadata]).to eq(foo: "bar")
+      end
+    end
+  end
 end

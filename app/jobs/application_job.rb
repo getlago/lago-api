@@ -3,9 +3,13 @@
 class ApplicationJob < ActiveJob::Base
   sidekiq_options retry: 0
 
+  # This is a generic error to trigger the retry of any job
+  # The max attempt is set to avoid infinite loops
+  retry_on RetriableError, wait: :polynomially_longer, attempts: 20
+
   # This method is used to perform a job after a commit.
   #
-  # It is meant to avoid race-conditions where a job run before changes are commited to the DB and we end up with stale
+  # It is meant to avoid race-conditions where a job run before changes are committed to the DB and we end up with stale
   # data in the job.
   #
   # It is also possible to rely on `ActiveJob::Base.enqueue_after_transaction_commit` but this doesn't allow incremental

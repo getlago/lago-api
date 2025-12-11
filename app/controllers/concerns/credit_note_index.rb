@@ -34,7 +34,15 @@ module CreditNoteIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.credit_notes.includes(:items, :applied_taxes, :invoice),
+          result.credit_notes.includes(
+            :items,
+            :applied_taxes,
+            :file_attachment,
+            :xml_file_attachment,
+            :error_details,
+            :metadata,
+            invoice: :billing_entity
+          ),
           ::V1::CreditNoteSerializer,
           collection_name: "credit_notes",
           meta: pagination_metadata(result.credit_notes),

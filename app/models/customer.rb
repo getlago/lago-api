@@ -41,7 +41,7 @@ class Customer < ApplicationRecord
   attribute :customer_type, :string
   enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   attribute :account_type, :string
-  enum :account_type, ACCOUNT_TYPES, suffix: :account
+  enum :account_type, ACCOUNT_TYPES, suffix: :account, validate: true
 
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
@@ -115,6 +115,9 @@ class Customer < ApplicationRecord
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 
+  scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
+  scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
+
   scope :falling_back_to_default_dunning_campaign, -> {
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
   }
@@ -131,6 +134,24 @@ class Customer < ApplicationRecord
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
+
+  [
+    :address_line1,
+    :address_line2,
+    :city,
+    :zipcode,
+    :state,
+    :country,
+    :shipping_address_line1,
+    :shipping_address_line2,
+    :shipping_city,
+    :shipping_zipcode,
+    :shipping_state,
+    :shipping_country
+  ].each do |attribute|
+    # NOTE: Null byte injection. Prevent 500 errors.
+    normalizes attribute, with: ->(value) { value.delete("\u0000") }
+  end
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]
@@ -296,6 +317,7 @@ end
 #  account_type                                 :enum             default("customer"), not null
 #  address_line1                                :string
 #  address_line2                                :string
+#  awaiting_wallet_refresh                      :boolean          default(FALSE), not null
 #  city                                         :string
 #  country                                      :string
 #  currency                                     :string
@@ -348,6 +370,7 @@ end
 #
 #  index_customers_on_account_type                     (account_type)
 #  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
+#  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
 #  index_customers_on_billing_entity_id                (billing_entity_id)
 #  index_customers_on_deleted_at                       (deleted_at)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)

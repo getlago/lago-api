@@ -39,6 +39,8 @@ RSpec.describe Subscription do
       expect(subject).to belong_to(:previous_subscription).optional
       expect(subject).to belong_to(:organization)
       expect(subject).to have_one(:billing_entity).through(:customer)
+      expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Subscription::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
       expect(subject).to have_many(:next_subscriptions).class_name("Subscription").with_foreign_key(:previous_subscription_id)
       expect(subject).to have_many(:events)
       expect(subject).to have_many(:invoice_subscriptions)
@@ -46,7 +48,6 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:integration_resources)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
-      expect(subject).to have_many(:usage_thresholds).through(:plan)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
@@ -662,6 +663,8 @@ RSpec.describe Subscription do
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
         timestamp: billing_date
       }
     end
@@ -696,6 +699,8 @@ RSpec.describe Subscription do
         expect(new_boundaries.to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
         expect(new_boundaries.charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
         expect(new_boundaries.charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.fixed_charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.fixed_charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
       end
     end
   end

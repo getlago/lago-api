@@ -72,7 +72,7 @@ module Integrations
             attr_reader :customer, :integration_customer, :credit_note, :billing_entity
 
             def item_amount(item, fee)
-              amount = (item.sub_total_excluding_taxes_amount_cents.to_i * -1).fdiv(fee.amount.currency.subunit_to_unit)
+              amount = (item.sub_total_excluding_taxes_amount_cents.round * -1).fdiv(fee.amount.currency.subunit_to_unit)
 
               amount.to_s
             end

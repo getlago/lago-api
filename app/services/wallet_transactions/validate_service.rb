@@ -21,6 +21,14 @@ module WalletTransactions
 
     private
 
+    MAX_AMOUNT = 10**25 - 1
+    private_constant :MAX_AMOUNT
+
+    def valid_amount?(amount)
+      ::Validators::DecimalAmountService.new(amount).valid_amount? &&
+        BigDecimal(amount).between?(0, MAX_AMOUNT)
+    end
+
     def valid_wallet?
       organization = args[:organization].presence || Organization.find_by(id: args[:organization_id])
 
@@ -33,27 +41,28 @@ module WalletTransactions
     end
 
     def valid_paid_credits_amount?
-      return true if ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
+      return true if valid_amount?(args[:paid_credits])
 
       add_error(field: :paid_credits, error_code: "invalid_paid_credits")
       add_error(field: :paid_credits, error_code: "invalid_amount")
     end
 
     def valid_granted_credits_amount?
-      return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
+      return true if valid_amount?(args[:granted_credits])
 
       add_error(field: :granted_credits, error_code: "invalid_granted_credits")
       add_error(field: :granted_credits, error_code: "invalid_amount")
     end
 
     def valid_voided_credits_amount?
-      unless ::Validators::DecimalAmountService.new(args[:voided_credits]).valid_amount?
+      voided_credits = args[:voided_credits]
+      unless valid_amount?(voided_credits)
         add_error(field: :voided_credits, error_code: "invalid_voided_credits")
         add_error(field: :voided_credits, error_code: "invalid_amount")
         return false
       end
 
-      if BigDecimal(args[:voided_credits]) > result.current_wallet.credits_balance
+      if BigDecimal(voided_credits) > result.current_wallet.credits_balance
         return add_error(field: :voided_credits, error_code: "insufficient_credits")
       end
 

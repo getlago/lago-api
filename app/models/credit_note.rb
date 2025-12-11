@@ -14,6 +14,10 @@ class CreditNote < ApplicationRecord
   belongs_to :organization
 
   has_one :billing_entity, through: :invoice
+  has_one :metadata,
+    class_name: "Metadata::ItemMetadata",
+    as: :owner,
+    dependent: :destroy
 
   has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items

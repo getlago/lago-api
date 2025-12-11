@@ -12,6 +12,7 @@ module Auth
 
       def call
         check_state
+        check_code
         check_okta_integration(result.email)
 
         query_okta_access_token

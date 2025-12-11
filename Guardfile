@@ -18,6 +18,15 @@ guard :rspec, cmd: "bundle exec rspec" do
   watch("app/services/integrations/aggregator/payments/payloads/base_payload.rb") do
     "spec/services/integrations/aggregator/payments/payloads"
   end
+
+  watch(%r{^app/services/(customers/refresh_wallets_service|wallets/balance/refresh_ongoing_usage_service)\.rb$}) do
+    [
+      "spec/scenarios/wallets/balance_spec.rb",
+      "spec/scenarios/wallets/customer_wallets_balance_refresh_spec.rb",
+      "spec/scenarios/invoices/invoicing_with_prepaid_credits_spec.rb"
+    ]
+  end
+
   watch("app/services/integrations/aggregator/base_service.rb") { "spec/services/integrations/aggregator/" }
   watch("app/services/base_service.rb") { "spec/services/" }
   watch("app/jobs/application_job.rb") { "spec/jobs/" }

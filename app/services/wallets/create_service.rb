@@ -68,6 +68,7 @@ module Wallets
 
       result.wallet = wallet
 
+      InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
       SendWebhookJob.perform_later("wallet.created", wallet)
 
       WalletTransactions::CreateJob.perform_later(

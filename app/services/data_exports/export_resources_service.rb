@@ -64,19 +64,19 @@ module DataExports
         pagination: nil,
         search_term:,
         filters:
-      ).invoices.pluck(:id)
+      ).invoices.pluck(:id).uniq
     end
 
     def credit_note_ids
-      search_term = resource_query.delete("search_term")
-      filters = resource_query
+      search_term = resource_query["search_term"]
+      filters = resource_query.except("search_term")
 
       CreditNotesQuery.call(
         organization:,
         pagination: nil,
         search_term:,
         filters:
-      ).credit_notes.pluck(:id)
+      ).credit_notes.pluck(:id).uniq
     end
   end
 end

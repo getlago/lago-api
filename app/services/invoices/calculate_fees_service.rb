@@ -103,7 +103,7 @@ module Invoices
     def create_charges_fees(subscription, boundaries)
       return unless charge_boundaries_valid?(boundaries)
 
-      received_event_codes = distinct_event_codes(subscription, boundaries)
+      filters = event_filters(subscription, boundaries)
 
       subscription
         .plan
@@ -116,7 +116,7 @@ module Invoices
         .find_each do |charge|
           next if should_not_create_charge_fee?(charge, subscription)
 
-          bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
+          bypass_aggregation = !filters.charge_ids.include?(charge.id)
           Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, context:, bypass_aggregation:).raise_if_error!
         end
     end
@@ -292,7 +292,8 @@ module Invoices
     end
 
     def wallets
-      @wallets ||= customer.wallets.active.with_positive_balance
+      @wallets ||= customer.wallets.active.includes(:wallet_targets)
+        .with_positive_balance.in_application_order
     end
 
     def should_create_credit_note_credit?
@@ -346,12 +347,10 @@ module Invoices
       context == :finalize || Invoice::GENERATED_INVOICE_STATUSES.include?(invoice.status)
     end
 
-    def distinct_event_codes(subscription, boundaries)
-      Events::Stores::StoreFactory.new_instance(
-        organization: invoice.organization,
-        subscription:,
-        boundaries: {from_datetime: boundaries.charges_from_datetime, to_datetime: boundaries.charges_to_datetime}
-      ).distinct_codes
+    def event_filters(subscription, boundaries)
+      Events::BillingPeriodFilterService.call!(
+        subscription:, boundaries:
+      )
     end
   end
 end

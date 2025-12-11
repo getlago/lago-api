@@ -41,6 +41,9 @@ module Types
       field :paid_top_up_min_amount_cents, GraphQL::Types::BigInt, null: true
       field :paid_top_up_min_credits, GraphQL::Types::BigInt, null: true
 
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+      field :skip_invoice_custom_sections, Boolean
+
       field :applies_to, Types::Wallets::AppliesTo, null: true, method: :itself
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

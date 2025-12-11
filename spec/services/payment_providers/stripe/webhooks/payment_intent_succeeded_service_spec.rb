@@ -93,7 +93,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
                 metadata: {
                   lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
                   lago_payable_type: "PaymentRequest"
-                }
+                },
+                error_code: nil
               )
             ).and_call_original
 
@@ -120,7 +121,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
               metadata: {
                 lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
                 lago_payable_type: "PaymentRequest"
-              }
+              },
+              error_code: nil
             )
           ).and_call_original
 

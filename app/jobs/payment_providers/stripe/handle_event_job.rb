@@ -14,6 +14,7 @@ module PaymentProviders
       # NOTE: Sometimes, the stripe webhook is received before the DB update of the impacted resource
       retry_on BaseService::NotFoundFailure
       retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
+      retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
 
       def perform(organization:, event:)
         result = PaymentProviders::Stripe::HandleEventService.call(

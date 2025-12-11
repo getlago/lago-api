@@ -123,7 +123,7 @@ module Api
       private
 
       def input_params
-        params.require(:billable_metric).permit(
+        params.expect(billable_metric: [
           :name,
           :code,
           :description,
@@ -134,8 +134,8 @@ module Api
           :expression,
           :rounding_function,
           :rounding_precision,
-          filters: [:key, {values: []}]
-        )
+          filters: [[:key, values: []]]
+        ])
       end
 
       def expression_event_params

@@ -63,6 +63,24 @@ RSpec.describe Webhooks::BaseService do
         expect(Webhook.where(object: invoice)).not_to exist
       end
     end
+
+    context "with deleted webhook endpoint" do
+      before do
+        endpoint = create(:webhook_endpoint, organization:)
+
+        # Preload the webhook end-points
+        invoice.organization.webhook_endpoints
+
+        # Manually delete the first endpoint to simulate the race condition
+        Organization.connection.execute("DELETE FROM webhook_endpoints WHERE id = '#{endpoint.id}'")
+      end
+
+      it "creates only one webhook" do
+        expect { webhook_service.call }.to change(Webhook, :count).by(1)
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.once
+      end
+    end
   end
 end
 
