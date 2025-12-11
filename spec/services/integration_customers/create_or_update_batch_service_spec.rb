@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe IntegrationCustomers::CreateOrUpdateService do
+RSpec.describe IntegrationCustomers::CreateOrUpdateBatchService do
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
