@@ -9,6 +9,7 @@ RSpec.describe Api::V1::SubscriptionsController do
   let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
   let(:commitment_amount_cents) { 1234 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+  let(:payment_method) { create(:payment_method, customer:, organization:) }
 
   around { |test| lago_premium!(&test) }
 
@@ -32,6 +33,10 @@ RSpec.describe Api::V1::SubscriptionsController do
         invoice_custom_section: {
           invoice_custom_section_codes: [section_1.code]
         },
+        payment_method: {
+          payment_method_id: payment_method.id,
+          payment_method_type: "provider"
+        },
         plan_overrides: {
           amount_cents: 100,
           name: "overridden name",
@@ -50,7 +55,10 @@ RSpec.describe Api::V1::SubscriptionsController do
     let(:override_amount_cents) { 777 }
     let(:override_display_name) { "Overriden Threshold 12" }
 
-    before { customer }
+    before do
+      customer
+      payment_method
+    end
 
     include_examples "requires API permission", "subscription", "write"
 
@@ -94,6 +102,8 @@ RSpec.describe Api::V1::SubscriptionsController do
           invoice_display_name: commitment_invoice_display_name,
           amount_cents: commitment_amount_cents
         )
+        expect(json[:subscription][:payment_method][:payment_method_type]).to eq("provider")
+        expect(json[:subscription][:payment_method][:payment_method_id]).to eq(payment_method.id)
       end
     end
 
@@ -751,6 +761,8 @@ RSpec.describe Api::V1::SubscriptionsController do
         name: "subscription name new",
         subscription_at: "2022-09-05T12:23:12Z"
       )
+      expect(subscription[:payment_method][:payment_method_type]).to eq("provider")
+      expect(subscription[:payment_method][:payment_method_id]).to eq(nil)
       plan_json = subscription[:plan]
       expect(plan_json).to include(
         lago_id: Regex::UUID,
@@ -1237,7 +1249,8 @@ RSpec.describe Api::V1::SubscriptionsController do
     include_examples "requires API permission", "subscription", "read"
 
     it "returns a subscription" do
-      create(:entitlement, :subscription, organization:, subscription:)
+      feature = create(:feature, organization:, code: "feature_1")
+      create(:entitlement, :subscription, organization:, subscription:, feature:)
       subject
 
       expect(response).to have_http_status(:success)

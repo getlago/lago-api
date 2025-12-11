@@ -23,6 +23,8 @@ module V1
       }
 
       payload.merge!(wallet) if include?(:wallet)
+      payload = payload.merge(payment_method)
+
       payload
     end
 
@@ -31,6 +33,15 @@ module V1
     def wallet
       {
         wallet: ::V1::WalletSerializer.new(model.wallet).serialize
+      }
+    end
+
+    def payment_method
+      {
+        payment_method: {
+          payment_method_id: model.payment_method_id,
+          payment_method_type: model.payment_method_type
+        }
       }
     end
   end
