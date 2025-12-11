@@ -44,6 +44,12 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
           expect(subscriptions_result.first.persisted?).to eq(false)
           expect(subscriptions_result.first.external_id).to eq(subscriptions.first.external_id)
         end
+
+        it "does not change original subscription" do
+          expect(result).to be_success
+          expect(subscriptions.first.reload.status.to_s).to eq("pending")
+          expect(subscriptions.first.reload.persisted?).to eq(true)
+        end
       end
 
       context "when subscription has a next subscription" do
