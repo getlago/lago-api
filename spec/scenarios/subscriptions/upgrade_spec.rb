@@ -213,6 +213,10 @@ describe "Subscription Upgrade Scenario", transaction: false do
           expect(new_subscription.invoices.count).to be(1)
           invoice = new_subscription.invoices.first
           expect(invoice.fees.fixed_charge.count).to eq(2)
+          # old_plan:
+          # create(:fixed_charge, plan:, add_on: add_ons[1], properties: {amount: "3"}, units: 5, pay_in_advance:, prorated:)
+          # new_plan:
+          # create(:fixed_charge, plan: plan_upgrade, add_on: add_ons[1], properties: {amount: "10"}, units: 10, pay_in_advance:, prorated:),
           # fixed_charge for add_on 1 was already prorated in the beginning of month for the full month,
           # 1500 has been paid, but it was only actually active 20 days. so when prorating the same add_on
           # with the new price we should deduct the amount that was already paid (remaining of already paid amount)
