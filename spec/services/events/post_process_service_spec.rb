@@ -28,6 +28,8 @@ RSpec.describe Events::PostProcessService do
     )
   end
 
+  before { create(:wallet, customer:) }
+
   describe "#call" do
     it "marks customer as awaiting wallet refresh" do
       expect { process_service.call }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)

@@ -54,10 +54,6 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         end
       end
 
-      it "marks customer as not awaiting wallet refresh" do
-        expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
-      end
-
       it "does not send depleted_ongoing_balance webhook" do
         expect { subject }.not_to have_enqueued_job(SendWebhookJob)
       end
@@ -83,10 +79,6 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
 
           expect(wallet.depleted_ongoing_balance).to eq true
         end
-      end
-
-      it "marks customer as not awaiting wallet refresh" do
-        expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
       end
 
       it "sends depleted_ongoing_balance webhook" do

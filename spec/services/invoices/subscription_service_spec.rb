@@ -267,6 +267,7 @@ RSpec.describe Invoices::SubscriptionService do
     context "with applicable grace period" do
       before do
         subscription.customer.update!(invoice_grace_period: 3)
+        create(:wallet, customer: subscription.customer)
       end
 
       it "does not track any invoice creation on segment" do

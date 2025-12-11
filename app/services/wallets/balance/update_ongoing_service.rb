@@ -13,7 +13,6 @@ module Wallets
 
       def call
         wallet.update!(update_params)
-        wallet.customer.update!(awaiting_wallet_refresh: false)
 
         after_commit do
           if update_params[:depleted_ongoing_balance] == true

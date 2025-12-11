@@ -299,6 +299,8 @@ class Customer < ApplicationRecord
   end
 
   def flag_wallets_for_refresh
+    return unless wallets.active.exists?
+
     update!(awaiting_wallet_refresh: true)
   end
 

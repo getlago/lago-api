@@ -1099,19 +1099,41 @@ RSpec.describe Customer do
 
     let(:customer) { create(:customer, awaiting_wallet_refresh:) }
 
-    context "when customer already awaiting wallet refresh" do
-      let(:awaiting_wallet_refresh) { true }
+    context "when customer has at least one active wallet" do
+      before { create(:wallet, customer:) }
 
-      it "keeps customer as awaiting wallet refresh" do
-        expect { subject }.not_to change(customer, :awaiting_wallet_refresh).from(true)
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
+
+        it "keeps customer as awaiting wallet refresh" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh).from(true)
+        end
+      end
+
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
+
+        it "marks customer as awaiting wallet refresh" do
+          expect { subject }.to change(customer, :awaiting_wallet_refresh).from(false).to(true)
+        end
       end
     end
 
-    context "when customer is not awaiting wallet refresh" do
-      let(:awaiting_wallet_refresh) { false }
+    context "when customer has no wallet" do
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
 
-      it "marks customer as awaiting wallet refresh" do
-        expect { subject }.to change(customer, :awaiting_wallet_refresh).from(false).to(true)
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
+      end
+
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
+
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
       end
     end
   end

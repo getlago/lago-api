@@ -9,6 +9,7 @@ RSpec.describe Subscriptions::FlagRefreshedService do
 
   before do
     allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call).and_call_original
+    create(:wallet, customer:, organization:)
   end
 
   around { |test| lago_premium!(&test) }
