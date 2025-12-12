@@ -56,7 +56,7 @@ module Invoices
 
     def resource_has_custom_sections?
       return false unless resource
-      return false unless resource&.respond_to?(:selected_invoice_custom_sections)
+      return false unless resource.respond_to?(:selected_invoice_custom_sections)
       return false if resource.skip_invoice_custom_sections
 
       resource.selected_invoice_custom_sections.any?
