@@ -133,7 +133,7 @@ module Invoices
       return @issuing_date if defined?(@issuing_date)
 
       terminated = subscription_context == :terminated
-      recurring = !terminated && !first_subscription.plan.pay_in_advance?
+      recurring = !terminated && (first_subscription.persisted? || !first_subscription.plan.pay_in_advance?)
 
       date = billing_time.in_time_zone(customer.applicable_timezone).to_date
       issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
