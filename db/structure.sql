@@ -8246,7 +8246,7 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime
 -- Name: index_uniq_invoice_subscriptions_on_fixed_charges_boundaries; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries ON public.invoice_subscriptions USING btree (subscription_id, fixed_charges_from_datetime, fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
+CREATE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries ON public.invoice_subscriptions USING btree (subscription_id, fixed_charges_from_datetime, fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
 
 
 --
@@ -10732,6 +10732,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251020090137'),
 ('20251020074349'),
 ('20251020073334'),
+('20251013101230'),
 ('20251010092830'),
 ('20251010073504'),
 ('20251007160309'),
