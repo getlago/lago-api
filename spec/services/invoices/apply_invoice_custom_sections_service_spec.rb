@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::ApplyInvoiceCustomSectionsService do
-  subject(:invoice_service) { described_class.new(invoice:) }
+  subject(:invoice_service) { described_class.new(invoice:, resource:, custom_section_ids:) }
 
   let(:organization) { create(:organization) }
   let(:billing_entity) { create(:billing_entity, organization:) }
@@ -12,6 +12,8 @@ RSpec.describe Invoices::ApplyInvoiceCustomSectionsService do
   let(:custom_section_1) { create(:invoice_custom_section, organization:) }
   let(:custom_section_2) { create(:invoice_custom_section, organization:) }
   let(:custom_section_3) { create(:invoice_custom_section, organization:) }
+  let(:resource) { nil }
+  let(:custom_section_ids) { [] }
 
   before do
     create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: custom_section_1)
@@ -66,6 +68,82 @@ RSpec.describe Invoices::ApplyInvoiceCustomSectionsService do
         expect(sections.map(&:details)).to contain_exactly(custom_section_1.details, custom_section_2.details)
         expect(sections.map(&:display_name)).to contain_exactly(custom_section_1.display_name, custom_section_2.display_name)
         expect(sections.map(&:name)).to contain_exactly(custom_section_1.name, custom_section_2.name)
+      end
+    end
+
+    context "with subscription source" do
+      let(:resource) { create(:subscription, customer:, organization:) }
+
+      context "when skip_invoice_custom_sections is true" do
+        let(:resource) { create(:subscription, customer:, organization:, skip_invoice_custom_sections: true) }
+
+        it "does not attach custom sections on the invoice" do
+          result = invoice_service.call
+          expect(result).to be_success
+          expect(result.applied_sections).to be_empty
+          expect(invoice.reload.applied_invoice_custom_sections).to be_empty
+        end
+      end
+
+      context "when skip_invoice_custom_sections is false but there is no attached custom sections" do
+        context "with customer sections" do
+          before do
+            create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: custom_section_3)
+          end
+
+          it "applies the customer sections on the invoice" do
+            result = invoice_service.call
+            expect(result).to be_success
+            sections = invoice.applied_invoice_custom_sections.reload
+            expect(sections.map(&:code)).to contain_exactly(custom_section_3.code)
+            expect(sections.map(&:details)).to contain_exactly(custom_section_3.details)
+            expect(sections.map(&:display_name)).to contain_exactly(custom_section_3.display_name)
+            expect(sections.map(&:name)).to contain_exactly(custom_section_3.name)
+          end
+        end
+
+        context "when there is no customer sections" do
+          it "applies the organization sections on the invoice" do
+            result = invoice_service.call
+            expect(result).to be_success
+            sections = invoice.applied_invoice_custom_sections.reload
+            expect(sections.map(&:code)).to contain_exactly(custom_section_1.code, custom_section_2.code)
+            expect(sections.map(&:details)).to contain_exactly(custom_section_1.details, custom_section_2.details)
+            expect(sections.map(&:display_name)).to contain_exactly(custom_section_1.display_name, custom_section_2.display_name)
+            expect(sections.map(&:name)).to contain_exactly(custom_section_1.name, custom_section_2.name)
+          end
+        end
+      end
+
+      context "when skip_invoice_custom_sections is false and there are attached custom sections" do
+        before do
+          create(:subscription_applied_invoice_custom_section, organization:, subscription: resource, invoice_custom_section: custom_section_2)
+        end
+
+        it "applies custom sections from the subscription" do
+          result = invoice_service.call
+          expect(result).to be_success
+          sections = invoice.applied_invoice_custom_sections.reload
+          expect(sections.map(&:code)).to contain_exactly(custom_section_2.code)
+          expect(sections.map(&:details)).to contain_exactly(custom_section_2.details)
+          expect(sections.map(&:display_name)).to contain_exactly(custom_section_2.display_name)
+          expect(sections.map(&:name)).to contain_exactly(custom_section_2.name)
+        end
+      end
+    end
+
+    context "with custom section ids provided" do
+      let(:custom_section_ids) { [custom_section_4.id] }
+      let(:custom_section_4) { create(:invoice_custom_section, organization:) }
+
+      it "applies the given sections on the invoice" do
+        result = invoice_service.call
+        expect(result).to be_success
+        sections = invoice.applied_invoice_custom_sections.reload
+        expect(sections.map(&:code)).to contain_exactly(custom_section_4.code)
+        expect(sections.map(&:details)).to contain_exactly(custom_section_4.details)
+        expect(sections.map(&:display_name)).to contain_exactly(custom_section_4.display_name)
+        expect(sections.map(&:name)).to contain_exactly(custom_section_4.name)
       end
     end
   end
