@@ -4,7 +4,7 @@ module V1
   module Wallets
     class RecurringTransactionRuleSerializer < ModelSerializer
       def serialize
-        {
+        payload = {
           lago_id: model.id,
           paid_credits: model.paid_credits,
           granted_credits: model.granted_credits,
@@ -21,6 +21,21 @@ module V1
           transaction_metadata: model.transaction_metadata,
           transaction_name: model.transaction_name,
           ignore_paid_top_up_limits: model.ignore_paid_top_up_limits
+        }
+
+        payload.merge!(payment_method)
+
+        payload
+      end
+
+      private
+
+      def payment_method
+        {
+          payment_method: {
+            payment_method_id: model.payment_method_id,
+            payment_method_type: model.payment_method_type
+          }
         }
       end
     end
