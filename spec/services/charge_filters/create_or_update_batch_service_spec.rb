@@ -36,6 +36,30 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
     )
   end
 
+  context "when filter values hash is empty" do
+    let(:filters_params) do
+      [
+        {
+          values: {},
+          invoice_display_name: "Invalid filter",
+          properties: {amount: "10"}
+        }
+      ]
+    end
+
+    before { card_location_filter }
+
+    it "returns a validation failure" do
+      expect(service).not_to be_success
+      expect(service.error).to be_a(BaseService::ValidationFailure)
+      expect(service.error.messages[:values]).to eq(["value_is_mandatory"])
+    end
+
+    it "does not create any filters" do
+      expect { service }.not_to change(ChargeFilter, :count)
+    end
+  end
+
   context "when filter params is empty" do
     it "does not create any filters" do
       expect { service }.not_to change(ChargeFilter, :count)

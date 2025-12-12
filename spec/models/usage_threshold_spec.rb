@@ -9,16 +9,13 @@ RSpec.describe UsageThreshold do
 
   it { expect(described_class).to be_soft_deletable }
 
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:applied_usage_thresholds) }
-  it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
-
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:plan).without_validating_presence
       expect(subject).to belong_to(:subscription).without_validating_presence
       expect(subject).to have_many(:applied_usage_thresholds)
+      expect(subject).to have_many(:invoices).through(:applied_usage_thresholds)
     end
   end
 

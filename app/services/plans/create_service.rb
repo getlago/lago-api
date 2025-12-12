@@ -52,13 +52,8 @@ module Plans
         end
 
         if args[:charges].present?
-          args[:charges].each do |charge|
-            new_charge = create_charge(plan, charge)
-
-            if charge[:tax_codes].present?
-              taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
-              taxes_result.raise_if_error!
-            end
+          args[:charges].each do |charge_params|
+            Charges::CreateService.call!(plan:, params: charge_params)
           end
         end
 
@@ -114,43 +109,6 @@ module Plans
       )
 
       usage_threshold.save!
-    end
-
-    def create_charge(plan, args)
-      charge = plan.charges.new(
-        organization_id: plan.organization_id,
-        billable_metric_id: args[:billable_metric_id],
-        invoice_display_name: args[:invoice_display_name],
-        charge_model: args[:charge_model],
-        pay_in_advance: args[:pay_in_advance] || false,
-        prorated: args[:prorated] || false
-      )
-
-      properties = args[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(args[:charge_model])
-      charge.properties = ChargeModels::FilterPropertiesService.call(
-        chargeable: charge,
-        properties:
-      ).properties
-
-      if args[:filters].present?
-        charge.save!
-        ChargeFilters::CreateOrUpdateBatchService.call(
-          charge:,
-          filters_params: args[:filters].map(&:with_indifferent_access)
-        ).raise_if_error!
-      end
-
-      if License.premium?
-        charge.invoiceable = args[:invoiceable] unless args[:invoiceable].nil?
-        charge.regroup_paid_fees = args[:regroup_paid_fees] if args.key?(:regroup_paid_fees)
-        charge.min_amount_cents = args[:min_amount_cents] || 0
-      end
-
-      charge.save!
-
-      AppliedPricingUnits::CreateService.call!(charge:, params: args[:applied_pricing_unit])
-
-      charge
     end
 
     def bill_charges_monthly(args)

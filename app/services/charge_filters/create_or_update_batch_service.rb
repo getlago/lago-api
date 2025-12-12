@@ -25,6 +25,8 @@ module ChargeFilters
         return result
       end
 
+      return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if empty_filter_values?
+
       # We only care about order when you have less than 100 filters.
       touch = filters_params.size < 100
 
@@ -163,6 +165,10 @@ module ChargeFilters
         filter.properties.delete("pricing_group_keys")
         filter.properties.delete("grouped_by")
       end
+    end
+
+    def empty_filter_values?
+      filters_params.any? { |filter_param| filter_param[:values].blank? }
     end
   end
 end
