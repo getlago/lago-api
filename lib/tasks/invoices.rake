@@ -43,4 +43,24 @@ namespace :invoices do
   task fill_expected_finalization_date: :environment do
     Invoice.in_batches.update_all("expected_finalization_date = COALESCE(expected_finalization_date, issuing_date)") # rubocop:disable Rails/SkipsModelValidations
   end
+
+  desc "Fix non-subscription invoices that used grace_period even though they should not"
+  task fix_non_subscription_issuing_date: :environment do
+    invoices = Invoice.finalized.where.not(invoice_type: :subscription).where("created_at >= DATE '2025-12-11' AND issuing_date > created_at")
+
+    invoices.find_each do |invoice|
+      issuing_date = invoice.created_at.in_time_zone(invoice.customer.applicable_timezone).to_date
+
+      invoice.update(
+        issuing_date:,
+        payment_due_date: (issuing_date + invoice.customer.applicable_net_payment_term.days).to_date,
+        expected_finalization_date: issuing_date
+      )
+
+      if invoice.file.url
+        invoice.file.purge
+        Invoices::GeneratePdfJob.perform_later(invoice)
+      end
+    end
+  end
 end
