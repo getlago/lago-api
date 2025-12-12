@@ -17,6 +17,9 @@ module Mutations
       type Types::AiConversations::Object
 
       def resolve(message:, conversation_id: nil)
+        raise unauthorized_error unless License.premium?
+        raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
+
         membership = current_organization.memberships.find_by(user_id: context[:current_user].id)
 
         ai_conversation = if conversation_id.present?
