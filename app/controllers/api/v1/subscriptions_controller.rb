@@ -75,7 +75,7 @@ module Api
 
         if result.success?
           response[:subscription] = ::V1::SubscriptionSerializer.new(
-            result.subscription, includes: %i[plan entitlements]
+            result.subscription, includes: %i[plan entitlements usage_thresholds]
           ).serialize
 
           render(json: response)
@@ -124,7 +124,7 @@ module Api
         )
 
         if result.success?
-          render_subscription(result.subscription)
+          render_subscription(result.subscription, includes: %i[plan entitlements usage_thresholds])
         else
           render_error_response(result)
         end
@@ -139,7 +139,7 @@ module Api
           )
         return not_found_error(resource: "subscription") unless subscription
 
-        render_subscription(subscription, includes: %i[plan entitlements])
+        render_subscription(subscription, includes: %i[plan entitlements usage_thresholds])
       end
 
       def index
@@ -164,7 +164,8 @@ module Api
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
             ],
-            plan_overrides:
+            plan_overrides:,
+            usage_thresholds:
           )
       end
 
@@ -179,7 +180,8 @@ module Api
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
           ],
-          plan_overrides:
+          plan_overrides:,
+          usage_thresholds:
         )
       end
 
@@ -223,12 +225,15 @@ module Api
             properties: {},
             tax_codes: []
           ],
-          usage_thresholds: [
-            :id,
-            :threshold_display_name,
-            :amount_cents,
-            :recurring
-          ]
+          usage_thresholds:
+        ]
+      end
+
+      def usage_thresholds
+        [
+          :threshold_display_name,
+          :amount_cents,
+          :recurring
         ]
       end
 
