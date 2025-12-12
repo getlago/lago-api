@@ -1080,7 +1080,7 @@ RSpec.describe Subscriptions::CreateService do
               fixed_charge_2
             end
 
-            it "does not create fixed charge events for the new subscription" do
+            it "does not create fixed charge events for the new subscription (that is pending)" do
               result = create_service.call
 
               expect(result).to be_success

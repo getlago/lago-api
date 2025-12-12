@@ -1328,7 +1328,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
         before do
           invoice_subscription[:invoicing_reason] = :subscription_starting
-          invoice_subscription.save
+          invoice_subscription.save!
         end
 
         context "when fixed charge is pay in advance" do
