@@ -267,6 +267,7 @@ RSpec.describe Invoices::SubscriptionService do
     context "with applicable grace period" do
       before do
         subscription.customer.update!(invoice_grace_period: 3)
+        create(:wallet, customer: subscription.customer)
       end
 
       it "does not track any invoice creation on segment" do
@@ -303,10 +304,8 @@ RSpec.describe Invoices::SubscriptionService do
         expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
       end
 
-      it "flags wallets for refresh" do
-        wallet = create(:wallet, customer:)
-
-        expect { invoice_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
+      it "marks customer as awaiting wallet refresh" do
+        expect { invoice_service.call }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
       end
 
       context "with keep_anchor as issuing_date adjustment" do

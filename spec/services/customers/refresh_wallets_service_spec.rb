@@ -5,7 +5,7 @@ RSpec.describe Customers::RefreshWalletsService do
     subject(:result) { described_class.call(customer:, include_generating_invoices:) }
 
     let(:include_generating_invoices) { false }
-    let(:customer) { create(:customer) }
+    let(:customer) { create(:customer, awaiting_wallet_refresh: true) }
     let(:organization) { customer.organization }
     let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
     let(:pay_in_advance_billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
@@ -93,6 +93,10 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(wallet.credits_ongoing_usage_balance).to eq 9.0
       expect(wallet.ongoing_balance_cents).to eq 100
       expect(wallet.credits_ongoing_balance).to eq 1.0
+    end
+
+    it "marks customer as not awaiting wallet refresh" do
+      expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
     end
 
     describe "current usage calculation" do

@@ -1095,28 +1095,46 @@ RSpec.describe Customer do
   end
 
   describe "#flag_wallets_for_refresh" do
-    context "without any wallets" do
-      it "returns 0" do
-        expect(customer.flag_wallets_for_refresh).to be_zero
+    subject { customer.flag_wallets_for_refresh }
+
+    let(:customer) { create(:customer, awaiting_wallet_refresh:) }
+
+    context "when customer has at least one active wallet" do
+      before { create(:wallet, customer:) }
+
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
+
+        it "keeps customer as awaiting wallet refresh" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh).from(true)
+        end
+      end
+
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
+
+        it "marks customer as awaiting wallet refresh" do
+          expect { subject }.to change(customer, :awaiting_wallet_refresh).from(false).to(true)
+        end
       end
     end
 
-    context "without active wallets" do
-      it "does not flag wallets for refresh" do
-        wallet = create(:wallet, :terminated, customer:)
+    context "when customer has no wallet" do
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
 
-        expect { customer.flag_wallets_for_refresh }.not_to change {
-          wallet.reload.ready_to_be_refreshed
-        }.from(false)
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
       end
-    end
 
-    it "flags all active wallets for refresh" do
-      wallet = create(:wallet, customer:)
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
 
-      expect { customer.flag_wallets_for_refresh }.to change {
-        wallet.reload.ready_to_be_refreshed
-      }.from(false).to(true)
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
+      end
     end
   end
 
