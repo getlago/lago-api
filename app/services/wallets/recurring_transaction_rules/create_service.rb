@@ -58,6 +58,10 @@ module Wallets
 
         rule = wallet.recurring_transaction_rules.create!(attributes)
 
+        if rule_params.key? :invoice_custom_section
+          InvoiceCustomSections::AttachToResourceService.call(resource: rule, params: rule_params)
+        end
+
         result.recurring_transaction_rule = rule
         result
       rescue BaseService::FailedResult

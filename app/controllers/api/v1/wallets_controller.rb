@@ -93,6 +93,10 @@ module Api
             :invoice_requires_successful_payment,
             :ignore_paid_top_up_limits,
             :transaction_name,
+            invoice_custom_section: [
+              :skip_invoice_custom_sections,
+              {invoice_custom_section_codes: []}
+            ],
             transaction_metadata: [
               :key,
               :value
@@ -135,6 +139,10 @@ module Api
             :invoice_requires_successful_payment,
             :ignore_paid_top_up_limits,
             :transaction_name,
+            invoice_custom_section: [
+              :skip_invoice_custom_sections,
+              {invoice_custom_section_codes: []}
+            ],
             transaction_metadata: [
               :key,
               :value

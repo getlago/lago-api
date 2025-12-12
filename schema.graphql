@@ -2743,6 +2743,7 @@ input CreateCustomerWalletTransactionInput {
   clientMutationId: String
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
   name: String
@@ -3060,6 +3061,7 @@ input CreateRecurringTransactionRuleInput {
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   method: RecurringTransactionMethodEnum
   paidCredits: String
@@ -9478,6 +9480,8 @@ type RecurringTransactionRule {
   lagoId: ID!
   method: RecurringTransactionMethodEnum!
   paidCredits: String!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
@@ -11542,6 +11546,7 @@ input UpdateRecurringTransactionRuleInput {
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
   interval: RecurringTransactionIntervalEnum
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   lagoId: ID
   method: RecurringTransactionMethodEnum
@@ -11822,7 +11827,9 @@ type WalletTransaction {
   metadata: [WalletTransactionMetadataObject!]
   name: String
   priority: Int!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
   settledAt: ISO8601DateTime
+  skipInvoiceCustomSections: Boolean
   source: WalletTransactionSourceEnum!
   status: WalletTransactionStatusEnum!
   transactionStatus: WalletTransactionTransactionStatusEnum!

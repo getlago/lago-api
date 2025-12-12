@@ -54,6 +54,12 @@ module WalletTransactions
         if params[:voided_credits]
           wallet_transactions << handle_voided_credits(wallet)
         end
+
+        if params[:invoice_custom_section]
+          wallet_transactions.compact.each do |wt|
+            InvoiceCustomSections::AttachToResourceService.call(resource: wt, params:)
+          end
+        end
       end
 
       transactions = wallet_transactions.compact

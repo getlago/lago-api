@@ -23,6 +23,7 @@ module V1
       }
 
       payload.merge!(wallet) if include?(:wallet)
+      payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
       payload
     end
 
@@ -32,6 +33,14 @@ module V1
       {
         wallet: ::V1::WalletSerializer.new(model.wallet).serialize
       }
+    end
+
+    def applied_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.applied_invoice_custom_sections,
+        ::V1::AppliedInvoiceCustomSectionSerializer,
+        collection_name: "applied_invoice_custom_sections"
+      ).serialize
     end
   end
 end
