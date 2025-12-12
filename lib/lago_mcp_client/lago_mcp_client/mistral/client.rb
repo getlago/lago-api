@@ -5,37 +5,19 @@ module LagoMcpClient
     class Client
       MISTRAL_CONVERSATIONS_URL = "https://api.mistral.ai/v1/conversations"
 
-      def initialize(api_key: ENV["MISTRAL_API_KEY"], agent_id: ENV["MISTRAL_AGENT_ID"])
-        @agent_id = agent_id
-        @api_key = api_key
-      end
-
-      def start_conversation(inputs:, stream: false, &block)
+      def start_conversation(inputs:, &block)
         payload = {
-          agent_id: @agent_id,
+          agent_id: ENV["MISTRAL_AGENT_ID"],
           inputs: normalize_inputs(inputs),
-          stream: stream
+          stream: true
         }
-
-        if stream && block_given?
-          stream_conversation(payload, MISTRAL_CONVERSATIONS_URL, &block)
-        else
-          standard_request(payload, MISTRAL_CONVERSATIONS_URL)
-        end
+        stream_conversation(payload, MISTRAL_CONVERSATIONS_URL, &block)
       end
 
-      def append_to_conversation(conversation_id:, inputs:, stream: false, &block)
+      def append_to_conversation(conversation_id:, inputs:, &block)
         url = "#{MISTRAL_CONVERSATIONS_URL}/#{conversation_id}"
-        payload = {
-          inputs: inputs,
-          stream: stream
-        }
-
-        if stream && block_given?
-          stream_conversation(payload, url, &block)
-        else
-          standard_request(payload, url)
-        end
+        payload = {inputs: inputs, stream: true}
+        stream_conversation(payload, url, &block)
       end
 
       private
@@ -48,86 +30,72 @@ module LagoMcpClient
         end
       end
 
-      def stream_conversation(payload, api_url)
-        uri = URI(api_url)
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.read_timeout = 120
-
-        request = Net::HTTP::Post.new(uri)
-        request["Content-Type"] = "application/json"
-        request["Authorization"] = "Bearer #{@api_key}"
-        request["Accept"] = "text/event-stream"
-        request.body = JSON.generate(payload)
+      def stream_conversation(payload, url)
+        http_client = LagoHttpClient::Client.new(url, read_timeout: 120)
+        headers = {
+          "Authorization" => "Bearer #{ENV["MISTRAL_API_KEY"]}",
+          "Accept" => "text/event-stream"
+        }
 
         conversation_id = nil
         outputs = []
         tool_calls = []
-        buffer = ""
 
-        http.request(request) do |response|
-          unless response.code == "200"
-            error_body = response.body
-            raise "Mistral Conversations API Error (#{response.code}): #{error_body}"
-          end
+        http_client.post_with_stream(payload, headers) do |_type, data, _id, _reconnection_time|
+          next if data == "[DONE]"
 
-          response.read_body do |chunk|
-            buffer += chunk
+          begin
+            parsed_data = JSON.parse(data)
+            conversation_id ||= parsed_data["conversation_id"]
 
-            # SSE events are separated by double newlines
-            while buffer.include?("\n\n")
-              event_block, buffer = buffer.split("\n\n", 2)
-              process_sse_event(event_block) do |data|
-                conversation_id ||= data["conversation_id"]
+            # Handle root-level event types (delta events)
+            case parsed_data["type"]
+            when "message.output.delta"
+              content = parsed_data["content"]
+              if content.present?
+                yield content if block_given?
+              end
+            when "conversation.response.done"
+              conversation_id ||= parsed_data["conversation_id"]
+            when "function.call", "function.call.delta"
+              # Handle function calls at root level (delta events accumulate)
+              tool_call_id = parsed_data["tool_call_id"]
+              existing = tool_calls.find { |tc| tc["id"] == tool_call_id }
 
-                # Handle root-level event types (delta events)
-                case data["type"]
-                when "message.output.delta"
-                  content = data["content"]
-                  if content.present?
-                    Rails.logger.debug("Yielding content: #{content}")
-                    yield content if block_given?
-                  end
-                when "conversation.response.done"
-                  conversation_id ||= data["conversation_id"]
-                when "function.call", "function.call.delta"
-                  # Handle function calls at root level (delta events accumulate)
-                  tool_call_id = data["tool_call_id"]
-                  existing = tool_calls.find { |tc| tc["id"] == tool_call_id }
-
-                  if existing
-                    # Accumulate arguments for streaming deltas
-                    existing["function"]["arguments"] = (existing["function"]["arguments"] || "") + (data["arguments"] || "")
-                  else
-                    tool_calls << {
-                      "id" => tool_call_id,
-                      "type" => "function",
-                      "function" => {
-                        "name" => data["name"],
-                        "arguments" => data["arguments"] || ""
-                      }
-                    }
-                  end
-                end
-
-                # Handle outputs array (tool calls, final messages)
-                data["outputs"]&.each do |output|
-                  case output["type"]
-                  when "message.output"
-                    outputs << output
-                  when "tool.call", "function.call"
-                    tool_calls << {
-                      "id" => output["tool_call_id"] || output["id"],
-                      "type" => "function",
-                      "function" => {
-                        "name" => output["name"] || output.dig("function", "name"),
-                        "arguments" => output["arguments"] || output.dig("function", "arguments")
-                      }
-                    }
-                  end
-                end
+              if existing
+                # Accumulate arguments for streaming deltas
+                existing["function"]["arguments"] = (existing["function"]["arguments"] || "") + (parsed_data["arguments"] || "")
+              else
+                tool_calls << {
+                  "id" => tool_call_id,
+                  "type" => "function",
+                  "function" => {
+                    "name" => parsed_data["name"],
+                    "arguments" => parsed_data["arguments"] || ""
+                  }
+                }
               end
             end
+
+            # Handle outputs array (tool calls, final messages)
+            parsed_data["outputs"]&.each do |output|
+              case output["type"]
+              when "message.output"
+                outputs << output
+              when "tool.call", "function.call"
+                tool_calls << {
+                  "id" => output["tool_call_id"] || output["id"],
+                  "type" => "function",
+                  "function" => {
+                    "name" => output["name"] || output.dig("function", "name"),
+                    "arguments" => output["arguments"] || output.dig("function", "arguments")
+                  }
+                }
+              end
+            end
+          rescue JSON::ParserError => e
+            Rails.logger.error("Failed to parse SSE data: #{data[0..200]}")
+            Rails.logger.error("Parse error: #{e.message}")
           end
         end
 
@@ -136,55 +104,10 @@ module LagoMcpClient
           "outputs" => outputs,
           "tool_calls" => tool_calls.empty? ? nil : tool_calls
         }
+      rescue LagoHttpClient::HttpError => e
+        raise "Mistral Conversations API Error (#{e.error_code}): #{e.error_body}"
       rescue => e
         raise "Mistral Conversations API streaming error: #{e.message}"
-      end
-
-      def process_sse_event(event_block)
-        data_line = nil
-
-        event_block.split("\n").each do |line|
-          line = line.strip
-          next if line.empty?
-
-          if line.start_with?("data: ")
-            data_line = line.sub(/^data: /, "")
-          end
-        end
-
-        return unless data_line
-        return if data_line == "[DONE]"
-
-        begin
-          data = JSON.parse(data_line)
-          yield data if block_given?
-        rescue JSON::ParserError => e
-          Rails.logger.error("Failed to parse SSE data: #{data_line[0..200]}")
-          Rails.logger.error("Parse error: #{e.message}")
-        end
-      end
-
-      def standard_request(payload, api_url)
-        uri = URI(api_url)
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.read_timeout = 120
-
-        request = Net::HTTP::Post.new(uri)
-        request["Content-Type"] = "application/json"
-        request["Authorization"] = "Bearer #{@api_key}"
-        request.body = JSON.generate(payload)
-
-        response = http.request(request)
-        response_body = JSON.parse(response.body)
-
-        raise "Mistral Conversations API Error: #{response_body}" unless response.code == "200"
-
-        response_body
-      rescue JSON::ParserError => e
-        raise "Invalid JSON response from Mistral Conversations API: #{e.message}"
-      rescue => e
-        raise "Mistral Conversations API connection error: #{e.message}"
       end
     end
   end

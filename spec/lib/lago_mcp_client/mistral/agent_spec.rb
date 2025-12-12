@@ -61,8 +61,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
         agent.chat(user_message) { |chunk| chunks << chunk }
 
         expect(mistral_client).to have_received(:start_conversation).with(
-          inputs: user_message,
-          stream: true
+          inputs: user_message
         )
       end
 
@@ -102,8 +101,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
 
         expect(mistral_client).to have_received(:append_to_conversation).with(
           conversation_id: conversation_id,
-          inputs: [{role: "user", content: user_message}],
-          stream: true
+          inputs: [{role: "user", content: user_message}]
         )
       end
 
@@ -180,8 +178,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
               type: "function.result",
               object: "entry"
             }
-          ],
-          stream: true
+          ]
         )
       end
 

@@ -47,14 +47,10 @@ module LagoMcpClient
         if conversation_id
           mistral_client.append_to_conversation(
             conversation_id: conversation_id,
-            inputs: [{role: "user", content: message}],
-            stream: true
+            inputs: [{role: "user", content: message}]
           ) { |chunk| yield chunk }
         else
-          response = mistral_client.start_conversation(
-            inputs: message,
-            stream: true
-          ) { |chunk| yield chunk }
+          response = mistral_client.start_conversation(inputs: message) { |chunk| yield chunk }
           self.conversation_id = response["conversation_id"]
           response
         end
@@ -72,8 +68,7 @@ module LagoMcpClient
 
         mistral_client.append_to_conversation(
           conversation_id: conversation_id,
-          inputs: inputs,
-          stream: true
+          inputs: inputs
         ) { |chunk| yield chunk }
       end
 
