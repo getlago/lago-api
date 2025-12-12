@@ -292,6 +292,21 @@ RSpec.describe Invoices::CreateGeneratingService do
           expect(result.invoice.expected_finalization_date).to eq(datetime.to_date + 3.days)
         end
       end
+
+      context "with a non-subscription invoice" do
+        let(:invoice_type) { :one_off }
+
+        let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+        let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+        let(:invoice_grace_period) { 3 }
+
+        it "does not include invoice_grace_period" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date).to eq(datetime.to_date)
+          expect(result.invoice.expected_finalization_date).to eq(datetime.to_date)
+        end
+      end
     end
   end
 end
