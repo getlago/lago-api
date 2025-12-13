@@ -90,8 +90,17 @@ module Invoices
     end
 
     def create_fees
+      filters = event_filters(subscription, boundaries).charges
+
       charges.find_each do |charge|
-        Fees::ChargeService.call(invoice:, charge:, subscription:, context: :finalize, boundaries:).raise_if_error!
+        Fees::ChargeService.call!(
+          invoice:,
+          charge:,
+          subscription:,
+          context: :finalize,
+          boundaries:,
+          filtered_aggregations: filters[charge.id] || []
+        )
       end
     end
 
@@ -154,6 +163,12 @@ module Invoices
 
       prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:)
       invoice.total_amount_cents -= prepaid_credit_result.prepaid_credit_amount_cents
+    end
+
+    def event_filters(subscription, boundaries)
+      Events::BillingPeriodFilterService.call!(
+        subscription:, boundaries:
+      )
     end
   end
 end
