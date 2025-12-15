@@ -119,8 +119,7 @@ module Invoices
     end
 
     def wallets
-      @wallets ||= customer.wallets.active.includes(:wallet_targets)
-        .with_positive_balance.in_application_order
+      @wallets ||= customer.wallets.active.with_positive_balance
     end
 
     def should_create_applied_prepaid_credit?
@@ -136,7 +135,7 @@ module Invoices
 
     def create_applied_prepaid_credit
       # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
-      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:, max_wallet_decrease_attempts: 1)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, max_wallet_decrease_attempts: 1)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 

@@ -346,8 +346,7 @@ module Invoices
     end
 
     def wallets
-      @wallets ||= customer.wallets.active.includes(:wallet_targets)
-        .with_positive_balance.in_application_order
+      @wallets ||= customer.wallets.active.with_positive_balance
     end
 
     def should_create_credit_note_credit?
@@ -376,7 +375,7 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
