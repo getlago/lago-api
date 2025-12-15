@@ -56,7 +56,7 @@ RSpec.describe Wallets::CreateService do
     end
 
     it "sends `wallet.created` webhook" do
-      expect { service_result }.to have_enqueued_job(SendWebhookJob).with("wallet.created", Wallet)
+      expect { service_result }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.created", Wallet)
     end
 
     it "produces an activity log" do
@@ -66,7 +66,58 @@ RSpec.describe Wallets::CreateService do
     end
 
     it "enqueues the WalletTransaction::CreateJob" do
-      expect { service_result }.to have_enqueued_job(WalletTransactions::CreateJob)
+      expect { service_result }.to have_enqueued_job_after_commit(WalletTransactions::CreateJob).with({
+        organization_id: organization.id,
+        params: {
+          wallet_id: Regex::UUID,
+          paid_credits: paid_credits,
+          granted_credits: granted_credits,
+          source: :manual,
+          metadata: nil,
+          name: nil,
+          ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
+        }
+      })
+    end
+
+    [
+      {ctx: "when one of the credits is zero", paid_credits: "10.00", granted_credits: "0.00", schedules_top_up: true},
+      {ctx: "when one of the credits is zero", paid_credits: "10.00", granted_credits: nil, schedules_top_up: true},
+      {ctx: "when granted_credits and paid_credits are zero", paid_credits: "0.00", granted_credits: "0.00", schedules_top_up: false},
+      {ctx: "when granted_credits and paid_credits are nil", paid_credits: nil, granted_credits: nil, schedules_top_up: false},
+      {ctx: "when granted_credits and paid_credits are nil or zero", paid_credits: nil, granted_credits: "0.00", schedules_top_up: false}
+    ].each do |test_case|
+      context test_case[:ctx] do
+        let(:paid_credits) { test_case[:paid_credits] }
+        let(:granted_credits) { test_case[:granted_credits] }
+
+        it "creates a wallet #{test_case[:schedules_top_up] ? "with" : "without"} initial top-up" do
+          result = nil
+
+          if test_case[:schedules_top_up]
+            expect { result = create_service.call }.to have_enqueued_job(WalletTransactions::CreateJob).with(
+              organization_id: organization.id,
+              params: hash_including(
+                paid_credits: paid_credits,
+                granted_credits: granted_credits
+              )
+            )
+          else
+            expect { result = create_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+          end
+
+          expect(Wallet.count).to eq(1)
+
+          wallet = result.wallet
+          expect(wallet.customer_id).to eq(customer.id)
+          expect(wallet.name).to eq("New Wallet")
+          expect(wallet.priority).to eq(5)
+          expect(wallet.currency).to eq("EUR")
+          expect(wallet.rate_amount).to eq(5.0)
+          expect(wallet.expiration_at.iso8601).to eq(expiration_at)
+          expect(wallet.recurring_transaction_rules.count).to eq(0)
+        end
+      end
     end
 
     context "with validation error" do

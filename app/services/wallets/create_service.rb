@@ -72,20 +72,9 @@ module Wallets
 
       result.wallet = wallet
 
-      SendWebhookJob.perform_later("wallet.created", wallet)
+      SendWebhookJob.perform_after_commit("wallet.created", wallet)
 
-      WalletTransactions::CreateJob.perform_later(
-        organization_id:,
-        params: {
-          wallet_id: wallet.id,
-          paid_credits: params[:paid_credits],
-          granted_credits: params[:granted_credits],
-          source: :manual,
-          metadata: params[:transaction_metadata],
-          name: params[:transaction_name],
-          ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
-        }
-      )
+      schedule_top_up(wallet)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -97,6 +86,35 @@ module Wallets
     private
 
     attr_reader :params
+
+    def schedule_top_up(wallet)
+      return unless positive_amount?(paid_credits) || positive_amount?(granted_credits)
+
+      WalletTransactions::CreateJob.perform_after_commit(
+        organization_id:,
+        params: {
+          wallet_id: wallet.id,
+          paid_credits: paid_credits,
+          granted_credits: granted_credits,
+          source: :manual,
+          metadata: params[:transaction_metadata],
+          name: params[:transaction_name],
+          ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
+        }
+      )
+    end
+
+    def positive_amount?(amount)
+      amount && BigDecimal(amount).positive?
+    end
+
+    def paid_credits
+      params[:paid_credits]
+    end
+
+    def granted_credits
+      params[:granted_credits]
+    end
 
     def customer
       params[:customer]
@@ -116,13 +134,13 @@ module Wallets
       Validators::WalletTransactionAmountLimitsValidator.new(
         result,
         wallet:,
-        credits_amount: params[:paid_credits],
+        credits_amount: paid_credits,
         ignore_validation: params[:ignore_paid_top_up_limits_on_creation]
       ).raise_if_invalid!
     end
 
     def positive_paid_credit_amount?
-      BigDecimal(params[:paid_credits]).positive?
+      BigDecimal(paid_credits).positive?
     rescue ArgumentError, TypeError
       false
     end
