@@ -7,8 +7,8 @@ module Auth
     def initialize(organization:, user: nil)
       @organization = organization
       @user = user
-      @cookies = []
       @csrf_token = nil
+      @http_client = nil
 
       super()
     end
@@ -62,52 +62,49 @@ module Auth
 
     private
 
-    attr_reader :organization, :user, :cookies, :csrf_token
+    attr_reader :organization, :user, :csrf_token
+
+    def http_client
+      @http_client ||= LagoHttpClient::SessionClient.new(superset_base_url)
+    end
+
+    def base_headers(referer_path: "/")
+      {
+        "Origin" => superset_base_url,
+        "Referer" => "#{superset_base_url}#{referer_path}"
+      }
+    end
+
+    def api_headers(referer_path: "/")
+      base_headers(referer_path: referer_path).merge("Accept" => "application/json")
+    end
+
+    def authenticated_api_headers(referer_path: "/")
+      api_headers(referer_path: referer_path).merge("X-CSRFToken" => csrf_token)
+    end
+
+    def authenticated_json_headers(referer_path: "/")
+      authenticated_api_headers(referer_path: referer_path).merge("Content-Type" => "application/json")
+    end
 
     def login_to_superset
-      uri = URI.join(superset_base_url, "/login/")
-      http = create_http_client(uri)
-
-      request = Net::HTTP::Post.new(uri.path)
-      request["Content-Type"] = "application/x-www-form-urlencoded"
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/login/"
-      request["Cookie"] = cookies.join("; ")
-
-      form_data = URI.encode_www_form({
+      body = {
         csrf_token: csrf_token,
         username: superset_username,
         password: superset_password
-      })
-      request.body = form_data
+      }
 
-      response = http_request_with_retry(request, http)
-
-      unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
-        result.service_failure!(code: "superset_login_failed", message: "Failed to login to Superset: #{response.code} #{response.message}")
-        return {success: false}
-      end
+      headers = base_headers(referer_path: "/login/").merge("Content-Type" => "application/x-www-form-urlencoded")
+      http_client.post("/login/", body: body, headers: headers)
 
       {success: true}
+    rescue LagoHttpClient::HttpError => e
+      result.service_failure!(code: "superset_login_failed", message: "Failed to login to Superset: #{e.error_code} #{e.message}")
+      {success: false}
     end
 
     def get_csrf_token
-      uri = URI.join(superset_base_url, "/api/v1/security/csrf_token/")
-      http = create_http_client(uri)
-
-      request = Net::HTTP::Get.new(uri.path)
-      request["Accept"] = "application/json"
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/"
-      request["Cookie"] = cookies.join("; ")
-
-      response = http_request_with_retry(request, http)
-
-      unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "superset_csrf_failed", message: "Failed to get CSRF token: #{response.body}")
-        return {success: false}
-      end
-
+      response = http_client.get("/api/v1/security/csrf_token/", headers: api_headers)
       parsed_response = JSON.parse(response.body)
       csrf_token = parsed_response["result"]
 
@@ -117,81 +114,44 @@ module Auth
       end
 
       {success: true, csrf_token: csrf_token}
+    rescue LagoHttpClient::HttpError => e
+      result.service_failure!(code: "superset_csrf_failed", message: "Failed to get CSRF token: #{e.error_body}")
+      {success: false}
     end
 
     def fetch_dashboards
-      uri = URI.join(superset_base_url, "/api/v1/dashboard/")
-      http = create_http_client(uri)
-
-      request = Net::HTTP::Get.new(uri.path)
-      request["Accept"] = "application/json"
-      request["X-CSRFToken"] = csrf_token
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/"
-      request["Cookie"] = cookies.join("; ")
-
-      response = http_request_with_retry(request, http)
-
-      unless response.is_a?(Net::HTTPSuccess)
-        result.service_failure!(code: "superset_fetch_dashboards_failed", message: "Failed to fetch dashboards: #{response.body}")
-        return {success: false}
-      end
-
+      response = http_client.get("/api/v1/dashboard/", headers: authenticated_api_headers)
       parsed_response = JSON.parse(response.body)
       dashboards = parsed_response["result"] || []
 
       {success: true, dashboards: dashboards}
+    rescue LagoHttpClient::HttpError => e
+      result.service_failure!(code: "superset_fetch_dashboards_failed", message: "Failed to fetch dashboards: #{e.error_body}")
+      {success: false}
     end
 
     def get_embedded_config(dashboard_id)
-      uri = URI.join(superset_base_url, "/api/v1/dashboard/#{dashboard_id}/embedded")
-      http = create_http_client(uri)
+      response = http_client.get("/api/v1/dashboard/#{dashboard_id}/embedded", headers: authenticated_api_headers)
+      parsed_response = JSON.parse(response.body)
+      uuid = parsed_response["result"]&.[]("uuid")
 
-      request = Net::HTTP::Get.new(uri.path)
-      request["Accept"] = "application/json"
-      request["X-CSRFToken"] = csrf_token
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/"
-      request["Cookie"] = cookies.join("; ")
-
-      response = http_request_with_retry(request, http)
-
-      if response.is_a?(Net::HTTPSuccess)
-        parsed_response = JSON.parse(response.body)
-        uuid = parsed_response["result"]&.[]("uuid")
-        return {success: true, uuid: uuid, exists: true} if uuid
-      end
+      return {success: true, uuid: uuid, exists: true} if uuid
 
       {success: true, exists: false}
-    rescue JSON::ParserError
+    rescue LagoHttpClient::HttpError, JSON::ParserError
       {success: true, exists: false}
     end
 
     def create_embedded_config(dashboard_id)
-      uri = URI.join(superset_base_url, "/api/v1/dashboard/#{dashboard_id}/embedded")
-      http = create_http_client(uri)
-
-      request = Net::HTTP::Post.new(uri.path)
-      request["Content-Type"] = "application/json"
-      request["X-CSRFToken"] = csrf_token
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/"
-      request["Cookie"] = cookies.join("; ")
-
       body = {allowed_domains: []}
-      request.body = body.to_json
-
-      response = http_request_with_retry(request, http)
-
-      return {success: false} unless response.is_a?(Net::HTTPSuccess)
-
+      response = http_client.post("/api/v1/dashboard/#{dashboard_id}/embedded", body: body, headers: authenticated_json_headers)
       parsed_response = JSON.parse(response.body)
       uuid = parsed_response["result"]&.[]("uuid")
 
       return {success: false} unless uuid
 
       {success: true, uuid: uuid}
-    rescue JSON::ParserError
+    rescue LagoHttpClient::HttpError, JSON::ParserError
       {success: false}
     end
 
@@ -205,16 +165,6 @@ module Auth
     end
 
     def get_guest_token(dashboard_id)
-      uri = URI.join(superset_base_url, "/api/v1/security/guest_token/")
-      http = create_http_client(uri)
-
-      request = Net::HTTP::Post.new(uri.path)
-      request["Content-Type"] = "application/json"
-      request["X-CSRFToken"] = csrf_token
-      request["Origin"] = superset_base_url
-      request["Referer"] = "#{superset_base_url}/"
-      request["Cookie"] = cookies.join("; ")
-
       body = {
         resources: [{id: dashboard_id.to_s, type: "dashboard"}],
         rls: [
@@ -224,69 +174,16 @@ module Auth
         ],
         user: guest_user_info
       }
-      request.body = body.to_json
 
-      response = http_request_with_retry(request, http)
-
-      return {success: false} unless response.is_a?(Net::HTTPSuccess)
-
+      response = http_client.post("/api/v1/security/guest_token/", body: body, headers: authenticated_json_headers)
       parsed_response = JSON.parse(response.body)
       guest_token = parsed_response["token"] || parsed_response["result"] || parsed_response["access_token"]
 
       return {success: false} unless guest_token
 
       {success: true, guest_token: guest_token}
-    rescue JSON::ParserError
+    rescue LagoHttpClient::HttpError, JSON::ParserError
       {success: false}
-    end
-
-    # We use Net::HTTP directly instead of LagoHttpClient because Superset
-    # requires session-based authentication with cookie management across multiple
-    # requests. LagoHttpClient is designed for stateless API calls and doesn't
-    # provide cookie jar functionality or response object access for GET requests.
-    def create_http_client(uri)
-      http = Net::HTTP.new(uri.host, uri.port)
-
-      if uri.scheme == "https"
-        http.use_ssl = true
-        if Rails.env.development? || Rails.env.test?
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        end
-      end
-
-      http.read_timeout = 30
-      http.open_timeout = 30
-      http
-    end
-
-    def http_request_with_retry(request, http_client, max_retries: 3)
-      attempt = 0
-
-      begin
-        attempt += 1
-        response = http_client.request(request)
-        store_cookies(response)
-        response
-      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout
-        retry if attempt < max_retries
-        raise
-      end
-    end
-
-    def store_cookies(response)
-      return unless response["Set-Cookie"]
-
-      new_cookies = response.get_fields("Set-Cookie")
-      return unless new_cookies
-
-      new_cookies.each do |cookie|
-        cookie_value = cookie.split(";").first
-        cookie_name = cookie_value.split("=").first
-
-        @cookies.reject! { |c| c.start_with?("#{cookie_name}=") }
-
-        @cookies << cookie_value
-      end
     end
 
     def guest_user_info
