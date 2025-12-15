@@ -273,6 +273,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
@@ -354,6 +355,9 @@ DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_on_organ
 DROP INDEX IF EXISTS public.index_subscription_fixed_charge_units_overrides_on_deleted_at;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_rtr_invoice_custom_sections_unique;
+DROP INDEX IF EXISTS public.index_roles_on_organization_id;
+DROP INDEX IF EXISTS public.index_roles_by_unique_admin;
+DROP INDEX IF EXISTS public.index_roles_by_code_per_organization;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_id;
@@ -773,6 +777,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscr
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS subscriptions_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS subscription_fixed_charge_units_overrides_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS recurring_transaction_rules_invoice_custom_sections_pkey;
@@ -884,6 +889,7 @@ DROP TABLE IF EXISTS public.usage_monitoring_alert_thresholds;
 DROP TABLE IF EXISTS public.subscriptions_invoice_custom_sections;
 DROP TABLE IF EXISTS public.subscription_fixed_charge_units_overrides;
 DROP TABLE IF EXISTS public.schema_migrations;
+DROP TABLE IF EXISTS public.roles;
 DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
@@ -1012,6 +1018,7 @@ DROP TABLE IF EXISTS public.active_storage_variant_records;
 DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
+DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
@@ -1250,6 +1257,15 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_units',
     'lifetime_usage_amount'
 );
+
+
+--
+-- Name: ensure_role_consistency(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ensure_role_consistency() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$ BEGIN IF OLD.organization_id IS NULL THEN RAISE EXCEPTION 'Predefined role cannot be modified'; ELSIF OLD.organization_id IS DISTINCT FROM NEW.organization_id THEN RAISE EXCEPTION 'Custom role cannot be moved to another organization'; ELSIF OLD.code IS DISTINCT FROM NEW.code THEN RAISE EXCEPTION 'The code of the role cannot be changed'; ELSIF NEW.permissions != OLD.permissions THEN NEW.permissions := ARRAY(SELECT DISTINCT unnest(NEW.permissions) ORDER BY 1); END IF; RETURN NEW; END; $$;
 
 
 --
@@ -4283,6 +4299,30 @@ CREATE TABLE public.refunds (
 
 
 --
+-- Name: roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.roles (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid,
+    code character varying NOT NULL,
+    admin boolean DEFAULT false NOT NULL,
+    permissions character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    CONSTRAINT code_is_valid CHECK (((code)::text ~ '^[a-z0-9_]{1,100}$'::text)),
+    CONSTRAINT custom_role_should_have_permissions CHECK (((organization_id IS NULL) OR (cardinality(permissions) > 0))),
+    CONSTRAINT description_max_length CHECK ((length((description)::text) <= 255)),
+    CONSTRAINT name_is_valid CHECK (((name)::text ~ '^.{1,100}$'::text)),
+    CONSTRAINT permissions_has_no_empty_parts CHECK (((NOT ((permissions)::text ~ '([\{,]:|::|:[,\}])'::text)) AND (NOT (''::text = ANY ((permissions)::text[]))))),
+    CONSTRAINT predefined_role_cannot_have_permissions CHECK (((organization_id IS NOT NULL) OR (cardinality(permissions) = 0)))
+);
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5293,6 +5333,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules
 
 ALTER TABLE ONLY public.refunds
     ADD CONSTRAINT refunds_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles
+    ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
 
 
 --
@@ -8248,6 +8296,27 @@ CREATE INDEX index_refunds_on_payment_provider_id ON public.refunds USING btree 
 
 
 --
+-- Name: index_roles_by_code_per_organization; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_roles_by_code_per_organization ON public.roles USING btree (organization_id NULLS FIRST, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_roles_by_unique_admin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_roles_by_unique_admin ON public.roles USING btree (admin) WHERE (admin AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_roles_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_roles_on_organization_id ON public.roles USING btree (organization_id);
+
+
+--
 -- Name: index_rtr_invoice_custom_sections_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8693,6 +8762,13 @@ CREATE OR REPLACE VIEW public.flat_filters AS
 --
 
 CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_receipts FOR EACH ROW EXECUTE FUNCTION public.set_payment_receipt_number();
+
+
+--
+-- Name: roles ensure_consistency; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXECUTE FUNCTION public.ensure_role_consistency();
 
 
 --
@@ -10822,6 +10898,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260105144123'),
 ('20251226145247'),
 ('20251222163416'),
+('20251221174251'),
 ('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
@@ -11707,3 +11784,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
