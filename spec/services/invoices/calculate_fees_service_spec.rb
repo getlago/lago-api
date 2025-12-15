@@ -1811,10 +1811,7 @@ RSpec.describe Invoices::CalculateFeesService do
         invoice_subscription
       end
 
-      # Check the logic: it's an active subscription, that is not pay in advance, fixed_charges are not pay in advance, but we get
-      # into billing service. Right now we will create a subscriptions fee. Shall we add a check and do not create a subscription fee
-      # in this case?
-      it "does not create a subscription fee, does not create charge fee, does not create fixed charge fee" do
+      it "creates a subscription fee with amount 0, does not create charge nor fixed charge fees" do
         result = invoice_service.call
 
         expect(result.invoice.fees.subscription.count).to eq(1)

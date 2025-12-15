@@ -119,10 +119,7 @@ describe "Billing Monthly Scenarios with all charges types" do
       # but it will be empty now
       expect(subscription.reload.invoices.count).to eq(1)
       expect(subscription.invoices.first.total_amount_cents).to eq(0)
-      # it immediately creates invoice with pay_in_advance fixed_charges
-      # expect(subscription.reload.invoices.count).to eq(1)
-      # pay_in_advance_fixed_charges_invoice = subscription.invoices.first
-      # this will be a part of another PR
+      # this will be a part of another PR:
       # expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
 
       # 28th of Feb - before billing, no usage sent for usage charges
