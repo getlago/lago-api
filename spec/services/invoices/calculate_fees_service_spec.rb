@@ -1327,8 +1327,7 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         before do
-          invoice_subscription[:invoicing_reason] = :subscription_starting
-          invoice_subscription.save
+          new_subscription
         end
 
         context "when fixed charge is pay in advance" do
@@ -1361,11 +1360,11 @@ RSpec.describe Invoices::CalculateFeesService do
             )
           end
 
-          it "does create a fixed charge fee for the old subscription pay in arrears charge" do
+          it "does create a fixed charge fee for the old subscription pay in arrears fixed charge" do
             result = invoice_service.call
 
             expect(result).to be_success
-            expect(invoice.fees.fixed_charge.count).to eq(0)
+            expect(invoice.fees.fixed_charge.count).to eq(1)
           end
         end
       end
@@ -1682,7 +1681,6 @@ RSpec.describe Invoices::CalculateFeesService do
               expect(invoice.fees.subscription.count).to eq(1)
               expect(invoice).to have_empty_charge_fees
               expect(invoice.fees.fixed_charge.count).to eq(1)
-              # shall fixed_charge be here?
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1862,6 +1860,7 @@ RSpec.describe Invoices::CalculateFeesService do
           let(:started_at) { created_at - 2.months }
           let(:created_at) { Time.zone.parse("2025-01-21T00:10:00") }
           let(:event_timestamp) { created_at }
+          let(:fixed_charge_event) { create(:fixed_charge_event, fixed_charge:, units: 10, timestamp: started_at, created_at: created_at) }
 
           it "updates the invoice accordingly" do
             result = invoice_service.call
@@ -2333,6 +2332,9 @@ RSpec.describe Invoices::CalculateFeesService do
         result = invoice_service.call
 
         expect(result).to be_success
+        # 100_00  - fixed_charges
+        # 100_00  - charges
+        # 100_00 - subscription
         expect(result.invoice.fees_amount_cents).to eq(300_00)
         # Billing entity tax is 10%
         # subtotal = fees_amount_cents - coupons_amount_cents - progressive_billing_credit_amount_cents

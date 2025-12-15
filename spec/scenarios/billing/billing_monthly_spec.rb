@@ -380,12 +380,10 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       billing_time = DateTime.new(2024, 5, 1)
       travel_to(billing_time) do
-        # EventsRecord.connection.commit_db_transaction
         perform_billing
       end
       expect(subscription.reload.invoices.count).to eq(10)
       last_invoice = subscription.invoices.order(:created_at).last
-      # 0 is only for now!
       expect(last_invoice.fees.fixed_charge.count).to eq(4)
       expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([200_000, 200_000, 200_000, 200_000])
       fixed_charge_fees_sum = 4 * 200_000
@@ -460,8 +458,5 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
       expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000 + fixed_charge_fees_sum)
     end
-  end
-
-  context "without fixed_charges" do
   end
 end

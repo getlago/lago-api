@@ -336,7 +336,7 @@ module Invoices
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
 
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
-      #       fee if the plan is in pay in arrears, otherwise this fee will never
+      #       fee if the fixed_charge is pay in arrears, otherwise this fee will never
       #       be created.
       subscription.active? ||
         (subscription.terminated? && subscription.plan.fixed_charges.pay_in_arrears.any?) ||
