@@ -12632,6 +12632,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceCustomSection",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "InvoiceCustomSectionsReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentMethod",
               "description": null,
               "type": {
@@ -26832,6 +26844,18 @@
                     }
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceCustomSection",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "InvoiceCustomSectionsReferenceInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

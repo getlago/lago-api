@@ -2,11 +2,12 @@
 
 module Invoices
   class ApplyInvoiceCustomSectionsService < BaseService
-    def initialize(invoice:, resource: nil, custom_section_ids: [])
+    def initialize(invoice:, resource: nil, custom_section_ids: [], skip: false)
       @invoice = invoice
       @customer = invoice.customer
       @resource = resource
       @custom_section_ids = custom_section_ids
+      @skip = skip
 
       super()
     end
@@ -32,9 +33,10 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :customer, :resource, :custom_section_ids
+    attr_reader :invoice, :customer, :resource, :custom_section_ids, :skip
 
     def skip_custom_sections?
+      return true if skip
       return false if resource_has_custom_sections?
       return true if resource&.skip_invoice_custom_sections
       return false if custom_section_ids.present?
