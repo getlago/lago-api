@@ -299,6 +299,20 @@ RSpec.describe Subscriptions::UpdateService do
               expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                 .to match_array([[fixed_charge.id, be_within(5.seconds).of(Time.current)]])
             end
+
+            it "does not schedule a BillSubscriptionJob" do
+              expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+            end
+
+            context "when at least one fixed_charge is pay in advance" do
+              let(:fixed_charge_2) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
+
+              before { fixed_charge_2 }
+
+              it "schedules BillSubscriptionJob" do
+                expect { update_service.call }.to have_enqueued_job(BillSubscriptionJob)
+              end
+            end
           end
         end
       end

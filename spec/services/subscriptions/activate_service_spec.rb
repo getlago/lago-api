@@ -23,7 +23,7 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
         .with(an_instance_of(Subscription), "subscription.started").exactly(3).times
     end
 
-    context "when plan has fixed charges" do
+    context "when plan is not pay in advance and has fixed charges" do
       let(:plan) { create(:plan) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
@@ -40,6 +40,18 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
             [fixed_charge_1.id, be_within(5.seconds).of(Time.current)]
           ]
         )
+      end
+
+      it "does not schedule BillSubscriptionJob" do
+        expect { activate_service.activate_all_pending }.not_to have_enqueued_job(BillSubscriptionJob)
+      end
+
+      context "when fixed charge is pay in advance" do
+        let(:fixed_charge_1) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        it "schedules BillSubscriptionJob" do
+          expect { activate_service.activate_all_pending }.to have_enqueued_job(BillSubscriptionJob)
+        end
       end
     end
 

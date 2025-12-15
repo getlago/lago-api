@@ -54,6 +54,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
           charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
           charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
+          fixed_charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
+          fixed_charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
           recurring: true,
           invoicing_reason: invoicing_reason.to_s
         )
@@ -85,6 +87,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
             charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
             charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
+            fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
+            fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
             recurring: false,
             invoicing_reason: invoicing_reason.to_s
           )
@@ -101,6 +105,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             to_datetime: Time.zone.parse("2023-09-30T23:59:59.999Z").end_of_day,
             charges_from_datetime: Time.zone.parse("2023-09-01T00:00:00.000Z"),
             charges_to_datetime: Time.zone.parse("2023-09-30T23:59:59.999Z").end_of_day,
+            fixed_charges_from_datetime: Time.zone.parse("2023-09-01T00:00:00.000Z"),
+            fixed_charges_to_datetime: Time.zone.parse("2023-09-30T23:59:59.999Z").end_of_day,
             recurring: true,
             invoicing_reason: "subscription_periodic"
           )
@@ -132,6 +138,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
               to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
               charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
               charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+              fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+              fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
               recurring: false,
               invoicing_reason: invoicing_reason.to_s
             )
@@ -211,7 +219,9 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime
+          charges_to_datetime: date_service.charges_to_datetime,
+          fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: date_service.fixed_charges_to_datetime
         )
       end
 
@@ -283,6 +293,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
             to_datetime: match_datetime(timestamp),
             charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
             charges_to_datetime: match_datetime(timestamp),
+            fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
+            fixed_charges_to_datetime: match_datetime(timestamp),
             recurring: false,
             invoicing_reason: "subscription_terminating"
           )
@@ -307,6 +319,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           timestamp: match_datetime(timestamp),
           charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
           charges_to_datetime: match_datetime("2023-10-05T23:59:59"),
+          fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
+          fixed_charges_to_datetime: match_datetime("2023-10-05T23:59:59"),
           recurring: false,
           invoicing_reason: "progressive_billing"
         )
