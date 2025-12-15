@@ -2,6 +2,8 @@
 
 module LagoMcpClient
   class SseClient
+    include SseParser
+
     def initialize(url:, session_id:)
       @uri = URI(url)
       @session_id = session_id
@@ -37,16 +39,10 @@ module LagoMcpClient
 
           response.read_body do |chunk|
             break unless @running
-            chunk.split("\n").each do |line|
-              next if line.strip.empty?
-              if line.start_with?("data: ")
-                event_data = begin
-                  JSON.parse(line[6..])
-                rescue JSON::ParserError
-                  line[6..]
-                end
-                @callbacks.each { |cb| cb&.call(event_data) }
-              end
+
+            chunk.each_line do |line|
+              event_data = parse_sse_data(line)
+              @callbacks.each { |cb| cb&.call(event_data) } if event_data
             end
           end
         end

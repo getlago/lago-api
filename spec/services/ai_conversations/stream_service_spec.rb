@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe AiConversations::StreamService, type: :service do
+RSpec.describe AiConversations::StreamService do
   subject(:service) { described_class.new(ai_conversation:, message:) }
 
   let(:ai_conversation) { create(:ai_conversation) }
@@ -27,6 +27,17 @@ describe AiConversations::StreamService, type: :service do
 
   describe "#call" do
     context "when streaming succeeds" do
+      before do
+        allow(mistral_agent_mock).to receive(:chat)
+      end
+
+      it "returns the ai_conversation" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.ai_conversation).to eq(ai_conversation)
+      end
+
       it "streams chunks and notifies completion" do
         chunks = ["Hello", " ", "world", "!"]
 

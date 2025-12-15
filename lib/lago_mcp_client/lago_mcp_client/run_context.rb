@@ -1,6 +1,15 @@
 # frozen_string_literal: true
 
 module LagoMcpClient
+  class ToolNotFoundError < StandardError
+    attr_reader :tool_name
+
+    def initialize(tool_name)
+      @tool_name = tool_name
+      super("Tool '#{tool_name}' not found")
+    end
+  end
+
   class RunContext
     attr_reader :client
 
@@ -55,7 +64,8 @@ module LagoMcpClient
 
     def call_tool(name, arguments = {})
       tool = get_tool(name)
-      raise "Tool '#{name}' not found" unless tool
+      raise ToolNotFoundError.new(name) unless tool
+
       result = client.call_tool(name, arguments)
       @tools_results << {name => result}
       result

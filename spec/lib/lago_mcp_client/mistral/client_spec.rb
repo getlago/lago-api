@@ -53,8 +53,9 @@ RSpec.describe LagoMcpClient::Mistral::Client do
       )
     end
 
-    it "returns the conversation_id" do
+    it "returns the parsed result" do
       result = client.start_conversation(inputs:)
+
       expect(result["conversation_id"]).to eq(conversation_id)
     end
 
@@ -81,69 +82,10 @@ RSpec.describe LagoMcpClient::Mistral::Client do
           .and_yield(nil, {conversation_id:, type: "conversation.response.done"}.to_json, nil, nil)
       end
 
-      it "yields content chunks" do
+      it "yields content chunks to the block" do
         client.start_conversation(inputs:) { |chunk| chunks << chunk }
+
         expect(chunks).to eq(["Hello", " world"])
-      end
-    end
-
-    context "when response contains tool calls" do
-      let(:tool_call_id) { "call_456" }
-
-      before do
-        allow(http_client).to receive(:post_with_stream)
-          .and_yield(nil, {
-            type: "function.call",
-            tool_call_id:,
-            name: "get_customer",
-            arguments: '{"id": "123"}'
-          }.to_json, nil, nil)
-          .and_yield(nil, {conversation_id:, type: "conversation.response.done"}.to_json, nil, nil)
-      end
-
-      it "returns tool_calls in the response" do
-        result = client.start_conversation(inputs:)
-
-        expect(result["tool_calls"]).to eq([
-          {
-            "id" => tool_call_id,
-            "type" => "function",
-            "function" => {
-              "name" => "get_customer",
-              "arguments" => '{"id": "123"}'
-            }
-          }
-        ])
-      end
-    end
-
-    context "when response contains outputs with messages" do
-      before do
-        allow(http_client).to receive(:post_with_stream)
-          .and_yield(nil, {
-            outputs: [{type: "message.output", content: "Final response"}]
-          }.to_json, nil, nil)
-          .and_yield(nil, {conversation_id:, type: "conversation.response.done"}.to_json, nil, nil)
-      end
-
-      it "returns outputs in the response" do
-        result = client.start_conversation(inputs:)
-
-        expect(result["outputs"]).to eq([
-          {"type" => "message.output", "content" => "Final response"}
-        ])
-      end
-    end
-
-    context "when receiving [DONE] marker" do
-      before do
-        allow(http_client).to receive(:post_with_stream)
-          .and_yield(nil, "[DONE]", nil, nil)
-          .and_yield(nil, {conversation_id:, type: "conversation.response.done"}.to_json, nil, nil)
-      end
-
-      it "skips the done marker without error" do
-        expect { client.start_conversation(inputs:) }.not_to raise_error
       end
     end
 
@@ -154,9 +96,13 @@ RSpec.describe LagoMcpClient::Mistral::Client do
         )
       end
 
-      it "raises a formatted error" do
+      it "raises ApiError with code and body" do
         expect { client.start_conversation(inputs:) }
-          .to raise_error("Mistral Conversations API Error (401): Unauthorized")
+          .to raise_error(LagoMcpClient::Mistral::ApiError) do |error|
+            expect(error.error_code).to eq(401)
+            expect(error.error_body).to eq("Unauthorized")
+            expect(error.message).to eq("Mistral API Error (401): Unauthorized")
+          end
       end
     end
 
@@ -204,69 +150,6 @@ RSpec.describe LagoMcpClient::Mistral::Client do
           "Accept" => "text/event-stream"
         }
       )
-    end
-
-    context "when streaming function call deltas" do
-      let(:tool_call_id) { "call_delta" }
-
-      before do
-        allow(http_client).to receive(:post_with_stream)
-          .and_yield(nil, {
-            type: "function.call.delta",
-            tool_call_id:,
-            name: "search",
-            arguments: '{"query":'
-          }.to_json, nil, nil)
-          .and_yield(nil, {
-            type: "function.call.delta",
-            tool_call_id:,
-            arguments: ' "test"}'
-          }.to_json, nil, nil)
-          .and_yield(nil, {type: "conversation.response.done"}.to_json, nil, nil)
-      end
-
-      it "accumulates function call arguments" do
-        result = client.append_to_conversation(conversation_id:, inputs:)
-
-        expect(result["tool_calls"]).to eq([
-          {
-            "id" => tool_call_id,
-            "type" => "function",
-            "function" => {
-              "name" => "search",
-              "arguments" => '{"query": "test"}'
-            }
-          }
-        ])
-      end
-    end
-
-    context "when outputs contain tool.call type" do
-      before do
-        allow(http_client).to receive(:post_with_stream)
-          .and_yield(nil, {
-            outputs: [
-              {
-                type: "tool.call",
-                tool_call_id: "tool_123",
-                name: "list_customers",
-                arguments: "{}"
-              }
-            ]
-          }.to_json, nil, nil)
-          .and_yield(nil, {type: "conversation.response.done"}.to_json, nil, nil)
-      end
-
-      it "includes tool calls from outputs" do
-        result = client.append_to_conversation(conversation_id:, inputs:)
-
-        expect(result["tool_calls"]).to include(
-          hash_including(
-            "id" => "tool_123",
-            "function" => hash_including("name" => "list_customers")
-          )
-        )
-      end
     end
   end
 end

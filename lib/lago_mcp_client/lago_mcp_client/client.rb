@@ -2,6 +2,8 @@
 
 module LagoMcpClient
   class Client
+    include SseParser
+
     PROTOCOL_VERSION = "2024-11-05"
     CLIENT_NAME = "lago-mcp-client"
     CLIENT_VERSION = "0.1"
@@ -57,8 +59,8 @@ module LagoMcpClient
       {
         status: response.code.to_i,
         headers: response.each_header.to_h,
-        body: parse_sse_body(response.body),
-        sse_id: extract_sse_id(response.body)
+        body: parse_sse_data(find_sse_data_line(response.body)),
+        sse_id: extract_sse_id(find_sse_id_line(response.body))
       }
     rescue => e
       {error: e.message}
@@ -91,20 +93,6 @@ module LagoMcpClient
 
       @session_id ||= response[:headers]["mcp-session-id"]
       make_request(method: "notifications/initialized")
-    end
-
-    def parse_sse_body(body)
-      return unless body
-
-      line = body.split("\n").find { |l| l.start_with?("data: ") }
-      JSON.parse(line&.delete_prefix("data: "))
-    rescue JSON::ParserError
-    end
-
-    def extract_sse_id(body)
-      return unless body
-
-      body.split("\n").find { |l| l.start_with?("id: ") }&.delete_prefix("id: ")
     end
   end
 end

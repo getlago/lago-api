@@ -19,6 +19,8 @@ module AiConversations
       stream_response
       save_conversation_id!
       notify_completion
+      result.ai_conversation = ai_conversation
+      result
     rescue => e
       handle_error(e)
     end
