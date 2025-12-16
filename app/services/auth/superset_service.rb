@@ -76,15 +76,15 @@ module Auth
     end
 
     def api_headers(referer_path: "/")
-      base_headers(referer_path: referer_path).merge("Accept" => "application/json")
+      base_headers(referer_path:).merge("Accept" => "application/json")
     end
 
     def authenticated_api_headers(referer_path: "/")
-      api_headers(referer_path: referer_path).merge("X-CSRFToken" => csrf_token)
+      api_headers(referer_path:).merge("X-CSRFToken" => csrf_token)
     end
 
     def authenticated_json_headers(referer_path: "/")
-      authenticated_api_headers(referer_path: referer_path).merge("Content-Type" => "application/json")
+      authenticated_api_headers(referer_path:).merge("Content-Type" => "application/json")
     end
 
     def login_to_superset
@@ -95,7 +95,7 @@ module Auth
       }
 
       headers = base_headers(referer_path: "/login/").merge("Content-Type" => "application/x-www-form-urlencoded")
-      http_client.post("/login/", body: body, headers: headers)
+      http_client.post("/login/", body:, headers:)
 
       {success: true}
     rescue LagoHttpClient::HttpError => e
@@ -124,7 +124,7 @@ module Auth
       parsed_response = JSON.parse(response.body)
       dashboards = parsed_response["result"] || []
 
-      {success: true, dashboards: dashboards}
+      {success: true, dashboards:}
     rescue LagoHttpClient::HttpError => e
       result.service_failure!(code: "superset_fetch_dashboards_failed", message: "Failed to fetch dashboards: #{e.error_body}")
       {success: false}
@@ -135,7 +135,7 @@ module Auth
       parsed_response = JSON.parse(response.body)
       uuid = parsed_response["result"]&.[]("uuid")
 
-      return {success: true, uuid: uuid, exists: true} if uuid
+      return {success: true, uuid:, exists: true} if uuid
 
       {success: true, exists: false}
     rescue LagoHttpClient::HttpError, JSON::ParserError
@@ -175,13 +175,13 @@ module Auth
         user: guest_user_info
       }
 
-      response = http_client.post("/api/v1/security/guest_token/", body: body, headers: authenticated_json_headers)
+      response = http_client.post("/api/v1/security/guest_token/", body:, headers: authenticated_json_headers)
       parsed_response = JSON.parse(response.body)
       guest_token = parsed_response["token"] || parsed_response["result"] || parsed_response["access_token"]
 
       return {success: false} unless guest_token
 
-      {success: true, guest_token: guest_token}
+      {success: true, guest_token:}
     rescue LagoHttpClient::HttpError, JSON::ParserError
       {success: false}
     end
@@ -196,9 +196,9 @@ module Auth
 
     def ensure_superset_configured
       missing_vars = []
-      missing_vars << "SUPERSET_URL" if ENV["SUPERSET_URL"].blank?
-      missing_vars << "SUPERSET_USERNAME" if ENV["SUPERSET_USERNAME"].blank?
-      missing_vars << "SUPERSET_PASSWORD" if ENV["SUPERSET_PASSWORD"].blank?
+      missing_vars << "SUPERSET_URL" if superset_base_url.blank?
+      missing_vars << "SUPERSET_USERNAME" if superset_username.blank?
+      missing_vars << "SUPERSET_PASSWORD" if superset_password.blank?
 
       return if missing_vars.empty?
 
