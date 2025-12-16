@@ -260,7 +260,16 @@ class Subscription < ApplicationRecord
   end
 
   def has_progressive_billing?
-    plan.usage_thresholds.any?
+    # TODO: usage_thresholds optimize to a single query
+    applicable_usage_thresholds.any?
+  end
+
+  # If the subscription has direct usage thresholds, they are override and take precedence
+  # If it has a plan override with thresholds, we use them. Ultimately, they will be migrated
+  #   to subscription usage thresholds.
+  # Once migrated, this method should also return parent plan thresholds if nothing else is set.
+  def applicable_usage_thresholds
+    usage_thresholds.any? ? usage_thresholds : plan.usage_thresholds
   end
 end
 

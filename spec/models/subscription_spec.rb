@@ -797,4 +797,45 @@ RSpec.describe Subscription do
       end
     end
   end
+
+  describe "#applicable_usage_thresholds" do
+    let(:plan_threshold) { create(:usage_threshold, plan:) }
+
+    context "when subscription has its own usage thresholds" do
+      let(:subscription_threshold) { create(:usage_threshold, :for_subscription, subscription:) }
+
+      before do
+        plan_threshold
+        subscription_threshold
+      end
+
+      it "returns subscription usage thresholds" do
+        expect(subscription.applicable_usage_thresholds).to contain_exactly(subscription_threshold)
+      end
+    end
+
+    context "when subscription has no usage thresholds" do
+      it "returns plan usage thresholds" do
+        plan_threshold
+        expect(subscription.applicable_usage_thresholds).to contain_exactly(plan_threshold)
+      end
+
+      context "when plan is a child with no thresholds" do
+        let(:parent_plan) { create(:plan) }
+        let(:plan) { create(:plan, parent: parent_plan) }
+        let(:plan_threshold) { create(:usage_threshold, plan: parent_plan) }
+
+        it "returns plan usage thresholds" do
+          plan_threshold
+          expect(subscription.applicable_usage_thresholds).to be_empty
+        end
+      end
+    end
+
+    context "when neither subscription nor plan has usage thresholds" do
+      it "returns empty collection" do
+        expect(subscription.applicable_usage_thresholds).to be_empty
+      end
+    end
+  end
 end
