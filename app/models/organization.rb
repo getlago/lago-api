@@ -28,9 +28,17 @@ class Organization < ApplicationRecord
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
   has_many :active_memberships, -> { active }, class_name: "Membership"
-  has_many :admins_memberships, -> { active.admin }, class_name: "Membership"
   has_many :users, through: :memberships
+
+  # TODO: Remove in favor of admins through admin_membership_roles
+  has_many :admins_memberships, -> { active.admin }, class_name: "Membership"
   has_many :admins, through: :admins_memberships, source: :user
+  # New way to access admin users
+  has_many :membership_roles, through: :memberships
+  has_many :admin_membership_roles, -> { admins }, class_name: "MembershipRole"
+  has_many :admin_memberships, through: :admin_membership_roles, source: :membership
+  has_many :admin_users, through: :admin_memberships, source: :user
+
   has_many :billable_metrics
   has_many :plans
   has_many :pricing_units

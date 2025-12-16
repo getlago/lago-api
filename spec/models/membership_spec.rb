@@ -6,8 +6,37 @@ RSpec.describe Membership do
   subject(:membership) { create(:membership) }
 
   it { is_expected.to have_many(:data_exports) }
+  it { is_expected.to have_many(:membership_roles) }
+  it { is_expected.to have_many(:roles).through(:membership_roles) }
 
   it_behaves_like "paper_trail traceable"
+
+  describe ".admins" do
+    let(:organization) { create(:organization) }
+    let(:admin_membership) { create(:membership, organization:) }
+    let(:finance_membership) { create(:membership, organization:) }
+
+    before do
+      create(:membership_role, membership: admin_membership, role: create(:role, :admin))
+      create(:membership_role, membership: finance_membership, role: create(:role, :finance))
+    end
+
+    it "returns only memberships with admin roles" do
+      expect(described_class.admins).to eq([admin_membership])
+    end
+  end
+
+  describe "#admin?" do
+    it "returns true when membership role is admin" do
+      membership = create(:membership, role: :admin)
+      expect(membership.admin?).to be true
+    end
+
+    it "returns false when membership role is not admin" do
+      membership = create(:membership, role: :finance)
+      expect(membership.admin?).to be false
+    end
+  end
 
   describe "#mark_as_revoked" do
     it "revokes the membership with a Time" do

@@ -12,7 +12,7 @@ RSpec.describe Role do
   end
 
   describe "scopes" do
-    describe ".with_name" do
+    describe ".with_names" do
       let(:organization) { create(:organization) }
       let!(:developer) { create(:role, name: "Developer", organization:) }
 

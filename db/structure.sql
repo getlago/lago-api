@@ -9,6 +9,7 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.membership_roles DROP CONSTRAINT IF EXISTS membership_role_membership_fk;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_ff75b29299;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_fea16bf2e7;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
@@ -161,6 +162,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_665ae33492;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_651eadaaa4;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_650fccfc41;
+ALTER TABLE IF EXISTS ONLY public.membership_roles DROP CONSTRAINT IF EXISTS fk_rails_65053e240e;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_63ca8e33c5;
@@ -273,6 +275,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
+DROP TRIGGER IF EXISTS ensure_consistency ON public.membership_roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.flat_filters AS
 SELECT
@@ -425,6 +428,10 @@ DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_memberships_on_user_id;
 DROP INDEX IF EXISTS public.index_memberships_on_organization_id;
+DROP INDEX IF EXISTS public.index_memberships_by_id_and_organization;
+DROP INDEX IF EXISTS public.index_membership_roles_uniqueness;
+DROP INDEX IF EXISTS public.index_membership_roles_on_role_id;
+DROP INDEX IF EXISTS public.index_membership_roles_by_membership_and_organization;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
@@ -793,6 +800,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_intents DROP CONSTRAINT IF EXISTS paym
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS password_resets_pkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
+ALTER TABLE IF EXISTS ONLY public.membership_roles DROP CONSTRAINT IF EXISTS membership_roles_pkey;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS lifetime_usages_pkey;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS item_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoices_taxes_pkey;
@@ -898,6 +906,7 @@ DROP TABLE IF EXISTS public.payment_methods;
 DROP TABLE IF EXISTS public.payment_intents;
 DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
+DROP TABLE IF EXISTS public.membership_roles;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
 DROP TABLE IF EXISTS public.item_metadata;
@@ -1011,6 +1020,7 @@ DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
+DROP FUNCTION IF EXISTS public.ensure_membership_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
@@ -1249,6 +1259,15 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_units',
     'lifetime_usage_amount'
 );
+
+
+--
+-- Name: ensure_membership_role_consistency(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ensure_membership_role_consistency() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$ BEGIN IF TG_OP = 'INSERT' THEN IF EXISTS ( SELECT FROM roles WHERE id = NEW.role_id AND COALESCE(organization_id, NEW.organization_id) != NEW.organization_id ) THEN RAISE EXCEPTION 'Cannot assign a role to a membership in a different organization'; END IF; ELSIF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Hard deletion of role membership is not allowed; use soft deletion instead'; ELSIF OLD.deleted_at IS NOT NULL THEN RAISE EXCEPTION 'Revoked role membership cannot be modified'; ELSIF OLD.organization_id != NEW.organization_id THEN RAISE EXCEPTION 'Role membership cannot be moved to a different organization'; ELSIF OLD.role_id != NEW.role_id THEN RAISE EXCEPTION 'Role membership cannot be moved to a different role'; ELSIF OLD.membership_id != NEW.membership_id THEN RAISE EXCEPTION 'Role membership cannot be moved to a different membership'; END IF; RETURN NEW; END; $$;
 
 
 --
@@ -4000,6 +4019,21 @@ CREATE TABLE public.lifetime_usages (
 
 
 --
+-- Name: membership_roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.membership_roles (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    membership_id uuid NOT NULL,
+    role_id uuid NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: memberships; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5103,6 +5137,14 @@ ALTER TABLE ONLY public.item_metadata
 
 ALTER TABLE ONLY public.lifetime_usages
     ADD CONSTRAINT lifetime_usages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: membership_roles membership_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.membership_roles
+    ADD CONSTRAINT membership_roles_pkey PRIMARY KEY (id);
 
 
 --
@@ -7721,6 +7763,34 @@ CREATE UNIQUE INDEX index_lifetime_usages_on_subscription_id ON public.lifetime_
 
 
 --
+-- Name: index_membership_roles_by_membership_and_organization; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_membership_roles_by_membership_and_organization ON public.membership_roles USING btree (membership_id, organization_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_membership_roles_on_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_membership_roles_on_role_id ON public.membership_roles USING btree (role_id);
+
+
+--
+-- Name: index_membership_roles_uniqueness; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_membership_roles_uniqueness ON public.membership_roles USING btree (membership_id, role_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_memberships_by_id_and_organization; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_memberships_by_id_and_organization ON public.memberships USING btree (id, organization_id);
+
+
+--
 -- Name: index_memberships_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8666,6 +8736,13 @@ CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_rec
 
 
 --
+-- Name: membership_roles ensure_consistency; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ensure_consistency BEFORE INSERT OR DELETE OR UPDATE ON public.membership_roles FOR EACH ROW EXECUTE FUNCTION public.ensure_membership_role_consistency();
+
+
+--
 -- Name: roles ensure_consistency; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9558,6 +9635,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.memberships
     ADD CONSTRAINT fk_rails_64267aab58 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: membership_roles fk_rails_65053e240e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.membership_roles
+    ADD CONSTRAINT fk_rails_65053e240e FOREIGN KEY (role_id) REFERENCES public.roles(id);
 
 
 --
@@ -10777,12 +10862,21 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 
 
 --
+-- Name: membership_roles membership_role_membership_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.membership_roles
+    ADD CONSTRAINT membership_role_membership_fk FOREIGN KEY (membership_id, organization_id) REFERENCES public.memberships(id, organization_id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251221174733'),
 ('20251221174251'),
 ('20251219115429'),
 ('20251216100247'),

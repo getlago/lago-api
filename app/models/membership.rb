@@ -7,6 +7,8 @@ class Membership < ApplicationRecord
   belongs_to :user
 
   has_many :data_exports
+  has_many :membership_roles
+  has_many :roles, through: :membership_roles
 
   STATUSES = [
     :active,
@@ -23,6 +25,12 @@ class Membership < ApplicationRecord
   enum :role, ROLES
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
+
+  scope :admins, -> { joins(:roles).where(roles: {admin: true}).distinct }
+
+  def admin?
+    role == "admin"
+  end
 
   def mark_as_revoked!(timestamp = Time.current)
     self.revoked_at ||= timestamp
@@ -63,6 +71,7 @@ end
 #
 # Indexes
 #
+#  index_memberships_by_id_and_organization          (id,organization_id) UNIQUE
 #  index_memberships_on_organization_id              (organization_id)
 #  index_memberships_on_user_id                      (user_id)
 #  index_memberships_on_user_id_and_organization_id  (user_id,organization_id) UNIQUE WHERE (revoked_at IS NULL)
