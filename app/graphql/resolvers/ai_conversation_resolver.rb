@@ -14,6 +14,9 @@ module Resolvers
     type Types::AiConversations::ObjectWithMessages, null: true
 
     def resolve(id:)
+      raise unauthorized_error unless License.premium?
+      raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
+
       ai_conversation = current_organization.ai_conversations.find(id)
       result = ::AiConversations::FetchMessagesService.call(ai_conversation:).raise_if_error!
 
