@@ -14,7 +14,7 @@ module V1
         to_datetime: Time.current.iso8601
       }
 
-      payload.merge!(usage_thresholds) if include?(:usage_thresholds) && model.subscription.plan.usage_thresholds.any?
+      payload.merge!(usage_thresholds) if include?(:usage_thresholds) && model.subscription.has_progressive_billing?
       payload
     end
 

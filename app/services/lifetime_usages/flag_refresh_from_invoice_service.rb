@@ -32,7 +32,7 @@ module LifetimeUsages
     attr_reader :invoice
 
     def should_flag_refresh_from_invoice?
-      invoice.organization.lifetime_usage_enabled? || invoice.subscriptions.any? { |s| s.plan.usage_thresholds.any? }
+      invoice.organization.lifetime_usage_enabled? || invoice.subscriptions.any?(&:has_progressive_billing?)
     end
   end
 end
