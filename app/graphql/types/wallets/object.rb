@@ -44,6 +44,9 @@ module Types
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
 
+      field :payment_method, Types::PaymentMethods::Object
+      field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
+
       field :applies_to, Types::Wallets::AppliesTo, null: true, method: :itself
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
