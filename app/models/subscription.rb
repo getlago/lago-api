@@ -269,6 +269,8 @@ class Subscription < ApplicationRecord
   #   to subscription usage thresholds.
   # Once migrated, this method should also return parent plan thresholds if nothing else is set.
   def applicable_usage_thresholds
+    return [] if progressive_billing_disabled?
+
     usage_thresholds.any? ? usage_thresholds : plan.usage_thresholds
   end
 end
@@ -285,6 +287,7 @@ end
 #  on_termination_credit_note   :enum
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
+#  progressive_billing_disabled :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime
 #  status                       :integer          not null

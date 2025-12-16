@@ -2799,7 +2799,8 @@ CREATE TABLE public.subscriptions (
     on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL,
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    progressive_billing_disabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -10689,6 +10690,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251216100247'),
 ('20251211154309'),
 ('20251210151531'),
 ('20251210133246'),
