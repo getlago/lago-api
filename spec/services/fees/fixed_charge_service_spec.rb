@@ -621,13 +621,13 @@ RSpec.describe Fees::FixedChargeService do
             id: String,
             invoice:,
             fixed_charge:,
-            amount_cents: 10_000,
-            precise_amount_cents: 10_000.0,
+            amount_cents: 155_000,
+            precise_amount_cents: 155_000,
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
             units: 5,
-            unit_amount_cents: 2_000,
-            precise_unit_amount: 20,
+            unit_amount_cents: 31_000,
+            precise_unit_amount: 310,
             payment_status: "pending"
           )
         end
@@ -701,13 +701,13 @@ RSpec.describe Fees::FixedChargeService do
             id: String,
             invoice:,
             fixed_charge:,
-            amount_cents: 20_000,
-            precise_amount_cents: 20_000.0,
+            amount_cents: 30_000,
+            precise_amount_cents: 30_000.002,
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
             units: 10,
-            unit_amount_cents: 2_000,
-            precise_unit_amount: 20,
+            unit_amount_cents: 3_000,
+            precise_unit_amount: 30.000002,
             invoice_display_name: "Custom Fixed Charge Name",
             payment_status: "pending"
           )
@@ -767,13 +767,13 @@ RSpec.describe Fees::FixedChargeService do
             id: String,
             invoice:,
             fixed_charge:,
-            amount_cents: 20_000,
-            precise_amount_cents: 20_000.0,
+            amount_cents: 30_000,
+            precise_amount_cents: 30_000.002,
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
             units: 10,
-            unit_amount_cents: 2_000,
-            precise_unit_amount: 20,
+            unit_amount_cents: 3_000,
+            precise_unit_amount: 30.000002,
             payment_status: "pending"
           )
         end
