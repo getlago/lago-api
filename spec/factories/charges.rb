@@ -10,7 +10,7 @@ FactoryBot.define do
     factory :standard_charge do
       charge_model { "standard" }
       properties do
-        {amount: Faker::Number.between(from: 100, to: 500).to_s}
+        {amount: "10"}
       end
     end
 
