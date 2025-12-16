@@ -20,8 +20,8 @@ module Wallets
       return result unless valid?
 
       attributes = {
-        organization_id: result.current_customer.organization_id,
-        customer_id: result.current_customer.id,
+        organization_id:,
+        customer_id: customer.id,
         name: params[:name],
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
@@ -49,7 +49,7 @@ module Wallets
 
       ActiveRecord::Base.transaction do
         if params[:currency].present?
-          Customers::UpdateCurrencyService.call!(customer: result.current_customer, currency: params[:currency])
+          Customers::UpdateCurrencyService.call!(customer: customer, currency: params[:currency])
         end
 
         wallet.currency = wallet.customer.currency
@@ -66,7 +66,7 @@ module Wallets
         end
 
         billable_metrics.each do |bm|
-          WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
+          WalletTarget.create!(wallet:, billable_metric: bm, organization_id:)
         end
       end
 
@@ -75,7 +75,7 @@ module Wallets
       SendWebhookJob.perform_later("wallet.created", wallet)
 
       WalletTransactions::CreateJob.perform_later(
-        organization_id: params[:organization_id],
+        organization_id:,
         params: {
           wallet_id: wallet.id,
           paid_credits: params[:paid_credits],
@@ -97,6 +97,14 @@ module Wallets
     private
 
     attr_reader :params
+
+    def customer
+      params[:customer]
+    end
+
+    def organization_id
+      params[:organization_id]
+    end
 
     def valid?
       Wallets::ValidateService.new(result, **params).valid?
@@ -134,9 +142,9 @@ module Wallets
       return [] if billable_metric_identifiers.blank?
 
       @billable_metrics = if api_context?
-        BillableMetric.where(code: billable_metric_identifiers, organization_id: params[:organization_id])
+        BillableMetric.where(code: billable_metric_identifiers, organization_id:)
       else
-        BillableMetric.where(id: billable_metric_identifiers, organization_id: params[:organization_id])
+        BillableMetric.where(id: billable_metric_identifiers, organization_id:)
       end
     end
 
@@ -144,7 +152,7 @@ module Wallets
       return @payment_method if defined? @payment_method
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
-      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: params[:organization_id])
+      @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id:)
     end
   end
 end
