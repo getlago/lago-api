@@ -9,6 +9,8 @@ RSpec.describe Role do
 
   describe "associations" do
     it { is_expected.to belong_to(:organization).optional }
+    it { is_expected.to have_many(:membership_roles) }
+    it { is_expected.to have_many(:memberships).through(:membership_roles) }
   end
 
   describe "callbacks" do
@@ -20,7 +22,7 @@ RSpec.describe Role do
   end
 
   describe "scopes" do
-    describe ".with_name" do
+    describe ".with_names" do
       let(:organization) { create(:organization) }
       let!(:developer) { create(:role, name: "Developer", organization:) }
 
