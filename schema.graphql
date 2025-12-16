@@ -11755,6 +11755,8 @@ type Wallet {
   paidTopUpMaxCredits: BigInt
   paidTopUpMinAmountCents: BigInt
   paidTopUpMinCredits: BigInt
+  paymentMethod: PaymentMethod
+  paymentMethodType: PaymentMethodTypeEnum
   priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
