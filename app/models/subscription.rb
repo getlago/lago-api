@@ -259,7 +259,7 @@ class Subscription < ApplicationRecord
     plan.pay_in_advance? || plan.fixed_charges.pay_in_advance.any?
   end
 
-  def has_usage_thresholds?
+  def has_progressive_billing?
     plan.usage_thresholds.any?
   end
 end

@@ -780,20 +780,20 @@ RSpec.describe Subscription do
     end
   end
 
-  describe "#has_usage_thresholds?" do
+  describe "#has_progressive_billing?" do
     let(:plan) { create(:plan) }
 
     context "when plan has usage thresholds" do
       before { create(:usage_threshold, plan:) }
 
       it "returns true" do
-        expect(subscription.has_usage_thresholds?).to be(true)
+        expect(subscription.has_progressive_billing?).to be(true)
       end
     end
 
     context "when plan has no usage thresholds" do
       it "returns false" do
-        expect(subscription.has_usage_thresholds?).to be(false)
+        expect(subscription.has_progressive_billing?).to be(false)
       end
     end
   end
