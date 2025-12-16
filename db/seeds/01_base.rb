@@ -20,8 +20,10 @@ organization.update!({
 })
 BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
 Membership.find_or_create_by!(user:, organization:, role: :admin)
-WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook/#{organization.id}")
-
+if Rails.env.development?
+  # In development, we create a webhook endpoint to the local webhook-tester service.
+  WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook/#{organization.id}")
+end
 organization.api_keys.destroy_all
 organization.api_keys.create!(name: "Expired Key", expires_at: 1.day.ago, last_used_at: 36.hours.ago, permissions: {"customer" => ["read", "write"]})
 k = organization.api_keys.create!(name: "Hooli Key", permissions: ApiKey.default_permissions)

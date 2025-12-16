@@ -93,8 +93,7 @@ module Wallets
           ongoing_usage_balance_cents:,
           credits_ongoing_usage_balance:,
           ongoing_balance_cents:,
-          credits_ongoing_balance:,
-          ready_to_be_refreshed: false
+          credits_ongoing_balance:
         }
 
         if !wallet.depleted_ongoing_balance? && ongoing_balance_cents <= 0

@@ -43,13 +43,13 @@ end
 #
 # Table name: item_metadata
 #
-#  id                                             :uuid             not null, primary key
-#  owner_type(Polymorphic owner type)             :string           not null
-#  value(item_metadata key-value pairs)           :jsonb            not null
-#  created_at                                     :datetime         not null
-#  updated_at                                     :datetime         not null
-#  organization_id(Reference to the organization) :uuid             not null
-#  owner_id(Polymorphic owner id)                 :uuid             not null
+#  id              :uuid             not null, primary key
+#  owner_type      :string           not null
+#  value           :jsonb            not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  organization_id :uuid             not null
+#  owner_id        :uuid             not null
 #
 # Indexes
 #

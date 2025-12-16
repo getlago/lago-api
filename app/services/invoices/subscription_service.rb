@@ -118,6 +118,7 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :subscription,
+        invoicing_reason:,
         currency:,
         datetime: Time.zone.at(timestamp),
         skip_charges:

@@ -651,6 +651,50 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#applicable_subscription_invoice_issuing_date_anchor" do
+    subject(:customer) do
+      described_class.new(billing_entity:, subscription_invoice_issuing_date_anchor:)
+    end
+
+    context "when customer has subscription_invoice_issuing_date_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+
+      it "returns the customer subscription_invoice_issuing_date_anchor" do
+        expect(customer.applicable_subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+      end
+    end
+
+    context "when customer does not have subscription_invoice_issuing_date_anchor" do
+      let(:subscription_invoice_issuing_date_anchor) { nil }
+
+      it "returns the billing entity subscription_invoice_issuing_date_anchor" do
+        expect(customer.applicable_subscription_invoice_issuing_date_anchor).to eq("next_period_start")
+      end
+    end
+  end
+
+  describe "#applicable_subscription_invoice_issuing_date_adjustment" do
+    subject(:customer) do
+      described_class.new(billing_entity:, subscription_invoice_issuing_date_adjustment:)
+    end
+
+    context "when customer has subscription_invoice_issuing_date_adjustment" do
+      let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+      it "returns the customer subscription_invoice_issuing_date_adjustment" do
+        expect(customer.applicable_subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+      end
+    end
+
+    context "when customer does not have subscription_invoice_issuing_date_adjustment" do
+      let(:subscription_invoice_issuing_date_adjustment) { nil }
+
+      it "returns the billing entity subscription_invoice_issuing_date_adjustment" do
+        expect(customer.applicable_subscription_invoice_issuing_date_adjustment).to eq("align_with_finalization_date")
+      end
+    end
+  end
+
   describe "#applicable_net_payment_term" do
     subject(:applicable_net_payment_term) { customer.applicable_net_payment_term }
 
@@ -1051,28 +1095,46 @@ RSpec.describe Customer do
   end
 
   describe "#flag_wallets_for_refresh" do
-    context "without any wallets" do
-      it "returns 0" do
-        expect(customer.flag_wallets_for_refresh).to be_zero
+    subject { customer.flag_wallets_for_refresh }
+
+    let(:customer) { create(:customer, awaiting_wallet_refresh:) }
+
+    context "when customer has at least one active wallet" do
+      before { create(:wallet, customer:) }
+
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
+
+        it "keeps customer as awaiting wallet refresh" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh).from(true)
+        end
+      end
+
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
+
+        it "marks customer as awaiting wallet refresh" do
+          expect { subject }.to change(customer, :awaiting_wallet_refresh).from(false).to(true)
+        end
       end
     end
 
-    context "without active wallets" do
-      it "does not flag wallets for refresh" do
-        wallet = create(:wallet, :terminated, customer:)
+    context "when customer has no wallet" do
+      context "when customer already awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { true }
 
-        expect { customer.flag_wallets_for_refresh }.not_to change {
-          wallet.reload.ready_to_be_refreshed
-        }.from(false)
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
       end
-    end
 
-    it "flags all active wallets for refresh" do
-      wallet = create(:wallet, customer:)
+      context "when customer is not awaiting wallet refresh" do
+        let(:awaiting_wallet_refresh) { false }
 
-      expect { customer.flag_wallets_for_refresh }.to change {
-        wallet.reload.ready_to_be_refreshed
-      }.from(false).to(true)
+        it "does not change customer" do
+          expect { subject }.not_to change(customer, :awaiting_wallet_refresh)
+        end
+      end
     end
   end
 

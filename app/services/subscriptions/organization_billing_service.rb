@@ -57,7 +57,6 @@ module Subscriptions
             (#{yearly_with_monthly_charges_calendar})
             UNION
             (#{yearly_calendar})
-
             UNION
             -- Anniversary subscriptions
             (#{weekly_anniversary})

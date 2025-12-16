@@ -104,6 +104,8 @@ RSpec.describe Mutations::Customers::Update do
     customer_settings:update:payment_terms
     customer_settings:update:grace_period
     customer_settings:update:lang
+    customer_settings:update:issuing_date_anchor
+    customer_settings:update:issuing_date_adjustment
   ]
 
   it "updates a customer" do

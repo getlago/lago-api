@@ -7,11 +7,19 @@ RSpec.describe ChargeFilterValue do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:charge_filter) }
-  it { is_expected.to belong_to(:billable_metric_filter) }
-  it { is_expected.to belong_to(:organization) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:charge_filter)
+      expect(subject).to belong_to(:billable_metric_filter)
+      expect(subject).to belong_to(:organization)
+    end
+  end
 
-  it { is_expected.to validate_presence_of(:values) }
+  describe "validations" do
+    it do
+      expect(subject).to validate_presence_of(:values)
+    end
+  end
 
   describe "#valdiate_values" do
     subject(:charge_filter_value) do

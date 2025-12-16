@@ -94,6 +94,10 @@ module Api
           metadata: [
             :key,
             :value
+          ],
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
           ]
         )
       end

@@ -31,6 +31,41 @@ RSpec.describe Wallets::ValidateService do
       expect(validate_service).to be_valid
     end
 
+    context "when organization_id is blank" do
+      let(:args) do
+        {
+          customer:,
+          organization_id: nil,
+          paid_credits:,
+          granted_credits:,
+          expiration_at:
+        }
+      end
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:organization_id]).to eq(["blank"])
+      end
+    end
+
+    context "when organization_id does not match customer's organization_id" do
+      let(:other_organization) { create(:organization) }
+      let(:args) do
+        {
+          customer:,
+          organization_id: other_organization.id,
+          paid_credits:,
+          granted_credits:,
+          expiration_at:
+        }
+      end
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:organization_id]).to eq(["invalid"])
+      end
+    end
+
     context "when customer does not exist" do
       let(:args) do
         {

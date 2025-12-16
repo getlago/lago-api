@@ -63,4 +63,19 @@ RSpec.describe ::V1::WalletTransactionSerializer do
       )
     end
   end
+
+  context "when includes applied_invoice_custom_sections is set" do
+    let(:includes) { %i[applied_invoice_custom_sections] }
+    let(:invoice_custom_section) { create(:wallet_transaction_applied_invoice_custom_section, wallet_transaction:) }
+
+    before { invoice_custom_section }
+
+    it "includes the invoice_custom_sections" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["applied_invoice_custom_sections"].first).to include(
+        "lago_id" => invoice_custom_section.id
+      )
+    end
+  end
 end

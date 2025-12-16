@@ -95,7 +95,9 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       travel_to time_1 + 5.days do
         ingest_event(subscription, 5)
         expect(subscription.invoices.count).to eq(0)
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
         recalculate_wallet_balances
+        expect(customer.reload.awaiting_wallet_refresh).to eq false
         wallet.reload
         expect(wallet.credits_balance).to eq 10
         expect(wallet.balance_cents).to eq 1000
@@ -115,7 +117,9 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         perform_billing
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("draft")
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
         recalculate_wallet_balances
+        expect(customer.reload.awaiting_wallet_refresh).to eq false
         wallet.reload
         expect(wallet.credits_balance).to eq 10
         expect(wallet.balance_cents).to eq 1000
@@ -131,7 +135,9 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # current usage = 6$ draft invoice + 3$ new usage = 9$
       travel_to time_2 + 5.days do
         ingest_event(subscription, 3)
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
         recalculate_wallet_balances
+        expect(customer.reload.awaiting_wallet_refresh).to eq false
         wallet.reload
         expect(wallet.credits_balance).to eq 10
         expect(wallet.balance_cents).to eq 1000

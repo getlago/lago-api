@@ -12,6 +12,7 @@ RSpec.describe Types::WalletTransactions::CreateInput do
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:ignore_paid_top_up_limits).of_type("Boolean")
     expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
+    expect(subject).to accept_argument(:invoice_custom_section).of_type("InvoiceCustomSectionsReferenceInput")
     expect(subject).to accept_argument(:metadata).of_type("[WalletTransactionMetadataInput!]")
     expect(subject).to accept_argument(:paid_credits).of_type("String")
     expect(subject).to accept_argument(:payment_method).of_type("PaymentMethodReferenceInput")

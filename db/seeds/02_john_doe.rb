@@ -51,6 +51,7 @@ end
 
 unless john_doe.wallets.active.exists?
   params = {
+    organization_id: organization.id,
     customer: john_doe,
     name: "Main wallet",
     rate_amount: "3",

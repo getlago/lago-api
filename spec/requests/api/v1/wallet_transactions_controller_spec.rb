@@ -118,6 +118,32 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(response).to have_http_status(:unprocessable_content)
       end
     end
+
+    context "with invoice_custom_section" do
+      let(:params) do
+        {
+          wallet_id:,
+          paid_credits: "10",
+          name: "Custom Top-up Name",
+          invoice_custom_section: {invoice_custom_section_codes: ["section_code_1"]}
+        }
+      end
+
+      before do
+        CurrentContext.source = "api"
+        create(:invoice_custom_section, organization:, code: "section_code_1")
+      end
+
+      it "creates the wallet transactions with correct data" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet_transaction = WalletTransaction.find(json[:wallet_transactions].first[:lago_id])
+        expect(wallet_transaction.applied_invoice_custom_sections.count).to eq(1)
+        expect(wallet_transaction.applied_invoice_custom_sections.first.invoice_custom_section.code).to eq("section_code_1")
+      end
+    end
   end
 
   describe "GET /api/v1/wallet_transactions" do

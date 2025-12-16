@@ -15,7 +15,7 @@ module Plans
       return result unless plan.organization.progressive_billing_enabled?
 
       if usage_thresholds_params.empty?
-        plan.usage_thresholds.discard_all
+        plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       else
         process_usage_thresholds
         LifetimeUsages::FlagRefreshFromPlanUpdateJob.perform_later(plan)

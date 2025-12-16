@@ -12,6 +12,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
         :invoice,
         status: :draft,
         issuing_date: DateTime.parse("23 Jun 2022").to_date,
+        expected_finalization_date: DateTime.parse("23 Jun 2022").to_date,
         customer:,
         organization: customer.organization
       )
@@ -21,6 +22,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
         :invoice,
         status: :finalized,
         issuing_date: DateTime.parse("23 Jun 2022").to_date,
+        expected_finalization_date: DateTime.parse("23 Jun 2022").to_date,
         customer:,
         organization: customer.organization
       )

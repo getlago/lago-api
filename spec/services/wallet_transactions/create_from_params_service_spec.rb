@@ -391,5 +391,26 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         expect(result.wallet_transactions.first.amount).to eq(4)
       end
     end
+
+    context "when invoice_custom_section param exists" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          invoice_custom_section: {invoice_custom_section_codes: ["section_code_1"]}
+        }
+      end
+
+      before do
+        CurrentContext.source = "api"
+        create(:invoice_custom_section, organization:, code: "section_code_1")
+      end
+
+      it "creates wallet transaction with invoice_custom_section" do
+        applied_sections = result.wallet_transactions.first.applied_invoice_custom_sections
+        expect(applied_sections.count).to eq(1)
+        expect(applied_sections.first.invoice_custom_section.code).to eq("section_code_1")
+      end
+    end
   end
 end

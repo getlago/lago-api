@@ -1046,6 +1046,453 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           end
         end
       end
+
+      context "with pending subscription starting in the future" do
+        let(:customer) { create(:customer, organization:, billing_entity:) }
+        let(:timestamp) { Time.zone.parse("15 Mar 2024") }
+        let(:future_start) { Time.zone.parse("1 Apr 2024") }
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: false) }
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            pay_in_advance: false,
+            invoiceable: true,
+            properties: {amount: "10"}
+          )
+        end
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            status: :active,
+            subscription_at: future_start,
+            started_at: future_start,
+            billing_time: "calendar",
+            created_at: future_start
+          )
+        end
+        let(:subscriptions) { [subscription] }
+
+        before do
+          charge
+          organization.update!(premium_integrations: ["preview"])
+        end
+
+        it "creates preview invoice for pending subscription with subscription fee only" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.organization).to eq(organization)
+            expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+            expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+            expect(result.invoice.invoice_type).to eq("subscription")
+            expect(result.invoice.issuing_date.to_s).to eq("2024-05-01")
+
+            subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+            expect(subscription_fee).to be_present
+            expect(subscription_fee.amount_cents).to eq(1000)
+            expect(subscription_fee.units).to eq(1.0)
+
+            charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+            expect(charge_fees).to be_empty
+
+            expect(result.invoice.fees_amount_cents).to eq(1000)
+            expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+            expect(result.invoice.taxes_amount_cents).to eq(500)
+            expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+            expect(result.invoice.total_amount_cents).to eq(1500)
+          end
+        end
+
+        context "with in advance billing in the future" do
+          let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: true) }
+
+          it "creates preview invoice for pending subscription with subscription fee only" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+              expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+
+              subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+              expect(subscription_fee).to be_present
+              expect(subscription_fee.amount_cents).to eq(1000)
+              expect(subscription_fee.units).to eq(1.0)
+
+              charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+              expect(charge_fees).to be_empty
+
+              expect(result.invoice.fees_amount_cents).to eq(1000)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+              expect(result.invoice.taxes_amount_cents).to eq(500)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+              expect(result.invoice.total_amount_cents).to eq(1500)
+            end
+          end
+        end
+
+        context "with in advance billing in the future and anniversary interval" do
+          let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000, pay_in_advance: true) }
+          let(:future_start) { Time.zone.parse("8 Apr 2024") }
+          let(:subscription) do
+            build(
+              :subscription,
+              customer:,
+              plan:,
+              status: :active,
+              subscription_at: future_start,
+              started_at: future_start,
+              billing_time: "anniversary",
+              created_at: future_start
+            )
+          end
+
+          it "creates preview invoice for pending subscription with subscription fee only" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+              expect(result.invoice.subscriptions.map(&:id)).to eq([subscription.id])
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-08")
+
+              subscription_fee = result.invoice.fees.find { |f| f.subscription_id == subscription.id && f.charge_id.nil? }
+              expect(subscription_fee).to be_present
+              expect(subscription_fee.amount_cents).to eq(1000)
+              expect(subscription_fee.units).to eq(1.0)
+
+              charge_fees = result.invoice.fees.select { |f| f.charge_id.present? }
+              expect(charge_fees).to be_empty
+
+              expect(result.invoice.fees_amount_cents).to eq(1000)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1000)
+              expect(result.invoice.taxes_amount_cents).to eq(500)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
+              expect(result.invoice.total_amount_cents).to eq(1500)
+            end
+          end
+        end
+      end
+
+      context "with issuing date preferences" do
+        let(:plan) { create(:plan, organization:, pay_in_advance:, interval: "monthly") }
+        let(:pay_in_advance) { false }
+
+        before do
+          organization.update!(premium_integrations: ["preview"])
+        end
+
+        context "with no preferences set on the customer level " do
+          let(:billing_entity) do
+            create(
+              :billing_entity,
+              subscription_invoice_issuing_date_anchor: "current_period_end",
+              subscription_invoice_issuing_date_adjustment: "keep_anchor",
+              invoice_grace_period: 3
+            )
+          end
+
+          let(:customer) { create(:customer, organization:, billing_entity:) }
+
+          it "uses billing_entity preferences" do
+            travel_to(timestamp + 5.days) do
+              result = preview_service.call
+
+              expect(result.invoice.issuing_date.to_s).to eq("2024-03-31")
+            end
+          end
+        end
+
+        context "when invoice is not recurring" do
+          let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+          let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+          before do
+            subscription.terminated_at = Time.zone.now
+          end
+
+          it "ignores all issuing date preferences" do
+            travel_to(timestamp + 5.days) do
+              result = preview_service.call
+
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+            end
+          end
+        end
+
+        context "with an existing subscription" do
+          let(:customer) do
+            create(
+              :customer,
+              billing_entity:,
+              organization:,
+              subscription_invoice_issuing_date_anchor:,
+              subscription_invoice_issuing_date_adjustment:,
+              invoice_grace_period: 3
+            )
+          end
+
+          let(:subscription) do
+            create(
+              :subscription,
+              customer:,
+              plan:,
+              billing_time:,
+              subscription_at: timestamp,
+              started_at: timestamp,
+              created_at: timestamp
+            )
+          end
+
+          context "with pay in advance" do
+            let(:pay_in_advance) { true }
+
+            context "with current_period_end + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the current billing period end date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
+                end
+              end
+            end
+
+            context "with current_period_end + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the current billing period end date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-04")
+                end
+              end
+            end
+
+            context "with next_period_start + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the next billing period start date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-01")
+                end
+              end
+            end
+
+            context "with next_period_start + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the next billing period start date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-04")
+                end
+              end
+            end
+          end
+
+          context "with arrears" do
+            let(:pay_in_advance) { false }
+
+            context "with current_period_end + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the current billing period end date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
+                end
+              end
+            end
+
+            context "with current_period_end + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the current billing period end date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-04")
+                end
+              end
+            end
+
+            context "with next_period_start + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the next billing period start date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-01")
+                end
+              end
+            end
+
+            context "with next_period_start + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the next billing period start date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-05-04")
+                end
+              end
+            end
+          end
+        end
+
+        context "without an existing subscription" do
+          let(:customer) do
+            build(
+              :customer,
+              billing_entity:,
+              organization:,
+              subscription_invoice_issuing_date_anchor:,
+              subscription_invoice_issuing_date_adjustment:,
+              invoice_grace_period: 3
+            )
+          end
+
+          context "with pay in advance" do
+            let(:pay_in_advance) { true }
+
+            context "with current_period_end + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the current billing period end date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
+                end
+              end
+            end
+
+            context "with current_period_end + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the current billing period end date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
+                end
+              end
+            end
+
+            context "with next_period_start + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the next billing period start date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
+                end
+              end
+            end
+
+            context "with next_period_start + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the next billing period start date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
+                end
+              end
+            end
+          end
+
+          context "with arrears" do
+            let(:pay_in_advance) { false }
+
+            context "with current_period_end + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the current billing period end date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-03-31")
+                end
+              end
+            end
+
+            context "with current_period_end + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "current_period_end" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the current billing period end date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-04")
+                end
+              end
+            end
+
+            context "with next_period_start + keep_anchor" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "keep_anchor" }
+
+              it "sets issuing_date to the next billing period start date" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+                end
+              end
+            end
+
+            context "with next_period_start + align_with_finalization_date" do
+              let(:subscription_invoice_issuing_date_anchor) { "next_period_start" }
+              let(:subscription_invoice_issuing_date_adjustment) { "align_with_finalization_date" }
+
+              it "sets issuing_date to the next billing period start date + grace period" do
+                travel_to(timestamp + 5.days) do
+                  result = preview_service.call
+
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-04-04")
+                end
+              end
+            end
+          end
+        end
+      end
     end
   end
 end

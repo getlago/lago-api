@@ -7,6 +7,7 @@ FactoryBot.define do
     organization { customer&.organization || association(:organization) }
 
     issuing_date { Time.zone.now - 1.day }
+    expected_finalization_date { Time.zone.now - 1.day }
     payment_due_date { issuing_date }
     payment_status { "pending" }
     currency { "EUR" }

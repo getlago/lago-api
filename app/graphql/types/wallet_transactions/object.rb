@@ -26,6 +26,9 @@ module Types
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+      field :skip_invoice_custom_sections, Boolean
+
       def invoice
         object.invoice&.visible? ? object.invoice : nil
       end

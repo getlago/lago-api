@@ -48,6 +48,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:integration_resources)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
+      expect(subject).to have_many(:usage_thresholds)
       expect(subject).to have_many(:fixed_charges).through(:plan)
       expect(subject).to have_many(:fixed_charge_events)
       expect(subject).to have_many(:add_ons).through(:fixed_charges)
@@ -720,6 +721,62 @@ RSpec.describe Subscription do
 
     it "returns most recently non-canceled next subscription" do
       expect(subject).to eq next_subscriptions.second
+    end
+  end
+
+  describe "#billed_on_activation?" do
+    context "when plan is not pay in advance" do
+      let(:plan) { create(:plan) }
+
+      it "returns false" do
+        expect(subscription.billed_on_activation?).to be(false)
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
+        let(:pay_in_advance) { false }
+
+        before { fixed_charge }
+
+        it "returns false" do
+          expect(subscription.billed_on_activation?).to be(false)
+        end
+
+        context "when fixed_charge is pay_in_advance" do
+          let(:pay_in_advance) { true }
+
+          it "return true" do
+            expect(subscription.billed_on_activation?).to be(true)
+          end
+        end
+      end
+    end
+
+    context "when plan is pay in advance" do
+      let(:plan) { create(:plan, :pay_in_advance) }
+
+      it "returns true" do
+        expect(subscription.billed_on_activation?).to be(true)
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
+        let(:pay_in_advance) { false }
+
+        before { fixed_charge }
+
+        it "returns true" do
+          expect(subscription.billed_on_activation?).to be(true)
+        end
+
+        context "when fixed_charge is pay_in_advance" do
+          let(:pay_in_advance) { true }
+
+          it "return true" do
+            expect(subscription.billed_on_activation?).to be(true)
+          end
+        end
+      end
     end
   end
 end

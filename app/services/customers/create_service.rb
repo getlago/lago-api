@@ -108,7 +108,7 @@ module Customers
 
       result.customer = customer
 
-      IntegrationCustomers::CreateOrUpdateService.call(
+      IntegrationCustomers::CreateOrUpdateBatchService.call(
         integration_customers: args[:integration_customers],
         customer: result.customer,
         new_customer: true

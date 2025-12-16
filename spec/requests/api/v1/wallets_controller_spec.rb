@@ -206,7 +206,8 @@ RSpec.describe Api::V1::WalletsController do
             {
               trigger: "interval",
               interval: "monthly",
-              ignore_paid_top_up_limits: true
+              ignore_paid_top_up_limits: true,
+              invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
             }
           ]
         }
@@ -226,6 +227,8 @@ RSpec.describe Api::V1::WalletsController do
         expect(recurring_rules.first[:method]).to eq("fixed")
         expect(recurring_rules.first[:trigger]).to eq("interval")
         expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+        custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
+        expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
       end
 
       context "when invoice_requires_successful_payment is set at the wallet level but the rule level" do
@@ -604,7 +607,8 @@ RSpec.describe Api::V1::WalletsController do
               granted_credits: "105",
               target_ongoing_balance: "300",
               invoice_requires_successful_payment: true,
-              ignore_paid_top_up_limits: true
+              ignore_paid_top_up_limits: true,
+              invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
             }
           ]
         }
@@ -629,6 +633,8 @@ RSpec.describe Api::V1::WalletsController do
         expect(recurring_rules.first[:trigger]).to eq("interval")
         expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
         expect(recurring_rules.first[:ignore_paid_top_up_limits]).to eq(true)
+        custom_section = recurring_rules.first[:applied_invoice_custom_sections].first
+        expect(custom_section[:invoice_custom_section_id]).to eq(section_1.id)
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end

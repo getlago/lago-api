@@ -3,63 +3,96 @@
 module AiConversations
   class StreamService < BaseService
     Result = BaseResult[:ai_conversation]
-
-    MISTRAL_CONVERSATIONS_API_URL = "https://api.mistral.ai/v1/conversations"
+    CHUNK_DELAY = 0.03
 
     def initialize(ai_conversation:, message:)
       @ai_conversation = ai_conversation
       @message = message
-      @http = LagoHttpClient::Client.new(api_url)
+
+      super
     end
 
     def call
-      @http.post_with_stream(body, headers) do |type, data, _id, _reconnection_time|
-        parsed_data = JSON.parse(data)
+      return result.forbidden_failure! if mcp_server_url.blank?
 
-        if type == "conversation.response.started" && ai_conversation.mistral_conversation_id.blank?
-          ai_conversation.update!(mistral_conversation_id: parsed_data["conversation_id"])
-        elsif type == "message.output.delta"
-          LagoApiSchema.subscriptions.trigger(
-            :ai_conversation_streamed,
-            {id: ai_conversation.id},
-            {chunk: parsed_data["content"], done: false}
-          )
-        end
-
-        sleep 0.01
-      end
-
-      LagoApiSchema.subscriptions.trigger(
-        :ai_conversation_streamed,
-        {id: ai_conversation.id},
-        {chunk: nil, done: true}
-      )
+      setup_clients!
+      stream_response
+      save_conversation_id!
+      notify_completion
+      result.ai_conversation = ai_conversation
+      result
+    rescue => e
+      handle_error(e)
     end
 
     private
 
     attr_reader :ai_conversation, :message
 
-    def api_url
-      return MISTRAL_CONVERSATIONS_API_URL if ai_conversation.mistral_conversation_id.blank?
-
-      "#{MISTRAL_CONVERSATIONS_API_URL}/#{ai_conversation.mistral_conversation_id}"
+    def setup_clients!
+      mcp_client.setup!
+      mistral_agent.setup!
     end
 
-    def headers
-      {
-        "Authorization" => "Bearer #{ENV.fetch("MISTRAL_API_KEY")}"
-      }
-    end
+    def stream_response
+      mistral_agent.chat(message) do |chunk|
+        next if chunk.nil?
 
-    def body
-      {
-        inputs: message,
-        stream: true,
-        store: true
-      }.tap do |body|
-        body[:agent_id] = ENV["MISTRAL_AGENT_ID"] if ai_conversation.mistral_conversation_id.blank?
+        trigger_subscription(chunk:, done: false)
+        sleep CHUNK_DELAY
       end
+    end
+
+    def save_conversation_id!
+      return if mistral_agent.conversation_id.blank?
+      return if ai_conversation.mistral_conversation_id == mistral_agent.conversation_id
+
+      ai_conversation.update!(mistral_conversation_id: mistral_agent.conversation_id)
+    end
+
+    def notify_completion
+      trigger_subscription(chunk: nil, done: true)
+    end
+
+    def trigger_subscription(chunk:, done:)
+      LagoApiSchema.subscriptions.trigger(
+        :ai_conversation_streamed,
+        {id: ai_conversation.id},
+        {chunk:, done:}
+      )
+    rescue => e
+      Rails.logger.error("Failed to trigger subscription: #{e.message}")
+    end
+
+    def handle_error(error)
+      Rails.logger.error("StreamService error: #{error.message}")
+      Rails.logger.error(error.backtrace.join("\n"))
+
+      trigger_subscription(chunk: "Error: #{error.message}", done: true)
+      result.service_failure!(code: "stream_service_error", message: error.message)
+    end
+
+    def mcp_server_url
+      @mcp_server_url ||= ENV["LAGO_MCP_SERVER_URL"]
+    end
+
+    def mcp_client
+      @mcp_client ||= LagoMcpClient::Client.new(mcp_client_config)
+    end
+
+    def mcp_client_config
+      @mcp_client_config ||= LagoMcpClient::Config.new(mcp_server_url:, lago_api_key:)
+    end
+
+    def mistral_agent
+      @mistral_agent ||= LagoMcpClient::Mistral::Agent.new(
+        client: mcp_client,
+        conversation_id: ai_conversation.mistral_conversation_id
+      )
+    end
+
+    def lago_api_key
+      @lago_api_key ||= ai_conversation.organization.api_keys.first.value
     end
   end
 end

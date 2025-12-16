@@ -37,20 +37,26 @@ module InvoiceCustomSections
       params.dig(:invoice_custom_section, :skip_invoice_custom_sections)
     end
 
+    def sections_param
+      key = api_context? ? :invoice_custom_section_codes : :invoice_custom_section_ids
+
+      params.dig(:invoice_custom_section, key)
+    end
+
     def handle_explicit_skip_flag
       if skip_sections?
         resource.update!(skip_invoice_custom_sections: true)
         resource.applied_invoice_custom_sections.destroy_all
       else
         resource.update!(skip_invoice_custom_sections: false)
-        attach_sections if section_identifiers.present?
+        attach_sections unless sections_param.nil?
       end
     end
 
     def handle_implicit_skip_flag
       return if resource.skip_invoice_custom_sections
 
-      attach_sections if section_identifiers.present?
+      attach_sections unless sections_param.nil?
     end
 
     def attach_sections
@@ -86,7 +92,7 @@ module InvoiceCustomSections
 
     def section_identifiers
       return @section_identifiers if defined?(@section_identifiers)
-      return @section_identifiers = [] unless params[:invoice_custom_section]
+      return @section_identifiers = [] if sections_param.blank?
 
       key = api_context? ? :invoice_custom_section_codes : :invoice_custom_section_ids
       @section_identifiers = params.dig(:invoice_custom_section, key)&.compact&.uniq || []

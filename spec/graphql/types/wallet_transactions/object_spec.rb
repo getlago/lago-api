@@ -25,6 +25,9 @@ RSpec.describe Types::WalletTransactions::Object do
     expect(subject).to have_field(:metadata).of_type("[WalletTransactionMetadataObject!]")
     expect(subject).to have_field(:settled_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
+
+    expect(subject).to have_field(:selected_invoice_custom_sections).of_type("[InvoiceCustomSection!]")
+    expect(subject).to have_field(:skip_invoice_custom_sections).of_type("Boolean")
   end
 
   describe "#wallet_name" do

@@ -34,6 +34,24 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
         end
       end
 
+      context "when subscription is pending" do
+        let(:subscriptions) { [create(:subscription, organization:, customer:, status: :pending)] }
+
+        it "returns the duplicate of subscription" do
+          expect(result).to be_success
+          expect(subscriptions_result.size).to eq(1)
+          expect(subscriptions_result.first.status.to_s).to eq("active")
+          expect(subscriptions_result.first.persisted?).to eq(false)
+          expect(subscriptions_result.first.external_id).to eq(subscriptions.first.external_id)
+        end
+
+        it "does not change original subscription" do
+          expect(result).to be_success
+          expect(subscriptions.first.reload.status.to_s).to eq("pending")
+          expect(subscriptions.first.reload.persisted?).to eq(true)
+        end
+      end
+
       context "when subscription has a next subscription" do
         let(:current_plan) { create(:plan, organization:, pay_in_advance: true) }
         let(:next_plan) { create(:plan, organization:, pay_in_advance:, amount_cents:) }

@@ -7,18 +7,47 @@ RSpec.describe UsageThreshold do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:applied_usage_thresholds) }
-  it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
+  it { expect(described_class).to be_soft_deletable }
 
-  it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:plan).without_validating_presence
+      expect(subject).to belong_to(:subscription).without_validating_presence
+      expect(subject).to have_many(:applied_usage_thresholds)
+      expect(subject).to have_many(:invoices).through(:applied_usage_thresholds)
+    end
+  end
 
-  describe "default scope" do
-    let!(:deleted_usage_threshold) { create(:usage_threshold, :deleted) }
+  describe "validations" do
+    it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
 
-    it "only returns non-deleted usage_threshold objects" do
-      expect(described_class.all).to eq([])
-      expect(described_class.unscoped.discarded).to eq([deleted_usage_threshold])
+    describe "exactly_one_parent_present validation" do
+      let(:organization) { create(:organization) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) { create(:subscription, organization:) }
+
+      it "is valid when only plan_id is present" do
+        threshold = build(:usage_threshold, organization:, plan:, subscription: nil)
+        expect(threshold).to be_valid
+      end
+
+      it "is valid when only subscription_id is present" do
+        threshold = build(:usage_threshold, organization:, plan: nil, subscription:)
+        expect(threshold).to be_valid
+      end
+
+      it "is invalid when both plan_id and subscription_id are present" do
+        threshold = build(:usage_threshold, organization:, plan:, subscription:)
+        expect(threshold).not_to be_valid
+        expect(threshold.errors[:base]).to eq(["one_of_plan_or_subscription_required"])
+      end
+
+      it "is invalid when neither plan_id nor subscription_id are present" do
+        threshold = described_class.new(organization:, plan: nil, subscription: nil, amount_cents: 100)
+        expect(threshold).not_to be_valid
+        expect(threshold.errors[:base]).to include("one_of_plan_or_subscription_required")
+      end
     end
   end
 

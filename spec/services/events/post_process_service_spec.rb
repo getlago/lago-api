@@ -28,11 +28,11 @@ RSpec.describe Events::PostProcessService do
     )
   end
 
-  describe "#call" do
-    it "flags wallets for refresh" do
-      wallet = create(:wallet, customer:)
+  before { create(:wallet, customer:) }
 
-      expect { process_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
+  describe "#call" do
+    it "marks customer as awaiting wallet refresh" do
+      expect { process_service.call }.to change { customer.reload.awaiting_wallet_refresh }.from(false).to(true)
     end
 
     it "tracks subscription activity" do

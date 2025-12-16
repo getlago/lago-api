@@ -16,7 +16,7 @@ RSpec.describe UsageThresholds::OverrideService do
       [
         {
           plan_id: plan.id,
-          threshold_display_name: "Overriden threshold",
+          threshold_display_name: "Overridden threshold",
           amount_cents: 1000
         }
       ]
@@ -31,11 +31,34 @@ RSpec.describe UsageThresholds::OverrideService do
 
       expect(threshold).to have_attributes(
         recurring: threshold.recurring,
-        # Overriden attributes
+        # Overridden attributes
         plan_id: plan.id,
-        threshold_display_name: "Overriden threshold",
+        threshold_display_name: "Overridden threshold",
         amount_cents: 1000
       )
+    end
+
+    context "when thresholds are not unique" do
+      let(:usage_thresholds_params) do
+        [
+          {
+            plan_id: plan.id,
+            threshold_display_name: "Overridden threshold",
+            amount_cents: 1000
+          },
+          {
+            plan_id: plan.id,
+            threshold_display_name: "",
+            amount_cents: 1000
+          }
+        ]
+      end
+
+      it do
+        result = override_service.call
+        expect(result).to be_failure
+        expect(result.error.messages[:amount_cents]).to contain_exactly("value_already_exist")
+      end
     end
   end
 end

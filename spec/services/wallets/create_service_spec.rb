@@ -580,5 +580,46 @@ RSpec.describe Wallets::CreateService do
         end
       end
     end
+
+    context "when organization_id is nil" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: nil,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "returns an error" do
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:organization_id]).to eq(["blank"])
+      end
+    end
+
+    context "when organization_id does not match customer's organization_id" do
+      let(:other_organization) { create(:organization) }
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: other_organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "returns an error" do
+        expect(service_result).not_to be_success
+        expect(service_result.error.messages[:organization_id]).to eq(["invalid"])
+      end
+    end
   end
 end

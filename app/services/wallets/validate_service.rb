@@ -5,6 +5,7 @@ module Wallets
     MAXIMUM_WALLETS_PER_CUSTOMER = 5
 
     def valid?
+      valid_organization_id?
       valid_customer?
       valid_paid_credits_amount? if args[:paid_credits]
       valid_granted_credits_amount? if args[:granted_credits]
@@ -25,10 +26,29 @@ module Wallets
 
     private
 
-    def valid_wallet_limit?
-      return true unless result.current_customer
+    def customer
+      args[:customer]
+    end
 
-      if result.current_customer.wallets.active.count >= MAXIMUM_WALLETS_PER_CUSTOMER
+    def organization_id
+      args[:organization_id]
+    end
+
+    def valid_organization_id?
+      if organization_id.blank?
+        add_error(field: :organization_id, error_code: "blank")
+        return false
+      end
+
+      return true if customer.nil? || customer.organization_id == organization_id
+
+      add_error(field: :organization_id, error_code: "invalid")
+    end
+
+    def valid_wallet_limit?
+      return true unless customer
+
+      if customer.wallets.active.count >= MAXIMUM_WALLETS_PER_CUSTOMER
         return add_error(field: :customer, error_code: "wallet_limit_reached")
       end
 
@@ -36,9 +56,9 @@ module Wallets
     end
 
     def valid_customer?
-      result.current_customer = args[:customer]
-
-      return add_error(field: :customer, error_code: "customer_not_found") unless result.current_customer
+      if customer.nil?
+        return add_error(field: :customer, error_code: "customer_not_found")
+      end
 
       true
     end
@@ -61,7 +81,6 @@ module Wallets
       return true if Validators::ExpirationDateValidator.valid?(args[:expiration_at])
 
       add_error(field: :expiration_at, error_code: "invalid_date")
-      false
     end
 
     def valid_recurring_transaction_rules?
@@ -94,8 +113,6 @@ module Wallets
       return true if Wallets::ValidateLimitationsService.new(limitation_result, **args).valid?
 
       add_error(field: :applies_to, error_code: "invalid_limitations")
-
-      false
     end
 
     def valid_payment_method?
@@ -105,8 +122,6 @@ module Wallets
       return true if PaymentMethods::ValidateService.new(pm_result, **args).valid?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
-
-      false
     end
   end
 end
