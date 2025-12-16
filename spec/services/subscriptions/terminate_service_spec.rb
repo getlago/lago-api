@@ -67,10 +67,16 @@ RSpec.describe Subscriptions::TerminateService do
       it "does not enqueue a BillSubscriptionJob" do
         expect { subject }.not_to have_enqueued_job(BillSubscriptionJob)
       end
+
+      it "does not send subscription updated webhook" do
+        subject
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.updated", Subscription)
+      end
     end
 
     context "when downgrade subscription is pending" do
-      let(:subscription) { create(:subscription, :pending, previous_subscription: create(:subscription)) }
+      let(:subscription) { create(:subscription, :pending, previous_subscription:) }
+      let(:previous_subscription) { create(:subscription) }
 
       it "does cancel it" do
         subject
@@ -78,6 +84,13 @@ RSpec.describe Subscriptions::TerminateService do
         expect(result.subscription).to be_present
         expect(result.subscription).to be_canceled
         expect(result.subscription.canceled_at).to be_present
+      end
+
+      it "sends both subscription.terminated for the canceled and subscription.updated for the previous subscription" do
+        subject
+
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription)
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", previous_subscription)
       end
     end
 
