@@ -75,12 +75,6 @@ module Subscriptions
         compute_to_date(compute_fixed_charges_from_date)
       end
 
-      def compute_fixed_charges_duration(from_date:)
-        return monthly_service.compute_fixed_charges_duration(from_date:) if plan.bill_fixed_charges_monthly
-
-        compute_duration(from_date:)
-      end
-
       def compute_duration(from_date:)
         next_to_date = compute_to_date(from_date)
 
@@ -89,6 +83,12 @@ module Subscriptions
 
       def compute_charges_duration(from_date:)
         return monthly_service.compute_charges_duration(from_date:) if plan.bill_charges_monthly
+
+        compute_duration(from_date:)
+      end
+
+      def compute_fixed_charges_duration(from_date:)
+        return monthly_service.compute_fixed_charges_duration(from_date:) if plan.bill_fixed_charges_monthly
 
         compute_duration(from_date:)
       end

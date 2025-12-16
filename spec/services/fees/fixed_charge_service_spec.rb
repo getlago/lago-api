@@ -50,8 +50,9 @@ RSpec.describe Fees::FixedChargeService do
       :fixed_charge,
       plan: subscription.plan,
       charge_model: "standard",
+      prorated: true,
       properties: {
-        amount: "20"
+        amount: "310"
       }
     )
   end
@@ -67,78 +68,184 @@ RSpec.describe Fees::FixedChargeService do
       end
 
       context "with an event" do
-        let(:event) do
-          create(
-            :fixed_charge_event,
-            organization: subscription.organization,
-            subscription:,
-            fixed_charge:,
-            timestamp: boundaries.charges_to_datetime - 2.days,
-            units: 10
-          )
-        end
-
-        before do
-          event
-          fixed_charge_tax
-        end
-
-        it "creates a fee" do
-          result = fixed_charge_service.call
-          expect(result).to be_success
-          expect(result.fee).to have_attributes(
-            id: String,
-            organization_id: organization.id,
-            billing_entity_id: invoice.customer.billing_entity_id,
-            invoice_id: invoice.id,
-            fixed_charge_id: fixed_charge.id,
-            amount_cents: 20000,
-            precise_amount_cents: 20000.0,
-            taxes_precise_amount_cents: 0.0,
-            amount_currency: "EUR",
-            units: 10,
-            unit_amount_cents: 2000,
-            precise_unit_amount: 20,
-            events_count: nil,
-            payment_status: "pending"
-          )
-        end
-
-        it "persists fee" do
-          expect { fixed_charge_service.call }.to change(Fee, :count)
-        end
-
-        context "with preview context" do
-          let(:context) { :invoice_preview }
-
-          it "does not persist fee" do
-            expect { fixed_charge_service.call }.not_to change(Fee, :count)
-          end
-        end
-
-        context "with prorated fixed_charge" do
-          let(:fixed_charge) do
-            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", prorated: true, properties: {amount: "20"})
+        context "when event created_at is within the current billing period" do
+          let(:event) do
+            create(
+              :fixed_charge_event,
+              organization: subscription.organization,
+              subscription:,
+              fixed_charge:,
+              timestamp: boundaries.charges_to_datetime - 2.days,
+              created_at: boundaries.charges_to_datetime - 2.days,
+              units: 10
+            )
           end
 
+          before do
+            event
+            fixed_charge_tax
+          end
+
+          # 3 days proration out of 31 of 10 units with price 310 (310 * 3/31 * 10 = 300)
           it "creates a fee" do
             result = fixed_charge_service.call
             expect(result).to be_success
-            prorated_units = (10 * 3.0 / 31).round(6)
+            prorated_units = (3.0 / 31 * 10).round(6)
             expect(result.fee).to have_attributes(
               id: String,
+              organization_id: organization.id,
+              billing_entity_id: invoice.customer.billing_entity_id,
               invoice_id: invoice.id,
               fixed_charge_id: fixed_charge.id,
-              amount_cents: 1935,
-              precise_amount_cents: 2000 * prorated_units,
+              amount_cents: 30000,
+              precise_amount_cents: 310_00 * prorated_units,
               taxes_precise_amount_cents: 0.0,
               amount_currency: "EUR",
-              units: prorated_units,
-              unit_amount_cents: 2000,
-              precise_unit_amount: 20,
+              units: 10,
+              unit_amount_cents: 3000,
               events_count: nil,
               payment_status: "pending"
             )
+          end
+
+          it "persists fee" do
+            expect { fixed_charge_service.call }.to change(Fee, :count)
+          end
+
+          it "sets correct boundaries on the fee properties" do
+            result = fixed_charge_service.call
+            expect(result).to be_success
+            expect(result.fee.properties).to include(
+              "fixed_charges_from_datetime" => "2022-03-17T00:00:00.000Z",
+              "fixed_charges_to_datetime" => "2022-03-31T23:59:59.999Z",
+              "fixed_charges_duration" => 31,
+              "charges_from_datetime" => nil,
+              "charges_to_datetime" => nil,
+              "charges_duration" => nil
+            )
+          end
+
+          context "with preview context" do
+            let(:context) { :invoice_preview }
+
+            it "does not persist fee" do
+              expect { fixed_charge_service.call }.not_to change(Fee, :count)
+            end
+          end
+
+          context "with not prorated fixed_charge" do
+            let(:fixed_charge) do
+              create(:fixed_charge, plan: subscription.plan, charge_model: "standard", prorated: false, properties: {amount: "20"})
+            end
+
+            it "creates a fee" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                fixed_charge_id: fixed_charge.id,
+                amount_cents: 20000,
+                precise_amount_cents: 20000.0,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 10,
+                unit_amount_cents: 2000,
+                precise_unit_amount: 20,
+                events_count: nil,
+                payment_status: "pending"
+              )
+            end
+          end
+
+          context "when fixed charge is pay_in_advance" do
+            let(:fixed_charge) do
+              create(:fixed_charge, plan: subscription.plan, charge_model: "standard", pay_in_advance: true, properties: {amount: "10"})
+            end
+
+            it "sets boundaries of the next billing period" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee.properties).to include(
+                "fixed_charges_from_datetime" => "2022-04-01T00:00:00.000Z",
+                "fixed_charges_to_datetime" => "2022-04-30T23:59:59.999Z",
+                "fixed_charges_duration" => 30,
+                "charges_from_datetime" => nil,
+                "charges_to_datetime" => nil,
+                "charges_duration" => nil
+              )
+            end
+          end
+        end
+
+        context "with event created_at is after the current billing period" do
+          let(:created_at) { Time.zone.parse("2022-05-17") }
+          # NOTE: subscription started at 2022-03-17, so all charges only start from 17th
+          let(:event) do
+            create(:fixed_charge_event, fixed_charge:, subscription:, timestamp:, created_at:, units: 10)
+          end
+
+          before do
+            event
+          end
+
+          context "when event timestamp is before the current billing period" do
+            let(:timestamp) { Time.zone.parse("2022-01-17") }
+
+            # subscription started at 2022-03-17, so all charges only start from 17th => 15 days
+            it "finds the event and creates the fee with proration from the beginning of the billing period" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                fixed_charge_id: fixed_charge.id,
+                amount_cents: 150000,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 10,
+                unit_amount_cents: 15000,
+                events_count: nil,
+                payment_status: "pending"
+              )
+            end
+          end
+
+          context "when event timestamp is within the current billing period" do
+            let(:timestamp) { Time.zone.parse("2022-03-22") }
+
+            # 10 days proration
+            # 10 days proration out of 31 of 10 units with price 310 (310 * 10/31 * 10 = 1000)
+            it "finds the event and creates the fee with the correct amount" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                fixed_charge_id: fixed_charge.id,
+                amount_cents: 100000,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 10,
+                # the math here is broken because of rounding. Firstly we're calculating the proration: 10/31 = 0.3225806451612903 => 0.322580
+                # then we're multiplying by the price: 3.225806 * 31000 = 9999,98 => 9999
+                unit_amount_cents: 9999,
+                events_count: nil,
+                payment_status: "pending"
+              )
+            end
+          end
+
+          context "when event timestamp is after the current billing period" do
+            let(:timestamp) { Time.zone.parse("2022-04-20") }
+
+            it "does not find the event and returns an empty fee" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to be_present
+              expect(result.fee.amount_cents).to eq(0)
+              expect(result.fee.id).to be_nil
+            end
           end
         end
       end
@@ -171,7 +278,7 @@ RSpec.describe Fees::FixedChargeService do
       end
 
       before do
-        create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: boundaries.from_datetime + 5.days, units: 31, created_at: boundaries.from_datetime + 5.days)
+        create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: boundaries.from_datetime + 5.days, units: 62, created_at: boundaries.from_datetime + 5.days)
         create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: boundaries.from_datetime + 10.days, units: 3.1, created_at: boundaries.from_datetime + 10.days)
       end
 
@@ -223,17 +330,16 @@ RSpec.describe Fees::FixedChargeService do
         it "creates a fee" do
           result = fixed_charge_service.call
           expect(result).to be_success
-          prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0).round(6)
           expect(result.fee).to have_attributes(
             id: String,
             invoice_id: invoice.id,
             fixed_charge_id: fixed_charge.id,
-            amount_cents: 1050 + (2000 + 100),
-            precise_amount_cents: 3150.0,
+            amount_cents: 1105,
+            precise_amount_cents: 1105.0,
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
-            units: prorated_units,
-            unit_amount_cents: 572,
+            units: 3.1,
+            unit_amount_cents: 356,
             events_count: nil
           )
         end
@@ -314,7 +420,7 @@ RSpec.describe Fees::FixedChargeService do
         it "creates a fee" do
           result = fixed_charge_service.call
           expect(result).to be_success
-          prorated_units = (31 * 5 / 31.0 + 3.1 * 5 / 31.0).round(6)
+          # (31 * 5 / 31.0 + 3.1 * 5 / 31.0).round(6)
           expect(result.fee).to have_attributes(
             id: String,
             invoice_id: invoice.id,
@@ -323,9 +429,9 @@ RSpec.describe Fees::FixedChargeService do
             precise_amount_cents: 1055.0,
             taxes_precise_amount_cents: 0.0,
             amount_currency: "EUR",
-            units: prorated_units,
-            unit_amount_cents: 191,
-            precise_unit_amount: 10.55 / 5.5,
+            units: 3.1,
+            unit_amount_cents: 340,
+            precise_unit_amount: 10.55 / 3.1,
             events_count: nil
           )
         end
@@ -344,6 +450,9 @@ RSpec.describe Fees::FixedChargeService do
 
     context "when billing a new upgraded subscription" do
       let(:previous_plan) { create(:plan, amount_cents: subscription.plan.amount_cents - 20) }
+      let(:fixed_charge) do
+        create(:fixed_charge, plan: subscription.plan, charge_model: "standard", prorated: true, properties: {amount: "30"})
+      end
       let(:previous_subscription) do
         create(:subscription, plan: previous_plan, status: :terminated)
       end
@@ -356,6 +465,16 @@ RSpec.describe Fees::FixedChargeService do
           fixed_charge:,
           timestamp: Time.zone.parse("10 Apr 2022 00:01:00"),
           units: 10
+        )
+      end
+
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          status: :active,
+          started_at: Time.zone.parse("2022-04-17"),
+          customer:
         )
       end
 
@@ -378,15 +497,15 @@ RSpec.describe Fees::FixedChargeService do
         event
       end
 
-      it "creates a new fee for the complete period" do
+      # proration starts on 17th of April, so 14 days proration
+      it "creates a new prorated fee for the complete period" do
         result = fixed_charge_service.call
         expect(result).to be_success
         expect(result.fee).to have_attributes(
           id: String,
           invoice_id: invoice.id,
           fixed_charge_id: fixed_charge.id,
-          amount_cents: 20000,
-          precise_amount_cents: 20_000.0,
+          amount_cents: 14000,
           taxes_precise_amount_cents: 0.0,
           amount_currency: "EUR",
           units: 10
@@ -412,11 +531,45 @@ RSpec.describe Fees::FixedChargeService do
         fixed_charge_tax
       end
 
+      # 3 days proration out of 31 of 10 units with price 310 (310 * 3/31 * 10 = 300)
       it "creates a fee with taxes" do
         result = fixed_charge_service.call
         expect(result).to be_success
         expect(result.fee).to have_attributes(
-          taxes_precise_amount_cents: 20000 * fixed_charge_tax.tax.rate / 100
+          taxes_amount_cents: 30000 * fixed_charge_tax.tax.rate / 100
+        )
+      end
+    end
+
+    context "when fixed charge is pay_in_advance" do
+      let(:fixed_charge) do
+        create(:fixed_charge, plan: subscription.plan, charge_model: "standard", pay_in_advance: true, properties: {amount: "10"})
+      end
+
+      it "creates a fee with pay_in_advance boundaries" do
+        result = fixed_charge_service.call
+        expect(result).to be_success
+        expect(result.fee.properties).to include(
+          "fixed_charges_from_datetime" => Time.parse("2022-04-01T00:00:00.000Z"),
+          "fixed_charges_to_datetime" => Time.parse("2022-04-30T23:59:59.999Z"),
+          "fixed_charges_duration" => 30
+        )
+      end
+    end
+
+    context "when fixed charge is not pay_in_advance" do
+      let(:fixed_charge) do
+        create(:fixed_charge, plan: subscription.plan, charge_model: "standard", pay_in_advance: false, properties: {amount: "10"})
+      end
+
+      it "creates a fee with current boundaries" do
+        result = fixed_charge_service.call
+        expect(result).to be_success
+        # subscription started at 2022-03-17, so all charges only start from 17th
+        expect(result.fee.properties).to include(
+          "fixed_charges_from_datetime" => Time.parse("2022-03-17T00:00:00.000Z"),
+          "fixed_charges_to_datetime" => Time.parse("2022-03-31T23:59:59.999Z"),
+          "fixed_charges_duration" => 31
         )
       end
     end

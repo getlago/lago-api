@@ -126,6 +126,8 @@ module Invoices
     end
 
     def create_generating_invoice
+      # TODO: seems that skip_charges here might be deleted. Performed one test locally - worked without any additional charges.
+      # Following the code - also did not find calling any service that would use this skip_charges
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,

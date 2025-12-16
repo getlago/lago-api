@@ -16,7 +16,7 @@ module Fees
       @fixed_charge = fixed_charge
       @subscription = subscription
       @organization = subscription.organization
-      @boundaries = boundaries
+      @boundaries = readjust_boundaries(boundaries)
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
       @context = context
@@ -62,7 +62,7 @@ module Fees
       unit_amount_cents = amount_result.unit_amount * currency.subunit_to_unit
       precise_unit_amount = amount_result.unit_amount
 
-      units = amount_result.units
+      units = amount_result.full_units_number
 
       new_fee = Fee.new(
         invoice:,
@@ -118,13 +118,12 @@ module Fees
     end
 
     def calculate_period_ratio
-      from_date = boundaries.charges_from_datetime.to_date
-      to_date = boundaries.charges_to_datetime.to_date
+      from_date = boundaries["fixed_charges_from_datetime"].to_date
+      to_date = boundaries["fixed_charges_to_datetime"].to_date
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
-
-      charges_duration = boundaries.charges_duration || total_days
+      charges_duration = boundaries["fixed_charges_duration"] || total_days
 
       return 1.0 if current_date >= to_date
       return 0.0 if current_date < from_date
@@ -141,6 +140,23 @@ module Fees
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
 
       false
+    end
+
+    # Note: boundaries are taken from the subscription and they do not consider some fixed_charges being pay_in_advance
+    def readjust_boundaries(boundaries)
+      properties = boundaries.to_h
+      properties["charges_from_datetime"] = nil
+      properties["charges_to_datetime"] = nil
+      properties["charges_duration"] = nil
+
+      return properties if !fixed_charge.pay_in_advance?
+      timestamp = boundaries.timestamp
+      in_advance_dates = Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+
+      properties["fixed_charges_from_datetime"] = in_advance_dates[:fixed_charges_from_datetime]
+      properties["fixed_charges_to_datetime"] = in_advance_dates[:fixed_charges_to_datetime]
+      properties["fixed_charges_duration"] = in_advance_dates[:fixed_charges_duration]
+      properties
     end
   end
 end

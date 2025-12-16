@@ -115,13 +115,36 @@ describe "Billing Monthly Scenarios with all charges types" do
       travel_to subscription_date + 10.minutes do
         perform_all_enqueued_jobs
       end
-      # we have 1 because we're starting having fixed_charges
-      # but it will be empty now
+      # it immediately creates invoice with pay_in_advance fixed_charges
       expect(subscription.reload.invoices.count).to eq(1)
-      expect(subscription.invoices.first.total_amount_cents).to eq(0)
-      # this will be a part of another PR:
-      # expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
+      pay_in_advance_fixed_charges_invoice = subscription.invoices.first
+      expect(pay_in_advance_fixed_charges_invoice.fees.count).to eq(2)
+      # check fixed_charge fees
+      expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.count).to eq(2)
+      # fixed_charge_not_prorated_in_advance: 200 * 100 * 10, fixed_charge_prorated_in_advance: 2000 * 100 * 10 * 26/29
+      expect(pay_in_advance_fixed_charges_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000])
+      # check invoice_subscription boundaries
+      invoice_subscription = pay_in_advance_fixed_charges_invoice.invoice_subscriptions.first
 
+      expect(invoice_subscription).to have_attributes(
+        from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        charges_from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        charges_to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        fixed_charges_from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        fixed_charges_to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
+        timestamp: DateTime.parse("2024-02-04T00:00:00Z")
+      )
+      # check pay_in_advance fixed_charge_fees boundaries
+      pay_in_advance_fixed_charge_fee = pay_in_advance_fixed_charges_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_advance.id, fixed_charge_prorated_in_advance.id]).sample
+      expect(pay_in_advance_fixed_charge_fee.properties).to include(
+        "charges_from_datetime" => nil,
+        "charges_to_datetime" => nil,
+        "charges_duration" => nil,
+        "fixed_charges_from_datetime" => "2024-02-04T00:00:00.000Z",
+        "fixed_charges_to_datetime" => "2024-02-29T23:59:59.999Z",
+        "fixed_charges_duration" => 29
+      )
       # 28th of Feb - before billing, no usage sent for usage charges
       time = DateTime.new(2024, 2, 28)
       travel_to(time) do
@@ -137,21 +160,48 @@ describe "Billing Monthly Scenarios with all charges types" do
       expect(subscription.reload.invoices.count).to eq(2)
       last_invoice = subscription.invoices.order(:created_at).last
 
-      # yet fixed_charge is 0, will be 4...
-      expect(last_invoice.fees.fixed_charge.count).to eq(0)
+      expect(last_invoice.fees.fixed_charge.count).to eq(4)
+      # we have in arrears prorated, in arrears prorated, 2 in advance (sp we're charging full amount)
+      expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([179_310, 200_000, 200_000, 200_000])
       expect(last_invoice.fees.charge.count).to eq(0)
       expect(last_invoice.fees.subscription.count).to eq(1)
-      expect(last_invoice.total_amount_cents).to eq((5_000_000 * 26.0 / 29).ceil)
+      subscription_fee_amount = (26.0 / 29 * 5_000_000).ceil
+      fixed_charges_amount = 179_310 + 200_000 + 200_000 + 200_000
+      expect(last_invoice.total_amount_cents).to eq(subscription_fee_amount + fixed_charges_amount)
 
-      # check invoice_subscription
+      # check invoice_subscription boundaries
       last_invoice_inv_sub = last_invoice.invoice_subscriptions.first
-      expect(last_invoice_inv_sub.from_datetime).to match_datetime("2024-02-04T00:00:00Z")
-      expect(last_invoice_inv_sub.to_datetime).to match_datetime("2024-02-29T23:59:59Z")
-      expect(last_invoice_inv_sub.charges_from_datetime).to match_datetime("2024-02-04T00:00:00Z")
-      expect(last_invoice_inv_sub.charges_to_datetime).to match_datetime("2024-02-29T23:59:59Z")
-      expect(last_invoice_inv_sub.fixed_charges_from_datetime).to match_datetime("2024-02-04T00:00:00Z")
-      expect(last_invoice_inv_sub.fixed_charges_to_datetime).to match_datetime("2024-02-29T23:59:59Z")
-      expect(last_invoice_inv_sub.timestamp).to match_datetime("2024-03-01T00:00:00Z")
+      expect(last_invoice_inv_sub).to have_attributes(
+        from_datetime: match_datetime("2024-02-04T00:00:00Z"),
+        to_datetime: match_datetime("2024-02-29T23:59:59Z"),
+        charges_from_datetime: match_datetime("2024-02-04T00:00:00Z"),
+        charges_to_datetime: match_datetime("2024-02-29T23:59:59Z"),
+        fixed_charges_from_datetime: match_datetime("2024-02-04T00:00:00Z"),
+        fixed_charges_to_datetime: match_datetime("2024-02-29T23:59:59Z"),
+        timestamp: match_datetime("2024-03-01T00:00:00Z")
+      )
+
+      # check pay_in_advance fixed_charge_fees boundaries
+      pay_in_advance_fixed_charge_fees = last_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_advance.id, fixed_charge_prorated_in_advance.id]).sample
+      expect(pay_in_advance_fixed_charge_fees.properties).to include(
+        "charges_from_datetime" => nil,
+        "charges_to_datetime" => nil,
+        "charges_duration" => nil,
+        "fixed_charges_from_datetime" => match_datetime("2024-03-01T00:00:00Z"),
+        "fixed_charges_to_datetime" => match_datetime("2024-03-31T23:59:59Z"),
+        "fixed_charges_duration" => 31
+      )
+
+      # check pay_in_arrears fixed_charge_fees boundaries
+      pay_in_arrears_fixed_charge_fees = last_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_arrears.id, fixed_charge_prorated_in_arrears.id]).sample
+      expect(pay_in_arrears_fixed_charge_fees.properties).to include(
+        "charges_from_datetime" => nil,
+        "charges_to_datetime" => nil,
+        "charges_duration" => nil,
+        "fixed_charges_from_datetime" => "2024-02-04T00:00:00.000Z",
+        "fixed_charges_to_datetime" => "2024-02-29T23:59:59.999Z",
+        "fixed_charges_duration" => 29
+      )
 
       # travel to the middle of month and create events per each charge:
       events_date = DateTime.new(2024, 3, 15)
@@ -203,8 +253,9 @@ describe "Billing Monthly Scenarios with all charges types" do
       end
       expect(subscription.reload.invoices.count).to eq(5)
       last_invoice = subscription.invoices.order(:created_at).last
-      # 0 is only for now!
-      expect(last_invoice.fees.fixed_charge.count).to eq(0)
+      expect(last_invoice.fees.fixed_charge.count).to eq(4)
+      expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([200_000, 200_000, 200_000, 200_000])
+      fixed_charge_fees_sum = 4 * 200_000
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
       # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(3)
@@ -212,20 +263,65 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       # Note: prorated_fee_amount should be 500000 * 10 * 17/31,
       # prorated_fee_amount = 2_741_935 - this is math correct, but service returns 2_741_940 because of rounding (10 * 17 / 31).
+      prorated_fee_amount = 2_741_940
       expected_charge_fees = [
         {charge_id: charge_metered_not_prorated_in_arrears.id, amount_cents: 10_000},
-        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: 2_741_940},
+        {charge_id: charge_recurring_prorated_in_arrears.id, amount_cents: prorated_fee_amount},
         {charge_id: charge_recurring_prorated_in_advance.id, amount_cents: 50_000_000}
       ]
-
       actual_charge_fees = last_invoice.fees.charge.map do |fee|
         {
           charge_id: fee.charge_id,
           amount_cents: fee.amount_cents
         }
       end
-
       expect(actual_charge_fees).to match_array(expected_charge_fees)
+      expect(last_invoice.fees.subscription.count).to eq(1)
+      expect(last_invoice.fees.subscription.map { |fee| fee.amount_cents }).to match_array([5_000_000])
+      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 50_000_000 + 10_000 + prorated_fee_amount + fixed_charge_fees_sum)
+
+      # check boundaries
+      invoice_subscription = last_invoice.invoice_subscriptions.first
+      expect(invoice_subscription).to have_attributes(
+        from_datetime: match_datetime("2024-03-01T00:00:00Z"),
+        to_datetime: match_datetime("2024-03-31T23:59:59Z"),
+        charges_from_datetime: match_datetime("2024-03-01T00:00:00Z"),
+        charges_to_datetime: match_datetime("2024-03-31T23:59:59Z"),
+        fixed_charges_from_datetime: match_datetime("2024-03-01T00:00:00Z"),
+        fixed_charges_to_datetime: match_datetime("2024-03-31T23:59:59Z"),
+        timestamp: match_datetime("2024-04-01T00:00:00Z")
+      )
+      # check pay_in_advance fixed_charge_fees boundaries
+      pay_in_advance_fixed_charge_fees = last_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_advance.id, fixed_charge_prorated_in_advance.id]).sample
+      expect(pay_in_advance_fixed_charge_fees.properties).to include(
+        "charges_from_datetime" => nil,
+        "charges_to_datetime" => nil,
+        "charges_duration" => nil,
+        "fixed_charges_from_datetime" => "2024-04-01T00:00:00.000Z",
+        "fixed_charges_to_datetime" => "2024-04-30T23:59:59.999Z",
+        "fixed_charges_duration" => 30
+      )
+      # check pay_in_arrears fixed_charge_fees boundaries
+      pay_in_arrears_fixed_charge_fees = last_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_arrears.id, fixed_charge_prorated_in_arrears.id]).sample
+      expect(pay_in_arrears_fixed_charge_fees.properties).to include(
+        "charges_from_datetime" => nil,
+        "charges_to_datetime" => nil,
+        "charges_duration" => nil,
+        "fixed_charges_from_datetime" => match_datetime("2024-03-01T00:00:00Z"),
+        "fixed_charges_to_datetime" => match_datetime("2024-03-31T23:59:59Z"),
+        "fixed_charges_duration" => 31
+      )
+
+      # check charge fees boundaries
+      charge_fees = last_invoice.fees.charge.where(charge_id: [charge_metered_not_prorated_in_arrears.id, charge_recurring_prorated_in_arrears.id, charge_recurring_prorated_in_advance.id]).sample
+      expect(charge_fees.properties).to include(
+        "charges_from_datetime" => "2024-03-01T00:00:00.000Z",
+        "charges_to_datetime" => "2024-03-31T23:59:59.999Z",
+        "charges_duration" => 31,
+        "fixed_charges_from_datetime" => nil,
+        "fixed_charges_to_datetime" => nil,
+        "fixed_charges_duration" => nil
+      )
 
       # travel to several dates in the next month and send usages
       [DateTime.new(2024, 4, 10), DateTime.new(2024, 4, 30)].each do |date|
@@ -284,13 +380,13 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       billing_time = DateTime.new(2024, 5, 1)
       travel_to(billing_time) do
-        # EventsRecord.connection.commit_db_transaction
         perform_billing
       end
       expect(subscription.reload.invoices.count).to eq(10)
       last_invoice = subscription.invoices.order(:created_at).last
-      # 0 is only for now!
-      expect(last_invoice.fees.fixed_charge.count).to eq(0)
+      expect(last_invoice.fees.fixed_charge.count).to eq(4)
+      expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([200_000, 200_000, 200_000, 200_000])
+      fixed_charge_fees_sum = 4 * 200_000
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
       # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(3)
@@ -318,7 +414,7 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       expect(last_invoice.fees.subscription.count).to eq(1)
       expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
-      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 40_000 + prorated_fee_amount)
+      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 40_000 + prorated_fee_amount + fixed_charge_fees_sum)
 
       # month without any events
       billing_time = DateTime.new(2024, 6, 1)
@@ -327,8 +423,9 @@ describe "Billing Monthly Scenarios with all charges types" do
       end
       expect(subscription.reload.invoices.count).to eq(11)
       last_invoice = subscription.invoices.order(:created_at).last
-      # 0 is only for now!
-      expect(last_invoice.fees.fixed_charge.count).to eq(0)
+      expect(last_invoice.fees.fixed_charge.count).to eq(4)
+      expect(last_invoice.fees.fixed_charge.map(&:amount_cents).sort).to match_array([200_000, 200_000, 200_000, 200_000])
+      fixed_charge_fees_sum = 4 * 200_000
       # note that charge_recurring_prorated_in_advance should be included, because since it's recurring, it has usage,
       # which we're charging in_advance
       expect(last_invoice.fees.charge.count).to eq(2)
@@ -359,7 +456,7 @@ describe "Billing Monthly Scenarios with all charges types" do
 
       expect(last_invoice.fees.subscription.count).to eq(1)
       expect(last_invoice.fees.subscription.map(&:amount_cents)).to match_array([5_000_000])
-      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000)
+      expect(last_invoice.total_amount_cents).to eq(5_000_000 + 250_000_000 + 25_000_000 + fixed_charge_fees_sum)
     end
   end
 end

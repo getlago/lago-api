@@ -103,11 +103,21 @@ RSpec.describe Invoices::CalculateFeesService do
 
   let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
+  let(:fixed_charge) do
+    create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "10"}, units: 10)
+  end
+
+  let(:fixed_charge_event) do
+    create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 10, created_at: event_timestamp)
+  end
+
   before do
     tax
     charge
     invoice_subscriptions
     event
+    fixed_charge
+    fixed_charge_event
 
     allow(SegmentTrackJob).to receive(:perform_later)
     allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
@@ -121,23 +131,22 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:subscription_at) { started_at }
       let(:billing_time) { :anniversary }
 
-      it "creates subscription and charge fees" do
+      it "creates subscription, charge and fixed charge fees" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(invoice.subscriptions.first).to eq(subscription)
-          expect(invoice.payment_status).to eq("pending")
-          expect(invoice.fees.subscription.count).to eq(1)
-          expect(invoice.fees.charge.count).to eq(1)
+        expect(invoice.subscriptions.first).to eq(subscription)
+        expect(invoice.payment_status).to eq("pending")
+        expect(invoice.fees.subscription.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
+        expect(invoice.fees.fixed_charge.count).to eq(1)
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
-            from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00"))
-          )
-        end
+        invoice_subscription = invoice.invoice_subscriptions.first
+        expect(invoice_subscription).to have_attributes(
+          to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
+          from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00"))
+        )
       end
 
       it "calls the ProgressiveBillingService" do
@@ -203,7 +212,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
             expect(invoice.reload.status).to eq("pending")
             expect(invoice.reload.tax_status).to eq("pending")
-            expect(invoice.reload.fees_amount_cents).to eq(200)
+            expect(invoice.reload.fees_amount_cents).to eq(10200)
             expect(invoice.reload.taxes_amount_cents).to eq(0)
             expect(invoice.reload.error_details.count).to eq(0)
           end
@@ -232,7 +241,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
                 expect(invoice.reload.status).to eq("draft")
                 expect(invoice.reload.tax_status).to eq("pending")
-                expect(invoice.reload.fees_amount_cents).to eq(200)
+                expect(invoice.reload.fees_amount_cents).to eq(10200)
                 expect(invoice.reload.taxes_amount_cents).to eq(0)
                 expect(invoice.reload.error_details.count).to eq(0)
               end
@@ -252,7 +261,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
                 expect(invoice.reload.status).to eq("pending")
                 expect(invoice.reload.tax_status).to eq("pending")
-                expect(invoice.reload.fees_amount_cents).to eq(200)
+                expect(invoice.reload.fees_amount_cents).to eq(10200)
                 expect(invoice.reload.taxes_amount_cents).to eq(0)
                 expect(invoice.reload.error_details.count).to eq(0)
               end
@@ -356,6 +365,256 @@ RSpec.describe Invoices::CalculateFeesService do
           expect(Fee.charge.where(invoice_id: nil).count).to eq(1)
         end
       end
+
+      # when pay_in_advance is true, the fixed charge fee is created, but with period of the next month
+      context "when fixed charge is pay_in_advance" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: true,
+            properties: {amount: "10"}
+          )
+        end
+
+        it "creates a fixed charge fee with period of the next month" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          fee_properties = invoice.fees.fixed_charge.first.properties
+          expect(fee_properties["fixed_charges_from_datetime"]).to match_datetime(Time.parse("2022-03-06T00:00:00.000Z"))
+          expect(fee_properties["fixed_charges_to_datetime"]).to match_datetime(Time.parse("2022-04-05T23:59:59.999Z"))
+        end
+
+        context "when subscription is terminated" do
+          let(:status) { :terminated }
+          let(:terminated_at) { timestamp - 1.day }
+
+          it "does not create a fixed charge fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.fixed_charge.count).to eq(0)
+          end
+        end
+      end
+
+      context "when fixed charge is pay_in_arrears" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: false,
+            properties: {amount: "10"}
+          )
+        end
+
+        it "creates a fixed charge fee with period of this month" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          fee_properties = invoice.fees.fixed_charge.first.properties
+          expect(fee_properties["fixed_charges_from_datetime"]).to match_datetime(Time.parse("2022-02-06T00:00:00.000Z"))
+          expect(fee_properties["fixed_charges_to_datetime"]).to match_datetime(Time.parse("2022-03-05T23:59:59.999Z"))
+        end
+
+        # TODO: Update when we have conditions on creation of fixed charge fees
+        context "when subscription is terminated" do
+          let(:status) { :terminated }
+          let(:terminated_at) { timestamp - 1.day }
+
+          it "does create a fixed charge fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.fixed_charge.count).to eq(1)
+          end
+        end
+      end
+
+      context "when there are multiple fixed charges" do
+        context "when changing the subscription" do
+          let(:add_on1) { create(:add_on, organization:) }
+          let(:add_on2) { create(:add_on, organization:) }
+
+          let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
+          let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+
+          let(:old_fixed_charge_arrears) do
+            create(
+              :fixed_charge,
+              plan: old_plan,
+              add_on: add_on1,
+              charge_model: "standard",
+              pay_in_advance: false,
+              properties: {amount: "10"}
+            )
+          end
+
+          let(:new_fixed_charge_advance) do
+            create(
+              :fixed_charge,
+              plan: new_plan,
+              add_on: add_on1,
+              charge_model: "standard",
+              pay_in_advance: true,
+              properties: {amount: "10"}
+            )
+          end
+
+          let(:new_fixed_charge_arrears) do
+            create(
+              :fixed_charge,
+              plan: new_plan,
+              add_on: add_on2,
+              charge_model: "standard",
+              pay_in_advance: false,
+              properties: {amount: "15"}
+            )
+          end
+
+          let(:fixed_charge) do
+            create(
+              :fixed_charge,
+              plan: subscription.plan,
+              charge_model: "standard",
+              pay_in_advance: true,
+              properties: {amount: "10"},
+              units: 1
+            )
+          end
+
+          let(:old_subscription) do
+            create(
+              :subscription,
+              plan: old_plan,
+              organization:,
+              customer:,
+              billing_time:,
+              subscription_at: started_at,
+              started_at:,
+              created_at:,
+              status: :terminated,
+              terminated_at: timestamp - 1.day
+            )
+          end
+
+          let(:new_subscription) do
+            create(
+              :subscription,
+              plan: new_plan,
+              organization:,
+              customer:,
+              billing_time:,
+              subscription_at: started_at,
+              started_at: timestamp,
+              created_at: timestamp,
+              status: :active,
+              previous_subscription: old_subscription
+            )
+          end
+
+          let(:old_fixed_charge_arrears_event) do
+            create(:fixed_charge_event, fixed_charge: old_fixed_charge_arrears, subscription: old_subscription, timestamp: event_timestamp, units: 10, created_at: event_timestamp)
+          end
+
+          let(:new_fixed_charge_advance_event) do
+            create(:fixed_charge_event, fixed_charge: new_fixed_charge_advance, subscription: new_subscription, timestamp:, units: 1)
+          end
+
+          let(:new_fixed_charge_arrears_event) do
+            create(:fixed_charge_event, fixed_charge: new_fixed_charge_arrears, subscription: new_subscription, timestamp:, units: 1)
+          end
+
+          before do
+            old_fixed_charge_arrears_event
+            new_fixed_charge_advance_event
+            new_fixed_charge_arrears_event
+          end
+
+          # for now we'll just always create the fixed_charge fee. in the next PR we'll handle upgrade/downgrade/termination scenarios
+          # for terminated subscription do not issue pay in advance fee, issue only pay in arrears fee
+          context "when subscription is upgraded" do
+            context "when passing old subscription in the service" do
+              let(:subscription) { old_subscription }
+
+              it "creates only fee for pay in arrears charges" do
+                result = invoice_service.call
+
+                expect(result).to be_success
+                expect(subscription.fixed_charges.count).to eq(2)
+                expect(invoice.fees.fixed_charge.count).to eq(1)
+                expect(invoice.fees.fixed_charge.first.fixed_charge).to eq(old_fixed_charge_arrears)
+              end
+            end
+
+            context "when passing new subscription in the service" do
+              let(:subscription) { new_subscription }
+
+              before do
+                invoice_subscription[:invoicing_reason] = :subscription_starting
+                invoice_subscription.save!
+              end
+
+              it "creates a fixed charge fee for the new subscription only for pay in advance charges" do
+                result = invoice_service.call
+
+                expect(result).to be_success
+                expect(subscription.fixed_charges.count).to eq(3)
+                expect(invoice.fees.fixed_charge.count).to eq(2)
+                expect(invoice.fees.fixed_charge.map(&:fixed_charge)).to match_array([new_fixed_charge_advance, fixed_charge])
+              end
+            end
+          end
+
+          context "when subscriptions is downgraded" do
+            let(:old_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 10000) }
+            let(:new_plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 2000) }
+
+            context "when passing old subscription in the service" do
+              let(:subscription) { old_subscription }
+
+              it "creates a pay_in_arrears fee for the previous subscription" do
+                result = invoice_service.call
+
+                expect(result).to be_success
+                expect(invoice.fees.fixed_charge.count).to eq(1)
+                expect(invoice.fees.fixed_charge.first.fixed_charge).to eq(old_fixed_charge_arrears)
+              end
+            end
+
+            context "when passing new subscription in the service" do
+              let(:subscription) { new_subscription }
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan: new_plan,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  properties: {amount: "10"},
+                  units: 1
+                )
+              end
+
+              before do
+                invoice_subscription.update!(invoicing_reason: :subscription_starting)
+              end
+
+              it "creates a fixed charge fee for the new subscription only for pay in advance charges" do
+                result = invoice_service.call
+
+                expect(result).to be_success
+                expect(invoice.fees.fixed_charge.count).to eq(1)
+                expect(invoice.fees.fixed_charge.map(&:fixed_charge)).to match_array([new_fixed_charge_advance])
+              end
+            end
+          end
+        end
+      end
     end
 
     context "when billed for the first time" do
@@ -363,42 +622,44 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:started_at) { timestamp - 3.days }
 
       context "when plan has no other requirements" do
-        it "creates subscription and charge fees" do
+        it "creates subscription, charge and fixed charge fees" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
-            expect(invoice.fees.commitment.count).to eq(0)
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(0)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
+          )
         end
       end
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
 
-        it "creates subscription, charge and commitment fees" do
+        it "creates subscription, charge, fixed charge and commitment fees" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
-            expect(invoice.fees.commitment.count).to eq(1)
-          end
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(1)
         end
       end
 
@@ -425,6 +686,116 @@ RSpec.describe Invoices::CalculateFeesService do
           end
         end
       end
+
+      context "when plan has graduated fixed charge" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            :graduated,
+            plan: subscription.plan,
+            properties: {
+              graduated_ranges: [
+                {from_value: 0, to_value: 10, per_unit_amount: "5", flat_amount: "200"},
+                {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "300"}
+              ]
+            },
+            units: 15
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 15)
+        end
+
+        it "creates subscription, charge and graduated fixed charge fees" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(0)
+
+          fixed_charge_fee = invoice.fees.fixed_charge.first
+          expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+          expect(fixed_charge_fee.units).to eq(15)
+          expect(fixed_charge_fee.amount_cents).to eq(20000 + 30000 + 10 * 500 + 5 * 100)
+        end
+      end
+
+      context "when plan has volume fixed charge" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            :volume,
+            plan: subscription.plan,
+            properties: {
+              volume_ranges: [
+                {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
+                {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+              ]
+            }
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 150)
+        end
+
+        it "creates subscription, charge and volume fixed charge fees" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(0)
+
+          fixed_charge_fee = invoice.fees.fixed_charge.first
+          expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+          expect(fixed_charge_fee.units).to eq(150)
+          expect(fixed_charge_fee.amount_cents).to eq(15000)
+        end
+      end
+
+      context "when plan has prorated fixed charge" do
+        let(:timestamp) { Time.zone.parse("01 Mar 2022") }
+        let(:event_timestamp) { Time.zone.parse("14 Feb 2022") }
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            prorated: true,
+            properties: {amount: "10"}
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 28, created_at: event_timestamp)
+        end
+
+        it "creates subscription, charge and prorated fixed charge fees" do
+          result = invoice_service.call
+          expect(result).to be_success
+
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(0)
+
+          fixed_charge_fee = invoice.fees.fixed_charge.first
+          expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+          # total units on the event is 28
+          expect(fixed_charge_fee.units).to eq(28)
+          # event is prorated for 3 days of 28 days period (28 * 3 / 28 * 10 = 30)
+          expect(fixed_charge_fee.amount_cents).to eq(3000)
+        end
+      end
     end
 
     context "when two subscriptions are given" do
@@ -447,33 +818,38 @@ RSpec.describe Invoices::CalculateFeesService do
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime
+          charges_to_datetime: date_service.charges_to_datetime,
+          fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: date_service.fixed_charges_to_datetime
         )
       end
 
       let(:invoice_subscriptions) { [invoice_subscription, invoice_subscription2] }
 
       context "when plan has no minimum commitment" do
-        it "creates subscription and charges fees for both" do
+        it "creates subscription, charge and fixed charge fees for both" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
-            expect(invoice.payment_status).to eq("pending")
-            expect(invoice.fees.subscription.count).to eq(2)
-            expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
+          expect(result).to be_success
+          expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
+          expect(invoice.payment_status).to eq("pending")
+          expect(invoice.fees.subscription.count).to eq(2)
+          expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
+          expect(invoice.fees.fixed_charge.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
+          )
         end
       end
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -506,6 +882,10 @@ RSpec.describe Invoices::CalculateFeesService do
       let(:terminated_at) { timestamp - 2.days }
 
       context "when plan has minimum commitment" do
+        let(:fixed_charge) do
+          create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+        end
+
         before do
           create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
         end
@@ -574,6 +954,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -621,11 +1005,14 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+          let(:event) { nil }
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
-
-          let(:event) { nil }
 
           it "creates a charge fee and a minimum commitment fee" do
             result = invoice_service.call
@@ -692,6 +1079,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -771,6 +1162,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -831,6 +1226,10 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         context "when plan has minimum commitment" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", properties: {amount: "0.001"}, units: 10)
+          end
+
           before do
             create(:commitment, :minimum_commitment, plan:, amount_cents: 10_000)
           end
@@ -853,11 +1252,119 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
+            expect(invoice.fees.commitment.count).to eq(1)
+          end
+        end
+      end
 
-              expect(invoice.fees.commitment.count).to eq(1)
-            end
+      context "when fixed charges are pay in advance and subscription is terminated" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: true,
+            properties: {amount: "10"}
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 5, created_at: event_timestamp)
+        end
+
+        context "when plan has no minimum commitment" do
+          it "does not create a fixed charge fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.fixed_charge.count).to eq(0)
+          end
+        end
+      end
+
+      context "when fixed charges are pay in arrear and subscription is terminated" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: false,
+            properties: {amount: "10"}
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 5, created_at: event_timestamp)
+        end
+
+        context "when plan has no minimum commitment" do
+          it "creates a fixed charge fee but no minimum commitment fee", transaction: false do
+            result = invoice_service.call
+
+            expect(result).to be_success
+
+            expect(invoice.fees.fixed_charge.count).to eq(1)
+            expect(invoice.fees.commitment.count).to eq(0)
+          end
+        end
+      end
+
+      context "when termination is part of upgrade" do
+        let(:new_subscription) do
+          create(
+            :subscription,
+            plan:,
+            previous_subscription: subscription,
+            subscription_at: started_at.to_date,
+            started_at: terminated_at + 1.day,
+            created_at: terminated_at + 1.day
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 5, created_at: event_timestamp)
+        end
+
+        before do
+          new_subscription
+        end
+
+        context "when fixed charge is pay in advance" do
+          let(:fixed_charge) do
+            create(
+              :fixed_charge,
+              plan: subscription.plan,
+              charge_model: "standard",
+              pay_in_advance: true,
+              properties: {amount: "10"}
+            )
+          end
+
+          it "does not create a fixed charge fee for the old subscription" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.fixed_charge.count).to eq(0)
+          end
+        end
+
+        context "when fixed charge is pay in arrear" do
+          let(:fixed_charge) do
+            create(
+              :fixed_charge,
+              plan: subscription.plan,
+              charge_model: "standard",
+              pay_in_advance: false,
+              properties: {amount: "10"}
+            )
+          end
+
+          it "does create a fixed charge fee for the old subscription pay in arrears fixed charge" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.fixed_charge.count).to eq(1)
           end
         end
       end
@@ -953,35 +1460,95 @@ RSpec.describe Invoices::CalculateFeesService do
             expect(invoice.fees.subscription.count).to eq(0)
           end
         end
+
+        it "does not create a fixed charge fee" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.fees.fixed_charge.count).to eq(0)
+        end
+      end
+
+      context "when fixed charges are pay in advance" do
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: true,
+            properties: {amount: "10"}
+          )
+        end
+
+        let(:fixed_charge_event) do
+          create(:fixed_charge_event, fixed_charge:, subscription:, timestamp: event_timestamp, units: 5, created_at: event_timestamp)
+        end
+
+        it "creates subscription and fixed charge fees with correct boundaries" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.payment_status).to eq("pending")
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription[:to_datetime].to_date).to eq(Time.zone.today.end_of_month)
+          expect(invoice_subscription[:from_datetime].to_date).to eq(Time.zone.today.beginning_of_month)
+
+          fixed_charge_fee_properties = invoice.fees.fixed_charge.first.properties
+          expect(fixed_charge_fee_properties["fixed_charges_from_datetime"].to_date).to match_datetime(Time.zone.today.beginning_of_month)
+          expect(fixed_charge_fee_properties["fixed_charges_to_datetime"].to_date).to match_datetime(Time.zone.today.end_of_month)
+
+          charge_fee_properties = invoice.fees.charge.first.properties
+          expect(charge_fee_properties["charges_from_datetime"].to_date).to match_datetime((Time.zone.today - 1.month).beginning_of_month)
+          expect(charge_fee_properties["charges_to_datetime"].to_date).to match_datetime((Time.zone.today - 1.month).end_of_month)
+        end
       end
 
       context "when subscription was already billed earlier the same day" do
         let(:timestamp) { Time.current }
+        let(:fixed_charge) do
+          create(
+            :fixed_charge,
+            plan: subscription.plan,
+            charge_model: "standard",
+            pay_in_advance: true,
+            properties: {amount: "10"}
+          )
+        end
 
-        before { create(:fee, subscription:) }
+        before do
+          create(:fee, subscription:)
+          create(:fixed_charge_fee, subscription:, fixed_charge:, created_at: timestamp)
+        end
 
         context "when plan has no minimum commitment" do
           it "does not create any subscription fees" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-
-              expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice.invoice_subscriptions.count).to eq(1)
-              expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
-            end
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(0)
+            expect(invoice.invoice_subscriptions.count).to eq(1)
+            expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
           end
 
-          it "does create a minimum commitment fee" do
+          it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(result).to be_success
+            expect(invoice.fees.commitment.count).to eq(0)
           end
+
+          # TODO: this will be solved with the service that calculates delta for fixed charges
+          # it "does not create a fixed charge fee" do
+          #   result = invoice_service.call
+
+          #   expect(result).to be_success
+          #   expect(invoice.fees.fixed_charge.count).to eq(0)
+          # end
         end
 
         context "when plan has minimum commitment" do
@@ -1016,15 +1583,14 @@ RSpec.describe Invoices::CalculateFeesService do
       context "when subscription started in the past" do
         let(:created_at) { timestamp }
 
-        it "creates charge fees" do
+        it "creates subscription, charge and fixed charge fees" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
-          end
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
         end
       end
 
@@ -1114,6 +1680,7 @@ RSpec.describe Invoices::CalculateFeesService do
               expect(invoice).to be_payment_pending
               expect(invoice.fees.subscription.count).to eq(1)
               expect(invoice).to have_empty_charge_fees
+              expect(invoice.fees.fixed_charge.count).to eq(1)
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1178,6 +1745,8 @@ RSpec.describe Invoices::CalculateFeesService do
 
               expect(invoice.fees.subscription.count).to eq(0)
               expect(invoice).to have_empty_charge_fees
+              # TODO: add test for fixed_charge fee when we discuss what should it be
+              expect(invoice.fees.fixed_charge.count).to eq(1) # fixed charge is pay in arrears - sub termination generated fee
 
               invoice_subscription = invoice.invoice_subscriptions.first
               expect(invoice_subscription).to have_attributes(
@@ -1212,6 +1781,8 @@ RSpec.describe Invoices::CalculateFeesService do
 
                 expect(invoice.fees.subscription.count).to eq(0)
                 expect(invoice).to have_empty_charge_fees
+                # Fixed charge is pay in arrears - sub termination generated fee
+                expect(invoice.fees.fixed_charge.count).to eq(1)
 
                 invoice_subscription = invoice.invoice_subscriptions.first
                 expect(invoice_subscription).to have_attributes(
@@ -1273,6 +1844,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
             expect(invoice.subscriptions.first).to eq(subscription)
             expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice.fees.fixed_charge.count).to eq(1)
             expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
             invoice_subscription = invoice.invoice_subscriptions.first
@@ -1287,6 +1859,8 @@ RSpec.describe Invoices::CalculateFeesService do
           let(:timestamp) { Time.zone.parse(started_at.to_s).end_of_year + 1.day }
           let(:started_at) { created_at - 2.months }
           let(:created_at) { Time.zone.parse("2025-01-21T00:10:00") }
+          let(:event_timestamp) { created_at }
+          let(:fixed_charge_event) { create(:fixed_charge_event, fixed_charge:, units: 10, timestamp: started_at, created_at: created_at) }
 
           it "updates the invoice accordingly" do
             result = invoice_service.call
@@ -1297,6 +1871,11 @@ RSpec.describe Invoices::CalculateFeesService do
               expect(invoice.subscriptions.first).to eq(subscription)
               expect(invoice.fees.subscription.count).to eq(0)
               expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+
+              # plan is billed anniversary on 21 of November (started_at, 2024). At the timestamp, 1st Jan 2025,
+              # previous billing period is "empty" - 21Nov 2024 - 21 Nov 2024, because it's not current usage, so we get an "empty"
+              # boundaries and cannot fetch any usage
+              expect(invoice.fees.fixed_charge.count).to eq(0)
             end
           end
         end
@@ -1519,17 +2098,15 @@ RSpec.describe Invoices::CalculateFeesService do
       it "updates the invoice accordingly" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.fees_amount_cents).to eq(200)
-          expect(result.invoice.taxes_amount_cents).to eq(40)
-          expect(result.invoice.total_amount_cents).to eq(230)
-          expect(result.invoice.credits.count).to eq(1)
+        expect(result).to be_success
+        expect(result.invoice.fees_amount_cents).to eq(10200)
+        expect(result.invoice.taxes_amount_cents).to eq(2040)
+        expect(result.invoice.total_amount_cents).to eq(12230)
+        expect(result.invoice.credits.count).to eq(1)
 
-          credit = result.invoice.credits.first
-          expect(credit.credit_note).to eq(credit_note)
-          expect(credit.amount_cents).to eq(10)
-        end
+        credit = result.invoice.credits.first
+        expect(credit.credit_note).to eq(credit_note)
+        expect(credit.amount_cents).to eq(10)
       end
     end
 
@@ -1546,21 +2123,22 @@ RSpec.describe Invoices::CalculateFeesService do
       it "updates the invoice accordingly" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.invoice.fees.first.properties["to_datetime"])
-            .to eq (timestamp - 1.day).end_of_day.as_json
-          expect(result.invoice.fees.first.properties["from_datetime"])
-            .to eq (timestamp - 1.month).beginning_of_day.as_json
-          expect(result.invoice.subscriptions.first).to eq(subscription)
-          expect(result.invoice.fees.subscription.count).to eq(1)
-          expect(result.invoice.fees.charge.count).to eq(1)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(200)
-          expect(result.invoice.taxes_amount_cents).to eq(40)
-          expect(result.invoice.total_amount_cents).to eq(210)
-          expect(result.invoice.wallet_transactions.count).to eq(1)
-        end
+        expect(result.invoice.fees.first.properties["to_datetime"])
+          .to eq (timestamp - 1.day).end_of_day.as_json
+        expect(result.invoice.fees.first.properties["from_datetime"])
+          .to eq (timestamp - 1.month).beginning_of_day.as_json
+        expect(result.invoice.subscriptions.first).to eq(subscription)
+        expect(result.invoice.fees.subscription.count).to eq(1)
+        expect(result.invoice.fees.charge.count).to eq(1)
+        expect(result.invoice.fees.fixed_charge.count).to eq(1)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(10200)
+        expect(result.invoice.taxes_amount_cents).to eq(2040)
+        expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(12240)
+        expect(result.invoice.prepaid_credit_amount_cents).to eq(30)
+        expect(result.invoice.total_amount_cents).to eq(12210)
+        expect(result.invoice.wallet_transactions.count).to eq(1)
       end
 
       it "updates wallet balance" do
@@ -1580,6 +2158,7 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         let(:event) { nil }
+        let(:fixed_charge_event) { nil }
 
         before { applied_coupon }
 
@@ -1753,17 +2332,19 @@ RSpec.describe Invoices::CalculateFeesService do
         result = invoice_service.call
 
         expect(result).to be_success
+        # 100_00  - fixed_charges
+        # 100_00  - charges
+        # 100_00 - subscription
+        expect(result.invoice.fees_amount_cents).to eq(300_00)
+        # Billing entity tax is 10%
+        # subtotal = fees_amount_cents - coupons_amount_cents - progressive_billing_credit_amount_cents
+        expect(result.invoice.progressive_billing_credit_amount_cents).to eq(30_00)
+        expect(result.invoice.coupons_amount_cents).to eq(15_00)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(255_00)
+        expect(result.invoice.taxes_amount_cents).to eq(25_50)
+        expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(280_50)
 
-        invoice = result.invoice
-        expect(invoice.fees_amount_cents).to eq(20_000)
-        expect(invoice.progressive_billing_credit_amount_cents).to eq(3_000)
-        expect(invoice.coupons_amount_cents).to eq(1_500)
-        expect(invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500) # 20_000 - 1_500 - 3_000
-        expect(invoice.taxes_amount_cents).to eq(1_550)
-        expect(invoice.sub_total_including_taxes_amount_cents).to eq(17_050) # 15_500 + 1_550
-        expect(invoice.prepaid_credit_amount_cents).to eq(6_323)
-        expect(invoice.credit_notes_amount_cents).to eq(1_000)
-        expect(invoice.total_amount_cents).to eq(9_727) # 17_050 - 1_000 - 6_323
+        expect(result.invoice.total_amount_cents).to eq(204_15) # 280_50 - 10_00 (credit note) - 66_35 (wallet)
       end
     end
 
@@ -1855,6 +2436,32 @@ RSpec.describe Invoices::CalculateFeesService do
             expect(result.invoice.fees.fixed_charge.count).to eq(0)
           end
         end
+      end
+    end
+
+    # this case might happen because we only started populating fixed_charge boundaries in the last PR,
+    # and we can have some invoices that we're recalculating with old invoice_subscriptions
+    context "when invoice has an invoice_subscription with empty fixed_charge boundaries" do
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+          fixed_charges_from_datetime: nil,
+          fixed_charges_to_datetime: nil
+        )
+      end
+
+      it "does not fail and does not create fixed charge fees" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.fees.fixed_charge.count).to eq(0)
       end
     end
   end

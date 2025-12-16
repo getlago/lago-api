@@ -6,6 +6,8 @@ table.invoice-resume-table width="100%"
     td.body-2 = I18n.t('invoice.tax_rate')
     td.body-2 = I18n.t('invoice.amount')
   - fees.order(:succeeded_at, :created_at).each do |fee|
+    - if fee.fixed_charge?
+      - next
     - if fee.charge.percentage? && fee.amount_details.present?
       - if fee.basic_rate_percentage?
         tr.fee
