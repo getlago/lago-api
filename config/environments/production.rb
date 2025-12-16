@@ -33,6 +33,9 @@ Rails.application.configure do
   config.assume_ssl = !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_SSL"])
   config.force_ssl = false
 
+  config.action_cable.disable_request_forgery_protection = true
+  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
+
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
   config.active_support.report_deprecations = false
