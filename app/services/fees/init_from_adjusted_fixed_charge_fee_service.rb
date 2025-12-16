@@ -92,4 +92,3 @@ module Fees
     end
   end
 end
-
