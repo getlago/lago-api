@@ -9,7 +9,7 @@ module Webhooks
         ::V1::SubscriptionSerializer.new(
           object,
           root_name: "subscription",
-          includes: %i[plan customer usage_threshold],
+          includes: %i[plan customer usage_threshold applicable_usage_thresholds],
           usage_threshold: options[:usage_threshold]
         )
       end

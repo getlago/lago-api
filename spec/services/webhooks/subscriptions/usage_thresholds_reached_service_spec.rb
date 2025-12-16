@@ -12,6 +12,9 @@ RSpec.describe Webhooks::Subscriptions::UsageThresholdsReachedService do
   let(:usage_threshold) { create(:usage_threshold, plan: plan) }
 
   describe ".call" do
-    it_behaves_like "creates webhook", "subscription.usage_threshold_reached", "subscription", {"usage_threshold" => Hash}
+    it_behaves_like "creates webhook", "subscription.usage_threshold_reached", "subscription", {
+      "usage_threshold" => Hash,
+      "applicable_usage_thresholds" => Array
+    }
   end
 end
