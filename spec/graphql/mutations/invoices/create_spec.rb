@@ -12,6 +12,7 @@ RSpec.describe Mutations::Invoices::Create do
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
+  let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
   let(:fees) do
     [
       {
@@ -73,7 +74,8 @@ RSpec.describe Mutations::Invoices::Create do
         input: {
           customerId: customer.id,
           currency:,
-          fees:
+          fees:,
+          invoiceCustomSection: {invoiceCustomSectionIds: [section_1.id]}
         }
       }
     )
@@ -110,6 +112,7 @@ RSpec.describe Mutations::Invoices::Create do
           }
         }
       )
+      expect(Invoice.one_off.order(created_at: :desc).first.applied_invoice_custom_sections.pluck(:code)).to eq([section_1.code])
     end
   end
 end

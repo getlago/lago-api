@@ -49,7 +49,11 @@ module Invoices
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids, skip: skip_custom_sections)
+
+        unless skip_custom_sections?
+          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
+        end
+
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.voided_invoice_id = voided_invoice_id if voided_invoice_id.present?
@@ -136,7 +140,6 @@ module Invoices
 
     def invoice_custom_section_ids
       return @invoice_custom_section_ids if defined?(@invoice_custom_section_ids)
-      return @invoice_custom_section_ids = nil if section_identifiers.nil?
       return @invoice_custom_section_ids = [] if section_identifiers.blank?
 
       identifier = api_context? ? :code : :id
@@ -152,7 +155,7 @@ module Invoices
       invoice_custom_section[key]&.compact&.uniq
     end
 
-    def skip_custom_sections
+    def skip_custom_sections?
       return false unless invoice_custom_section
       return false if invoice_custom_section[:skip_invoice_custom_sections].nil?
 
