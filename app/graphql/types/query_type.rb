@@ -85,6 +85,7 @@ module Types
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
+    field :roles, resolver: Resolvers::RolesResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver

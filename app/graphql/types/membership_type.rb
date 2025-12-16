@@ -7,8 +7,11 @@ module Types
     field :organization, Types::Organizations::OrganizationType, null: false
     field :user, Types::UserType, null: false
 
-    field :permissions, Types::PermissionsType, null: false
-    field :role, Types::Memberships::RoleEnum, null: false
+    field :permissions, Types::PermissionsType, null: false,
+      deprecation_reason: "Use permissions enum instead"
+    field :role, Types::Memberships::RoleEnum, null: false,
+      deprecation_reason: "Use roleDetails instead"
+    field :roles, [Types::RoleType], null: false
     field :status, Types::Memberships::StatusEnum, null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false

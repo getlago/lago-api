@@ -6289,9 +6289,10 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organization: Organization!
-  permissions: Permissions!
+  permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
   revokedAt: ISO8601DateTime!
-  role: MembershipRole!
+  role: MembershipRole! @deprecated(reason: "Use roleDetails instead")
+  roles: [Role!]!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   user: User!
@@ -8236,6 +8237,120 @@ enum PaymentTypeEnum {
 }
 
 """
+Permission
+"""
+enum PermissionEnum {
+  addons_create
+  addons_delete
+  addons_update
+  addons_view
+  ai_conversations_create
+  ai_conversations_view
+  analytics_overdue_balances_view
+  analytics_view
+  audit_logs_view
+  authentication_methods_update
+  authentication_methods_view
+  billable_metrics_create
+  billable_metrics_delete
+  billable_metrics_update
+  billable_metrics_view
+  billing_entities_create
+  billing_entities_delete
+  billing_entities_dunning_campaigns_update
+  billing_entities_emails_update
+  billing_entities_emails_view
+  billing_entities_invoices_update
+  billing_entities_invoices_view
+  billing_entities_taxes_update
+  billing_entities_taxes_view
+  billing_entities_update
+  billing_entities_view
+  coupons_attach
+  coupons_create
+  coupons_delete
+  coupons_detach
+  coupons_update
+  coupons_view
+  credit_notes_create
+  credit_notes_export
+  credit_notes_update
+  credit_notes_view
+  credit_notes_void
+  customer_settings_update_grace_period
+  customer_settings_update_issuing_date_adjustment
+  customer_settings_update_issuing_date_anchor
+  customer_settings_update_lang
+  customer_settings_update_payment_terms
+  customer_settings_update_tax_rates
+  customer_settings_view
+  customers_create
+  customers_delete
+  customers_update
+  customers_view
+  data_api_view
+  developers_keys_manage
+  developers_manage
+  draft_invoices_update
+  dunning_campaigns_create
+  dunning_campaigns_delete
+  dunning_campaigns_update
+  dunning_campaigns_view
+  features_create
+  features_delete
+  features_update
+  features_view
+  invoice_custom_sections_create
+  invoice_custom_sections_delete
+  invoice_custom_sections_update
+  invoice_custom_sections_view
+  invoices_create
+  invoices_export
+  invoices_send
+  invoices_update
+  invoices_view
+  invoices_void
+  organization_emails_update
+  organization_emails_view
+  organization_integrations_create
+  organization_integrations_delete
+  organization_integrations_update
+  organization_integrations_view
+  organization_invoices_update
+  organization_invoices_view
+  organization_members_create
+  organization_members_delete
+  organization_members_update
+  organization_members_view
+  organization_taxes_update
+  organization_taxes_view
+  organization_update
+  organization_view
+  payment_methods_create
+  payment_methods_delete
+  payment_methods_update
+  payment_methods_view
+  payment_requests_create
+  payment_requests_view
+  payments_create
+  payments_view
+  plans_create
+  plans_delete
+  plans_update
+  plans_view
+  pricing_units_create
+  pricing_units_update
+  pricing_units_view
+  subscriptions_create
+  subscriptions_update
+  subscriptions_view
+  wallets_create
+  wallets_terminate
+  wallets_top_up
+  wallets_update
+}
+
+"""
 Permissions Type
 """
 type Permissions {
@@ -9334,6 +9449,11 @@ type Query {
   pricingUnits(limit: Int, page: Int, searchTerm: String): PricingUnitCollection!
 
   """
+  Query roles available for the organization
+  """
+  roles: [Role!]!
+
+  """
   Query a single subscription of an organization
   """
   subscription(
@@ -9773,6 +9893,14 @@ input RevokeMembershipInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+type Role {
+  admin: Boolean!
+  description: String
+  id: ID!
+  name: String!
+  permissions: [PermissionEnum!]!
 }
 
 """
