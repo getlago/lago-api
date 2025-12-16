@@ -31,10 +31,18 @@ module Wallets
 
           recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
+          if rule_attributes.key?(:invoice_custom_section)
+            invoice_custom_section = {
+              invoice_custom_section: rule_attributes.delete(:invoice_custom_section)
+            }
+          end
+
           if recurring_rule
-            if rule_attributes.key?(:invoice_custom_section)
-              InvoiceCustomSections::AttachToResourceService.call(resource: recurring_rule, params: rule_attributes)
-              rule_attributes.delete(:invoice_custom_section)
+            if invoice_custom_section.present?
+              InvoiceCustomSections::AttachToResourceService.call(
+                resource: recurring_rule,
+                params: invoice_custom_section
+              )
             end
 
             recurring_rule.update!(rule_attributes)
@@ -46,6 +54,13 @@ module Wallets
             created_recurring_rule = wallet.recurring_transaction_rules.create!(
               rule_attributes.merge(organization_id: wallet.organization_id)
             )
+
+            if invoice_custom_section.present?
+              InvoiceCustomSections::AttachToResourceService.call(
+                resource: created_recurring_rule,
+                params: invoice_custom_section
+              )
+            end
 
             created_recurring_rules_ids.push(created_recurring_rule.id)
           end
