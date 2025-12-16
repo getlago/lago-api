@@ -14,7 +14,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         paid_credits: "105",
         granted_credits: "105",
         started_at: "2024-05-30T12:48:26Z",
-        transaction_metadata:
+        transaction_metadata:,
+        invoice_custom_section: {skip_invoice_custom_sections: true}
       }
     ]
   end
@@ -49,7 +50,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
             trigger: "interval",
             interval: "weekly",
             paid_credits: "105",
-            granted_credits: "105"
+            granted_credits: "105",
+            invoice_custom_section: {skip_invoice_custom_sections: true}
           }
         ]
       end
@@ -66,7 +68,8 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           interval: "weekly",
           method: "fixed",
           paid_credits: 105,
-          trigger: "interval"
+          trigger: "interval",
+          skip_invoice_custom_sections: true
         )
       end
     end
