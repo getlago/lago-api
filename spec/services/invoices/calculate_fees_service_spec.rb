@@ -2438,6 +2438,32 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
     end
+
+    # this case might happen because we only started populating fixed_charge boundaries in the last PR,
+    # and we can have some invoices that we're recalculating with old invoice_subscriptions
+    context "when invoice has an invoice_subscription with empty fixed_charge boundaries" do
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+          fixed_charges_from_datetime: nil,
+          fixed_charges_to_datetime: nil
+        )
+      end
+
+      it "does not fail and does not create fixed charge fees" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.fees.fixed_charge.count).to eq(0)
+      end
+    end
   end
 
   describe "#should_create_yearly_subscription_fee?" do

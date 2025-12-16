@@ -105,6 +105,8 @@ module Invoices
     end
 
     def fixed_charge_boundaries_valid?(boundaries)
+      return false if boundaries.fixed_charges_from_datetime.blank? || boundaries.fixed_charges_to_datetime.blank?
+
       boundaries.fixed_charges_from_datetime <= boundaries.fixed_charges_to_datetime
     end
 
