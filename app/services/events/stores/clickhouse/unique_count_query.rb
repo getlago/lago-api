@@ -12,24 +12,27 @@ module Events
           # NOTE: First sum calculates all operation values for a specific property
           # (for instance 2 relevant additions with 1 relevant removal [0, 1, 0, -1, 1] returns 1)
           # The next sum combines all properties into a single result
-          <<-SQL
-            #{events_cte_sql},
-            event_values AS (
+          event_values = <<-SQL
+            SELECT
+              property,
+              SUM(adjusted_value) AS sum_adjusted_value
+            FROM (
               SELECT
+                timestamp,
                 property,
-                SUM(adjusted_value) AS sum_adjusted_value
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC, property ASC
-              ) adjusted_event_values
-              GROUP BY property
-            )
+                operation_type,
+                #{operation_value_sql} AS adjusted_value
+              FROM events
+              ORDER BY timestamp ASC, property ASC
+            ) adjusted_event_values
+            GROUP BY property
+          SQL
 
+          ctes_sql = events_cte_sql.merge {
+            "event_values" => event_values
+          }
+
+          with_ctes(ctes_sql, <<-SQL)
             SELECT coalesce(SUM(sum_adjusted_value), 0) AS aggregation FROM event_values
           SQL
         end
@@ -46,45 +49,50 @@ module Events
         # performant than the postgres approach.
         # TODO: we should use the postgres approach in clickhouse as well, but it requires update CLickhouse
         def prorated_query
-          <<-SQL
-            #{events_cte_sql},
-            same_day_ignored AS (
+          same_day_ignored = <<-SQL
+            SELECT
+              property,
+              operation_type,
+              timestamp,
+              #{ignore_remove_events_sql} AS is_ignored
+            FROM (
               SELECT
-                property,
-                operation_type,
                 timestamp,
-                #{ignore_remove_events_sql} AS is_ignored
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
-                ORDER BY timestamp ASC, property ASC
-              ) as e
-            ),
-            -- Check if the operation type is the same as previous, so it nullifies this one
-            event_values AS (
-              SELECT
                 property,
                 operation_type,
-                timestamp
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
-                ORDER BY timestamp ASC, property ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
-            )
+                -- Check if this is the last event of the day for this property
+                timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
+              FROM events
+              ORDER BY timestamp ASC, property ASC
+            ) as e
+          SQL
 
+          # Check if the operation type is the same as previous, so it nullifies this one
+          event_values = <<-SQL
+            SELECT
+              property,
+              operation_type,
+              timestamp
+            FROM (
+              SELECT
+                timestamp,
+                property,
+                operation_type,
+                #{operation_value_sql} AS adjusted_value
+              FROM same_day_ignored
+              WHERE is_ignored = false
+              ORDER BY timestamp ASC, property ASC
+            ) adjusted_event_values
+            WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+            GROUP BY property, operation_type, timestamp
+          SQL
+
+          ctes_sql = events_cte_sql.merge {
+            "same_day_ignored" => same_day_ignored,
+            "event_values" => event_values
+          }
+
+          with_ctes(ctes_sql, <<-SQL)
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
@@ -94,27 +102,29 @@ module Events
         end
 
         def grouped_query
-          <<-SQL
-            #{grouped_events_cte_sql},
-
-            event_values AS (
+          event_values = <<-SQL
+            SELECT
+              #{group_names},
+              property,
+              SUM(adjusted_value) AS sum_adjusted_value
+            FROM (
               SELECT
-                #{group_names},
+                timestamp,
                 property,
-                SUM(adjusted_value) AS sum_adjusted_value
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{group_names},
-                  #{grouped_operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC, property ASC
-              ) adjusted_event_values
-              GROUP BY #{group_names}, property
-            )
+                operation_type,
+                #{group_names},
+                #{grouped_operation_value_sql} AS adjusted_value
+              FROM events
+              ORDER BY timestamp ASC, property ASC
+            ) adjusted_event_values
+            GROUP BY #{group_names}, property
+          SQL
 
+          ctes_sql = grouped_events_cte_sql.merge {
+            "event_values" => event_values
+          }
+
+          with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
@@ -124,10 +134,8 @@ module Events
         end
 
         def grouped_prorated_query
-          <<-SQL
-            #{grouped_events_cte_sql},
-            -- Only ignore remove events if they are NOT the last event of the day
-            same_day_ignored AS (
+            # Only ignore remove events if they are NOT the last event of the day
+            same_day_ignored = <<-SQL
               SELECT
                 #{group_names},
                 property,
@@ -142,12 +150,13 @@ module Events
                   #{group_names},
                   -- Check if this is the last event of the day for this property and group
                   timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
+                FROM events
                 ORDER BY timestamp ASC, property ASC
               ) as e
-            ),
-            -- Check if the operation type is the same as previous, so it nullifies this one
-            event_values AS (
+            SQL
+
+            # Check if the operation type is the same as previous, so it nullifies this one
+            event_values = <<-SQL
               SELECT
                 #{group_names},
                 property,
@@ -167,7 +176,14 @@ module Events
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY #{group_names}, property, operation_type, timestamp
             )
+          SQL
 
+          ctes_sql = grouped_events_cte_sql.merge {
+            "same_day_ignored" => same_day_ignored,
+            "event_values" => event_values
+          }
+
+          with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
               coalesce(SUM(period_ratio), 0) as aggregation
@@ -192,60 +208,63 @@ module Events
         #   ["2023-03-19T00:00:00.000Z", "002", "add", 1]
         # ]
         def breakdown_query
-          <<-SQL
-            #{events_cte_sql}
-
+          with_ctes(events_cte_sql, <<-SQL)
             SELECT
               timestamp,
               property,
               operation_type,
               #{operation_value_sql},
               lagInFrame(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)
-            FROM events_data
+            FROM events
             ORDER BY timestamp ASC, property ASC
           SQL
         end
 
         def prorated_breakdown_query(with_remove: false)
-          <<-SQL
-            #{events_cte_sql},
-            -- Only ignore remove events if they are NOT the last event of the day
-            same_day_ignored AS (
+          # Only ignore remove events if they are NOT the last event of the day
+          same_day_ignored = <<-SQL
+            SELECT
+              property,
+              operation_type,
+              timestamp,
+              #{ignore_remove_events_sql} AS is_ignored
+            FROM (
               SELECT
-                property,
-                operation_type,
                 timestamp,
-                #{ignore_remove_events_sql} AS is_ignored
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  -- Check if this is the last event of the day for this property
-                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
-                FROM events_data
-                ORDER BY timestamp ASC, property ASC
-              ) as e
-            ),
-            event_values AS (
-              SELECT
                 property,
                 operation_type,
-                timestamp
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
-                ORDER BY timestamp ASC, property ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, timestamp, operation_type
-            )
+                -- Check if this is the last event of the day for this property
+                timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp, :timezone)) AS is_last_event_of_day
+              FROM events
+              ORDER BY timestamp ASC, property ASC
+            ) as e
+          SQL
 
+          event_values = <<-SQL
+            SELECT
+              property,
+              operation_type,
+              timestamp
+            FROM (
+              SELECT
+                timestamp,
+                property,
+                operation_type,
+                #{operation_value_sql} AS adjusted_value
+              FROM same_day_ignored
+              WHERE is_ignored = false
+              ORDER BY timestamp ASC, property ASC
+            ) adjusted_event_values
+            WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+            GROUP BY property, timestamp, operation_type
+          SQL
+
+          ctes_sql = grouped_events_cte_sql.merge {
+            "same_day_ignored" => same_day_ignored,
+            "event_values" => event_values
+          }
+
+          with_ctes(ctes_sql, <<-SQL)
             SELECT
               prorated_value,
               timestamp,
@@ -268,59 +287,49 @@ module Events
 
         attr_reader :store
 
-        delegate :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
+        delegate :with_ctes, :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
-          <<-SQL
-            WITH events_data AS (
-              (#{
-                events_sql(
-                  ordered: true,
-                  select: [
-                    arel_table[:timestamp].as("timestamp"),
-                    arel_table[:value].as("property"),
-                    Arel::Nodes::NamedFunction.new(
-                      "coalesce",
-                      [
-                        Arel::Nodes::NamedFunction.new("NULLIF", [
-                          Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
-                          Arel::Nodes::SqlLiteral.new("''")
-                        ]),
-                        Arel::Nodes::SqlLiteral.new("'add'")
-                      ]
-                    ).as("operation_type")
-                  ]
-                )
-              })
-            )
-          SQL
+          events_sql(
+            ordered: true,
+            select: [
+              arel_table[:timestamp].as("timestamp"),
+              arel_table[:value].as("property"),
+              Arel::Nodes::NamedFunction.new(
+                "coalesce",
+                [
+                  Arel::Nodes::NamedFunction.new("NULLIF", [
+                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("''")
+                  ]),
+                  Arel::Nodes::SqlLiteral.new("'add'")
+                ]
+              ).as("operation_type")
+            ]
+          )
         end
 
         def grouped_events_cte_sql
           groups, _ = grouped_arel_columns
 
-          <<-SQL
-            WITH events_data AS (#{
-              events_sql(
-                ordered: true,
-                select: groups + [
-                  arel_table[:timestamp].as("timestamp"),
-                  arel_table[:value].as("property"),
-                  Arel::Nodes::NamedFunction.new(
-                    "coalesce",
-                    [
-                      Arel::Nodes::NamedFunction.new("NULLIF", [
-                        Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
-                        Arel::Nodes::SqlLiteral.new("''")
-                      ]),
-                      Arel::Nodes::SqlLiteral.new("'add'")
-                    ]
-                  ).as("operation_type")
+          events_sql(
+            ordered: true,
+            select: groups + [
+              arel_table[:timestamp].as("timestamp"),
+              arel_table[:value].as("property"),
+              Arel::Nodes::NamedFunction.new(
+                "coalesce",
+                [
+                  Arel::Nodes::NamedFunction.new("NULLIF", [
+                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("''")
+                  ]),
+                  Arel::Nodes::SqlLiteral.new("'add'")
                 ]
-              )
-            })
-          SQL
+              ).as("operation_type")
+            ]
+          )
         end
 
         def operation_value_sql
