@@ -388,7 +388,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             end
 
             context "with multiple fixed charges" do
-              let(:add_on2) { create(:add_on, organization:, amount_cents: 500) }
+              let(:add_on2) { create(:add_on, organization:) }
+              let(:add_on3) { create(:add_on, organization:) }
 
               let(:fixed_charge_advance) do
                 create(
@@ -412,10 +413,22 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                   properties: {amount: "5"}
                 )
               end
+              let(:fixed_charge_in_arrears) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on3,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  units: 1,
+                  properties: {amount: "25"}
+                )
+              end
 
               before do
                 fixed_charge_advance
                 fixed_charge_advance2
+                fixed_charge_in_arrears
 
                 event_timestamp = subscription.started_at + 1.second
                 create(
@@ -437,6 +450,16 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                   timestamp: event_timestamp,
                   created_at: event_timestamp
                 )
+
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge: fixed_charge_in_arrears,
+                  units: fixed_charge_in_arrears.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
               end
 
               it "includes all applicable fixed charges" do
@@ -446,13 +469,13 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                   expect(result).to be_success
 
                   fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
-                  expect(fixed_charge_fees.size).to eq(2)
+                  expect(fixed_charge_fees.size).to eq(3)
 
                   total_fixed_charges = fixed_charge_fees.sum(&:amount_cents)
-                  expect(total_fixed_charges).to eq(2000) # $10 * 1 + $5 * 2 = $20
+                  expect(total_fixed_charges).to eq(4500) # $10 * 1 + $5 * 2 + $25 * 1 = $45
 
-                  # Total: subscription (6) + fixed charges (2000) = 2006
-                  expect(result.invoice.fees_amount_cents).to eq(2006)
+                  # Total: subscription (6) + fixed charges (4500) = 4506
+                  expect(result.invoice.fees_amount_cents).to eq(4506)
                 end
               end
             end
