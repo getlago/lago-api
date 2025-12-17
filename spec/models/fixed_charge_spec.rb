@@ -309,33 +309,31 @@ RSpec.describe FixedCharge do
     end
   end
 
-  describe "#included_in_next_subscription?" do
+  describe "#matching_fixed_charge_prev_subscription" do
     let(:add_on) { build(:add_on) }
     let(:fixed_charge) { build(:fixed_charge, add_on:) }
-    let(:subscription) { create(:subscription, plan: fixed_charge.plan) }
-    let(:next_subscription) { create(:subscription, :with_previous_subscription, previous_subscription: subscription) }
+    let(:previous_subscription) { create(:subscription) }
+    let(:subscription) { create(:subscription, plan: fixed_charge.plan, previous_subscription:) }
 
-    context "when the fixed charge is included in the next subscription" do
-      before { next_subscription.plan.fixed_charges = [fixed_charge] }
+    context "when the fixed charge is included in the previous subscription" do
+      before { previous_subscription.plan.fixed_charges = [fixed_charge] }
 
-      it "returns true" do
-        expect(fixed_charge.included_in_next_subscription?(subscription)).to be true
+      it "returns the fixed charge" do
+        expect(fixed_charge.matching_fixed_charge_prev_subscription(subscription)).to eq(fixed_charge)
       end
     end
 
-    context "when the fixed charge is not included in the next subscription" do
-      before { next_subscription.plan.fixed_charges = [] }
-
-      it "returns false" do
-        expect(fixed_charge.included_in_next_subscription?(subscription)).to be false
+    context "when the fixed charge is not included in the previous subscription" do
+      it "returns nil" do
+        expect(fixed_charge.matching_fixed_charge_prev_subscription(subscription)).to be nil
       end
     end
 
-    context "when there is no next subscription" do
-      let(:next_subscription) { nil }
+    context "when there is no previous subscription" do
+      let(:previous_subscription) { nil }
 
-      it "returns false" do
-        expect(fixed_charge.included_in_next_subscription?(subscription)).to be false
+      it "returns nil" do
+        expect(fixed_charge.matching_fixed_charge_prev_subscription(subscription)).to be nil
       end
     end
   end

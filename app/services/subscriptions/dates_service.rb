@@ -117,7 +117,7 @@ module Subscriptions
       return unless subscription.started_at
 
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
-      datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
+      datetime = subscription.terminated_at if subscription.terminated? && subscription.terminated_at <= datetime
       datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
@@ -148,7 +148,7 @@ module Subscriptions
       return unless subscription.started_at
 
       datetime = customer_timezone_shift(compute_fixed_charges_to_date, end_of_day: true)
-      datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
+      datetime = subscription.terminated_at if subscription.terminated? && subscription.terminated_at <= datetime
       datetime = subscription.started_at if datetime < subscription.started_at
 
       datetime
