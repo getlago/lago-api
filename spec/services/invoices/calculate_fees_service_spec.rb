@@ -422,7 +422,6 @@ RSpec.describe Invoices::CalculateFeesService do
           expect(fee_properties["fixed_charges_to_datetime"]).to match_datetime(Time.parse("2022-03-05T23:59:59.999Z"))
         end
 
-        # TODO: Update when we have conditions on creation of fixed charge fees
         context "when subscription is terminated" do
           let(:status) { :terminated }
           let(:terminated_at) { timestamp - 1.day }
@@ -1745,7 +1744,6 @@ RSpec.describe Invoices::CalculateFeesService do
 
               expect(invoice.fees.subscription.count).to eq(0)
               expect(invoice).to have_empty_charge_fees
-              # TODO: add test for fixed_charge fee when we discuss what should it be
               expect(invoice.fees.fixed_charge.count).to eq(1) # fixed charge is pay in arrears - sub termination generated fee
 
               invoice_subscription = invoice.invoice_subscriptions.first

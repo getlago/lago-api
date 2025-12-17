@@ -209,5 +209,29 @@ module Fees
       properties["fixed_charges_duration"] = in_advance_dates[:fixed_charges_duration]
       properties
     end
+
+    # if we have a prorated paid in advance fixed charge, and we're upgrading to a new plan with the same add_on,
+    # there is an existing fee paid for the full month, but at the moment of upgrade, the new price should applied,
+    # so we need to deduct the prorated for the rest of the billing period amount that was already paid from the new price.
+    def first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
+      return false unless fixed_charge.pay_in_advance?
+      return false unless fixed_charge.prorated?
+      return false unless subscription.previous_subscription
+      return false if subscription.invoices.count > 1
+      fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
+    end
+
+    def find_already_paid_fee_for_the_fixed_charge(current_fee_boundaries)
+      prev_fixed_charge = fixed_charge.matching_fixed_charge_prev_subscription(subscription)
+      Fee.where(
+        organization: organization,
+        billing_entity: subscription.customer.billing_entity,
+        fixed_charge: prev_fixed_charge
+      ).where(
+        "properties->>'fixed_charges_from_datetime' <= ? AND properties->>'fixed_charges_to_datetime' >= ?",
+        current_fee_boundaries[:fixed_charges_from_datetime],
+        current_fee_boundaries[:fixed_charges_to_datetime]
+      ).first
+    end
   end
 end
