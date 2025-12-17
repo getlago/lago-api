@@ -118,12 +118,8 @@ module Invoices
       License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
     end
 
-    def wallets
-      @wallets ||= customer.wallets.active.with_positive_balance
-    end
-
     def should_create_applied_prepaid_credit?
-      invoice.total_amount_cents&.positive? && wallets.any?
+      invoice.total_amount_cents&.positive?
     end
 
     def create_credit_note_credit

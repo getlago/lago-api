@@ -233,17 +233,15 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       it "creates an invoice and fees" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.invoice.fees_amount_cents).to eq(10)
-          expect(result.invoice.taxes_amount_cents).to eq(1)
-          expect(result.invoice.taxes_rate).to eq(10)
-          expect(result.invoice.total_amount_cents).to eq(11)
-          expect(result.invoice).to be_finalized
+        expect(result.invoice.fees_amount_cents).to eq(10)
+        expect(result.invoice.taxes_amount_cents).to eq(1)
+        expect(result.invoice.taxes_rate).to eq(10)
+        expect(result.invoice.total_amount_cents).to eq(11)
+        expect(result.invoice).to be_finalized
 
-          expect(result.invoice.reload.error_details.count).to eq(0)
-        end
+        expect(result.invoice.reload.error_details.count).to eq(0)
       end
 
       context "when there is error received from the provider" do
@@ -282,39 +280,38 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
     end
 
-    context "when customer has a wallet" do
-      context "when the wallet has a positive balance" do
-        before { create(:wallet, customer:, balance_cents: 100, credits_balance: 100) }
+    context "when customer has wallet with positive balance" do
+      before { create(:wallet, customer:, balance_cents: 100, credits_balance: 100) }
 
-        it "uses the prepaid credits" do
-          allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
+      it "uses the prepaid credits" do
+        allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
 
-          result = invoice_service.call
+        result = invoice_service.call
 
-          expect(result).to be_success
-          expect(result.invoice.total_amount_cents).to eq(0)
-          expect(result.invoice.prepaid_credit_amount_cents).to eq(12)
+        expect(result).to be_success
+        expect(result.invoice.total_amount_cents).to eq(0)
+        expect(result.invoice.prepaid_credit_amount_cents).to eq(12)
 
-          expect(Credits::AppliedPrepaidCreditsService).to have_received(:call).with(
-            invoice: result.invoice,
-            max_wallet_decrease_attempts: 1
-          )
-        end
+        expect(Credits::AppliedPrepaidCreditsService).to have_received(:call).with(
+          invoice: result.invoice,
+          max_wallet_decrease_attempts: 1
+        )
       end
+    end
 
-      context "when the wallet has a zero balance" do
-        before { create(:wallet, customer:, balance_cents: 0) }
+    context "when invoice total amount cents is zero" do
+      before { create(:credit_note, customer:) }
 
-        it "does not create a credit note" do
-          allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
+      it "does not call apply prepaid credits service" do
+        allow(Credits::AppliedPrepaidCreditsService).to receive(:call).and_call_original
 
-          result = invoice_service.call
+        result = invoice_service.call
 
-          expect(Credits::AppliedPrepaidCreditsService).not_to have_received(:call)
+        expect(result).to be_success
+        expect(result.invoice.total_amount_cents).to eq(0)
+        expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
 
-          expect(result).to be_success
-          expect(result.invoice.total_amount_cents).to eq(12)
-        end
+        expect(Credits::AppliedPrepaidCreditsService).not_to have_received(:call)
       end
     end
 

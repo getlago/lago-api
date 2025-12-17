@@ -98,6 +98,17 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
+    context "when customer has no applicable wallets" do
+      let(:wallets) { [] }
+
+      it "returns early with empty values and no side effects" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(0)
+        expect(result.wallet_transactions).to eq([])
+        expect(invoice.prepaid_credit_amount_cents).to eq(0)
+      end
+    end
+
     it "creates wallet transaction" do
       expect(result).to be_success
       expect(result.wallet_transactions).to be_present

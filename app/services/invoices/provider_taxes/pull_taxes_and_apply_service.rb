@@ -84,10 +84,6 @@ module Invoices
           invoice.billing_entity.email_settings.include?("invoice.finalized")
       end
 
-      def wallets
-        @wallets ||= customer.wallets.active.with_positive_balance
-      end
-
       def should_create_credit_note_credit?
         return false if invoice.draft?
 
@@ -97,9 +93,8 @@ module Invoices
       def should_create_applied_prepaid_credit?
         return false if invoice.draft?
         return false if invoice.one_off?
-        return false unless invoice.total_amount_cents&.positive?
 
-        wallets.any?
+        invoice.total_amount_cents&.positive?
       end
 
       def create_credit_note_credit

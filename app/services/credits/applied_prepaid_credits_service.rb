@@ -20,6 +20,8 @@ module Credits
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
 
+      return result if wallets.empty?
+
       ActiveRecord::Base.transaction do
         ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
         wallets.each do |wallet|

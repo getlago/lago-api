@@ -345,9 +345,6 @@ module Invoices
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
-    def wallets
-      @wallets ||= customer.wallets.active.with_positive_balance
-    end
 
     def should_create_credit_note_credit?
       !not_in_finalizing_process?
@@ -362,9 +359,8 @@ module Invoices
 
     def should_create_applied_prepaid_credit?
       return false if not_in_finalizing_process?
-      return false unless invoice.total_amount_cents&.positive?
 
-      wallets.any?
+      invoice.total_amount_cents&.positive?
     end
 
     def create_credit_note_credit

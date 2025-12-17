@@ -146,9 +146,6 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      wallets = subscription.customer.wallets.active.with_positive_balance
-
-      return if wallets.none?
       return unless invoice.total_amount_cents.positive?
 
       prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:)
