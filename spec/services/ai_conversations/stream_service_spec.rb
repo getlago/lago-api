@@ -11,13 +11,15 @@ RSpec.describe AiConversations::StreamService do
   let(:mcp_client_mock) { instance_double(LagoMcpClient::Client) }
   let(:mistral_agent_mock) { instance_double(LagoMcpClient::Mistral::Agent) }
 
+  let(:config_mock) { instance_double(LagoMcpClient::Config) }
+
   before do
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("LAGO_MCP_SERVER_URL").and_return("http://localhost:3001")
 
     allow(LagoMcpClient::Client).to receive(:new).and_return(mcp_client_mock)
     allow(LagoMcpClient::Mistral::Agent).to receive(:new).and_return(mistral_agent_mock)
-    allow(LagoMcpClient::Config).to receive(:new).and_return(instance_double(LagoMcpClient::Config))
+    allow(LagoMcpClient::Config).to receive(:new).and_return(config_mock)
 
     allow(mcp_client_mock).to receive(:setup!)
     allow(mistral_agent_mock).to receive(:setup!)
@@ -98,6 +100,18 @@ RSpec.describe AiConversations::StreamService do
         expect(LagoMcpClient::Mistral::Agent).to have_received(:new).with(
           client: mcp_client_mock,
           conversation_id: ai_conversation.mistral_conversation_id
+        )
+      end
+
+      it "passes member permissions to the MCP client config" do
+        allow(mistral_agent_mock).to receive(:chat)
+
+        service.call
+
+        expect(LagoMcpClient::Config).to have_received(:new).with(
+          mcp_server_url: "http://localhost:3001",
+          lago_api_key: ai_conversation.organization.api_keys.with_most_permissions.value,
+          member_permissions: ai_conversation.membership.permissions_hash
         )
       end
 

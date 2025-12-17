@@ -81,7 +81,15 @@ module AiConversations
     end
 
     def mcp_client_config
-      @mcp_client_config ||= LagoMcpClient::Config.new(mcp_server_url:, lago_api_key:)
+      @mcp_client_config ||= LagoMcpClient::Config.new(
+        mcp_server_url:,
+        lago_api_key:,
+        member_permissions:
+      )
+    end
+
+    def member_permissions
+      @member_permissions ||= ai_conversation.membership.permissions_hash
     end
 
     def mistral_agent

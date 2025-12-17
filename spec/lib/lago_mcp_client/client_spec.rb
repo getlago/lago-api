@@ -12,6 +12,7 @@ RSpec.describe LagoMcpClient::Client do
       timeout: 5,
       lago_api_key: "secret",
       lago_api_url: "https://api.lago.dev",
+      member_permissions: nil,
       headers: {"X-Custom" => "foo"}
     )
   end
@@ -370,6 +371,45 @@ RSpec.describe LagoMcpClient::Client do
         anything,
         hash_including("X-Custom" => "foo")
       ).at_least(:once)
+    end
+
+    context "when member_permissions are provided" do
+      let(:member_permissions) { {"customers" => {"view" => true, "create" => false}} }
+      let(:config) do
+        instance_double(
+          LagoMcpClient::Config,
+          mcp_server_url: "https://mcp.example.com",
+          timeout: 5,
+          lago_api_key: "secret",
+          lago_api_url: "https://api.lago.dev",
+          member_permissions:,
+          headers: {}
+        )
+      end
+
+      it "includes base64 encoded member permissions header" do
+        client.setup!
+        client.list_tools
+
+        expected_header = Base64.strict_encode64(member_permissions.to_json)
+
+        expect(http_client).to have_received(:post_with_response).with(
+          anything,
+          hash_including("X-LAGO-MEMBER-PERMISSIONS" => expected_header)
+        ).at_least(:once)
+      end
+    end
+
+    context "when member_permissions are nil" do
+      it "does not include member permissions header" do
+        client.setup!
+        client.list_tools
+
+        expect(http_client).to have_received(:post_with_response).with(
+          anything,
+          hash_not_including("X-LAGO-MEMBER-PERMISSIONS")
+        ).at_least(:once)
+      end
     end
   end
 end

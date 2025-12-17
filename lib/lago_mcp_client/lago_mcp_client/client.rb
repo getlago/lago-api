@@ -72,8 +72,15 @@ module LagoMcpClient
         "Accept" => "application/json,text/event-stream",
         "Mcp-Session-Id" => session_id,
         "X-LAGO-API-KEY" => config.lago_api_key,
-        "X-LAGO-API-URL" => config.lago_api_url
+        "X-LAGO-API-URL" => config.lago_api_url,
+        "X-LAGO-MEMBER-PERMISSIONS" => encoded_member_permissions
       }.compact.merge(config.headers)
+    end
+
+    def encoded_member_permissions
+      return nil if config.member_permissions.blank?
+
+      Base64.strict_encode64(config.member_permissions.to_json)
     end
 
     def start_sse_client
