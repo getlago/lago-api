@@ -226,6 +226,57 @@ class Fee < ApplicationRecord
   def has_charge_filters?
     charge&.filters&.any?
   end
+
+  def date_boundaries
+    if charge? && !pay_in_advance? && charge.pay_in_advance?
+      timestamp = invoice.invoice_subscription(subscription.id).timestamp
+      interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
+
+      return {
+        from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
+        to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
+      }
+    end
+
+    if charge? && !charge.invoiceable? && pay_in_advance?
+      timestamp = Time.parse(properties["timestamp"]).to_i
+      interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
+
+      return {
+        from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
+        to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
+      }
+    end
+
+    {
+      from_date:,
+      to_date:
+    }
+  end
+
+  private
+
+  def from_date
+    property = if charge?
+      "charges_from_datetime"
+    elsif fixed_charge?
+      "fixed_charges_from_datetime"
+    else
+      "from_datetime"
+    end
+    properties[property]&.to_datetime&.iso8601
+  end
+
+  def to_date
+    property = if charge?
+      "charges_to_datetime"
+    elsif fixed_charge?
+      "fixed_charges_to_datetime"
+    else
+      "to_datetime"
+    end
+    properties[property]&.to_datetime&.iso8601
+  end
 end
 
 # == Schema Information
