@@ -143,6 +143,23 @@ RSpec.describe ApiKey do
     end
   end
 
+  describe ".with_most_permissions" do
+    subject { organization.api_keys.with_most_permissions }
+
+    let(:organization) { create(:organization) }
+
+    let(:limited_permissions_key) do
+      create(:api_key, organization:, permissions: {add_on: ["read"], customer: ["read"]})
+    end
+
+    before { limited_permissions_key }
+
+    it "returns the API key with the most permissions" do
+      expect(subject).not_to eq(limited_permissions_key)
+      expect(subject.permissions).to eq(described_class.default_permissions)
+    end
+  end
+
   describe "#permit?" do
     subject { api_key.permit?(resource, mode) }
 

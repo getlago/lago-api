@@ -28,6 +28,7 @@ class ApiKey < ApplicationRecord
 
   scope :active, -> { where("expires_at IS NULL OR expires_at > ?", Time.current) }
   scope :non_expiring, -> { where(expires_at: nil) }
+  scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
 
   def permit?(resource, mode)
     return true unless organization.api_permissions_enabled?
