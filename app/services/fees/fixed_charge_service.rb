@@ -57,15 +57,7 @@ module Fees
       # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
       # Base fee creation flow handles case when only name has been adjusted
       if !current_usage && invoice&.draft? && adjusted_fee && !adjusted_fee.adjusted_display_name?
-        adjustment_result = Fees::InitFromAdjustedFixedChargeFeeService.call(
-          adjusted_fee:,
-          boundaries:,
-          properties: fixed_charge.properties
-        )
-        return result.fail_with_error!(adjustment_result.error) unless adjustment_result.success?
-
-        result.fee = adjustment_result.fee
-        return
+        return init_adjusted_fee
       end
 
       amount_result = apply_aggregation_and_charge_model
@@ -121,6 +113,18 @@ module Fees
       end
 
       result.fee = new_fee
+    end
+
+    def init_adjusted_fee
+      adjustment_result = Fees::InitFromAdjustedFixedChargeFeeService.call(
+        adjusted_fee:,
+        boundaries:,
+        properties: fixed_charge.properties
+      )
+      return result.fail_with_error!(adjustment_result.error) unless adjustment_result.success?
+
+      result.fee = adjustment_result.fee
+      result
     end
 
     def apply_aggregation_and_charge_model
