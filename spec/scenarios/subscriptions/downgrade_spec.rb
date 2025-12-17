@@ -179,7 +179,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           expect(invoice.fees.fixed_charge.count).to eq(2)
           expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([1000 * 13 / 31, 1500 * 13 / 31])
 
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
 
@@ -205,7 +205,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           end
           new_subscription = subscription.reload.next_subscription
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
             # we still need to charge subscription fee for the old plan
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(2).to(3)
           end
@@ -248,7 +248,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           expect(invoice.fees.fixed_charge.count).to eq(2)
           expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([1000, 1500])
 
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
 
@@ -274,7 +274,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           end
           new_subscription = subscription.reload.next_subscription
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
             # we still need to charge subscription fee for the old plan
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(2).to(3)
           end
@@ -317,7 +317,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           subscription = customer.subscriptions.first
           expect(subscription).to be_active
           expect(subscription.invoices.count).to eq(0)
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(0).to(1)
           end
 
@@ -343,7 +343,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           end
           new_subscription = subscription.reload.next_subscription
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
             # Now we do charge the old plan pay in arrears
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
@@ -366,7 +366,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           expect(new_subscription.reload).to be_active
           expect(new_subscription.invoices.count).to eq(0)
 
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 10, 1, 0, 0)) do
             # finally charge the new plan (we're in arrears charges); prev invoice is counted for  both subscriptions
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(0).to(1)
           end
@@ -397,7 +397,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           expect(subscription).to be_active
           expect(subscription.invoices.count).to eq(0)
 
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(0).to(1)
           end
 
@@ -423,7 +423,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           end
           new_subscription = subscription.reload.next_subscription
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
             # Now we do charge the old plan
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
@@ -444,7 +444,7 @@ describe "Subscription Downgrade Scenario", transaction: false do
           expect(new_subscription.reload).to be_active
           expect(new_subscription.invoices.count).to eq(0)
 
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 10, 1, 0, 0)) do
             # finally charge the new plan (we're in arrears charges); prev invoice is counted for  both subscriptions
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(0).to(1)
           end

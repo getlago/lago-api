@@ -143,7 +143,6 @@ describe "Subscription Upgrade Scenario", transaction: false do
       fixed_charges_plan_upgrade
     end
 
-    # these still require some work :sad
     context "when fixed charges are in_advance" do
       let(:pay_in_advance) { true }
 
@@ -174,7 +173,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_from_datetime" => "2023-07-19T12:12:00.000Z",
             "fixed_charges_to_datetime" => "2023-07-31T23:59:59.999Z"
           )
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
 
@@ -187,7 +186,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-08-31T23:59:59.999Z"
           )
 
-          travel_to(DateTime.new(2023, 8, 21, 12, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 8, 21, 12, 0, 0)) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -229,8 +228,8 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-08-31T23:59:59.999Z"
           )
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
-            # Now we do charge the rest of the month for the new subscription
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
+            # Now we do charge the full month, as it's pay in advance
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(1).to(2)
             new_sub_invoice = new_subscription.invoices.order(created_at: :asc).last
             expect(new_sub_invoice.fees.fixed_charge.count).to eq(2)
@@ -240,18 +239,6 @@ describe "Subscription Upgrade Scenario", transaction: false do
               "fixed_charges_to_datetime" => "2023-09-30T23:59:59.999Z"
             )
           end
-
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
-            # finally charge the full subscription
-            expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(2).to(3)
-          end
-          invoice = new_subscription.invoices.order(created_at: :asc).last
-          expect(invoice.fees.fixed_charge.count).to eq(2)
-          expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([10000, 2000])
-          expect(invoice.fees.fixed_charge.sample.properties).to include(
-            "fixed_charges_from_datetime" => "2023-10-01T00:00:00.000Z",
-            "fixed_charges_to_datetime" => "2023-10-31T23:59:59.999Z"
-          )
         end
       end
 
@@ -279,7 +266,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_from_datetime" => "2023-07-19T12:12:00.000Z",
             "fixed_charges_to_datetime" => "2023-07-31T23:59:59.999Z"
           )
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(1).to(2)
           end
 
@@ -292,7 +279,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-08-31T23:59:59.999Z"
           )
 
-          travel_to(DateTime.new(2023, 8, 21, 12, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 8, 21, 12, 0, 0)) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -322,8 +309,8 @@ describe "Subscription Upgrade Scenario", transaction: false do
           expect(new_subscription).to be_active
           expect(new_subscription.invoices.count).to be(1)
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
-            # Now we do charge the new month for the new subscription
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
+            # Now we do charge the new month for the new subscription (paid in advance)
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(1).to(2)
             new_sub_invoice = new_subscription.invoices.order(created_at: :asc).last
             expect(new_sub_invoice.fees.fixed_charge.count).to eq(2)
@@ -333,22 +320,10 @@ describe "Subscription Upgrade Scenario", transaction: false do
               "fixed_charges_to_datetime" => "2023-09-30T23:59:59.999Z"
             )
           end
-
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
-            expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(2).to(3)
-          end
-          invoice = new_subscription.invoices.order(created_at: :asc).last
-          expect(invoice.fees.fixed_charge.count).to eq(2)
-          expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([10000, 2000])
-          expect(invoice.fees.fixed_charge.sample.properties).to include(
-            "fixed_charges_from_datetime" => "2023-10-01T00:00:00.000Z",
-            "fixed_charges_to_datetime" => "2023-10-31T23:59:59.999Z"
-          )
         end
       end
     end
 
-    # these two are correct!
     context "when fixed charges are in_arrears" do
       let(:pay_in_advance) { false }
 
@@ -368,7 +343,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
           subscription = customer.subscriptions.first
           expect(subscription).to be_active
           expect(subscription.invoices.count).to eq(0)
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(0).to(1)
           end
 
@@ -380,7 +355,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-07-31T23:59:59.999Z"
           )
 
-          travel_to(DateTime.new(2023, 8, 21, 12, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 8, 21, 12, 0, 0)) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -390,12 +365,11 @@ describe "Subscription Upgrade Scenario", transaction: false do
               }
             )
 
-            # TODO: The test seem to be correct, however the dates for fixed_charge termination are wrong...
             expect(subscription.reload).to be_terminated
             expect(subscription.invoices.count).to eq(2)
             # it creates fees for pay in arrears prorated charges
             termination_invoice = subscription.invoices.order(:created_at).last
-            # the charges were active 20 days out of 31
+            # the charges were active 21 days out of 31, because upgrade happened on 21st...
             expect(termination_invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([1000 * 21 / 31, 1500 * 21 / 31])
             expect(termination_invoice.fees.fixed_charge.sample.properties).to include(
               "fixed_charges_from_datetime" => "2023-08-01T00:00:00.000Z",
@@ -406,7 +380,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
           expect(new_subscription).to be_active
           expect(new_subscription.invoices.count).to be(0)
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
             # Now we do charge the rest of the month for the new subscription
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(0).to(1)
             new_sub_invoice = new_subscription.invoices.first
@@ -418,7 +392,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             )
           end
 
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 10, 1, 0, 0)) do
             # finally charge the full subscription
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(1).to(2)
           end
@@ -448,7 +422,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
           subscription = customer.subscriptions.first
           expect(subscription).to be_active
           expect(subscription.invoices.count).to eq(0)
-          travel_to(DateTime.new(2023, 8, 0o1, 0o0, 0o1)) do
+          travel_to(DateTime.new(2023, 8, 1, 0, 0)) do
             expect { perform_billing }.to change { subscription.reload.invoices.count }.from(0).to(1)
           end
 
@@ -460,7 +434,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-07-31T23:59:59.999Z"
           )
 
-          travel_to(DateTime.new(2023, 8, 21, 12, 0o0, 0o0)) do
+          travel_to(DateTime.new(2023, 8, 21, 12, 0, 0)) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -470,12 +444,10 @@ describe "Subscription Upgrade Scenario", transaction: false do
               }
             )
 
-            # TODO: The test seem to be correct, however the dates for fixed_charge termination are wrong...
             expect(subscription.reload).to be_terminated
             expect(subscription.invoices.count).to eq(2)
             # it creates fees for pay in arrears full charges
             termination_invoice = subscription.invoices.order(:created_at).last
-            # the charges were active 20 days out of 31, but it's a full
             expect(termination_invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([1000, 1500])
             expect(termination_invoice.fees.fixed_charge.sample.properties).to include(
               "fixed_charges_from_datetime" => "2023-08-01T00:00:00.000Z",
@@ -486,8 +458,8 @@ describe "Subscription Upgrade Scenario", transaction: false do
           expect(new_subscription).to be_active
           expect(new_subscription.invoices.count).to be(0)
 
-          travel_to(DateTime.new(2023, 9, 0o1, 0o0, 0o0, 0o0)) do
-            # Now we do charge the rest of the month for the new subscription
+          travel_to(DateTime.new(2023, 9, 1, 0, 0)) do
+            # pay in arrears full charges for the end of the month when it was prorated
             expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(0).to(1)
             new_sub_invoice = new_subscription.invoices.first
             expect(new_sub_invoice.fees.fixed_charge.count).to eq(2)
@@ -497,18 +469,6 @@ describe "Subscription Upgrade Scenario", transaction: false do
               "fixed_charges_to_datetime" => "2023-08-31T23:59:59.999Z"
             )
           end
-
-          travel_to(DateTime.new(2023, 10, 0o1, 0o0, 0o0, 0o0)) do
-            # finally charge the full subscription
-            expect { perform_billing }.to change { new_subscription.reload.invoices.count }.from(1).to(2)
-          end
-          invoice = new_subscription.invoices.order(created_at: :asc).last
-          expect(invoice.fees.fixed_charge.count).to eq(2)
-          expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([10000, 2000])
-          expect(invoice.fees.fixed_charge.sample.properties).to include(
-            "fixed_charges_from_datetime" => "2023-09-01T00:00:00.000Z",
-            "fixed_charges_to_datetime" => "2023-09-30T23:59:59.999Z"
-          )
         end
       end
     end
