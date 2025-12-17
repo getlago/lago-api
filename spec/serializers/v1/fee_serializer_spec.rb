@@ -162,6 +162,22 @@ RSpec.describe ::V1::FeeSerializer do
     end
   end
 
+  context "when fee is fixed_charge" do
+    let(:fee) do
+      create(:fixed_charge_fee, properties: {
+        fixed_charges_from_datetime: Time.current,
+        fixed_charges_to_datetime: Time.current
+      })
+    end
+
+    it "serializes the fees with dates boundaries" do
+      freeze_time do
+        expect(result["fee"]["from_date"]).to eq(Time.current.to_datetime.iso8601)
+        expect(result["fee"]["to_date"]).to eq(Time.current.to_datetime.iso8601)
+      end
+    end
+  end
+
   context "when fee is add_on" do
     let(:fee) { create(:add_on_fee) }
 

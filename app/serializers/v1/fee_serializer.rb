@@ -55,7 +55,7 @@ module V1
         pricing_unit_details:
       }
 
-      payload.merge!(date_boundaries) if model.charge? || model.subscription? || model.add_on?
+      payload.merge!(model.date_boundaries) if model.charge? || model.subscription? || model.add_on? || model.fixed_charge?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
       payload.merge!(applied_taxes) if include?(:applied_taxes)
 
@@ -63,44 +63,6 @@ module V1
     end
 
     private
-
-    def date_boundaries
-      if model.charge? && !model.pay_in_advance? && model.charge.pay_in_advance?
-        subscription = model.subscription
-        timestamp = model.invoice.invoice_subscription(subscription.id).timestamp
-        interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
-
-        return {
-          from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
-          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
-        }
-      end
-
-      if model.charge? && !model.charge.invoiceable? && model.pay_in_advance?
-        timestamp = Time.parse(model.properties["timestamp"]).to_i
-        interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, model.subscription)
-
-        return {
-          from_date: interval[:charges_from_date]&.to_datetime&.iso8601,
-          to_date: interval[:charges_to_date]&.to_datetime&.end_of_day&.iso8601
-        }
-      end
-
-      {
-        from_date:,
-        to_date:
-      }
-    end
-
-    def from_date
-      property = model.charge? ? "charges_from_datetime" : "from_datetime"
-      model.properties[property]&.to_datetime&.iso8601
-    end
-
-    def to_date
-      property = model.charge? ? "charges_to_datetime" : "to_datetime"
-      model.properties[property]&.to_datetime&.iso8601
-    end
 
     def pay_in_advance_charge_attributes
       return {} unless model.pay_in_advance?
