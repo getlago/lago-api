@@ -19,7 +19,13 @@ module Subscriptions
 
       ActiveRecord::Base.transaction do
         if subscription.pending?
+          previous = subscription.previous_subscription
           subscription.mark_as_canceled!
+
+          if previous
+            SendWebhookJob.perform_after_commit("subscription.updated", previous)
+            Utils::ActivityLog.produce_after_commit(previous, "subscription.updated")
+          end
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
           update_on_termination_actions!
