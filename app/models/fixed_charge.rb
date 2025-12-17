@@ -44,7 +44,9 @@ class FixedCharge < ApplicationRecord
   validate :validate_properties
 
   def equal_properties?(fixed_charge)
-    charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
+    charge_model == fixed_charge.charge_model &&
+      properties == fixed_charge.properties &&
+      units == fixed_charge.units
   end
 
   def included_in_next_subscription?(subscription)
