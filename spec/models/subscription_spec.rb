@@ -812,12 +812,26 @@ RSpec.describe Subscription do
       it "returns subscription usage thresholds" do
         expect(subscription.applicable_usage_thresholds).to contain_exactly(subscription_threshold)
       end
+
+      context "when progressive billing is disabled for subscription" do
+        it "returns empty array" do
+          subscription.progressive_billing_disabled = true
+          expect(subscription.applicable_usage_thresholds).to be_empty
+        end
+      end
     end
 
     context "when subscription has no usage thresholds" do
       it "returns plan usage thresholds" do
         plan_threshold
         expect(subscription.applicable_usage_thresholds).to contain_exactly(plan_threshold)
+      end
+
+      context "when progressive billing is disabled for subscription" do
+        it "returns empty array" do
+          subscription.progressive_billing_disabled = true
+          expect(subscription.applicable_usage_thresholds).to be_empty
+        end
       end
 
       context "when plan is a child with no thresholds" do
