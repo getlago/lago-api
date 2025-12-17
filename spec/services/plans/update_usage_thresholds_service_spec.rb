@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Plans::UpdateUsageThresholdsService do
-  subject { described_class.call(plan:, usage_thresholds_params:) }
+  subject { described_class.call(plan:, usage_thresholds_params:, partial: false) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
 
   before do
-    allow(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to receive(:perform_later).with(plan)
+    allow(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to receive(:perform_after_commit).with(plan)
   end
 
   context "when usage_thresholds_params is empty" do
@@ -26,7 +26,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
 
       it "does not update the plan" do
         expect(subject.plan.usage_thresholds).to be_empty
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_later).with(plan)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit).with(plan)
       end
     end
   end
@@ -44,7 +44,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
     context "when progressive_billing is not enabled" do
       it "does not update the plan" do
         expect(subject.plan.usage_thresholds).to be_empty
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_later).with(plan)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit).with(plan)
       end
     end
 
@@ -56,7 +56,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
         expect(thresholds.size).to eq(1)
         expect(thresholds.first.threshold_display_name).to eq("Threshold 1")
         expect(thresholds.first.amount_cents).to eq(1000)
-        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_later).with(plan)
+        expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_after_commit).with(plan)
       end
     end
   end
@@ -89,7 +89,7 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
 
         it "clears the thresholds" do
           expect(subject.plan.usage_thresholds).to be_empty
-          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_later).with(plan)
+          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).not_to have_received(:perform_after_commit).with(plan)
         end
       end
     end
@@ -113,12 +113,20 @@ RSpec.describe Plans::UpdateUsageThresholdsService do
       context "when progressive_billing is enabled" do
         around { |test| premium_integration!(organization, "progressive_billing", &test) }
 
-        it "does update the plan" do
-          thresholds = subject.plan.usage_thresholds
-          expect(thresholds.size).to eq(1)
-          expect(thresholds.first.threshold_display_name).to eq("Other threshold")
-          expect(thresholds.first.amount_cents).to eq(1000)
-          expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_later).with(plan)
+        context "when plan is a child plan" do
+          it "does not update the plan" do
+            expect { subject }.not_to change(plan, :usage_thresholds)
+          end
+        end
+
+        context "when plan is a parent plan" do
+          it "does update the plan" do
+            thresholds = subject.plan.usage_thresholds
+            expect(thresholds.size).to eq(1)
+            expect(thresholds.first.threshold_display_name).to eq("Other threshold")
+            expect(thresholds.first.amount_cents).to eq(1000)
+            expect(LifetimeUsages::FlagRefreshFromPlanUpdateJob).to have_received(:perform_after_commit).with(plan)
+          end
         end
       end
     end

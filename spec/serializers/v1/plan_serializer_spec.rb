@@ -189,4 +189,33 @@ RSpec.describe ::V1::PlanSerializer do
       })
     end
   end
+
+  context "when plan has a parent plan" do
+    let(:organization) { create(:organization) }
+    let(:plan) { create(:plan, parent: create(:plan, organization:), organization:) }
+    let!(:parent_usage_threshold) { create(:usage_threshold, plan: plan.parent, amount_cents: 9876, recurring: true) }
+
+    context "when child plan has usage_thresholds" do
+      it "serialize the usage_thresholds of the child plan" do
+        result = JSON.parse(serializer.to_json)
+        expect(result["plan"]["usage_thresholds"].sole).to include({
+          "lago_id" => plan.usage_thresholds.first.id,
+          "amount_cents" => 100,
+          "recurring" => false
+        })
+      end
+    end
+
+    context "when child plan has no usage_thresholds" do
+      it "serialize the usage_thresholds of the parent plan" do
+        usage_threshold.discard!
+        result = JSON.parse(serializer.to_json)
+        expect(result["plan"]["usage_thresholds"].sole).to include({
+          "lago_id" => parent_usage_threshold.id,
+          "amount_cents" => 9876,
+          "recurring" => true
+        })
+      end
+    end
+  end
 end

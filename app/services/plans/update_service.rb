@@ -54,8 +54,9 @@ module Plans
         process_charges(plan, params[:charges]) if params[:charges]
         process_fixed_charges(plan, params[:fixed_charges]) if params[:fixed_charges]
 
-        if params.key?(:usage_thresholds) && License.premium?
-          Plans::UpdateUsageThresholdsService.call(plan:, usage_thresholds_params: params[:usage_thresholds])
+        if params.key?(:usage_thresholds) && License.premium? && plan.parent?
+          # NOTE: the threshold update is NOT partial until we introduce a PATCH endpoint on plan
+          Plans::UpdateUsageThresholdsService.call!(plan:, usage_thresholds_params: params[:usage_thresholds], partial: false)
         end
 
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?

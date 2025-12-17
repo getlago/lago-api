@@ -44,6 +44,7 @@ module Plans
           FixedCharges::OverrideService.call(fixed_charge:, params: fixed_charge_params, subscription:)
         end
 
+        # TODO: usage_thresholds remove block here
         if params[:usage_thresholds].present? &&
             License.premium? &&
             plan.organization.progressive_billing_enabled?

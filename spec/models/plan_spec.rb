@@ -46,6 +46,39 @@ RSpec.describe Plan do
     end
   end
 
+  describe "#parent? and #child?" do
+    it do
+      expect(plan).to be_parent
+      expect(plan).not_to be_child
+
+      plan.parent_id = SecureRandom.uuid
+      expect(plan).not_to be_parent
+      expect(plan).to be_child
+    end
+  end
+
+  describe "#applicable_usage_thresholds" do
+    let(:plan) { create(:plan) }
+
+    it "returns usage thresholds if present on the plan" do
+      threshold = create(:usage_threshold, plan: plan)
+      expect(plan.applicable_usage_thresholds).to contain_exactly(threshold)
+    end
+
+    it "returns parent usage thresholds if plan has none" do
+      parent = create(:plan)
+      threshold = create(:usage_threshold, plan: parent)
+      plan.update!(parent: parent)
+
+      expect(plan.applicable_usage_thresholds).to contain_exactly(threshold)
+    end
+
+    it "returns an empty array if neither plan nor parent has thresholds" do
+      plan.update!(parent: create(:plan))
+      expect(plan.applicable_usage_thresholds).to eq([])
+    end
+  end
+
   describe "#has_trial?" do
     it "returns true when trial_period" do
       expect(plan).to have_trial

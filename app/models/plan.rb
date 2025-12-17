@@ -58,6 +58,19 @@ class Plan < ApplicationRecord
     %w[name code]
   end
 
+  def parent?
+    parent_id.nil?
+  end
+
+  def child?
+    !parent?
+  end
+
+  def applicable_usage_thresholds
+    # NOTE: The child plan should not have usage_thresholds anymore but this is needed until the data is fully migrated
+    usage_thresholds.presence || parent&.usage_thresholds.presence || []
+  end
+
   def pay_in_arrears?
     !pay_in_advance
   end
