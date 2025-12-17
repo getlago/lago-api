@@ -86,11 +86,11 @@ RSpec.describe Api::V1::SubscriptionsController do
           overrides: {}
         })
         expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
-          hash_including(
+          {
             amount_cents: override_amount_cents,
             threshold_display_name: override_display_name,
             recurring: false
-          )
+          }
         )
         expect(json[:subscription][:plan]).to include(
           amount_cents: 100,
@@ -1252,7 +1252,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
     it "returns a subscription" do
       create(:entitlement, :subscription, organization:, subscription:)
-      create(:usage_threshold, :for_subscription, subscription:)
+      usage_threshold = create(:usage_threshold, :for_subscription, subscription:)
       subject
 
       expect(response).to have_http_status(:success)
@@ -1268,11 +1268,11 @@ RSpec.describe Api::V1::SubscriptionsController do
         overrides: {}
       })
       expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
-        hash_including(
+        {
           amount_cents: 100,
-          threshold_display_name: String,
+          threshold_display_name: usage_threshold.threshold_display_name,
           recurring: false
-        )
+        }
       )
     end
 
