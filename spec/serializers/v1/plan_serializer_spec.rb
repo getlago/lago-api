@@ -189,4 +189,25 @@ RSpec.describe ::V1::PlanSerializer do
       })
     end
   end
+
+  context "when applicable_usage_thresholds is included" do
+    subject(:serializer) do
+      described_class.new(
+        plan,
+        root_name: "plan",
+        includes: %i[applicable_usage_thresholds]
+      )
+    end
+
+    it "serializes applicable_usage_thresholds without lago_id, created_at, and updated_at" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["plan"]["applicable_usage_thresholds"].count).to eq(1)
+      expect(result["plan"]["applicable_usage_thresholds"].first).to eq(
+        "threshold_display_name" => usage_threshold.threshold_display_name,
+        "amount_cents" => usage_threshold.amount_cents,
+        "recurring" => usage_threshold.recurring?
+      )
+    end
+  end
 end

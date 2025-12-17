@@ -46,6 +46,29 @@ RSpec.describe Plan do
     end
   end
 
+  describe "#applicable_usage_thresholds" do
+    let(:plan) { create(:plan) }
+
+    it "returns usage thresholds plan is a parent" do
+      threshold = create(:usage_threshold, plan: plan)
+      expect(plan.applicable_usage_thresholds).to contain_exactly(threshold)
+    end
+
+    it "returns parent usage thresholds if plan is a child" do
+      create(:usage_threshold, plan: plan, amount_cents: 99_00)
+      parent = create(:plan)
+      threshold = create(:usage_threshold, plan: parent)
+      plan.update!(parent: parent)
+
+      expect(plan.applicable_usage_thresholds).to contain_exactly(threshold)
+    end
+
+    it "returns an empty array if neither plan nor parent has thresholds" do
+      plan.update!(parent: create(:plan))
+      expect(plan.applicable_usage_thresholds).to eq([])
+    end
+  end
+
   describe "#has_trial?" do
     it "returns true when trial_period" do
       expect(plan).to have_trial

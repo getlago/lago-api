@@ -28,6 +28,7 @@ module V1
       payload.merge!(fixed_charges) if include?(:fixed_charges)
       payload.merge!(entitlements) if include?(:entitlements)
       payload.merge!(usage_thresholds) if include?(:usage_thresholds)
+      payload.merge!(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
 
@@ -67,6 +68,14 @@ module V1
         model.usage_thresholds,
         ::V1::UsageThresholdSerializer,
         collection_name: "usage_thresholds"
+      ).serialize
+    end
+
+    def applicable_usage_thresholds
+      ::CollectionSerializer.new(
+        model.applicable_usage_thresholds,
+        ::V1::ApplicableUsageThresholdSerializer,
+        collection_name: "applicable_usage_thresholds"
       ).serialize
     end
 
