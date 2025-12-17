@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::SubscriptionsController do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, premium_integrations: %w[progressive_billing]) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
   let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
@@ -54,7 +54,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
     include_examples "requires API permission", "subscription", "write"
 
-    it "returns a success", :aggregate_failures do
+    it "returns a success" do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
       create(:entitlement, organization:, plan:)
 
@@ -85,6 +85,13 @@ RSpec.describe Api::V1::SubscriptionsController do
           privileges: [],
           overrides: {}
         })
+        expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+          hash_including(
+            amount_cents: override_amount_cents,
+            threshold_display_name: override_display_name,
+            recurring: false
+          )
+        )
         expect(json[:subscription][:plan]).to include(
           amount_cents: 100,
           name: "overridden name",
@@ -209,7 +216,7 @@ RSpec.describe Api::V1::SubscriptionsController do
       end
     end
 
-    context "without external_customer_id", :aggregate_failures do
+    context "without external_customer_id" do
       let(:params) do
         {
           plan_code:,
@@ -772,7 +779,14 @@ RSpec.describe Api::V1::SubscriptionsController do
         parent_id: plan.id,
         pending_deletion: false,
         taxes: [],
-        usage_thresholds: []
+        usage_thresholds: [{
+          lago_id: Regex::UUID,
+          threshold_display_name: override_display_name,
+          amount_cents: override_amount_cents,
+          recurring: usage_threshold.recurring,
+          created_at: usage_threshold.created_at.iso8601,
+          updated_at: usage_threshold.updated_at.iso8601
+        }]
       )
       minimum_commitment = plan_json[:minimum_commitment]
       expect(minimum_commitment).to match(
@@ -1194,7 +1208,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
       before { active_subscription }
 
-      it "updates the active subscription", :aggregate_failures do
+      it "updates the active subscription" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -1238,6 +1252,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
     it "returns a subscription" do
       create(:entitlement, :subscription, organization:, subscription:)
+      create(:usage_threshold, :for_subscription, subscription:)
       subject
 
       expect(response).to have_http_status(:success)
@@ -1246,12 +1261,19 @@ RSpec.describe Api::V1::SubscriptionsController do
         external_id: subscription.external_id
       )
       expect(json[:subscription][:entitlements]).to contain_exactly({
-        code: "feature_1",
+        code: start_with("feature_"),
         name: "Feature Name",
         description: "Feature Description",
         privileges: [],
         overrides: {}
       })
+      expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+        hash_including(
+          amount_cents: 100,
+          threshold_display_name: String,
+          recurring: false
+        )
+      )
     end
 
     context "when subscription does not exist" do
