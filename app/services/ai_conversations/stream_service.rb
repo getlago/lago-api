@@ -92,7 +92,7 @@ module AiConversations
     end
 
     def lago_api_key
-      @lago_api_key ||= ai_conversation.organization.api_keys.first.value
+      @lago_api_key ||= ai_conversation.organization.api_keys.with_most_permissions.value
     end
   end
 end
