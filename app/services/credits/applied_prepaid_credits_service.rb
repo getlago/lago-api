@@ -4,9 +4,8 @@ module Credits
   class AppliedPrepaidCreditsService < BaseService
     DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS = 6
 
-    def initialize(invoice:, wallets:, max_wallet_decrease_attempts: DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS)
+    def initialize(invoice:, max_wallet_decrease_attempts: DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS)
       @invoice = invoice
-      @wallets = wallets
       @max_wallet_decrease_attempts = max_wallet_decrease_attempts
       raise ArgumentError, "max_wallet_decrease_attempts must be between 1 and #{DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS} (inclusive)" if max_wallet_decrease_attempts < 1 || max_wallet_decrease_attempts > DEFAULT_MAX_WALLET_DECREASE_ATTEMPTS
 
@@ -20,6 +19,8 @@ module Credits
 
       result.prepaid_credit_amount_cents ||= 0
       result.wallet_transactions ||= []
+
+      return result if wallets.empty?
 
       ActiveRecord::Base.transaction do
         ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
@@ -79,7 +80,7 @@ module Credits
 
     private
 
-    attr_accessor :invoice, :wallets, :max_wallet_decrease_attempts
+    attr_accessor :invoice, :max_wallet_decrease_attempts
 
     delegate :customer, to: :invoice
 
@@ -149,6 +150,10 @@ module Credits
       unrestricted_wallet = targets.empty? && types.empty?
 
       target_match || type_match || unrestricted_wallet
+    end
+
+    def wallets
+      @wallets ||= customer.wallets.active.includes(:wallet_targets).with_positive_balance.in_application_order
     end
   end
 end

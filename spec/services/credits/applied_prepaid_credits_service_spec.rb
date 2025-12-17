@@ -62,34 +62,51 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
   end
 
   describe "#initialize" do
+    subject { described_class.new(invoice:, max_wallet_decrease_attempts:) }
+
     context "when max_wallet_decrease_attempts is less than 1" do
+      let(:max_wallet_decrease_attempts) { 0 }
+
       it "raises an error" do
-        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 0) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+        expect { subject }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
       end
     end
 
     context "when max_wallet_decrease_attempts is greater than 6" do
+      let(:max_wallet_decrease_attempts) { 7 }
+
       it "raises an error" do
-        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 7) }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
+        expect { subject }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
       end
     end
 
     context "when max_wallet_decrease_attempts is between 1 and 6" do
+      let(:max_wallet_decrease_attempts) { rand(1..6) }
+
       it "does not raise an error" do
-        expect { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 6) }.not_to raise_error
+        expect { subject }.not_to raise_error
       end
     end
   end
 
   describe "#call" do
-    subject(:result) do
-      described_class.call(invoice:, wallets: customer.wallets.active.in_application_order)
-    end
+    subject(:result) { described_class.call(invoice:) }
 
     it "calculates prepaid credit" do
       expect(result).to be_success
       expect(result.prepaid_credit_amount_cents).to eq(100)
       expect(invoice.prepaid_credit_amount_cents).to eq(100)
+    end
+
+    context "when customer has no applicable wallets" do
+      let(:wallets) { [] }
+
+      it "returns early with empty values and no side effects" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(0)
+        expect(result.wallet_transactions).to eq([])
+        expect(invoice.prepaid_credit_amount_cents).to eq(0)
+      end
     end
 
     it "creates wallet transaction" do
@@ -434,7 +451,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       context "when max attempts is specified" do
-        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, wallets:, max_wallet_decrease_attempts: 3) }
+        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, max_wallet_decrease_attempts: 3) }
 
         context "when decrease attempts failed" do
           before do
