@@ -43,7 +43,7 @@ RSpec.describe Fees::FixedChargeService do
   end
 
   let(:invoice) do
-    create(:invoice, customer:, organization:)
+    create(:invoice, :draft, customer:, organization:)
   end
   let(:fixed_charge) do
     create(
@@ -571,6 +571,212 @@ RSpec.describe Fees::FixedChargeService do
           "fixed_charges_to_datetime" => Time.parse("2022-03-31T23:59:59.999Z"),
           "fixed_charges_duration" => 31
         )
+      end
+    end
+
+    context "when there is an adjusted fee for fixed charge" do
+      let(:event) do
+        create(
+          :fixed_charge_event,
+          organization:,
+          subscription:,
+          fixed_charge:,
+          timestamp: boundaries.charges_to_datetime - 2.days,
+          units: 10
+        )
+      end
+
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          fixed_charge:,
+          properties:,
+          fee_type: :fixed_charge,
+          adjusted_units: true,
+          adjusted_amount: false,
+          units: 5
+        )
+      end
+
+      let(:properties) do
+        {
+          fixed_charges_from_datetime: boundaries.fixed_charges_from_datetime,
+          fixed_charges_to_datetime: boundaries.fixed_charges_to_datetime
+        }
+      end
+
+      before do
+        event
+        adjusted_fee
+      end
+
+      context "with adjusted units" do
+        it "creates a fee with adjusted units" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 155_000,
+            precise_amount_cents: 155_000,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 5,
+            unit_amount_cents: 31_000,
+            precise_unit_amount: 310,
+            payment_status: "pending"
+          )
+        end
+
+        it "updates the adjusted fee with the new fee_id" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(adjusted_fee.reload.fee_id).to eq(result.fee.id)
+        end
+      end
+
+      context "with adjusted amount" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            fixed_charge:,
+            properties:,
+            fee_type: :fixed_charge,
+            adjusted_units: false,
+            adjusted_amount: true,
+            units: 10,
+            unit_amount_cents: 500,
+            unit_precise_amount_cents: 500
+          )
+        end
+
+        it "creates a fee with adjusted amount" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 5_000,
+            precise_amount_cents: 5_000.0,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 10,
+            unit_amount_cents: 500,
+            precise_unit_amount: 5,
+            payment_status: "pending"
+          )
+        end
+      end
+
+      context "with adjusted display name only" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            fixed_charge:,
+            properties:,
+            fee_type: :fixed_charge,
+            adjusted_units: false,
+            adjusted_amount: false,
+            invoice_display_name: "Custom Fixed Charge Name",
+            units: 5
+          )
+        end
+
+        it "creates a fee with adjusted display name" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 30_000,
+            precise_amount_cents: 30_000.002,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 10,
+            unit_amount_cents: 3_000,
+            precise_unit_amount: 30.000002,
+            invoice_display_name: "Custom Fixed Charge Name",
+            payment_status: "pending"
+          )
+        end
+      end
+
+      context "with adjusted units set to zero" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            fixed_charge:,
+            properties:,
+            fee_type: :fixed_charge,
+            adjusted_units: true,
+            adjusted_amount: false,
+            units: 0
+          )
+        end
+
+        it "creates and persists a fee with zero units" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 0,
+            precise_amount_cents: 0.0,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 0,
+            payment_status: "pending"
+          )
+          # Fee should be persisted despite zero units
+          expect(result.fee.persisted?).to be(true)
+        end
+
+        it "updates the adjusted fee with the new fee_id" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(adjusted_fee.reload.fee_id).to eq(result.fee.id)
+        end
+      end
+
+      context "with invoice NOT in draft status" do
+        before { invoice.finalized! }
+
+        it "creates a fee without using adjusted fee attributes" do
+          result = fixed_charge_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(
+            id: String,
+            invoice:,
+            fixed_charge:,
+            amount_cents: 30_000,
+            precise_amount_cents: 30_000.002,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 10,
+            unit_amount_cents: 3_000,
+            precise_unit_amount: 30.000002,
+            payment_status: "pending"
+          )
+        end
       end
     end
   end

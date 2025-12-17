@@ -31,7 +31,15 @@ module Fees
       init_fee
       return result if current_usage
 
-      result.fee.save! if context != :invoice_preview && should_persist_fee?
+      if context != :invoice_preview && should_persist_fee?
+        result.fee.save!
+
+        # Update adjusted fee with the new fee_id
+        if invoice&.draft? && adjusted_fee
+          adjusted_fee.update!(fee: result.fee)
+        end
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -46,6 +54,12 @@ module Fees
     end
 
     def init_fee
+      # NOTE: Build fee for case when there is adjusted fee and units or amount has been adjusted.
+      # Base fee creation flow handles case when only name has been adjusted
+      if !current_usage && invoice&.draft? && adjusted_fee && !adjusted_fee.adjusted_display_name?
+        return init_adjusted_fee
+      end
+
       amount_result = apply_aggregation_and_charge_model
 
       # Prevent trying to create a fee with negative units or amount.
@@ -89,12 +103,28 @@ module Fees
         pay_in_advance: fixed_charge.pay_in_advance?
       )
 
+      if adjusted_fee&.adjusted_display_name?
+        new_fee.invoice_display_name = adjusted_fee.invoice_display_name
+      end
+
       if apply_taxes
         taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
         taxes_result.raise_if_error!
       end
 
       result.fee = new_fee
+    end
+
+    def init_adjusted_fee
+      adjustment_result = Fees::InitFromAdjustedFixedChargeFeeService.call(
+        adjusted_fee:,
+        boundaries:,
+        properties: fixed_charge.properties
+      )
+      return result.fail_with_error!(adjustment_result.error) unless adjustment_result.success?
+
+      result.fee = adjustment_result.fee
+      result
     end
 
     def apply_aggregation_and_charge_model
@@ -138,8 +168,19 @@ module Fees
       return true if context == :recurring
       return true if organization.zero_amount_fees_enabled?
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
+      return true if adjusted_fee.present?
 
       false
+    end
+
+    def adjusted_fee
+      return @adjusted_fee if defined?(@adjusted_fee)
+
+      @adjusted_fee = AdjustedFee
+        .where(invoice:, subscription:, fixed_charge:, fee_type: :fixed_charge)
+        .where("(properties->>'fixed_charges_from_datetime')::timestamptz = ?", boundaries[:fixed_charges_from_datetime]&.iso8601(3))
+        .where("(properties->>'fixed_charges_to_datetime')::timestamptz = ?", boundaries[:fixed_charges_to_datetime]&.iso8601(3))
+        .first
     end
 
     # Note: boundaries are taken from the subscription and they do not consider some fixed_charges being pay_in_advance
