@@ -345,7 +345,6 @@ module Invoices
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
 
-
     def should_create_credit_note_credit?
       !not_in_finalizing_process?
     end
