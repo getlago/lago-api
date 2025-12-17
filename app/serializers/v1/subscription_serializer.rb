@@ -72,7 +72,7 @@ module V1
     def applicable_usage_thresholds
       ::CollectionSerializer.new(
         model.applicable_usage_thresholds,
-        ::V1::UsageThresholdSerializer,
+        ::V1::ApplicableUsageThresholdSerializer,
         collection_name: "applicable_usage_thresholds"
       ).serialize
     end
