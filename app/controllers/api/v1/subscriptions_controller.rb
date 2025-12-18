@@ -164,6 +164,7 @@ module Api
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
             ],
+            usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
       end
@@ -179,8 +180,17 @@ module Api
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
           ],
+          usage_thresholds: usage_thresholds_params,
           plan_overrides:
         )
+      end
+
+      def usage_thresholds_params
+        [
+          :amount_cents,
+          :threshold_display_name,
+          :recurring
+        ]
       end
 
       def plan_overrides
