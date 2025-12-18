@@ -6,11 +6,16 @@ RSpec.describe Api::V1::SubscriptionsController do
   let(:organization) { create(:organization, premium_integrations: %w[progressive_billing]) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
+  let(:plan_usage_threshold) { create(:usage_threshold, plan:, amount_cents: 10_00, threshold_display_name: "Init") }
   let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
   let(:commitment_amount_cents) { 1234 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
   around { |test| lago_premium!(&test) }
+
+  before do
+    plan_usage_threshold
+  end
 
   describe "POST /api/v1/subscriptions" do
     subject { post_with_token(organization, "/api/v1/subscriptions", body) }
@@ -97,6 +102,12 @@ RSpec.describe Api::V1::SubscriptionsController do
           name: "overridden name",
           description: "desc"
         )
+        expect(json[:subscription][:plan][:usage_thresholds].count).to eq 1
+        expect(json[:subscription][:plan][:applicable_usage_thresholds]).to contain_exactly({
+          amount_cents: plan_usage_threshold.amount_cents,
+          threshold_display_name: plan_usage_threshold.threshold_display_name,
+          recurring: false
+        })
         expect(json[:subscription][:plan][:minimum_commitment]).to include(
           invoice_display_name: commitment_invoice_display_name,
           amount_cents: commitment_amount_cents
@@ -106,25 +117,6 @@ RSpec.describe Api::V1::SubscriptionsController do
 
     it "doesn't create a new customer" do
       expect { subject }.not_to change(Customer, :count)
-    end
-
-    context "when progressive billing premium integration is present" do
-      around { |test| lago_premium!(&test) }
-
-      before do
-        organization.update!(premium_integrations: ["progressive_billing"])
-      end
-
-      it "creates subscription with an overriden plan with usage thresholds" do
-        subject
-
-        expect(response).to have_http_status(:ok)
-
-        expect(json[:subscription][:plan][:usage_thresholds].first).to include(
-          amount_cents: override_amount_cents,
-          threshold_display_name: override_display_name
-        )
-      end
     end
 
     context "with external_customer_id, external_id and name as integer" do
@@ -737,7 +729,7 @@ RSpec.describe Api::V1::SubscriptionsController do
     let(:tax) { create(:tax, organization:) }
     let(:override_amount_cents) { 999 }
     let(:override_display_name) { "Overriden Threshold 1" }
-    let(:usage_threshold) { create(:usage_threshold, plan:) }
+    let(:usage_threshold) { create(:usage_threshold, plan:, created_at: 1.day.ago) }
 
     before do
       subscription
@@ -756,8 +748,14 @@ RSpec.describe Api::V1::SubscriptionsController do
       expect(subscription).to include(
         lago_id: Regex::UUID,
         name: "subscription name new",
-        subscription_at: "2022-09-05T12:23:12Z"
+        subscription_at: "2022-09-05T12:23:12Z",
+        applicable_usage_thresholds: [{
+          threshold_display_name: override_display_name,
+          amount_cents: override_amount_cents,
+          recurring: usage_threshold.recurring
+        }]
       )
+
       plan_json = subscription[:plan]
       expect(plan_json).to include(
         lago_id: Regex::UUID,
@@ -784,10 +782,20 @@ RSpec.describe Api::V1::SubscriptionsController do
           threshold_display_name: override_display_name,
           amount_cents: override_amount_cents,
           recurring: usage_threshold.recurring,
-          created_at: usage_threshold.created_at.iso8601,
-          updated_at: usage_threshold.updated_at.iso8601
+          # NOTE: Notice that even if usage_threshold.id is passed, a new threshold is created
+          created_at: Regex::ISO8601_DATETIME,
+          updated_at: Regex::ISO8601_DATETIME
         }]
       )
+      expect(plan_json[:applicable_usage_thresholds]).to contain_exactly({
+        threshold_display_name: usage_threshold.threshold_display_name,
+        amount_cents: usage_threshold.amount_cents,
+        recurring: false
+      }, {
+        threshold_display_name: plan_usage_threshold.threshold_display_name,
+        amount_cents: plan_usage_threshold.amount_cents,
+        recurring: false
+      })
       minimum_commitment = plan_json[:minimum_commitment]
       expect(minimum_commitment).to match(
         {
@@ -1271,6 +1279,13 @@ RSpec.describe Api::V1::SubscriptionsController do
         {
           amount_cents: 100,
           threshold_display_name: usage_threshold.threshold_display_name,
+          recurring: false
+        }
+      )
+      expect(json[:subscription][:plan][:applicable_usage_thresholds]).to contain_exactly(
+        {
+          amount_cents: 10_00,
+          threshold_display_name: "Init",
           recurring: false
         }
       )

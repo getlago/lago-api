@@ -166,7 +166,9 @@ RSpec.describe Api::V1::PlansController do
 
               expect(response).to have_http_status(:success)
               expect(json[:plan][:usage_thresholds].first[:lago_id]).to be_present
-              expect(json[:plan][:usage_thresholds].first[:amount_cents]).to eq(json[:plan][:amount_cents])
+              expect(json[:plan][:usage_thresholds].first[:amount_cents]).to eq(100)
+              expect(json[:plan][:applicable_usage_thresholds].first[:amount_cents]).to eq(100)
+              expect(json[:plan][:applicable_usage_thresholds].first[:threshold_display_name]).to eq("Threshold 1")
             end
           end
 
@@ -384,7 +386,6 @@ RSpec.describe Api::V1::PlansController do
       [
         {
           amount_cents: 7_000,
-          amount_currency: "EUR",
           threshold_display_name: "Updated threshold"
         }
       ]
@@ -514,8 +515,13 @@ RSpec.describe Api::V1::PlansController do
         expect(charge[:invoiceable]).to be false
         expect(charge[:regroup_paid_fees]).to eq "invoice"
 
-        usage_threshold = json[:plan][:usage_thresholds].first
+        usage_threshold = json[:plan][:usage_thresholds].sole
         expect(usage_threshold[:amount_cents]).to eq(7_000)
+        expect(usage_threshold[:threshold_display_name]).to eq("Updated threshold")
+
+        applicable_usage_threshold = json[:plan][:applicable_usage_thresholds].sole
+        expect(applicable_usage_threshold[:amount_cents]).to eq(7_000)
+        expect(applicable_usage_threshold[:threshold_display_name]).to eq("Updated threshold")
       end
     end
 
@@ -918,6 +924,7 @@ RSpec.describe Api::V1::PlansController do
         expect(json[:plan][:lago_id]).to eq(plan.id)
         expect(json[:plan][:code]).to eq(plan.code)
         expect(json[:plan][:usage_thresholds].count).to eq(2)
+        expect(json[:plan][:applicable_usage_thresholds].count).to eq(2)
       end
     end
 
@@ -976,6 +983,7 @@ RSpec.describe Api::V1::PlansController do
         expect(response).to have_http_status(:success)
         expect(json[:plan][:lago_id]).to eq(plan.id)
         expect(json[:plan][:code]).to eq(plan.code)
+        expect(json[:plan][:applicable_usage_thresholds]).to be_empty
         expect(json[:plan][:entitlements]).to be_empty
       end
     end
@@ -1008,6 +1016,7 @@ RSpec.describe Api::V1::PlansController do
       expect(json[:plans].first[:lago_id]).to eq(plan.id)
       expect(json[:plans].first[:code]).to eq(plan.code)
       expect(json[:plans].first[:usage_thresholds].count).to eq(1)
+      expect(json[:plans].first[:applicable_usage_thresholds].count).to eq(1)
     end
 
     context "when pending for deletion plan exists" do

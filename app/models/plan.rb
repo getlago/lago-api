@@ -58,6 +58,10 @@ class Plan < ApplicationRecord
     %w[name code]
   end
 
+  def applicable_usage_thresholds
+    (parent || self).usage_thresholds
+  end
+
   def pay_in_arrears?
     !pay_in_advance
   end

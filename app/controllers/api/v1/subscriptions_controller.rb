@@ -124,7 +124,7 @@ module Api
         )
 
         if result.success?
-          render_subscription(result.subscription)
+          render_subscription(result.subscription, includes: %i[plan applicable_usage_thresholds])
         else
           render_error_response(result)
         end

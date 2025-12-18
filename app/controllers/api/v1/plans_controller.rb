@@ -91,7 +91,7 @@ module Api
               ::V1::PlanSerializer,
               collection_name: "plans",
               meta: pagination_metadata(result.plans),
-              includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
+              includes: %i[charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements]
             )
           )
         else
@@ -178,7 +178,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment entitlements]
+            includes: %i[charges fixed_charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements]
           )
         )
       end
