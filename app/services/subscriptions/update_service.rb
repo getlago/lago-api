@@ -50,33 +50,37 @@ module Subscriptions
         subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
       end
 
-      if params.key?(:plan_overrides)
-        plan_result = handle_plan_override
-        return plan_result unless plan_result.success?
+      ActiveRecord::Base.transaction do
+        if params.key?(:plan_overrides)
+          plan_result = handle_plan_override
+          plan_result.raise_if_error!
 
-        subscription.plan = plan_result.plan
-      end
-
-      if subscription.starting_in_the_future? && params.key?(:subscription_at)
-        subscription.subscription_at = params[:subscription_at]
-
-        process_subscription_at_change(subscription)
-      else
-        subscription.save!
-
-        SendWebhookJob.perform_after_commit("subscription.updated", subscription)
-
-        if subscription.should_sync_hubspot_subscription?
-          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
+          subscription.plan = plan_result.plan
         end
-      end
 
-      InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
+        if subscription.starting_in_the_future? && params.key?(:subscription_at)
+          subscription.subscription_at = params[:subscription_at]
+
+          process_subscription_at_change(subscription)
+        else
+          subscription.save!
+
+          SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+
+          if subscription.should_sync_hubspot_subscription?
+            Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
+          end
+        end
+
+        InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
+      end
 
       result.subscription = subscription
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

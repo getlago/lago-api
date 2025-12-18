@@ -472,6 +472,26 @@ RSpec.describe Subscriptions::UpdateService do
           expect(subscription.plan.parent_id).to eq(plan.id)
         end
 
+        context "when plan_overrides params are invalid" do
+          let(:params) do
+            {
+              name: "NEW NAME",
+              plan_overrides: {
+                amount_currency: "MAGIC-COIN"
+              }
+            }
+          end
+
+          it "returns an error" do
+            result = update_service.call
+
+            expect(subscription.reload.name).not_to eq "NEW NAME"
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:amount_currency]).to eq(["value_is_invalid"])
+          end
+        end
+
         context "with overriden plan" do
           let(:parent_plan) { create(:plan, organization: membership.organization) }
           let(:plan) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
