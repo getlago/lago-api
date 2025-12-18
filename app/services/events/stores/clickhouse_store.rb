@@ -8,7 +8,7 @@ module Events
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = if deduplication
+          scope = if deduplicate
             dedcuplicated_subquery = deduplicated_events_sql(
               from_datetime: (from_datetime if force_from || use_from_boundary),
               to_datetime: (applicable_to_datetime if applicable_to_datetime),
@@ -34,7 +34,7 @@ module Events
       end
 
       def events_sql(**args)
-        return events_sql_with_deduplication(**args) if deduplication
+        return events_sql_with_deduplication(**args) if deduplicate
 
         events_sql_without_deduplication(**args)
       end
@@ -117,8 +117,8 @@ module Events
             arel_table[:code],
             arel_table[:organization_id],
             arel_table[:external_subscription_id],
-            arel_table[:transaction_id].as("transaction_id"),
-            arel_table[:timestamp].as("timestamp")
+            arel_table[:transaction_id],
+            arel_table[:timestamp]
           ] + arel_columns
         )
       end
