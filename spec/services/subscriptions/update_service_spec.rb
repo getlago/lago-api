@@ -24,6 +24,54 @@ RSpec.describe Subscriptions::UpdateService do
       subscription
     end
 
+    context "when both usage_thresholds and plan_overrides.usage_thresholds are present" do
+      let(:params) do
+        {
+          name: "new name",
+          ending_at:,
+          subscription_at:,
+          usage_thresholds: [{threshold_display_name: "Threshold 1"}],
+          plan_overrides: {
+            usage_thresholds: [{threshold_display_name: "Override Threshold"}]
+          }
+        }
+      end
+
+      it "returns a validation error", :premium do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:"plan_overrides.usage_thresholds"]).to eq(["incompatible_params"])
+        expect(result.error.messages[:usage_thresholds]).to eq(["incompatible_params"])
+      end
+    end
+
+    context "when usage_thresholds are present", :premium do
+      let(:usage_thresholds) { [amount_cents: 99_00] }
+
+      before do
+        subscription.organization.update!(premium_integrations: ["progressive_billing"])
+        allow(Subscriptions::UpdateUsageThresholdsService).to receive(:call!).and_return(BaseResult.new)
+      end
+
+      context "when under subscription" do
+        let(:params) { {usage_thresholds:} }
+
+        it "calls UpdateUsageThresholdsService" do
+          update_service.call
+          expect(Subscriptions::UpdateUsageThresholdsService).to have_received(:call!).with(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
+        end
+      end
+
+      context "when under plan_overrides" do
+        it "ignores UpdateUsageThresholdsService" do
+          update_service.call
+          expect(Subscriptions::UpdateUsageThresholdsService).not_to have_received(:call!)
+        end
+      end
+    end
+
     context "when subscription is already active" do
       it "updates the subscription and ignores subscription_at" do
         result = update_service.call

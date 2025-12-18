@@ -34,6 +34,14 @@ module Subscriptions
 
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
+      # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
+      if params[:usage_thresholds].present? && params.dig(:plan_overrides, :usage_thresholds).present?
+        return result.validation_failure!(errors: {
+          "plan_overrides.usage_thresholds": ["incompatible_params"],
+          usage_thresholds: ["incompatible_params"]
+        })
+      end
+
       subscription.name = params[:name] if params.key?(:name)
       subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
 
@@ -56,6 +64,10 @@ module Subscriptions
           plan_result.raise_if_error!
 
           subscription.plan = plan_result.plan
+        end
+
+        if params.key?(:usage_thresholds)
+          UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
         end
 
         if subscription.starting_in_the_future? && params.key?(:subscription_at)

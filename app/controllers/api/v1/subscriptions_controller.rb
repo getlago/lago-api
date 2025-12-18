@@ -168,6 +168,7 @@ module Api
               :payment_method_type,
               :payment_method_id
             ],
+            usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
       end
@@ -187,8 +188,17 @@ module Api
             :payment_method_type,
             :payment_method_id
           ],
+          usage_thresholds: usage_thresholds_params,
           plan_overrides:
         )
+      end
+
+      def usage_thresholds_params
+        [
+          :amount_cents,
+          :threshold_display_name,
+          :recurring
+        ]
       end
 
       def plan_overrides
