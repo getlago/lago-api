@@ -37,7 +37,8 @@ RSpec.describe ::V1::SubscriptionSerializer do
             "trial_ended_at" => nil,
             "started_at" => "2024-04-23T10:02:03.000Z",
             "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
-            "current_billing_period_ending_at" => "2024-05-31T23:59:59Z"
+            "current_billing_period_ending_at" => "2024-05-31T23:59:59Z",
+            "progressive_billing_disabled" => false
           )
           expect(result["subscription"]["payment_method"]["payment_method_id"]).to eq(nil)
           expect(result["subscription"]["payment_method"]["payment_method_type"]).to eq("provider")
