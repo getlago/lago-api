@@ -3,7 +3,7 @@
 module Events
   module Stores
     class BaseStore
-      def initialize(subscription:, boundaries:, code: nil, filters: {})
+      def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplication: false)
         @code = code
         @subscription = subscription
         @boundaries = boundaries
@@ -21,6 +21,7 @@ module Events
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
+        @deduplication = deduplication
       end
 
       def grouped_by_values?
@@ -143,7 +144,7 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
+      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplication
 
       delegate :customer, to: :subscription
 
