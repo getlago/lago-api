@@ -26,6 +26,14 @@ module Subscriptions
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
       return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
+      # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
+      if params[:usage_thresholds].present? && plan_overrides[:usage_thresholds].present?
+        return result.validation_failure!(errors: {
+          "plan_overrides.usage_thresholds": ["incompatible_params"],
+          usage_thresholds: ["incompatible_params"]
+        })
+      end
+
       plan.amount_currency = plan_overrides[:amount_currency] if plan_overrides[:amount_currency]
       plan.amount_cents = plan_overrides[:amount_cents] if plan_overrides[:amount_cents]
 
@@ -44,6 +52,10 @@ module Subscriptions
             .first
 
           subscription = handle_subscription
+
+          if params[:usage_thresholds].present?
+            UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
+          end
           InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
 
           result.subscription = subscription
