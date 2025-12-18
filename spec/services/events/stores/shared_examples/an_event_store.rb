@@ -12,7 +12,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         matching_filters:,
         ignored_filters:
       },
-      deduplication: with_event_duplication
+      deduplicate: with_event_duplication
     )
   end
 
