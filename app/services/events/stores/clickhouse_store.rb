@@ -85,8 +85,6 @@ module Events
       # This is done by grouping events on transaction_id and timestamp (unicity key) and
       # by using `argMax` function, to keep only the most recent event of each group
       def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
-        arel_table = ::Clickhouse::EventsEnriched.arel_table
-
         query = arel_table.where(
           arel_table[:external_subscription_id].eq(subscription.external_id)
           .and(arel_table[:organization_id].eq(subscription.organization.id)
@@ -96,12 +94,14 @@ module Events
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
         query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
 
+        columns = deduplicated_columns.dup
+
         # Grouping and filtering is made based on the properties
         if grouped_by.present? || grouped_by_values? || matching_filters.present? || ignored_filters.present?
-          deduplicated_columns << "properties"
+          columns << "properties"
         end
 
-        arel_columns = deduplicated_columns.uniq.map do
+        arel_columns = columns.uniq.map do
           Arel::Nodes::NamedFunction.new("argMax", [arel_table[it.to_sym], arel_table[:enriched_at]]).as(it)
         end
 
@@ -154,7 +154,6 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_sql(
-            ordered: true,
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value]
           )
@@ -198,7 +197,6 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_sql(
-            ordered: true,
             select: groups + [arel_table[:transaction_id]],
             deduplicated_columns: %w[value properties]
           )
@@ -353,7 +351,6 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_sql(
-            ordered: true,
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value properties]
           )
@@ -385,7 +382,6 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_sql(
-            ordered: true,
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value properties]
           )
