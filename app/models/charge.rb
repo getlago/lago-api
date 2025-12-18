@@ -5,6 +5,7 @@ class Charge < ApplicationRecord
   include Currencies
   include ChargePropertiesValidation
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization

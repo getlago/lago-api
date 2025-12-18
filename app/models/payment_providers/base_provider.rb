@@ -6,6 +6,7 @@ module PaymentProviders
     include SecretsStorable
     include SettingsStorable
     include Discard::Model
+
     self.discard_column = :deleted_at
     default_scope -> { kept }
 

@@ -3,6 +3,7 @@
 class QuantifiedEvent < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   RECURRING_TOTAL_UNITS = "total_aggregated_units"

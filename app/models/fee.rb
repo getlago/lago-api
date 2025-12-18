@@ -3,6 +3,7 @@
 class Fee < ApplicationRecord
   include Currencies
   include Discard::Model
+
   self.discard_column = :deleted_at
   self.ignored_columns += %w[duplicated_in_advance]
   default_scope -> { kept }

@@ -11,7 +11,7 @@ private_key_string =
   end
 
 if private_key_string.blank?
-  abort("Error: Private key is blank, you must provide a private key to start the application. Exiting...")
+  abort("Error: Private key is blank, you must provide a private key to start the application. Exiting...") # rubocop:disable Rails/Exit
 end
 
 RsaPrivateKey = OpenSSL::PKey::RSA.new(private_key_string)

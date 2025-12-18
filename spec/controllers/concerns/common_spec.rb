@@ -6,6 +6,7 @@ RSpec.describe Common do
   let(:klass) do
     Class.new do
       include Common
+
       public :valid_date? # expose for testing
     end
   end

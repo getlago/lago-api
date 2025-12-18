@@ -10,7 +10,7 @@ namespace :tests do
     all_metrics = find_or_create_metrics(organization)
 
     delete_charge_parents = args[:delete_charge_parents] == "true"
-    create_plans = args[:num_plans].to_i || 10
+    create_plans = (args[:num_plans] || 10).to_i
     create_plans.times do |i|
       args = build_plan_args(organization, all_metrics, i)
       result = Plans::CreateService.call(args)

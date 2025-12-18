@@ -51,7 +51,7 @@ module Entitlement
 
     private
 
-    attr_reader :organization, :subscription, :entitlements_params, :partial
+    attr_reader :subscription, :entitlements_params, :partial
     delegate :organization, to: :subscription
     alias_method :partial?, :partial
 

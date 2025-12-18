@@ -393,16 +393,12 @@ module Events
         grouped_by.map { sanitized_property_name(it) }
       end
 
-      def connection
-        Event.connection
-      end
+      delegate :connection, to: :Event
 
       delegate :select_all, to: :connection
       delegate :select_one, to: :connection
 
-      def sanitize_sql_for_conditions(sql)
-        ActiveRecord::Base.sanitize_sql_for_conditions(sql)
-      end
+      delegate :sanitize_sql_for_conditions, to: :"ActiveRecord::Base"
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
       #       Dates are in customer timezone to make sure the duration is good

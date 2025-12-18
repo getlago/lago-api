@@ -5,6 +5,7 @@ module Api
     module Customers
       class AppliedCouponsController < BaseController
         include AppliedCouponIndex
+
         def index
           applied_coupon_index(external_customer_id: customer.external_id)
         end

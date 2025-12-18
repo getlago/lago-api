@@ -4,6 +4,7 @@ class Plan < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization

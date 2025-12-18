@@ -5,6 +5,7 @@ class AddOn < ApplicationRecord
   include Currencies
   include IntegrationMappable
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization

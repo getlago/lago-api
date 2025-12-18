@@ -39,7 +39,7 @@ module Events
 
     attr_reader :event
 
-    delegate :billable_metric, :properties, :charges, to: :event
+    delegate :billable_metric, :properties, to: :event
 
     def charges
       return Charge.none unless event.subscription

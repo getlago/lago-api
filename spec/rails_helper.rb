@@ -8,8 +8,10 @@ def pp(*args)
   end
 end
 
+# rubocop:disable Rails/Output
 def pps(*args)
   pp "--------------------------------------"
   pp(*args)
   pp "--------------------------------------"
 end
+# rubocop:enable Rails/Output
