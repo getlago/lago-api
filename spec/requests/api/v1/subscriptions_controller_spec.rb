@@ -1258,7 +1258,8 @@ RSpec.describe Api::V1::SubscriptionsController do
       expect(response).to have_http_status(:success)
       expect(json[:subscription]).to include(
         lago_id: subscription.id,
-        external_id: subscription.external_id
+        external_id: subscription.external_id,
+        usage_thresholds: []
       )
       expect(json[:subscription][:entitlements]).to contain_exactly({
         code: start_with("feature_"),

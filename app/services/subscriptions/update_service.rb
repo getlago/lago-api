@@ -73,6 +73,14 @@ module Subscriptions
 
       InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:)
 
+      if usage_thresholds_params
+        UpdateUsageThresholdsService.call(
+          subscription:,
+          usage_thresholds_params:,
+          partial: true
+        )
+      end
+
       result.subscription = subscription
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -132,6 +140,10 @@ module Subscriptions
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: subscription.organization_id)
+    end
+
+    def usage_thresholds_params
+      params[:usage_thresholds] || params.dig(:plan_overrides, :usage_thresholds)
     end
   end
 end

@@ -44,6 +44,13 @@ module Subscriptions
             .first
 
           subscription = handle_subscription
+          if usage_thresholds.present?
+            UpdateUsageThresholdsService.call(
+              subscription:,
+              usage_thresholds_params: usage_thresholds,
+              partial: false
+            )
+          end
           InvoiceCustomSections::AttachToResourceService.call(resource: subscription, params:) unless downgrade?
 
           result.subscription = subscription
@@ -250,6 +257,10 @@ module Subscriptions
 
     def override_plan(plan)
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def usage_thresholds
+      params[:usage_thresholds] || params.dig(:plan_overrides, :usage_thresholds) || []
     end
 
     def payment_method
