@@ -11,7 +11,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         grouped_by_values:,
         matching_filters:,
         ignored_filters:
-      }
+      },
+      deduplication: with_event_duplication
     )
   end
 
@@ -103,10 +104,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     create_european_event(country: "united kingdom", city: "cambridge", value: -5, timestamp: subscription_started_at + 10.days)
   end
 
-  before do
-    events
-    force_deduplication if respond_to?(:force_deduplication)
-  end
+  before { events }
 
   describe "#events" do
     it "returns the events" do
@@ -461,7 +459,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
             matching_filters:,
             ignored_filters:,
             event:
-          }
+          },
+          deduplication: with_event_duplication
         )
       end
 

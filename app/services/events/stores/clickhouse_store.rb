@@ -8,14 +8,24 @@ module Events
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          dedcuplicated_subquery = deduplicated_events_sql(
-            from_datetime: (from_datetime if force_from || use_from_boundary),
-            to_datetime: (applicable_to_datetime if applicable_to_datetime),
-            deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
-          ).to_sql
+          scope = if deduplication
+            dedcuplicated_subquery = deduplicated_events_sql(
+              from_datetime: (from_datetime if force_from || use_from_boundary),
+              to_datetime: (applicable_to_datetime if applicable_to_datetime),
+              deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
+            ).to_sql
 
-          scope = ::Clickhouse::EventsEnriched
-            .from("(#{dedcuplicated_subquery}) AS events_enriched")
+            ::Clickhouse::EventsEnriched.from("(#{dedcuplicated_subquery}) AS events_enriched")
+          else
+            query = ::Clickhouse::EventsEnriched
+              .where(external_subscription_id: subscription.external_id)
+              .where(organization_id: subscription.organization_id)
+              .where(code:)
+
+            query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
+            query = query.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
+            query
+          end
 
           scope = scope.order(timestamp: :asc) if ordered
           scope = apply_grouped_by_values(scope) if grouped_by_values?
@@ -23,7 +33,31 @@ module Events
         end
       end
 
-      def events_sql(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_sql(**args)
+        return events_sql_with_deduplication(**args) if deduplication
+
+        events_sql_without_deduplication(**args)
+      end
+
+      def events_sql_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+        query = arel_table.where(
+          arel_table[:external_subscription_id].eq(subscription.external_id)
+          .and(arel_table[:organization_id].eq(subscription.organization.id)
+          .and(arel_table[:code].eq(code)))
+        )
+
+        query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
+
+        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
+        query = query.where(arel_table[:timestamp].lteq(applicable_to_datetime)) if applicable_to_datetime
+
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+        query = arel_filters_scope(query)
+
+        {"events" => query.project(select).to_sql}
+      end
+
+      def events_sql_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         base_sql = deduplicated_events_sql(
           from_datetime: (from_datetime if force_from || use_from_boundary),
           to_datetime: (applicable_to_datetime if applicable_to_datetime),
