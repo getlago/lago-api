@@ -297,7 +297,7 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("#{arel_table.name}.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")
@@ -320,7 +320,7 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("#{arel_table.name}.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")
