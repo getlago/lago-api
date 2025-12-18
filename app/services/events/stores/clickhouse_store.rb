@@ -7,17 +7,17 @@ module Events
       DECIMAL_DATE_SCALE = 10
 
       def events(force_from: false, ordered: false)
-        # TODO: deduplicate with argmax
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = ::Clickhouse::EventsEnriched.where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization.id)
-            .where(code:)
+          dedcuplicated_subquery = deduplicated_events_sql(
+            from_datetime: (from_datetime if force_from || use_from_boundary),
+            to_datetime: (applicable_to_datetime if applicable_to_datetime),
+            deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
+          ).to_sql
+
+          scope = ::Clickhouse::EventsEnriched
+            .from("(#{dedcuplicated_subquery}) AS events_enriched")
 
           scope = scope.order(timestamp: :asc) if ordered
-
-          scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-          scope = scope.where("events_enriched.timestamp <= ?", applicable_to_datetime) if applicable_to_datetime
-
           scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
         end
@@ -30,7 +30,7 @@ module Events
           deduplicated_columns:
         ).to_sql
 
-        dedup_cte = Arel::Table.new("deduplicated_events")
+        dedup_cte = Arel::Table.new("events_enriched") # Override table name with deduplicated events
         query = dedup_cte
 
         if ordered
@@ -45,7 +45,7 @@ module Events
         query = arel_filters_scope(query)
 
         {
-          "deduplicated_events" => base_sql,
+          "events_enriched" => base_sql,
           "events" => query.project(select).to_sql
         }
       end
@@ -77,9 +77,18 @@ module Events
           Arel::Nodes::NamedFunction.new("argMax", [arel_table[it.to_sym], arel_table[:enriched_at]]).as(it)
         end
 
-        query = query.group(arel_table[:timestamp], arel_table[:transaction_id])
+        query = query.group(
+          arel_table[:code],
+          arel_table[:organization_id],
+          arel_table[:external_subscription_id],
+          arel_table[:timestamp],
+          arel_table[:transaction_id]
+        )
         query.project(
           [
+            arel_table[:code],
+            arel_table[:organization_id],
+            arel_table[:external_subscription_id],
             arel_table[:transaction_id].as("transaction_id"),
             arel_table[:timestamp].as("timestamp")
           ] + arel_columns
@@ -434,7 +443,7 @@ module Events
           persisted_duration.fdiv(period_duration)
         else
           Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
-            "#{arel_table.name}.timestamp", to_datetime, period_duration, timezone
+            "events_enriched.timestamp", to_datetime, period_duration, timezone
           )
         end
 
@@ -465,7 +474,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql("#{arel_table.name}.timestamp", to_datetime, period_duration, timezone)
+          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql("events_enriched.timestamp", to_datetime, period_duration, timezone)
         end
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -493,7 +502,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("#{arel_table.name}.timestamp", timezone)
+        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("events_enriched.timestamp", timezone)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_sql(
@@ -649,7 +658,7 @@ module Events
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(#{arel_table.name}.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
+              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
         end
@@ -693,7 +702,7 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ["#{arel_table.name}.properties[?]", property]
+          ["events_enriched.properties[?]", property]
         )
       end
 
@@ -717,7 +726,7 @@ module Events
       end
 
       def arel_table
-        @arel_table ||= Arel::Table.new("deduplicated_events")
+        @arel_table ||= Arel::Table.new("events_enriched")
       end
 
       def grouped_arel_columns
