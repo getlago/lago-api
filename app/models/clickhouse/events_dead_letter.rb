@@ -12,6 +12,7 @@ end
 # == Schema Information
 #
 # Table name: events_dead_letter
+# Database name: clickhouse
 #
 #  code                     :string           not null
 #  error_code               :string           not null

@@ -8,6 +8,7 @@ end
 # == Schema Information
 #
 # Table name: integration_customers
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  settings             :jsonb            not null

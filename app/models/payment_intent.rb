@@ -20,6 +20,7 @@ end
 # == Schema Information
 #
 # Table name: payment_intents
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  expires_at      :datetime         not null

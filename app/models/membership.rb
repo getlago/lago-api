@@ -50,6 +50,7 @@ end
 # == Schema Information
 #
 # Table name: memberships
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  revoked_at      :datetime

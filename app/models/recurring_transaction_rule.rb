@@ -97,6 +97,7 @@ end
 # == Schema Information
 #
 # Table name: recurring_transaction_rules
+# Database name: primary
 #
 #  id                                  :uuid             not null, primary key
 #  expiration_at                       :datetime

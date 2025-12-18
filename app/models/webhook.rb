@@ -67,6 +67,7 @@ end
 # == Schema Information
 #
 # Table name: webhooks
+# Database name: primary
 #
 #  id                  :uuid             not null, primary key
 #  endpoint            :string

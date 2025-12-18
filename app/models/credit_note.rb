@@ -190,6 +190,7 @@ end
 # == Schema Information
 #
 # Table name: credit_notes
+# Database name: primary
 #
 #  id                                      :uuid             not null, primary key
 #  balance_amount_cents                    :bigint           default(0), not null

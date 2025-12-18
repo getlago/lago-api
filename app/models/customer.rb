@@ -322,6 +322,7 @@ end
 # == Schema Information
 #
 # Table name: customers
+# Database name: primary
 #
 #  id                                           :uuid             not null, primary key
 #  account_type                                 :enum             default("customer"), not null

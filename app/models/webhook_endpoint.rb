@@ -32,6 +32,7 @@ end
 # == Schema Information
 #
 # Table name: webhook_endpoints
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  signature_algo  :integer          default("jwt"), not null

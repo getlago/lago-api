@@ -26,6 +26,7 @@ end
 # == Schema Information
 #
 # Table name: integrations
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  code            :string           not null

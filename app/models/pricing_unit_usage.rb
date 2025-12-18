@@ -50,6 +50,7 @@ end
 # == Schema Information
 #
 # Table name: pricing_unit_usages
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  amount_cents         :bigint           not null

@@ -13,6 +13,7 @@ end
 # == Schema Information
 #
 # Table name: add_ons_taxes
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  created_at      :datetime         not null

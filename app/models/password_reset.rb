@@ -10,6 +10,7 @@ end
 # == Schema Information
 #
 # Table name: password_resets
+# Database name: primary
 #
 #  id         :uuid             not null, primary key
 #  expire_at  :datetime         not null

@@ -26,6 +26,7 @@ end
 # == Schema Information
 #
 # Table name: payment_receipts
+# Database name: primary
 #
 #  id                :uuid             not null, primary key
 #  number            :string           not null

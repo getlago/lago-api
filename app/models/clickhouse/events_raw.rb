@@ -49,6 +49,7 @@ end
 # == Schema Information
 #
 # Table name: events_raw
+# Database name: clickhouse
 #
 #  code                       :string           not null
 #  ingested_at                :datetime         not null

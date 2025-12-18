@@ -28,6 +28,7 @@ end
 # == Schema Information
 #
 # Table name: payment_methods
+# Database name: primary
 #
 #  id                           :uuid             not null, primary key
 #  deleted_at                   :datetime

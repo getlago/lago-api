@@ -12,6 +12,7 @@ end
 # == Schema Information
 #
 # Table name: customers_invoice_custom_sections
+# Database name: primary
 #
 #  id                        :uuid             not null, primary key
 #  created_at                :datetime         not null

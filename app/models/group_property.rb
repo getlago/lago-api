@@ -16,6 +16,7 @@ end
 # == Schema Information
 #
 # Table name: group_properties
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  deleted_at           :datetime

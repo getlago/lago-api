@@ -63,6 +63,7 @@ end
 # == Schema Information
 #
 # Table name: charge_filters
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  deleted_at           :datetime

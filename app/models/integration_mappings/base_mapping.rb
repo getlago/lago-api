@@ -34,6 +34,7 @@ end
 # == Schema Information
 #
 # Table name: integration_mappings
+# Database name: primary
 #
 #  id                :uuid             not null, primary key
 #  mappable_type     :string           not null

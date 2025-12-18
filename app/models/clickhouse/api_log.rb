@@ -28,6 +28,7 @@ end
 # == Schema Information
 #
 # Table name: api_logs
+# Database name: clickhouse
 #
 #  api_version      :string           not null
 #  client           :string           not null

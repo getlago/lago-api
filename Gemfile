@@ -139,6 +139,7 @@ group :development, :test do
   gem "shoulda-matchers"
 
   gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git", require: false
+
   gem "rubocop-rails", require: false
   gem "rubocop-graphql", require: false
   gem "rubocop-performance", require: false

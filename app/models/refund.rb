@@ -13,6 +13,7 @@ end
 # == Schema Information
 #
 # Table name: refunds
+# Database name: primary
 #
 #  id                           :uuid             not null, primary key
 #  amount_cents                 :bigint           default(0), not null

@@ -32,6 +32,7 @@ end
 # == Schema Information
 #
 # Table name: users
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  email           :string

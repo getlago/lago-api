@@ -18,6 +18,7 @@ end
 # == Schema Information
 #
 # Table name: cached_aggregations
+# Database name: primary
 #
 #  id                             :uuid             not null, primary key
 #  current_aggregation            :decimal(, )

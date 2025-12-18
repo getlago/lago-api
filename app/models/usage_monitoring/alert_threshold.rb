@@ -12,6 +12,7 @@ end
 # == Schema Information
 #
 # Table name: usage_monitoring_alert_thresholds
+# Database name: primary
 #
 #  id                        :uuid             not null, primary key
 #  code                      :string

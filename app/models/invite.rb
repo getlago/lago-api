@@ -32,6 +32,7 @@ end
 # == Schema Information
 #
 # Table name: invites
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  accepted_at     :datetime

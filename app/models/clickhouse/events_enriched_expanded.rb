@@ -9,6 +9,7 @@ end
 # == Schema Information
 #
 # Table name: events_enriched_expanded
+# Database name: clickhouse
 #
 #  aggregation_type           :string           not null
 #  charge_filter_version      :datetime

@@ -13,6 +13,7 @@ end
 # == Schema Information
 #
 # Table name: idempotency_records
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  idempotency_key :binary           not null

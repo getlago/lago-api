@@ -19,6 +19,7 @@ end
 # == Schema Information
 #
 # Table name: daily_usages
+# Database name: primary
 #
 #  id                       :uuid             not null, primary key
 #  from_datetime            :datetime         not null

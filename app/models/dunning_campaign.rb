@@ -52,6 +52,7 @@ end
 # == Schema Information
 #
 # Table name: dunning_campaigns
+# Database name: primary
 #
 #  id                    :uuid             not null, primary key
 #  bcc_emails            :string           default([]), is an Array

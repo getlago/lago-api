@@ -93,6 +93,7 @@ end
 # == Schema Information
 #
 # Table name: coupons
+# Database name: primary
 #
 #  id                       :uuid             not null, primary key
 #  amount_cents             :bigint

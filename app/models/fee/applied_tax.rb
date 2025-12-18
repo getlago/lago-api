@@ -17,6 +17,7 @@ end
 # == Schema Information
 #
 # Table name: fees_taxes
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  amount_cents         :bigint           default(0), not null

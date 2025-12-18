@@ -158,6 +158,7 @@ end
 # == Schema Information
 #
 # Table name: charges
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  amount_currency      :string

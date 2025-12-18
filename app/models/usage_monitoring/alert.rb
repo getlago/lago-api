@@ -117,6 +117,7 @@ end
 # == Schema Information
 #
 # Table name: usage_monitoring_alerts
+# Database name: primary
 #
 #  id                       :uuid             not null, primary key
 #  alert_type               :enum             not null

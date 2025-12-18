@@ -103,6 +103,7 @@ end
 # == Schema Information
 #
 # Table name: billable_metrics
+# Database name: primary
 #
 #  id                 :uuid             not null, primary key
 #  aggregation_type   :integer          not null

@@ -86,6 +86,7 @@ end
 # == Schema Information
 #
 # Table name: fixed_charges
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  charge_model         :enum             default("standard"), not null

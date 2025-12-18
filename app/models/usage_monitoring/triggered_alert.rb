@@ -14,6 +14,7 @@ end
 # == Schema Information
 #
 # Table name: usage_monitoring_triggered_alerts
+# Database name: primary
 #
 #  id                        :uuid             not null, primary key
 #  crossed_thresholds        :jsonb
