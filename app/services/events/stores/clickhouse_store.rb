@@ -58,28 +58,24 @@ module Events
       end
 
       def events_sql_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+        # Ensure presence of one of value or decimal_value for the ordering
+        order_column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
+        deduplicated_columns << order_column if ordered
+
         base_sql = deduplicated_events_sql(
           from_datetime: (from_datetime if force_from || use_from_boundary),
           to_datetime: (applicable_to_datetime if applicable_to_datetime),
           deduplicated_columns:
         ).to_sql
 
-        dedup_cte = Arel::Table.new("events_enriched") # Override table name with deduplicated events
-        query = dedup_cte
-
-        if ordered
-          # Ensure presence of one of value or decimal_value for the ordering
-          column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
-          deduplicated_columns << column
-
-          query = query.order(dedup_cte[:timestamp].desc, dedup_cte[column])
-        end
+        query = arel_table
+        query = query.order(arel_table[:timestamp].desc, arel_table[order_column]) if ordered
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
         query = arel_filters_scope(query)
 
         {
-          "events_enriched" => base_sql,
+          "events_enriched" => base_sql, # Override events table name with deduplicated events
           "events" => query.project(select).to_sql
         }
       end
@@ -100,11 +96,9 @@ module Events
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
         query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
 
-        columns = deduplicated_columns
-
         # Grouping and filtering is made based on the properties
         if grouped_by.present? || grouped_by_values? || matching_filters.present? || ignored_filters.present?
-          columns << "properties"
+          deduplicated_columns << "properties"
         end
 
         arel_columns = deduplicated_columns.uniq.map do
@@ -760,7 +754,7 @@ module Events
       end
 
       def arel_table
-        @arel_table ||= Arel::Table.new("events_enriched")
+        @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
       end
 
       def grouped_arel_columns
