@@ -28,9 +28,7 @@ module Events
             GROUP BY property
           SQL
 
-          ctes_sql = events_cte_sql.merge {
-            "event_values" => event_values
-          }
+          ctes_sql = events_cte_sql.merge!("event_values" => event_values)
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT coalesce(SUM(sum_adjusted_value), 0) AS aggregation FROM event_values
@@ -87,10 +85,10 @@ module Events
             GROUP BY property, operation_type, timestamp
           SQL
 
-          ctes_sql = events_cte_sql.merge {
+          ctes_sql = events_cte_sql.merge!(
             "same_day_ignored" => same_day_ignored,
             "event_values" => event_values
-          }
+          )
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
@@ -120,9 +118,9 @@ module Events
             GROUP BY #{group_names}, property
           SQL
 
-          ctes_sql = grouped_events_cte_sql.merge {
+          ctes_sql = grouped_events_cte_sql.merge!(
             "event_values" => event_values
-          }
+          )
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT
@@ -134,8 +132,8 @@ module Events
         end
 
         def grouped_prorated_query
-            # Only ignore remove events if they are NOT the last event of the day
-            same_day_ignored = <<-SQL
+          # Only ignore remove events if they are NOT the last event of the day
+          same_day_ignored = <<-SQL
               SELECT
                 #{group_names},
                 property,
@@ -153,35 +151,34 @@ module Events
                 FROM events
                 ORDER BY timestamp ASC, property ASC
               ) as e
-            SQL
-
-            # Check if the operation type is the same as previous, so it nullifies this one
-            event_values = <<-SQL
-              SELECT
-                #{group_names},
-                property,
-                operation_type,
-                timestamp
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{group_names},
-                  #{grouped_operation_value_sql} AS adjusted_value
-                FROM same_day_ignored
-                WHERE is_ignored = false
-                ORDER BY timestamp ASC, property ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
-            )
           SQL
 
-          ctes_sql = grouped_events_cte_sql.merge {
+          # Check if the operation type is the same as previous, so it nullifies this one
+          event_values = <<-SQL
+            SELECT
+              #{group_names},
+              property,
+              operation_type,
+              timestamp
+            FROM (
+              SELECT
+                timestamp,
+                property,
+                operation_type,
+                #{group_names},
+                #{grouped_operation_value_sql} AS adjusted_value
+              FROM same_day_ignored
+              WHERE is_ignored = false
+              ORDER BY timestamp ASC, property ASC
+            ) adjusted_event_values
+            WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+            GROUP BY #{group_names}, property, operation_type, timestamp
+          SQL
+
+          ctes_sql = grouped_events_cte_sql.merge!(
             "same_day_ignored" => same_day_ignored,
             "event_values" => event_values
-          }
+          )
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT
@@ -259,10 +256,10 @@ module Events
             GROUP BY property, timestamp, operation_type
           SQL
 
-          ctes_sql = grouped_events_cte_sql.merge {
+          ctes_sql = events_cte_sql.merge!(
             "same_day_ignored" => same_day_ignored,
             "event_values" => event_values
-          }
+          )
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT
@@ -287,7 +284,7 @@ module Events
 
         attr_reader :store
 
-        delegate :with_ctes, :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
+        delegate :arel_table, :with_ctes, :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -300,13 +297,14 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("#{arel_table.name}.sorted_properties['operation_type']"),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")
                 ]
               ).as("operation_type")
-            ]
+            ],
+            deduplicated_columns: %w[value sorted_properties]
           )
         end
 
@@ -322,13 +320,14 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new("#{arel_table.name}.sorted_properties['operation_type']"),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")
                 ]
               ).as("operation_type")
-            ]
+            ],
+            deduplicated_columns: %w[value sorted_properties]
           )
         end
 
