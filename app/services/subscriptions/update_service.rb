@@ -32,11 +32,20 @@ module Subscriptions
         return result
       end
 
+      # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
+      if params[:usage_thresholds].present? && params.dig(:plan_overrides, :usage_thresholds).present?
+        return result.validation_failure!(errors: {
+          "plan_overrides.usage_thresholds": ["incompatible_params"],
+          usage_thresholds: ["incompatible_params"]
+        })
+      end
+
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
 
       ActiveRecord::Base.transaction do
         subscription.name = params[:name] if params.key?(:name)
         subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+        subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
           subscription.on_termination_credit_note = params[:on_termination_credit_note]
@@ -52,6 +61,10 @@ module Subscriptions
         end
 
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
+
+        if params.key?(:usage_thresholds)
+          UpdateUsageThresholdsService.call!(subscription:, usage_thresholds_params: params[:usage_thresholds], partial: false)
+        end
 
         if subscription.starting_in_the_future? && params.key?(:subscription_at)
           subscription.subscription_at = params[:subscription_at]

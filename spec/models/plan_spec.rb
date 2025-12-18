@@ -48,6 +48,17 @@ RSpec.describe Plan do
     end
   end
 
+  describe "#is_parent? and #is_child?" do
+    it do
+      expect(plan.is_parent?).to be true
+      expect(plan.is_child?).to be false
+
+      plan.parent_id = SecureRandom.uuid
+      expect(plan.is_parent?).to be false
+      expect(plan.is_child?).to be true
+    end
+  end
+
   describe "#applicable_usage_thresholds" do
     let(:plan) { create(:plan) }
 
