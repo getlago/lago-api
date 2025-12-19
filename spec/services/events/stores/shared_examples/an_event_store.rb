@@ -125,6 +125,86 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         expect(retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }).to eq(["1", "2", "3", "4", "5"])
       end
     end
+
+    context "with events before from_datetime" do
+      before do
+        create_event(
+          timestamp: subscription_started_at - 1.day,
+          value: 0,
+          properties: {"region" => "europe", "country" => "france"},
+          transaction_id: SecureRandom.uuid
+        )
+      end
+
+      it "excludes events before from_datetime by default" do
+        retrieved_events = event_store.events.to_a
+        values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+        expect(retrieved_events.count).to eq(5)
+        expect(values).not_to include("0")
+        expect(values).to match_array(["1", "2", "3", "4", "5"])
+      end
+
+      context "when use_from_boundary is false" do
+        before { event_store.use_from_boundary = false }
+
+        it "includes events before from_datetime" do
+          retrieved_events = event_store.events.to_a
+          values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+          expect(retrieved_events.count).to eq(6)
+          expect(values).to match_array(["0", "1", "2", "3", "4", "5"])
+        end
+
+        context "when force_from is true" do
+          it "excludes events before from_datetime" do
+            retrieved_events = event_store.events(force_from: true).to_a
+            values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+            expect(retrieved_events.count).to eq(5)
+            expect(values).not_to include("0")
+            expect(values).to match_array(["1", "2", "3", "4", "5"])
+          end
+        end
+      end
+    end
+
+    context "with events after to_datetime" do
+      let(:boundaries) do
+        {
+          from_datetime: subscription_started_at,
+          to_datetime: subscription_started_at + 3.days + 12.hours,
+          charges_duration: 31
+        }
+      end
+
+      it "excludes events after to_datetime" do
+        retrieved_events = event_store.events.to_a
+        values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+        expect(retrieved_events.count).to eq(3)
+        expect(values).to match_array(["1", "2", "3"])
+      end
+    end
+
+    context "with max_timestamp boundary" do
+      let(:boundaries) do
+        {
+          from_datetime: subscription_started_at,
+          to_datetime: subscription.started_at.end_of_month.end_of_day,
+          max_timestamp: subscription_started_at + 3.days + 12.hours,
+          charges_duration: 31
+        }
+      end
+
+      it "uses max_timestamp instead of to_datetime" do
+        retrieved_events = event_store.events.to_a
+        values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+        expect(retrieved_events.count).to eq(3)
+        expect(values).to match_array(["1", "2", "3"])
+      end
+    end
   end
 
   describe "#count" do
@@ -472,6 +552,35 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         event
 
         expect(event_store.events_values(exclude_event: true)).to eq([1, 2, 3, 4, 5])
+      end
+    end
+
+    context "with events before from_datetime" do
+      before do
+        create_event(
+          timestamp: subscription_started_at - 1.day,
+          value: 0,
+          properties: {"region" => "europe", "country" => "france"},
+          transaction_id: SecureRandom.uuid
+        )
+      end
+
+      it "excludes values from events before from_datetime by default" do
+        expect(event_store.events_values).to eq([1, 2, 3, 4, 5])
+      end
+
+      context "when use_from_boundary is false" do
+        before { event_store.use_from_boundary = false }
+
+        it "includes values from events before from_datetime" do
+          expect(event_store.events_values).to eq([0, 1, 2, 3, 4, 5])
+        end
+
+        context "when force_from is true" do
+          it "excludes values from events before from_datetime" do
+            expect(event_store.events_values(force_from: true)).to eq([1, 2, 3, 4, 5])
+          end
+        end
       end
     end
   end
