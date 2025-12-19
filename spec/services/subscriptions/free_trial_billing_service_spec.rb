@@ -48,7 +48,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
 
         expect { service.call }.to change { sub.reload.trial_ended_at }.from(nil).to(sub.trial_end_datetime)
       end
-
     end
 
     context "with customer timezone" do
