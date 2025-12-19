@@ -10,6 +10,7 @@ end
 # == Schema Information
 #
 # Table name: usage_monitoring_subscription_activities
+# Database name: primary
 #
 #  id              :bigint           not null, primary key
 #  enqueued        :boolean          default(FALSE), not null

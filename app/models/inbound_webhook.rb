@@ -28,6 +28,7 @@ end
 # == Schema Information
 #
 # Table name: inbound_webhooks
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  code            :string

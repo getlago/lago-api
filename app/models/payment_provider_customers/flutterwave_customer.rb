@@ -11,6 +11,7 @@ end
 # == Schema Information
 #
 # Table name: payment_provider_customers
+# Database name: primary
 #
 #  id                   :uuid             not null, primary key
 #  deleted_at           :datetime

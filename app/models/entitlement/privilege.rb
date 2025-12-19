@@ -44,6 +44,7 @@ end
 # == Schema Information
 #
 # Table name: entitlement_privileges
+# Database name: primary
 #
 #  id                     :uuid             not null, primary key
 #  code                   :string           not null

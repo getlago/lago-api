@@ -77,6 +77,7 @@ end
 # == Schema Information
 #
 # Table name: credits
+# Database name: primary
 #
 #  id                             :uuid             not null, primary key
 #  amount_cents                   :bigint           not null

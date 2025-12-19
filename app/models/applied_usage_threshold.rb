@@ -26,6 +26,7 @@ end
 # == Schema Information
 #
 # Table name: applied_usage_thresholds
+# Database name: primary
 #
 #  id                          :uuid             not null, primary key
 #  lifetime_usage_amount_cents :bigint           default(0), not null

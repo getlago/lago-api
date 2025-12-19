@@ -11,6 +11,7 @@ end
 # == Schema Information
 #
 # Table name: wallet_transactions_invoice_custom_sections
+# Database name: primary
 #
 #  id                        :uuid             not null, primary key
 #  created_at                :datetime         not null

@@ -10,6 +10,7 @@ end
 # == Schema Information
 #
 # Table name: data_export_parts
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  completed       :boolean          default(FALSE), not null

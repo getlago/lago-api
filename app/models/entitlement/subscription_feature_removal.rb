@@ -17,6 +17,7 @@ end
 # == Schema Information
 #
 # Table name: entitlement_subscription_feature_removals
+# Database name: primary
 #
 #  id                       :uuid             not null, primary key
 #  deleted_at               :datetime

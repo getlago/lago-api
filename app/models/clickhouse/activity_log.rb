@@ -112,6 +112,7 @@ end
 # == Schema Information
 #
 # Table name: activity_logs
+# Database name: clickhouse
 #
 #  activity_object          :string
 #  activity_object_changes  :string

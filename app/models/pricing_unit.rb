@@ -25,6 +25,7 @@ end
 # == Schema Information
 #
 # Table name: pricing_units
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  code            :string           not null

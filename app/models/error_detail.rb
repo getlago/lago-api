@@ -34,6 +34,7 @@ end
 # == Schema Information
 #
 # Table name: error_details
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  deleted_at      :datetime

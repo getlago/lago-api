@@ -40,6 +40,7 @@ end
 # == Schema Information
 #
 # Table name: adjusted_fees
+# Database name: primary
 #
 #  id                        :uuid             not null, primary key
 #  adjusted_amount           :boolean          default(FALSE), not null

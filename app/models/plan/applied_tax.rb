@@ -15,6 +15,7 @@ end
 # == Schema Information
 #
 # Table name: plans_taxes
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  created_at      :datetime         not null

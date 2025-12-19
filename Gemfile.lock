@@ -24,13 +24,13 @@ GIT
 
 GIT
   remote: https://github.com/glebm/i18n-tasks.git
-  revision: d22542021e7e8cea106fb81d792b64974d2868c7
+  revision: b7db1cb2fe1484d93ee1cf14b5100c321d16392a
   specs:
-    i18n-tasks (1.0.15)
+    i18n-tasks (1.1.2)
       activesupport (>= 4.0.2)
       ast (>= 2.1.0)
       erubi
-      highline (>= 2.0.0)
+      highline (>= 3.0.0)
       i18n
       parser (>= 3.2.2.1)
       prism
@@ -41,9 +41,9 @@ GIT
 
 GIT
   remote: https://github.com/rmosolgo/graphiql-rails.git
-  revision: 1d4c70055c0e3b601e18c8c8d69892bf6bb8e0c2
+  revision: 41c98ace618c824b141cf3f79824ed7d208e156e
   specs:
-    graphiql-rails (1.10.1)
+    graphiql-rails (1.10.5)
       railties
 
 GEM
@@ -146,7 +146,9 @@ GEM
       activerecord (>= 4.2)
       activesupport
     analytics-ruby (2.4.0)
-    annotaterb (4.14.0)
+    annotaterb (4.20.0)
+      activerecord (>= 6.0.0)
+      activesupport (>= 6.0.0)
     anyway_config (2.7.2)
       ruby-next-core (~> 1.0)
     ast (2.4.3)
@@ -178,7 +180,7 @@ GEM
     bootsnap (1.18.4)
       msgpack (~> 1.2)
     builder (3.3.0)
-    bullet (8.0.7)
+    bullet (8.1.0)
       activesupport (>= 3.0.0)
       uniform_notifier (~> 1.11)
     byebug (12.0.0)
@@ -208,9 +210,9 @@ GEM
       rexml
     crass (1.0.6)
     csv (3.3.2)
-    database_cleaner-active_record (2.2.0)
+    database_cleaner-active_record (2.2.2)
       activerecord (>= 5.a)
-      database_cleaner-core (~> 2.0.0)
+      database_cleaner-core (~> 2.0)
     database_cleaner-core (2.0.1)
     datadog (2.22.0)
       datadog-ruby_core_source (~> 3.4, >= 3.4.1)
@@ -220,18 +222,18 @@ GEM
       msgpack
     datadog-ruby_core_source (3.4.1)
     date (3.4.1)
-    debug (1.10.0)
+    debug (1.11.0)
       irb (~> 1.10)
       reline (>= 0.3.8)
     declarative (0.0.20)
-    diff-lcs (1.5.1)
+    diff-lcs (1.6.2)
     digest-crc (0.6.5)
       rake (>= 12.0.0, < 14.0.0)
     discard (1.4.0)
       activerecord (>= 4.2, < 9.0)
     docile (1.4.1)
     dogstatsd-ruby (5.7.1)
-    dotenv (3.1.7)
+    dotenv (3.2.0)
     drb (2.2.3)
     dry-configurable (1.2.0)
       dry-core (~> 1.0, < 2)
@@ -273,10 +275,10 @@ GEM
     execjs (2.9.1)
     factory_bot (6.5.0)
       activesupport (>= 5.0.0)
-    factory_bot_rails (6.4.4)
+    factory_bot_rails (6.5.1)
       factory_bot (~> 6.5)
-      railties (>= 5.0.0)
-    faker (3.4.2)
+      railties (>= 6.1.0)
+    faker (3.5.3)
       i18n (>= 1.8.11, < 2)
     faraday (2.10.1)
       faraday-net_http (>= 2.0, < 3.2)
@@ -425,8 +427,8 @@ GEM
       logger
       mini_portile2 (~> 2.6)
       rake (> 12)
-    karafka-testing (2.5.3)
-      karafka (>= 2.5.0.beta1, < 2.6.0)
+    karafka-testing (2.5.5)
+      karafka (>= 2.5.0, < 2.6.0)
       waterdrop (>= 2.8.0)
     karafka-web (0.11.3)
       erubi (~> 1.4)
@@ -434,7 +436,7 @@ GEM
       karafka-core (>= 2.5.0, < 2.6.0)
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
-    knapsack_pro (8.1.0)
+    knapsack_pro (8.4.0)
       rake
     language_server-protocol (3.17.0.5)
     libdatadog (22.0.1.1.0)
@@ -732,7 +734,7 @@ GEM
       activerecord (>= 6.1)
       request_store (~> 1.4)
     parallel (1.27.0)
-    parallel_tests (5.3.0)
+    parallel_tests (5.5.0)
       parallel
     parser (3.3.8.0)
       ast (~> 2.4.1)
@@ -880,7 +882,7 @@ GEM
       rubocop-ast (>= 1.44.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
-    rubocop-ast (1.44.1)
+    rubocop-ast (1.48.0)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
     rubocop-capybara (2.21.0)
@@ -907,13 +909,12 @@ GEM
       rubocop (~> 1.61)
     rubocop-thread_safety (0.5.1)
       rubocop (>= 0.90.0)
-    ruby-lsp (0.23.6)
+    ruby-lsp (0.26.4)
       language_server-protocol (~> 3.17.0)
       prism (>= 1.2, < 2.0)
-      rbs (>= 3, < 4)
-      sorbet-runtime (>= 0.5.10782)
-    ruby-lsp-rails (0.3.30)
-      ruby-lsp (>= 0.23.0, < 0.24.0)
+      rbs (>= 3, < 5)
+    ruby-lsp-rails (0.4.8)
+      ruby-lsp (>= 0.26.0, < 0.27.0)
     ruby-next-core (1.1.2)
     ruby-progressbar (1.13.0)
     sass-rails (6.0.0)
@@ -940,7 +941,7 @@ GEM
       sentry-ruby (~> 5.18.2)
       sidekiq (>= 3.0)
     shellany (0.0.1)
-    shoulda-matchers (6.4.0)
+    shoulda-matchers (6.5.0)
       activesupport (>= 5.2.0)
     sidekiq (7.3.7)
       connection_pool (>= 2.3.0)
@@ -972,7 +973,6 @@ GEM
     snaky_hash (2.0.1)
       hashie
       version_gem (~> 1.1, >= 1.1.1)
-    sorbet-runtime (0.5.11766)
     sprockets (4.2.1)
       concurrent-ruby (~> 1.0)
       rack (>= 2.2.4, < 4)
@@ -1027,13 +1027,13 @@ GEM
     useragent (0.16.11)
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
-    vernier (1.8.1)
+    vernier (1.9.0)
     version_gem (1.1.4)
     waterdrop (2.8.11)
       karafka-core (>= 2.4.9, < 3.0.0)
       karafka-rdkafka (>= 0.20.0)
       zeitwerk (~> 2.3)
-    webmock (3.23.1)
+    webmock (3.26.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)

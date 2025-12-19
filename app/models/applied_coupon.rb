@@ -45,6 +45,7 @@ end
 # == Schema Information
 #
 # Table name: applied_coupons
+# Database name: primary
 #
 #  id                           :uuid             not null, primary key
 #  amount_cents                 :bigint

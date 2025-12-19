@@ -24,6 +24,7 @@ end
 # == Schema Information
 #
 # Table name: integration_items
+# Database name: primary
 #
 #  id                    :uuid             not null, primary key
 #  external_account_code :string

@@ -20,6 +20,7 @@ end
 # == Schema Information
 #
 # Table name: entitlement_entitlement_values
+# Database name: primary
 #
 #  id                         :uuid             not null, primary key
 #  deleted_at                 :datetime

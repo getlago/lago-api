@@ -104,6 +104,7 @@ end
 # == Schema Information
 #
 # Table name: wallets
+# Database name: primary
 #
 #  id                                  :uuid             not null, primary key
 #  allowed_fee_types                   :string           default([]), not null, is an Array

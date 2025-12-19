@@ -63,6 +63,7 @@ end
 # == Schema Information
 #
 # Table name: events
+# Database name: events
 #
 #  id                         :uuid             not null, primary key
 #  code                       :string           not null

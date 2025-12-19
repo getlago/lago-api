@@ -68,6 +68,7 @@ end
 # == Schema Information
 #
 # Table name: taxes
+# Database name: primary
 #
 #  id                      :uuid             not null, primary key
 #  applied_to_organization :boolean          default(FALSE), not null

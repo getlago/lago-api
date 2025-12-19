@@ -114,6 +114,7 @@ end
 # == Schema Information
 #
 # Table name: invoice_subscriptions
+# Database name: primary
 #
 #  id                          :uuid             not null, primary key
 #  charges_from_datetime       :datetime

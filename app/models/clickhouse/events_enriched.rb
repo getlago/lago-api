@@ -9,6 +9,7 @@ end
 # == Schema Information
 #
 # Table name: events_enriched
+# Database name: clickhouse
 #
 #  code                       :string           not null, primary key
 #  decimal_value              :decimal(38, 26)

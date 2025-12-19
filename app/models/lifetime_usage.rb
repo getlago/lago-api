@@ -29,6 +29,7 @@ end
 # == Schema Information
 #
 # Table name: lifetime_usages
+# Database name: primary
 #
 #  id                                 :uuid             not null, primary key
 #  current_usage_amount_cents         :bigint           default(0), not null

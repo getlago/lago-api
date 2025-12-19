@@ -8,6 +8,7 @@ end
 # == Schema Information
 #
 # Table name: integration_collection_mappings
+# Database name: primary
 #
 #  id                :uuid             not null, primary key
 #  mapping_type      :integer          not null

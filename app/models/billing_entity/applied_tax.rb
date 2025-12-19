@@ -15,6 +15,7 @@ end
 # == Schema Information
 #
 # Table name: billing_entities_taxes
+# Database name: primary
 #
 #  id                :uuid             not null, primary key
 #  created_at        :datetime         not null

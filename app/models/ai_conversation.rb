@@ -10,6 +10,7 @@ end
 # == Schema Information
 #
 # Table name: ai_conversations
+# Database name: primary
 #
 #  id                      :uuid             not null, primary key
 #  name                    :string           not null

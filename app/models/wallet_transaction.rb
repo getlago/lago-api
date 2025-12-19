@@ -79,6 +79,7 @@ end
 # == Schema Information
 #
 # Table name: wallet_transactions
+# Database name: primary
 #
 #  id                                  :uuid             not null, primary key
 #  amount                              :decimal(30, 5)   default(0.0), not null

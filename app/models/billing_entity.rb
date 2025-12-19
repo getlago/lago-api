@@ -176,6 +176,7 @@ end
 # == Schema Information
 #
 # Table name: billing_entities
+# Database name: primary
 #
 #  id                                           :uuid             not null, primary key
 #  address_line1                                :string

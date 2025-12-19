@@ -26,6 +26,7 @@ end
 # == Schema Information
 #
 # Table name: invoice_custom_sections
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  code            :string           not null

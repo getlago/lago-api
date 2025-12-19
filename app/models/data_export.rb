@@ -66,6 +66,7 @@ end
 # == Schema Information
 #
 # Table name: data_exports
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  completed_at    :datetime

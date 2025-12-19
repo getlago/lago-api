@@ -277,6 +277,7 @@ end
 # == Schema Information
 #
 # Table name: organizations
+# Database name: primary
 #
 #  id                           :uuid             not null, primary key
 #  address_line1                :string

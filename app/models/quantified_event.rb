@@ -22,6 +22,7 @@ end
 # == Schema Information
 #
 # Table name: quantified_events
+# Database name: primary
 #
 #  id                       :uuid             not null, primary key
 #  added_at                 :datetime         not null

@@ -17,6 +17,7 @@ end
 # == Schema Information
 #
 # Table name: customer_metadata
+# Database name: primary
 #
 #  id                 :uuid             not null, primary key
 #  display_in_invoice :boolean          default(FALSE), not null

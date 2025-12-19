@@ -15,6 +15,7 @@ end
 # == Schema Information
 #
 # Table name: integration_resources
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  resource_type   :integer          default("invoice"), not null

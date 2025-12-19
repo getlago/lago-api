@@ -13,6 +13,7 @@ end
 # == Schema Information
 #
 # Table name: last_hour_events_mv
+# Database name: primary
 #
 #  billable_metric_code    :string
 #  field_name_mandatory    :boolean

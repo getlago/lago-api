@@ -15,6 +15,7 @@ end
 # == Schema Information
 #
 # Table name: invoice_metadata
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  key             :string           not null

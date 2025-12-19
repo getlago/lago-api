@@ -594,6 +594,7 @@ end
 # == Schema Information
 #
 # Table name: invoices
+# Database name: primary
 #
 #  id                                      :uuid             not null, primary key
 #  applied_grace_period                    :integer

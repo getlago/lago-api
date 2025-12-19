@@ -77,6 +77,7 @@ end
 # == Schema Information
 #
 # Table name: api_keys
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  expires_at      :datetime

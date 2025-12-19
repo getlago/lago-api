@@ -11,6 +11,7 @@ end
 # == Schema Information
 #
 # Table name: fixed_charges_taxes
+# Database name: primary
 #
 #  id              :uuid             not null, primary key
 #  created_at      :datetime         not null

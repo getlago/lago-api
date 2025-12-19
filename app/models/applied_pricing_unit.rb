@@ -12,6 +12,7 @@ end
 # == Schema Information
 #
 # Table name: applied_pricing_units
+# Database name: primary
 #
 #  id                    :uuid             not null, primary key
 #  conversion_rate       :decimal(40, 15)  default(0.0), not null

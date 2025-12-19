@@ -278,6 +278,7 @@ end
 # == Schema Information
 #
 # Table name: subscriptions
+# Database name: primary
 #
 #  id                           :uuid             not null, primary key
 #  billing_time                 :integer          default("calendar"), not null

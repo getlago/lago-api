@@ -42,6 +42,7 @@ end
 # == Schema Information
 #
 # Table name: item_metadata
+# Database name: primary
 #
 #  id                                             :uuid             not null, primary key
 #  owner_type(Polymorphic owner type)             :string           not null
