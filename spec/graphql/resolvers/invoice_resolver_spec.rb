@@ -62,6 +62,10 @@ RSpec.describe Resolvers::InvoiceResolver do
                 amountCents
                 amountCurrency
               }
+              properties {
+                fromDatetime
+                toDatetime
+              }
             }
           }
           subscriptions {
@@ -111,9 +115,43 @@ RSpec.describe Resolvers::InvoiceResolver do
   let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
   let(:subscription) { invoice_subscription.subscription }
-  let(:fee) { create(:fee, subscription:, invoice:, amount_cents: 10) }
+  let(:fee) do
+    create(:fee, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    })
+  end
+  let(:charge_fee) do
+    create(:charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    })
+  end
+  let(:fixed_charge_fee) do
+    create(:fixed_charge_fee, subscription:, invoice:, amount_cents: 10, properties: {
+      from_datetime: Time.current.beginning_of_month,
+      to_datetime: Time.current.end_of_month,
+      charges_from_datetime: Time.current.beginning_of_month - 1.month,
+      charges_to_datetime: Time.current.end_of_month - 1.month,
+      fixed_charges_from_datetime: Time.current.beginning_of_month + 1.month,
+      fixed_charges_to_datetime: Time.current.end_of_month + 1.month
+    })
+  end
 
-  before { fee and invoice }
+  before do
+    fee
+    charge_fee
+    fixed_charge_fee
+    invoice
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -141,11 +179,25 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data["customer"]["id"]).to eq(customer.id)
       expect(data["customer"]["name"]).to eq(customer.name)
       expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
-      expect(data["invoiceSubscriptions"][0]["fees"][0]["id"]).to eq(fee.id)
+
+      subscription_fee = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "subscription" }
+      expect(subscription_fee["id"]).to eq(fee.id)
+      expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
+      expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
+
+      charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
+      expect(charge_fee_result["id"]).to eq(charge_fee.id)
+      expect(charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month - 1.month).to_datetime.iso8601)
+      expect(charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month - 1.month).to_datetime.iso8601)
+
+      fixed_charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "fixed_charge" }
+      expect(fixed_charge_fee_result["id"]).to eq(fixed_charge_fee.id)
+      expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
+      expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
     end
   end
 
-  it "includes filters for each fee" do
+  it "includes filters for the fee" do
     billable_metric_filter = create(:billable_metric_filter, key: "cloud", values: %w[aws gcp])
     charge_filter = create(:charge_filter, invoice_display_name: nil)
     charge_filter_value = create(:charge_filter_value, billable_metric_filter:, charge_filter:, values: ["aws"])
@@ -160,8 +212,8 @@ RSpec.describe Resolvers::InvoiceResolver do
       variables: {id: invoice.id}
     )
 
-    fee = result["data"]["invoice"]["invoiceSubscriptions"][0]["fees"][0]
-    expect(fee["chargeFilter"]["values"][billable_metric_filter.key]).to eq(charge_filter_value.values)
+    fee_result = result["data"]["invoice"]["invoiceSubscriptions"][0]["fees"].find { |f| f["id"] == fee.id }
+    expect(fee_result["chargeFilter"]["values"][billable_metric_filter.key]).to eq(charge_filter_value.values)
   end
 
   it "includes pricing unit usage when available" do
