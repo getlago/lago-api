@@ -12,10 +12,17 @@ module AddOns
     def call
       return result.not_found_failure!(resource: "add_on") unless add_on
 
-      add_on.discard!
+      ActiveRecord::Base.transaction do
+        add_on.discard!
+        add_on.fixed_charges.discard_all!
+      end
 
       result.add_on = add_on
       result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

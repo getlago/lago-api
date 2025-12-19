@@ -11,6 +11,7 @@ RSpec.describe AddOn do
   it { is_expected.to have_many(:applied_add_ons) }
   it { is_expected.to have_many(:customers) }
   it { is_expected.to have_many(:fees) }
+  it { is_expected.to have_many(:fixed_charges).dependent(:destroy) }
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes) }
   it { is_expected.to have_many(:netsuite_mappings).dependent(:destroy) }
