@@ -398,7 +398,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         before { create(:wallet, customer:, balance_cents: 100) }
 
         it "propagates the error" do
-          allow_any_instance_of(Credits::AppliedPrepaidCreditService) # rubocop:disable RSpec/AnyInstance
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
             .to receive(:call).and_raise(ActiveRecord::StaleObjectError)
 
           expect { invoice_service.call }.to raise_error(ActiveRecord::StaleObjectError)
