@@ -82,15 +82,6 @@ RSpec.describe Wallets::ValidateService do
       end
     end
 
-    # uncomment when we support multiple wallets per customer
-    # context "when customer already has a wallet" do
-    #   before { create(:wallet, customer:) }
-    #
-    #   it "returns true without errors" do
-    #     expect(validate_service).to be_valid
-    #   end
-    # end
-
     context "with invalid paid_credits" do
       let(:paid_credits) { "foobar" }
 
@@ -244,6 +235,49 @@ RSpec.describe Wallets::ValidateService do
         it "returns true and result has no errors" do
           expect(validate_service).to be_valid
           expect(result.error).to be_nil
+        end
+      end
+    end
+
+    context "with multiple wallets" do
+      let(:max_wallets_limit) { Wallets::ValidateService::MAXIMUM_WALLETS_PER_CUSTOMER }
+
+      describe "maximum wallets per customer" do
+        it "is 6" do
+          expect(max_wallets_limit).to eq(6)
+        end
+      end
+
+      context "when number of wallets less than limit" do
+        before do
+          create_list(:wallet, max_wallets_limit - 2, customer:)
+        end
+
+        it "returns true and result has no errors" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "when number of wallets equals limit" do
+        before do
+          create_list(:wallet, max_wallets_limit - 1, customer:)
+        end
+
+        it "returns true and result has no errors" do
+          expect(validate_service).to be_valid
+          expect(result.error).to be_nil
+        end
+      end
+
+      context "when number of wallets exceeds limit" do
+        before do
+          create_list(:wallet, max_wallets_limit, customer:)
+        end
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:customer]).to eq(["wallet_limit_reached"])
         end
       end
     end

@@ -131,7 +131,7 @@ RSpec.describe Wallets::CreateService do
 
     context "when customer has reached the wallet limit" do
       before do
-        create_list(:wallet, 5, customer:, organization:, status: :active)
+        create_list(:wallet, Wallets::ValidateService::MAXIMUM_WALLETS_PER_CUSTOMER, customer:, organization:, status: :active)
       end
 
       it "returns an error" do
