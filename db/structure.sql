@@ -902,7 +902,6 @@ DROP TABLE IF EXISTS public.integrations;
 DROP TABLE IF EXISTS public.integration_resources;
 DROP TABLE IF EXISTS public.integration_mappings;
 DROP TABLE IF EXISTS public.integration_items;
-DROP TABLE IF EXISTS public.integration_customers;
 DROP TABLE IF EXISTS public.integration_collection_mappings;
 DROP TABLE IF EXISTS public.inbound_webhooks;
 DROP TABLE IF EXISTS public.idempotency_records;
@@ -935,6 +934,8 @@ DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
 DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
+DROP VIEW IF EXISTS public.exports_integration_customers;
+DROP TABLE IF EXISTS public.integration_customers;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
@@ -2951,6 +2952,40 @@ CREATE VIEW public.exports_fees_taxes AS
 
 
 --
+-- Name: integration_customers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.integration_customers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    integration_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    external_customer_id character varying,
+    type character varying NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: exports_integration_customers; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_integration_customers AS
+ SELECT ic.id AS lago_id,
+    ic.organization_id,
+    ic.customer_id AS lago_customer_id,
+    ic.integration_id AS lago_integration_id,
+    ic.external_customer_id,
+    ic.type,
+    ic.settings,
+    ic.created_at,
+    ic.updated_at
+   FROM public.integration_customers ic;
+
+
+--
 -- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3754,23 +3789,6 @@ CREATE TABLE public.integration_collection_mappings (
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL,
     billing_entity_id uuid
-);
-
-
---
--- Name: integration_customers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.integration_customers (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    integration_id uuid NOT NULL,
-    customer_id uuid NOT NULL,
-    external_customer_id character varying,
-    type character varying NOT NULL,
-    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
 );
 
 
@@ -10690,6 +10708,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
 ('20251210151531'),
@@ -11573,4 +11592,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
