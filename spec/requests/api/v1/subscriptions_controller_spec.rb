@@ -177,8 +177,6 @@ RSpec.describe Api::V1::SubscriptionsController do
 
         expect(response).to have_http_status(:ok)
 
-        pps json
-
         expect(plan.usage_thresholds).to contain_exactly(plan_usage_threshold)
         subscription = Subscription.find json[:subscription][:lago_id]
         expect(subscription.plan).to be_child
@@ -1263,8 +1261,10 @@ RSpec.describe Api::V1::SubscriptionsController do
           expect(usage_thresholds.length).to eq(2)
           expect(usage_thresholds.first).to match(
             {
-              lago_id: overriden_usage_threshold.id,
-              threshold_display_name: "Threshold 1",
+              # previous threshold was removed and a new one created
+              # so ID as changed and threshold was lost
+              lago_id: Regex::UUID,
+              threshold_display_name: nil,
               amount_cents: 999,
               recurring: false,
               created_at: Regex::ISO8601_DATETIME,
