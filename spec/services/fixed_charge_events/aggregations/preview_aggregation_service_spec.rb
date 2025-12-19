@@ -33,9 +33,9 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
   let(:fixed_charges_to_datetime) { 1.month.from_now }
   let(:boundaries) do
     {
-      fixed_charges_from_datetime:,
-      fixed_charges_to_datetime:,
-      fixed_charges_duration: 30
+      "fixed_charges_from_datetime": fixed_charges_from_datetime,
+      "fixed_charges_to_datetime": fixed_charges_to_datetime.to_datetime,
+      "fixed_charges_duration": 30
     }
   end
 

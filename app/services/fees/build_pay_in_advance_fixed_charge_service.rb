@@ -52,12 +52,12 @@ module Fees
       BillingPeriodBoundaries.new(
         from_datetime: dates[:fixed_charges_from_datetime],
         to_datetime: dates[:fixed_charges_to_datetime],
-        charges_from_datetime: dates[:fixed_charges_from_datetime],
-        charges_to_datetime: dates[:fixed_charges_to_datetime],
+        charges_from_datetime: nil,
+        charges_to_datetime: nil,
         fixed_charges_from_datetime: dates[:fixed_charges_from_datetime],
         fixed_charges_to_datetime: dates[:fixed_charges_to_datetime],
         timestamp: Time.zone.at(timestamp),
-        charges_duration: dates[:fixed_charges_duration],
+        charges_duration: nil,
         fixed_charges_duration: dates[:fixed_charges_duration]
       )
     end
