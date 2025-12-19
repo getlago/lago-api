@@ -48,8 +48,11 @@ module Events
 
         query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
 
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
-        query = query.where(arel_table[:timestamp].lteq(applicable_to_datetime)) if applicable_to_datetime
+        query = with_timestamp_boundaries(
+          query,
+          (from_datetime if force_from || use_from_boundary),
+          applicable_to_datetime
+        )
 
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
         query = arel_filters_scope(query)
@@ -89,10 +92,7 @@ module Events
           arel_table[:external_subscription_id].eq(subscription.external_id)
           .and(arel_table[:organization_id].eq(subscription.organization.id)
           .and(arel_table[:code].eq(code)))
-        )
-
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        ).then { with_timestamp_boundaries(it, from_datetime, to_datetime) }
 
         columns = deduplicated_columns.dup
 
@@ -644,6 +644,12 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
+      end
+
+      def with_timestamp_boundaries(query, from_datetime, to_datetime)
+        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
+        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query
       end
 
       def with_ctes(ctes, query)
