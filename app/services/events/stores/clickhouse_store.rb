@@ -9,13 +9,13 @@ module Events
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = if deduplicate
-            dedcuplicated_subquery = deduplicated_events_sql(
+            deduplicated_subquery = deduplicated_events_sql(
               from_datetime: (from_datetime if force_from || use_from_boundary),
               to_datetime: (applicable_to_datetime if applicable_to_datetime),
               deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
             ).to_sql
 
-            ::Clickhouse::EventsEnriched.from("(#{dedcuplicated_subquery}) AS events_enriched")
+            ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
           else
             query = ::Clickhouse::EventsEnriched
               .where(external_subscription_id: subscription.external_id)
@@ -33,13 +33,13 @@ module Events
         end
       end
 
-      def events_sql(**args)
-        return events_sql_with_deduplication(**args) if deduplicate
+      def events_cte_queries(**args)
+        return events_cte_queries_with_deduplication(**args) if deduplicate
 
-        events_sql_without_deduplication(**args)
+        events_cte_queries_without_deduplication(**args)
       end
 
-      def events_sql_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         query = arel_table.where(
           arel_table[:external_subscription_id].eq(subscription.external_id)
           .and(arel_table[:organization_id].eq(subscription.organization.id)
@@ -57,7 +57,7 @@ module Events
         {"events" => query.project(select).to_sql}
       end
 
-      def events_sql_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         # Ensure presence of one of value or decimal_value for the ordering
         order_column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
         deduplicated_columns << order_column if ordered
@@ -153,7 +153,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value]
           )
@@ -183,7 +183,7 @@ module Events
 
       def count
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_sql(deduplicated_columns: %w[value]), <<-SQL)
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
           SQL
@@ -196,7 +196,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:transaction_id]],
             deduplicated_columns: %w[value properties]
           )
@@ -337,7 +337,7 @@ module Events
 
       def max
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_sql(deduplicated_columns: %w[decimal_value]), <<-SQL)
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT max(events.decimal_value)
             FROM events
           SQL
@@ -350,7 +350,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value properties]
           )
@@ -381,7 +381,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
             deduplicated_columns: %w[decimal_value properties]
           )
@@ -400,7 +400,7 @@ module Events
 
       def sum_precise_total_amount_cents
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_sql(deduplicated_columns: %w[precise_total_amount_cents]), <<-SQL)
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[precise_total_amount_cents]), <<-SQL)
             SELECT COALESCE(SUM(events.precise_total_amount_cents), 0)
             FROM events
           SQL
@@ -413,7 +413,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:precise_total_amount_cents].as("property")],
             deduplicated_columns: %w[precise_total_amount_cents]
           )
@@ -432,7 +432,7 @@ module Events
 
       def sum
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_sql(deduplicated_columns: %w[decimal_value]), <<-SQL)
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT sum(events.decimal_value)
             FROM events
           SQL
@@ -445,7 +445,7 @@ module Events
         groups, group_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [arel_table[:decimal_value].as("property")],
             deduplicated_columns: %w[decimal_value]
           )
@@ -472,7 +472,7 @@ module Events
         end
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: [
               Arel::Nodes::InfixOperation.new(
                 "*",
@@ -502,7 +502,7 @@ module Events
         end
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: groups + [
               Arel::Nodes::InfixOperation.new(
                 "*",
@@ -529,7 +529,7 @@ module Events
         date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("events_enriched.timestamp", timezone)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_sql(
+          ctes_sql = events_cte_queries(
             select: [
               Arel::Nodes::NamedFunction.new(
                 "toDate",
