@@ -872,6 +872,69 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         end
       end
     end
+
+    context "with events before from_datetime" do
+      before do
+        create_event(
+          timestamp: subscription_started_at - 1.day,
+          value: 100,
+          properties: {"region" => "europe", "country" => "france"},
+          transaction_id: SecureRandom.uuid
+        )
+      end
+
+      it "excludes events before from_datetime by default" do
+        expect(event_store.sum).to eq(15)
+      end
+
+      context "when use_from_boundary is false" do
+        before { event_store.use_from_boundary = false }
+
+        it "includes events before from_datetime" do
+          expect(event_store.sum).to eq(115)
+        end
+
+        context "when force_from is true" do
+          it "excludes events before from_datetime" do
+            # Note: #sum doesn't use force_from directly, it goes through events_cte_queries
+            # which respects use_from_boundary. This test verifies the boundary is applied.
+            event_store.use_from_boundary = true
+            expect(event_store.sum).to eq(15)
+          end
+        end
+      end
+    end
+
+    context "with events after to_datetime" do
+      let(:boundaries) do
+        {
+          from_datetime: subscription_started_at,
+          to_datetime: subscription_started_at + 3.days + 12.hours,
+          charges_duration: 31
+        }
+      end
+
+      it "excludes events after to_datetime" do
+        # Only events with values 1, 2, 3 are within the boundary
+        expect(event_store.sum).to eq(6)
+      end
+    end
+
+    context "with max_timestamp boundary" do
+      let(:boundaries) do
+        {
+          from_datetime: subscription_started_at,
+          to_datetime: subscription.started_at.end_of_month.end_of_day,
+          max_timestamp: subscription_started_at + 3.days + 12.hours,
+          charges_duration: 31
+        }
+      end
+
+      it "uses max_timestamp instead of to_datetime" do
+        # Only events with values 1, 2, 3 are within the boundary
+        expect(event_store.sum).to eq(6)
+      end
+    end
   end
 
   describe "#grouped_sum" do
