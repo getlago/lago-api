@@ -11721,6 +11721,7 @@ input VoidedInvoiceFeeInput {
   chargeFilterId: ID
   chargeId: ID
   description: String
+  fixedChargeId: ID
   id: ID
   invoiceDisplayName: String
   subscriptionId: ID

@@ -128,6 +128,27 @@ module Invoices
               "charge_filter"
             )
           )
+        elsif fee.fee_type == "fixed_charge"
+          result = Fees::InitFromAdjustedFixedChargeFeeService.call!(
+            adjusted_fee:,
+            boundaries: fee.properties,
+            properties: fee.fixed_charge.properties
+          )
+
+          updated = result.fee
+          fee.assign_attributes(
+            updated.attributes.slice(
+              "invoice_display_name",
+              "fixed_charge_id",
+              "subscription_id",
+              "units",
+              "unit_amount_cents",
+              "precise_unit_amount",
+              "amount_cents",
+              "precise_amount_cents",
+              "amount_details"
+            )
+          )
         else
           fee.invoice_display_name = adjusted_fee.invoice_display_name if adjusted_fee.invoice_display_name.present?
           fee.charge_id = adjusted_fee.charge_id if adjusted_fee.charge_id.present?
