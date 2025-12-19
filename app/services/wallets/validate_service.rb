@@ -2,7 +2,7 @@
 
 module Wallets
   class ValidateService < BaseValidator
-    MAXIMUM_WALLETS_PER_CUSTOMER = 5
+    MAXIMUM_WALLETS_PER_CUSTOMER = 6
 
     def valid?
       valid_organization_id?
