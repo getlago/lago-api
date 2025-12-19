@@ -51,10 +51,10 @@ module Events
 
         attr_reader :store
 
-        delegate :arel_table, :with_ctes, :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
+        delegate :arel_table, :with_ctes, :charges_duration, :events_cte_queries, :arel_table, :grouped_arel_columns, to: :store
 
         def events_cte_sql
-          events_cte = events_sql(
+          events_cte = events_cte_queries(
             ordered: true,
             select: [
               arel_table[:timestamp].as("timestamp"),
@@ -113,7 +113,7 @@ module Events
 
         def grouped_events_cte_sql(initial_values)
           groups, _ = grouped_arel_columns
-          events_cte = events_sql(
+          events_cte = events_cte_queries(
             ordered: true,
             select: groups + [
               arel_table[:timestamp].as("timestamp"),
