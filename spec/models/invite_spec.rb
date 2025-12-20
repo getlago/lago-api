@@ -27,21 +27,38 @@ RSpec.describe Invite do
     end
   end
 
-  describe "Invite email" do
-    let(:invite) { build(:invite) }
+  describe "validations" do
+    subject(:invite) { build(:invite, organization:) }
 
-    it "is valid by default" do
-      expect(invite).to be_valid
+    let(:organization) { create(:organization) }
+    let!(:role) { create(:role, :custom, organization:) }
+
+    before { create(:role, :admin) }
+
+    it { is_expected.to be_valid }
+
+    context "with wrong email format" do
+      before { invite.email = "wrong" }
+
+      it { is_expected.not_to be_valid }
     end
 
-    it "is invalid with wrong format" do
-      invite.email = "wrong"
-      expect(invite).not_to be_valid
+    context "without email" do
+      before { invite.email = nil }
+
+      it { is_expected.not_to be_valid }
     end
 
-    it "is invalid if not present" do
-      invite.email = nil
-      expect(invite).not_to be_valid
+    context "when roles is empty" do
+      before { invite.roles = [] }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "when all roles exist in the organization" do
+      before { invite.roles = [role.name.swapcase, "Admin"] }
+
+      it { is_expected.to be_valid }
     end
   end
 end
