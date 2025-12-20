@@ -11,7 +11,7 @@ class Role < ApplicationRecord
   has_many :memberships, through: :membership_roles
 
   scope :admins, -> { where(admin: true) }
-  scope :with_code, ->(code) { where(code:) }
+  scope :with_code, ->(*codes) { where(code: codes) }
   scope :with_organization, ->(organization_id) { where(organization_id: [nil, organization_id]) }
 
   before_validation :normalize_name
