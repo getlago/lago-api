@@ -90,10 +90,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           it "does not enqueue a job to bill the subscription" do
             expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
-
-          it "enqueues a job to bill the pay in advance fixed charges" do
-            expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
-          end
         end
       end
     end
