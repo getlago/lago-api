@@ -2893,8 +2893,7 @@ input CreateInviteInput {
   """
   clientMutationId: String
   email: String!
-  role: MembershipRole @deprecated(reason: "Use roles argument instead")
-  roles: [String!] = []
+  roles: [String!]!
 }
 
 """
@@ -5961,7 +5960,6 @@ type Invite {
   organization: Organization!
   recipient: Membership!
   revokedAt: ISO8601DateTime!
-  role: MembershipRole @deprecated(reason: "Use `roles` field instead")
   roles: [String!]!
   status: InviteStatusTypeEnum!
   token: String!
@@ -6316,9 +6314,7 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organization: Organization!
-  permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
   revokedAt: ISO8601DateTime!
-  role: MembershipRole @deprecated(reason: "Use roles instead")
   roles: [String!]!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
@@ -6338,12 +6334,6 @@ type MembershipCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: Metadata!
-}
-
-enum MembershipRole {
-  admin
-  finance
-  manager
 }
 
 enum MembershipStatus {
@@ -8410,125 +8400,6 @@ enum PermissionEnum {
   wallets_terminate
   wallets_top_up
   wallets_update
-}
-
-"""
-Permissions Type
-"""
-type Permissions {
-  addonsCreate: Boolean!
-  addonsDelete: Boolean!
-  addonsUpdate: Boolean!
-  addonsView: Boolean!
-  aiConversationsCreate: Boolean!
-  aiConversationsView: Boolean!
-  analyticsOverdueBalancesView: Boolean!
-  analyticsView: Boolean!
-  auditLogsView: Boolean!
-  authenticationMethodsUpdate: Boolean!
-  authenticationMethodsView: Boolean!
-  billableMetricsCreate: Boolean!
-  billableMetricsDelete: Boolean!
-  billableMetricsUpdate: Boolean!
-  billableMetricsView: Boolean!
-  billingEntitiesCreate: Boolean!
-  billingEntitiesDelete: Boolean!
-  billingEntitiesDunningCampaignsUpdate: Boolean!
-  billingEntitiesEmailsUpdate: Boolean!
-  billingEntitiesEmailsView: Boolean!
-  billingEntitiesInvoicesUpdate: Boolean!
-  billingEntitiesInvoicesView: Boolean!
-  billingEntitiesTaxesUpdate: Boolean!
-  billingEntitiesTaxesView: Boolean!
-  billingEntitiesUpdate: Boolean!
-  billingEntitiesView: Boolean!
-  couponsAttach: Boolean!
-  couponsCreate: Boolean!
-  couponsDelete: Boolean!
-  couponsDetach: Boolean!
-  couponsUpdate: Boolean!
-  couponsView: Boolean!
-  creditNotesCreate: Boolean!
-  creditNotesExport: Boolean!
-  creditNotesUpdate: Boolean!
-  creditNotesView: Boolean!
-  creditNotesVoid: Boolean!
-  customerSettingsUpdateGracePeriod: Boolean!
-  customerSettingsUpdateIssuingDateAdjustment: Boolean!
-  customerSettingsUpdateIssuingDateAnchor: Boolean!
-  customerSettingsUpdateLang: Boolean!
-  customerSettingsUpdatePaymentTerms: Boolean!
-  customerSettingsUpdateTaxRates: Boolean!
-  customerSettingsView: Boolean!
-  customersCreate: Boolean!
-  customersDelete: Boolean!
-  customersUpdate: Boolean!
-  customersView: Boolean!
-  dataApiView: Boolean!
-  developersKeysManage: Boolean!
-  developersManage: Boolean!
-  draftInvoicesUpdate: Boolean!
-  dunningCampaignsCreate: Boolean!
-  dunningCampaignsDelete: Boolean!
-  dunningCampaignsUpdate: Boolean!
-  dunningCampaignsView: Boolean!
-  featuresCreate: Boolean!
-  featuresDelete: Boolean!
-  featuresUpdate: Boolean!
-  featuresView: Boolean!
-  invoiceCustomSectionsCreate: Boolean!
-  invoiceCustomSectionsDelete: Boolean!
-  invoiceCustomSectionsUpdate: Boolean!
-  invoiceCustomSectionsView: Boolean!
-  invoicesCreate: Boolean!
-  invoicesExport: Boolean!
-  invoicesSend: Boolean!
-  invoicesUpdate: Boolean!
-  invoicesView: Boolean!
-  invoicesVoid: Boolean!
-  organizationEmailsUpdate: Boolean!
-  organizationEmailsView: Boolean!
-  organizationIntegrationsCreate: Boolean!
-  organizationIntegrationsDelete: Boolean!
-  organizationIntegrationsUpdate: Boolean!
-  organizationIntegrationsView: Boolean!
-  organizationInvoicesUpdate: Boolean!
-  organizationInvoicesView: Boolean!
-  organizationMembersCreate: Boolean!
-  organizationMembersDelete: Boolean!
-  organizationMembersUpdate: Boolean!
-  organizationMembersView: Boolean!
-  organizationTaxesUpdate: Boolean!
-  organizationTaxesView: Boolean!
-  organizationUpdate: Boolean!
-  organizationView: Boolean!
-  paymentMethodsCreate: Boolean!
-  paymentMethodsDelete: Boolean!
-  paymentMethodsUpdate: Boolean!
-  paymentMethodsView: Boolean!
-  paymentRequestsCreate: Boolean!
-  paymentRequestsView: Boolean!
-  paymentsCreate: Boolean!
-  paymentsView: Boolean!
-  permissionsView: Boolean!
-  plansCreate: Boolean!
-  plansDelete: Boolean!
-  plansUpdate: Boolean!
-  plansView: Boolean!
-  pricingUnitsCreate: Boolean!
-  pricingUnitsUpdate: Boolean!
-  pricingUnitsView: Boolean!
-  rolesCreate: Boolean!
-  rolesDelete: Boolean!
-  rolesUpdate: Boolean!
-  rolesView: Boolean!
-  subscriptionsCreate: Boolean!
-  subscriptionsUpdate: Boolean!
-  subscriptionsView: Boolean!
-  walletsCreate: Boolean!
-  walletsTerminate: Boolean!
-  walletsTopUp: Boolean!
-  walletsUpdate: Boolean!
 }
 
 type Plan {
@@ -11576,8 +11447,7 @@ input UpdateInviteInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole @deprecated(reason: "Use `roles` instead")
-  roles: [String!]
+  roles: [String!]!
 }
 
 """
@@ -11618,8 +11488,7 @@ input UpdateMembershipInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole @deprecated(reason: "Use `roles` instead")
-  roles: [String!]
+  roles: [String!]!
 }
 
 """

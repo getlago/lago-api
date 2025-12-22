@@ -11,8 +11,6 @@ RSpec.describe Types::MembershipType do
     expect(subject).to have_field(:organization).of_type("Organization!")
     expect(subject).to have_field(:user).of_type("User!")
 
-    expect(subject).to have_field(:permissions).of_type("Permissions!")
-    expect(subject).to have_field(:role).of_type("MembershipRole")
     expect(subject).to have_field(:roles).of_type("[String!]!")
     expect(subject).to have_field(:status).of_type("MembershipStatus!")
 

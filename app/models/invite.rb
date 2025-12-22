@@ -13,7 +13,6 @@ class Invite < ApplicationRecord
   ].freeze
 
   enum :status, INVITE_STATUS
-  enum :role, Membership::ROLES
 
   validates :email, email: true
   validates :token, uniqueness: true
