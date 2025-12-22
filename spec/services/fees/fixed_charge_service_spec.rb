@@ -13,13 +13,14 @@ RSpec.describe Fees::FixedChargeService do
   let(:organization) { customer.organization }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
+  let(:started_at) { Time.zone.parse("2022-03-17") }
 
   let(:subscription) do
     create(
       :subscription,
       organization:,
       status: :active,
-      started_at: Time.zone.parse("2022-03-17"),
+      started_at:,
       customer:
     )
   end
@@ -468,27 +469,29 @@ RSpec.describe Fees::FixedChargeService do
         )
       end
 
+      let(:started_at) { Time.zone.parse("2022-04-17") }
+
       let(:subscription) do
         create(
           :subscription,
           organization:,
           status: :active,
-          started_at: Time.zone.parse("2022-04-17"),
+          started_at:,
           customer:
         )
       end
 
       let(:boundaries) do
         BillingPeriodBoundaries.new(
-          from_datetime: Time.zone.parse("15 Apr 2022 00:01:00"),
-          to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
-          charges_from_datetime: subscription.started_at,
-          charges_to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
-          fixed_charges_from_datetime: subscription.started_at,
-          fixed_charges_to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
+          from_datetime: started_at,
+          to_datetime: started_at.end_of_month,
+          charges_from_datetime: started_at,
+          charges_to_datetime: started_at.end_of_month,
+          fixed_charges_from_datetime: started_at,
+          fixed_charges_to_datetime: started_at.end_of_month,
           charges_duration: 30,
           fixed_charges_duration: 30,
-          timestamp: Time.zone.parse("2022-05-01T00:01:00")
+          timestamp: Time.zone.parse("2022-05-01T00:00:00.000Z")
         )
       end
 
@@ -510,6 +513,96 @@ RSpec.describe Fees::FixedChargeService do
           amount_currency: "EUR",
           units: 10
         )
+      end
+
+      context "when there is an already paid fee from prev subscription" do
+        context "when fee is paid in advance" do
+          let(:pay_in_advance) { true }
+          let(:previous_fixed_charge) do
+            create(:fixed_charge, plan: previous_plan, charge_model: "standard", prorated: true, properties: {amount: prev_price}, add_on: fixed_charge.add_on, pay_in_advance:)
+          end
+          let(:previous_fee) do
+            create(:fee, fixed_charge: previous_fixed_charge, subscription: previous_subscription,
+              properties: previous_boundaries.to_h, amount_cents: prev_fee_price, organization:,
+              billing_entity: subscription.customer.billing_entity)
+          end
+          let(:previous_timestamp) { Time.zone.parse("11 Apr 2022 00:01:00") }
+          let(:previous_boundaries) do
+            BillingPeriodBoundaries.new(
+              from_datetime: previous_timestamp,
+              to_datetime: started_at.end_of_month,
+              charges_from_datetime: previous_timestamp,
+              charges_to_datetime: started_at.end_of_month,
+              fixed_charges_from_datetime: previous_timestamp,
+              fixed_charges_to_datetime: started_at.end_of_month,
+              charges_duration: 30,
+              fixed_charges_duration: 30,
+              timestamp: previous_timestamp
+            )
+          end
+
+          let(:fixed_charge) do
+            create(:fixed_charge, plan: subscription.plan, charge_model: "standard", prorated: true, properties: {amount: new_price}, pay_in_advance:)
+          end
+          let(:boundaries) do
+            BillingPeriodBoundaries.new(
+              from_datetime: started_at,
+              to_datetime: started_at,
+              charges_from_datetime: started_at,
+              charges_to_datetime: started_at,
+              fixed_charges_from_datetime: started_at,
+              fixed_charges_to_datetime: started_at,
+              charges_duration: 30,
+              fixed_charges_duration: 30,
+              timestamp: Time.zone.parse("2022-04-17T00:01:00.000Z")
+            )
+          end
+
+          before { previous_fee }
+
+          context "when fixed charge price is higher than previous one" do
+            let(:prev_price) { "3" }
+            let(:prev_fee_price) { 2000 } # (for 20 days out of 30)
+            let(:new_price) { "60" }
+
+            it "creates a new prorated fee for the complete period" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                fixed_charge_id: fixed_charge.id,
+                # new_proration = 6000 * 14 / 30 * 10
+                # previous_proration = 2000 (for 20 days)
+                # total = new_proration - previous_proration * 14 / 20 = 28000 - 1400 = 26600
+                amount_cents: 26600,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 10
+              )
+            end
+          end
+
+          context "when fixed charge price is lower than previous one" do
+            let(:prev_price) { "60" }
+            let(:prev_fee_price) { 40000 } # (for 20 days out of 30, 10 units)
+            let(:new_price) { "30" }
+
+            it "creates a new prorated fee for the complete period" do
+              result = fixed_charge_service.call
+              expect(result).to be_success
+              expect(result.fee).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                fixed_charge_id: fixed_charge.id,
+                amount_cents: 0,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 10
+              )
+            end
+          end
+        end
       end
     end
 
