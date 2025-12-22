@@ -46,14 +46,14 @@ RSpec.describe Plan do
     end
   end
 
-  describe "#parent? and #child?" do
+  describe "#is_parent? and #is_child?" do
     it do
-      expect(plan).to be_parent
-      expect(plan).not_to be_child
+      expect(plan.is_parent?).to be true
+      expect(plan.is_child?).to be false
 
       plan.parent_id = SecureRandom.uuid
-      expect(plan).not_to be_parent
-      expect(plan).to be_child
+      expect(plan.is_parent?).to be false
+      expect(plan.is_child?).to be true
     end
   end
 
