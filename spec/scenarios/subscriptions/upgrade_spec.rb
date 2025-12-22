@@ -253,6 +253,111 @@ describe "Subscription Upgrade Scenario", transaction: false do
             "fixed_charges_to_datetime" => "2023-10-31T23:59:59.999Z"
           )
         end
+
+        context "when upgrade happens at the same day when sub starts" do
+          let(:subscription_at) { DateTime.new(2025, 12, 22, 12, 12) }
+
+          it "calculates all fees" do
+            travel_to(subscription_at) do
+              create_subscription({
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+                billing_time: "calendar"
+              })
+            end
+            subscription = customer.subscriptions.first
+            expect(subscription).to be_active
+            expect(subscription.invoices.count).to eq(1)
+            invoice = subscription.invoices.first
+            expect(invoice.fees.fixed_charge.count).to eq(2)
+            # create(:fixed_charge, plan:, add_on: add_ons[0], properties: {amount: "1"}, units: 10, pay_in_advance:, prorated:),
+            # create(:fixed_charge, plan:, add_on: add_ons[1], properties: {amount: "3"}, units: 5, pay_in_advance:, prorated:)
+            expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([(1000.0 * 10 / 31).round, (1500.0 * 10 / 31).round])
+            expect(invoice.fees.fixed_charge.sample.properties).to include(
+              "fixed_charges_from_datetime" => "2025-12-22T12:12:00.000Z",
+              "fixed_charges_to_datetime" => "2025-12-31T23:59:59.999Z"
+            )
+
+            travel_to(subscription_at + 1.hour) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan_upgrade.code,
+                  billing_time: "calendar"
+                }
+              )
+            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.invoices.count).to eq(2)
+            new_subscription = subscription.reload.next_subscription
+            expect(new_subscription).to be_active
+            expect(new_subscription.invoices.count).to be(1)
+            invoice = new_subscription.invoices.first
+            expect(invoice.fees.fixed_charge.count).to eq(2)
+            # create(:fixed_charge, plan: plan_upgrade, add_on: add_ons[1], properties: {amount: "10"}, units: 10, pay_in_advance:, prorated:),
+            # create(:fixed_charge, plan: plan_upgrade, add_on: add_ons[2], properties: {amount: "20"}, units: 1, pay_in_advance:, prorated:)
+            # old fee was prorated for the same number of days, so we fully deduct it
+            old_fee_prorated_amount = (1500.0 * 10 / 31).round
+            expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([(10000.0 * 10 / 31).round - old_fee_prorated_amount, 2000 * 10 / 31])
+            expect(invoice.fees.fixed_charge.sample.properties).to include(
+              "fixed_charges_from_datetime" => "2025-12-22T13:12:00.000Z",
+              "fixed_charges_to_datetime" => "2025-12-31T23:59:59.999Z"
+            )
+          end
+        end
+
+        context "when original fee was prorated for less than a month" do
+          let(:subscription_at) { DateTime.new(2025, 12, 10, 12, 12) }
+          let(:upgrade_at) { DateTime.new(2025, 12, 22, 12, 12) }
+
+          it "calculates all fees" do
+            travel_to(subscription_at) do
+              create_subscription({
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+                billing_time: "calendar"
+              })
+            end
+            subscription = customer.subscriptions.first
+            expect(subscription).to be_active
+            expect(subscription.invoices.count).to eq(1)
+            invoice = subscription.invoices.first
+            expect(invoice.fees.fixed_charge.count).to eq(2)
+            expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([(1000.0 * 22 / 31).round, (1500.0 * 22 / 31).round])
+            expect(invoice.fees.fixed_charge.sample.properties).to include(
+              "fixed_charges_from_datetime" => "2025-12-10T12:12:00.000Z",
+              "fixed_charges_to_datetime" => "2025-12-31T23:59:59.999Z"
+            )
+            travel_to(upgrade_at) do
+              create_subscription(
+                {
+                  external_customer_id: customer.external_id,
+                  external_id: customer.external_id,
+                  plan_code: plan_upgrade.code,
+                  billing_time: "calendar"
+                }
+              )
+            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.invoices.count).to eq(2)
+            new_subscription = subscription.reload.next_subscription
+            expect(new_subscription).to be_active
+            expect(new_subscription.invoices.count).to be(1)
+            invoice = new_subscription.invoices.first
+            expect(invoice.fees.fixed_charge.count).to eq(2)
+            # old fee was prorated for 22 days out of 31, so we need to get "price of one day" and multiply by the number of days in the new period
+            old_fee_prorated_amount = (1500.0 * 22 / 31).round
+            old_fee_covers_current_period = (old_fee_prorated_amount * 10.0/22).round
+            expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([(10000.0 * 10 / 31).round - old_fee_covers_current_period, (2000 * 10 / 31).round])
+            expect(invoice.fees.fixed_charge.sample.properties).to include(
+              "fixed_charges_from_datetime" => "2025-12-22T12:12:00.000Z",
+              "fixed_charges_to_datetime" => "2025-12-31T23:59:59.999Z"
+            )
+          end
+        end
       end
 
       context "when fixed charges are not prorated" do
