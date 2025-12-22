@@ -173,6 +173,29 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when updating progressive_billing_disabled" do
+        let(:params) { {progressive_billing_disabled: true} }
+
+        it "updates progressive_billing_disabled" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.progressive_billing_disabled).to be(true)
+        end
+
+        context "when setting to false" do
+          let(:subscription) { create(:subscription, progressive_billing_disabled: true) }
+          let(:params) { {progressive_billing_disabled: false} }
+
+          it "updates progressive_billing_disabled to false" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.progressive_billing_disabled).to be(false)
+          end
+        end
+      end
+
       context "when updating payment method" do
         let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
         let(:params) { {payment_method: payment_method_params} }
