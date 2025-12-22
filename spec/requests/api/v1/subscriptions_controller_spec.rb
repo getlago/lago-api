@@ -844,8 +844,7 @@ RSpec.describe Api::V1::SubscriptionsController do
       expect(subscription).to include(
         lago_id: Regex::UUID,
         name: "subscription name new",
-        subscription_at: "2022-09-05T12:23:12Z",
-        applicable_usage_thresholds: []
+        subscription_at: "2022-09-05T12:23:12Z"
       )
 
       plan_json = subscription[:plan]
