@@ -222,6 +222,380 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             end
           end
 
+          context "with fixed charges" do
+            let(:add_on) { create(:add_on, organization:) }
+
+            context "with pay_in_advance fixed charge on first invoice" do
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  prorated: false,
+                  units: 2,
+                  properties: {amount: "10"}
+                )
+              end
+
+              before do
+                fixed_charge
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge:,
+                  units: fixed_charge.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "includes pay_in_advance fixed charge on first invoice" do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(1)
+
+                  fixed_charge_fee = fixed_charge_fees.first
+                  expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+                  expect(fixed_charge_fee.amount_cents).to eq(2000) # $10 * 2 units * 100
+                  expect(fixed_charge_fee.units).to eq(2)
+
+                  # Total: subscription (6) + fixed charge (2000) = 2006
+                  expect(result.invoice.fees_amount_cents).to eq(2006)
+                  expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2006)
+                  expect(result.invoice.taxes_amount_cents).to eq(1003) # 50% tax
+                  expect(result.invoice.total_amount_cents).to eq(3009)
+                end
+              end
+            end
+
+            context "with pay_in_arrears fixed charge on first invoice" do
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  prorated: false,
+                  units: 1,
+                  properties: {amount: "5"}
+                )
+              end
+
+              before do
+                fixed_charge
+
+                # Create invoice_subscription to mark this as "starting"
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  invoicing_reason: :subscription_starting,
+                  from_datetime: subscription.started_at,
+                  to_datetime: subscription.started_at + 1.month
+                )
+              end
+
+              it "does not include pay_in_arrears fixed charge on first invoice" do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.invoice.fees.size).to eq(1) # only subscription fee
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to be_zero
+
+                  # Only subscription fee
+                  expect(result.invoice.fees_amount_cents).to eq(6)
+                end
+              end
+            end
+
+            context "with pay_in_arrears fixed charge on subsequent invoice" do
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  prorated: false,
+                  units: 1,
+                  properties: {amount: "5"}
+                )
+              end
+
+              before do
+                fixed_charge
+
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge:,
+                  units: fixed_charge.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+
+                # Create invoice_subscriptions to simulate that subscription has been invoiced before
+                # First invoice (subscription_starting)
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  invoicing_reason: :subscription_starting,
+                  from_datetime: subscription.started_at,
+                  to_datetime: subscription.started_at + 1.month,
+                  created_at: 1.month.ago
+                )
+
+                # Second invoice (regular billing)
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  invoicing_reason: :subscription_periodic,
+                  from_datetime: subscription.started_at + 1.month,
+                  to_datetime: subscription.started_at + 2.months,
+                  created_at: 15.days.ago
+                )
+              end
+
+              it "includes pay_in_arrears fixed charge on subsequent invoice" do
+                travel_to(timestamp + 1.month) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(1)
+
+                  fixed_charge_fee = fixed_charge_fees.first
+                  expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+                  expect(fixed_charge_fee.amount_cents).to eq(500) # $5 * 1 unit * 100
+                end
+              end
+            end
+
+            context "with multiple fixed charges" do
+              let(:add_on2) { create(:add_on, organization:) }
+              let(:add_on3) { create(:add_on, organization:) }
+
+              let(:fixed_charge_advance) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 1,
+                  properties: {amount: "10"}
+                )
+              end
+              let(:fixed_charge_advance2) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on2,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 2,
+                  properties: {amount: "5"}
+                )
+              end
+              let(:fixed_charge_in_arrears) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on3,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  units: 1,
+                  properties: {amount: "25"}
+                )
+              end
+
+              before do
+                fixed_charge_advance
+                fixed_charge_advance2
+                fixed_charge_in_arrears
+
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge: fixed_charge_advance,
+                  units: fixed_charge_advance.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge: fixed_charge_advance2,
+                  units: fixed_charge_advance2.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge: fixed_charge_in_arrears,
+                  units: fixed_charge_in_arrears.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "includes all applicable fixed charges" do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(3)
+
+                  total_fixed_charges = fixed_charge_fees.sum(&:amount_cents)
+                  expect(total_fixed_charges).to eq(4500) # $10 * 1 + $5 * 2 + $25 * 1 = $45
+
+                  # Total: subscription (6) + fixed charges (4500) = 4506
+                  expect(result.invoice.fees_amount_cents).to eq(4506)
+                end
+              end
+            end
+
+            context "with graduated pricing model" do
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "graduated",
+                  pay_in_advance: true,
+                  units: 15,
+                  properties: {
+                    graduated_ranges: [
+                      {from_value: 0, to_value: 10, flat_amount: "0", per_unit_amount: "1"},
+                      {from_value: 11, to_value: nil, flat_amount: "0", per_unit_amount: "0.5"}
+                    ]
+                  }
+                )
+              end
+
+              before do
+                fixed_charge
+
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge:,
+                  units: fixed_charge.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "calculates graduated pricing correctly" do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  fixed_charge_fee = fixed_charge_fees.first
+                  # 10 units * $1 + 5 units * $0.5 = $12.5
+                  expect(fixed_charge_fee.amount_cents).to eq(1250)
+                end
+              end
+            end
+
+            context "with volume pricing model" do
+              let(:fixed_charge) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on:,
+                  charge_model: "volume",
+                  pay_in_advance: false,
+                  units: 25,
+                  properties: {
+                    volume_ranges: [
+                      {from_value: 0, to_value: 10, flat_amount: "0", per_unit_amount: "1"},
+                      {from_value: 11, to_value: 50, flat_amount: "5", per_unit_amount: "0.8"},
+                      {from_value: 51, to_value: nil, flat_amount: "10", per_unit_amount: "0.5"}
+                    ]
+                  }
+                )
+              end
+
+              before do
+                fixed_charge
+
+                # Volume pricing requires pay_in_arrears, so we need to simulate subsequent invoice
+                # Create 2 invoice_subscriptions to mark as subsequent (not starting)
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  invoicing_reason: :subscription_starting,
+                  from_datetime: subscription.started_at,
+                  to_datetime: subscription.started_at + 1.month,
+                  created_at: 1.month.ago
+                )
+
+                create(
+                  :invoice_subscription,
+                  subscription:,
+                  invoicing_reason: :subscription_periodic,
+                  from_datetime: subscription.started_at + 1.month,
+                  to_datetime: subscription.started_at + 2.months,
+                  created_at: 15.days.ago
+                )
+
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge:,
+                  units: fixed_charge.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "calculates volume pricing correctly" do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  fixed_charge_fee = fixed_charge_fees.first
+                  # 25 units falls in second tier: $5 flat + (25 * $0.8) = $25
+                  expect(fixed_charge_fee.amount_cents).to eq(2500)
+                end
+              end
+            end
+          end
+
           context "when preview premium integration does not exist" do
             before { organization.update!(premium_integrations: ["netsuite"]) }
 
@@ -298,6 +672,68 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.total_amount_cents).to eq(3803) # 3803
               end
             end
+
+            context "with fixed charges" do
+              let(:add_on_advance) { create(:add_on, organization:) }
+              let(:add_on_arrears) { create(:add_on, organization:) }
+              let(:fixed_charge_advance) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on_advance,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 1,
+                  properties: {amount: "10"}
+                )
+              end
+              let(:fixed_charge_arrears) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on_arrears,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  units: 1,
+                  properties: {amount: "5"}
+                )
+              end
+
+              before do
+                fixed_charge_advance
+                fixed_charge_arrears
+
+                event_timestamp = subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription:,
+                  fixed_charge: fixed_charge_arrears,
+                  units: fixed_charge_arrears.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "excludes pay_in_advance and includes pay_in_arrears fixed charges", transaction: false do
+                travel_to(subscription.terminated_at) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(1)
+
+                  fixed_charge_fee = fixed_charge_fees.first
+                  expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge_arrears)
+                  expect(fixed_charge_fee.amount_cents).to eq(500) # $5 * 1 unit
+
+                  # Should NOT include pay_in_advance fixed charge
+                  fixed_charge_ids = fixed_charge_fees.map(&:fixed_charge_id)
+                  expect(fixed_charge_ids).not_to include(fixed_charge_advance.id)
+                end
+              end
+            end
           end
 
           context "when subscription is upgraded" do
@@ -359,6 +795,16 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 invoicing_reason: :subscription_starting
               )
 
+              # Create a second invoice_subscription to mark terminated_subscription as subsequent (not starting)
+              create(
+                :invoice_subscription,
+                subscription: terminated_subscription,
+                invoicing_reason: :subscription_periodic,
+                from_datetime: timestamp + 1.day,
+                to_datetime: timestamp + 15.hours,
+                created_at: timestamp + 1.day
+              )
+
               terminated_subscription.assign_attributes(
                 status: "terminated",
                 terminated_at: timestamp + 15.hours
@@ -385,6 +831,82 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.taxes_amount_cents).to eq(18)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(53)
                 expect(result.invoice.total_amount_cents).to eq(53)
+              end
+            end
+
+            context "with fixed charges on both plans" do
+              let(:add_on_old) { create(:add_on, organization:) }
+              let(:add_on_new) { create(:add_on, organization:) }
+              let(:fixed_charge_old_plan) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on_old,
+                  charge_model: "standard",
+                  pay_in_advance: false,
+                  units: 1,
+                  properties: {amount: "5"}
+                )
+              end
+              let(:fixed_charge_new_plan) do
+                create(
+                  :fixed_charge,
+                  plan: plan_new,
+                  add_on: add_on_new,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 1,
+                  properties: {amount: "8"}
+                )
+              end
+
+              before do
+                fixed_charge_old_plan
+                fixed_charge_new_plan
+
+                old_event_timestamp = terminated_subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription: terminated_subscription,
+                  fixed_charge: fixed_charge_old_plan,
+                  units: fixed_charge_old_plan.units,
+                  timestamp: old_event_timestamp,
+                  created_at: old_event_timestamp
+                )
+
+                new_event_timestamp = upgrade_subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription: upgrade_subscription,
+                  fixed_charge: fixed_charge_new_plan,
+                  units: fixed_charge_new_plan.units,
+                  timestamp: new_event_timestamp,
+                  created_at: new_event_timestamp
+                )
+              end
+
+              it "includes fixed charges from both old and new plans", transaction: false do
+                travel_to(terminated_subscription.terminated_at) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.invoice.subscriptions.size).to eq(2)
+
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(2)
+
+                  # Old plan pay_in_arrears fixed charge should be included
+                  old_plan_fixed_fees = fixed_charge_fees.select { |f| f.subscription == terminated_subscription }
+                  expect(old_plan_fixed_fees.size).to eq(1)
+                  expect(old_plan_fixed_fees.first.amount_cents).to eq(500) # $5
+
+                  # New plan pay_in_advance fixed charge should be included
+                  new_plan_fixed_fees = fixed_charge_fees.select { |f| f.subscription == upgrade_subscription }
+                  expect(new_plan_fixed_fees.size).to eq(1)
+                  expect(new_plan_fixed_fees.first.amount_cents).to eq(800) # $8
+                end
               end
             end
           end
@@ -483,6 +1005,70 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.credit_notes_amount_cents).to eq(0)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(221)
                 expect(result.invoice.total_amount_cents).to eq(221)
+              end
+            end
+
+            context "with fixed charges on both plans" do
+              let(:add_on_old) { create(:add_on, organization:) }
+              let(:add_on_new) { create(:add_on, organization:) }
+              let(:fixed_charge_old_plan) do
+                create(
+                  :fixed_charge,
+                  plan:,
+                  add_on: add_on_old,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 1,
+                  properties: {amount: "10"}
+                )
+              end
+              let(:fixed_charge_new_plan) do
+                create(
+                  :fixed_charge,
+                  plan: plan_new,
+                  add_on: add_on_new,
+                  charge_model: "standard",
+                  pay_in_advance: true,
+                  units: 1,
+                  properties: {amount: "3"}
+                )
+              end
+
+              before do
+                fixed_charge_old_plan
+                fixed_charge_new_plan
+
+                event_timestamp = downgraded_subscription.started_at + 1.second
+                create(
+                  :fixed_charge_event,
+                  organization:,
+                  subscription: downgraded_subscription,
+                  fixed_charge: fixed_charge_new_plan,
+                  units: fixed_charge_new_plan.units,
+                  timestamp: event_timestamp,
+                  created_at: event_timestamp
+                )
+              end
+
+              it "includes fixed charges from new plan only", transaction: false do
+                # Old plan pay_in_advance should NOT be included (terminated)
+                # New plan pay_in_advance should be included
+
+                travel_to(Time.zone.parse("30 Mar 2024 05:00")) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.invoice.subscriptions.size).to eq(2)
+
+                  # Should only have fixed charge from new plan (pay_in_advance not charged on terminated subscription)
+                  fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                  expect(fixed_charge_fees.size).to eq(1)
+
+                  # New plan pay_in_advance fixed charge should be included
+                  new_plan_fixed_fee = fixed_charge_fees.first
+                  expect(new_plan_fixed_fee.subscription).to eq(downgraded_subscription)
+                  expect(new_plan_fixed_fee.amount_cents).to eq(300) # $3
+                end
               end
             end
           end
@@ -991,6 +1577,57 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.taxes_amount_cents).to eq(1316)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3948)
                 expect(result.invoice.total_amount_cents).to eq(3948)
+              end
+            end
+          end
+
+          context "with fixed charges" do
+            let(:add_on) { create(:add_on, organization:) }
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "standard",
+                pay_in_advance: true,
+                units: 2,
+                properties: {amount: "7.5"}
+              )
+            end
+
+            before do
+              fixed_charge
+
+              event_timestamp = subscription.started_at + 1.second
+              create(
+                :fixed_charge_event,
+                organization:,
+                subscription:,
+                fixed_charge:,
+                units: fixed_charge.units,
+                timestamp: event_timestamp,
+                created_at: event_timestamp
+              )
+            end
+
+            it "creates preview invoice with fixed charges for anniversary billing" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                expect(fixed_charge_fee.amount_cents).to eq(1500) # $7.5 * 2 units = $15
+
+                # Total: subscription (100) + fixed charge (1500) = 1600
+                expect(result.invoice.fees_amount_cents).to eq(1600)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1600)
+                expect(result.invoice.taxes_amount_cents).to eq(800) # 50% tax
+                expect(result.invoice.total_amount_cents).to eq(2400)
               end
             end
           end
