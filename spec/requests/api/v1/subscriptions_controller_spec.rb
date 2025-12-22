@@ -127,7 +127,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
         expect(plan.usage_thresholds).to contain_exactly(plan_usage_threshold)
         subscription = Subscription.find json[:subscription][:lago_id]
-        expect(subscription.plan).to be_child
+        expect(subscription.plan.is_child?).to be true
         expect(subscription.plan.usage_thresholds.sole.amount_cents).to eq override_amount_cents
         expect(subscription.usage_thresholds).to be_empty
 
@@ -179,7 +179,7 @@ RSpec.describe Api::V1::SubscriptionsController do
 
         expect(plan.usage_thresholds).to contain_exactly(plan_usage_threshold)
         subscription = Subscription.find json[:subscription][:lago_id]
-        expect(subscription.plan).to be_child
+        expect(subscription.plan.is_child?).to be true
         expect(subscription.plan.usage_thresholds).to be_empty
         expect(subscription.usage_thresholds.sole.amount_cents).to eq override_amount_cents
 
@@ -954,7 +954,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           expect(response).to have_http_status(:success)
 
           subscription = Subscription.find_by(id: json[:subscription][:lago_id])
-          expect(subscription.plan).to be_child
+          expect(subscription.plan.is_child?).to be true
           expect(subscription.plan.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
           expect(subscription.plan.parent.usage_thresholds.count).to eq 2
           expect(subscription.usage_thresholds).to be_empty
@@ -991,7 +991,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           expect(response).to have_http_status(:success)
 
           subscription = Subscription.find_by(id: json[:subscription][:lago_id])
-          expect(subscription.plan).to be_child
+          expect(subscription.plan.is_child?).to be true
           expect(subscription.plan.usage_thresholds).to be_empty
           expect(subscription.plan.parent.usage_thresholds.count).to eq 2
           expect(subscription.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
@@ -1020,7 +1020,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           expect(response).to have_http_status(:success)
 
           subscription = Subscription.find_by(id: json[:subscription][:lago_id])
-          expect(subscription.plan).to be_parent
+          expect(subscription.plan.is_parent?).to be true
           expect(subscription.plan.usage_thresholds.count).to eq 2
           expect(subscription.usage_thresholds.pluck(:amount_cents, :threshold_display_name)).to eq([[override_amount_cents, override_display_name]])
 
