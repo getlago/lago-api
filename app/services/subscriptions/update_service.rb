@@ -44,6 +44,7 @@ module Subscriptions
 
       subscription.name = params[:name] if params.key?(:name)
       subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+      subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
 
       if pay_in_advance? && params.key?(:on_termination_credit_note)
         subscription.on_termination_credit_note = params[:on_termination_credit_note]

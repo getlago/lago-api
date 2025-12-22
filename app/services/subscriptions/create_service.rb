@@ -125,7 +125,8 @@ module Subscriptions
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
-        ending_at: params[:ending_at]
+        ending_at: params[:ending_at],
+        progressive_billing_disabled: params[:progressive_billing_disabled] || false
       )
 
       if params.key?(:payment_method)
@@ -200,7 +201,8 @@ module Subscriptions
         subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        progressive_billing_disabled: params[:progressive_billing_disabled] || false
       )
 
       if params.key?(:payment_method)
