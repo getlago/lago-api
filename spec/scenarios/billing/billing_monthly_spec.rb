@@ -132,8 +132,7 @@ describe "Billing Monthly Scenarios with all charges types" do
         charges_to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
         fixed_charges_from_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
         fixed_charges_to_datetime: DateTime.parse("2024-02-04T00:00:00Z"),
-        # TODO: why this timestamp changed?
-        timestamp: DateTime.parse("2024-02-04T00:00:01Z")
+        timestamp: DateTime.parse("2024-02-04T00:00:00Z")
       )
       # check pay_in_advance fixed_charge_fees boundaries
       pay_in_advance_fixed_charge_fee = pay_in_advance_fixed_charges_invoice.fees.fixed_charge.where(fixed_charge_id: [fixed_charge_not_prorated_in_advance.id, fixed_charge_prorated_in_advance.id]).sample
