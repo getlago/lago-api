@@ -27,6 +27,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
           id
           name
           subscriptionAt
+          progressiveBillingDisabled
           plan {
             fixedCharges {
               invoiceDisplayName
@@ -41,6 +42,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
     {
       id: subscription.id,
       name: "New name",
+      progressiveBillingDisabled: true,
       planOverrides: {
         fixedCharges: [
           {
@@ -69,6 +71,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
     result_data = result["data"]["updateSubscription"]
 
     expect(result_data["name"]).to eq("New name")
+    expect(result_data["progressiveBillingDisabled"]).to be(true)
 
     expect(result_data["plan"]["fixedCharges"].first).to include(
       "invoiceDisplayName" => "NEW fixed charge display name",
@@ -83,6 +86,60 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       expect { subject }.to change(FixedChargeEvent, :count).by(1)
 
       expect(FixedChargeEvent.first).to have_attributes(units: BigDecimal("99"))
+    end
+  end
+
+  context "when updating only usage_thresholds" do
+    let(:query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            usageThresholds {
+              amountCents
+              thresholdDisplayName
+              recurring
+            }
+          }
+        }
+      GQL
+    end
+    let(:input) do
+      {
+        id: subscription.id,
+        usageThresholds: [
+          {
+            amountCents: 10_000,
+            thresholdDisplayName: "First threshold"
+          },
+          {
+            amountCents: 50_000,
+            thresholdDisplayName: "Second threshold",
+            recurring: true
+          }
+        ]
+      }
+    end
+
+    before { organization.update!(premium_integrations: ["progressive_billing"]) }
+
+    it "updates the usage thresholds" do
+      result = subject
+
+      result_data = result["data"]["updateSubscription"]
+
+      expect(result_data["usageThresholds"]).to match_array([
+        {
+          "amountCents" => "10000",
+          "thresholdDisplayName" => "First threshold",
+          "recurring" => false
+        },
+        {
+          "amountCents" => "50000",
+          "thresholdDisplayName" => "Second threshold",
+          "recurring" => true
+        }
+      ])
     end
   end
 end

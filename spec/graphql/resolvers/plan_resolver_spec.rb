@@ -61,6 +61,7 @@ RSpec.describe Resolvers::PlanResolver do
             invoiceDisplayName
             taxes { id rate }
           }
+          usageThresholds { amountCents thresholdDisplayName recurring }
           entitlements { code name description privileges { code value name valueType } }
         }
       }
@@ -75,10 +76,12 @@ RSpec.describe Resolvers::PlanResolver do
   let(:add_on) { create(:add_on, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
 
   before do
     customer
     minimum_commitment
+    usage_threshold
   end
 
   it_behaves_like "requires current user"
@@ -95,6 +98,12 @@ RSpec.describe Resolvers::PlanResolver do
     expect(plan_response["hasFixedCharges"]).to eq(false)
     expect(plan_response["hasActiveSubscriptions"]).to eq(false)
     expect(plan_response["hasSubscriptions"]).to eq(false)
+
+    expect(plan_response["usageThresholds"]).to contain_exactly({
+      "amountCents" => "100",
+      "thresholdDisplayName" => usage_threshold.threshold_display_name,
+      "recurring" => false
+    })
 
     expect(plan_response["minimumCommitment"]).to include(
       "id" => minimum_commitment.id,

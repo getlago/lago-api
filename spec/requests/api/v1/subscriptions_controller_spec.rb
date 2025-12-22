@@ -1072,6 +1072,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           )
         end
       end
+
+      context "when only usage_thresholds are passed without any other parameters" do
+        let(:update_params) { {usage_thresholds:} }
+
+        it "updates the usage thresholds without requiring other parameters" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:applicable_usage_thresholds]).to contain_exactly(
+            threshold_display_name: override_display_name,
+            amount_cents: override_amount_cents,
+            recurring: false
+          )
+        end
+      end
     end
 
     context "when the plan has already been overriden" do

@@ -13,12 +13,14 @@ RSpec.describe Resolvers::SubscriptionResolver do
           name
           startedAt
           endingAt
+          progressiveBillingDisabled
           plan {
             id
             code
           }
           nextSubscriptionType
           nextSubscriptionAt
+          usageThresholds { amountCents thresholdDisplayName recurring }
         }
       }
     GQL
@@ -68,10 +70,13 @@ RSpec.describe Resolvers::SubscriptionResolver do
       subscription_response = result["data"]["subscription"]
       expect(subscription_response["id"]).to eq(subscription.id)
       expect(subscription_response["externalId"]).to eq(subscription.external_id)
+      expect(subscription_response["usageThresholds"]).to be_an(Array).and be_empty
     end
   end
 
   it "returns a single subscription" do
+    threshold = create(:usage_threshold, :for_subscription, subscription:, amount_cents: 99_00)
+
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -85,13 +90,20 @@ RSpec.describe Resolvers::SubscriptionResolver do
       "id" => subscription.id,
       "name" => subscription.name,
       "startedAt" => subscription.started_at.iso8601,
-      "endingAt" => subscription.ending_at
+      "endingAt" => subscription.ending_at,
+      "progressiveBillingDisabled" => false
     )
 
     expect(subscription_response["plan"]).to include(
       "id" => subscription.plan.id,
       "code" => subscription.plan.code
     )
+
+    expect(subscription_response["usageThresholds"]).to contain_exactly({
+      "amountCents" => "9900",
+      "thresholdDisplayName" => threshold.threshold_display_name,
+      "recurring" => false
+    })
   end
 
   context "when subscription is not found" do
