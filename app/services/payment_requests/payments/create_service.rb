@@ -48,8 +48,9 @@ module PaymentRequests
 
         result.payment = payment
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider:,
+        payment_result = ::PaymentProviders::Registry.new_instance(
+          provider,
+          :create_payment,
           payment:,
           reference: "#{payable.billing_entity.name} - Overdue invoices",
           metadata: {

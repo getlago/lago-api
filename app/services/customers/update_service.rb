@@ -218,12 +218,13 @@ module Customers
       handle_provider_customer ||= customer.send(:"#{payment_provider}_customer")&.provider_customer_id.present?
       return unless handle_provider_customer
 
-      PaymentProviders::CreateCustomerFactory.new_instance(
-        provider: payment_provider,
+      PaymentProviders::Registry.new_instance(
+        payment_provider,
+        :create_customer,
         customer:,
         payment_provider_id: payment_provider(customer)&.id,
         params: billing_configuration
-      ).call.raise_if_error!
+      ).call!
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
