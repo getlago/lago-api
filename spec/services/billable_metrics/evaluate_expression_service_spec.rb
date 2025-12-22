@@ -49,6 +49,25 @@ RSpec.describe BillableMetrics::EvaluateExpressionService do
       end
     end
 
+    context "when timestamp is missing" do
+      let(:expression) { "event.timestamp" }
+      let(:event) do
+        {
+          "code" => "test_code",
+          "properties" => {}
+        }
+      end
+
+      it "uses current time as fallback" do
+        freeze_time do
+          result = evaluate_service.call
+
+          expect(result).to be_success
+          expect(result.evaluation_result).to eq(Time.current.to_i)
+        end
+      end
+    end
+
     context "when the event failed to evaluate" do
       let(:event) do
         {
