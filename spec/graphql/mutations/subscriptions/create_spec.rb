@@ -32,20 +32,21 @@ RSpec.describe Mutations::Subscriptions::Create do
           billingTime
           subscriptionAt
           endingAt
+          progressiveBillingDisabled
           customer {
             id
           },
           plan {
             id
             amountCents
-            usageThresholds {
-              amountCents
-              thresholdDisplayName
-            }
             fixedCharges {
               invoiceDisplayName
               units
             }
+          }
+          usageThresholds {
+            amountCents
+            thresholdDisplayName
           }
         }
       }
@@ -60,7 +61,7 @@ RSpec.describe Mutations::Subscriptions::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:create"
 
-  it "creates a subscription", :aggregate_failures do
+  it "creates a subscription" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -74,6 +75,11 @@ RSpec.describe Mutations::Subscriptions::Create do
           externalId: "custom-external-id",
           billingTime: "anniversary",
           endingAt: ending_at.iso8601,
+          progressiveBillingDisabled: true,
+          usageThresholds: [
+            amountCents: 100,
+            thresholdDisplayName: "threshold display name"
+          ],
           planOverrides: {
             amountCents: 100,
             charges: [
@@ -87,10 +93,6 @@ RSpec.describe Mutations::Subscriptions::Create do
                 invoiceDisplayName: "NEW fixed charge display name",
                 units: "99"
               }
-            ],
-            usageThresholds: [
-              amountCents: 100,
-              thresholdDisplayName: "threshold display name"
             ]
           }
         }
@@ -106,7 +108,8 @@ RSpec.describe Mutations::Subscriptions::Create do
       "externalId" => "custom-external-id",
       "startedAt" => String,
       "billingTime" => "anniversary",
-      "endingAt" => ending_at.iso8601
+      "endingAt" => ending_at.iso8601,
+      "progressiveBillingDisabled" => true
     )
     expect(result_data["customer"]).to include(
       "id" => customer.id
@@ -115,7 +118,7 @@ RSpec.describe Mutations::Subscriptions::Create do
       "id" => String,
       "amountCents" => "100"
     )
-    expect(result_data["plan"]["usageThresholds"].first).to include(
+    expect(result_data["usageThresholds"].first).to include(
       "thresholdDisplayName" => "threshold display name",
       "amountCents" => "100"
     )
