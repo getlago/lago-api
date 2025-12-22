@@ -171,6 +171,28 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when progressive_billing_disabled is passed" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          progressive_billing_disabled: true
+        }
+      end
+
+      it "creates a subscription with progressive_billing_disabled set to true" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.progressive_billing_disabled).to be(true)
+      end
+    end
+
     context "when customer is invalid in an api context" do
       let(:customer) do
         build(:customer, organization:, currency: "EUR", external_id: nil)
