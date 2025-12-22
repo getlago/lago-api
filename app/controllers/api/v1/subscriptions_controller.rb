@@ -160,6 +160,7 @@ module Api
             :billing_time,
             :subscription_at,
             :ending_at,
+            :progressive_billing_disabled,
             invoice_custom_section: [
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
@@ -176,6 +177,7 @@ module Api
           :ending_at,
           :on_termination_credit_note,
           :on_termination_invoice,
+          :progressive_billing_disabled,
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}

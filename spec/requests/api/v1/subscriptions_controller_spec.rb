@@ -576,6 +576,27 @@ RSpec.describe Api::V1::SubscriptionsController do
         end
       end
     end
+
+    context "with progressive_billing_disabled" do
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code:,
+          external_id: SecureRandom.uuid,
+          progressive_billing_disabled: true
+        }
+      end
+
+      it "creates a subscription with progressive_billing_disabled set to true" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:progressive_billing_disabled]).to be(true)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.progressive_billing_disabled).to be(true)
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -1348,6 +1369,21 @@ RSpec.describe Api::V1::SubscriptionsController do
             expect(subscription.applied_invoice_custom_sections.pluck(:invoice_custom_section_id)).to include(section_1.id)
           end
         end
+      end
+    end
+
+    context "when updating progressive_billing_disabled" do
+      let(:update_params) { {progressive_billing_disabled: true} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates progressive_billing_disabled" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:progressive_billing_disabled]).to be(true)
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.progressive_billing_disabled).to be(true)
       end
     end
 
