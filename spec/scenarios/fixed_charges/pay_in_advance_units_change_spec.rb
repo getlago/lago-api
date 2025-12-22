@@ -840,8 +840,8 @@ describe "Pay in advance fixed charge units change mid-period" do
         child_delta_invoice = child_invoices.last
         expect(child_delta_invoice.fees.count).to eq(2)
 
-        child_fixed_charge_fee_1 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge1)
-        child_fixed_charge_fee_2 = child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
+        child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge1)
+        child_delta_invoice.fees.fixed_charge.find_by(fixed_charge: child_fixed_charge2)
 
         expect(parent_fixed_charge_fee_1.units).to eq(15)  # 25 - 10 = 15
         expect(parent_fixed_charge_fee_1.amount_cents).to eq(15_000)
