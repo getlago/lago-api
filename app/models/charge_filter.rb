@@ -4,6 +4,7 @@ class ChargeFilter < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include ChargePropertiesValidation
+
   self.discard_column = :deleted_at
 
   belongs_to :charge, -> { with_discarded }, touch: true

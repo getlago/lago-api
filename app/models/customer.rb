@@ -8,6 +8,7 @@ class Customer < ApplicationRecord
   include OrganizationTimezone
   include BillingEntityTimezone
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS = [

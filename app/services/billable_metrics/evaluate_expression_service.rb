@@ -20,7 +20,7 @@ module BillableMetrics
 
       evaluation_event = Lago::Event.new(
         event["code"].to_s,
-        event["timestamp"].to_i || Time.current.to_i,
+        (event["timestamp"] || Time.current).to_i,
         event["properties"]&.transform_values(&:to_s) || {}
       )
 

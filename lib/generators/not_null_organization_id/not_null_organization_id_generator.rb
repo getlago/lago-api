@@ -2,6 +2,7 @@
 
 class NotNullOrganizationIdGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
+
   source_root File.expand_path("templates", __dir__)
 
   desc "This generator creates the migrations to add the not null constraint on the organization_id column of a database table"

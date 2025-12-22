@@ -2,6 +2,7 @@
 
 class OrganizationIdGeneratorGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
+
   source_root File.expand_path("templates", __dir__)
 
   desc "This generator creates the migrations and job to add the organization_id column to a database table"

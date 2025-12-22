@@ -3,6 +3,7 @@
 module Entitlement
   class Feature < ApplicationRecord
     include Discard::Model
+
     self.discard_column = :deleted_at
 
     default_scope -> { kept }

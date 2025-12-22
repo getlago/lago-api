@@ -4,6 +4,7 @@ module Api
   module V1
     class ActivityLogsController < Api::BaseController
       include PremiumFeatureOnly
+
       skip_audit_logs!
 
       def index

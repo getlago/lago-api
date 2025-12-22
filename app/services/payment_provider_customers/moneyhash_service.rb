@@ -77,7 +77,7 @@ module PaymentProviderCustomers
 
     private
 
-    attr_accessor :moneyhash_customer, :customer
+    attr_accessor :moneyhash_customer
 
     delegate :customer, to: :moneyhash_customer
 

@@ -15,7 +15,7 @@ RSpec.describe Resolvers::ApiLogsResolver, clickhouse: true do
   def build_query(limit: 5, filters: "")
     <<~GQL
       query {
-        apiLogs(limit: #{limit}#{filters.present? ? ", #{filters}" : ""}) {
+        apiLogs(limit: #{limit}#{", #{filters}" if filters.present?}) {
           collection {
             requestId
           }

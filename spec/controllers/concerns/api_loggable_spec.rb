@@ -41,6 +41,7 @@ RSpec.describe ApiLoggable do
     # rubocop:disable RSpec/DescribedClass
     controller(ApplicationController) do
       include ApiLoggable
+
       skip_audit_logs!
 
       def index

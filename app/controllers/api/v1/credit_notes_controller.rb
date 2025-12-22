@@ -4,6 +4,7 @@ module Api
   module V1
     class CreditNotesController < Api::BaseController
       include CreditNoteIndex
+
       def create
         result = ::CreditNotes::CreateService.call(
           invoice: current_organization.invoices.visible.find_by(id: input_params[:invoice_id]),

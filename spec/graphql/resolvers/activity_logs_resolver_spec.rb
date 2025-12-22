@@ -15,7 +15,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, clickhouse: true do
   def build_query(limit: 5, filters: "")
     <<~GQL
       query {
-        activityLogs(limit: #{limit}#{filters.present? ? ", #{filters}" : ""}) {
+        activityLogs(limit: #{limit}#{", #{filters}" if filters.present?}) {
           collection {
             activityId
           }

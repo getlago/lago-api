@@ -114,3 +114,11 @@ GraphQL/ExtractInputType:
     - "app/graphql/mutations/plans/update.rb"
     - "app/graphql/mutations/register_user.rb"
     - "app/graphql/mutations/wallet_transactions/create.rb"
+
+ThreadSafety/NewThread:
+  Exclude:
+    - "spec/**/*"
+
+ThreadSafety/DirChdir:
+  Exclude:
+    - "spec/**/*"

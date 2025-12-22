@@ -2,6 +2,7 @@
 
 class Event < EventsRecord
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   include CustomerTimezone

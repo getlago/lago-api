@@ -3,6 +3,7 @@
 class LifetimeUsage < ApplicationRecord
   include Currencies
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization

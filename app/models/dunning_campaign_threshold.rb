@@ -4,6 +4,7 @@ class DunningCampaignThreshold < ApplicationRecord
   include Currencies
   include PaperTrailTraceable
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :dunning_campaign
