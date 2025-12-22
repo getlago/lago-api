@@ -4033,7 +4033,6 @@ CREATE TABLE public.memberships (
     user_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    role integer DEFAULT 0 NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     revoked_at timestamp(6) without time zone
 );
@@ -10859,6 +10858,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251222151015'),
 ('20251221174946'),
 ('20251221174938'),
 ('20251221174733'),
