@@ -5,7 +5,7 @@ module FixedCharges
     Result = BaseResult[:plan]
     UnknownActionError = Class.new(StandardError)
 
-    def initialize (plan:, cascade_fixed_charges_payload:, timestamp:)
+    def initialize(plan:, cascade_fixed_charges_payload:, timestamp:)
       @plan = plan
       @cascade_fixed_charges_payload = cascade_fixed_charges_payload.map(&:deep_symbolize_keys)
       @timestamp = timestamp.to_i
@@ -58,7 +58,6 @@ module FixedCharges
 
       result.plan = plan
       result
-
     rescue UnknownActionError => e
       result.fail_with_error!(e.message)
     rescue ActiveRecord::RecordNotFound => e
