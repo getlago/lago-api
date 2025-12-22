@@ -57,6 +57,10 @@ gem "tzinfo-data", platforms: %i[mingw mswin x64_mingw jruby]
 gem "graphql"
 gem "graphql-pagination"
 
+# Feature flags
+gem "flipper", "1.3.0"
+gem "flipper-redis"
+
 # Payment processing
 gem "adyen-ruby-api-library"
 gem "gocardless_pro", "~> 2.34"
