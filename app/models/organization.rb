@@ -100,6 +100,7 @@ class Organization < ApplicationRecord
   PREMIUM_INTEGRATIONS = %w[
     beta_payment_authorization
     netsuite
+    netsuite_v2
     okta
     avalara
     xero

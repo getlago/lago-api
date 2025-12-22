@@ -10,6 +10,8 @@ module IntegrationCustomers
       case integration&.type&.to_s
       when "Integrations::NetsuiteIntegration"
         IntegrationCustomers::NetsuiteService
+      when "Integrations::NetsuiteV2Integration"
+        Integrations::NetsuiteV2::Customers::SyncService
       when "Integrations::AnrokIntegration"
         IntegrationCustomers::AnrokService
       when "Integrations::AvalaraIntegration"

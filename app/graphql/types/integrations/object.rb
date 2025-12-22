@@ -6,6 +6,7 @@ module Types
       graphql_name "Integration"
 
       possible_types Types::Integrations::Netsuite,
+        Types::Integrations::NetsuiteV2,
         Types::Integrations::Okta,
         Types::Integrations::Anrok,
         Types::Integrations::Avalara,
@@ -17,6 +18,8 @@ module Types
         case object.class.to_s
         when "Integrations::NetsuiteIntegration"
           Types::Integrations::Netsuite
+        when "Integrations::NetsuiteV2Integration"
+          Types::Integrations::NetsuiteV2
         when "Integrations::OktaIntegration"
           Types::Integrations::Okta
         when "Integrations::AnrokIntegration"

@@ -16,6 +16,21 @@ FactoryBot.define do
     end
   end
 
+  factory :netsuite_v2_integration, class: "Integrations::Netsuitev2Integration" do
+    organization
+    type { "Integrations::Netsuitev2Integration" }
+    code { "netsuite_#{SecureRandom.uuid}" }
+    name { "Accounting integration 1" }
+
+    secrets do
+      {client_secret: SecureRandom.uuid}.to_json
+    end
+
+    settings do
+      {account_id: "acc_12345", client_id: "cli_12345", script_endpoint_url: Faker::Internet.url}
+    end
+  end
+
   factory :okta_integration, class: "Integrations::OktaIntegration" do
     organization
     type { "Integrations::OktaIntegration" }

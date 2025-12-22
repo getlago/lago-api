@@ -102,6 +102,7 @@ class Customer < ApplicationRecord
   has_one :adyen_customer, class_name: "PaymentProviderCustomers::AdyenCustomer"
   has_one :flutterwave_customer, class_name: "PaymentProviderCustomers::FlutterwaveCustomer"
   has_one :netsuite_customer, class_name: "IntegrationCustomers::NetsuiteCustomer"
+  has_one :netsuite_v2_customer, class_name: "IntegrationsCustomers::NetsuiteV2Customer"
   has_one :anrok_customer, class_name: "IntegrationCustomers::AnrokCustomer"
   has_one :avalara_customer, class_name: "IntegrationCustomers::AvalaraCustomer"
   has_one :xero_customer, class_name: "IntegrationCustomers::XeroCustomer"

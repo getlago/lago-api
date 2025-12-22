@@ -52,6 +52,7 @@ module Types
       field :avalara_customer, Types::IntegrationCustomers::Avalara, null: true
       field :hubspot_customer, Types::IntegrationCustomers::Hubspot, null: true
       field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
+      field :netsuite_v2_customer, Types::IntegrationCustomers::NetsuiteV2, null: true
       field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true
       field :xero_customer, Types::IntegrationCustomers::Xero, null: true
 

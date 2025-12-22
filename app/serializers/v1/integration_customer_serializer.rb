@@ -19,6 +19,8 @@ module V1
       case model.type
       when "IntegrationCustomers::NetsuiteCustomer"
         "netsuite"
+      when "IntegrationCustomers::NetsuiteV2Customer"
+        "netsuite_v2"
       when "IntegrationCustomers::AnrokCustomer"
         "anrok"
       when "IntegrationCustomers::XeroCustomer"

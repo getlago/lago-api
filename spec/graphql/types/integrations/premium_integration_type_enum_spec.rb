@@ -10,6 +10,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       auto_dunning
       hubspot
       netsuite
+      netsuite_v2
       okta
       progressive_billing
       lifetime_usage
