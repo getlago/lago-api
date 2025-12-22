@@ -37,6 +37,8 @@ RSpec.describe ::V1::SubscriptionSerializer do
             "current_billing_period_started_at" => "2024-05-01T00:00:00Z",
             "current_billing_period_ending_at" => "2024-05-31T23:59:59Z"
           )
+          expect(result["subscription"]["payment_method"]["payment_method_id"]).to eq(nil)
+          expect(result["subscription"]["payment_method"]["payment_method_type"]).to eq("provider")
 
           expect(result["subscription"]["customer"]["lago_id"]).to be_present
           expect(result["subscription"]["plan"]["lago_id"]).to be_present
