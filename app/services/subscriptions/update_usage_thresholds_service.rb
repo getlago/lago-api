@@ -17,7 +17,7 @@ module Subscriptions
       ActiveRecord::Base.transaction do
         UsageThresholds::UpdateService.call!(model: subscription, usage_thresholds_params:, partial:)
         # NOTE: Once we attach UT to the subscription, we should delete all UT attached to the plan override
-        plan.usage_thresholds.update_all(deleted_at: Time.current) if plan.child? # rubocop:disable Rails/SkipsModelValidations
+        plan.usage_thresholds.update_all(deleted_at: Time.current) if plan.is_child? # rubocop:disable Rails/SkipsModelValidations
       end
 
       subscription.usage_thresholds.reload

@@ -264,10 +264,10 @@ class Subscription < ApplicationRecord
     applicable_usage_thresholds.any?
   end
 
-  # If the subscription has direct usage thresholds, they are override and take precedence
-  # If it has a plan override with thresholds, we use them. Ultimately, they will be migrated
-  #   to subscription usage thresholds.
+  # If the subscription has direct usage thresholds, these overrides take precedence.
+  # If it has a plan override with thresholds, we use them. Ultimately, they will be migrated to subscription usage thresholds.
   # Once migrated, this method should also return parent plan thresholds if nothing else is set.
+  # TODO: usage_thresholds return parent plan thresholds
   def applicable_usage_thresholds
     return [] if progressive_billing_disabled?
 
