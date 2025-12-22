@@ -21,6 +21,8 @@ module Types
       field :parent, Types::Plans::Object, null: true
       field :pay_in_advance, Boolean, null: false
       field :trial_period, Float
+
+      field :applicable_usage_thresholds, [Types::UsageThresholds::Object]
       field :usage_thresholds, [Types::UsageThresholds::Object]
 
       field :entitlements, [Types::Entitlement::PlanEntitlementObject]
