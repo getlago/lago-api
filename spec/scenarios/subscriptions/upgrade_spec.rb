@@ -350,7 +350,7 @@ describe "Subscription Upgrade Scenario", transaction: false do
             expect(invoice.fees.fixed_charge.count).to eq(2)
             # old fee was prorated for 22 days out of 31, so we need to get "price of one day" and multiply by the number of days in the new period
             old_fee_prorated_amount = (1500.0 * 22 / 31).round
-            old_fee_covers_current_period = (old_fee_prorated_amount * 10.0/22).round
+            old_fee_covers_current_period = (old_fee_prorated_amount * 10.0 / 22).round
             expect(invoice.fees.fixed_charge.map(&:amount_cents)).to match_array([(10000.0 * 10 / 31).round - old_fee_covers_current_period, (2000 * 10 / 31).round])
             expect(invoice.fees.fixed_charge.sample.properties).to include(
               "fixed_charges_from_datetime" => "2025-12-22T12:12:00.000Z",
