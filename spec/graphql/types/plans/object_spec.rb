@@ -28,6 +28,7 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:created_at).of_type("ISO8601DateTime!") }
   it { is_expected.to have_field(:updated_at).of_type("ISO8601DateTime!") }
   it { is_expected.to have_field(:deleted_at).of_type("ISO8601DateTime") }
+
   it { is_expected.to have_field(:usage_thresholds).of_type("[UsageThreshold!]") }
 
   it { is_expected.to have_field(:has_active_subscriptions).of_type("Boolean!") }

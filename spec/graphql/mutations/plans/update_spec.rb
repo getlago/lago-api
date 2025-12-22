@@ -76,7 +76,6 @@ RSpec.describe Mutations::Plans::Update do
             }
           },
           usageThresholds {
-            id,
             amountCents,
             thresholdDisplayName,
             recurring
