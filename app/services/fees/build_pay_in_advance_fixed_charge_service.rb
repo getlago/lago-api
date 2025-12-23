@@ -29,8 +29,6 @@ module Fees
       # If delta is negative or zero (decrease), create a zero-amount fee
       # We don't refund pay-in-advance, but we still generate an invoice to document the change
       if delta_units <= 0
-        return result unless organization.zero_amount_fees_enabled?
-
         fee = build_zero_amount_fee(boundaries)
         result.fee = fee
         return result
