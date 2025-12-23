@@ -30,7 +30,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       result = moneyhash_service.update_payment_status(
         organization_id: organization.id,
         provider_payment_id: intent_processed_json.dig("data", "intent_id"),
-        status: mh_provider_service.event_to_payment_status(intent_processed_json.dig("type")),
+        status: "SUCCESSFUL",
         metadata: intent_processed_json.dig("data", "intent", "custom_fields")
       ).raise_if_error!
 
