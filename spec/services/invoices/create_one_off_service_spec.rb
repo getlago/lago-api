@@ -59,6 +59,7 @@ RSpec.describe Invoices::CreateOneOffService do
 
         expect(result.invoice).to be_finalized
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+        expect(result.invoice.applied_invoice_custom_sections.count).to eq(0)
       end
     end
 
@@ -71,6 +72,52 @@ RSpec.describe Invoices::CreateOneOffService do
 
         expect(result).to be_success
         expect(result.invoice.voided_invoice_id).to eq(voided_invoice_id)
+      end
+    end
+
+    context "with custom sections" do
+      let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
+      let(:args) do
+        {
+          customer:,
+          timestamp: timestamp.to_i,
+          fees:,
+          currency:,
+          invoice_custom_section:
+        }
+      end
+
+      context "when custom section id is passed" do
+        let(:invoice_custom_section) do
+          {
+            invoice_custom_section_codes: [section_1.code]
+          }
+        end
+
+        it "creates the invoice correctly with sections" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(result.invoice.applied_invoice_custom_sections.pluck(:code)).to eq([section_1.code])
+        end
+      end
+
+      context "when custom section needs to be skipped" do
+        let(:invoice_custom_section) do
+          {
+            invoice_custom_section_codes: [section_1.code],
+            skip_invoice_custom_sections: true
+          }
+        end
+
+        it "creates the invoice correctly without sections" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(result.invoice.applied_invoice_custom_sections.count).to eq(0)
+        end
       end
     end
 
