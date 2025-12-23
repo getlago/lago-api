@@ -203,6 +203,140 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
       end
     end
 
+    context "when there are draft invoices" do
+      let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 500) }
+      let(:draft_fee) do
+        create(
+          :charge_fee,
+          invoice: draft_invoice,
+          charge: first_charge,
+          subscription: first_subscription,
+          amount_cents: 450,
+          taxes_amount_cents: 50,
+          precise_coupons_amount_cents: 0
+        )
+      end
+
+      before { draft_fee }
+
+      it "includes draft invoices in ongoing usage balance" do
+        # Current usage: 1100, Draft invoice: 500, Total: 1600
+        expect { subject }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1600)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-600)
+      end
+    end
+
+    context "when there are draft invoices with billable metric limitations" do
+      let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+      let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
+      let(:second_charge) do
+        create(:standard_charge, plan: second_subscription.plan, billable_metric: billable_metric2, properties: {amount: "5"})
+      end
+      let(:events) do
+        create_list(:event, 2, organization: wallet.organization, subscription: first_subscription, customer: first_subscription.customer, code: billable_metric.code, timestamp:) +
+          [create(:event, organization: wallet.organization, subscription: second_subscription, customer: second_subscription.customer, code: billable_metric2.code, timestamp:)]
+      end
+      let(:charge_for_other_metric) do
+        create(:standard_charge, plan: first_subscription.plan, billable_metric: billable_metric2, properties: {amount: "10"})
+      end
+      let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 550) }
+      let(:limited_fee) do
+        create(
+          :charge_fee,
+          invoice: draft_invoice,
+          charge: first_charge,
+          subscription: first_subscription,
+          amount_cents: 300,
+          taxes_amount_cents: 30,
+          precise_coupons_amount_cents: 0
+        )
+      end
+      let(:non_limited_fee) do
+        create(
+          :charge_fee,
+          invoice: draft_invoice,
+          charge: charge_for_other_metric,
+          subscription: first_subscription,
+          amount_cents: 200,
+          taxes_amount_cents: 20,
+          precise_coupons_amount_cents: 0
+        )
+      end
+
+      before do
+        wallet_target
+        charge_for_other_metric
+        limited_fee
+        non_limited_fee
+      end
+
+      it "only includes fees matching billable metric limitations from draft invoices" do
+        # Current usage: 600 (limited to billable_metric)
+        # Draft invoice: 330 (limited_fee only: 300 + 30)
+        # Total: 930
+        expect { subject }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(930)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(70)
+      end
+    end
+
+    context "when there are draft invoices with fee type limitations" do
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          depleted_ongoing_balance:,
+          balance_cents: 1000,
+          ongoing_balance_cents: 800,
+          ongoing_usage_balance_cents: 200,
+          credits_balance: 10.0,
+          credits_ongoing_balance: 8.0,
+          credits_ongoing_usage_balance: 2.0,
+          allowed_fee_types: ["subscription"]
+        )
+      end
+      let(:draft_invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 550) }
+      let(:subscription_fee) do
+        create(
+          :fee,
+          invoice: draft_invoice,
+          subscription: first_subscription,
+          fee_type: "subscription",
+          amount_cents: 100,
+          precise_amount_cents: 100,
+          taxes_amount_cents: 10,
+          taxes_precise_amount_cents: 10,
+          precise_coupons_amount_cents: 0
+        )
+      end
+      let(:charge_fee) do
+        create(
+          :charge_fee,
+          invoice: draft_invoice,
+          charge: first_charge,
+          subscription: first_subscription,
+          amount_cents: 400,
+          taxes_amount_cents: 40,
+          precise_coupons_amount_cents: 0
+        )
+      end
+
+      before do
+        subscription_fee
+        charge_fee
+      end
+
+      it "only includes fees matching fee type limitations from draft invoices" do
+        # Current usage: 0 (charges don't count for subscription-limited wallet)
+        # Draft invoice: 110 (subscription fee only: 100 + 10)
+        # Total: 110
+        expect { subject }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(110)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(890)
+      end
+    end
+
     context "when recalculated ongoing balance is less than 0" do
       before do
         allow(Wallets::Balance::UpdateOngoingService).to receive(:call).and_call_original
