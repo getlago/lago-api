@@ -7,6 +7,7 @@ module CreditNotes
       valid_items_amount?
       valid_refund_amount?
       valid_credit_amount?
+      valid_applied_to_source_invoice_amount?
       valid_remaining_invoice_amount?
       valid_total_amount_positive?
 
@@ -99,6 +100,12 @@ module CreditNotes
       if (credit_note.credit_amount_cents - creditable).abs > 1
         add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
       end
+    end
+
+    def valid_applied_to_source_invoice_amount?
+      return true if credit_note.applied_to_source_invoice_amount_cents <= invoice.total_due_amount_cents
+
+      add_error(field: :applied_to_source_invoice_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
