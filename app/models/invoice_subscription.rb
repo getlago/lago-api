@@ -98,6 +98,30 @@ class InvoiceSubscription < ApplicationRecord
     fees.commitment.first
   end
 
+  # For arrears plans: commitment period = subscription period
+  # For advance plans: commitment period = previous subscription period
+  def commitment_from_datetime
+    return from_datetime unless subscription.plan.pay_in_advance?
+
+    # For advance plans, commitment is for the previous subscription period
+    previous_period_start(from_datetime)
+  end
+
+  def commitment_to_datetime
+    return to_datetime unless subscription.plan.pay_in_advance?
+
+    # For advance plans, commitment is for the previous subscription period
+    previous_period_end(to_datetime)
+  end
+
+  def commitment_from_datetime_in_customer_timezone
+    commitment_from_datetime&.in_time_zone(customer_applicable_timezone)
+  end
+
+  def commitment_to_datetime_in_customer_timezone
+    commitment_to_datetime&.in_time_zone(customer_applicable_timezone)
+  end
+
   def total_amount_cents
     charge_amount_cents + subscription_amount_cents + fixed_charge_amount_cents
   end
@@ -109,6 +133,42 @@ class InvoiceSubscription < ApplicationRecord
   alias_method :charge_amount_currency, :total_amount_currency
   alias_method :subscription_amount_currency, :total_amount_currency
   alias_method :fixed_charge_amount_currency, :total_amount_currency
+
+  private
+
+  def previous_period_start(datetime)
+    return nil unless datetime
+
+    case subscription.plan.interval.to_sym
+    when :weekly
+      datetime - 1.week
+    when :monthly
+      datetime - 1.month
+    when :quarterly
+      datetime - 3.months
+    when :yearly
+      datetime - 1.year
+    else
+      datetime
+    end
+  end
+
+  def previous_period_end(datetime)
+    return nil unless datetime
+
+    case subscription.plan.interval.to_sym
+    when :weekly
+      datetime - 1.week
+    when :monthly
+      datetime - 1.month
+    when :quarterly
+      datetime - 3.months
+    when :yearly
+      datetime - 1.year
+    else
+      datetime
+    end
+  end
 end
 
 # == Schema Information

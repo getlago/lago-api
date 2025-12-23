@@ -101,6 +101,11 @@ module Invoices
       DateTime.parse(fee.properties["timestamp"])
     end
 
+    2025-06-03 14:28:00.1234 UTC to_i = 1735776480
+    2025-06-03 14:28:00.9999 UTC to_i = 1735776480
+
+    +1 -> 1735776481
+
     def invoice_credit_note_items
       CreditNoteItem
         .joins(:credit_note)

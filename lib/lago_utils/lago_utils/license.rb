@@ -4,7 +4,7 @@ module LagoUtils
   class License
     def initialize(url)
       @url = url
-      @premium = false
+      @premium = true
     end
 
     def verify
