@@ -839,9 +839,9 @@ RSpec.describe Subscription do
         let(:plan) { create(:plan, parent: parent_plan) }
         let(:plan_threshold) { create(:usage_threshold, plan: parent_plan) }
 
-        it "returns plan usage thresholds" do
+        it "returns the parent plan usage thresholds" do
           plan_threshold
-          expect(subscription.applicable_usage_thresholds).to be_empty
+          expect(subscription.applicable_usage_thresholds).to contain_exactly(plan_threshold)
         end
       end
     end
