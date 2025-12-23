@@ -581,6 +581,33 @@ RSpec.describe Fees::FixedChargeService do
                 units: 10
               )
             end
+
+            context "when previous fee was issued during the billing period" do
+              let(:previous_boundaries) do
+                BillingPeriodBoundaries.new(
+                  from_datetime: previous_timestamp.beginning_of_month, 
+                  to_datetime: started_at.end_of_month,
+                  charges_from_datetime: previous_timestamp.beginning_of_month,
+                  charges_to_datetime: started_at.end_of_month,
+                  fixed_charges_from_datetime: previous_timestamp.beginning_of_month,
+                  fixed_charges_to_datetime: started_at.end_of_month,
+                  charges_duration: 30,
+                  fixed_charges_duration: 30,
+                  timestamp: previous_timestamp
+                )
+              end
+
+              it "calculate correct proration for the previous fee" do
+                result = fixed_charge_service.call
+                expect(result).to be_success
+                expect(result.fee).to have_attributes(
+                  id: String,
+                  invoice_id: invoice.id,
+                  fixed_charge_id: fixed_charge.id,
+                  amount_cents: 26600,
+                )
+              end
+            end
           end
 
           context "when fixed charge price is lower than previous one" do

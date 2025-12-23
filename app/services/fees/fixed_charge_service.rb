@@ -83,8 +83,10 @@ module Fees
         already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
         if already_paid_fee
           current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
+          # note: previous pay in advance FC fee was issued at the event of the timestamp, so that's when we received this event, and since when
+          # the proration is started, despite from-to boundaries are taking into account the whole
           already_paid_fee_prorated_days = ((already_paid_fee.properties["fixed_charges_to_datetime"].to_time -
-                                             already_paid_fee.properties["fixed_charges_from_datetime"].to_time) / 1.day.in_seconds).ceil
+                                             already_paid_fee.properties["timestamp"].to_time) / 1.day.in_seconds).ceil
           # if previous fee was prorated for x days out of n, current is prorated for y days out of n,
           # we need to find coefficient of proration for current period:
           # prorated_for_current_period = already_paid_fee.amount_cents / x * y
@@ -242,7 +244,7 @@ module Fees
         current_fee_boundaries[:fixed_charges_from_datetime],
         # in the DB we store timestamp with 3 digits of milliseconds, timestamp of boundaries has 9, so we need to floor it
         current_fee_boundaries[:fixed_charges_to_datetime].floor(3)
-      ).first
+      ).order(created_at: :desc).first
     end
   end
 end
