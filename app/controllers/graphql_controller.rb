@@ -29,7 +29,7 @@ class GraphqlController < ApplicationController
       current_membership:,
       customer_portal_user:,
       request:,
-      permissions: current_membership&.permissions_hash || Permission::EMPTY_PERMISSIONS_HASH
+      permissions: (current_membership || Permission)&.permissions_hash
     }
 
     if query.present? && query.length > MAX_QUERY_LENGTH

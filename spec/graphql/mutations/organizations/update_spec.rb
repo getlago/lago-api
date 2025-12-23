@@ -45,7 +45,7 @@ RSpec.describe Mutations::Organizations::Update do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
-      permissions: Permission::ADMIN_PERMISSIONS_HASH,
+      permissions: Permission.permissions_hash(:admin),
       query: mutation,
       variables: {
         input: {
