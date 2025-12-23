@@ -10,7 +10,7 @@ RSpec.describe Types::PermissionsType do
     expect(all_boolean).to be_truthy
 
     gql_field_names = described_class.fields.keys.map(&:underscore)
-    rails_field_names = Permission::DEFAULT_PERMISSIONS_HASH.keys.map { |k| k.tr(":", "_") }
+    rails_field_names = Permission.permissions_hash.keys.map { |k| k.tr(":", "_") }
     expect(gql_field_names).to match_array(rails_field_names)
   end
 end

@@ -59,7 +59,7 @@ RSpec.describe CanRequirePermissions do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: "new name"}},
-        context: {permissions: Permission::EMPTY_PERMISSIONS_HASH}
+        context: {permissions: Permission.permissions_hash}
       )
 
       partial_error = {

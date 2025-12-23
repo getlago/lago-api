@@ -32,4 +32,52 @@ RSpec.describe Membership do
       end
     end
   end
+
+  describe "#permissions_hash" do
+    subject(:permissions_hash) { membership.permissions_hash }
+
+    context "with admin role" do
+      let(:membership) { create(:membership, role: :admin) }
+
+      it "includes all existing permissions" do
+        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+      end
+
+      it "returns all permissions as true" do
+        expect(permissions_hash.values).to all(be true)
+      end
+    end
+
+    context "with finance role" do
+      let(:membership) { create(:membership, role: :finance) }
+
+      it "includes all existing permissions" do
+        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+      end
+
+      it "returns true for finance-specific permissions" do
+        expect(permissions_hash).to include("analytics:view" => true)
+      end
+
+      it "returns false for non-finance permissions" do
+        expect(permissions_hash).to include("coupons:attach" => false)
+      end
+    end
+
+    context "with manager role" do
+      let(:membership) { create(:membership, role: :manager) }
+
+      it "includes all existing permissions" do
+        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+      end
+
+      it "returns true for manager-specific permissions" do
+        expect(permissions_hash).to include("coupons:attach" => true)
+      end
+
+      it "returns false for non-manager permissions" do
+        expect(permissions_hash).to include("analytics:view" => false)
+      end
+    end
+  end
 end
