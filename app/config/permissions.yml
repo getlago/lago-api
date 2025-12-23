@@ -1,0 +1,208 @@
+# The list of permissions to be associated to predefined roles.
+# In the leafs of the tree we keep the array of names of predefined roles.
+---
+addons:
+  view:
+  create:
+  update:
+  delete:
+ai_conversations:
+  view:
+  create:
+audit_logs:
+  view:
+authentication_methods:
+  view:
+  update:
+analytics:
+  overdue_balances:
+    view:
+      - finance
+      - manager
+  view:
+    - finance
+billable_metrics:
+  view:
+  create:
+  update:
+  delete:
+billing_entities:
+  view:
+    - finance
+    - manager
+  create:
+    - finance
+  update:
+    - finance
+  delete:
+    - finance
+  invoices:
+    view:
+      - finance
+    update:
+      - finance
+  taxes:
+    view:
+      - finance
+    update:
+      - finance
+  emails:
+    view:
+      - finance
+    update:
+      - finance
+  dunning_campaigns:
+    update:
+      - finance
+coupons:
+  view:
+  create:
+  update:
+  delete:
+  attach:
+    - manager
+  detach:
+    - manager
+credit_notes:
+  view:
+  create:
+  update:
+  void:
+  export:
+customers:
+  view:
+    - manager
+  create:
+    - manager
+  update:
+    - manager
+  delete:
+    - manager
+customer_settings:
+  view:
+  update:
+    tax_rates:
+    payment_terms:
+    grace_period:
+    lang:
+    issuing_date_anchor:
+    issuing_date_adjustment:
+data_api:
+  view:
+    - finance
+developers:
+  manage:
+  keys:
+    manage:
+draft_invoices:
+  update:
+dunning_campaigns:
+  view:
+    - finance
+    - manager
+  create:
+    - finance
+  update:
+    - finance
+  delete:
+    - finance
+features:
+  view:
+  create:
+  update:
+  delete:
+invoices:
+  view:
+    - finance
+    - manager
+  send:
+  create:
+    - finance
+    - manager
+  update:
+  void:
+  export:
+invoice_custom_sections:
+  view:
+    - finance
+  create:
+    - finance
+  update:
+    - finance
+  delete:
+    - finance
+organization:
+  view:
+    - finance
+  update:
+    - finance
+  invoices:
+    view:
+      - finance
+    update:
+      - finance
+  taxes:
+    view:
+    update:
+  emails:
+    view:
+    update:
+  integrations:
+    view:
+      - finance
+    create:
+      - finance
+    update:
+      - finance
+    delete:
+      - finance
+  members:
+    view:
+    create:
+    update:
+    delete:
+payments:
+  view:
+    - finance
+    - manager
+  create:
+    - finance
+    - manager
+payment_methods:
+  view:
+  create:
+  update:
+  delete:
+payment_requests:
+  view:
+    - finance
+    - manager
+  create:
+    - finance
+    - manager
+plans:
+  view:
+  create:
+  update:
+  delete:
+pricing_units:
+  view:
+    - finance
+  create:
+  update:
+subscriptions:
+  view:
+    - manager
+  create:
+    - manager
+  update:
+    - manager
+wallets:
+  create:
+    - manager
+  update:
+    - manager
+  top_up:
+    - manager
+  terminate:
+    - manager

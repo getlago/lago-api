@@ -42,16 +42,7 @@ class Membership < ApplicationRecord
   end
 
   def permissions_hash
-    case role
-    when "admin"
-      Permission::ADMIN_PERMISSIONS_HASH
-    when "manager"
-      Permission::MANAGER_PERMISSIONS_HASH
-    when "finance"
-      Permission::FINANCE_PERMISSIONS_HASH
-    else
-      {}
-    end
+    Permission.permissions_hash(role)
   end
 end
 

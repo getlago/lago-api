@@ -59,7 +59,7 @@ RSpec.describe RequiredOrganization do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
         variables: {input: {newName: "new name"}},
-        context: {current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH}
+        context: {current_user: create(:user), permissions: Permission.permissions_hash(:admin)}
       )
 
       partial_error = {

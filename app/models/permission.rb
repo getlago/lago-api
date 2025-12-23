@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-class Permission
-  def self.yaml_to_hash(filename)
-    h = YAML.parse_file(Rails.root.join("app/config/permissions", filename)).to_ruby
-    DottedHash.new(h, separator: ":").transform_values(&:present?)
+module Permission
+  extend self
+
+  def permissions_hash(role = nil)
+    role = role.to_s.downcase
+    DATA.transform_values { |list| role == "admin" || list.include?(role) }
+  end
+
+  private
+
+  def yaml_to_hash(filename)
+    h = YAML.parse_file(Rails.root.join("app/config", filename)).to_ruby
+    DottedHash.new(h, separator: ":").transform_values(&:to_a)
   end
 
   # rubocop:disable Layout/ClassStructure
-  EMPTY_PERMISSIONS_HASH = {}.freeze
-
-  DEFAULT_PERMISSIONS_HASH = yaml_to_hash("definition.yml").freeze
-
-  ADMIN_PERMISSIONS_HASH = DEFAULT_PERMISSIONS_HASH.transform_values { true }.freeze
-
-  MANAGER_PERMISSIONS_HASH = DEFAULT_PERMISSIONS_HASH.merge(yaml_to_hash("role-manager.yml")).freeze
-
-  FINANCE_PERMISSIONS_HASH = DEFAULT_PERMISSIONS_HASH.merge(yaml_to_hash("role-finance.yml")).freeze
-  # rubocop:enable Layout/ClassStructure
+  DATA = yaml_to_hash("permissions.yml").freeze
 end
