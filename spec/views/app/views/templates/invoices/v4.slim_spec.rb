@@ -116,38 +116,28 @@ RSpec.describe "templates/invoices/v4.slim" do
 
   context "when invoice_type is subscription and plan is paid in arrears" do
     let(:organization) { create(:organization, :with_static_values) }
-    let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
-    let(:customer) { create(:customer, :with_static_values, organization: organization, billing_entity: billing_entity) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
 
     let(:plan) do
       create(
         :plan,
-        organization: organization,
+        organization:,
         interval: "monthly",
-        pay_in_advance: false,
-        invoice_display_name: "Premium Plan"
+        invoice_display_name: "Pay in Arrears Premium Plan"
       )
     end
 
     let(:subscription) do
-      create(
-        :subscription,
-        organization: organization,
-        customer: customer,
-        plan: plan,
-        status: "active"
-      )
+      create(:subscription, customer:, plan:, status: "active")
     end
 
     let(:invoice) do
       create(
         :invoice,
-        organization: organization,
-        billing_entity: billing_entity,
-        customer: customer,
-        number: "LAGO-202509-001",
-        payment_due_date: Date.parse("2025-09-04"),
-        issuing_date: Date.parse("2025-09-04"),
+        customer:,
+        number: "LAGO-202509-002",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
         invoice_type: :subscription,
         total_amount_cents: 5000,
         currency: "USD",
@@ -160,9 +150,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:invoice_subscription) do
       create(
         :invoice_subscription,
-        invoice: invoice,
-        subscription: subscription,
-        organization: organization,
+        invoice:,
+        subscription:,
         from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
         to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
@@ -173,113 +162,105 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 1. Standard model - not prorated
-    let(:standard_addon) { create(:add_on, organization: organization, name: "Setup Fee", invoice_display_name: "Setup Fee") }
-    let(:standard_fixed_charge) do
-      create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: standard_addon,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: false,
-        units: 2,
-        invoice_display_name: "Setup Fee",
-        properties: {amount: "25.00"}
-      )
-    end
-    let(:standard_fee) do
+    let(:subscription_fee) do
       create(
         :fee,
-        invoice: invoice,
-        subscription: subscription,
+        invoice:,
+        subscription:,
+        fee_type: :subscription,
+        amount_cents: 1500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 1500,
+        precise_unit_amount: 15.00,
+        invoice_display_name: "Pay in Arrears Subscription Fee",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    let(:add_on) { create(:add_on, organization: organization) }
+
+    # Pay in advance fees
+    # 1. Standard model - not prorated
+    let(:standard_fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:)
+    end
+    let(:standard_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: standard_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 5000,
         amount_currency: "USD",
         units: 2,
         unit_amount_cents: 2500,
         precise_unit_amount: 25.00,
-        invoice_display_name: "Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Standard Pay in Advance Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
       )
     end
 
     # 2. Standard model - prorated
-    let(:standard_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Fee", invoice_display_name: "Prorated Fee") }
     let(:standard_prorated_fixed_charge) do
       create(
         :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: standard_prorated_addon,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Setup Fee",
-        properties: {amount: "100.00"}
+        :pay_in_advance,
+        plan:,
+        add_on:,
+        prorated: true
       )
     end
-    let(:standard_prorated_fee) do
+    let(:standard_prorated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: standard_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 5000,
         amount_currency: "USD",
         units: 0.5,
         unit_amount_cents: 10000,
         precise_unit_amount: 100.00,
-        invoice_display_name: "Prorated Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Standard Pay in Advance Prorated Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
       )
     end
 
     # 3. Graduated model - not prorated
-    let(:graduated_addon) { create(:add_on, organization: organization, name: "Graduated Fee", invoice_display_name: "Graduated Fee") }
     let(:graduated_fixed_charge) do
       create(
         :fixed_charge,
         :graduated,
-        organization: organization,
-        plan: plan,
-        add_on: graduated_addon,
-        charge_model: "graduated",
-        pay_in_advance: false,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Graduated Fixed Charge",
-        properties: {
-          graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "5", flat_amount: "200"},
-            {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "300"}
-          ]
-        }
+        :pay_in_advance,
+        plan:,
+        add_on:
       )
     end
-    let(:graduated_fee) do
+    let(:graduated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: graduated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 55500,
         amount_currency: "USD",
         units: 15,
         unit_amount_cents: 3700,
         precise_unit_amount: 37.00,
-        invoice_display_name: "Graduated Fixed Charge",
+        invoice_display_name: "Graduated Pay in Advance Fixed Charge Fee",
         amount_details: {
           "graduated_ranges" => [
             {
@@ -300,260 +281,276 @@ RSpec.describe "templates/invoices/v4.slim" do
             }
           ]
         },
-        invoiceable: nil
-      )
-    end
-
-    # 4. Graduated model - prorated
-    let(:graduated_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Graduated Fee", invoice_display_name: "Prorated Graduated Fee") }
-    let(:graduated_prorated_fixed_charge) do
-      create(
-        :fixed_charge,
-        :graduated,
-        organization: organization,
-        plan: plan,
-        add_on: graduated_prorated_addon,
-        charge_model: "graduated",
-        pay_in_advance: false,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Graduated Fixed Charge",
         properties: {
-          graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "3", flat_amount: "100"},
-            {from_value: 11, to_value: nil, per_unit_amount: "0.5", flat_amount: "150"}
-          ]
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
         }
       )
     end
-    let(:graduated_prorated_fee) do
+
+    # 4. Standard model - zero amount
+    let(:zero_fixed_charge) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: graduated_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 28100,
+        :fixed_charge,
+        :pay_in_advance,
+        plan:,
+        add_on:
+      )
+    end
+    let(:zero_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: zero_fixed_charge,
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 0,
         amount_currency: "USD",
-        units: 12,
-        unit_amount_cents: 2342,
-        precise_unit_amount: 23.42,
-        invoice_display_name: "Prorated Graduated Fixed Charge",
+        units: 1,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0.00,
+        invoice_display_name: "Zero Pay in Advance Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    # Pay in arrears fees
+    # 5. Standard model - not prorated
+    let(:arrears_fixed_charge) do
+      create(
+        :fixed_charge,
+        plan:,
+        add_on:
+      )
+    end
+    let(:arrears_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_fixed_charge,
+        subscription:,
+        amount_cents: 8500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 8500,
+        precise_unit_amount: 85.00,
+        invoice_display_name: "Standard Pay in Arrears Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # 6. Graduated model - not prorated
+    let(:arrears_graduated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        plan:,
+        add_on:,
+      )
+    end
+    let(:arrears_graduated_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_graduated_fixed_charge,
+        subscription:,
+        amount_cents: 55500,
+        amount_currency: "USD",
+        units: 15,
+        unit_amount_cents: 3700,
+        precise_unit_amount: 37.00,
+        invoice_display_name: "Graduated Pay in Arrears Fixed Charge Fee",
         amount_details: {
           "graduated_ranges" => [
             {
               "from_value" => 0,
               "to_value" => 10,
               "units" => 10.0,
-              "per_unit_amount" => "3.0",
-              "per_unit_total_amount" => "30.0",
-              "flat_unit_amount" => "100.0"
+              "per_unit_amount" => "5.0",
+              "per_unit_total_amount" => "50.0",
+              "flat_unit_amount" => "200.0"
             },
             {
               "from_value" => 11,
               "to_value" => nil,
-              "units" => 2.0,
-              "per_unit_amount" => "0.5",
-              "per_unit_total_amount" => "1.0",
-              "flat_unit_amount" => "150.0"
+              "units" => 5.0,
+              "per_unit_amount" => "1.0",
+              "per_unit_total_amount" => "5.0",
+              "flat_unit_amount" => "300.0"
             }
           ]
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 5. Volume model - not prorated
-    let(:volume_addon) { create(:add_on, organization: organization, name: "Volume Fee", invoice_display_name: "Volume Fee") }
+    # 7. Graduated model - prorated
+    let(:arrears_graduated_prorated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        plan:,
+        add_on:,
+        prorated: true
+      )
+    end
+    let(:arrears_graduated_prorated_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_graduated_prorated_fixed_charge,
+        subscription:,
+        amount_cents: 55500,
+        amount_currency: "USD",
+        units: 15,
+        unit_amount_cents: 3700,
+        precise_unit_amount: 37.00,
+        invoice_display_name: "Graduated Pay in Arrears Prorated Fixed Charge Fee",
+        amount_details: {
+          "graduated_ranges" => [
+            {
+              "from_value" => 0,
+              "to_value" => 10,
+              "units" => 10.0,
+              "per_unit_amount" => "5.0",
+              "per_unit_total_amount" => "50.0",
+              "flat_unit_amount" => "200.0"
+            },
+            {
+              "from_value" => 11,
+              "to_value" => nil,
+              "units" => 5.0,
+              "per_unit_amount" => "1.0",
+              "per_unit_total_amount" => "5.0",
+              "flat_unit_amount" => "300.0"
+            }
+          ]
+        },
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # 8. Volume model - not prorated
     let(:volume_fixed_charge) do
       create(
         :fixed_charge,
         :volume,
-        organization: organization,
-        plan: plan,
-        add_on: volume_addon,
-        charge_model: "volume",
-        pay_in_advance: false,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Volume Fixed Charge",
-        properties: {
-          volume_ranges: [
-            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
-            {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
-          ]
-        }
+        plan:,
+        add_on:
       )
     end
-    let(:volume_fee) do
+    let(:volume_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: volume_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
         amount_cents: 15100,
         amount_currency: "USD",
         units: 75,
         unit_amount_cents: 201,
         precise_unit_amount: 2.01,
-        invoice_display_name: "Volume Fixed Charge",
+        invoice_display_name: "Volume Pay in Arrears Fixed Charge Fee",
         amount_details: {
           "per_unit_amount" => "2.0",
           "per_unit_total_amount" => "150.0",
           "flat_unit_amount" => "1.0"
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 6. Volume model - prorated
-    let(:volume_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Volume Fee", invoice_display_name: "Prorated Volume Fee") }
+    # 9. Volume model - prorated
     let(:volume_prorated_fixed_charge) do
       create(
         :fixed_charge,
         :volume,
-        organization: organization,
-        plan: plan,
-        add_on: volume_prorated_addon,
-        charge_model: "volume",
-        pay_in_advance: false,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Volume Fixed Charge",
-        properties: {
-          volume_ranges: [
-            {from_value: 0, to_value: 50, per_unit_amount: "3", flat_amount: "2"},
-            {from_value: 51, to_value: nil, per_unit_amount: "1.5", flat_amount: "0"}
-          ]
-        }
+        plan:,
+        add_on:,
+        prorated: true
       )
     end
-    let(:volume_prorated_fee) do
+    let(:volume_prorated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: volume_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
         amount_cents: 9200,
         amount_currency: "USD",
         units: 30,
         unit_amount_cents: 307,
         precise_unit_amount: 3.07,
-        invoice_display_name: "Prorated Volume Fixed Charge",
+        invoice_display_name: "Volume Pay in Arrears Prorated Fixed Charge Fee",
         amount_details: {
           "per_unit_amount" => "3.0",
           "per_unit_total_amount" => "90.0",
           "flat_unit_amount" => "2.0"
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 7. Standard model - zero amount
-    let(:zero_addon) { create(:add_on, organization: organization, name: "Free Fee", invoice_display_name: "Free Fee") }
-    let(:zero_fixed_charge) do
+    # Commitment fee
+    let(:minimum_commitment_fee) do
       create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: zero_addon,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Free Setup Fee",
-        properties: {amount: "0"}
-      )
-    end
-    let(:zero_fee) do
-      create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: zero_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 0,
+        :minimum_commitment_fee,
+        invoice:,
+        subscription:,
         amount_currency: "USD",
-        units: 1,
-        unit_amount_cents: 0,
-        precise_unit_amount: 0.00,
-        invoice_display_name: "Free Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Minimum Commitment Fee"
       )
     end
-
-    # 8. Fixed charge paid in advance (on plan paid in arrears)
-    let(:advance_addon) { create(:add_on, organization: organization, name: "Advance Fee", invoice_display_name: "Advance Fee") }
-    let(:advance_fixed_charge) do
-      create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: advance_addon,
-        charge_model: "standard",
-        pay_in_advance: true,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Advance Fixed Charge",
-        properties: {amount: "75.00"}
-      )
-    end
-    let(:advance_fee) do
-      create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: advance_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 7500,
-        amount_currency: "USD",
-        units: 1,
-        unit_amount_cents: 7500,
-        precise_unit_amount: 75.00,
-        invoice_display_name: "Advance Fixed Charge",
-        invoiceable: nil
-      )
+    
+    before do
+      invoice_subscription
+      subscription_fee
+      minimum_commitment_fee
+      # Pay in advance fees
+      standard_fixed_charge_fee
+      standard_prorated_fixed_charge_fee
+      graduated_fixed_charge_fee
+      zero_fixed_charge_fee
+      # Pay in arrears fees
+      arrears_fixed_charge_fee
+      arrears_graduated_fixed_charge_fee
+      arrears_graduated_prorated_fixed_charge_fee
+      volume_fixed_charge_fee
+      volume_prorated_fixed_charge_fee
     end
 
     it "renders correctly with all included fees types" do
-      travel_to Time.zone.parse("2025-10-01 12:00:00") do
-        invoice_subscription
-        standard_fee
-        standard_prorated_fee
-        graduated_fee
-        graduated_prorated_fee
-        volume_fee
-        volume_prorated_fee
-        zero_fee
-        advance_fee
-
-        expect(rendered_template).to match_html_snapshot
-      end
+      expect(rendered_template).to match_html_snapshot
     end
   end
 
   context "when invoice has different boundaries for fixed charges" do
     let(:organization) { create(:organization, :with_static_values) }
-    let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
-    let(:customer) { create(:customer, :with_static_values, organization: organization, billing_entity: billing_entity) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
 
     # Yearly plan with monthly billed fixed charges
     let(:plan) do
       create(
         :plan,
-        organization: organization,
+        organization:,
         interval: "yearly",
         pay_in_advance: false,
         invoice_display_name: "Annual Plan",
@@ -564,9 +561,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:subscription) do
       create(
         :subscription,
-        organization: organization,
-        customer: customer,
-        plan: plan,
+        customer:,
+        plan:,
         status: "active"
       )
     end
@@ -574,15 +570,13 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:invoice) do
       create(
         :invoice,
-        organization: organization,
-        billing_entity: billing_entity,
-        customer: customer,
+        customer:,
         number: "LAGO-202509-003",
-        payment_due_date: Date.parse("2025-09-04"),
-        issuing_date: Date.parse("2025-09-04"),
+        payment_due_date: Date.parse("2026-01-01"),
+        issuing_date: Date.parse("2026-01-01"),
         invoice_type: :subscription,
         total_amount_cents: 5000,
-        currency: "USD",
+        currency: "EUR",
         fees_amount_cents: 5000,
         sub_total_excluding_taxes_amount_cents: 5000,
         sub_total_including_taxes_amount_cents: 5000
@@ -596,13 +590,13 @@ RSpec.describe "templates/invoices/v4.slim" do
         subscription: subscription,
         organization: organization,
         from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
-        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
-        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
         # Fixed charges billed monthly have different boundaries
-        fixed_charges_from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
-        fixed_charges_to_datetime: Time.zone.parse("2025-09-30 23:59:59"),
-        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+        fixed_charges_from_datetime: Time.zone.parse("2025-12-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-12-31 23:59:59")
       )
     end
 
@@ -610,76 +604,68 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:subscription_fee) do
       create(
         :fee,
-        invoice: invoice,
-        subscription: subscription,
+        invoice:,
+        subscription:,
         fee_type: :subscription,
-        organization: organization,
-        billing_entity: billing_entity,
         amount_cents: 99900,
-        amount_currency: "USD",
+        amount_currency: "EUR",
         units: 1,
         unit_amount_cents: 99900,
         precise_unit_amount: 999.00,
         invoice_display_name: nil,
-        invoiceable: subscription,
-        invoiceable_type: "Subscription"
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-12-31 23:59:59"
+        }
       )
     end
 
-    let(:monthly_addon) { create(:add_on, organization: organization, name: "Monthly Fee", invoice_display_name: "Monthly Fee") }
+    let(:add_on) { create(:add_on, organization:) }
     let(:monthly_fixed_charge) do
       create(
         :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: monthly_addon,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Monthly Fixed Charge",
-        properties: {amount: "100.00"}
+        plan:,
+        add_on:
       )
     end
-    let(:monthly_fee) do
+    let(:monthly_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
+        subscription:,
         fixed_charge: monthly_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
         amount_cents: 10000,
-        amount_currency: "USD",
+        amount_currency: "EUR",
         units: 1,
         unit_amount_cents: 10000,
         precise_unit_amount: 100.00,
         invoice_display_name: "Monthly Fixed Charge",
-        invoiceable: nil
+        properties: {
+          from_datetime: "2025-12-01 00:00:00",
+          to_datetime: "2025-12-31 23:59:59"
+        }
       )
     end
 
-    it "renders correctly with different boundaries" do
-      travel_to Time.zone.parse("2025-10-01 12:00:00") do
-        invoice_subscription
-        subscription_fee
-        monthly_fee
+    before do
+      invoice_subscription
+      subscription_fee
+      monthly_fixed_charge_fee
+    end
 
-        expect(rendered_template).to match_html_snapshot
-      end
+    it "renders correctly with different boundaries" do
+      expect(rendered_template).to match_html_snapshot
     end
   end
 
   context "when invoice_type is subscription and plan is paid in advance" do
     let(:organization) { create(:organization, :with_static_values) }
-    let(:billing_entity) { create(:billing_entity, :with_static_values, organization: organization) }
-    let(:customer) { create(:customer, :with_static_values, organization: organization, billing_entity: billing_entity) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
 
     let(:plan) do
       create(
         :plan,
-        organization: organization,
+        organization:,
         interval: "monthly",
         pay_in_advance: true,
         invoice_display_name: "Premium Plan"
@@ -687,23 +673,15 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
 
     let(:subscription) do
-      create(
-        :subscription,
-        organization: organization,
-        customer: customer,
-        plan: plan,
-        status: "active"
-      )
+      create(:subscription, customer:, plan:, status: "active")
     end
 
     let(:invoice) do
       create(
         :invoice,
-        organization: organization,
-        billing_entity: billing_entity,
-        customer: customer,
+        customer:,
         number: "LAGO-202509-002",
-        payment_due_date: Date.parse("2025-09-04"),
+        payment_due_date: Date.parse("2025-09-19"),
         issuing_date: Date.parse("2025-09-04"),
         invoice_type: :subscription,
         total_amount_cents: 5000,
@@ -717,11 +695,10 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:invoice_subscription) do
       create(
         :invoice_subscription,
-        invoice: invoice,
-        subscription: subscription,
-        organization: organization,
-        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
-        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-09-30 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
         charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
         fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
@@ -730,113 +707,143 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 1. Standard model - not prorated
-    let(:standard_addon) { create(:add_on, organization: organization, name: "Setup Fee", invoice_display_name: "Setup Fee") }
-    let(:standard_fixed_charge) do
-      create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: standard_addon,
-        charge_model: "standard",
-        pay_in_advance: true,
-        prorated: false,
-        units: 2,
-        invoice_display_name: "Setup Fee",
-        properties: {amount: "25.00"}
-      )
-    end
-    let(:standard_fee) do
+    let(:subscription_fee) do
       create(
         :fee,
-        invoice: invoice,
-        subscription: subscription,
+        invoice:,
+        subscription:,
+        pay_in_advance: true,
+        fee_type: :subscription,
+        amount_cents: 1500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 1500,
+        precise_unit_amount: 15.00,
+        invoice_display_name: "Pay in Advance Subscription Fee",
+        properties: {
+          from_datetime: "2025-09-01 00:00:00",
+          to_datetime: "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    let(:add_on) { create(:add_on, organization: organization) }
+
+    # Previous invoice subscription for the previous period
+    let(:previous_invoice) do
+      create(:invoice, customer:)
+    end
+    let(:previous_invoice_subscription) do
+      create(
+        :invoice_subscription,
+        subscription:,
+        invoice: previous_invoice,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-07-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-07-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-07-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-07-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-07-31 23:59:59")
+      )
+    end
+    let(:previous_subscription_fee) do
+      create(
+        :fee,
+        invoice: previous_invoice,
+        subscription:,
+        pay_in_advance: true,
+        fee_type: :subscription,
+        amount_cents: 1500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 1500,
+        precise_unit_amount: 15.00,
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # Pay in advance fees
+    # 1. Standard model - not prorated
+    let(:standard_fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:)
+    end
+    let(:standard_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: standard_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 5000,
         amount_currency: "USD",
         units: 2,
         unit_amount_cents: 2500,
         precise_unit_amount: 25.00,
-        invoice_display_name: "Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Standard Pay in Advance Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
       )
     end
 
     # 2. Standard model - prorated
-    let(:standard_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Fee", invoice_display_name: "Prorated Fee") }
     let(:standard_prorated_fixed_charge) do
       create(
         :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: standard_prorated_addon,
-        charge_model: "standard",
-        pay_in_advance: true,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Setup Fee",
-        properties: {amount: "100.00"}
+        :pay_in_advance,
+        plan:,
+        add_on:,
+        prorated: true
       )
     end
-    let(:standard_prorated_fee) do
+    let(:standard_prorated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: standard_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 5000,
         amount_currency: "USD",
         units: 0.5,
         unit_amount_cents: 10000,
         precise_unit_amount: 100.00,
-        invoice_display_name: "Prorated Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Standard Pay in Advance Prorated Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
       )
     end
 
     # 3. Graduated model - not prorated
-    let(:graduated_addon) { create(:add_on, organization: organization, name: "Graduated Fee", invoice_display_name: "Graduated Fee") }
     let(:graduated_fixed_charge) do
       create(
         :fixed_charge,
         :graduated,
-        organization: organization,
-        plan: plan,
-        add_on: graduated_addon,
-        charge_model: "graduated",
-        pay_in_advance: true,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Graduated Fixed Charge",
-        properties: {
-          graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "5", flat_amount: "200"},
-            {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "300"}
-          ]
-        }
+        :pay_in_advance,
+        plan:,
+        add_on:
       )
     end
-    let(:graduated_fee) do
+    let(:graduated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: graduated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
+        pay_in_advance: true,
         amount_cents: 55500,
         amount_currency: "USD",
         units: 15,
         unit_amount_cents: 3700,
         precise_unit_amount: 37.00,
-        invoice_display_name: "Graduated Fixed Charge",
+        invoice_display_name: "Graduated Pay in Advance Fixed Charge Fee",
         amount_details: {
           "graduated_ranges" => [
             {
@@ -857,243 +864,264 @@ RSpec.describe "templates/invoices/v4.slim" do
             }
           ]
         },
-        invoiceable: nil
-      )
-    end
-
-    # 4. Graduated model - prorated
-    let(:graduated_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Graduated Fee", invoice_display_name: "Prorated Graduated Fee") }
-    let(:graduated_prorated_fixed_charge) do
-      create(
-        :fixed_charge,
-        :graduated,
-        organization: organization,
-        plan: plan,
-        add_on: graduated_prorated_addon,
-        charge_model: "graduated",
-        pay_in_advance: true,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Graduated Fixed Charge",
         properties: {
-          graduated_ranges: [
-            {from_value: 0, to_value: 10, per_unit_amount: "3", flat_amount: "100"},
-            {from_value: 11, to_value: nil, per_unit_amount: "0.5", flat_amount: "150"}
-          ]
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
         }
       )
     end
-    let(:graduated_prorated_fee) do
+
+    # 4. Standard model - zero amount
+    let(:zero_fixed_charge) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: graduated_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 28100,
+        :fixed_charge,
+        :pay_in_advance,
+        plan:,
+        add_on:
+      )
+    end
+    let(:zero_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: zero_fixed_charge,
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 0,
         amount_currency: "USD",
-        units: 12,
-        unit_amount_cents: 2342,
-        precise_unit_amount: 23.42,
-        invoice_display_name: "Prorated Graduated Fixed Charge",
+        units: 1,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0.00,
+        invoice_display_name: "Zero Pay in Advance Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    # Pay in arrears fees
+    # 5. Standard model - not prorated
+    let(:arrears_fixed_charge) do
+      create(
+        :fixed_charge,
+        plan:,
+        add_on:
+      )
+    end
+    let(:arrears_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_fixed_charge,
+        subscription:,
+        amount_cents: 8500,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 8500,
+        precise_unit_amount: 85.00,
+        invoice_display_name: "Standard Pay in Arrears Fixed Charge Fee",
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # 6. Graduated model - not prorated
+    let(:arrears_graduated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        plan:,
+        add_on:,
+      )
+    end
+    let(:arrears_graduated_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_graduated_fixed_charge,
+        subscription:,
+        amount_cents: 55500,
+        amount_currency: "USD",
+        units: 15,
+        unit_amount_cents: 3700,
+        precise_unit_amount: 37.00,
+        invoice_display_name: "Graduated Pay in Arrears Fixed Charge Fee",
         amount_details: {
           "graduated_ranges" => [
             {
               "from_value" => 0,
               "to_value" => 10,
               "units" => 10.0,
-              "per_unit_amount" => "3.0",
-              "per_unit_total_amount" => "30.0",
-              "flat_unit_amount" => "100.0"
+              "per_unit_amount" => "5.0",
+              "per_unit_total_amount" => "50.0",
+              "flat_unit_amount" => "200.0"
             },
             {
               "from_value" => 11,
               "to_value" => nil,
-              "units" => 2.0,
-              "per_unit_amount" => "0.5",
-              "per_unit_total_amount" => "1.0",
-              "flat_unit_amount" => "150.0"
+              "units" => 5.0,
+              "per_unit_amount" => "1.0",
+              "per_unit_total_amount" => "5.0",
+              "flat_unit_amount" => "300.0"
             }
           ]
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 5. Volume model - not prorated
-    let(:volume_addon) { create(:add_on, organization: organization, name: "Volume Fee", invoice_display_name: "Volume Fee") }
+    # 7. Graduated model - prorated
+    let(:arrears_graduated_prorated_fixed_charge) do
+      create(
+        :fixed_charge,
+        :graduated,
+        plan:,
+        add_on:,
+        prorated: true
+      )
+    end
+    let(:arrears_graduated_prorated_fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: arrears_graduated_prorated_fixed_charge,
+        subscription:,
+        amount_cents: 55500,
+        amount_currency: "USD",
+        units: 15,
+        unit_amount_cents: 3700,
+        precise_unit_amount: 37.00,
+        invoice_display_name: "Graduated Pay in Arrears Prorated Fixed Charge Fee",
+        amount_details: {
+          "graduated_ranges" => [
+            {
+              "from_value" => 0,
+              "to_value" => 10,
+              "units" => 10.0,
+              "per_unit_amount" => "5.0",
+              "per_unit_total_amount" => "50.0",
+              "flat_unit_amount" => "200.0"
+            },
+            {
+              "from_value" => 11,
+              "to_value" => nil,
+              "units" => 5.0,
+              "per_unit_amount" => "1.0",
+              "per_unit_total_amount" => "5.0",
+              "flat_unit_amount" => "300.0"
+            }
+          ]
+        },
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # 8. Volume model - not prorated
     let(:volume_fixed_charge) do
       create(
         :fixed_charge,
         :volume,
-        organization: organization,
-        plan: plan,
-        add_on: volume_addon,
-        charge_model: "volume",
-        pay_in_advance: true,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Volume Fixed Charge",
-        properties: {
-          volume_ranges: [
-            {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "1"},
-            {from_value: 101, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
-          ]
-        }
+        plan:,
+        add_on:
       )
     end
-    let(:volume_fee) do
+    let(:volume_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: volume_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
         amount_cents: 15100,
         amount_currency: "USD",
         units: 75,
         unit_amount_cents: 201,
         precise_unit_amount: 2.01,
-        invoice_display_name: "Volume Fixed Charge",
+        invoice_display_name: "Volume Pay in Arrears Fixed Charge Fee",
         amount_details: {
           "per_unit_amount" => "2.0",
           "per_unit_total_amount" => "150.0",
           "flat_unit_amount" => "1.0"
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 6. Volume model - prorated
-    let(:volume_prorated_addon) { create(:add_on, organization: organization, name: "Prorated Volume Fee", invoice_display_name: "Prorated Volume Fee") }
+    # 9. Volume model - prorated
     let(:volume_prorated_fixed_charge) do
       create(
         :fixed_charge,
         :volume,
-        organization: organization,
-        plan: plan,
-        add_on: volume_prorated_addon,
-        charge_model: "volume",
-        pay_in_advance: true,
-        prorated: true,
-        units: 1,
-        invoice_display_name: "Prorated Volume Fixed Charge",
-        properties: {
-          volume_ranges: [
-            {from_value: 0, to_value: 50, per_unit_amount: "3", flat_amount: "2"},
-            {from_value: 51, to_value: nil, per_unit_amount: "1.5", flat_amount: "0"}
-          ]
-        }
+        plan:,
+        add_on:,
+        prorated: true
       )
     end
-    let(:volume_prorated_fee) do
+    let(:volume_prorated_fixed_charge_fee) do
       create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
+        :fixed_charge_fee,
+        invoice:,
         fixed_charge: volume_prorated_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
+        subscription:,
         amount_cents: 9200,
         amount_currency: "USD",
         units: 30,
         unit_amount_cents: 307,
         precise_unit_amount: 3.07,
-        invoice_display_name: "Prorated Volume Fixed Charge",
+        invoice_display_name: "Volume Pay in Arrears Prorated Fixed Charge Fee",
         amount_details: {
           "per_unit_amount" => "3.0",
           "per_unit_total_amount" => "90.0",
           "flat_unit_amount" => "2.0"
         },
-        invoiceable: nil
+        properties: {
+          fixed_charges_from_datetime: "2025-08-01 00:00:00",
+          fixed_charges_to_datetime: "2025-08-31 23:59:59"
+        }
       )
     end
 
-    # 7. Standard model - zero amount
-    let(:zero_addon) { create(:add_on, organization: organization, name: "Free Fee", invoice_display_name: "Free Fee") }
-    let(:zero_fixed_charge) do
+    # Commitment fee
+    let(:minimum_commitment_fee) do
       create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: zero_addon,
-        charge_model: "standard",
-        pay_in_advance: true,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Free Setup Fee",
-        properties: {amount: "0"}
-      )
-    end
-    let(:zero_fee) do
-      create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: zero_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 0,
+        :minimum_commitment_fee,
+        invoice:,
+        subscription:,
         amount_currency: "USD",
-        units: 1,
-        unit_amount_cents: 0,
-        precise_unit_amount: 0.00,
-        invoice_display_name: "Free Setup Fee",
-        invoiceable: nil
+        invoice_display_name: "Minimum Commitment Fee"
       )
     end
-
-    # 8. Fixed charge paid in arrears (on plan paid in advance)
-    let(:arrears_addon) { create(:add_on, organization: organization, name: "Arrears Fee", invoice_display_name: "Arrears Fee") }
-    let(:arrears_fixed_charge) do
-      create(
-        :fixed_charge,
-        organization: organization,
-        plan: plan,
-        add_on: arrears_addon,
-        charge_model: "standard",
-        pay_in_advance: false,
-        prorated: false,
-        units: 1,
-        invoice_display_name: "Arrears Fixed Charge",
-        properties: {amount: "85.00"}
-      )
-    end
-    let(:arrears_fee) do
-      create(
-        :fee,
-        invoice: invoice,
-        subscription: subscription,
-        fixed_charge: arrears_fixed_charge,
-        fee_type: :fixed_charge,
-        organization: organization,
-        billing_entity: billing_entity,
-        amount_cents: 8500,
-        amount_currency: "USD",
-        units: 1,
-        unit_amount_cents: 8500,
-        precise_unit_amount: 85.00,
-        invoice_display_name: "Arrears Fixed Charge",
-        invoiceable: nil
-      )
-    end
-
+    
     before do
+      # Previous invoice subscription for the previous period
+      previous_invoice_subscription
+      previous_subscription_fee
+
       invoice_subscription
-      standard_fee
-      standard_prorated_fee
-      graduated_fee
-      graduated_prorated_fee
-      volume_fee
-      volume_prorated_fee
-      zero_fee
-      arrears_fee
+      subscription_fee
+      minimum_commitment_fee
+      # Pay in advance fees
+      standard_fixed_charge_fee
+      standard_prorated_fixed_charge_fee
+      graduated_fixed_charge_fee
+      zero_fixed_charge_fee
+      # Pay in arrears fees
+      arrears_fixed_charge_fee
+      arrears_graduated_fixed_charge_fee
+      arrears_graduated_prorated_fixed_charge_fee
+      volume_fixed_charge_fee
+      volume_prorated_fixed_charge_fee
     end
 
     it "renders correctly with all included fees types" do
