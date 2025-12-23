@@ -131,7 +131,7 @@ group :development, :test do
   gem "webmock"
   gem "awesome_print"
   gem "pry-byebug"
-  gem "knapsack_pro", "~> 8.1"
+  gem "knapsack_pro", "~> 9.0"
   gem "parallel_tests", "~> 5.3"
 
   gem "database_cleaner-active_record"
@@ -147,7 +147,7 @@ group :development, :test do
   gem "rubocop-thread_safety", require: false
 
   gem "vernier", "~> 1.0", require: false
-  gem "super_diff", "~> 0.16.0"
+  gem "super_diff", "~> 0.18.0"
 end
 
 group :test do
