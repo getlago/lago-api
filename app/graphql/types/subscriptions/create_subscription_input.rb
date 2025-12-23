@@ -14,6 +14,7 @@ module Types
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :plan_id, ID, required: true
       argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
+      argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
 
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
