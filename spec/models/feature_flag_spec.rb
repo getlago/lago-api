@@ -3,10 +3,14 @@
 require "rails_helper"
 
 RSpec.describe FeatureFlag do
+  let(:feature_hash) { {"feature1" => {"description" => "text"}}.with_indifferent_access.freeze }
   let(:organization) { create(:organization) }
   let(:feature_name) { "feature1" }
 
-  before { Flipper.add(feature_name) }
+  before do
+    stub_const("FeatureFlag::DEFINITION", feature_hash)
+    Flipper.add(feature_name)
+  end
 
   after { Flipper.remove(feature_name) }
 
@@ -100,23 +104,23 @@ RSpec.describe FeatureFlag do
     end
   end
 
-  describe ".sync!" do
+  describe ".cleanup!" do
     it "adds missing features from definition" do
       Flipper.remove(feature_name)
 
-      expect { described_class.sync! }.to change { Flipper.features.map(&:key) }.from([]).to([feature_name])
+      expect { described_class.cleanup! }.to change { Flipper.features.map(&:key) }.from([]).to([feature_name])
     end
 
     it "removes features not in definition" do
       Flipper.add("obsolete_feature")
 
-      expect { described_class.sync! }.to change { Flipper.features.map(&:key).sort }
+      expect { described_class.cleanup! }.to change { Flipper.features.map(&:key).sort }
         .from(match_array([feature_name, "obsolete_feature"]))
         .to([feature_name])
     end
 
     it "returns self" do
-      expect(described_class.sync!).to eq(described_class)
+      expect(described_class.cleanup!).to eq(described_class)
     end
   end
 end
