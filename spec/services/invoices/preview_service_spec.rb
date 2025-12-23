@@ -119,6 +119,92 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           end
         end
 
+        context "with fixed charges for non-persisted subscription" do
+          let(:add_on) { create(:add_on, organization:) }
+
+          context "with standard charge model" do
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "standard",
+                pay_in_advance: true,
+                units: 3,
+                properties: {amount: "15"}
+              )
+            end
+
+            before { fixed_charge }
+
+            it "creates preview invoice with fixed charges using default units" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+                expect(fixed_charge_fee.units).to eq(3)
+                expect(fixed_charge_fee.amount_cents).to eq(4500) # $15 * 3 units = $45
+
+                # Total: subscription (6) + fixed charge (4500) = 4506
+                expect(result.invoice.fees_amount_cents).to eq(4506)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(4506)
+                expect(result.invoice.taxes_amount_cents).to eq(2253) # 50% tax
+                expect(result.invoice.total_amount_cents).to eq(6759)
+              end
+            end
+          end
+
+          context "with volume charge model" do
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "volume",
+                pay_in_advance: false,
+                units: 18,
+                properties: {
+                  volume_ranges: [
+                    {from_value: 0, to_value: 10, flat_amount: "0", per_unit_amount: "3"},
+                    {from_value: 11, to_value: 50, flat_amount: "15", per_unit_amount: "2"},
+                    {from_value: 51, to_value: nil, flat_amount: "30", per_unit_amount: "1"}
+                  ]
+                }
+              )
+            end
+
+            before { fixed_charge }
+
+            it "calculates volume pricing using default units" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+                expect(fixed_charge_fee.units).to eq(18)
+                # 18 units falls in second tier: $15 flat + (18 * $2) = $51
+                expect(fixed_charge_fee.amount_cents).to eq(5100)
+
+                # Total: subscription (6) + fixed charge (5100) = 5106
+                expect(result.invoice.fees_amount_cents).to eq(5106)
+              end
+            end
+          end
+        end
+
         context "with one persisted subscription" do
           let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
@@ -1493,6 +1579,56 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             expect(result.invoice.taxes_amount_cents).to eq(50)
             expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(150)
             expect(result.invoice.total_amount_cents).to eq(150)
+          end
+        end
+
+        context "with fixed charges for non-persisted subscription" do
+          let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1000) }
+          let(:add_on) { create(:add_on, organization:) }
+
+          context "with graduated charge model" do
+            let(:fixed_charge) do
+              create(
+                :fixed_charge,
+                plan:,
+                add_on:,
+                charge_model: "graduated",
+                pay_in_advance: true,
+                units: 25,
+                properties: {
+                  graduated_ranges: [
+                    {from_value: 0, to_value: 10, flat_amount: "0", per_unit_amount: "2"},
+                    {from_value: 11, to_value: 20, flat_amount: "5", per_unit_amount: "1.5"},
+                    {from_value: 21, to_value: nil, flat_amount: "10", per_unit_amount: "1"}
+                  ]
+                }
+              )
+            end
+
+            before { fixed_charge }
+
+            it "calculates graduated pricing using default units" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.fees.size).to eq(2) # subscription + fixed_charge
+
+                fixed_charge_fees = result.invoice.fees.select { |f| f.fee_type == "fixed_charge" }
+                expect(fixed_charge_fees.size).to eq(1)
+
+                fixed_charge_fee = fixed_charge_fees.first
+                # Tier 1: 10 units * $2 = $20
+                # Tier 2: $5 flat + (10 units * $1.5) = $20
+                # Tier 3: $10 flat + (5 units * $1) = $15
+                # Total: $20 + $20 + $15 = $55
+                expect(fixed_charge_fee.amount_cents).to eq(5500)
+                expect(fixed_charge_fee.units).to eq(25)
+
+                # Total: subscription (1000) + fixed charge (5500) = 6500
+                expect(result.invoice.fees_amount_cents).to eq(6500)
+              end
+            end
           end
         end
 
