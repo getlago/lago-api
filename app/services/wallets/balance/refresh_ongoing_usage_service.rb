@@ -66,18 +66,13 @@ module Wallets
         applicable_fees(fees, wallets_applicable_on_fees)
       end
 
-      def draft_invoices_fees
+      def draft_invoices_total_amount_cents
         fees = wallet.customer.invoices.draft.where.not(total_amount_cents: 0).flat_map(&:fees)
         wallets_applicable_on_fees = assign_wallet_per_fee(fees)
+        applicable = applicable_fees(fees, wallets_applicable_on_fees)
 
-        applicable_fees(fees, wallets_applicable_on_fees)
-      end
-
-      def draft_invoices_total_amount_cents
-        fees = draft_invoices_fees
-
-        fees.sum do |fee|
-          fee.amount_cents + fee.taxes_amount_cents - fee.precise_coupons_amount_cents
+        applicable.sum do |fee|
+          fee.amount_cents + fee.taxes_amount_cents # we do not apply coupon on draft invoices so no need to deduct anything
         end
       end
 
