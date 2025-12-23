@@ -20,10 +20,11 @@ module Subscriptions
         )
         .find_each do |subscription|
           subscription.mark_as_active!(Time.zone.at(timestamp))
+          fixed_charge_timestamp = subscription.started_at + 1.second
 
           EmitFixedChargeEventsService.call!(
             subscriptions: [subscription],
-            timestamp: subscription.started_at + 1.second
+            timestamp: fixed_charge_timestamp
           )
 
           if subscription.should_sync_hubspot_subscription?
@@ -38,7 +39,7 @@ module Subscriptions
           if subscription.plan.pay_in_advance?
             BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)
           elsif subscription.fixed_charges.pay_in_advance.any?
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, fixed_charge_timestamp)
           end
         end
     end

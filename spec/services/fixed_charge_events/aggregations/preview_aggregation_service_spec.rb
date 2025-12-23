@@ -33,9 +33,9 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
   let(:fixed_charges_to_datetime) { 1.month.from_now }
   let(:boundaries) do
     {
-      fixed_charges_from_datetime:,
-      fixed_charges_to_datetime:,
-      fixed_charges_duration: 30
+      "fixed_charges_from_datetime" => fixed_charges_from_datetime,
+      "fixed_charges_to_datetime" => fixed_charges_to_datetime.to_datetime,
+      "fixed_charges_duration" => 30
     }
   end
 
@@ -114,9 +114,9 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
     let(:fixed_charges_to_datetime) { Time.zone.parse("2024-12-31 23:59:59") }
     let(:boundaries) do
       {
-        fixed_charges_from_datetime:,
-        fixed_charges_to_datetime:,
-        fixed_charges_duration: 365 # Full year
+        "fixed_charges_from_datetime" => fixed_charges_from_datetime,
+        "fixed_charges_to_datetime" => fixed_charges_to_datetime,
+        "fixed_charges_duration" => 365 # Full year
       }
     end
 
@@ -135,9 +135,9 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
       let(:fixed_charges_to_datetime) { Time.zone.parse("2024-03-31 23:59:59") }
       let(:boundaries) do
         {
-          fixed_charges_from_datetime:,
-          fixed_charges_to_datetime:,
-          fixed_charges_duration: 31 # Full month (March)
+          "fixed_charges_from_datetime" => fixed_charges_from_datetime,
+          "fixed_charges_to_datetime" => fixed_charges_to_datetime,
+          "fixed_charges_duration" => 31 # Full month (March)
         }
       end
 

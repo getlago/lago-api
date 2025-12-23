@@ -48,7 +48,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
 
         expect { service.call }.to change { sub.reload.trial_ended_at }.from(nil).to(sub.trial_end_datetime)
       end
-
     end
 
     context "with customer timezone" do
@@ -148,8 +147,8 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
             subscription
           end
 
-          it "does not enqueue a job to bill the subscription" do
-            expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          it "enqueues a job to bill the subscription" do
+            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
           end
 
           it "does not enqueue a job to bill the pay in advance fixed charges" do
