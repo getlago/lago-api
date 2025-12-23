@@ -57,7 +57,7 @@ RSpec.describe Resolvers::OrganizationResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: Permission::ADMIN_PERMISSIONS_HASH,
+        permissions: Permission.permissions_hash(:admin),
         query:,
         variables: {}
       )
