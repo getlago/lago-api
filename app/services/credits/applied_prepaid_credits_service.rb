@@ -59,6 +59,12 @@ module Credits
           wallet_transaction = create_wallet_transaction(wallet, total_amount_cents)
           amount_cents = wallet_transaction.amount_cents
 
+          if wallet.traceable?
+            WalletTransactions::TrackConsumptionService.call!(
+              outbound_wallet_transaction: wallet_transaction
+            )
+          end
+
           with_optimistic_lock_retry(wallet) do
             Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:, skip_refresh: true)
           end
