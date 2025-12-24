@@ -419,10 +419,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       # Create a wallet with 1000$
       wallet = create_wallet_with_defaults(
         rate_amount: "10",
-        granted_credits: "100",
-        applies_to: {
-          billable_metric_codes: [billable_metric.code]
-        }
+        granted_credits: "100"
       )
 
       expect(wallet.credits_balance).to eq 100
@@ -520,6 +517,30 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
         expect(wallet.credits_ongoing_balance).to eq 23
         expect(wallet.ongoing_usage_balance_cents).to eq 0
         expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+
+      travel_to time_0 + 25.days do
+        ingest_event(subscription, 1)
+        perform_usage_update
+      end
+
+      travel_to time_0 + 1.month do
+        perform_billing
+        recalculate_wallet_balances
+
+        expect(subscription.invoices.draft.count).to eq(1)
+
+        draft_invoice = subscription.invoices.draft.first
+        expect(draft_invoice.total_amount_cents).not_to eq(0.0)
+        expect(draft_invoice.fees.find { |f| f.precise_coupons_amount_cents != 0.0 }).to be_present
+
+        wallet.reload
+        expect(wallet.credits_balance).to eq 23
+        expect(wallet.balance_cents).to eq 230_00
+        expect(wallet.ongoing_balance_cents).to eq 219_00
+        expect(wallet.credits_ongoing_balance).to eq 21.9
+        expect(wallet.ongoing_usage_balance_cents).to eq 1100
+        expect(wallet.credits_ongoing_usage_balance).to eq 1.1
       end
     end
   end
