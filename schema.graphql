@@ -8090,6 +8090,7 @@ type Payment {
   id: ID!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
+  paymentProvider: PaymentProvider
   paymentProviderType: ProviderTypeEnum
   paymentReceipt: PaymentReceipt
   paymentType: PaymentTypeEnum!

@@ -39231,6 +39231,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentProvider",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "UNION",
+                "name": "PaymentProvider",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProviderType",
               "description": null,
               "args": [],
