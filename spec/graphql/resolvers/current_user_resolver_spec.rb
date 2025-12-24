@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CurrentUserResolver do
+  let(:admin_role) { create(:role, :admin) }
+
   let(:query) do
     <<~GRAPHQL
       query {
@@ -12,6 +14,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
           premium
           memberships {
             role
+            roles
             permissions { invoicesView }
             status
             organization {
@@ -25,7 +28,8 @@ RSpec.describe Resolvers::CurrentUserResolver do
 
   it "returns current_user" do
     user = create(:user)
-    create(:membership, user:, role: :admin)
+    membership = create(:membership, user:)
+    create(:membership_role, membership:, role: admin_role)
 
     result = execute_graphql(
       current_user: user,
@@ -76,7 +80,10 @@ RSpec.describe Resolvers::CurrentUserResolver do
       create(:membership, user: membership.user, status: :revoked)
     end
 
-    before { revoked_membership }
+    before do
+      create(:membership_role, membership:, role: admin_role)
+      revoked_membership
+    end
 
     it "only lists organizations when membership has an active status" do
       result = execute_graphql(

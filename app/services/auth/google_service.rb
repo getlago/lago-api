@@ -115,9 +115,11 @@ module Auth
 
         result.membership = Membership.create!(
           user: result.user,
-          organization: result.organization,
-          role: :admin
+          organization: result.organization
         )
+
+        role = Role.find_by!(admin: true)
+        MembershipRole.create!(membership: result.membership, organization: result.organization, role:)
 
         generate_token
       rescue ActiveRecord::RecordInvalid => e

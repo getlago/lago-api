@@ -143,6 +143,7 @@ RSpec.describe Auth::GoogleService do
     end
 
     before do
+      create(:role, :admin)
       allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
       allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
