@@ -18,19 +18,22 @@ RSpec.describe Events::CreateBatchService do
   let(:metadata) { {} }
   let(:creation_timestamp) { Time.current.to_f }
   let(:precise_total_amount_cents) { "123.34" }
+  let(:external_subscription_id) { SecureRandom.uuid }
+  let(:events_params) { build_params }
 
-  let(:events_params) do
+  def build_params(count: 100, &block)
     events = []
-    100.times do
+    count.times do |i|
       event = {
         external_customer_id: SecureRandom.uuid,
-        external_subscription_id: SecureRandom.uuid,
+        external_subscription_id:,
         code:,
         transaction_id: SecureRandom.uuid,
         precise_total_amount_cents:,
         properties: {foo: "bar"},
         timestamp:
       }
+      yield(event, i) if block_given?
 
       events << event
     end
@@ -38,15 +41,23 @@ RSpec.describe Events::CreateBatchService do
     {events:}
   end
 
+  def test_validation_failure(expected_errors)
+    result = nil
+
+    expect { result = create_batch_service.call }.not_to change(Event, :count)
+
+    expect(result).not_to be_success
+    expect(result.error).to be_a(BaseService::ValidationFailure)
+    expect(result.error.messages).to eq expected_errors
+  end
+
   describe ".call" do
     it "creates all events" do
       result = nil
 
-      aggregate_failures do
-        expect { result = create_batch_service.call }.to change(Event, :count).by(100)
+      expect { result = create_batch_service.call }.to change(Event, :count).by(100)
 
-        expect(result).to be_success
-      end
+      expect(result).to be_success
     end
 
     it "enqueues a post processing job" do
@@ -54,112 +65,62 @@ RSpec.describe Events::CreateBatchService do
     end
 
     context "when no events are provided" do
-      before do
-        events_params[:events] = []
-      end
+      let(:events_params) { build_params(count: 0) }
 
       it "returns a no_events error" do
-        result = nil
-
-        aggregate_failures do
-          expect { result = create_batch_service.call }.not_to change(Event, :count)
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:events)
-          expect(result.error.messages[:events]).to include("no_events")
-        end
+        test_validation_failure({events: ["no_events"]})
       end
     end
 
     context "when events count is too big" do
-      before do
-        events_params[:events].push(
-          {
-            external_customer_id: SecureRandom.uuid,
-            external_subscription_id: SecureRandom.uuid,
-            code:,
-            transaction_id: SecureRandom.uuid,
-            properties: {foo: "bar"},
-            timestamp:
-          }
-        )
-      end
+      let(:events_params) { build_params(count: 101) }
 
       it "returns a too big error" do
-        result = nil
-
-        aggregate_failures do
-          expect { result = create_batch_service.call }.not_to change(Event, :count)
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:events)
-          expect(result.error.messages[:events]).to include("too_many_events")
-        end
+        test_validation_failure({events: ["too_many_events"]})
       end
     end
 
     context "with at least one invalid event" do
-      context "with already existing event" do
-        let(:existing_event) do
-          create(
-            :event,
-            organization:,
-            transaction_id: "123456",
-            external_subscription_id: "123456"
-          )
+      context "with duplicate transaction_id" do
+        let(:duplicate_transaction_id) { SecureRandom.uuid }
+        let(:events_params) { build_params(count: 2) { |event, index| event[:transaction_id] = duplicate_transaction_id } }
+
+        it "returns a duplicate transaction_id error" do
+          test_validation_failure({1 => {transaction_id: ["value_already_exist"]}})
         end
+      end
 
-        let(:events_params) do
-          {
-            events: [
-              {
-                external_customer_id: SecureRandom.uuid,
-                external_subscription_id: "123456",
-                code:,
-                transaction_id: "123456",
-                properties: {foo: "bar"},
-                timestamp:
-              }
-            ]
-          }
-        end
+      # We have different error/issues depending on whether another error is saved afterward as PG will roll-back the
+      # transaction when an error occurs due to duplicate.
+      [:beginning, :middle, :end].each do |duplicate_event_occurence|
+        context "with already existing event (#{duplicate_event_occurence})" do
+          let(:existing_event) do
+            create(:event, organization:, transaction_id: SecureRandom.uuid, external_subscription_id:)
+          end
+          let(:duplicate_event_index) do
+            case duplicate_event_occurence
+            when :beginning then 0
+            when :middle then 2
+            when :end then 4
+            end
+          end
+          let(:events_params) do
+            build_params(count: 5) do |event, index|
+              event[:transaction_id] = existing_event.transaction_id if index == duplicate_event_index
+            end
+          end
 
-        before { existing_event }
+          before { existing_event }
 
-        it "returns an error" do
-          result = nil
-
-          aggregate_failures do
-            expect { result = create_batch_service.call }.not_to change(Event, :count)
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[0].keys).to include(:transaction_id)
-            expect(result.error.messages[0][:transaction_id]).to include("value_already_exist")
+          it "returns an error" do
+            test_validation_failure({duplicate_event_index => {transaction_id: ["value_already_exist"]}})
           end
         end
       end
     end
 
     context "when timestamp is not present in the payload" do
-      let(:timestamp) { nil }
-
-      let(:events_params) do
-        {
-          events: [
-            {
-              external_customer_id: SecureRandom.uuid,
-              external_subscription_id: SecureRandom.uuid,
-              code:,
-              transaction_id: SecureRandom.uuid,
-              properties: {foo: "bar"},
-              timestamp:
-            }
-          ]
-        }
-      end
+      let(:events_params) { build_params(count: 1) { it.delete(:timestamp) } }
 
       it "creates an event by setting the timestamp to the current datetime" do
         result = create_batch_service.call
@@ -171,22 +132,7 @@ RSpec.describe Events::CreateBatchService do
 
     context "when timestamp is given as string" do
       let(:timestamp) { Time.current.to_f.to_s }
-
-      let(:events_params) do
-        {
-          events: [
-            {
-              external_customer_id: SecureRandom.uuid,
-              external_subscription_id: SecureRandom.uuid,
-              code:,
-              transaction_id: SecureRandom.uuid,
-              precise_total_amount_cents:,
-              properties: {foo: "bar"},
-              timestamp:
-            }
-          ]
-        }
-      end
+      let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }
 
       it "creates an event by setting timestamp" do
         result = create_batch_service.call
@@ -198,30 +144,10 @@ RSpec.describe Events::CreateBatchService do
 
     context "when timestamp is in a wrong format" do
       let(:timestamp) { Time.current.to_s }
-      let(:events_params) do
-        {
-          events: [
-            {
-              external_customer_id: SecureRandom.uuid,
-              external_subscription_id: SecureRandom.uuid,
-              code:,
-              transaction_id: SecureRandom.uuid,
-              precise_total_amount_cents:,
-              properties: {foo: "bar"},
-              timestamp:
-            }
-          ]
-        }
-      end
+      let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }
 
       it "returns an error" do
-        result = nil
-        expect { result = create_batch_service.call }.not_to change(Event, :count)
-
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(0)
-        expect(result.error.messages[0][:timestamp]).to include("invalid_format")
+        test_validation_failure({0 => {timestamp: ["invalid_format"]}})
       end
     end
 
@@ -240,47 +166,17 @@ RSpec.describe Events::CreateBatchService do
       end
 
       context "when not all the event properties are not provided" do
-        let(:events_params) do
-          {
-            events: [
-              {
-                external_subscription_id: SecureRandom.uuid,
-                code:,
-                transaction_id: SecureRandom.uuid,
-                properties: {},
-                timestamp:
-              }
-            ]
-          }
-        end
+        let(:events_params) { build_params(count: 1) { |event| event[:properties] = {} } }
 
         it "returns a failure when the expression fails to evaluate" do
-          result = create_batch_service.call
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ValidationFailure)
+          test_validation_failure({0 => "expression_evaluation_failed: Variable: foo not found"})
         end
       end
     end
 
     context "when timestamp is sent with decimal precision" do
       let(:timestamp) { DateTime.parse("2023-09-04T15:45:12.344Z").to_f }
-
-      let(:events_params) do
-        {
-          events: [
-            {
-              external_customer_id: SecureRandom.uuid,
-              external_subscription_id: SecureRandom.uuid,
-              code:,
-              transaction_id: SecureRandom.uuid,
-              precise_total_amount_cents:,
-              properties: {foo: "bar"},
-              timestamp:
-            }
-          ]
-        }
-      end
+      let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }
 
       it "creates an event by keeping the millisecond precision" do
         result = create_batch_service.call

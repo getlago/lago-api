@@ -64,16 +64,14 @@ module Events
 
     def post_validate_events
       if organization.postgres_events_store?
-        ActiveRecord::Base.transaction do
+        Event.transaction do
           result.events.each_with_index do |event, index|
             event.save!
           rescue ActiveRecord::RecordNotUnique
             result.errors[index] = {transaction_id: ["value_already_exist"]}
+            raise ActiveRecord::Rollback
           end
-
-          raise ActiveRecord::Rollback if result.errors.any?
         end
-
         return if result.errors.any?
       end
 
