@@ -66,6 +66,7 @@ class Organization < ApplicationRecord
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
+  has_many :roles
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :features, class_name: "Entitlement::Feature"
   has_many :privileges, class_name: "Entitlement::Privilege"
@@ -130,6 +131,7 @@ class Organization < ApplicationRecord
     analytics_dashboards
     forecasted_usage
     projected_usage
+    custom_roles
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze

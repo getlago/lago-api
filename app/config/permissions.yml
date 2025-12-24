@@ -180,6 +180,8 @@ payment_requests:
   create:
     - finance
     - manager
+permissions:
+  view:
 plans:
   view:
   create:
@@ -190,6 +192,11 @@ pricing_units:
     - finance
   create:
   update:
+roles:
+  view:
+  create:
+  update:
+  delete:
 subscriptions:
   view:
     - manager
