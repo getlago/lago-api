@@ -55,7 +55,7 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
-  scope :positive_units, -> { where("units > ?", 0) }
+  scope :positive_units, -> { where("fees.units > ?", 0) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
