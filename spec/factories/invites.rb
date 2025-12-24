@@ -10,9 +10,9 @@ FactoryBot.define do
     roles { %w[admin] }
 
     after(:build) do |invite|
-      names = Role.with_names(*invite.roles).with_organization(invite.organization.id).pluck(:name)
-      missed_names = invite.roles.map(&:downcase) - names.map(&:downcase)
-      missed_names.each { |name| create(:role, name.to_sym) }
+      existing_names = Role.with_names(*invite.roles).with_organization(invite.organization.id).pluck("LOWER(name)")
+      missing_roles = invite.roles.reject { |name| existing_names.include?(name.downcase) }
+      missing_roles.each { |name| create(:role, organization: invite.organization, name: name) }
     end
   end
 end
