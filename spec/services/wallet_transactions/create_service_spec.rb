@@ -107,5 +107,61 @@ RSpec.describe WalletTransactions::CreateService do
         expect(wallet_transaction.payment_method_type).to eq("provider")
       end
     end
+
+    context "with traceable wallet" do
+      let(:credit_amount) { 100 }
+      let(:wallet) { create(:wallet, customer:, currency:, traceable: true) }
+
+      context "when transaction is inbound" do
+        let(:transaction_params) do
+          {
+            status: :settled,
+            transaction_type: :inbound,
+            transaction_status: :purchased
+          }
+        end
+
+        it "initializes remaining_amount_cents to amount_cents" do
+          wallet_transaction = result.wallet_transaction
+
+          expect(wallet_transaction.remaining_amount_cents).to eq(wallet_transaction.amount_cents)
+        end
+      end
+
+      context "when transaction is outbound" do
+        let(:transaction_params) do
+          {
+            status: :settled,
+            transaction_type: :outbound,
+            transaction_status: :invoiced
+          }
+        end
+
+        it "does not set remaining_amount_cents" do
+          wallet_transaction = result.wallet_transaction
+
+          expect(wallet_transaction.remaining_amount_cents).to be_nil
+        end
+      end
+    end
+
+    context "with non-traceable wallet" do
+      let(:credit_amount) { 100 }
+      let(:wallet) { create(:wallet, customer:, currency:, traceable: false) }
+
+      let(:transaction_params) do
+        {
+          status: :settled,
+          transaction_type: :inbound,
+          transaction_status: :purchased
+        }
+      end
+
+      it "does not set remaining_amount_cents" do
+        wallet_transaction = result.wallet_transaction
+
+        expect(wallet_transaction.remaining_amount_cents).to be_nil
+      end
+    end
   end
 end
