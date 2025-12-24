@@ -2,11 +2,11 @@
 
 module FixedCharges
   class EmitEventsForActiveSubscriptionsService < BaseService
-    def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current)
+    def initialize(fixed_charge:, subscription: nil, apply_units_immediately: false, timestamp: Time.current.to_i)
       @fixed_charge = fixed_charge
       @subscription = subscription
       @apply_units_immediately = !!apply_units_immediately
-      @timestamp = timestamp
+      @timestamp = Time.zone.at(timestamp.to_i)
       super
     end
 
