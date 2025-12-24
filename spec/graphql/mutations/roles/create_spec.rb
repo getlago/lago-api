@@ -72,4 +72,35 @@ RSpec.describe Mutations::Roles::Create do
       expect_graphql_error(result:, message: "feature_unavailable")
     end
   end
+
+  describe "with admin role permissions" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: membership.permissions_hash,
+        query:,
+        variables: {input: {name:, description:, permissions: role_permissions}}
+      )
+    end
+
+    let!(:membership) { create(:membership, organization:, roles: [:admin]) }
+
+    context "with premium organization and custom_roles integration" do
+      around { |test| lago_premium!(&test) }
+
+      before { organization.update!(premium_integrations: ["custom_roles"]) }
+
+      it "allows admin to create a role" do
+        expect { result }.to change(Role, :count).by(1)
+      end
+    end
+
+    context "without premium license" do
+      it "returns feature_unavailable error" do
+        expect_graphql_error(result:, message: "feature_unavailable")
+      end
+    end
+  end
 end

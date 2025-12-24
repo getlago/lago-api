@@ -362,17 +362,24 @@ RSpec.describe Organization do
     subject { organization.admins }
 
     let(:organization) { create(:organization) }
-    let(:scoped) { create(:membership, organization:).user }
+    let(:admin_role) { create(:role, :admin) }
+    let(:finance_role) { create(:role, :finance) }
+    let(:admin_membership) { create(:membership, organization:) }
+    let(:admin_user) { admin_membership.user }
 
     before do
-      scoped
+      create(:membership_role, membership: admin_membership, role: admin_role)
       create(:membership)
-      create(:membership, organization:, role: [:manager, :finance].sample)
-      create(:membership, organization:, role: :admin, status: :revoked)
+
+      non_admin = create(:membership, organization:)
+      create(:membership_role, membership: non_admin, role: finance_role)
+
+      revoked_admin = create(:membership, :revoked, organization:)
+      create(:membership_role, membership: revoked_admin, role: admin_role)
     end
 
     it "returns admins of the organization" do
-      expect(subject).to contain_exactly scoped
+      expect(subject).to contain_exactly(admin_user)
     end
   end
 

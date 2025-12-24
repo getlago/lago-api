@@ -14,7 +14,7 @@ module Invites
         organization_id: args[:current_organization].id,
         email: args[:email],
         token: generate_token,
-        role: args[:role]
+        roles: args[:roles]
       )
 
       result.invite_url = build_invite_url(result.invite.token)

@@ -9,9 +9,9 @@ module Types
 
     field :permissions, Types::PermissionsType, null: false,
       deprecation_reason: "Use permissions enum instead"
-    field :role, Types::Memberships::RoleEnum, null: false,
-      deprecation_reason: "Use roleDetails instead"
-    field :roles, [Types::RoleType], null: false
+    field :role, Types::Memberships::RoleEnum,
+      deprecation_reason: "Use roles instead"
+    field :roles, [String], null: false
     field :status, Types::Memberships::StatusEnum, null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -20,6 +20,14 @@ module Types
 
     def permissions
       object.permissions_hash.transform_keys { |key| key.tr(":", "_") }
+    end
+
+    def role
+      (roles.map(&:downcase) & %w[admin finance manager]).first
+    end
+
+    def roles
+      @roles ||= object.roles.pluck(:name)
     end
   end
 end

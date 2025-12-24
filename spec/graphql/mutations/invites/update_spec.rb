@@ -14,6 +14,7 @@ RSpec.describe Mutations::Invites::Update do
         updateInvite(input: $input) {
           id
           role
+          roles
         }
       }
     GQL
@@ -25,7 +26,9 @@ RSpec.describe Mutations::Invites::Update do
 
   describe "Invite update mutation" do
     context "with an existing invite" do
-      let(:invite) { create(:invite, organization:, role: :admin) }
+      let(:invite) { create(:invite, organization:, roles: %w[admin]) }
+
+      before { create(:role, :finance) }
 
       it "returns the updated invite" do
         result = execute_graphql(
@@ -36,7 +39,8 @@ RSpec.describe Mutations::Invites::Update do
           variables: {
             input: {
               id: invite.id,
-              role: "finance"
+              role: "finance",
+              roles: %w[finance]
             }
           }
         )
@@ -45,6 +49,7 @@ RSpec.describe Mutations::Invites::Update do
 
         expect(data["id"]).to eq(invite.id)
         expect(data["role"]).to eq("finance")
+        expect(data["roles"]).to eq(%w[finance])
       end
     end
 

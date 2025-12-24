@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CurrentUserResolver do
+  let(:admin_role) { create(:role, :admin) }
+
   let(:query) do
     <<~GRAPHQL
       query {
@@ -12,6 +14,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
           premium
           memberships {
             role
+            roles
             permissions { invoicesView }
             status
             organization {
@@ -25,7 +28,8 @@ RSpec.describe Resolvers::CurrentUserResolver do
 
   it "returns current_user" do
     user = create(:user)
-    create(:membership, user:, role: :admin)
+    membership = create(:membership, user:)
+    create(:membership_role, membership:, role: admin_role)
 
     result = execute_graphql(
       current_user: user,
@@ -40,6 +44,17 @@ RSpec.describe Resolvers::CurrentUserResolver do
       expect(result["data"]["currentUser"]["memberships"][0]["permissions"]).to eq({"invoicesView" => true})
       expect(result["data"]["currentUser"]["memberships"][0]["organization"]["name"]).not_to be_empty
     end
+  end
+
+  it "returns null for deprecated role field when using custom role" do
+    membership = create(:membership)
+    custom_role = create(:role, name: "Developer", organization: membership.organization, permissions: %w[organization:view])
+    create(:membership_role, membership:, role: custom_role)
+
+    result = execute_graphql(current_user: membership.user, query:)
+
+    expect(result["data"]["currentUser"]["memberships"][0]["role"]).to be_nil
+    expect(result["data"]["currentUser"]["memberships"][0]["roles"]).to eq(["Developer"])
   end
 
   describe "with organizations instead of memberships" do
@@ -76,7 +91,10 @@ RSpec.describe Resolvers::CurrentUserResolver do
       create(:membership, user: membership.user, status: :revoked)
     end
 
-    before { revoked_membership }
+    before do
+      create(:membership_role, membership:, role: admin_role)
+      revoked_membership
+    end
 
     it "only lists organizations when membership has an active status" do
       result = execute_graphql(

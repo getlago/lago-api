@@ -11,9 +11,9 @@ RSpec.describe OrganizationMailer do
   let(:additions) { ["okta"] }
   let(:deletions) { ["google_oauth"] }
 
-  let(:admin0) { create(:membership, organization:, role: :admin, user: create(:user)).user }
-  let(:admin1) { create(:membership, organization:, role: :admin, user: create(:user)).user }
-  let(:admin2) { create(:membership, organization:, role: :admin, user: create(:user)).user }
+  let(:admin0) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
+  let(:admin1) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
+  let(:admin2) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
 
   before do
     admin0
