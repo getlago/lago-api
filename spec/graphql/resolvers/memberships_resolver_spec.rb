@@ -14,15 +14,15 @@ RSpec.describe Resolvers::MembershipsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
+  let(:membership) { create(:membership, roles: %i[admin]) }
   let(:organization) { membership.organization }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
 
   it "returns a list of memberships" do
-    create(:membership, organization: organization, role: :admin)
-    create_list(:membership, 2, organization: organization, role: :finance)
+    create(:membership, organization: organization, roles: %i[admin])
+    create_list(:membership, 2, organization: organization, roles: %i[finance])
 
     result = execute_graphql(
       current_user: membership.user,
@@ -43,8 +43,8 @@ RSpec.describe Resolvers::MembershipsResolver do
   end
 
   it "returns the count of active admin memberships" do
-    create(:membership, organization: organization, role: :admin, status: :revoked)
-    create_list(:membership, 2, organization: organization, role: :finance)
+    create(:membership, organization: organization, roles: %i[admin], status: :revoked)
+    create_list(:membership, 2, organization: organization, roles: %i[finance])
 
     result = execute_graphql(
       current_user: membership.user,

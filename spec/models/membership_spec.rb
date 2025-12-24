@@ -11,14 +11,33 @@ RSpec.describe Membership do
 
   it_behaves_like "paper_trail traceable"
 
+  describe ".admins" do
+    let(:organization) { create(:organization) }
+    let(:admin_membership) { create(:membership, organization:) }
+    let(:finance_membership) { create(:membership, organization:) }
+
+    before do
+      create(:membership_role, membership: admin_membership, role: create(:role, :admin))
+      create(:membership_role, membership: finance_membership, role: create(:role, :finance))
+    end
+
+    it "returns only memberships with admin roles" do
+      expect(described_class.admins).to eq([admin_membership])
+    end
+  end
+
   describe "#admin?" do
-    it "returns true when membership role is admin" do
-      membership = create(:membership, role: :admin)
+    it "returns true when membership has admin role" do
+      create(:membership_role, membership:, role: create(:role, :admin))
       expect(membership.admin?).to be true
     end
 
-    it "returns false when membership role is not admin" do
-      membership = create(:membership, role: :finance)
+    it "returns false when membership has no admin role" do
+      create(:membership_role, membership:, role: create(:role, :finance))
+      expect(membership.admin?).to be false
+    end
+
+    it "returns false when membership has no roles" do
       expect(membership.admin?).to be false
     end
   end
@@ -37,7 +56,7 @@ RSpec.describe Membership do
     subject(:permissions_hash) { membership.permissions_hash }
 
     context "with admin role" do
-      let(:membership) { create(:membership, role: :admin) }
+      let(:membership) { create(:membership, roles: %i[admin]) }
 
       it "includes all existing permissions" do
         expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
@@ -49,7 +68,7 @@ RSpec.describe Membership do
     end
 
     context "with finance role" do
-      let(:membership) { create(:membership, role: :finance) }
+      let(:membership) { create(:membership, roles: %i[finance]) }
 
       it "includes all existing permissions" do
         expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
@@ -65,7 +84,7 @@ RSpec.describe Membership do
     end
 
     context "with manager role" do
-      let(:membership) { create(:membership, role: :manager) }
+      let(:membership) { create(:membership, roles: %i[manager]) }
 
       it "includes all existing permissions" do
         expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
@@ -77,6 +96,54 @@ RSpec.describe Membership do
 
       it "returns false for non-manager permissions" do
         expect(permissions_hash).to include("analytics:view" => false)
+      end
+    end
+
+    context "with custom role" do
+      let(:organization) { create(:organization) }
+      let(:role) { create(:role, :custom, organization:, permissions: %w[foo addons:view]) }
+      let(:membership) { create(:membership, organization:, role:) }
+
+      it "includes all existing permissions" do
+        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+      end
+
+      it "excludes non-existing permissions" do
+        expect(permissions_hash).not_to be_key("foo")
+      end
+
+      it "returns true for custom permissions" do
+        expect(permissions_hash).to include("addons:view" => true)
+      end
+
+      it "returns false for other permissions" do
+        expect(permissions_hash.except("addons:view").values).to all(be false)
+      end
+    end
+
+    context "with mixed roles" do
+      let(:organization) { create(:organization) }
+      let(:role) { create(:role, :custom, organization:, permissions: %w[foo addons:view]) }
+      let(:membership) { create(:membership, organization:, role:, roles: %i[finance]) }
+
+      it "includes all existing permissions" do
+        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+      end
+
+      it "excludes non-existing permissions" do
+        expect(permissions_hash).not_to be_key("foo")
+      end
+
+      it "returns true for custom permissions" do
+        expect(permissions_hash).to include("addons:view" => true)
+      end
+
+      it "returns true for predefined permissions" do
+        expect(permissions_hash).to include("analytics:view" => true)
+      end
+
+      it "returns false for disabled permissions" do
+        expect(permissions_hash).to include("coupons:attach" => false)
       end
     end
   end

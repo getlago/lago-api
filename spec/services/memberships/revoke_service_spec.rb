@@ -6,17 +6,19 @@ RSpec.describe Memberships::RevokeService do
   subject(:revoke_service) { described_class.new(user:, membership:) }
 
   let(:organization) { create(:organization) }
+  let(:admin_role) { create(:role, :admin) }
+  let(:finance_role) { create(:role, :finance) }
 
   let(:user) { create(:user) }
   let(:membership) { create(:membership, organization:) }
-  let(:other_membership) { create(:membership, user:, organization:, role: :admin) }
-
-  before { other_membership }
+  let(:other_membership) { create(:membership, user:, organization:) }
 
   describe "#call" do
     context "when revoking my own membership" do
       let(:membership) { create(:membership, user:, organization:) }
-      let(:other_membership) { create(:membership, organization:, role: :admin) }
+      let(:other_membership) { create(:membership, organization:) }
+
+      before { create(:membership_role, membership: other_membership, role: admin_role) }
 
       it "returns an error" do
         result = revoke_service.call
@@ -38,6 +40,8 @@ RSpec.describe Memberships::RevokeService do
     end
 
     context "when revoking another membership" do
+      before { create(:membership_role, membership: other_membership, role: admin_role) }
+
       it "revokes the membership" do
         freeze_time do
           result = revoke_service.call
@@ -51,8 +55,10 @@ RSpec.describe Memberships::RevokeService do
     end
 
     context "when removing the last admin" do
-      let(:membership) { create(:membership, organization:, role: :admin) }
-      let(:other_membership) { create(:membership, user:, organization:, role: :finance) }
+      before do
+        create(:membership_role, membership:, role: admin_role)
+        create(:membership_role, membership: other_membership, role: finance_role)
+      end
 
       it "returns an error" do
         result = revoke_service.call

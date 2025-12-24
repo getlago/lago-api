@@ -54,9 +54,11 @@ RSpec.describe Resolvers::RolesResolver do
     roles_response = result["data"]["roles"]
     admin_role = roles_response.find { |r| r["name"] == "Admin" }
 
+    all_permissions = Permission.permissions_hash.each_key.map { |p| p.tr(":", "_") }
+
     expect(admin_role["name"]).to eq("Admin")
     expect(admin_role["admin"]).to be(true)
-    expect(admin_role["permissions"]).to eq([])
+    expect(admin_role["permissions"]).to match_array(all_permissions)
   end
 
   it "does not return roles from other organizations" do

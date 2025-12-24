@@ -2975,7 +2975,8 @@ input CreateInviteInput {
   """
   clientMutationId: String
   email: String!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use roles argument instead")
+  roles: [String!] = []
 }
 
 """
@@ -3169,7 +3170,7 @@ input CreateRoleInput {
   code: String!
   description: String
   name: String!
-  permissions: [String!]!
+  permissions: [PermissionEnum!]!
 }
 
 """
@@ -6161,7 +6162,8 @@ type Invite {
   organization: Organization!
   recipient: Membership!
   revokedAt: ISO8601DateTime!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use `roles` field instead")
+  roles: [String!]!
   status: InviteStatusTypeEnum!
   token: String!
 }
@@ -6517,8 +6519,8 @@ type Membership {
   organization: Organization!
   permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
   revokedAt: ISO8601DateTime!
-  role: MembershipRole! @deprecated(reason: "Use roleDetails instead")
-  roles: [Role!]!
+  role: MembershipRole @deprecated(reason: "Use roles instead")
+  roles: [String!]!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   user: User!
@@ -10284,6 +10286,7 @@ input RevokeMembershipInput {
 
 type Role {
   admin: Boolean!
+  code: String!
   createdAt: ISO8601DateTime!
   description: String
   id: ID!
@@ -11885,7 +11888,8 @@ input UpdateInviteInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use `roles` instead")
+  roles: [String!]
 }
 
 """
@@ -11926,7 +11930,8 @@ input UpdateMembershipInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use `roles` instead")
+  roles: [String!]
 }
 
 """
@@ -12104,7 +12109,7 @@ input UpdateRoleInput {
   description: String
   id: ID!
   name: String
-  permissions: [String!]
+  permissions: [PermissionEnum!]
 }
 
 """

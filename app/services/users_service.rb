@@ -50,8 +50,13 @@ class UsersService < BaseService
 
       result.membership = Membership.create!(
         user: result.user,
+        organization: result.organization
+      )
+
+      MembershipRole.create!(
         organization: result.organization,
-        role: :admin
+        membership: result.membership,
+        role: Role.admins.first!
       )
 
       result.token = generate_token
@@ -72,9 +77,17 @@ class UsersService < BaseService
 
       result.membership = Membership.create!(
         user: result.user,
-        organization: result.organization,
-        role: invite.role
+        organization: result.organization
       )
+
+      invite.roles.each do |role_code|
+        role = Role.with_code(role_code).with_organization(invite.organization_id).first!
+        MembershipRole.create!(
+          organization: result.organization,
+          membership: result.membership,
+          role:
+        )
+      end
 
       result.token = generate_token
     rescue ActiveRecord::RecordInvalid => e

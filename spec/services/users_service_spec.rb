@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe UsersService do
   subject(:user_service) { described_class.new }
 
+  before { create(:role, :admin) }
+
   describe "#register" do
     it "calls SegmentIdentifyJob" do
       allow(SegmentIdentifyJob).to receive(:perform_later)
