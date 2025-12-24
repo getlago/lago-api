@@ -11,8 +11,8 @@ FactoryBot.define do
 
     after(:build) do |invite|
       existing_codes = Role.with_code(*invite.roles).with_organization(invite.organization.id).pluck(:code)
-      missed_codes = invite.roles - existing_codes
-      missed_codes.each { |code| create(:role, code.to_sym) }
+      missing_roles = invite.roles.reject { |code| existing_codes.include?(code) }
+      missing_roles.each { |code| create(:role, organization: invite.organization, code:) }
     end
   end
 end
