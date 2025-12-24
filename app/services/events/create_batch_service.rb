@@ -69,8 +69,8 @@ module Events
             event.save!
           rescue ActiveRecord::RecordNotUnique
             result.errors[index] = {transaction_id: ["value_already_exist"]}
+            raise ActiveRecord::Rollback
           end
-          raise ActiveRecord::Rollback if result.errors.any?
         end
         return if result.errors.any?
       end

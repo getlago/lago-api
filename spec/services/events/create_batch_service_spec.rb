@@ -90,20 +90,31 @@ RSpec.describe Events::CreateBatchService do
         end
       end
 
-      context "with already existing event", transaction: false do
-        let(:existing_event) do
-          create(:event, organization:, transaction_id: "123456", external_subscription_id:)
-        end
-        let(:events_params) do
-          build_params(count: 2) do |event, index|
-            event[:transaction_id] = existing_event.transaction_id if index == 1
+      # We have different error/issues depending on whether another error is saved afterward as PG will roll-back the
+      # transaction when an error occurs due to duplicate.
+      [:beginning, :middle, :end].each do |duplicate_event_occurence|
+        context "with already existing event (#{duplicate_event_occurence})" do
+          let(:existing_event) do
+            create(:event, organization:, transaction_id: SecureRandom.uuid, external_subscription_id:)
           end
-        end
+          let(:duplicate_event_index) do
+            case duplicate_event_occurence
+            when :beginning then 0
+            when :middle then 2
+            when :end then 4
+            end
+          end
+          let(:events_params) do
+            build_params(count: 5) do |event, index|
+              event[:transaction_id] = existing_event.transaction_id if index == duplicate_event_index
+            end
+          end
 
-        before { existing_event }
+          before { existing_event }
 
-        it "returns an error" do
-          test_validation_failure({1 => {transaction_id: ["value_already_exist"]}})
+          it "returns an error" do
+            test_validation_failure({duplicate_event_index => {transaction_id: ["value_already_exist"]}})
+          end
         end
       end
     end
