@@ -7,12 +7,44 @@ RSpec.describe Charge do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to validate_presence_of(:code) }
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to have_many(:filters).dependent(:destroy)
       expect(subject).to have_one(:applied_pricing_unit)
       expect(subject).to have_one(:pricing_unit).through(:applied_pricing_unit)
+    end
+  end
+
+  describe "validations" do
+    describe "code" do
+      it "validates uniqueness scoped to plan_id for parent charges" do
+        existing_charge = create(:standard_charge, code: "my_code")
+        new_charge = build(:standard_charge, code: "my_code", plan: existing_charge.plan)
+        expect(new_charge).not_to be_valid
+        expect(new_charge.errors[:code]).to include("value_already_exist")
+      end
+
+      it "allows same code on different plans" do
+        existing_charge = create(:standard_charge, code: "my_code")
+        new_charge = build(:standard_charge, code: "my_code")
+        expect(new_charge).to be_valid
+      end
+
+      it "allows same code on soft-deleted charges" do
+        existing_charge = create(:standard_charge, code: "my_code")
+        existing_charge.discard
+        new_charge = build(:standard_charge, code: "my_code", plan: existing_charge.plan)
+        expect(new_charge).to be_valid
+      end
+
+      it "allows same code for child charges" do
+        parent_charge = create(:standard_charge, code: "my_code")
+        child_charge = build(:standard_charge, code: "my_code", plan: parent_charge.plan, parent: parent_charge)
+        expect(child_charge).to be_valid
+      end
     end
   end
 

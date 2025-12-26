@@ -5,6 +5,7 @@ FactoryBot.define do
     organization { add_on&.organization || plan&.organization || association(:organization) }
     plan
     add_on
+    code { Faker::Alphanumeric.alphanumeric(number: 10) }
     charge_model { "standard" }
     units { 1 }
     properties { {amount: Faker::Number.between(from: 100, to: 500).to_s} }
