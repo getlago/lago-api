@@ -92,7 +92,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
       it "creates a commitment fee with zero taxes" do
         result = service_call
         expect(result).to be_success
-        
+
         fee = result.fee
         expect(fee).to have_attributes(
           taxes_amount_cents: 0,
