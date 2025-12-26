@@ -5,6 +5,8 @@ class Invite < ApplicationRecord
 
   belongs_to :organization
   belongs_to :recipient, class_name: "Membership", foreign_key: :membership_id, optional: true
+  # TODO: remove this after migration from role to roles
+  before_save { self.roles = [role] if roles.blank? }
 
   INVITE_STATUS = %i[
     pending
@@ -39,6 +41,7 @@ end
 #  email           :string           not null
 #  revoked_at      :datetime
 #  role            :integer          default("admin"), not null
+#  roles           :string           default([]), not null, is an Array
 #  status          :integer          default("pending"), not null
 #  token           :string           not null
 #  created_at      :datetime         not null
