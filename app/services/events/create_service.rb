@@ -47,7 +47,7 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def produce_kafka_event(event)
-      Events::KafkaProducerService.call!(event:, organization:)
+      Events::KafkaProducerService.call!(events: event, organization:)
     end
   end
 end
