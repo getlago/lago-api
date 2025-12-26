@@ -14,7 +14,7 @@ RSpec.describe Mutations::Invites::Create do
   end
   let(:organization) { membership.organization }
   let(:email) { Faker::Internet.email }
-  let(:role) { "finance" }
+  let(:roles) { %w[finance] }
 
   let(:mutation) do
     <<~GQL
@@ -23,7 +23,6 @@ RSpec.describe Mutations::Invites::Create do
           id
           token
           email
-          role
           roles
         }
       }
@@ -45,7 +44,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -53,8 +52,7 @@ RSpec.describe Mutations::Invites::Create do
     data = result["data"]["createInvite"]
 
     expect(data["email"]).to eq(email)
-    expect(data["role"]).to eq(role)
-    expect(data["roles"]).to eq([role])
+    expect(data["roles"]).to eq(roles)
     expect(data["token"]).to be_present
   end
 
@@ -67,7 +65,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: revoked_membership.user.email,
-          role:
+          roles:
         }
       }
     )
@@ -89,7 +87,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -108,7 +106,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: membership.user.email,
-          role:
+          roles:
         }
       }
     )
