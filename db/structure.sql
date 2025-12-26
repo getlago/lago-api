@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d384ec1ebf;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
@@ -388,6 +389,7 @@ DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_pr
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_customer_id;
+DROP INDEX IF EXISTS public.index_payments_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type_and_error_code;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
@@ -3269,7 +3271,8 @@ CREATE TABLE public.payments (
     provider_payment_method_id character varying,
     organization_id uuid NOT NULL,
     customer_id uuid,
-    error_code character varying
+    error_code character varying,
+    payment_method_id uuid
 );
 
 
@@ -7905,6 +7908,13 @@ CREATE INDEX index_payments_on_payable_type_and_payable_id ON public.payments US
 
 
 --
+-- Name: index_payments_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_payment_method_id ON public.payments USING btree (payment_method_id);
+
+
+--
 -- Name: index_payments_on_payment_provider_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10366,6 +10376,14 @@ ALTER TABLE ONLY public.item_metadata
 
 
 --
+-- Name: payments fk_rails_d384ec1ebf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments
+    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+
+
+--
 -- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10708,6 +10726,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251222163416'),
 ('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
@@ -11592,3 +11611,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
