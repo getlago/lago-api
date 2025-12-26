@@ -43,12 +43,8 @@ module Plans
           taxes_result.raise_if_error!
         end
 
-        if args[:usage_thresholds].present? &&
-            License.premium? &&
-            plan.organization.progressive_billing_enabled?
-          args[:usage_thresholds].each do |threshold_args|
-            create_usage_threshold(plan, threshold_args)
-          end
+        if args[:usage_thresholds].present? && plan.organization.progressive_billing_enabled?
+          UsageThresholds::UpdateService.call!(model: plan, usage_thresholds_params: args[:usage_thresholds], partial: false)
         end
 
         if args[:charges].present?

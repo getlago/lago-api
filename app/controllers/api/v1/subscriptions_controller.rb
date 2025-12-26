@@ -160,6 +160,7 @@ module Api
             :billing_time,
             :subscription_at,
             :ending_at,
+            :progressive_billing_disabled,
             invoice_custom_section: [
               :skip_invoice_custom_sections,
               {invoice_custom_section_codes: []}
@@ -168,6 +169,7 @@ module Api
               :payment_method_type,
               :payment_method_id
             ],
+            usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
       end
@@ -179,6 +181,7 @@ module Api
           :ending_at,
           :on_termination_credit_note,
           :on_termination_invoice,
+          :progressive_billing_disabled,
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
@@ -187,8 +190,17 @@ module Api
             :payment_method_type,
             :payment_method_id
           ],
+          usage_thresholds: usage_thresholds_params,
           plan_overrides:
         )
+      end
+
+      def usage_thresholds_params
+        [
+          :amount_cents,
+          :threshold_display_name,
+          :recurring
+        ]
       end
 
       def plan_overrides
