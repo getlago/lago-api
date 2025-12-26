@@ -16,8 +16,8 @@ module PaymentIntents
       payment_intent = PaymentIntent.non_expired.find_or_create_by!(invoice:, organization: invoice.organization)
 
       if payment_intent.payment_url.blank?
-        payment_url_result = Invoices::Payments::PaymentProviders::Factory
-          .new_instance(invoice:)
+        payment_url_result = ::PaymentProviders::Registry
+          .new_instance(invoice.customer.payment_provider, :manage_invoice_payment, invoice)
           .generate_payment_url(payment_intent)
 
         payment_url_result.raise_if_error!
