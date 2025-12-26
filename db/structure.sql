@@ -1875,7 +1875,9 @@ CREATE TABLE public.credit_notes (
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
-    xml_file character varying
+    xml_file character varying,
+    applied_to_source_invoice_amount_cents bigint DEFAULT 0 NOT NULL,
+    applied_to_source_invoice_amount_currency character varying
 );
 
 
@@ -10708,6 +10710,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251223123938'),
 ('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
@@ -11592,3 +11595,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

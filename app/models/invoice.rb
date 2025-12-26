@@ -287,8 +287,12 @@ class Invoice < ApplicationRecord
     }
   end
 
+  def applied_credit_notes_amount_cents
+    credit_notes.finalized.sum(:applied_to_source_invoice_amount_cents)
+  end
+
   def total_due_amount_cents
-    total_amount_cents - total_paid_amount_cents
+    total_amount_cents - total_paid_amount_cents - applied_credit_notes_amount_cents
   end
 
   # amount cents onto which we can issue a credit note
