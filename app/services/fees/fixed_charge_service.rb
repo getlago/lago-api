@@ -83,9 +83,20 @@ module Fees
         already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
         if already_paid_fee
           current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
-          prorated_for_current_period = already_paid_fee.amount_cents * current_period_duration_days / boundaries[:fixed_charges_duration]
+          # note: previous pay in advance FC fee was issued at the event of the timestamp, so that's when we received this event, and since when
+          # the proration is started, despite from-to boundaries are taking into account the whole
+          already_paid_fee_prorated_days = ((already_paid_fee.properties["fixed_charges_to_datetime"].to_time -
+                                             already_paid_fee.properties["timestamp"].to_time) / 1.day.in_seconds).ceil
+          # if previous fee was prorated for x days out of n, current is prorated for y days out of n,
+          # we need to find coefficient of proration for current period:
+          # prorated_for_current_period = already_paid_fee.amount_cents / x * y
+          # we devide by prev proration length to find price of one day, and mutiply by the current period length
+          prorated_for_current_period = (already_paid_fee.amount_cents * current_period_duration_days.to_f / already_paid_fee_prorated_days).round
           amount_cents -= prorated_for_current_period
           precise_amount_cents -= prorated_for_current_period.to_d
+
+          amount_cents = 0 if amount_cents < 0
+          precise_amount_cents = 0.0 if precise_amount_cents < 0
         end
       end
 
@@ -237,10 +248,11 @@ module Fees
         billing_entity: subscription.customer.billing_entity,
         fixed_charge: prev_fixed_charge
       ).where(
-        "properties->>'fixed_charges_from_datetime' <= ? AND properties->>'fixed_charges_to_datetime' >= ?",
+        "(properties->>'fixed_charges_from_datetime')::timestamptz <= ? AND (properties->>'fixed_charges_to_datetime')::timestamptz >= ?",
         current_fee_boundaries[:fixed_charges_from_datetime],
-        current_fee_boundaries[:fixed_charges_to_datetime]
-      ).first
+        # in the DB we store timestamp with 3 digits of milliseconds, timestamp of boundaries has 9, so we need to floor it
+        current_fee_boundaries[:fixed_charges_to_datetime].floor(3)
+      ).order(created_at: :desc).first
     end
   end
 end
