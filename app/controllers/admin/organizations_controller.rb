@@ -33,7 +33,7 @@ module Admin
       invite_result = ::Invites::CreateService.call(
         current_organization: organization,
         email: create_params[:email],
-        role: :admin
+        roles: %w[admin]
       )
 
       return render_error_response(invite_result) unless invite_result.success?

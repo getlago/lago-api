@@ -24,10 +24,13 @@ RSpec.describe Mutations::Invites::Create do
           token
           email
           role
+          roles
         }
       }
     GQL
   end
+
+  before { create(:role, :finance) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -51,6 +54,7 @@ RSpec.describe Mutations::Invites::Create do
 
     expect(data["email"]).to eq(email)
     expect(data["role"]).to eq(role)
+    expect(data["roles"]).to eq([role])
     expect(data["token"]).to be_present
   end
 

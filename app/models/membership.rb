@@ -26,10 +26,10 @@ class Membership < ApplicationRecord
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
 
-  scope :admins, -> { where(role: :admin) }
+  scope :admins, -> { joins(:roles).where(roles: {admin: true}).distinct }
 
   def admin?
-    role == "admin"
+    roles.admins.exists?
   end
 
   def mark_as_revoked!(timestamp = Time.current)
@@ -42,7 +42,15 @@ class Membership < ApplicationRecord
   end
 
   def permissions_hash
-    Permission.permissions_hash(role)
+    Permission.permissions_hash.dup.tap do |h|
+      roles.each do |role|
+        if role.permissions.present?
+          role.permissions.each { |key| h[key] = true if h.key?(key) }
+        else
+          Permission.permissions_hash(role.name).each { |key, val| h[key] ||= val }
+        end
+      end
+    end
   end
 end
 
