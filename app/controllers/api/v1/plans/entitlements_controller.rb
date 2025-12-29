@@ -3,8 +3,7 @@
 module Api
   module V1
     module Plans
-      class EntitlementsController < Api::BaseController
-        before_action :find_plan
+      class EntitlementsController < BaseController
         before_action :find_entitlement, only: %i[show destroy]
 
         def index
@@ -101,14 +100,6 @@ module Api
 
         def resource_name
           "plan"
-        end
-
-        def find_plan
-          @plan = current_organization.plans.parents.find_by!(
-            code: params[:plan_code]
-          )
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "plan")
         end
 
         def find_entitlement

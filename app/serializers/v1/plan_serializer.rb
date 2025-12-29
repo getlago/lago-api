@@ -31,6 +31,7 @@ module V1
       payload.merge!(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
+      payload.merge!(metadata) if model.metadata.present?
 
       payload
     end
@@ -94,6 +95,12 @@ module V1
         ::V1::TaxSerializer,
         collection_name: "taxes"
       ).serialize
+    end
+
+    def metadata
+      {
+        metadata: model.metadata&.value
+      }
     end
   end
 end

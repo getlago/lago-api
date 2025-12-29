@@ -2,9 +2,10 @@
 
 module Plans
   class UpdateService < BaseService
-    def initialize(plan:, params:)
+    def initialize(plan:, partial_metadata: false, params:)
       @plan = plan
       @params = params
+      @partial_metadata = partial_metadata
       super
     end
 
@@ -45,6 +46,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
+        update_metadata!
 
         if params[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: params[:tax_codes])
@@ -81,9 +83,16 @@ module Plans
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :partial_metadata
 
     delegate :organization, to: :plan
+
+    def update_metadata!
+      value = params[:metadata]&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
+      result = Metadata::UpdateItemService.call!(owner: plan, value:, partial: partial_metadata.present?)
+      @metadata_changed = result.metadata_changed
+    end
+
 
     def bill_charges_monthly?
       return unless billable_monthly?

@@ -20,6 +20,7 @@ module Types
       argument :pay_in_advance, Boolean, required: true
       argument :tax_codes, [String], required: false
       argument :trial_period, Float, required: false
+      argument :metadata, [Types::Metadata::Input], required: false
 
       argument :charges, [Types::Charges::Input]
       argument :fixed_charges, [Types::FixedCharges::Input], required: false

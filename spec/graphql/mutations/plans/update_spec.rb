@@ -600,4 +600,44 @@ RSpec.describe Mutations::Plans::Update do
       expect(result_data["billFixedChargesMonthly"]).to be true
     end
   end
+
+  context "with metadata" do
+    let(:mutation) do
+      <<~GQL
+        mutation($input: UpdatePlanInput!) {
+          updatePlan(input: $input) {
+            id
+            metadata { key value }
+          }
+        }
+      GQL
+    end
+
+    before { create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"}) }
+
+    it "replaces metadata (not merges)" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: plan.code,
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            charges: [],
+            metadata: [{key: "new", value: "data"}]
+          }
+        }
+      )
+
+      result_data = result["data"]["updatePlan"]
+      expect(result_data["metadata"]).to eq([{"key" => "new", "value" => "data"}])
+    end
+  end
 end
