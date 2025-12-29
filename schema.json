@@ -13389,6 +13389,26 @@
               "deprecationReason": null
             },
             {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "MetadataInput",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "charges",
               "description": null,
               "type": {
@@ -42458,6 +42478,26 @@
               "deprecationReason": null
             },
             {
+              "name": "metadata",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ItemMetadata",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "minimumCommitment",
               "description": null,
               "args": [],
@@ -60837,6 +60877,26 @@
                 "kind": "SCALAR",
                 "name": "Float",
                 "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "MetadataInput",
+                    "ofType": null
+                  }
+                }
               },
               "defaultValue": null,
               "isDeprecated": false,

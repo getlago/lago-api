@@ -1632,4 +1632,123 @@ RSpec.describe Plans::UpdateService do
       end
     end
   end
+
+  describe "metadata" do
+    context "when metadata is provided" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          metadata: {key1: "value1", key2: "value2"}
+        }
+      end
+
+      it "creates metadata" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata.value).to eq("key1" => "value1", "key2" => "value2")
+      end
+    end
+
+    context "when metadata already exists" do
+      before do
+        create(:item_metadata, owner: plan, organization:, value: {"existing" => "value", "key1" => "old"})
+      end
+
+      context "with partial_metadata: false" do
+        subject(:plans_service) { described_class.new(plan:, params: update_args, partial_metadata: false) }
+
+        let(:update_args) do
+          {
+            name: plan_name,
+            metadata: {key1: "value1", key2: "value2"}
+          }
+        end
+
+        it "replaces all metadata" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.metadata.value).to eq("key1" => "value1", "key2" => "value2")
+        end
+      end
+
+      context "with partial_metadata: true" do
+        subject(:plans_service) { described_class.new(plan:, params: update_args, partial_metadata: true) }
+
+        let(:update_args) do
+          {
+            name: plan_name,
+            metadata: {key1: "value1", key2: "value2"}
+          }
+        end
+
+        it "merges metadata" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.metadata.value).to eq("existing" => "value", "key1" => "value1", "key2" => "value2")
+        end
+      end
+    end
+
+    context "when metadata is nil" do
+      before do
+        create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"})
+      end
+
+      let(:update_args) do
+        {
+          name: plan_name,
+          metadata: nil
+        }
+      end
+
+      it "deletes metadata" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata).to be_nil
+      end
+    end
+
+    context "when metadata is empty hash" do
+      before do
+        create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"})
+      end
+
+      let(:update_args) do
+        {
+          name: plan_name,
+          metadata: {}
+        }
+      end
+
+      it "replaces metadata with empty hash" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata.value).to eq({})
+      end
+    end
+
+    context "when metadata is not provided" do
+      before do
+        create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"})
+      end
+
+      let(:update_args) do
+        {
+          name: plan_name
+        }
+      end
+
+      it "does not change metadata" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata.value).to eq("existing" => "value")
+      end
+    end
+  end
 end

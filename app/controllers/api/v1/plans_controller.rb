@@ -115,6 +115,7 @@ module Api
           :bill_charges_monthly,
           :bill_fixed_charges_monthly,
           :cascade_updates,
+          metadata: {},
           tax_codes: [],
           minimum_commitment: [
             :id,
@@ -180,7 +181,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges fixed_charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements]
+            includes: %i[charges fixed_charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements metadata]
           )
         )
       end
