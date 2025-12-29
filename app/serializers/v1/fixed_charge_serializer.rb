@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         lago_add_on_id: model.add_on_id,
+        code: model.code,
         invoice_display_name: model.invoice_display_name,
         add_on_code: model.add_on.code,
         created_at: model.created_at.iso8601,
@@ -13,7 +14,8 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         properties: model.properties,
-        units: model.units
+        units: model.units,
+        parent_id: model.parent_id
       }
 
       payload.merge!(taxes) if include?(:taxes)

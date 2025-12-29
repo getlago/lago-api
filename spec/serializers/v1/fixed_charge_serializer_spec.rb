@@ -12,6 +12,7 @@ RSpec.describe ::V1::FixedChargeSerializer do
   it "serializes the object" do
     expect(result["fixed_charge"]["lago_id"]).to eq(fixed_charge.id)
     expect(result["fixed_charge"]["lago_add_on_id"]).to eq(fixed_charge.add_on_id)
+    expect(result["fixed_charge"]["code"]).to eq(fixed_charge.code)
     expect(result["fixed_charge"]["invoice_display_name"]).to eq(fixed_charge.invoice_display_name)
     expect(result["fixed_charge"]["add_on_code"]).to eq(fixed_charge.add_on.code)
     expect(result["fixed_charge"]["created_at"]).to eq(fixed_charge.created_at.iso8601)
@@ -21,6 +22,7 @@ RSpec.describe ::V1::FixedChargeSerializer do
     expect(result["fixed_charge"]["properties"]).to eq(fixed_charge.properties)
     expect(result["fixed_charge"]["taxes"]).to eq([])
     expect(result["fixed_charge"]["units"]).to eq(fixed_charge.units.to_s)
+    expect(result["fixed_charge"]["parent_id"]).to eq(fixed_charge.parent_id)
   end
 
   context "when fixed charge has taxes" do
