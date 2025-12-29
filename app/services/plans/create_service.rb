@@ -37,6 +37,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
+        create_metadata(plan, args[:metadata]) if args[:metadata].present?
 
         if args[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: args[:tax_codes])
@@ -109,6 +110,13 @@ module Plans
       )
 
       usage_threshold.save!
+    end
+
+    def create_metadata(plan, metadata_value)
+      plan.create_metadata!(
+        organization_id: plan.organization_id,
+        value: metadata_value
+      )
     end
 
     def bill_charges_monthly(args)
