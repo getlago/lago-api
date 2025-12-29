@@ -67,7 +67,7 @@ module Analytics
             FROM usage_fees uf
             LEFT JOIN charges c ON c.id = uf.charge_id
             LEFT JOIN billable_metrics bm ON bm.id = c.billable_metric_id
-            GROUP BY month, code, currency
+            GROUP BY month, bm.code, currency
             ORDER BY month
           )
           SELECT

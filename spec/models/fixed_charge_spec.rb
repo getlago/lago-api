@@ -24,6 +24,36 @@ RSpec.describe FixedCharge do
   it { is_expected.to validate_exclusion_of(:prorated).in_array([nil]) }
   it { is_expected.to validate_presence_of(:properties) }
 
+  describe "validations" do
+    describe "code" do
+      it "validates uniqueness scoped to plan_id for parent fixed_charges" do
+        existing = create(:fixed_charge, code: "my_code")
+        new_fixed_charge = build(:fixed_charge, code: "my_code", plan: existing.plan)
+        expect(new_fixed_charge).not_to be_valid
+        expect(new_fixed_charge.errors[:code]).to include("value_already_exist")
+      end
+
+      it "allows same code on different plans" do
+        create(:fixed_charge, code: "my_code")
+        new_fixed_charge = build(:fixed_charge, code: "my_code")
+        expect(new_fixed_charge).to be_valid
+      end
+
+      it "allows same code on soft-deleted fixed_charges" do
+        existing = create(:fixed_charge, code: "my_code")
+        existing.discard
+        new_fixed_charge = build(:fixed_charge, code: "my_code", plan: existing.plan)
+        expect(new_fixed_charge).to be_valid
+      end
+
+      it "allows same code for child fixed_charges" do
+        parent = create(:fixed_charge, code: "my_code")
+        child = build(:fixed_charge, code: "my_code", plan: parent.plan, parent:)
+        expect(child).to be_valid
+      end
+    end
+  end
+
   describe "#validate_properties" do
     context "with standard charge model" do
       subject(:fixed_charge) { build(:fixed_charge, charge_model: "standard", properties:) }
