@@ -4,8 +4,9 @@
     - if subscriptions.count > 1
       h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
 
-    / Group all fees by their billing period
-    - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(subscription_fees(subscription.id), invoice_subscription:)
+    / Group all fees by their billing period (with eager loading to avoid N+1 queries)
+    - fees_with_associations = subscription_fees(subscription.id).includes(:true_up_parent_fee, :true_up_fee, :charge_filter, charge: :billable_metric, fixed_charge: :add_on)
+    - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(fees_with_associations, invoice_subscription:)
 
     / Render each billing period group
     - grouped_fees.each_with_index do |fee_group, group_index|
@@ -140,7 +141,7 @@
               = MoneyHelper.format(invoice_subscription.total_amount)
 
     / Recurring fees breakdown
-    - if subscription_fees(subscription.id).charge.any?
+    - if grouped_fees.any? { |fg| fg.charge_fees.any? }
       .invoice-resume.mb-24.overflow-auto
         - recurring_fees(subscription.id).group_by(&:charge_id).each do |_charge_id, fees|
           - next unless fees.sum(&:units) > 0
