@@ -12,6 +12,8 @@ namespace :upgrade do
 
     resources_to_fill = [
       {model: Wallet, job: DatabaseMigrations::PopulateWalletsWithCodeJob},
+      {model: Charge, job: DatabaseMigrations::BackfillChargesCodeJob},
+      {model: FixedCharge, job: DatabaseMigrations::BackfillFixedChargesCodeJob}
     ]
 
     puts "##################################\nStarting required jobs"
