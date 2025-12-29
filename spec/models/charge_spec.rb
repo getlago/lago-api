@@ -649,6 +649,34 @@ RSpec.describe Charge do
   describe "validations" do
     subject { charge.valid? }
 
+    describe "code" do
+      it "validates uniqueness scoped to plan_id for parent charges" do
+        existing_charge = create(:standard_charge, code: "my_code")
+        new_charge = build(:standard_charge, code: "my_code", plan: existing_charge.plan)
+        expect(new_charge).not_to be_valid
+        expect(new_charge.errors[:code]).to include("value_already_exist")
+      end
+
+      it "allows same code on different plans" do
+        create(:standard_charge, code: "my_code")
+        new_charge = build(:standard_charge, code: "my_code")
+        expect(new_charge).to be_valid
+      end
+
+      it "allows same code on soft-deleted charges" do
+        existing_charge = create(:standard_charge, code: "my_code")
+        existing_charge.discard
+        new_charge = build(:standard_charge, code: "my_code", plan: existing_charge.plan)
+        expect(new_charge).to be_valid
+      end
+
+      it "allows same code for child charges" do
+        parent_charge = create(:standard_charge, code: "my_code")
+        child_charge = build(:standard_charge, code: "my_code", plan: parent_charge.plan, parent: parent_charge)
+        expect(child_charge).to be_valid
+      end
+    end
+
     describe "#validate_invoiceable_unless_pay_in_advance" do
       let(:charge) { build_stubbed(:standard_charge, pay_in_advance:, invoiceable:) }
 
