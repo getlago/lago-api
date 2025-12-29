@@ -17,6 +17,7 @@ module Charges
         charge = plan.charges.new(
           organization_id: plan.organization_id,
           billable_metric_id: params[:billable_metric_id],
+          code: params[:code],
           invoice_display_name: params[:invoice_display_name],
           amount_currency: params[:amount_currency],
           charge_model: params[:charge_model],

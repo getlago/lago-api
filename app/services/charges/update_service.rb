@@ -18,6 +18,7 @@ module Charges
       ActiveRecord::Base.transaction do
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
+        charge.code = params[:code] if cascade && params[:code].present?
 
         # Make sure that pricing group keys are cascaded even if properties are overridden
         cascade_pricing_group_keys if cascade
@@ -60,9 +61,11 @@ module Charges
           unless plan.attached_to_subscriptions?
             invoiceable = params.delete(:invoiceable)
             min_amount_cents = params.delete(:min_amount_cents)
+            code = params.delete(:code)
 
             charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
             charge.min_amount_cents = min_amount_cents || 0 if License.premium?
+            charge.code = code if code.present?
 
             charge.update!(params)
           end
