@@ -1733,7 +1733,7 @@ CREATE TABLE public.charges (
     regroup_paid_fees integer,
     parent_id uuid,
     organization_id uuid NOT NULL,
-    code character varying
+    code character varying NOT NULL
 );
 
 
@@ -3676,7 +3676,7 @@ CREATE TABLE public.fixed_charges (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    code character varying
+    code character varying NOT NULL
 );
 
 
@@ -10726,6 +10726,9 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251229153734'),
+('20251229153718'),
+('20251229153702'),
 ('20251226145247'),
 ('20251219115429'),
 ('20251216100247'),
