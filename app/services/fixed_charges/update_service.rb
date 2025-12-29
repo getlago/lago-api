@@ -21,6 +21,8 @@ module FixedCharges
         # Note: when updating a fixed_charge, we can't update pay_in_advance and prorated,
         fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         fixed_charge.invoice_display_name = params[:invoice_display_name] unless cascade
+        fixed_charge.code = params[:code] if cascade && params[:code].present?
+
         if !cascade || cascade_options[:equal_properties]
           fixed_charge.units = params[:units]
           properties = params.delete(:properties).presence || ChargeModels::BuildDefaultPropertiesService.call(
@@ -40,6 +42,10 @@ module FixedCharges
         end
 
         unless cascade || plan.attached_to_subscriptions?
+          code = params.delete(:code)
+          fixed_charge.code = code if code.present?
+          fixed_charge.save!
+
           if (tax_codes = params.delete(:tax_codes))
             taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge:, tax_codes:)
             taxes_result.raise_if_error!
