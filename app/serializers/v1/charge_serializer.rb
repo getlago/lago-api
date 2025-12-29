@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         lago_billable_metric_id: model.billable_metric_id,
+        code: model.code,
         invoice_display_name: model.invoice_display_name,
         billable_metric_code: model.billable_metric.code,
         created_at: model.created_at.iso8601,
@@ -16,7 +17,8 @@ module V1
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
         properties:,
-        applied_pricing_unit:
+        applied_pricing_unit:,
+        parent_id: model.parent_id
       }
 
       payload.merge!(charge_filters)
