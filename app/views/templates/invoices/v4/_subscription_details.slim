@@ -4,9 +4,10 @@
     - if subscriptions.count > 1
       h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
 
-    / Group all fees by their billing period (with eager loading to avoid N+1 queries)
-    - fees_with_associations = subscription_fees(subscription.id).includes(:true_up_parent_fee, :true_up_fee, :charge_filter, charge: :billable_metric, fixed_charge: :add_on)
-    - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(fees_with_associations, invoice_subscription:)
+    / Group all fees by their billing period (with eager loading and DB-level filtering to avoid N+1 queries)
+    - base_fees = subscription_fees(subscription.id).includes(:true_up_parent_fee, :true_up_fee, :charge_filter, charge: :billable_metric, fixed_charge: :add_on)
+    - filtered_fees = base_fees.where(fee_type: [:subscription, :commitment]).or(base_fees.where(fee_type: :fixed_charge).positive_units).or(base_fees.where(fee_type: :charge).positive_units.where(true_up_parent_fee: nil))
+    - grouped_fees = FeeBoundariesHelper.group_fees_by_billing_period(filtered_fees, invoice_subscription:)
 
     / Render each billing period group
     - grouped_fees.each_with_index do |fee_group, group_index|
@@ -37,16 +38,16 @@
               td.body-2 == TaxHelper.applied_taxes(subscription_fee)
               td.body-2 = MoneyHelper.format(subscription_fee.amount)
 
-          / 2. Fixed charge fees (alphabetically ordered)
-          - fee_group.fixed_charge_fees.select { |f| f.units.positive? }.group_by(&:fixed_charge_id).each do |_fixed_charge_id, fees|
+          / 2. Fixed charge fees (alphabetically ordered, already filtered for positive units)
+          - fee_group.fixed_charge_fees.group_by(&:fixed_charge_id).each do |_fixed_charge_id, fees|
             - fees.each do |fee|
               == SlimHelper.render('templates/invoices/v4/_fixed_charge_fee', fee)
 
-          / 3. Charge fees (alphabetically ordered)
-          - fee_group.charge_fees.select { |f| f.true_up_parent_fee.nil? && f.units.positive? }.group_by(&:charge_id).each do |_charge_id, fees|
+          / 3. Charge fees (alphabetically ordered, already filtered for positive units and no true-up parent)
+          - fee_group.charge_fees.group_by(&:charge_id).each do |_charge_id, fees|
             / Fees for filters
             - if fees.all? { |f| f.charge_filter_id? } && fees.sum(&:units) > 0
-              - fees.select { |f| f.units.positive? }.each do |fee|
+              - fees.each do |fee|
                 - if fee.amount_details.blank?
                   == SlimHelper.render('templates/invoices/v4/_default_fee_with_filters', fee)
                 - else
