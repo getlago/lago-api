@@ -40,6 +40,7 @@ nb:
       standard_payment: Standardbetaling
     fee_prorated: Avgiften beregnes forholdsmessig etter brukerdager, den viste enhetsprisen er et gjennomsnitt
     fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
+    free_credits: Gratis kreditter
     from_to_date: Fra %{from_date} til %{to_date}
     graduated:
       fee_per_unit_for_the_first: Avgift per enhet for de første %{to}
