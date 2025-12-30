@@ -76,6 +76,7 @@ pt-BR:
       percentage_rate_on_amount: Taxa sobre o valor
     powered_by: Desenvolvido por
     prepaid_credit_invoice: Fatura antecipada
+    free_credits: Créditos gratuitos
     prepaid_credits: Créditos pré-pagos
     prepaid_credits_with_value: Créditos pré-pagos - %{wallet_name}
     progressive_billing_credit: Uso já faturado

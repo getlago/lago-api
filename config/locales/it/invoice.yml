@@ -76,6 +76,7 @@ it:
       percentage_rate_on_amount: Tariffa sull'importo
     powered_by: Elaborato da
     prepaid_credit_invoice: Fattura anticipata
+    free_credits: Crediti gratuiti
     prepaid_credits: Crediti prepagati
     prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
     progressive_billing_credit: Uso già fatturato

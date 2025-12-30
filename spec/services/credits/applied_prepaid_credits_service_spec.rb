@@ -449,6 +449,70 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
         expect(inbound_transaction.reload.remaining_amount_cents).to eq(900)
       end
+
+      it "sets prepaid_granted_credit_amount_cents on invoice" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to eq(100)
+        expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+      end
+
+      context "when inbound transaction is purchased" do
+        let!(:inbound_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 10,
+            credit_amount: 10,
+            remaining_amount_cents: 1000)
+        end
+
+        it "sets prepaid_purchased_credit_amount_cents on invoice" do
+          result
+
+          expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+          expect(invoice.prepaid_purchased_credit_amount_cents).to eq(100)
+        end
+      end
+
+      context "when consuming from both granted and purchased transactions" do
+        let(:amount_cents) { 500 }
+        let(:fee_amount_cents) { 500 }
+
+        let!(:inbound_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :granted,
+            status: :settled,
+            amount: 3,
+            credit_amount: 3,
+            remaining_amount_cents: 300)
+        end
+
+        let!(:purchased_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 7,
+            credit_amount: 7,
+            remaining_amount_cents: 700)
+        end
+
+        it "sets both breakdown amounts on invoice" do
+          result
+
+          expect(invoice.prepaid_granted_credit_amount_cents).to eq(300)
+          expect(invoice.prepaid_purchased_credit_amount_cents).to eq(200)
+        end
+      end
     end
 
     context "when wallet is not traceable" do
@@ -459,6 +523,13 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
       it "does not create consumption records" do
         expect { result }.not_to change(WalletTransactionConsumption, :count)
+      end
+
+      it "sets prepaid_purchased_credit_amount_cents on invoice as fallback" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+        expect(invoice.prepaid_purchased_credit_amount_cents).to eq(100)
       end
     end
 

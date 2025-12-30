@@ -3128,6 +3128,8 @@ CREATE TABLE public.invoices (
     voided_invoice_id uuid,
     xml_file character varying,
     expected_finalization_date date,
+    prepaid_granted_credit_amount_cents bigint,
+    prepaid_purchased_credit_amount_cents bigint,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -10832,6 +10834,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251230154408'),
 ('20251224152737'),
 ('20251224152736'),
 ('20251224152735'),

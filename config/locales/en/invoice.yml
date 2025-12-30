@@ -77,6 +77,7 @@ en:
       percentage_rate_on_amount: Rate on the amount
     powered_by: Powered by
     prepaid_credit_invoice: Advance invoice
+    free_credits: Free credits
     prepaid_credits: Prepaid credits
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     progressive_billing_credit: Usage already billed

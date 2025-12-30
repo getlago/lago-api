@@ -74,6 +74,7 @@ module Credits
           invoice.prepaid_credit_amount_cents += amount_cents
         end
 
+        calculate_prepaid_credit_breakdown(result.wallet_transactions)
         Customers::RefreshWalletsService.call(customer:, include_generating_invoices: true)
         invoice.save! if invoice.changed?
       end
@@ -95,6 +96,30 @@ module Credits
         Utils::ActivityLog.produce_after_commit(wt, "wallet_transaction.created")
         SendWebhookJob.perform_after_commit("wallet_transaction.created", wt)
       end
+    end
+
+    def calculate_prepaid_credit_breakdown(wallet_transactions)
+      return if wallet_transactions.empty?
+
+      granted_amount = 0
+      purchased_amount = 0
+
+      wallet_transactions.each do |wt|
+        if wt.wallet.traceable?
+          wt.fundings.includes(:inbound_wallet_transaction).each do |consumption|
+            if consumption.inbound_wallet_transaction.granted?
+              granted_amount += consumption.consumed_amount_cents
+            else
+              purchased_amount += consumption.consumed_amount_cents
+            end
+          end
+        else
+          purchased_amount += wt.amount_cents
+        end
+      end
+
+      invoice.prepaid_granted_credit_amount_cents = granted_amount if granted_amount > 0
+      invoice.prepaid_purchased_credit_amount_cents = purchased_amount if purchased_amount > 0
     end
 
     def calculate_amounts_for_fees_by_type_and_bm

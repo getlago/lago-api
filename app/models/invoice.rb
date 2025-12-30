@@ -74,6 +74,13 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
+  # NOTE: Prepaid credit breakdown - nil for historical invoices
+  monetize :prepaid_granted_credit_amount_cents,
+    :prepaid_purchased_credit_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
+
   INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
@@ -615,6 +622,8 @@ end
 #  payment_overdue                         :boolean          default(FALSE)
 #  payment_status                          :integer          default("pending"), not null
 #  prepaid_credit_amount_cents             :bigint           default(0), not null
+#  prepaid_granted_credit_amount_cents     :bigint
+#  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null

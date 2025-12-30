@@ -75,6 +75,7 @@ sv:
       percentage_rate_on_amount: Satsen på beloppet
     powered_by: Genererad av
     prepaid_credit_invoice: Förskottsfaktura
+    free_credits: Gratis krediter
     prepaid_credits: Förbetald kontobalans
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
     progressive_billing_credit: Redan fakturerad användning

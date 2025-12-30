@@ -75,6 +75,7 @@ es:
       percentage_rate_on_amount: Tarifa sobre el monto
     powered_by: Generada por
     prepaid_credit_invoice: Factura anticipada
+    free_credits: Créditos gratuitos
     prepaid_credits: Créditos prepagados
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
     progressive_billing_credit: Uso ya facturado

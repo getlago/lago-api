@@ -181,10 +181,22 @@
               td.body-2 = I18n.t('invoice.credit_notes')
               td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
           - if subscription? && wallet_transactions.exists?
-            tr
-              td.body-2
-              td.body-2 = I18n.t('invoice.prepaid_credits')
-              td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
+            - if prepaid_granted_credit_amount_cents.present? || prepaid_purchased_credit_amount_cents.present?
+              - if prepaid_granted_credit_amount_cents&.positive?
+                tr
+                  td.body-2
+                  td.body-2 = I18n.t('invoice.free_credits')
+                  td.body-2 = '-' + MoneyHelper.format(prepaid_granted_credit_amount)
+              - if prepaid_purchased_credit_amount_cents&.positive?
+                tr
+                  td.body-2
+                  td.body-2 = I18n.t('invoice.prepaid_credits')
+                  td.body-2 = '-' + MoneyHelper.format(prepaid_purchased_credit_amount)
+            - else
+              tr
+                td.body-2
+                td.body-2 = I18n.t('invoice.prepaid_credits')
+                td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
             td.body-1 = I18n.t('invoice.total')

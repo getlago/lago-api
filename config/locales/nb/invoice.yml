@@ -76,6 +76,7 @@ nb:
       percentage_rate_on_amount: Satsen på beløpet
     powered_by: Fakturering drevet av
     prepaid_credit_invoice: Forskuddsfaktura
+    free_credits: Gratis kreditter
     prepaid_credits: Forskuddsbetalte kreditter
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     progressive_billing_credit: Bruk allerede fakturert
