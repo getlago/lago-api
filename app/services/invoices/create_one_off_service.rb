@@ -66,7 +66,7 @@ module Invoices
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Invoices::Payments::CreateService.call_async(invoice:) unless skip_psp
+        Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless skip_psp
       end
 
       result
