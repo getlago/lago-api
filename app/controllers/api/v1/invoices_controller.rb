@@ -12,7 +12,8 @@ module Api
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
           skip_psp: create_params[:skip_psp],
-          invoice_custom_section: create_params[:invoice_custom_section] || {}
+          invoice_custom_section: create_params[:invoice_custom_section] || {},
+          payment_method_params: create_params[:payment_method]
         )
 
         if result.success?
@@ -266,6 +267,10 @@ module Api
               invoice_custom_section: [
                 :skip_invoice_custom_sections,
                 {invoice_custom_section_codes: []}
+              ],
+              payment_method: [
+                :payment_method_type,
+                :payment_method_id
               ]
             ).to_h.deep_symbolize_keys
       end
