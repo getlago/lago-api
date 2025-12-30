@@ -11,7 +11,8 @@ module Api
           currency: create_params[:currency],
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
-          skip_psp: create_params[:skip_psp]
+          skip_psp: create_params[:skip_psp],
+          payment_method_params: create_params[:payment_method]
         )
 
         if result.success?
@@ -261,6 +262,10 @@ module Api
                 :from_datetime,
                 :to_datetime,
                 {tax_codes: []}
+              ],
+              payment_method: [
+                :payment_method_type,
+                :payment_method_id
               ]
             ).to_h.deep_symbolize_keys
       end
