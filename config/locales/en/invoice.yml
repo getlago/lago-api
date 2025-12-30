@@ -41,6 +41,7 @@ en:
       standard_payment: Standard payment
     fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
     fees_from_to_date: Fees from %{from_date} to %{to_date}
+    free_credits: Free credits
     from_to_date: From %{from_date} to %{to_date}
     graduated:
       fee_per_unit_for_the_first: Fee per unit for the first %{to}

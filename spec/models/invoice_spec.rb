@@ -764,6 +764,34 @@ RSpec.describe Invoice do
     it { expect(invoice.currency).to eq("JPY") }
   end
 
+  describe "#prepaid_granted_credit_amount" do
+    let(:invoice) { build(:invoice, currency: "USD", prepaid_granted_credit_amount_cents: 500) }
+
+    it "returns the granted credit amount as Money" do
+      expect(invoice.prepaid_granted_credit_amount).to eq(Money.new(500, "USD"))
+    end
+
+    context "when nil" do
+      let(:invoice) { build(:invoice, currency: "USD", prepaid_granted_credit_amount_cents: nil) }
+
+      it { expect(invoice.prepaid_granted_credit_amount).to be_nil }
+    end
+  end
+
+  describe "#prepaid_purchased_credit_amount" do
+    let(:invoice) { build(:invoice, currency: "USD", prepaid_purchased_credit_amount_cents: 300) }
+
+    it "returns the purchased credit amount as Money" do
+      expect(invoice.prepaid_purchased_credit_amount).to eq(Money.new(300, "USD"))
+    end
+
+    context "when nil" do
+      let(:invoice) { build(:invoice, currency: "USD", prepaid_purchased_credit_amount_cents: nil) }
+
+      it { expect(invoice.prepaid_purchased_credit_amount).to be_nil }
+    end
+  end
+
   describe "#charge_amount" do
     let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
