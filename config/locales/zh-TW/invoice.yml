@@ -32,7 +32,7 @@ zh-TW:
     details: "%{resource} 詳細資訊"
     document_name: 發票
     document_tax_name: 稅務發票
-    due_date: 到期日 %{date}
+    due_date: 繳款期限 %{date}
     e_invoicing:
       credit_card: 信用卡付款
       credit_card_information: 已於 %{date} 收到信用卡付款
