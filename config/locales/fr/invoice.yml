@@ -40,6 +40,7 @@ fr:
       standard_payment: Paiement standard
     fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    free_credits: Crédits gratuits
     from_to_date: Du %{from_date} au %{to_date}
     graduated:
       fee_per_unit_for_the_first: Frais par unité pour les %{to} premières
