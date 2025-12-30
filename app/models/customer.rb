@@ -311,6 +311,10 @@ class Customer < ApplicationRecord
     anrok_customer || avalara_customer
   end
 
+  def default_payment_method
+    payment_methods.find_by(is_default: true)
+  end
+
   private
 
   def ensure_slug

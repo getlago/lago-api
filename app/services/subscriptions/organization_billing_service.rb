@@ -24,11 +24,15 @@ module Subscriptions
 
         next if billing_subscriptions.empty?
 
-        BillSubscriptionJob.perform_later(
-          billing_subscriptions,
-          today.to_i,
-          invoicing_reason: :subscription_periodic
-        )
+        subscription_groups = group_by_payment_method(billing_subscriptions)
+
+        subscription_groups.each do |subscriptions|
+          BillSubscriptionJob.perform_later(
+            subscriptions,
+            today.to_i,
+            invoicing_reason: :subscription_periodic
+          )
+        end
 
         BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, today)
       end
@@ -421,6 +425,46 @@ module Subscriptions
           ) = DATE(:today#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
+    end
+
+    # NOTE: Returns array of subscription groups
+    #       - Groups subscriptions by their EFFECTIVE payment method (resolved, not raw)
+    #       - If payment_method_id is nil, resolves to customer's default payment method
+    #       - If all subscriptions resolve to the same payment method, returns single group
+    #
+    # Examples (assuming customer default is pm_1):
+    #   - [nil, provider] + [nil, provider]   → single group (both resolve to pm_1)
+    #   - [nil, provider] + [nil, manual]     → two groups (different type)
+    #   - [pm_1, provider] + [nil, provider]  → single group (both resolve to pm_1)
+    #   - [pm_1, provider] + [pm_2, provider] → two groups (different resolved id)
+    def group_by_payment_method(subscriptions)
+      return [subscriptions] if subscriptions.size <= 1
+
+      customer = subscriptions.first.customer
+      default_payment_method = customer.default_payment_method
+
+      resolved_keys = subscriptions.map { |s| resolve_payment_method_key(s, default_payment_method) }.uniq
+
+      if resolved_keys.size == 1
+        return [subscriptions]
+      end
+
+      subscriptions.group_by { |s| resolve_payment_method_key(s, default_payment_method) }.values
+    end
+
+    # NOTE: Returns the effective payment method key for grouping
+    #       - If subscription has explicit payment_method_id, use it
+    #       - If nil, inherit from customer's default payment method
+    def resolve_payment_method_key(subscription, default_payment_method)
+      if subscription.payment_method_id.present?
+        [subscription.payment_method_id, subscription.payment_method_type]
+      elsif subscription.payment_method_type == "manual"
+        [nil, "manual"]
+      elsif default_payment_method.present?
+        [default_payment_method.id, "provider"]
+      else
+        [nil, subscription.payment_method_type]
+      end
     end
   end
 end
