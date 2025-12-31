@@ -103,7 +103,7 @@ module Invoices
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
-        return false if determine_payment_method.nil? # TODO: Block this with the feature flag until migration is done
+        return false if customer.organization.premium_integrations.include?("manual_payments") && determine_payment_method.nil? # TODO: Block this with the feature flag until migration is done - use real feature flag
 
         current_payment_provider_customer&.provider_customer_id # TODO: change this line later
       end
