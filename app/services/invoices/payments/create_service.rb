@@ -103,9 +103,9 @@ module Invoices
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
-        return false if determine_payment_method.nil? # Block this with feature flag
+        return false if determine_payment_method.nil? # TODO: Block this with the feature flag until migration is done
 
-        current_payment_provider_customer&.provider_customer_id
+        current_payment_provider_customer&.provider_customer_id # TODO: change this line later
       end
 
       def current_payment_provider
@@ -172,7 +172,7 @@ module Invoices
       # NOTE: Returns PaymentMethod object or nil
       #       nil means: skip automatic payment (manual type or no payment method configured)
       def determine_payment_method
-        case invoice.invoice_type
+        @determine_payment_method ||= case invoice.invoice_type
         when "subscription", "advance_charges", "progressive_billing"
           determine_subscription_payment_method
         when "credit"
@@ -209,13 +209,8 @@ module Invoices
 
         if wallet_transaction.source.to_s.in?(%w[interval threshold])
           rule = wallet_transaction.wallet.recurring_transaction_rules.active.first
-          if rule
-            return nil if rule.payment_method_type == "manual"
-
-            if rule.payment_method_id.present?
-              return customer.payment_methods.find_by(id: rule.payment_method_id)
-            end
-          end
+          return nil if rule&.payment_method_type == "manual"
+          return customer.payment_methods.find_by(id: rule.payment_method_id) if rule&.payment_method_id.present?
         end
 
         wallet = wallet_transaction.wallet
@@ -229,6 +224,7 @@ module Invoices
       end
 
       def determine_one_off_payment_method
+        return customer.default_payment_method if payment_method_params.blank?
         return nil if payment_method_params[:payment_method_type] == "manual"
 
         if payment_method_params[:payment_method_id].present?
