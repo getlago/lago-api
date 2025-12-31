@@ -16,6 +16,22 @@ module Subscriptions
         billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
       end
 
+      # For yearly plans with bill_charges_monthly=true, charges are billed every month
+      # For yearly plans with bill_charges_monthly=false, charges are billed only on the first month of the period
+      def should_bill_charges?
+        return true if plan.bill_charges_monthly?
+
+        first_month_in_yearly_period?
+      end
+
+      # For yearly plans with bill_fixed_charges_monthly=true, fixed charges are billed every month
+      # For yearly plans with bill_fixed_charges_monthly=false, fixed charges are billed only on the first month
+      def should_bill_fixed_charges?
+        return true if plan.bill_fixed_charges_monthly?
+
+        first_month_in_yearly_period?
+      end
+
       private
 
       def compute_base_date
