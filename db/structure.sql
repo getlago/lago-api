@@ -336,6 +336,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
@@ -1024,6 +1025,14 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+-- *not* dropping schema, since initdb creates it
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -8247,7 +8256,14 @@ CREATE INDEX index_taxes_on_organization_id ON public.taxes USING btree (organiz
 -- Name: index_uniq_invoice_subscriptions_on_charges_from_to_datetime; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
+CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL) AND (plan_bill_fixed_charges_monthly IS TRUE) AND ((plan_bill_charges_monthly IS FALSE) OR (plan_bill_charges_monthly IS NULL)));
+
+
+--
+-- Name: index_uniq_invoice_subscriptions_on_fixed_charges_boundaries; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries ON public.invoice_subscriptions USING btree (subscription_id, fixed_charges_from_datetime, fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL) AND (plan_bill_fixed_charges_monthly IS TRUE) AND ((plan_bill_charges_monthly IS FALSE) OR (plan_bill_charges_monthly IS NULL)));
 
 
 --
@@ -10690,6 +10706,8 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251219162009'),
+('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
 ('20251210151531'),
