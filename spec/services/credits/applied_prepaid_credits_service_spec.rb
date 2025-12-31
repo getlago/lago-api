@@ -414,6 +414,54 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when wallet is traceable" do
+      let(:wallets) { [traceable_wallet] }
+      let(:traceable_wallet) do
+        create(:wallet, name: "traceable", customer:, balance_cents: 1000, credits_balance: 10.0, traceable: true)
+      end
+      let!(:inbound_transaction) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet,
+          organization: traceable_wallet.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000)
+      end
+
+      it "tracks consumption from inbound transactions" do
+        expect { result }.to change(WalletTransactionConsumption, :count).by(1)
+      end
+
+      it "creates consumption record linking inbound and outbound" do
+        result
+
+        consumption = WalletTransactionConsumption.last
+        expect(consumption.inbound_wallet_transaction).to eq(inbound_transaction)
+        expect(consumption.outbound_wallet_transaction).to eq(result.wallet_transactions.first)
+        expect(consumption.consumed_amount_cents).to eq(100)
+      end
+
+      it "decrements remaining_amount_cents on inbound transaction" do
+        result
+
+        expect(inbound_transaction.reload.remaining_amount_cents).to eq(900)
+      end
+    end
+
+    context "when wallet is not traceable" do
+      let(:wallets) { [non_traceable_wallet] }
+      let(:non_traceable_wallet) do
+        create(:wallet, name: "non-traceable", customer:, balance_cents: 1000, credits_balance: 10.0, traceable: false)
+      end
+
+      it "does not create consumption records" do
+        expect { result }.not_to change(WalletTransactionConsumption, :count)
+      end
+    end
+
     context "when wallet optimistic lock fails" do
       def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
         attempts = 0

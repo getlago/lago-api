@@ -10,6 +10,24 @@ class WalletTransaction < ApplicationRecord
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
 
+  has_many :consumptions,
+    class_name: "WalletTransactionConsumption",
+    foreign_key: :inbound_wallet_transaction_id,
+    dependent: :destroy
+
+  has_many :fundings,
+    class_name: "WalletTransactionConsumption",
+    foreign_key: :outbound_wallet_transaction_id,
+    dependent: :destroy
+
+  has_many :consuming_transactions,
+    through: :consumptions,
+    source: :outbound_wallet_transaction
+
+  has_many :source_transactions,
+    through: :fundings,
+    source: :inbound_wallet_transaction
+
   has_many :applied_invoice_custom_sections,
     class_name: "WalletTransaction::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -50,6 +68,7 @@ class WalletTransaction < ApplicationRecord
   validates :priority, presence: true, inclusion: {in: 1..50}
   validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
   validates :invoice_requires_successful_payment, exclusion: [nil]
+  validate :remaining_amount_cents_only_for_inbound
 
   delegate :customer, to: :wallet
 
@@ -74,6 +93,15 @@ class WalletTransaction < ApplicationRecord
 
     update!(status: :failed, failed_at: timestamp)
   end
+
+  private
+
+  def remaining_amount_cents_only_for_inbound
+    return if remaining_amount_cents.nil?
+    return if inbound?
+
+    errors.add(:remaining_amount_cents, :only_for_inbound)
+  end
 end
 
 # == Schema Information
@@ -91,6 +119,7 @@ end
 #  name                                :string(255)
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
+#  remaining_amount_cents              :bigint
 #  settled_at                          :datetime
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  source                              :integer          default("manual"), not null
@@ -107,6 +136,7 @@ end
 #
 # Indexes
 #
+#  idx_wallet_transactions_available_inbound       (wallet_id) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
 #  index_wallet_transactions_on_credit_note_id     (credit_note_id)
 #  index_wallet_transactions_on_invoice_id         (invoice_id)
 #  index_wallet_transactions_on_organization_id    (organization_id)
