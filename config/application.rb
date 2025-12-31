@@ -39,7 +39,7 @@ module LagoApi
     ActiveRecord::Tasks::DatabaseTasks.structure_dump_flags = ["--clean", "--if-exists", "--no-comments", "--no-publications"]
 
     config.i18n.load_path += Dir[Rails.root.join("config/locales/**/*.{rb,yml}")]
-    config.i18n.available_locales = %i[en fr nb de it es sv pt-BR]
+    config.i18n.available_locales = %i[en fr nb de it es sv pt-BR zh-TW]
     config.i18n.default_locale = :en
 
     config.generators do |g|
