@@ -18,7 +18,7 @@ module V1
         min_amount_cents: model.min_amount_cents,
         properties:,
         applied_pricing_unit:,
-        parent_id: model.parent_id
+        lago_parent_id: model.parent_id
       }
 
       payload.merge!(charge_filters)

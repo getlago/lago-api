@@ -15,7 +15,7 @@ module V1
         prorated: model.prorated,
         properties: model.properties,
         units: model.units,
-        parent_id: model.parent_id
+        lago_parent_id: model.parent_id
       }
 
       payload.merge!(taxes) if include?(:taxes)

@@ -22,7 +22,7 @@ RSpec.describe ::V1::FixedChargeSerializer do
     expect(result["fixed_charge"]["properties"]).to eq(fixed_charge.properties)
     expect(result["fixed_charge"]["taxes"]).to eq([])
     expect(result["fixed_charge"]["units"]).to eq(fixed_charge.units.to_s)
-    expect(result["fixed_charge"]["parent_id"]).to eq(fixed_charge.parent_id)
+    expect(result["fixed_charge"]["lago_parent_id"]).to eq(fixed_charge.parent_id)
   end
 
   context "when fixed charge has taxes" do
