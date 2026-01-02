@@ -106,7 +106,7 @@ describe "Create partner and run billing Scenarios" do
     end
 
     # May 1st: Billing run; check invoice numbering
-    may1 = Time.zone.parse("2024-05-1")
+    may1 = Time.zone.parse("2024-05-01")
     travel_to(may1) do
       organization.update!(created_at: 1.month.ago)
       perform_billing
@@ -129,7 +129,7 @@ describe "Create partner and run billing Scenarios" do
     end
 
     # June 1st: Billing run; check invoice numbering
-    june1 = Time.zone.parse("2024-06-1")
+    june1 = Time.zone.parse("2024-06-01")
     travel_to(june1) do
       perform_billing
       expect(billing_entity.invoices.count).to eq(6)
@@ -153,8 +153,11 @@ describe "Create partner and run billing Scenarios" do
     # check analytics
     may_org_invoices = organization.invoices.where(self_billed: false, created_at: may1)
     june_org_invoices = organization.invoices.where(self_billed: false, created_at: june1)
+
+    months = (Time.zone.now.beginning_of_month - Time.zone.parse("2024-04-01")).second.in_months.round + 1
+
     # invoice_collection
-    get_analytics(organization:, analytics_type: "invoice_collection")
+    get_analytics(organization:, analytics_type: "invoice_collection", months:)
     collection = json[:invoice_collections]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
@@ -165,7 +168,7 @@ describe "Create partner and run billing Scenarios" do
     expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # gross_revenue
-    get_analytics(organization:, analytics_type: "gross_revenue")
+    get_analytics(organization:, analytics_type: "gross_revenue", months:)
     collection = json[:gross_revenues]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
@@ -176,7 +179,7 @@ describe "Create partner and run billing Scenarios" do
     expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # mrr
-    get_analytics(organization:, analytics_type: "mrr")
+    get_analytics(organization:, analytics_type: "mrr", months:)
     collection = json[:mrrs]
     # We have different time format for mrr - is it alright?
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000+00:00" }
@@ -186,7 +189,7 @@ describe "Create partner and run billing Scenarios" do
     expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # overdue_balance
-    get_analytics(organization:, analytics_type: "overdue_balance")
+    get_analytics(organization:, analytics_type: "overdue_balance", months:)
     collection = json[:overdue_balances]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
