@@ -41,6 +41,14 @@ module PaymentProviders
     def payment_type
       "stripe"
     end
+
+    register_services(
+      create_customer: "PaymentProviders::Stripe::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::StripeService",
+      create_payment: "PaymentProviders::Stripe::Payments::CreateService",
+      manage_invoice_payment: "Invoices::Payments::StripeService",
+      manage_payment_request_payment: "PaymentRequests::Payments::StripeService"
+    )
   end
 end
 

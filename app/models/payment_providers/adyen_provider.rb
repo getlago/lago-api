@@ -28,6 +28,14 @@ module PaymentProviders
     def payment_type
       "adyen"
     end
+
+    register_services(
+      create_customer: "PaymentProviders::Adyen::Customers::CreateService",
+      manage_customer: "PaymentProviderCustomers::AdyenService",
+      create_payment: "PaymentProviders::Adyen::Payments::CreateService",
+      manage_invoice_payment: "Invoices::Payments::AdyenService",
+      manage_payment_request_payment: "PaymentRequests::Payments::AdyenService"
+    )
   end
 end
 
