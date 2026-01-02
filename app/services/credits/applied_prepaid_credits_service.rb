@@ -92,16 +92,22 @@ module Credits
     end
 
     def calculate_amounts_for_fees_by_type_and_bm
+      invoice_cap = invoice.total_amount_cents
       remaining = Hash.new(0)
 
       invoice.fees.includes(:charge).find_each do |fee|
+        next if fee.sub_total_excluding_taxes_amount_cents == 0
+
         cap = fee.sub_total_excluding_taxes_amount_cents +
           fee.taxes_precise_amount_cents -
           fee.precise_credit_notes_amount_cents
 
+        cap = [cap, invoice_cap].min
+
         next if cap <= 0
         key = [fee.fee_type, fee.charge&.billable_metric_id]
         remaining[key] += cap
+        invoice_cap -= cap
       end
 
       remaining.sort_by { |_, v| -v }.to_h
