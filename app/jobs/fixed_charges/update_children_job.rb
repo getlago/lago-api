@@ -4,7 +4,7 @@ module FixedCharges
   class UpdateChildrenJob < ApplicationJob
     queue_as :default
 
-    def perform(params:, old_parent_attrs:)
+    def perform(params:, old_parent_attrs:, timestamp:)
       fixed_charge = FixedCharge.find_by(id: old_parent_attrs["id"])
       return unless fixed_charge
 
@@ -12,7 +12,8 @@ module FixedCharges
         FixedCharges::UpdateChildrenBatchJob.perform_later(
           child_ids:,
           params:,
-          old_parent_attrs:
+          old_parent_attrs:,
+          timestamp:
         )
       end
     end
