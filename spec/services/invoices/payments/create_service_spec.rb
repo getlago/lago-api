@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::CreateService do
-  subject(:create_service) { described_class.new(invoice:, payment_provider: provider) }
+  subject(:create_service) { described_class.new(invoice:, payment_provider: provider, payment_method_params:) }
 
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100) }
@@ -13,6 +13,7 @@ RSpec.describe Invoices::Payments::CreateService do
   let(:payment_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
   let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
   let(:default_payment_method) { create(:payment_method, customer:, is_default: true) }
+  let(:payment_method_params) { {} }
 
   describe "#call" do
     let(:result) do
@@ -274,15 +275,10 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with one-off invoice" do
-      subject(:create_service) do
-        described_class.new(invoice:, payment_provider: provider, payment_method_params:)
-      end
-
       let(:organization) { create(:organization, premium_integrations: %w[manual_payments]) } # TODO: remove later
       let(:invoice) do
         create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off)
       end
-      let(:payment_method_params) { {} }
 
       context "when manual payment method is passed in params" do
         let(:payment_method_params) { {payment_method_type: "manual"} }
@@ -623,7 +619,7 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(result).to be_success
         expect(result.payment_provider).to eq(provider.to_sym)
       }.to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-        .with(invoice:, payment_provider: :stripe)
+        .with(invoice:, payment_provider: :stripe, payment_method_params: {})
     end
 
     context "with gocardless payment provider" do
@@ -632,7 +628,7 @@ RSpec.describe Invoices::Payments::CreateService do
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-          .with(invoice:, payment_provider: :gocardless)
+          .with(invoice:, payment_provider: :gocardless, payment_method_params: {})
       end
     end
 
@@ -642,7 +638,7 @@ RSpec.describe Invoices::Payments::CreateService do
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-          .with(invoice:, payment_provider: :adyen)
+          .with(invoice:, payment_provider: :adyen, payment_method_params: {})
       end
     end
 
