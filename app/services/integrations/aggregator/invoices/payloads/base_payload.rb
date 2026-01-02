@@ -88,6 +88,7 @@ module Integrations
               "units" => fee.units,
               "precise_unit_amount" => fee.precise_unit_amount,
               "account_code" => mapped_item.external_account_code,
+              "item_code" => mapped_item.external_item_code,
               "taxes_amount_cents" => fee.taxes_amount_cents
             }
           end

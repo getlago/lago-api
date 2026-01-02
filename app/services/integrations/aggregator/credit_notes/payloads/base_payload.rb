@@ -83,6 +83,7 @@ module Integrations
               "units" => (precise_unit_amount > 0) ? 1 : 0,
               "precise_unit_amount" => amount(precise_unit_amount, resource: credit_note_item.credit_note),
               "account_code" => mapped_item.external_account_code,
+              "item_code" => mapped_item.external_item_code,
               "taxes_amount_cents" => amount(taxes_amount_cents(credit_note_item), resource: credit_note_item.credit_note)
             }
           end
