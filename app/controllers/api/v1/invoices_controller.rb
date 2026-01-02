@@ -11,7 +11,8 @@ module Api
           currency: create_params[:currency],
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
-          skip_psp: create_params[:skip_psp]
+          skip_psp: create_params[:skip_psp],
+          payment_method_params: create_params[:payment_method]
         )
 
         if result.success?
@@ -139,7 +140,10 @@ module Api
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
 
-        result = Invoices::Payments::RetryService.new(invoice:).call
+        result = Invoices::Payments::RetryService.new(
+          invoice:,
+          payment_method_params: retry_payment_params[:payment_method]
+        ).call
         return render_error_response(result) unless result.success?
 
         head(:ok)
@@ -261,6 +265,10 @@ module Api
                 :from_datetime,
                 :to_datetime,
                 {tax_codes: []}
+              ],
+              payment_method: [
+                :payment_method_type,
+                :payment_method_id
               ]
             ).to_h.deep_symbolize_keys
       end
@@ -274,6 +282,15 @@ module Api
             :value
           ]
         )
+      end
+
+      def retry_payment_params
+        params.permit(
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
+          ]
+        ).to_h.deep_symbolize_keys
       end
 
       def preview_params
