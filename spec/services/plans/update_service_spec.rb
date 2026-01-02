@@ -1733,14 +1733,16 @@ RSpec.describe Plans::UpdateService do
     end
 
     context "when metadata is not provided" do
-      before do
-        create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"})
-      end
+      let(:metadata) { create(:item_metadata, owner: plan, organization:, value: {"existing" => "value"}) }
 
       let(:update_args) do
         {
           name: plan_name
         }
+      end
+
+      before do
+        metadata
       end
 
       it "does not change metadata" do

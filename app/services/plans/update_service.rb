@@ -2,7 +2,7 @@
 
 module Plans
   class UpdateService < BaseService
-    def initialize(plan:, partial_metadata: false, params:)
+    def initialize(plan:, params:, partial_metadata: false)
       @plan = plan
       @params = params
       @timestamp = Time.current.to_i
@@ -89,11 +89,12 @@ module Plans
     delegate :organization, to: :plan
 
     def update_metadata!
+      return unless params.key?(:metadata)
+
       value = params[:metadata]&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
       result = Metadata::UpdateItemService.call!(owner: plan, value:, partial: partial_metadata.present?)
       @metadata_changed = result.metadata_changed
     end
-
 
     def bill_charges_monthly?
       return unless billable_monthly?

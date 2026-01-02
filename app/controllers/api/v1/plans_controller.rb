@@ -181,7 +181,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges fixed_charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements metadata]
+            includes: %i[charges fixed_charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment entitlements]
           )
         )
       end
