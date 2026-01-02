@@ -35,7 +35,6 @@ module Invoices
           organization_id: invoice.organization_id,
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
-          payment_method_id: determine_payment_method&.id,
           amount_cents: invoice.total_due_amount_cents,
           amount_currency: invoice.currency,
           status: "pending",
@@ -44,6 +43,11 @@ module Invoices
           payable: invoice,
           payable_payment_status: "pending"
         )
+
+        if multiple_payment_methods_enabled?
+          payment.payment_method_id = determine_payment_method&.id
+          payment.save!
+        end
 
         result.payment = payment
 
@@ -83,7 +87,7 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider)
+        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
 
         result.payment_provider = provider
         result
@@ -99,13 +103,21 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
+      # TODO: Replace with real feature flag once implemented
+      def multiple_payment_methods_enabled?
+        customer.organization.premium_integrations.include?("manual_payments")
+      end
+
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
-        return false if customer.organization.premium_integrations.include?("manual_payments") && determine_payment_method.nil? # TODO: Block this with the feature flag until migration is done - use real feature flag
 
-        current_payment_provider_customer&.provider_customer_id # TODO: change this line later
+        if multiple_payment_methods_enabled?
+          determine_payment_method.present?
+        else
+          current_payment_provider_customer&.provider_customer_id
+        end
       end
 
       def current_payment_provider
@@ -171,14 +183,31 @@ module Invoices
 
       # NOTE: Returns PaymentMethod object or nil
       #       nil means: skip automatic payment (manual type or no payment method configured)
+      #       payment_method_params takes precedence (used for retry with override)
       def determine_payment_method
-        @determine_payment_method ||= case invoice.invoice_type
+        @determine_payment_method ||= if payment_method_params.present?
+          determine_override_payment_method
+        else
+          determine_invoice_payment_method
+        end
+      end
+
+      def determine_override_payment_method
+        return nil if payment_method_params[:payment_method_type] == "manual"
+
+        if payment_method_params[:payment_method_id].present?
+          customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
+        else
+          customer.default_payment_method
+        end
+      end
+
+      def determine_invoice_payment_method
+        case invoice.invoice_type
         when "subscription", "advance_charges", "progressive_billing"
           determine_subscription_payment_method
         when "credit"
           determine_credit_payment_method
-        when "add_on", "one_off"
-          determine_one_off_payment_method
         else
           customer.default_payment_method
         end
@@ -221,17 +250,6 @@ module Invoices
         end
 
         customer.default_payment_method
-      end
-
-      def determine_one_off_payment_method
-        return customer.default_payment_method if payment_method_params.blank?
-        return nil if payment_method_params[:payment_method_type] == "manual"
-
-        if payment_method_params[:payment_method_id].present?
-          customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
-        else
-          customer.default_payment_method
-        end
       end
     end
   end
