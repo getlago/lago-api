@@ -53,13 +53,13 @@ module Plans
 
         if args[:charges].present?
           args[:charges].each do |charge_params|
-            Charges::CreateService.call!(plan:, params: charge_params)
+            Charges::CreateService.call!(plan:, params: charge_params_with_code(plan, charge_params))
           end
         end
 
         if args[:fixed_charges].present?
           args[:fixed_charges].each do |fixed_charge_args|
-            FixedCharges::CreateService.call!(plan:, params: fixed_charge_args)
+            FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(plan, fixed_charge_args))
           end
         end
 
@@ -127,6 +127,24 @@ module Plans
       interval = args[:interval]&.to_sym
 
       %i[yearly semiannual].include?(interval)
+    end
+
+    def charge_params_with_code(plan, charge_params)
+      return charge_params if charge_params[:code].present?
+
+      billable_metric = plan.organization.billable_metrics.find_by(id: charge_params[:billable_metric_id])
+      return charge_params unless billable_metric
+
+      charge_params.merge(code: Charges::GenerateCodeService.call(plan:, billable_metric:).code)
+    end
+
+    def fixed_charge_params_with_code(plan, fixed_charge_params)
+      return fixed_charge_params if fixed_charge_params[:code].present?
+
+      add_on = plan.organization.add_ons.find_by(id: fixed_charge_params[:add_on_id])
+      return fixed_charge_params unless add_on
+
+      fixed_charge_params.merge(code: FixedCharges::GenerateCodeService.call(plan:, add_on:).code)
     end
 
     def track_plan_created(plan)

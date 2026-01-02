@@ -264,6 +264,14 @@ RSpec.describe Plans::CreateService do
       )
     end
 
+    it "auto-generates charge codes when not provided" do
+      plan = result.plan
+      charges = plan.charges.order(:created_at)
+
+      expect(charges.first.code).to eq(billable_metric.code)
+      expect(charges.second.code).to eq(sum_billable_metric.code)
+    end
+
     it "creates fixed charges" do
       plan = result.plan
       expect(plan.fixed_charges.count).to eq(1)
@@ -278,6 +286,12 @@ RSpec.describe Plans::CreateService do
         units: 0,
         properties: {"amount" => "0"}
       )
+    end
+
+    it "auto-generates fixed charge codes when not provided" do
+      plan = result.plan
+
+      expect(plan.fixed_charges.first.code).to eq(add_on.code)
     end
 
     it "calls SegmentTrackJob" do

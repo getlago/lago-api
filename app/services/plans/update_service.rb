@@ -203,7 +203,7 @@ module Plans
           next
         end
 
-        create_charge_result = Charges::CreateService.call!(plan:, params: payload_charge)
+        create_charge_result = Charges::CreateService.call!(plan:, params: charge_params_with_code(payload_charge))
 
         after_commit { cascade_charge_creation(create_charge_result.charge, payload_charge) }
         created_charges_ids.push(create_charge_result.charge.id)
@@ -236,7 +236,7 @@ module Plans
           next
         end
 
-        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: payload_fixed_charge)
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge))
 
         after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge) }
         created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
@@ -253,6 +253,24 @@ module Plans
         after_commit { cascade_fixed_charge_removal(fixed_charge) }
         FixedCharges::DestroyService.call(fixed_charge:)
       end
+    end
+
+    def charge_params_with_code(charge_params)
+      return charge_params if charge_params[:code].present?
+
+      billable_metric = organization.billable_metrics.find_by(id: charge_params[:billable_metric_id])
+      return charge_params unless billable_metric
+
+      charge_params.merge(code: Charges::GenerateCodeService.call(plan:, billable_metric:).code)
+    end
+
+    def fixed_charge_params_with_code(fixed_charge_params)
+      return fixed_charge_params if fixed_charge_params[:code].present?
+
+      add_on = organization.add_ons.find_by(id: fixed_charge_params[:add_on_id])
+      return fixed_charge_params unless add_on
+
+      fixed_charge_params.merge(code: FixedCharges::GenerateCodeService.call(plan:, add_on:).code)
     end
 
     # NOTE: We should remove pending subscriptions
