@@ -52,7 +52,7 @@ RSpec.describe AuthenticableCustomerPortalUser do
     it "returns an error" do
       result = AuthenticableCustomerPortalUserSpec::TestApiSchema.execute(
         resolver,
-        context: {permissions: Permission::ADMIN_PERMISSIONS_HASH}
+        context: {permissions: Permission.permissions_hash(:admin)}
       )
 
       partial_error = {

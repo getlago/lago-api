@@ -37,7 +37,7 @@ module GraphQLHelper
     end
 
     permissions.keys.each do |permission|
-      next if Permission::DEFAULT_PERMISSIONS_HASH.key?(permission)
+      next if Permission.permissions_hash.key?(permission)
 
       raise "Unknown permission: #{permission}"
     end
