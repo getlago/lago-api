@@ -141,7 +141,10 @@ module Api
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
 
-        result = Invoices::Payments::RetryService.new(invoice:).call
+        result = Invoices::Payments::RetryService.new(
+          invoice:,
+          payment_method_params: retry_payment_params[:payment_method]
+        ).call
         return render_error_response(result) unless result.success?
 
         head(:ok)
@@ -284,6 +287,15 @@ module Api
             :value
           ]
         )
+      end
+
+      def retry_payment_params
+        params.permit(
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
+          ]
+        ).to_h.deep_symbolize_keys
       end
 
       def preview_params
