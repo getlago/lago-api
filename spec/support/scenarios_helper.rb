@@ -292,9 +292,9 @@ module ScenariosHelper
 
   ### Analytics
 
-  def get_analytics(organization:, analytics_type:, **kwargs)
+  def get_analytics(organization:, analytics_type:, months: 20, **kwargs)
     api_call(**kwargs) do
-      get_with_token(organization, "/api/v1/analytics/#{analytics_type}", months: 20)
+      get_with_token(organization, "/api/v1/analytics/#{analytics_type}", months:)
     end
   end
 
