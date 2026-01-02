@@ -55,4 +55,24 @@ class BillSubscriptionJob < ApplicationJob
       skip_charges:
     )
   end
+
+  # Each hour, we check for each customer whether they need to be billed today. If it is the case and there's not
+  # invoice for today in the DB, we will schedule the BillSubscriptionJob with timestamp of the current time. So it
+  # could occur that we schedule a second job while the first one (from one hour ago) hasn't been processed yet due to a
+  # high number of jobs. As the timestamp won't be the same, the lock key would be different and both jobs could be
+  # processed concurrently, causing unnecessary jobs. Note that even if the job is schduled twice, we'll still prevent
+  # duplicate invoices.
+  #
+  # To avoid this, we normalize the timestamp in the customer's timezone and use the date as the lock key argument.
+  def lock_key_arguments
+    arguments = self.arguments.dup
+    timestamp = arguments[1]
+    subscriptions = arguments[0]
+
+    # BillSubscriptionJob subscriptions will always contain subscriptions for the same customer
+    customer = subscriptions.first.customer
+    date = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
+    arguments[1] = date
+    arguments
+  end
 end
