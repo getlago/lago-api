@@ -11,7 +11,8 @@ module Api
           currency: create_params[:currency],
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
-          skip_psp: create_params[:skip_psp]
+          skip_psp: create_params[:skip_psp],
+          invoice_custom_section: create_params[:invoice_custom_section] || {}
         )
 
         if result.success?
@@ -261,6 +262,10 @@ module Api
                 :from_datetime,
                 :to_datetime,
                 {tax_codes: []}
+              ],
+              invoice_custom_section: [
+                :skip_invoice_custom_sections,
+                {invoice_custom_section_codes: []}
               ]
             ).to_h.deep_symbolize_keys
       end
