@@ -23,15 +23,15 @@ RSpec.describe ::V1::ChargeFilterSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["filter"]["invoice_display_name"]).to eq(charge_filter.invoice_display_name)
-      expect(result["filter"]["properties"]).to eq(charge_filter.properties)
-      expect(result["filter"]["values"]).to eq(
-        {
-          filter.key => filter_value.values
-        }
-      )
-    end
+    expect(result["filter"]["lago_id"]).to eq(charge_filter.id)
+    expect(result["filter"]["charge_code"]).to eq(charge_filter.charge.code)
+    expect(result["filter"]["invoice_display_name"]).to eq(charge_filter.invoice_display_name)
+    expect(result["filter"]["properties"]).to eq(charge_filter.properties)
+    expect(result["filter"]["values"]).to eq(
+      {
+        filter.key => filter_value.values
+      }
+    )
   end
 
   # TODO(pricing_group_keys): remove after deprecation of grouped_by

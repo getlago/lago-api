@@ -13,6 +13,7 @@ RSpec.describe ::V1::ChargeSerializer do
   it "serializes the object" do
     expect(result["charge"]["lago_id"]).to eq(charge.id)
     expect(result["charge"]["lago_billable_metric_id"]).to eq(charge.billable_metric_id)
+    expect(result["charge"]["code"]).to eq(charge.code)
     expect(result["charge"]["invoice_display_name"]).to eq(charge.invoice_display_name)
     expect(result["charge"]["billable_metric_code"]).to eq(charge.billable_metric.code)
     expect(result["charge"]["created_at"]).to eq(charge.created_at.iso8601)
@@ -21,6 +22,7 @@ RSpec.describe ::V1::ChargeSerializer do
     expect(result["charge"]["properties"]).to eq(charge.properties)
     expect(result["charge"]["filters"]).to eq([])
     expect(result["charge"]["applied_pricing_unit"]).to eq nil
+    expect(result["charge"]["lago_parent_id"]).to eq(charge.parent_id)
     expect(result["charge"]["taxes"]).to eq([])
   end
 
