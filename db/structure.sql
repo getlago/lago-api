@@ -507,6 +507,7 @@ DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_fixed_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_fixed_charge_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id_and_code;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
@@ -620,6 +621,7 @@ DROP INDEX IF EXISTS public.index_charges_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
 DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
+DROP INDEX IF EXISTS public.index_charges_on_plan_id_and_code;
 DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
@@ -1730,7 +1732,8 @@ CREATE TABLE public.charges (
     invoice_display_name character varying,
     regroup_paid_fees integer,
     parent_id uuid,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying
 );
 
 
@@ -3672,7 +3675,8 @@ CREATE TABLE public.fixed_charges (
     units numeric(30,10) DEFAULT 0.0 NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying
 );
 
 
@@ -6281,6 +6285,13 @@ CREATE INDEX index_charges_on_plan_id ON public.charges USING btree (plan_id);
 
 
 --
+-- Name: index_charges_on_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_charges_on_plan_id_and_code ON public.charges USING btree (plan_id, code) WHERE ((deleted_at IS NULL) AND (parent_id IS NULL));
+
+
+--
 -- Name: index_charges_pay_in_advance; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7069,6 +7080,13 @@ CREATE INDEX index_fixed_charges_on_parent_id ON public.fixed_charges USING btre
 --
 
 CREATE INDEX index_fixed_charges_on_plan_id ON public.fixed_charges USING btree (plan_id);
+
+
+--
+-- Name: index_fixed_charges_on_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_fixed_charges_on_plan_id_and_code ON public.fixed_charges USING btree (plan_id, code) WHERE ((deleted_at IS NULL) AND (parent_id IS NULL));
 
 
 --
@@ -10708,6 +10726,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251226145247'),
 ('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
@@ -11592,3 +11611,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
