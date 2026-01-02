@@ -56,5 +56,24 @@ RSpec.describe Mutations::Invoices::RetryPayment do
 
       expect(data["id"]).to eq(invoice.id)
     end
+
+    it "returns the invoice after payment retry with dedicated payment method" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: invoice.id,
+            paymentMethod: {paymentMethodType: "manual"}
+          }
+        }
+      )
+
+      data = result["data"]["retryInvoicePayment"]
+
+      expect(data["id"]).to eq(invoice.id)
+    end
   end
 end
