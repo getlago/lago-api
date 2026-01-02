@@ -1081,7 +1081,7 @@ RSpec.describe Api::V1::PlansController do
       expect(response).to have_http_status(:success)
       expect(json[:plan][:lago_id]).to be_present
       expect(json[:plan][:code]).to eq("plan_with_metadata")
-      expect(json[:plan][:metadata]).to eq([{key: "foo", value: "bar"}, {key: "baz", value: "qux"}])
+      expect(json[:plan][:metadata]).to eq({foo: "bar", baz: "qux"})
     end
 
     context "when metadata is empty" do
@@ -1102,7 +1102,7 @@ RSpec.describe Api::V1::PlansController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan][:metadata]).to eq([])
+        expect(json[:plan][:metadata]).to eq({})
       end
     end
 
@@ -1123,7 +1123,7 @@ RSpec.describe Api::V1::PlansController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan][:metadata]).to eq([])
+        expect(json[:plan][:metadata]).to eq(nil)
       end
     end
   end

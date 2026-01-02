@@ -37,7 +37,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
-        create_metadata(plan, args[:metadata]) if args[:metadata].present?
+        create_metadata(plan, args[:metadata]) if !args[:metadata].nil?
 
         if args[:tax_codes]
           taxes_result = Plans::ApplyTaxesService.call(plan:, tax_codes: args[:tax_codes])
