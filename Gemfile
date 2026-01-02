@@ -113,7 +113,7 @@ gem "valvat"
 gem "csv", "~> 3.0"
 gem "ostruct"
 
-gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", tag: "v0.1.5"
+gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", tag: "v0.2.0"
 
 group :development, :test, :staging do
   gem "factory_bot_rails"
