@@ -15,7 +15,6 @@ RSpec.describe Mutations::Memberships::Update do
       mutation($input: UpdateMembershipInput!) {
         updateMembership(input: $input) {
           id
-          role
           roles
         }
       }
@@ -43,7 +42,7 @@ RSpec.describe Mutations::Memberships::Update do
         variables: {
           input: {
             id: membership_to_edit.id,
-            role: "admin"
+            roles: %w[admin]
           }
         }
       )
@@ -51,7 +50,6 @@ RSpec.describe Mutations::Memberships::Update do
       data = result["data"]["updateMembership"]
 
       expect(data["id"]).to eq(membership_to_edit.id)
-      expect(data["role"]).to eq("admin")
       expect(data["roles"]).to eq(%w[Admin])
     end
   end
