@@ -859,7 +859,7 @@ RSpec.describe Api::V1::SubscriptionsController do
             package_size: 2000
           },
           applied_pricing_unit: {conversion_rate: "2.0", code: pricing_unit.code},
-          parent_id: package_charge.id,
+          lago_parent_id: package_charge.id,
           filters: [],
           taxes: [
             {
@@ -1078,7 +1078,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               min_amount_cents: 0,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               applied_pricing_unit: nil,
-              parent_id: nil,
+              lago_parent_id: nil,
               filters: [],
               taxes: [
                 {
@@ -1114,7 +1114,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               min_amount_cents: 6000,
               applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
               properties: {amount: "60", free_units: 200, package_size: 2000},
-              parent_id: nil,
+              lago_parent_id: nil,
               filters: [],
               taxes: [
                 {

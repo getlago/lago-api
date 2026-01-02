@@ -22,7 +22,7 @@ RSpec.describe ::V1::ChargeSerializer do
     expect(result["charge"]["properties"]).to eq(charge.properties)
     expect(result["charge"]["filters"]).to eq([])
     expect(result["charge"]["applied_pricing_unit"]).to eq nil
-    expect(result["charge"]["parent_id"]).to eq(charge.parent_id)
+    expect(result["charge"]["lago_parent_id"]).to eq(charge.parent_id)
     expect(result["charge"]["taxes"]).to eq([])
   end
 

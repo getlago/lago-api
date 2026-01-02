@@ -30,6 +30,7 @@ RSpec.describe Api::V1::PlansController do
         charges: [
           {
             billable_metric_id: billable_metric.id,
+            code: "charge_code",
             charge_model: "standard",
             pay_in_advance: true,
             invoiceable: false,
@@ -46,6 +47,7 @@ RSpec.describe Api::V1::PlansController do
         ],
         fixed_charges: [
           {
+            code: "fixed_charge_code",
             invoice_display_name: "Fixed charge 1",
             units: 1,
             add_on_id: add_on.id,
@@ -96,7 +98,9 @@ RSpec.describe Api::V1::PlansController do
         expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
         expect(json[:plan][:created_at]).to be_present
         expect(json[:plan][:charges].first[:lago_id]).to be_present
+        expect(json[:plan][:charges].first[:code]).to eq("charge_code")
         expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
+        expect(json[:plan][:fixed_charges].first[:code]).to eq("fixed_charge_code")
         expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
       end
 
@@ -206,6 +210,7 @@ RSpec.describe Api::V1::PlansController do
             charges: [
               {
                 billable_metric_id: billable_metric.id,
+                code: "graduated_charge_code",
                 charge_model: "graduated",
                 properties: {
                   graduated_ranges: [
@@ -254,6 +259,7 @@ RSpec.describe Api::V1::PlansController do
             pay_in_advance: false,
             fixed_charges: [
               {
+                code: "graduated_fixed_charge_code",
                 invoice_display_name: "Fixed charge 1",
                 units: 1,
                 add_on_id: add_on.id,
@@ -395,6 +401,7 @@ RSpec.describe Api::V1::PlansController do
       [
         {
           billable_metric_id: billable_metric.id,
+          code: "charge_code",
           charge_model: "standard",
           properties: {
             amount: "0.22"
@@ -407,6 +414,7 @@ RSpec.describe Api::V1::PlansController do
     let(:fixed_charges_params) do
       [
         {
+          code: "fixed_charge_code",
           units: 1,
           add_on_id: add_on.id,
           charge_model: "standard",
@@ -462,6 +470,7 @@ RSpec.describe Api::V1::PlansController do
         [
           {
             billable_metric_id: billable_metric.id,
+            code: "charge_code",
             charge_model: "standard",
             properties: {
               amount: "0.22"
@@ -490,6 +499,7 @@ RSpec.describe Api::V1::PlansController do
         [
           {
             billable_metric_id: billable_metric.id,
+            code: "charge_code",
             charge_model: "standard",
             properties: {
               amount: "0.22"
@@ -665,6 +675,7 @@ RSpec.describe Api::V1::PlansController do
             tax_codes:
           },
           {
+            code: "fixed_charge_2_code",
             invoice_display_name: "Fixed charge 2",
             units: 1,
             add_on_id: add_on.id,
@@ -699,6 +710,7 @@ RSpec.describe Api::V1::PlansController do
         let(:fixed_charges_params) do
           [
             {
+              code: "fixed_charge_2_code",
               apply_units_immediately: true,
               invoice_display_name: "Fixed charge 2",
               units: 100,
@@ -738,6 +750,7 @@ RSpec.describe Api::V1::PlansController do
         let(:fixed_charges_params) do
           [
             {
+              code: "fixed_charge_2_code",
               apply_units_immediately: false,
               invoice_display_name: "Fixed charge 2",
               units: 100,
