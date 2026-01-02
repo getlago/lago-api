@@ -26,6 +26,12 @@ class Role < ApplicationRecord
   validates :description, length: {maximum: 255, allow_blank: true}
   validates :permissions, presence: true, if: :organization_id
 
+  def permissions_hash
+    Permission.permissions_hash(name).dup.tap do |h|
+      permissions.each { |key| h[key] = true if h.key?(key) }
+    end
+  end
+
   private
 
   RESERVED_NAMES = %w[admin finance manager].freeze

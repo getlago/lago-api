@@ -8,7 +8,7 @@ RSpec.describe ApiKeyMailer do
     let(:api_key) { create(:api_key) }
     let(:organization) { api_key.organization }
 
-    before { create(:membership, organization:, role: :admin) }
+    before { create(:membership, organization:, roles: [:admin]) }
 
     describe "subject" do
       subject { mail.subject }
@@ -19,7 +19,7 @@ RSpec.describe ApiKeyMailer do
     describe "recipients" do
       subject { mail.bcc }
 
-      before { create(:membership, organization:, role: :manager) }
+      before { create(:membership, organization:, roles: [:manager]) }
 
       specify do
         expect(subject)
@@ -42,7 +42,7 @@ RSpec.describe ApiKeyMailer do
     let(:api_key) { create(:api_key) }
     let(:organization) { api_key.organization }
 
-    before { create(:membership, organization:, role: :admin) }
+    before { create(:membership, organization:, roles: [:admin]) }
 
     describe "subject" do
       subject { mail.subject }
@@ -53,7 +53,7 @@ RSpec.describe ApiKeyMailer do
     describe "recipients" do
       subject { mail.bcc }
 
-      before { create(:membership, organization:, role: :manager) }
+      before { create(:membership, organization:, roles: [:manager]) }
 
       specify do
         expect(subject)
@@ -76,7 +76,7 @@ RSpec.describe ApiKeyMailer do
     let(:api_key) { create(:api_key) }
     let(:organization) { api_key.organization }
 
-    before { create(:membership, organization:, role: :admin) }
+    before { create(:membership, organization:, roles: [:admin]) }
 
     describe "subject" do
       subject { mail.subject }
@@ -87,7 +87,7 @@ RSpec.describe ApiKeyMailer do
     describe "recipients" do
       subject { mail.bcc }
 
-      before { create(:membership, organization:, role: :manager) }
+      before { create(:membership, organization:, roles: [:manager]) }
 
       specify do
         expect(subject)

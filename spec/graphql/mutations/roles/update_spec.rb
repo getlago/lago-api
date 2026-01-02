@@ -71,4 +71,27 @@ RSpec.describe Mutations::Roles::Update do
       expect_graphql_error(result:, message: "predefined_role")
     end
   end
+
+  describe "with admin role permissions" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: membership.permissions_hash,
+        query:,
+        variables: {input: {id: role.id, name: new_name, description: new_description}}
+      )
+    end
+
+    let(:membership) { create(:membership, organization:, roles: [:admin]) }
+
+    it "allows admin to update a role" do
+      result
+      role.reload
+
+      expect(role.name).to eq(new_name)
+      expect(role.description).to eq(new_description)
+    end
+  end
 end

@@ -333,9 +333,7 @@ RSpec.describe Organizations::UpdateService do
       let(:additions) { ["okta"] }
       let(:deletions) { ["google_oauth"] }
 
-      before do
-        create(:membership, organization:, role: :admin, user:)
-      end
+      before { create(:membership, organization:, roles: %i[admin], user:) }
 
       it "delivers a email notification" do
         expect { subject.call }.to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)

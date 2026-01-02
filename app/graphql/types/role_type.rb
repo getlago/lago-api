@@ -15,5 +15,9 @@ module Types
         .with(Sources::MembershipsForRole, context[:current_organization])
         .load(object.id)
     end
+
+    def permissions
+      object.permissions_hash.filter_map { |k, v| k if v }
+    end
   end
 end

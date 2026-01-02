@@ -71,4 +71,23 @@ RSpec.describe Mutations::Roles::Destroy do
       expect_graphql_error(result:, message: "role_assigned_to_members")
     end
   end
+
+  describe "with admin role permissions" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: membership.permissions_hash,
+        query:,
+        variables: {input: {id: role.id}}
+      )
+    end
+
+    let(:membership) { create(:membership, organization:, roles: [:admin]) }
+
+    it "allows admin to delete a role" do
+      expect { result }.to change { role.reload.deleted_at }.from(nil)
+    end
+  end
 end
