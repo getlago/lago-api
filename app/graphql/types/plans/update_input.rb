@@ -16,6 +16,7 @@ module Types
       argument :description, String, required: false
       argument :interval, Types::Plans::IntervalEnum, required: true
       argument :invoice_display_name, String, required: false
+      argument :metadata, [Types::Metadata::Input], required: false, **Types::Metadata::Input::ARGUMENT_OPTIONS
       argument :name, String, required: true
       argument :pay_in_advance, Boolean, required: true
       argument :tax_codes, [String], required: false
