@@ -64,7 +64,7 @@ module FixedCharges
     delegate :organization, to: :plan
 
     def add_on
-      if params[:add_on_id].present?
+      @add_on ||= if params[:add_on_id].present?
         organization.add_ons.find(params[:add_on_id])
       elsif params[:add_on_code].present?
         organization.add_ons.find_by!(code: params[:add_on_code])

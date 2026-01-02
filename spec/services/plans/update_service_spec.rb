@@ -564,6 +564,11 @@ RSpec.describe Plans::UpdateService do
           result = plans_service.call
           expect(result.plan.charges.count).to eq(1)
         end
+
+        it "auto-generates charge code when not provided" do
+          result = plans_service.call
+          expect(result.plan.charges.first.code).to eq(sum_billable_metric.code)
+        end
       end
 
       context "with premium charge model" do
@@ -1436,6 +1441,12 @@ RSpec.describe Plans::UpdateService do
           expect(result.plan.bill_fixed_charges_monthly).to eq(true)
           expect(result.plan.fixed_charges.count).to eq(2)
           expect(result.plan.fixed_charges.map(&:invoice_display_name)).to match_array(["fixed_charge1", "fixed_charge2"])
+        end
+
+        it "auto-generates fixed charge codes when not provided" do
+          result = plans_service.call
+
+          expect(result.plan.fixed_charges.pluck(:code)).to match_array([add_on.code, "#{add_on.code}_2"])
         end
       end
 
