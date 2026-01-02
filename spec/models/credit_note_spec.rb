@@ -344,6 +344,102 @@ RSpec.describe CreditNote do
     end
   end
 
+  describe "#status_changed_to_finalized?" do
+    subject(:method_call) { credit_note.send(:status_changed_to_finalized?) }
+
+    let(:credit_note) { create(:credit_note, status: :draft) }
+
+    context "when status changes from draft to finalized" do
+      it "returns true" do
+        credit_note.status = :finalized
+        expect(subject).to eq(true)
+      end
+    end
+
+    context "when status changes from finalized to draft" do
+      let(:finalized_credit_note) { create(:credit_note, status: :finalized) }
+
+      it "returns false" do
+        finalized_credit_note.status = :draft
+        expect(subject).to eq(false)
+      end
+    end
+
+    context "when status remains draft" do
+      it "returns false" do
+        expect(subject).to eq(false)
+      end
+    end
+
+    context "when status remains finalized" do
+      let(:finalized_credit_note) { create(:credit_note, status: :finalized) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
+      end
+    end
+
+    context "when credit note is new and status is set to finalized" do
+      let(:new_credit_note) { build(:credit_note, status: :finalized) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
+      end
+    end
+
+    context "when credit note is new and status is set to draft" do
+      let(:new_credit_note) { build(:credit_note, status: :draft) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
+      end
+    end
+  end
+
+  describe "#ensure_number" do
+    let(:invoice) { create(:invoice, number: "LAG-1234-001") }
+
+    context "when creating a new credit note" do
+      let(:credit_note) { build(:credit_note, invoice:, sequential_id: 1) }
+
+      before { credit_note.save! }
+
+      it "generates number" do
+        expect(credit_note.number).to eq("LAG-1234-001-CN001")
+      end
+    end
+
+    context "when credit note already has a number" do
+      context "when credit note has a number" do
+        let(:credit_note) { create(:credit_note, invoice:, number: "EXISTING-NUMBER") }
+
+        it "does not change existing number on create" do
+          expect(credit_note.number).to eq("EXISTING-NUMBER")
+        end
+      end
+
+      context "when finalizing a draft credit note" do
+        let(:credit_note) { create(:credit_note, invoice:, status: :draft, number: "DRAFT-NUMBER", sequential_id: 5) }
+
+        before { credit_note.finalized! }
+
+        it "regenerates the number" do
+          expect(credit_note.number).to eq("LAG-1234-001-CN005")
+        end
+      end
+    end
+
+    context "when credit note has no number" do
+      let(:credit_note) { create(:credit_note, number: nil, invoice:, sequential_id: 3) }
+
+      it "generates number on update" do
+        credit_note.update!(description: "Updated")
+
+        expect(credit_note.number).to eq("LAG-1234-001-CN003")
+      end
+    end
+  end
+
   describe "#should_sync_credit_note?" do
     subject(:method_call) { credit_note.should_sync_credit_note? }
 
