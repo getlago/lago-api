@@ -116,15 +116,20 @@ module BillableMetrics
 
       delegate :billable_metric, to: :charge
 
-      delegate :customer, to: :subscription
+      delegate :customer, :organization, to: :subscription
 
       def event_store
         @event_store ||= event_store_class.new(
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          filters:
+          filters:,
+          deduplicate: deduplicate?
         )
+      end
+
+      def deduplicate?
+        organization.clickhouse_events_store? && organization.clickhouse_deduplication?
       end
 
       def from_datetime

@@ -23,8 +23,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
     {event: pay_in_advance_event, grouped_by:, matching_filters:, ignored_filters:}
   end
 
-  let(:subscription) { create(:subscription) }
-  let(:organization) { subscription.organization }
+  let(:subscription) { create(:subscription, organization:) }
+  let(:organization) { create(:organization) }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
   let(:matching_filters) { {} }
@@ -273,6 +273,52 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
         expect(aggregation.grouped_by).to eq({"agent_name" => nil})
+      end
+    end
+  end
+
+  context "with clickhouse event store", :clickhouse do
+    let(:event_store_class) { Events::Stores::ClickhouseStore }
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    let(:event_list) do
+      create_list(
+        :clickhouse_events_enriched,
+        4,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        subscription:,
+        customer:,
+        timestamp: Time.zone.now - 1.day
+      )
+    end
+
+    it "aggregates the events" do
+      result = count_service.aggregate
+
+      expect(result.aggregation).to eq(4)
+    end
+
+    context "with deduplication" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication: true) }
+
+      let(:event_list) do
+        create_list(
+          :clickhouse_events_enriched,
+          4,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          subscription:,
+          customer:,
+          timestamp: Time.zone.now - 1.day,
+          transaction_id: "123456"
+        )
+      end
+
+      it "aggregates the events" do
+        result = count_service.aggregate
+
+        expect(result.aggregation).to eq(1)
       end
     end
   end
