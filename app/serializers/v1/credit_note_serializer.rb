@@ -30,14 +30,14 @@ module V1
         updated_at: model.updated_at.iso8601,
         file_url: model.file_url,
         xml_url: model.xml_url,
-        self_billed: model.invoice.self_billed,
-        metadata: model.metadata&.value
+        self_billed: model.invoice.self_billed
       }
 
       payload.merge!(customer) if include?(:customer)
       payload.merge!(items) if include?(:items)
       payload.merge!(applied_taxes) if include?(:applied_taxes)
       payload.merge!(error_details) if include?(:error_details)
+      payload.merge!(metadata) if model.metadata.present?
 
       payload
     end
@@ -72,6 +72,12 @@ module V1
         ::V1::ErrorDetailSerializer,
         collection_name: "error_details"
       ).serialize
+    end
+
+    def metadata
+      {
+        metadata: ::V1::MetadataSerializer.new(model.metadata).serialize
+      }
     end
   end
 end

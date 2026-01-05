@@ -99,7 +99,7 @@ module V1
 
     def metadata
       {
-        metadata: model.metadata&.value
+        metadata: ::V1::MetadataSerializer.new(model.metadata).serialize
       }
     end
   end
