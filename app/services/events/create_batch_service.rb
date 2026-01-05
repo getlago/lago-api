@@ -76,11 +76,15 @@ module Events
       records = result.events.map { |event| event.attributes.without("id", "created_at", "updated_at") }
       Event.transaction do
         saved_attributes = Event.insert_all(records, unique_by: :index_unique_transaction_id, returning: [:transaction_id, :id, :created_at, :updated_at]).rows # rubocop:disable Rails/SkipsModelValidations
-        attributes_per_transaction_id = saved_attributes.index_by { |attrs| attrs[0] }
+        attributes_per_transaction_id = saved_attributes.index_by { |attrs| attrs[0] } # maps to { transaction_id => [transaction_id, id, created_at, updated_at] }
 
         result.events.each_with_index do |event, index|
+          # We delete to ensure that any duplicate transaction_id in the input events_params
+          # are caught and reported as errors.
           attrs = attributes_per_transaction_id.delete(event.transaction_id)
           if attrs
+            # NOTE: even though we set id, created_at and updated_at here, the event is not considered as `.persisted?`
+            # because ActiveRecord doesn't track that for bulk inserts.
             event.id = attrs[1]
             event.created_at = attrs[2]
             event.updated_at = attrs[3]
