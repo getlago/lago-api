@@ -123,6 +123,8 @@ Rails.application.routes.draw do
       resources :payment_requests, only: %i[create index show]
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
+        resources :charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/charges"
+        resources :fixed_charges, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/fixed_charges"
         resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
           resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
         end
