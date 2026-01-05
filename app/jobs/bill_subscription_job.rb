@@ -66,6 +66,9 @@ class BillSubscriptionJob < ApplicationJob
   # To avoid this, we normalize the timestamp in the customer's timezone and use the date as the lock key argument.
   def lock_key_arguments
     arguments = self.arguments.dup
+
+    # if there is no subscription, we don't need to normalize anything
+    return arguments if arguments[0].empty?
     timestamp = arguments[1]
     subscriptions = arguments[0]
 

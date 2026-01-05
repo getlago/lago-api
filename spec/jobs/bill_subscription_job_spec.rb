@@ -102,6 +102,19 @@ RSpec.describe BillSubscriptionJob do
     let(:subscription) { create(:subscription, customer:) }
     let(:subscriptions) { [subscription] }
 
+    context "when subscriptions are empty" do
+      let(:subscriptions) { [] }
+      let(:timestamp) { Time.zone.parse("2024-01-15 10:00:00 UTC").to_i }
+
+      it "returns arguments unchanged" do
+        job = described_class.new(subscriptions, timestamp, invoicing_reason: :subscription_periodic)
+
+        expect(job.lock_key_arguments).to eq(
+          [[], timestamp, {invoicing_reason: :subscription_periodic}]
+        )
+      end
+    end
+
     it "normalizes the timestamp to the date in customer timezone" do
       timestamp = Time.zone.parse("2024-01-15 10:00:00 UTC").to_i
 
