@@ -24,7 +24,7 @@ RSpec.describe OrganizationMailer do
   describe "#authentication_methods_updated" do
     specify do
       expect(subject.subject).to eq("Login method updated in your Lago workspace")
-      expect(subject.bcc).to eq([admin0.email, admin1.email, admin2.email])
+      expect(subject.bcc).to contain_exactly(admin0.email, admin1.email, admin2.email)
       expect(subject.from).to eq(["noreply@getlago.com"])
       expect(subject.reply_to).to eq(["noreply@getlago.com"])
 
