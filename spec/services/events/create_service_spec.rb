@@ -138,11 +138,13 @@ RSpec.describe Events::CreateService do
 
       it "produces the event on kafka" do
         allow(Karafka).to receive(:producer).and_return(karafka_producer)
-        allow(karafka_producer).to receive(:produce_async)
+        allow(karafka_producer).to receive(:produce_many_async)
 
         create_service.call
 
-        expect(karafka_producer).to have_received(:produce_async)
+        expect(karafka_producer).to have_received(:produce_many_async) do |messages|
+          expect(messages.size).to eq(1)
+        end
       end
     end
 
