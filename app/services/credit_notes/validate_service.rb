@@ -122,6 +122,7 @@ module CreditNotes
     def valid_applied_to_source_invoice_amount?
       applicable_to_source_invoice_amount = invoice.total_amount_cents -
         invoice.total_paid_amount_cents -
+        credited_invoice_amount_cents -
         applied_to_source_invoice_total_amount_cents
 
       return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
