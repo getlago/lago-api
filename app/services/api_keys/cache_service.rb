@@ -27,7 +27,7 @@ module ApiKeys
         # Avoid returning an expired API key
         unless api_key.expired?
           organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-          return api_key, organization
+          return api_key, organization, cache_json["api_rate_limits"]
         end
       end
 
@@ -35,7 +35,7 @@ module ApiKeys
       api_key, organization = fetch_from_database
       write_to_cache(api_key) if api_key
 
-      [api_key, organization]
+      [api_key, organization, organization&.api_rate_limits]
     end
 
     def cache_key
@@ -52,7 +52,7 @@ module ApiKeys
 
     def fetch_from_database
       api_key = ApiKey.includes(:organization).find_by(value: auth_token)
-      [api_key, api_key&.organization]
+      [api_key, api_key&.organization, api_key&.organization&.api_rate_limits]
     end
 
     def write_to_cache(api_key)
@@ -68,7 +68,8 @@ module ApiKeys
         cache_key,
         {
           organization: api_key.organization.attributes,
-          api_key: api_key.attributes
+          api_key: api_key.attributes,
+          api_rate_limits: api_key.organization.api_rate_limits
         }.to_json,
         expires_in: expiration
       )

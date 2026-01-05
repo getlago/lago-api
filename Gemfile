@@ -33,6 +33,7 @@ gem "googleauth", "~> 1.11.0"
 gem "jwt"
 gem "oauth2"
 gem "rack-cors"
+gem "rack-attack", "~> 6.7.0"
 
 # Database
 gem "after_commit_everywhere"

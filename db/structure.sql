@@ -2596,6 +2596,7 @@ CREATE TABLE public.organizations (
     hmac_key character varying NOT NULL,
     authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     audit_logs_period integer DEFAULT 30,
+    api_rate_limits jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10726,6 +10727,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260105143503'),
 ('20251226145247'),
 ('20251219115429'),
 ('20251216100247'),
