@@ -1884,7 +1884,9 @@ CREATE TABLE public.credit_notes (
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
-    xml_file character varying
+    xml_file character varying,
+    applied_to_source_invoice_amount_cents bigint DEFAULT 0 NOT NULL,
+    applied_to_source_invoice_amount_currency character varying
 );
 
 
@@ -10821,6 +10823,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260106120601'),
 ('20260105144123'),
 ('20251226145247'),
+('20251223123938'),
 ('20251222163416'),
 ('20251219115429'),
 ('20251216100247'),
