@@ -39,6 +39,7 @@ RSpec.describe Mutations::CreditNotes::Create do
           creditAmountCents
           balanceAmountCents
           refundAmountCents
+          appliedToSourceInvoiceAmountCents
           items {
             id
             amountCents
@@ -69,6 +70,7 @@ RSpec.describe Mutations::CreditNotes::Create do
           description: "Duplicated charge",
           creditAmountCents: 10,
           refundAmountCents: 5,
+          appliedToSourceInvoiceAmountCents: 10,
           items: [
             {
               feeId: fee1.id,
@@ -76,7 +78,7 @@ RSpec.describe Mutations::CreditNotes::Create do
             },
             {
               feeId: fee2.id,
-              amountCents: 5
+              amountCents: 15
             }
           ]
         }
@@ -91,10 +93,11 @@ RSpec.describe Mutations::CreditNotes::Create do
     expect(result_data["reason"]).to eq("duplicated_charge")
     expect(result_data["description"]).to eq("Duplicated charge")
     expect(result_data["currency"]).to eq("EUR")
-    expect(result_data["totalAmountCents"]).to eq("15")
+    expect(result_data["totalAmountCents"]).to eq("25")
     expect(result_data["creditAmountCents"]).to eq("10")
     expect(result_data["balanceAmountCents"]).to eq("10")
     expect(result_data["refundAmountCents"]).to eq("5")
+    expect(result_data["appliedToSourceInvoiceAmountCents"]).to eq("10")
 
     expect(result_data["items"][0]["id"]).to be_present
     expect(result_data["items"][0]["amountCents"]).to eq("10")
@@ -102,7 +105,7 @@ RSpec.describe Mutations::CreditNotes::Create do
     expect(result_data["items"][0]["fee"]["id"]).to eq(fee1.id)
 
     expect(result_data["items"][1]["id"]).to be_present
-    expect(result_data["items"][1]["amountCents"]).to eq("5")
+    expect(result_data["items"][1]["amountCents"]).to eq("15")
     expect(result_data["items"][1]["amountCurrency"]).to eq("EUR")
     expect(result_data["items"][1]["fee"]["id"]).to eq(fee2.id)
   end
