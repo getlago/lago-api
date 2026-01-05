@@ -120,7 +120,11 @@ module CreditNotes
     end
 
     def valid_applied_to_source_invoice_amount?
-      return true if credit_note.applied_to_source_invoice_amount_cents <= invoice.total_due_amount_cents
+      applicable_to_source_invoice_amount = invoice.total_amount_cents -
+        invoice.total_paid_amount_cents -
+        applied_to_source_invoice_total_amount_cents
+
+      return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
 
       add_error(field: :applied_to_source_invoice_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end

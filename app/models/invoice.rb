@@ -331,7 +331,7 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
-    already_refunded_cents = credit_notes.sum("refund_amount_cents")
+    already_refunded_cents = credit_notes.sum("refund_amount_cents + applied_to_source_invoice_amount_cents")
     remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
 
     # when invoice is for pre paid credits we can issue a credit note only as refund
