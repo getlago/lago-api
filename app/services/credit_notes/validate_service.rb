@@ -7,6 +7,7 @@ module CreditNotes
       valid_items_amount?
       valid_refund_amount?
       valid_credit_amount?
+      valid_applied_to_source_invoice_amount?
       valid_remaining_invoice_amount?
       valid_total_amount_positive?
 
@@ -27,7 +28,9 @@ module CreditNotes
     delegate :invoice, to: :credit_note
 
     def total_amount_cents
-      credit_note.credit_amount_cents + credit_note.refund_amount_cents
+      credit_note.credit_amount_cents +
+        credit_note.refund_amount_cents +
+        credit_note.applied_to_source_invoice_amount_cents
     end
 
     def refunded_invoice_amount_cents
@@ -38,8 +41,12 @@ module CreditNotes
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
+    def applied_to_source_invoice_total_amount_cents
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:applied_to_source_invoice_amount_cents)
+    end
+
     def invoice_credit_note_total_amount_cents
-      credited_invoice_amount_cents + refunded_invoice_amount_cents
+      credited_invoice_amount_cents + refunded_invoice_amount_cents + applied_to_source_invoice_total_amount_cents
     end
 
     def precise_total_items_amount_cents
@@ -101,12 +108,21 @@ module CreditNotes
         add_error(field: :credit_amount_cents, error_code: "cannot_credit_invoice")
       end
 
-      creditable = invoice.fee_total_amount_cents - credited_invoice_amount_cents
+      creditable = invoice.fee_total_amount_cents -
+        credited_invoice_amount_cents -
+        applied_to_source_invoice_total_amount_cents
+
       return true if credit_note.credit_amount_cents <= creditable
 
       if (credit_note.credit_amount_cents - creditable).abs > 1
         add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
       end
+    end
+
+    def valid_applied_to_source_invoice_amount?
+      return true if credit_note.applied_to_source_invoice_amount_cents <= invoice.total_due_amount_cents
+
+      add_error(field: :applied_to_source_invoice_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
