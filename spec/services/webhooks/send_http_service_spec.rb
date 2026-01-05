@@ -37,7 +37,7 @@ RSpec.describe Webhooks::SendHttpService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds)
+        .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds, open_timeout: expected_timeout_seconds)
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_raise(
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
@@ -60,7 +60,7 @@ RSpec.describe Webhooks::SendHttpService do
         service.call
 
         expect(LagoHttpClient::Client).to have_received(:new)
-          .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds)
+          .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds, open_timeout: expected_timeout_seconds)
       end
     end
 
