@@ -37,6 +37,7 @@ RSpec.describe Charges::CreateService do
         let(:params) do
           {
             billable_metric_id: sum_billable_metric.id,
+            code: "invalid_charge",
             charge_model: "graduated_percentage",
             properties: {
               graduated_percentage_ranges: [
@@ -84,6 +85,7 @@ RSpec.describe Charges::CreateService do
           {
             applied_pricing_unit: applied_pricing_unit_params,
             billable_metric_id: sum_billable_metric.id,
+            code: "my_charge_code",
             charge_model: "standard",
             pay_in_advance: false,
             prorated: true,
@@ -117,6 +119,7 @@ RSpec.describe Charges::CreateService do
           created_charge = plan.reload.charges.first
           expect(created_charge).to have_attributes(
             organization_id: organization.id,
+            code: "my_charge_code",
             prorated: true,
             pay_in_advance: false,
             parent_id: parent_charge.id,

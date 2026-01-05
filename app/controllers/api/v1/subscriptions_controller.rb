@@ -208,6 +208,7 @@ module Api
           charges: [
             :id,
             :billable_metric_id,
+            :code,
             :min_amount_cents,
             :invoice_display_name,
             :charge_model,

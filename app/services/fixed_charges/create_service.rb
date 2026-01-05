@@ -18,6 +18,7 @@ module FixedCharges
         fixed_charge = plan.fixed_charges.new(
           organization_id: plan.organization_id,
           add_on_id: add_on.id,
+          code: params[:code],
           invoice_display_name: params[:invoice_display_name],
           charge_model: params[:charge_model],
           parent_id: params[:parent_id],

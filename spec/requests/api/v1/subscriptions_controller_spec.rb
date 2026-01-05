@@ -843,6 +843,7 @@ RSpec.describe Api::V1::SubscriptionsController do
         {
           lago_id: Regex::UUID,
           lago_billable_metric_id: package_charge.billable_metric.id,
+          code: package_charge.code,
           invoice_display_name: "Setup",
           billable_metric_code: package_charge.billable_metric.code,
           created_at: Regex::ISO8601_DATETIME,
@@ -858,6 +859,7 @@ RSpec.describe Api::V1::SubscriptionsController do
             package_size: 2000
           },
           applied_pricing_unit: {conversion_rate: "2.0", code: pricing_unit.code},
+          lago_parent_id: package_charge.id,
           filters: [],
           taxes: [
             {
@@ -933,6 +935,7 @@ RSpec.describe Api::V1::SubscriptionsController do
                 applied_pricing_unit: {code: pricing_unit.code, conversion_rate: "40"},
                 billable_metric_id: other_billable_metric.id,
                 charge_model: "package",
+                code: "new_charge_code",
                 invoice_display_name: "Setup 2",
                 invoiceable: true,
                 min_amount_cents: 6000,
@@ -1063,6 +1066,7 @@ RSpec.describe Api::V1::SubscriptionsController do
             {
               lago_id: Regex::UUID,
               lago_billable_metric_id: overriden_package_charge.billable_metric.id,
+              code: overriden_package_charge.code,
               invoice_display_name: "Setup",
               billable_metric_code: overriden_package_charge.billable_metric.code,
               created_at: Regex::ISO8601_DATETIME,
@@ -1074,6 +1078,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               min_amount_cents: 0,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               applied_pricing_unit: nil,
+              lago_parent_id: nil,
               filters: [],
               taxes: [
                 {
@@ -1097,6 +1102,7 @@ RSpec.describe Api::V1::SubscriptionsController do
             {
               lago_id: Regex::UUID,
               lago_billable_metric_id: other_billable_metric.id,
+              code: "new_charge_code",
               invoice_display_name: "Setup 2",
               billable_metric_code: other_billable_metric.code,
               created_at: Regex::ISO8601_DATETIME,
@@ -1108,6 +1114,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               min_amount_cents: 6000,
               applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
               properties: {amount: "60", free_units: 200, package_size: 2000},
+              lago_parent_id: nil,
               filters: [],
               taxes: [
                 {

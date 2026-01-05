@@ -124,6 +124,7 @@ module Api
           ],
           charges: [
             :id,
+            :code,
             :invoice_display_name,
             :billable_metric_id,
             :charge_model,
@@ -154,6 +155,7 @@ module Api
           ],
           fixed_charges: [
             :id,
+            :code,
             :invoice_display_name,
             :units,
             :add_on_id,
