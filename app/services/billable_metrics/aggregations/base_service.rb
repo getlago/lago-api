@@ -132,7 +132,7 @@ module BillableMetrics
         organization = subscription&.organization
         return false unless organization
 
-        organization.clickhouse_events_store? && organization.clickhouse_deduplication?
+        organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
       end
 
       def from_datetime

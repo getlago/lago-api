@@ -300,7 +300,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
     end
 
     context "with deduplication" do
-      let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication: true) }
+      let(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
 
       let(:event_list) do
         create_list(
