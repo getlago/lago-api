@@ -17,6 +17,7 @@ module Mutations
 
       argument :credit_amount_cents, GraphQL::Types::BigInt, required: false
       argument :refund_amount_cents, GraphQL::Types::BigInt, required: false
+      argument :applied_to_source_invoice_amount_cents, GraphQL::Types::BigInt, required: false
 
       argument :items, [Types::CreditNoteItems::Input], required: true
       argument :metadata, [Types::Metadata::Input], required: false, **Types::Metadata::Input::ARGUMENT_OPTIONS

@@ -11,6 +11,7 @@ module Types
       field :coupons_adjustment_amount_cents, GraphQL::Types::BigInt, null: false
       field :max_creditable_amount_cents, GraphQL::Types::BigInt, method: :credit_amount_cents, null: false
       field :max_refundable_amount_cents, GraphQL::Types::BigInt, method: :refund_amount_cents, null: false
+      field :max_applied_to_source_invoice_amount_cents, GraphQL::Types::BigInt, null: false
       field :precise_coupons_adjustment_amount_cents, GraphQL::Types::Float, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
 
@@ -21,6 +22,12 @@ module Types
       field :items, [Types::CreditNoteItems::Estimate], null: false
 
       field :applied_taxes, [Types::CreditNotes::AppliedTaxes::Object], null: false
+
+      def max_applied_to_source_invoice_amount_cents
+        due = object.invoice&.total_due_amount_cents.to_i
+
+        [[max_creditable_amount_cents, due].min, 0].max
+      end
     end
   end
 end
