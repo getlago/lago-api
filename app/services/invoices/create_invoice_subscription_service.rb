@@ -86,12 +86,12 @@ module Invoices
       BillingPeriodBoundaries.new(
         from_datetime: ds.from_datetime,
         to_datetime: ds.to_datetime,
-        charges_from_datetime: ds.should_bill_charges? ? ds.charges_from_datetime : nil,
-        charges_to_datetime: ds.should_bill_charges? ? ds.charges_to_datetime : nil,
-        charges_duration: ds.should_bill_charges? ? ds.charges_duration_in_days : nil,
-        fixed_charges_from_datetime: ds.should_bill_fixed_charges? ? ds.fixed_charges_from_datetime : nil,
-        fixed_charges_to_datetime: ds.should_bill_fixed_charges? ? ds.fixed_charges_to_datetime : nil,
-        fixed_charges_duration: ds.should_bill_fixed_charges? ? ds.fixed_charges_duration_in_days : nil,
+        charges_from_datetime: ds.should_fill_charges_boundaries? ? ds.charges_from_datetime : nil,
+        charges_to_datetime: ds.should_fill_charges_boundaries? ? ds.charges_to_datetime : nil,
+        charges_duration: ds.should_fill_charges_boundaries? ? ds.charges_duration_in_days : nil,
+        fixed_charges_from_datetime: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_from_datetime : nil,
+        fixed_charges_to_datetime: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_to_datetime : nil,
+        fixed_charges_duration: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_duration_in_days : nil,
         timestamp: datetime
       )
     end
@@ -129,13 +129,13 @@ module Invoices
       previous_period_boundaries = BillingPeriodBoundaries.new(
         from_datetime: ds.from_datetime,
         to_datetime: ds.to_datetime,
-        charges_from_datetime: ds.should_bill_charges? ? ds.charges_from_datetime : nil,
-        charges_to_datetime: ds.should_bill_charges? ? ds.charges_to_datetime : nil,
-        fixed_charges_from_datetime: ds.should_bill_fixed_charges? ? ds.fixed_charges_from_datetime : nil,
-        fixed_charges_to_datetime: ds.should_bill_fixed_charges? ? ds.fixed_charges_to_datetime : nil,
+        charges_from_datetime: ds.should_fill_charges_boundaries? ? ds.charges_from_datetime : nil,
+        charges_to_datetime: ds.should_fill_charges_boundaries? ? ds.charges_to_datetime : nil,
+        fixed_charges_from_datetime: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_from_datetime : nil,
+        fixed_charges_to_datetime: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_to_datetime : nil,
         timestamp: datetime,
-        charges_duration: ds.should_bill_charges? ? ds.charges_duration_in_days : nil,
-        fixed_charges_duration: ds.should_bill_fixed_charges? ? ds.fixed_charges_duration_in_days : nil
+        charges_duration: ds.should_fill_charges_boundaries? ? ds.charges_duration_in_days : nil,
+        fixed_charges_duration: ds.should_fill_fixed_charges_boundaries? ? ds.fixed_charges_duration_in_days : nil
       )
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries

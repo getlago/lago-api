@@ -47,22 +47,16 @@ class InvoiceSubscription < ApplicationRecord
 
     base_query = base_query.recurring if recurring
 
-    # Match charges boundaries - either both set or both NULL
-    if boundaries.charges_from_datetime.present?
+    if subscription.plan.charges_billed_in_monthly_split_intervals?
       base_query = base_query
         .where(charges_from_datetime: boundaries.charges_from_datetime)
         .where(charges_to_datetime: boundaries.charges_to_datetime)
-    else
-      base_query = base_query.where(charges_from_datetime: nil)
     end
 
-    # Match fixed_charges boundaries - either both set or both NULL
-    if boundaries.fixed_charges_from_datetime.present?
+    if subscription.plan.fixed_charges_billed_in_monthly_split_intervals?
       base_query = base_query
         .where(fixed_charges_from_datetime: boundaries.fixed_charges_from_datetime)
         .where(fixed_charges_to_datetime: boundaries.fixed_charges_to_datetime)
-    else
-      base_query = base_query.where(fixed_charges_from_datetime: nil)
     end
 
     base_query.exists?
@@ -122,37 +116,34 @@ end
 # Table name: invoice_subscriptions
 # Database name: primary
 #
-#  id                              :uuid             not null, primary key
-#  charges_from_datetime           :datetime
-#  charges_to_datetime             :datetime
-#  fixed_charges_from_datetime     :datetime
-#  fixed_charges_to_datetime       :datetime
-#  from_datetime                   :datetime
-#  invoicing_reason                :enum
-#  plan_bill_charges_monthly       :boolean          default(FALSE), not null
-#  plan_bill_fixed_charges_monthly :boolean          default(FALSE), not null
-#  recurring                       :boolean
-#  timestamp                       :datetime
-#  to_datetime                     :datetime
-#  created_at                      :datetime         not null
-#  updated_at                      :datetime         not null
-#  invoice_id                      :uuid             not null
-#  organization_id                 :uuid             not null
-#  regenerated_invoice_id          :uuid
-#  subscription_id                 :uuid             not null
+#  id                          :uuid             not null, primary key
+#  charges_from_datetime       :datetime
+#  charges_to_datetime         :datetime
+#  fixed_charges_from_datetime :datetime
+#  fixed_charges_to_datetime   :datetime
+#  from_datetime               :datetime
+#  invoicing_reason            :enum
+#  recurring                   :boolean
+#  timestamp                   :datetime
+#  to_datetime                 :datetime
+#  created_at                  :datetime         not null
+#  updated_at                  :datetime         not null
+#  invoice_id                  :uuid             not null
+#  organization_id             :uuid             not null
+#  regenerated_invoice_id      :uuid
+#  subscription_id             :uuid             not null
 #
 # Indexes
 #
 #  idx_invoice_subscriptions_on_subscription_with_timestamps      (subscription_id, COALESCE(to_datetime, created_at) DESC)
 #  index_invoice_subscriptions_boundaries                         (subscription_id,from_datetime,to_datetime)
-#  index_invoice_subscriptions_on_fixed_charges_boundaries        (subscription_id,fixed_charges_from_datetime,fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL))
 #  index_invoice_subscriptions_on_invoice_id                      (invoice_id)
 #  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE WHERE (created_at >= '2023-11-23 00:00:00'::timestamp without time zone)
 #  index_invoice_subscriptions_on_organization_id                 (organization_id)
 #  index_invoice_subscriptions_on_regenerated_invoice_id          (regenerated_invoice_id)
 #  index_invoice_subscriptions_on_subscription_id                 (subscription_id)
-#  index_uniq_invoice_subscriptions_on_charges_from_to_datetime   (subscription_id,charges_from_datetime,charges_to_datetime) UNIQUE WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL) AND (plan_bill_fixed_charges_monthly IS TRUE) AND ((plan_bill_charges_monthly IS FALSE) OR (plan_bill_charges_monthly IS NULL)))
-#  index_uniq_invoice_subscriptions_on_fixed_charges_boundaries   (subscription_id,fixed_charges_from_datetime,fixed_charges_to_datetime) UNIQUE WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL) AND (plan_bill_fixed_charges_monthly IS TRUE) AND ((plan_bill_charges_monthly IS FALSE) OR (plan_bill_charges_monthly IS NULL)))
+#  index_uniq_invoice_subscriptions_on_charges_from_to_datetime   (subscription_id,charges_from_datetime,charges_to_datetime) UNIQUE WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL))
+#  index_uniq_invoice_subscriptions_on_fixed_charges_boundaries   (subscription_id,fixed_charges_from_datetime,fixed_charges_to_datetime) UNIQUE WHERE ((fixed_charges_from_datetime IS NOT NULL) AND (recurring = true) AND (regenerated_invoice_id IS NULL))
 #  index_unique_starting_invoice_subscription                     (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_starting'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
 #  index_unique_terminating_invoice_subscription                  (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
 #
