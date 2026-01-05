@@ -585,7 +585,7 @@ RSpec.describe Fees::FixedChargeService do
             context "when previous fee was issued during the billing period" do
               let(:previous_boundaries) do
                 BillingPeriodBoundaries.new(
-                  from_datetime: previous_timestamp.beginning_of_month, 
+                  from_datetime: previous_timestamp.beginning_of_month,
                   to_datetime: started_at.end_of_month,
                   charges_from_datetime: previous_timestamp.beginning_of_month,
                   charges_to_datetime: started_at.end_of_month,
@@ -604,7 +604,7 @@ RSpec.describe Fees::FixedChargeService do
                   id: String,
                   invoice_id: invoice.id,
                   fixed_charge_id: fixed_charge.id,
-                  amount_cents: 26600,
+                  amount_cents: 26600
                 )
               end
             end
