@@ -257,7 +257,9 @@ RSpec.describe Api::V1::EventsController do
 
       context "when exceeding organization rate limit", cach: :memory do
         before do
-          organization.update(api_rate_limits: { events_batch: 1, events_batch_window: 1 })
+          organization.update(api_rate_limits: {
+            events_batch: { limit: 1, period: 1 }
+          })
         end
 
         it "returns 429 Too Many Requests" do

@@ -10,9 +10,9 @@ module RateLimit
 
   def rate_limit(store: cache_store, name: nil)
     limit_name = "#{controller_name}_#{action_name}"
-    window_name = "#{limit_name}_window"
-    to = api_rate_limits&.dig(limit_name) || self.class::DEFAULT_RATE_LIMITS.dig(limit_name)
-    within = (api_rate_limits&.dig(window_name) || self.class::DEFAULT_RATE_LIMITS.dig(limit_name)).seconds
+    applicable_limit = api_rate_limits&.dig(limit_name) || self.class::DEFAULT_RATE_LIMITS.dig(limit_name)
+    to = applicable_limit.dig("limit")
+    within = applicable_limit.dig("period")
 
     rate_limiting(
       to:,
