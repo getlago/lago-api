@@ -82,7 +82,15 @@ module CreditNotes
 
     # NOTE: Check if refunded amount is less than or equal to invoice total amount
     def valid_refund_amount?
-      return true if credit_note.refund_amount_cents <= invoice.total_amount_cents - refunded_invoice_amount_cents
+      return true if credit_note.refund_amount_cents.zero?
+
+      if invoice.total_paid_amount_cents <= 0
+        add_error(field: :refund_amount_cents, error_code: "cannot_refund_unpaid_invoice")
+        return
+      end
+
+      refundable_paid_cents = invoice.total_paid_amount_cents - refunded_invoice_amount_cents
+      return true if credit_note.refund_amount_cents <= refundable_paid_cents
 
       add_error(field: :refund_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
