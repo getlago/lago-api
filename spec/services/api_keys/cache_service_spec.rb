@@ -38,10 +38,6 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
   end
 
   describe "#call" do
-    let(:api_rate_limits) do
-      {"events_batch" => 25}
-    end
-
     let(:organization) { create(:organization, api_keys: [api_key]) }
     let(:api_key) { create(:api_key) }
     let(:auth_token) { api_key.value }
@@ -49,7 +45,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
     before { organization }
 
     it "returns the api_key and the organization" do
-      expect(cache_service.call).to eq([api_key, organization, api_rate_limits])
+      expect(cache_service.call).to eq([api_key, organization])
     end
 
     context "when cache is enabled" do
@@ -58,7 +54,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
       before { Rails.cache.clear }
 
       it "returns the api_key and the organization and create the cache" do
-        expect(cache_service.call).to eq([api_key, organization, api_rate_limits])
+        expect(cache_service.call).to eq([api_key, organization])
 
         expect(Rails.cache.read(cache_service.cache_key)).to be_present
       end
