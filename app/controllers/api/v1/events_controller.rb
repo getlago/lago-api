@@ -12,7 +12,7 @@ module Api
 
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
       DEFAULT_RATE_LIMITS = {
-        "events_batch" => { "limit" => 10, "period" => 1 }
+        "events#batch" => { "limit" => 10, "period" => 1 }
       }.freeze
 
       def create

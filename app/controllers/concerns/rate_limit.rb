@@ -8,8 +8,8 @@ module RateLimit
 
   private
 
-  def rate_limit(store: cache_store, name: nil)
-    limit_name = "#{controller_name}_#{action_name}"
+  def rate_limit(name: nil)
+    limit_name = "#{controller_name}##{action_name}"
     applicable_limit = api_rate_limits&.dig(limit_name) || self.class::DEFAULT_RATE_LIMITS.dig(limit_name)
     to = applicable_limit.dig("limit")
     within = applicable_limit.dig("period")
