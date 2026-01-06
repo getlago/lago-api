@@ -22,6 +22,8 @@ module Subscriptions
           end
         end
 
+        next if billing_subscriptions.empty?
+
         BillSubscriptionJob.perform_later(
           billing_subscriptions,
           today.to_i,
