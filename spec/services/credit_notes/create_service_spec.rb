@@ -27,6 +27,7 @@ RSpec.describe CreditNotes::CreateService do
       customer:,
       currency: "EUR",
       total_amount_cents: 24,
+      total_paid_amount_cents: 6,
       payment_status: :succeeded,
       taxes_rate: 20,
       version_number: 2
@@ -317,6 +318,8 @@ RSpec.describe CreditNotes::CreateService do
 
     context "when invoice is not automatic" do
       let(:automatic) { false }
+      let(:credit_amount_cents) { 18 }
+      let(:refund_amount_cents) { 0 }
 
       it "returns a failure" do
         result = create_service.call
@@ -407,6 +410,7 @@ RSpec.describe CreditNotes::CreateService do
           coupons_amount_cents: 10,
           taxes_amount_cents: 2,
           total_amount_cents: 12,
+          total_paid_amount_cents: 12,
           payment_status: :succeeded,
           taxes_rate: 20,
           version_number: 3
@@ -490,6 +494,7 @@ RSpec.describe CreditNotes::CreateService do
           currency: "EUR",
           fees_amount_cents: 1000,
           total_amount_cents: 1000,
+          total_paid_amount_cents: 1000,
           payment_status: :succeeded
         )
       end
@@ -598,6 +603,7 @@ RSpec.describe CreditNotes::CreateService do
           currency: "EUR",
           fees_amount_cents: 1000,
           total_amount_cents: 1000,
+          total_paid_amount_cents: 1000,
           payment_status: :succeeded,
           status: :voided
         )
