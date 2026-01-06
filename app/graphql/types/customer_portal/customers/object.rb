@@ -22,6 +22,7 @@ module Types
         field :tax_identification_number, String, null: true
 
         field :billing_configuration, Types::Customers::BillingConfiguration, null: true
+        field :billing_entity_billing_configuration, Types::BillingEntities::BillingConfiguration, null: false
 
         # Billing address
         field :address_line1, String, null: true
@@ -39,6 +40,13 @@ module Types
           {
             id: "#{object&.id}-c0nf",
             document_locale: object&.document_locale
+          }
+        end
+
+        def billing_entity_billing_configuration
+          {
+            id: "#{object&.billing_entity&.id}-c1nf",
+            document_locale: object&.billing_entity&.document_locale
           }
         end
 
