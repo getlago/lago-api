@@ -138,13 +138,23 @@ RSpec.describe Events::BillingPeriodFilterService do
         let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
         let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
 
-        before { recurring_charge }
+        let(:charge_filter) { create(:charge_filter, charge: recurring_charge) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: recurring_billable_metric, key: "region", values: ["eu", "us"]) }
+
+        let(:charge_filter_value) do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        end
+
+        before do
+          recurring_charge
+          charge_filter_value
+        end
 
         it "returns recurring charge_ids even without events" do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
         end
       end
 
@@ -407,13 +417,23 @@ RSpec.describe Events::BillingPeriodFilterService do
         let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
         let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
 
-        before { recurring_charge }
+        let(:charge_filter) { create(:charge_filter, charge: recurring_charge) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: recurring_billable_metric, key: "region", values: ["eu", "us"]) }
+
+        let(:charge_filter_value) do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        end
+
+        before do
+          recurring_charge
+          charge_filter_value
+        end
 
         it "returns recurring charge_ids even without events" do
           result = filter_service.call
 
           expect(result).to be_success
-          expect(result.charges).to eq({recurring_charge.id => [nil]})
+          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
         end
       end
 

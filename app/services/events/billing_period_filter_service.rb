@@ -101,7 +101,7 @@ module Events
     def all_recurring_charges_and_filters
       plan.charges.joins(:billable_metric).left_joins(:filters)
         .where(billable_metrics: {recurring: true})
-        .pluck("charges.id", "filters.id")
+        .pluck("charges.id", "charge_filters.id")
         .then { group_by_charge_id(it) }
         .then { add_default_filter(it) }
     end
