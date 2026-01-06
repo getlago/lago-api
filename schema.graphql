@@ -4260,6 +4260,7 @@ type CustomerPortalCustomer {
   addressLine2: String
   applicableTimezone: TimezoneEnum!
   billingConfiguration: CustomerBillingConfiguration
+  billingEntityBillingConfiguration: BillingEntityBillingConfiguration!
   city: String
   country: CountryCode
   currency: CurrencyEnum
