@@ -328,7 +328,7 @@ class Invoice < ApplicationRecord
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
     already_refunded_cents = credit_notes.sum("refund_amount_cents")
-    remaining_paid_cents   = total_paid_amount_cents - already_refunded_cents
+    remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
 
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
     refundable_cents = 0 if refundable_cents.negative?
