@@ -3242,7 +3242,7 @@ type CreditNoteEstimate {
   couponsAdjustmentAmountCents: BigInt!
   currency: CurrencyEnum!
   items: [CreditNoteItemEstimate!]!
-  maxAppliedToSourceInvoiceAmountCents: BigInt!
+  maxApplicableToSourceInvoiceAmountCents: BigInt!
   maxCreditableAmountCents: BigInt!
   maxRefundableAmountCents: BigInt!
   preciseCouponsAdjustmentAmountCents: Float!

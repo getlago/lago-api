@@ -9,7 +9,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
 
       field :coupons_adjustment_amount_cents, GraphQL::Types::BigInt, null: false
-      field :max_applied_to_source_invoice_amount_cents, GraphQL::Types::BigInt, null: false
+      field :max_applicable_to_source_invoice_amount_cents, GraphQL::Types::BigInt, null: false
       field :max_creditable_amount_cents, GraphQL::Types::BigInt, method: :credit_amount_cents, null: false
       field :max_refundable_amount_cents, GraphQL::Types::BigInt, method: :refund_amount_cents, null: false
       field :precise_coupons_adjustment_amount_cents, GraphQL::Types::Float, null: false
@@ -23,7 +23,7 @@ module Types
 
       field :applied_taxes, [Types::CreditNotes::AppliedTaxes::Object], null: false
 
-      def max_applied_to_source_invoice_amount_cents
+      def max_applicable_to_source_invoice_amount_cents
         creditable = object.credit_amount_cents.to_i
         due = object.invoice&.total_due_amount_cents.to_i
 

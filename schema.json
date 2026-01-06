@@ -15280,7 +15280,7 @@
               "deprecationReason": null
             },
             {
-              "name": "maxAppliedToSourceInvoiceAmountCents",
+              "name": "maxApplicableToSourceInvoiceAmountCents",
               "description": null,
               "args": [],
               "type": {
