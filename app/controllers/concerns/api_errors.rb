@@ -101,6 +101,18 @@ module ApiErrors
     )
   end
 
+  def render_rate_limit_exceeded(retry_after)
+    response.set_header("Retry-After", retry_after)
+    render(
+      json: {
+        status: 429,
+        error: "Too Many Requests",
+        code: "rate_limit_exceeded"
+      },
+      status: :too_many_requests
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure

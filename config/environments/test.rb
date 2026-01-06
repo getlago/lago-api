@@ -46,15 +46,6 @@ Rails.application.configure do
 
   Dotenv.load
 
-  if ENV["LAGO_REDIS_CACHE_URL"].present?
-    redis_store_config = {
-      url: ENV["LAGO_REDIS_CACHE_URL"],
-      ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
-    }
-    config.cache_store = :redis_cache_store, redis_store_config
-  end
-  config.cache_store = :null_store
-
   # Set default API URL for test environment
   ENV["LAGO_API_URL"] ||= "http://localhost:3000"
 

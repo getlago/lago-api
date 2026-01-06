@@ -3,11 +3,18 @@
 module Api
   module V1
     class EventsController < Api::BaseController
+      include RateLimit
+
       skip_audit_logs!
 
       before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]
+      before_action :rate_limit, only: %i[batch]
 
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
+      DEFAULT_RATE_LIMITS = {
+        "events_batch" => 10,
+        "events_batch_window" => 1
+      }.freeze
 
       def create
         result = ::Events::CreateService.call(
