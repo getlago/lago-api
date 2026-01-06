@@ -531,6 +531,44 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
           expect(group.first["operation_type"]).to eq("add")
         end
       end
+
+      describe "#distinct_charges_and_filters" do
+        let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
+        before do
+          Clickhouse::EventsEnrichedExpanded.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            subscription_id: subscription.id,
+            plan_id: subscription.plan_id,
+            code:,
+            aggregation_type: billable_metric.aggregation_type,
+            charge_id: charge.id,
+            charge_version: charge.updated_at,
+            charge_filter_id: charge_filter&.id,
+            charge_filter_version: charge_filter&.updated_at,
+            timestamp: boundaries[:from_datetime] + 12.days,
+            properties: {},
+            value: "12",
+            decimal_value: 12.0,
+            precise_total_amount_cents: nil
+          )
+        end
+
+        it "returns the distinct event codes" do
+          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
+        end
+
+        context "when charge_filter is nil" do
+          let(:charge_filter) { nil }
+
+          it "returns the distinct event codes" do
+            expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, ""]])
+          end
+        end
+      end
     end
   end
 end
