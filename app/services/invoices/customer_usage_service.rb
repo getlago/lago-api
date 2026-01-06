@@ -98,7 +98,7 @@ module Invoices
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .find_each { fees += charge_usage(it, filters[it.id] || []) }
+        .find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end

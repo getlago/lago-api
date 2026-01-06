@@ -70,12 +70,12 @@ module Events
     def charges_and_filters_from_clickhouse_events
       values = event_store.distinct_charges_and_filters
 
-      charge_filter_id = values.map(&:last).reject(&:blank?)
+      charge_filter_ids = values.map(&:last).reject(&:blank?)
       charge_ids = values.map(&:first).uniq
 
       existing_charge_ids = plan.charges.where(id: charge_ids).pluck(:id)
       existing_charge_filters = plan.charges.joins(:filters)
-        .where(charge_filters: {id: charge_filter_id})
+        .where(charge_filters: {id: charge_filter_ids})
         .pluck("charge_filters.id")
 
       result = all_recurring_charges_and_filters
@@ -121,8 +121,7 @@ module Events
 
     # Make sure all filters are unique for each charge
     def deduplicate_filters(charges_and_filters)
-      charges_and_filters.each_value(&:uniq!)
-      charges_and_filters
+      charges_and_filters.transform_values(&:uniq)
     end
   end
 end

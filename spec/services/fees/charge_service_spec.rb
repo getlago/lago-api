@@ -2787,7 +2787,7 @@ RSpec.describe Fees::ChargeService do
           result = charge_subscription_service.call
           expect(result).to be_success
 
-          # Recurring metrics ignore bypass_aggregation flag, so fees should have data
+          # Recurring metrics ignore the filtered_aggregations parameter, so fees should have data
           aggregated_fees = result.fees.select { |f| f.units != 0 || f.events_count != 0 }
           expect(aggregated_fees).not_to be_empty
         end
