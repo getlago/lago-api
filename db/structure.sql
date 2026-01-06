@@ -946,6 +946,8 @@ DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
+DROP VIEW IF EXISTS public.exports_entitlement_features;
+DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
 DROP VIEW IF EXISTS public.exports_daily_usages;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
@@ -2700,6 +2702,38 @@ CREATE VIEW public.exports_daily_usages AS
     du.subscription_id AS lago_subscription_id,
     du.external_subscription_id
    FROM public.daily_usages du;
+
+
+--
+-- Name: exports_entitlement_entitlements; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_entitlement_entitlements AS
+ SELECT ee.id AS lago_id,
+    ee.organization_id,
+    ee.entitlement_feature_id AS lago_entitlement_feature_id,
+    ee.plan_id AS lago_plan_id,
+    ee.subscription_id AS lago_subscription_id,
+    ee.deleted_at,
+    ee.created_at,
+    ee.updated_at
+   FROM public.entitlement_entitlements ee;
+
+
+--
+-- Name: exports_entitlement_features; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_entitlement_features AS
+ SELECT ef.id AS lago_id,
+    ef.organization_id,
+    ef.code,
+    ef.name,
+    ef.description,
+    ef.deleted_at,
+    ef.created_at,
+    ef.updated_at
+   FROM public.entitlement_features ef;
 
 
 --
@@ -10746,6 +10780,8 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260106120832'),
+('20260106120601'),
 ('20260105144123'),
 ('20251226145247'),
 ('20251222163416'),
