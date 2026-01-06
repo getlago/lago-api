@@ -45,7 +45,11 @@ module Api
           end
 
           def update
-            result = ChargeFilters::UpdateService.call(charge_filter:, params: input_params.to_h.deep_symbolize_keys)
+            result = ChargeFilters::UpdateService.call(
+              charge_filter:,
+              params: input_params.to_h.deep_symbolize_keys,
+              cascade_updates: cascade_updates?
+            )
 
             if result.success?
               render(
@@ -60,7 +64,7 @@ module Api
           end
 
           def destroy
-            result = ChargeFilters::DestroyService.call(charge_filter:)
+            result = ChargeFilters::DestroyService.call(charge_filter:, cascade_updates: cascade_updates?)
 
             if result.success?
               render(
@@ -81,9 +85,16 @@ module Api
           def input_params
             params.require(:filter).permit(
               :invoice_display_name,
+              :cascade_updates,
               properties: {},
               values: {}
             )
+          end
+
+          def cascade_updates?
+            return false unless params[:filter]
+
+            ActiveModel::Type::Boolean.new.cast(params[:filter][:cascade_updates])
           end
 
           def find_plan
