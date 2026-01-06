@@ -42,7 +42,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
       {"events_batch" => 25}
     end
 
-    let(:organization) { create(:organization, api_keys: [api_key], api_rate_limits:) }
+    let(:organization) { create(:organization, api_keys: [api_key]) }
     let(:api_key) { create(:api_key) }
     let(:auth_token) { api_key.value }
 
@@ -67,7 +67,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         before { cache_service.call }
 
         it "returns the api_key and the organization" do
-          expect(cache_service.call).to eq([api_key, organization, api_rate_limits])
+          expect(cache_service.call).to eq([api_key, organization])
         end
       end
 
@@ -77,13 +77,12 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         before do
           Rails.cache.write(cache_service.cache_key, {
             api_key: api_key.attributes,
-            organization: organization.attributes,
-            api_rate_limits: organization.api_rate_limits
+            organization: organization.attributes
           }.to_json)
         end
 
         it "does not return the cache key and organization" do
-          expect(cache_service.call).to eq([nil, nil, nil])
+          expect(cache_service.call).to eq([nil, nil])
         end
       end
     end
