@@ -1737,7 +1737,8 @@ CREATE TABLE public.charges (
     regroup_paid_fees integer,
     parent_id uuid,
     organization_id uuid NOT NULL,
-    code character varying
+    code character varying,
+    group_by_wallet boolean DEFAULT false NOT NULL
 );
 
 
@@ -10782,9 +10783,11 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260112140805'),
+('20260107142816'),
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
+('20251231162838'),
 ('20251226145247'),
 ('20251222163416'),
 ('20251219115429'),

@@ -46,9 +46,14 @@ module Charges
       filters = {event:, charge_id: charge.id}
 
       model = charge_filter.presence || charge
-      if model.pricing_group_keys.present?
-        filters[:grouped_by_values] = model.pricing_group_keys.index_with { event.properties[it] }
+      grouped_by_values = model.pricing_group_keys&.index_with { event.properties[it] } || {}
+
+      # Add wallet_id grouping if enabled on charge
+      if charge.group_by_wallet && event.properties["wallet_id"].present?
+        grouped_by_values["wallet_id"] = event.properties["wallet_id"]
       end
+
+      filters[:grouped_by_values] = grouped_by_values if grouped_by_values.present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

@@ -139,5 +139,61 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
         expect(result.top_priority_wallet).to be_nil
       end
     end
+
+    context "when fee has wallet_id in grouped_by" do
+      subject(:result) { described_class.call(allocation_rules:, fee:, wallets:) }
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:wallet) { create(:wallet, customer:, status: :active) }
+      let(:other_wallet) { create(:wallet, customer:, status: :active) }
+      let(:wallets) { [wallet, other_wallet] }
+
+      let(:allocation_rules) do
+        {
+          bm_map: {},
+          type_map: {"charge" => [other_wallet.id]},
+          unrestricted: [other_wallet.id]
+        }
+      end
+
+      context "when wallet_id matches an existing wallet" do
+        let(:fee) { create(:charge_fee, grouped_by: {"wallet_id" => wallet.id}) }
+
+        it "returns the matching wallet" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq wallet.id
+        end
+      end
+
+      context "when wallet_id does not match any wallet" do
+        let(:fee) { create(:charge_fee, grouped_by: {"wallet_id" => SecureRandom.uuid}) }
+
+        it "falls back to default allocation logic" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq other_wallet.id
+        end
+      end
+
+      context "when wallets parameter is nil" do
+        subject(:result) { described_class.call(allocation_rules:, fee:, wallets: nil) }
+
+        let(:fee) { create(:charge_fee, grouped_by: {"wallet_id" => wallet.id}) }
+
+        it "falls back to default allocation logic" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq other_wallet.id
+        end
+      end
+
+      context "when fee has no wallet_id in grouped_by" do
+        let(:fee) { create(:charge_fee, grouped_by: {"region" => "us-east"}) }
+
+        it "uses default allocation logic" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq other_wallet.id
+        end
+      end
+    end
   end
 end

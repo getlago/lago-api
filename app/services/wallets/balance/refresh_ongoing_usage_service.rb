@@ -134,13 +134,17 @@ module Wallets
           key = fee.id || fee.object_id
 
           applicable_wallets = Wallets::FindApplicableOnFeesService
-            .call!(allocation_rules:, fee:)
+            .call!(allocation_rules:, fee:, wallets: customer_wallets)
             .top_priority_wallet
 
           fee_wallet[key] = applicable_wallets.presence
         end
 
         fee_wallet
+      end
+
+      def customer_wallets
+        @customer_wallets ||= customer.wallets.active.in_application_order
       end
 
       def calculate_total_usage_with_limitation

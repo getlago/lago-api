@@ -16,6 +16,7 @@ module V1
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
         min_amount_cents: model.min_amount_cents,
+        group_by_wallet: model.group_by_wallet,
         properties:,
         applied_pricing_unit:,
         lago_parent_id: model.parent_id

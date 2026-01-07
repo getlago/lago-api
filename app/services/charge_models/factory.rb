@@ -21,7 +21,11 @@ module ChargeModels
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
       pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
 
-      if pricing_group_keys.present? && !aggregation_result.aggregations.nil?
+      # Use GroupedService if pricing_group_keys or group_by_wallet is enabled
+      use_grouped_service = (pricing_group_keys.present? || (chargeable.is_a?(Charge) && chargeable.group_by_wallet)) &&
+        !aggregation_result.aggregations.nil?
+
+      if use_grouped_service
         ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
       else
         charge_model_class.new(**common_args)
