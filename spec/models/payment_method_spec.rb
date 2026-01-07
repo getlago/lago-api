@@ -22,6 +22,27 @@ RSpec.describe PaymentMethod do
     end
   end
 
+  describe "Scopes" do
+    describe ".default" do
+      let(:pm1) { create(:payment_method, is_default: true) }
+      let(:pm2) { create(:payment_method, is_default: true) }
+      let(:pm3) { create(:payment_method, is_default: false) }
+
+      before do
+        pm1
+        pm2
+        pm3
+      end
+
+      it "lists only default payments" do
+        default_payments = described_class.default
+
+        expect(default_payments).to include(pm1, pm2)
+        expect(default_payments).not_to include(pm3)
+      end
+    end
+  end
+
   describe "#payment_provider_type" do
     subject(:payment_provider_type) { payment_method.payment_provider_type }
 
