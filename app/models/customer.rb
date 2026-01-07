@@ -110,6 +110,8 @@ class Customer < ApplicationRecord
   has_one :salesforce_customer, class_name: "IntegrationCustomers::SalesforceCustomer"
   has_one :moneyhash_customer, class_name: "PaymentProviderCustomers::MoneyhashCustomer"
 
+  has_one :default_payment_method, -> { where(is_default: true) }, class_name: "PaymentMethod"
+
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
   default_scope -> { kept }
