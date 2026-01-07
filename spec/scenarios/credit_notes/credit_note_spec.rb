@@ -1010,8 +1010,7 @@ describe "Create credit note Scenarios" do
 
       estimate = json[:estimated_credit_note]
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
-      ## TODO check this with mike
-      expect(estimate[:max_refundable_amount_cents]).to eq(0)
+      expect(estimate[:max_refundable_amount_cents]).to eq(10)
       expect(estimate[:max_creditable_amount_cents]).to eq(0)
 
       # it allows to create credit notes on credit invoices with payment status succeeded
