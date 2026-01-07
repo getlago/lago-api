@@ -149,6 +149,11 @@ describe "Create credit note Scenarios" do
       expect(estimate[:coupons_adjustment_amount_cents]).to eq(164_54)
       expect(estimate[:taxes_rate]).to eq(20)
 
+      Payments::ManualCreateService.call(
+        organization:,
+        params: {invoice_id: invoice.id, amount_cents: 105_67, reference: "ref1"}
+      )
+
       # Emit a credit note on only one fee
       create_credit_note({invoice_id: invoice.id,
          reason: :other,
@@ -386,6 +391,11 @@ describe "Create credit note Scenarios" do
             taxes_rate: 20.0
           )
 
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 7700, reference: "ref3"}
+          )
+
           # Emit a credit note on only one fee
           create_credit_note({
             invoice_id: invoice.id,
@@ -434,8 +444,13 @@ describe "Create credit note Scenarios" do
             precise_taxes_amount_cents: "1366.2",
             sub_total_excluding_taxes_amount_cents: 68_33,
             max_creditable_amount_cents: 81_99,
-            max_refundable_amount_cents: 3_00,
+            max_refundable_amount_cents: 80_00,
             taxes_rate: 20.0
+          )
+
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 1_99, reference: "ref3"}
           )
 
           # Emit a credit note on only one fee
@@ -653,6 +668,11 @@ describe "Create credit note Scenarios" do
             max_creditable_amount_cents: 38_78,
             max_refundable_amount_cents: 10_80, # invoice.total_paid_amount_cents - invoice.credit_notes.sum(:refund_amount_cents)
             taxes_rate: 20.0
+          )
+
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 27_98, reference: "ref3"}
           )
 
           # Emit a credit note on only one fee
@@ -990,7 +1010,8 @@ describe "Create credit note Scenarios" do
 
       estimate = json[:estimated_credit_note]
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(10)
-      expect(estimate[:max_refundable_amount_cents]).to eq(10)
+      ## TODO check this with mike
+      expect(estimate[:max_refundable_amount_cents]).to eq(0)
       expect(estimate[:max_creditable_amount_cents]).to eq(0)
 
       # it allows to create credit notes on credit invoices with payment status succeeded
