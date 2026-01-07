@@ -37,7 +37,7 @@ module Api
         end
 
         def create
-          result = Charges::CreateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
+          result = ::Charges::CreateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
           if result.success?
             render(
@@ -53,7 +53,7 @@ module Api
         end
 
         def update
-          result = Charges::UpdateService.call(charge:, params: input_params.to_h.deep_symbolize_keys)
+          result = ::Charges::UpdateService.call(charge:, params: input_params.to_h.deep_symbolize_keys)
 
           if result.success?
             render(
@@ -69,7 +69,7 @@ module Api
         end
 
         def destroy
-          result = Charges::DestroyService.call(charge:)
+          result = ::Charges::DestroyService.call(charge:)
 
           if result.success?
             render(
