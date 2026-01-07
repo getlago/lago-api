@@ -1,0 +1,59 @@
+# frozen_string_literal: true
+
+class MigrateGocardlessPaymentMethods < ActiveRecord::Migration[8.0]
+  def up
+    safety_assured do
+      execute <<~SQL
+        INSERT INTO payment_methods (
+          id,
+          organization_id,
+          customer_id,
+          payment_provider_id,
+          payment_provider_customer_id,
+          provider_method_id,
+          provider_method_type,
+          is_default,
+          details,
+          created_at,
+          updated_at
+        )
+        SELECT
+          gen_random_uuid(),
+          ppc.organization_id,
+          ppc.customer_id,
+          ppc.payment_provider_id,
+          ppc.id,
+          ppc.settings->>'provider_mandate_id',
+          'mandate',
+          true,
+          jsonb_build_object(
+            'provider_customer_id', ppc.provider_customer_id,
+            'from_migration', TRUE
+          ),
+          NOW(),
+          NOW()
+        FROM payment_provider_customers ppc
+        WHERE ppc.type = 'PaymentProviderCustomers::GocardlessCustomer'
+          AND ppc.settings->>'provider_mandate_id' IS NOT NULL
+          AND ppc.deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM payment_methods pm
+            WHERE pm.customer_id = ppc.customer_id
+              AND pm.payment_provider_customer_id = ppc.id
+              AND pm.provider_method_id = ppc.settings->>'provider_mandate_id'
+          );
+      SQL
+    end
+  end
+
+  def down
+    safety_assured do
+      execute <<~SQL
+        DELETE FROM payment_methods pm
+        USING payment_provider_customers ppc
+        WHERE pm.payment_provider_customer_id = ppc.id
+          AND ppc.type = 'PaymentProviderCustomers::GocardlessCustomer';
+      SQL
+    end
+  end
+end
