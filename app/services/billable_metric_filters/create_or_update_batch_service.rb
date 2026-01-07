@@ -13,7 +13,7 @@ module BillableMetricFilters
       result.filters = []
 
       if filters_params.empty?
-        discard_all
+        discard_all_filters
 
         return result
       end
@@ -60,7 +60,7 @@ module BillableMetricFilters
 
     attr_reader :billable_metric, :filters_params
 
-    def discard_all
+    def discard_all_filters
       ActiveRecord::Base.transaction do
         billable_metric.filters.each { discard_filter(it) }
       end

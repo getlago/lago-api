@@ -123,7 +123,7 @@ module Invoices
       invoice.fees.destroy_all
       invoice_subscriptions.destroy_all
       invoice.applied_taxes.destroy_all
-      invoice.error_details.discard_all
+      invoice.error_details.discard_all # rubocop:disable Lago/DiscardAll
       invoice.applied_invoice_custom_sections.destroy_all
       invoice.credits.progressive_billing_invoice_kind.destroy_all
 

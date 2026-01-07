@@ -42,7 +42,7 @@ module DunningCampaigns
       input_threshold_ids = params[:thresholds].map { |t| t[:id] }.compact
 
       # Delete thresholds not included in the payload
-      discarded_thresholds = dunning_campaign
+      discarded_thresholds = dunning_campaign # rubocop:disable Lago/DiscardAll
         .thresholds
         .where.not(id: input_threshold_ids)
         .discard_all

@@ -13,7 +13,7 @@ module Invoices
         return result.not_found_failure!(resource: "invoice") if invoice.blank?
         return result.not_allowed_failure!(code: "status_not_voided") unless invoice.voided?
 
-        invoice.error_details.tax_voiding_error.discard_all
+        invoice.error_details.tax_voiding_error.discard_all # rubocop:disable Lago/DiscardAll
 
         tax_result = Integrations::Aggregator::Taxes::Invoices::VoidService.new(invoice:).call
 
