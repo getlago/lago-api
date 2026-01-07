@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 class FeatureFlag
-  def self.yaml_to_hash(filename)
-    yaml = YAML.parse_file(Rails.root.join(filename))
-    hash = yaml.presence&.to_ruby || {} # Handle empty yaml file
-    hash.with_indifferent_access.freeze
-  end
-
-  DEFINITION = yaml_to_hash("app/config/feature_flags.yaml") # rubocop:disable Layout/ClassStructure
+  DEFINITION = begin
+    yaml = YAML.parse_file(Rails.root.join("app/config/feature_flags.yaml"))
+    yaml.presence&.to_ruby || {} # Handle empty yaml file
+  end.with_indifferent_access.freeze
 
   class << self
     def enabled?(feature_name, organization:)
@@ -29,7 +26,7 @@ class FeatureFlag
       Flipper.disable(feature_name, organization)
     end
 
-    def cleanup!
+    def sanitize!
       found = Flipper.features.map(&:key)
       defined = DEFINITION.keys
 

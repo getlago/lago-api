@@ -104,23 +104,23 @@ RSpec.describe FeatureFlag do
     end
   end
 
-  describe ".cleanup!" do
+  describe ".sanitize!" do
     it "adds missing features from definition" do
       Flipper.remove(feature_name)
 
-      expect { described_class.cleanup! }.to change { Flipper.features.map(&:key) }.from([]).to([feature_name])
+      expect { described_class.sanitize! }.to change { Flipper.features.map(&:key) }.from([]).to([feature_name])
     end
 
     it "removes features not in definition" do
       Flipper.add("obsolete_feature")
 
-      expect { described_class.cleanup! }.to change { Flipper.features.map(&:key).sort }
+      expect { described_class.sanitize! }.to change { Flipper.features.map(&:key).sort }
         .from(match_array([feature_name, "obsolete_feature"]))
         .to([feature_name])
     end
 
     it "returns self" do
-      expect(described_class.cleanup!).to eq(described_class)
+      expect(described_class.sanitize!).to eq(described_class)
     end
   end
 end
