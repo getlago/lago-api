@@ -417,6 +417,41 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when wallet is limited to a fee processed last" do
+      let(:fee) { nil }
+      let(:amount_cents) { 680 }
+
+      let(:wallet_limited_billable_metric) { create(:billable_metric, organization: customer.organization) }
+      let(:wallet) do
+        create(:wallet, customer:, balance_cents: 6600, credits_balance: 66.0)
+      end
+      let(:wallet_target) { create(:wallet_target, wallet: wallet, billable_metric: wallet_limited_billable_metric) }
+      let(:wallets) { [wallet] }
+
+      before do
+        uuid = SecureRandom.uuid
+        10.times do |i|
+          billable_metric = (i == 9) ? wallet_limited_billable_metric : create(:billable_metric, organization: customer.organization)
+          charge = create(:standard_charge, organization: customer.organization, billable_metric: billable_metric)
+          create(
+            :charge_fee,
+            id: "#{uuid[..-2]}#{i}", # enforce database order to avoid flaky tests
+            invoice:,
+            subscription:,
+            charge: charge,
+            amount_cents: 60, precise_amount_cents: 60.4, taxes_precise_amount_cents: 8.456, taxes_amount_cents: 8
+          )
+        end
+        wallet_target
+      end
+
+      it "applies credits based on fee cap, not fee processing order" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(68)
+        expect(invoice.prepaid_credit_amount_cents).to eq(68)
+      end
+    end
+
     context "when wallet is traceable" do
       let(:wallets) { [traceable_wallet] }
       let(:traceable_wallet) do
