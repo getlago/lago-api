@@ -330,12 +330,15 @@ class Invoice < ApplicationRecord
     already_refunded_cents = credit_notes.sum("refund_amount_cents")
     remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
 
+    # when invoice is for pre paid credits we can issue a credit note only as refund
+    # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note
+    # as refund only if the wallet balance is greater or equal than the remaining paid amount
+    if credit?
+      return [associated_active_wallet&.balance_cents, remaining_paid_cents].min
+    end
+
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
-    refundable_cents = 0 if refundable_cents.negative?
-
-    return [refundable_cents, associated_active_wallet&.balance_cents].min if credit?
-
-    refundable_cents
+    refundable_cents.negative? ? 0 : refundable_cents
   end
 
   def associated_active_wallet
