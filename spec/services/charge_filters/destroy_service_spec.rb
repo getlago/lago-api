@@ -50,5 +50,50 @@ RSpec.describe ChargeFilters::DestroyService do
         expect(result.charge_filter.deleted_at).to be_present
       end
     end
+
+    context "with cascade_updates" do
+      subject(:service) { described_class.call(charge_filter:, cascade_updates: true) }
+
+      let(:child_plan) { create(:plan, organization: charge.organization, parent: charge.plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization: charge.organization, billable_metric: charge.billable_metric, parent: charge) }
+      let(:filter_value) { create(:charge_filter_value, charge_filter:, billable_metric_filter: card_location_filter, values: ["domestic"]) }
+
+      before do
+        filter_value
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "triggers cascade update via Charges::UpdateChildrenJob" do
+        service
+
+        expect(Charges::UpdateChildrenJob).to have_received(:perform_later).with(
+          params: hash_including("charge_model", "properties", "filters"),
+          old_parent_attrs: hash_including("id" => charge.id),
+          old_parent_filters_attrs: array_including(hash_including("id", "properties")),
+          old_parent_applied_pricing_unit_attrs: nil
+        )
+      end
+    end
+
+    context "without cascade_updates when charge has children" do
+      let(:child_plan) { create(:plan, organization: charge.organization, parent: charge.plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization: charge.organization, billable_metric: charge.billable_metric, parent: charge) }
+      let(:filter_value) { create(:charge_filter_value, charge_filter:, billable_metric_filter: card_location_filter, values: ["domestic"]) }
+
+      before do
+        filter_value
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "does not trigger cascade update" do
+        service
+
+        expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+      end
+    end
   end
 end

@@ -2,6 +2,8 @@
 
 module ChargeFilters
   class UpdateService < BaseService
+    include CascadeUpdatable
+
     Result = BaseResult[:charge_filter]
 
     def initialize(charge_filter:, params:, cascade_updates: false)
@@ -15,7 +17,7 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge_filter") unless charge_filter
 
-      old_filters_attrs = charge.filters.map { |f| {id: f.id, properties: f.properties} }
+      old_filters_attrs = capture_old_filters_attrs
 
       ActiveRecord::Base.transaction do
         charge_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
@@ -43,32 +45,6 @@ module ChargeFilters
         chargeable: charge,
         properties: params[:properties]
       ).properties
-    end
-
-    def trigger_cascade(old_filters_attrs)
-      return unless cascade_updates
-      return unless charge.children.exists?
-
-      Charges::UpdateChildrenJob.perform_later(
-        params: build_cascade_params.deep_stringify_keys,
-        old_parent_attrs: charge.attributes,
-        old_parent_filters_attrs: old_filters_attrs.map(&:deep_stringify_keys),
-        old_parent_applied_pricing_unit_attrs: charge.applied_pricing_unit&.attributes
-      )
-    end
-
-    def build_cascade_params
-      {
-        charge_model: charge.charge_model,
-        properties: charge.properties,
-        filters: charge.filters.reload.map do |f|
-          {
-            invoice_display_name: f.invoice_display_name,
-            properties: f.properties,
-            values: f.to_h
-          }
-        end
-      }
     end
   end
 end
