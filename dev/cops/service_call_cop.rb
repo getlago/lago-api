@@ -15,7 +15,7 @@ module Cops
     MSG = "Subclasses of Baseservice should have #call without arguments"
 
     def self.badge
-      @badge ||= ::RuboCop::Cop::Badge.for("Lago::ServiceCall") # rubocop:disable ThreadSafety/InstanceVariableInClassMethod
+      @badge ||= ::RuboCop::Cop::Badge.for("Lago::ServiceCall") # rubocop:disable ThreadSafety/ClassInstanceVariable
     end
 
     def on_def(node)

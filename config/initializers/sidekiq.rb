@@ -76,10 +76,10 @@ Sidekiq.configure_server do |config|
   config[:dead_max_jobs] = ENV.fetch("LAGO_SIDEKIQ_MAX_DEAD_JOBS", 100_000).to_i
   config.on(:startup) do
     Sidekiq.logger.info "Starting liveness server on #{LIVENESS_PORT}"
-    Thread.start do
+    Thread.start do # rubocop:disable ThreadSafety/NewThread
       server = TCPServer.new("0.0.0.0", LIVENESS_PORT)
       loop do
-        Thread.start(server.accept) do |socket|
+        Thread.start(server.accept) do |socket| # rubocop:disable ThreadSafety/NewThread
           request = socket.gets
           sidekiq_response = ::Sidekiq.redis { |r| r.ping }
 

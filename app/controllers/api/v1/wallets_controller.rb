@@ -100,6 +100,10 @@ module Api
             transaction_metadata: [
               :key,
               :value
+            ],
+            payment_method: [
+              :payment_method_type,
+              :payment_method_id
             ]
           ],
           applies_to: [
@@ -109,6 +113,10 @@ module Api
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
+          ],
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
           ]
         )
       end
@@ -146,6 +154,10 @@ module Api
             transaction_metadata: [
               :key,
               :value
+            ],
+            payment_method: [
+              :payment_method_type,
+              :payment_method_id
             ]
           ],
           applies_to: [
@@ -155,6 +167,10 @@ module Api
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
+          ],
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
           ]
         )
       end

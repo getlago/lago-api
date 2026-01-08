@@ -12,8 +12,7 @@ module PaymentProviders
       end
 
       def perform(organization:, event_json:)
-        result = ::PaymentProviders::MoneyhashService.new.handle_event(organization:, event_json:)
-        result.raise_if_error!
+        ::PaymentProviders::Moneyhash::HandleEventService.call(organization:, event_json:)
       end
     end
   end

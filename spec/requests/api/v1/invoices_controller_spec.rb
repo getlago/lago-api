@@ -6,6 +6,7 @@ RSpec.describe Api::V1::InvoicesController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
+  let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
   before { tax }
 
@@ -32,7 +33,8 @@ RSpec.describe Api::V1::InvoicesController do
           {
             add_on_code: add_on_second.code
           }
-        ]
+        ],
+        invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
       }
     end
 
@@ -56,6 +58,8 @@ RSpec.describe Api::V1::InvoicesController do
 
       expect(fee[:item][:invoice_display_name]).to eq(invoice_display_name)
       expect(json[:invoice][:applied_taxes][0][:tax_code]).to eq(tax.code)
+      expect(json[:invoice][:applied_invoice_custom_sections].size).to eq(1)
+      expect(json[:invoice][:applied_invoice_custom_sections].first[:code]).to eq(section_1.code)
     end
 
     context "when customer does not exist" do
@@ -918,6 +922,33 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when plan has fixed charges" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, units: 2, charge_model: "standard", properties: {amount: "10"}) }
+
+      before { fixed_charge }
+
+      it "creates a preview invoice with fixed charges" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(
+          fees_amount_cents: 2100,
+          taxes_amount_cents: 420,
+          total_amount_cents: 2520,
+          currency: "EUR"
+        )
+        expect(json[:invoice][:fees]).to include(
+          hash_including(
+            item: hash_including(
+              type: "fixed_charge"
+            ),
+            amount_cents: 2000,
+            units: "2.0"
+          )
+        )
+      end
+    end
+
     context "when sending billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
@@ -1035,6 +1066,34 @@ RSpec.describe Api::V1::InvoicesController do
               currency: "EUR"
             )
           end
+        end
+      end
+
+      context "when subscription's plan has fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan: subscription1.plan, units: 2, charge_model: "standard", properties: {amount: "10"}) }
+        let(:fixed_charge_event) { create(:fixed_charge_event, subscription: subscription1, fixed_charge:, units: 2) }
+
+        before { fixed_charge_event }
+
+        it "creates a preview invoice with fixed charges" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 2200,
+            taxes_amount_cents: 440,
+            total_amount_cents: 2640,
+            currency: "EUR"
+          )
+          expect(json[:invoice][:fees]).to include(
+            hash_including(
+              item: hash_including(
+                type: "fixed_charge"
+              ),
+              amount_cents: 2000,
+              units: "2.0"
+            )
+          )
         end
       end
     end

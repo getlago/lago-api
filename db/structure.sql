@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d384ec1ebf;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
@@ -388,6 +389,7 @@ DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_pr
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_customer_id;
+DROP INDEX IF EXISTS public.index_payments_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type_and_error_code;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
@@ -507,6 +509,7 @@ DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_fixed_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_taxes_on_fixed_charge_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id_and_code;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
@@ -620,6 +623,7 @@ DROP INDEX IF EXISTS public.index_charges_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
 DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
+DROP INDEX IF EXISTS public.index_charges_on_plan_id_and_code;
 DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
@@ -942,6 +946,8 @@ DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
+DROP VIEW IF EXISTS public.exports_entitlement_features;
+DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
 DROP VIEW IF EXISTS public.exports_daily_usages;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
@@ -1730,7 +1736,8 @@ CREATE TABLE public.charges (
     invoice_display_name character varying,
     regroup_paid_fees integer,
     parent_id uuid,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    code character varying
 );
 
 
@@ -2593,6 +2600,8 @@ CREATE TABLE public.organizations (
     hmac_key character varying NOT NULL,
     authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     audit_logs_period integer DEFAULT 30,
+    pre_filter_events boolean DEFAULT false NOT NULL,
+    clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -2693,6 +2702,38 @@ CREATE VIEW public.exports_daily_usages AS
     du.subscription_id AS lago_subscription_id,
     du.external_subscription_id
    FROM public.daily_usages du;
+
+
+--
+-- Name: exports_entitlement_entitlements; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_entitlement_entitlements AS
+ SELECT ee.id AS lago_id,
+    ee.organization_id,
+    ee.entitlement_feature_id AS lago_entitlement_feature_id,
+    ee.plan_id AS lago_plan_id,
+    ee.subscription_id AS lago_subscription_id,
+    ee.deleted_at,
+    ee.created_at,
+    ee.updated_at
+   FROM public.entitlement_entitlements ee;
+
+
+--
+-- Name: exports_entitlement_features; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_entitlement_features AS
+ SELECT ef.id AS lago_id,
+    ef.organization_id,
+    ef.code,
+    ef.name,
+    ef.description,
+    ef.deleted_at,
+    ef.created_at,
+    ef.updated_at
+   FROM public.entitlement_features ef;
 
 
 --
@@ -3269,7 +3310,8 @@ CREATE TABLE public.payments (
     provider_payment_method_id character varying,
     organization_id uuid NOT NULL,
     customer_id uuid,
-    error_code character varying
+    error_code character varying,
+    payment_method_id uuid
 );
 
 
@@ -3672,7 +3714,8 @@ CREATE TABLE public.fixed_charges (
     units numeric(30,10) DEFAULT 0.0 NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying
 );
 
 
@@ -6281,6 +6324,13 @@ CREATE INDEX index_charges_on_plan_id ON public.charges USING btree (plan_id);
 
 
 --
+-- Name: index_charges_on_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_charges_on_plan_id_and_code ON public.charges USING btree (plan_id, code) WHERE ((deleted_at IS NULL) AND (parent_id IS NULL));
+
+
+--
 -- Name: index_charges_pay_in_advance; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7069,6 +7119,13 @@ CREATE INDEX index_fixed_charges_on_parent_id ON public.fixed_charges USING btre
 --
 
 CREATE INDEX index_fixed_charges_on_plan_id ON public.fixed_charges USING btree (plan_id);
+
+
+--
+-- Name: index_fixed_charges_on_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_fixed_charges_on_plan_id_and_code ON public.fixed_charges USING btree (plan_id, code) WHERE ((deleted_at IS NULL) AND (parent_id IS NULL));
 
 
 --
@@ -7902,6 +7959,13 @@ CREATE INDEX index_payments_on_payable_id_and_payable_type_and_error_code ON pub
 --
 
 CREATE INDEX index_payments_on_payable_type_and_payable_id ON public.payments USING btree (payable_type, payable_id);
+
+
+--
+-- Name: index_payments_on_payment_method_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_payment_method_id ON public.payments USING btree (payment_method_id);
 
 
 --
@@ -10366,6 +10430,14 @@ ALTER TABLE ONLY public.item_metadata
 
 
 --
+-- Name: payments fk_rails_d384ec1ebf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments
+    ADD CONSTRAINT fk_rails_d384ec1ebf FOREIGN KEY (payment_method_id) REFERENCES public.payment_methods(id) NOT VALID;
+
+
+--
 -- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10708,6 +10780,11 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260106120832'),
+('20260106120601'),
+('20260105144123'),
+('20251226145247'),
+('20251222163416'),
 ('20251219115429'),
 ('20251216100247'),
 ('20251211154309'),
@@ -10715,6 +10792,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251210133246'),
 ('20251210133225'),
 ('20251204142205'),
+('20251204101451'),
 ('20251202141759'),
 ('20251201094057'),
 ('20251201084648'),

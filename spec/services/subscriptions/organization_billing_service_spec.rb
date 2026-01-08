@@ -571,6 +571,15 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         expect(Subscriptions::TerminateJob).to have_been_enqueued
           .with(previous_subscription, current_date.to_i)
       end
+
+      context "when all customer subscriptions are downgraded" do
+        it "does not enqueue billing jobs for that customer" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+          expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
+        end
+      end
     end
 
     context "when on subscription creation day" do

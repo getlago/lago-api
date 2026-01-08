@@ -41,6 +41,7 @@ module Invoices
 
       add_subscription_fees
       add_charge_fees
+      add_fixed_charge_fees
       compute_tax_and_totals
 
       result.invoice = invoice
@@ -107,6 +108,9 @@ module Invoices
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
+        fixed_charges_duration: date_service.fixed_charges_duration_in_days,
         timestamp: billing_time,
         charges_duration: date_service.charges_duration_in_days
       )
@@ -188,6 +192,34 @@ module Invoices
                 .fees
             end
           end
+        end
+      end
+    end
+
+    def add_fixed_charge_fees
+      subscriptions.each do |subscription|
+        boundaries = boundaries(subscription)
+
+        next unless fixed_charge_boundaries_valid?(boundaries)
+
+        fixed_charges = if subscription.persisted?
+          subscription.fixed_charges
+        else
+          subscription.plan.fixed_charges.kept
+        end
+
+        fixed_charges.find_each do |fixed_charge|
+          next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+
+          fee_result = Fees::FixedChargeService.call(
+            invoice:,
+            fixed_charge:,
+            subscription:,
+            boundaries:,
+            context: :invoice_preview
+          )
+
+          invoice.fees << fee_result.fee if fee_result.success? && fee_result.fee
         end
       end
     end
@@ -312,6 +344,30 @@ module Invoices
         subscription.terminated? &&
         subscription.upgraded? &&
         charge.included_in_next_subscription?(subscription)
+    end
+
+    def fixed_charge_boundaries_valid?(boundaries)
+      return false if boundaries.fixed_charges_from_datetime.nil?
+      return false if boundaries.fixed_charges_to_datetime.nil?
+
+      boundaries.fixed_charges_from_datetime <= boundaries.fixed_charges_to_datetime
+    end
+
+    def should_create_fixed_charge_fee?(fixed_charge, subscription)
+      return false if fixed_charge.pay_in_advance? && subscription.terminated?
+
+      if !fixed_charge.pay_in_advance? && is_starting_subscription?(subscription)
+        return false
+      end
+
+      true
+    end
+
+    def is_starting_subscription?(subscription)
+      return false unless subscription.persisted?
+
+      subscription.invoice_subscriptions.count == 1 &&
+        subscription.invoice_subscriptions.order(:created_at).last.subscription_starting?
     end
   end
 end

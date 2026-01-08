@@ -2,14 +2,16 @@ inherit_mode:
   merge:
     - Exclude
 
+plugins:
+  - rubocop-rails
+  - rubocop-graphql
+  - rubocop-factory_bot
+  - rubocop-performance
+  - rubocop-thread_safety
+
 require:
   - standard
   - rubocop-rspec
-  - rubocop-performance
-  - rubocop-rails
-  - rubocop-thread_safety
-  - rubocop-graphql
-  - rubocop-factory_bot
   - rubocop-rspec_rails
   - ./dev/cops/service_call_cop.rb
 
@@ -114,3 +116,11 @@ GraphQL/ExtractInputType:
     - "app/graphql/mutations/plans/update.rb"
     - "app/graphql/mutations/register_user.rb"
     - "app/graphql/mutations/wallet_transactions/create.rb"
+
+ThreadSafety/NewThread:
+  Exclude:
+    - "spec/**/*"
+
+ThreadSafety/DirChdir:
+  Exclude:
+    - "spec/**/*"

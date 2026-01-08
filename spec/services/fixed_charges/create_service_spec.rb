@@ -87,6 +87,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "my_fixed_charge_code",
               charge_model: "standard",
               pay_in_advance: true,
               prorated: true,
@@ -107,6 +108,7 @@ RSpec.describe FixedCharges::CreateService do
               organization_id: organization.id,
               plan_id: plan.id,
               add_on_id: add_on.id,
+              code: "my_fixed_charge_code",
               charge_model: "standard",
               pay_in_advance: true,
               prorated: true,
@@ -133,6 +135,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_code: add_on.code,
+              code: "add_on_code_fixed_charge",
               charge_model: "graduated",
               pay_in_advance: false,
               prorated: false,
@@ -161,6 +164,7 @@ RSpec.describe FixedCharges::CreateService do
             {
               add_on_id: add_on.id,
               add_on_code: other_add_on.code,
+              code: "both_ids_fixed_charge",
               charge_model: "standard"
             }
           end
@@ -174,6 +178,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "no_props_fixed_charge",
               charge_model: "standard"
             }
           end
@@ -187,6 +192,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "graduated_fixed_charge",
               charge_model: "graduated",
               properties: {
                 graduated_ranges: [
@@ -231,6 +237,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "no_tax_fixed_charge",
               charge_model: "standard"
             }
           end
@@ -244,6 +251,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "tax_fail_fixed_charge",
               charge_model: "standard",
               tax_codes: ["non-existing-tax"]
             }
@@ -263,6 +271,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "defaults_fixed_charge",
               charge_model: "volume"
             }
           end
@@ -298,6 +307,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "filter_props_fixed_charge",
               charge_model: "volume",
               properties: {
                 volume_ranges: [
@@ -323,6 +333,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "apply_immediately_fixed_charge",
               charge_model: "standard",
               apply_units_immediately: true
             }
@@ -358,6 +369,7 @@ RSpec.describe FixedCharges::CreateService do
           let(:params) do
             {
               add_on_id: add_on.id,
+              code: "no_apply_immediately_fixed_charge",
               charge_model: "standard",
               apply_units_immediately: false
             }

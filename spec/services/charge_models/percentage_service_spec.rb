@@ -28,9 +28,15 @@ RSpec.describe ChargeModels::PercentageService do
   let(:per_transaction_min_amount) { nil }
 
   let(:rate) { "1.3" }
+
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
+
   let(:charge) do
     create(
       :percentage_charge,
+      organization:,
+      plan:,
       properties: {
         rate:,
         fixed_amount:,
@@ -246,11 +252,13 @@ RSpec.describe ChargeModels::PercentageService do
     let(:per_transaction_max_amount) { "12" }
     let(:per_transaction_min_amount) { "1.75" }
 
+    let(:subscription) { create(:subscription, organization:, plan:) }
+
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(
         event_store_class:,
         charge:,
-        subscription: nil,
+        subscription:,
         boundaries: nil
       )
     end

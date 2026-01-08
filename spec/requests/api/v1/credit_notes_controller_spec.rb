@@ -6,7 +6,7 @@ RSpec.describe Api::V1::CreditNotesController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
-
+  let(:total_paid_amount_cents) { 120 }
   let(:invoice) do
     create(
       :invoice,
@@ -16,7 +16,8 @@ RSpec.describe Api::V1::CreditNotesController do
       currency: "EUR",
       fees_amount_cents: 100,
       taxes_amount_cents: 120,
-      total_amount_cents: 120
+      total_amount_cents: 120,
+      total_paid_amount_cents:
     )
   end
 
@@ -395,7 +396,6 @@ RSpec.describe Api::V1::CreditNotesController do
       subject
 
       expect(response).to have_http_status(:success)
-
       expect(json[:credit_note]).to include(
         credit_status: "available",
         refund_status: "pending",
@@ -546,6 +546,7 @@ RSpec.describe Api::V1::CreditNotesController do
 
     let(:fees) { create_list(:fee, 2, invoice:, amount_cents: 100) }
     let(:invoice_id) { invoice.id }
+    let(:total_paid_amount_cents) { 0 }
 
     let(:estimate_params) do
       {

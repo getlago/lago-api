@@ -6,7 +6,7 @@ require "./config/environment"
 
 module Clockwork
   handler do |job, time|
-    puts "Running #{job} at #{time}"
+    puts "Running #{job} at #{time}" # rubocop:disable Rails/Output
   end
 
   error_handler do |error|

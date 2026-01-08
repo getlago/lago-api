@@ -12632,6 +12632,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceCustomSection",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "InvoiceCustomSectionsReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentMethod",
               "description": null,
               "type": {
@@ -18897,6 +18909,22 @@
                 "kind": "OBJECT",
                 "name": "CustomerBillingConfiguration",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityBillingConfiguration",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillingEntityBillingConfiguration",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -26832,6 +26860,18 @@
                     }
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceCustomSection",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "InvoiceCustomSectionsReferenceInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -39225,6 +39265,18 @@
               "type": {
                 "kind": "ENUM",
                 "name": "PayablePaymentStatusEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentProvider",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "UNION",
+                "name": "PaymentProvider",
                 "ofType": null
               },
               "isDeprecated": false,

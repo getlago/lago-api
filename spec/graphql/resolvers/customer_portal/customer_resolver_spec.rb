@@ -10,6 +10,9 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver do
           id
           name
           currency
+          billingEntityBillingConfiguration {
+            documentLocale
+          }
         }
       }
     GQL
@@ -35,6 +38,7 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver do
       expect(customer_response["id"]).to eq(customer.id)
       expect(customer_response["name"]).to eq(customer.name)
       expect(customer_response["currency"]).to eq("EUR")
+      expect(customer_response["billingEntityBillingConfiguration"]["documentLocale"]).to eq(customer.billing_entity.document_locale)
     end
   end
 

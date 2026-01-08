@@ -113,6 +113,29 @@ RSpec.describe Charges::UpdateService do
         end
       end
 
+      context "with code in the params" do
+        let(:params) do
+          {
+            id: charge.id,
+            charge_model: "standard",
+            code: "updated_code",
+            properties: {amount: "400"}
+          }
+        end
+
+        it "updates charge code" do
+          expect { subject }.to change { charge.reload.code }.to("updated_code")
+        end
+
+        context "when plan is attached to subscriptions" do
+          before { create(:subscription, plan:) }
+
+          it "does not update charge code" do
+            expect { subject }.not_to change { charge.reload.code }
+          end
+        end
+      end
+
       context "when cascade is true" do
         let(:cascade_options) do
           {
@@ -140,6 +163,21 @@ RSpec.describe Charges::UpdateService do
 
         it "updates applied pricing unit's conversion rate" do
           expect { subject }.to change(charge.applied_pricing_unit, :conversion_rate).to(2.5)
+        end
+
+        context "with code in the params" do
+          let(:params) do
+            {
+              id: charge.id,
+              charge_model: "standard",
+              code: "new_charge_code",
+              properties: {amount: "400"}
+            }
+          end
+
+          it "updates charge code" do
+            expect { subject }.to change { charge.reload.code }.to("new_charge_code")
+          end
         end
 
         context "with pricing_group_keys in the properties" do

@@ -12,6 +12,10 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     )
   end
 
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, organization:, plan:) }
+
   let(:aggregation_result) { BaseService::Result.new }
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
   let(:aggregation) { 5.96667 }
@@ -19,7 +23,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     BillableMetrics::ProratedAggregations::SumService.new(
       event_store_class:,
       charge:,
-      subscription: nil,
+      subscription:,
       boundaries: nil
     )
   end
@@ -34,6 +38,8 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     create(
       :graduated_charge,
       billable_metric:,
+      organization:,
+      plan:,
       properties: {
         graduated_ranges: [
           {

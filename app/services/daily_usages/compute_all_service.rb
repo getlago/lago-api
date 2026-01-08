@@ -9,8 +9,11 @@ module DailyUsages
     end
 
     def call
-      subscriptions.find_each do |subscription|
-        DailyUsages::ComputeJob.set(wait: rand(30.minutes)).perform_later(subscription, timestamp:)
+      subscriptions.find_in_batches do |subscriptions|
+        jobs = subscriptions.map do |subscription|
+          DailyUsages::ComputeJob.new(subscription, timestamp:).set(wait: rand(30.minutes))
+        end
+        ActiveJob.perform_all_later(jobs)
       end
 
       result

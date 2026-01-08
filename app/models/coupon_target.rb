@@ -3,6 +3,7 @@
 class CouponTarget < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :coupon

@@ -23,6 +23,7 @@ class FixedCharge < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
   scope :pay_in_arrears, -> { where(pay_in_advance: false) }
+  scope :parents, -> { where(parent_id: nil) }
 
   CHARGE_MODELS = {
     standard: "standard",
@@ -31,7 +32,6 @@ class FixedCharge < ApplicationRecord
   }.freeze
 
   enum :charge_model, CHARGE_MODELS
-  delegate :code, to: :add_on
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, presence: true
@@ -39,6 +39,7 @@ class FixedCharge < ApplicationRecord
   validates :prorated, exclusion: [nil]
   validates :properties, presence: true
 
+  validate :validate_code_unique, if: -> { code.present? }
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_properties
@@ -87,6 +88,14 @@ class FixedCharge < ApplicationRecord
 
     validate_charge_model_properties(charge_model)
   end
+
+  def validate_code_unique
+    return unless plan
+    return if parent_id?
+
+    fixed_charge = plan.fixed_charges.parents.where(code:).first
+    errors.add(:code, :taken) if fixed_charge && fixed_charge != self
+  end
 end
 
 # == Schema Information
@@ -96,6 +105,7 @@ end
 #
 #  id                   :uuid             not null, primary key
 #  charge_model         :enum             default("standard"), not null
+#  code                 :string
 #  deleted_at           :datetime
 #  invoice_display_name :string
 #  pay_in_advance       :boolean          default(FALSE), not null
@@ -111,11 +121,12 @@ end
 #
 # Indexes
 #
-#  index_fixed_charges_on_add_on_id        (add_on_id)
-#  index_fixed_charges_on_deleted_at       (deleted_at)
-#  index_fixed_charges_on_organization_id  (organization_id)
-#  index_fixed_charges_on_parent_id        (parent_id)
-#  index_fixed_charges_on_plan_id          (plan_id)
+#  index_fixed_charges_on_add_on_id         (add_on_id)
+#  index_fixed_charges_on_deleted_at        (deleted_at)
+#  index_fixed_charges_on_organization_id   (organization_id)
+#  index_fixed_charges_on_parent_id         (parent_id)
+#  index_fixed_charges_on_plan_id           (plan_id)
+#  index_fixed_charges_on_plan_id_and_code  (plan_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
 #
 # Foreign Keys
 #

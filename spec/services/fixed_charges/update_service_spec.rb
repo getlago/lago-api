@@ -66,6 +66,12 @@ RSpec.describe FixedCharges::UpdateService do
           expect(result.fixed_charge.charge_model).to eq(original_charge_model)
         end
 
+        it "does not update code" do
+          params[:code] = "updated_code"
+
+          expect { result }.not_to change { fixed_charge.reload.code }
+        end
+
         it "does not apply taxes" do
           tax = create(:tax, organization: plan.organization, code: "tax1")
           params[:tax_codes] = [tax.code]
@@ -91,6 +97,14 @@ RSpec.describe FixedCharges::UpdateService do
 
           expect(result).to be_success
           expect(result.fixed_charge.charge_model).to eq("graduated")
+        end
+
+        context "with code in the params" do
+          before { params[:code] = "updated_code" }
+
+          it "updates fixed charge code" do
+            expect { result }.to change { fixed_charge.reload.code }.to("updated_code")
+          end
         end
 
         context "when tax_codes are provided" do
@@ -145,6 +159,14 @@ RSpec.describe FixedCharges::UpdateService do
           it "does not update the display name" do
             expect(result).to be_success
             expect(result.fixed_charge.invoice_display_name).not_to eq("Updated Display Name")
+          end
+
+          context "with code in the params" do
+            before { params[:code] = "cascaded_code" }
+
+            it "updates fixed charge code" do
+              expect { result }.to change { fixed_charge.reload.code }.to("cascaded_code")
+            end
           end
 
           context "when equal_properties is true" do

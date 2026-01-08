@@ -2,6 +2,7 @@
 
 class User < ApplicationRecord
   include PaperTrailTraceable
+
   has_secure_password
 
   has_many :password_resets

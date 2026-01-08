@@ -123,8 +123,16 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          filters:
+          filters:,
+          deduplicate: deduplicate?
         )
+      end
+
+      def deduplicate?
+        organization = subscription&.organization
+        return false unless organization
+
+        organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
       end
 
       def from_datetime

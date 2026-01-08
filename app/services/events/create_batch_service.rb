@@ -64,27 +64,42 @@ module Events
 
     def post_validate_events
       if organization.postgres_events_store?
-        ActiveRecord::Base.transaction do
-          result.events.each_with_index do |event, index|
-            event.save!
-          rescue ActiveRecord::RecordNotUnique
-            result.errors[index] = {transaction_id: ["value_already_exist"]}
-          end
-
-          raise ActiveRecord::Rollback if result.errors.any?
-        end
-
+        bulk_insert_events
         return if result.errors.any?
       end
 
-      result.events.each do |event|
-        produce_kafka_event(event)
-        Events::PostProcessJob.perform_later(event:) if organization.postgres_events_store?
+      KafkaProducerService.call!(events: result.events, organization:)
+      enqueue_post_process_jobs if organization.postgres_events_store?
+    end
+
+    def bulk_insert_events
+      records = result.events.map { |event| event.attributes.without("id", "created_at", "updated_at") }
+      Event.transaction do
+        saved_attributes = Event.insert_all(records, unique_by: :index_unique_transaction_id, returning: [:transaction_id, :id, :created_at, :updated_at]).rows # rubocop:disable Rails/SkipsModelValidations
+        attributes_per_transaction_id = saved_attributes.index_by { |attrs| attrs[0] } # maps to { transaction_id => [transaction_id, id, created_at, updated_at] }
+
+        result.events.each_with_index do |event, index|
+          # We delete to ensure that any duplicate transaction_id in the input events_params
+          # are caught and reported as errors.
+          attrs = attributes_per_transaction_id.delete(event.transaction_id)
+          if attrs
+            # NOTE: even though we set id, created_at and updated_at here, the event is not considered as `.persisted?`
+            # because ActiveRecord doesn't track that for bulk inserts.
+            event.id = attrs[1]
+            event.created_at = attrs[2]
+            event.updated_at = attrs[3]
+          else
+            result.errors[index] = {transaction_id: ["value_already_exist"]}
+          end
+        end
+
+        raise ActiveRecord::Rollback if result.errors.any?
       end
     end
 
-    def produce_kafka_event(event)
-      Events::KafkaProducerService.call!(event:, organization:)
+    def enqueue_post_process_jobs
+      jobs = result.events.map { |event| Events::PostProcessJob.new(event:) }
+      ActiveJob.perform_all_later(jobs)
     end
   end
 end

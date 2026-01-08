@@ -564,6 +564,11 @@ RSpec.describe Plans::UpdateService do
           result = plans_service.call
           expect(result.plan.charges.count).to eq(1)
         end
+
+        it "auto-generates charge code when not provided" do
+          result = plans_service.call
+          expect(result.plan.charges.first.code).to eq(sum_billable_metric.code)
+        end
       end
 
       context "with premium charge model" do
@@ -1442,22 +1447,24 @@ RSpec.describe Plans::UpdateService do
           expect(result.plan.fixed_charges.map(&:invoice_display_name)).to match_array(["fixed_charge1", "fixed_charge2"])
         end
 
+        it "auto-generates fixed charge codes when not provided" do
+          result = plans_service.call
+
+          expect(result.plan.fixed_charges.pluck(:code)).to match_array([add_on.code, "#{add_on.code}_2"])
+        end
+
         it "calls FixedCharges::CreateService with timestamp" do
           freeze_time do
             plans_service.call
 
-            expect(FixedCharges::CreateService).to have_received(:call!).with(
-              plan:,
-              params: {
-                add_on_id: add_on.id,
-                charge_model: "standard",
-                invoice_display_name: "fixed_charge1",
-                units: 2,
-                properties: {amount: "150"},
-                tax_codes: [tax1.code]
-              },
-              timestamp: Time.current.to_i
-            )
+            expect(FixedCharges::CreateService).to have_received(:call!).twice
+            expect(FixedCharges::CreateService)
+              .to have_received(:call!)
+              .with(plan:, params: fixed_charges_args.first.merge(code: add_on.code), timestamp: Time.current.to_i)
+
+            expect(FixedCharges::CreateService)
+              .to have_received(:call!)
+              .with(plan:, params: fixed_charges_args.second.merge(code: "#{add_on.code}_2"), timestamp: Time.current.to_i)
           end
         end
 

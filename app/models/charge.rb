@@ -5,6 +5,7 @@ class Charge < ApplicationRecord
   include Currencies
   include ChargePropertiesValidation
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization
@@ -46,6 +47,7 @@ class Charge < ApplicationRecord
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
 
+  validate :validate_code_unique, if: -> { code.present? }
   validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
@@ -57,6 +59,7 @@ class Charge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  scope :parents, -> { where(parent_id: nil) }
 
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]
@@ -153,6 +156,14 @@ class Charge < ApplicationRecord
       errors.add(:charge_model, :graduated_percentage_requires_premium_license)
     end
   end
+
+  def validate_code_unique
+    return unless plan
+    return if parent_id?
+
+    charge = plan.charges.parents.where(code:).first
+    errors.add(:code, :taken) if charge && charge != self
+  end
 end
 
 # == Schema Information
@@ -163,6 +174,7 @@ end
 #  id                   :uuid             not null, primary key
 #  amount_currency      :string
 #  charge_model         :integer          default("standard"), not null
+#  code                 :string
 #  deleted_at           :datetime
 #  invoice_display_name :string
 #  invoiceable          :boolean          default(TRUE), not null
@@ -186,6 +198,7 @@ end
 #  index_charges_on_organization_id                             (organization_id)
 #  index_charges_on_parent_id                                   (parent_id)
 #  index_charges_on_plan_id                                     (plan_id)
+#  index_charges_on_plan_id_and_code                            (plan_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
 #  index_charges_pay_in_advance                                 (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
 #
 # Foreign Keys

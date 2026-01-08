@@ -2,7 +2,7 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {})
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
@@ -10,6 +10,7 @@ module Invoices
       @skip_psp = skip_psp
       @voided_invoice_id = voided_invoice_id
       @payment_method_params = payment_method_params
+      @invoice_custom_section = invoice_custom_section
 
       super(nil)
     end
@@ -48,7 +49,11 @@ module Invoices
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+        unless skip_custom_sections?
+          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, custom_section_ids: invoice_custom_section_ids)
+        end
+
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.voided_invoice_id = voided_invoice_id if voided_invoice_id.present?
@@ -77,7 +82,7 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params
+    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params, :invoice_custom_section
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -131,6 +136,30 @@ module Invoices
       return nil if payment_method_params.blank? || payment_method_params[:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: payment_method_params[:payment_method_id], organization_id: customer.organization_id)
+    end
+
+    def invoice_custom_section_ids
+      return @invoice_custom_section_ids if defined?(@invoice_custom_section_ids)
+      return @invoice_custom_section_ids = [] if section_identifiers.blank?
+
+      identifier = api_context? ? :code : :id
+      @invoice_custom_section_ids =
+        customer.organization.invoice_custom_sections.where(identifier => section_identifiers).pluck(:id)
+    end
+
+    def section_identifiers
+      return nil unless invoice_custom_section
+
+      key = api_context? ? :invoice_custom_section_codes : :invoice_custom_section_ids
+
+      invoice_custom_section[key]&.compact&.uniq
+    end
+
+    def skip_custom_sections?
+      return false unless invoice_custom_section
+      return false if invoice_custom_section[:skip_invoice_custom_sections].nil?
+
+      invoice_custom_section[:skip_invoice_custom_sections]
     end
   end
 end
