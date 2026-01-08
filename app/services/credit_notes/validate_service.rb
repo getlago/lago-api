@@ -86,7 +86,7 @@ module CreditNotes
 
       if invoice.total_paid_amount_cents <= 0
         add_error(field: :refund_amount_cents, error_code: "cannot_refund_unpaid_invoice")
-        return
+        return false
       end
 
       refundable_paid_cents = invoice.total_paid_amount_cents - refunded_invoice_amount_cents
