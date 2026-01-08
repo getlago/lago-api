@@ -3,11 +3,14 @@
 require "rails_helper"
 
 RSpec.describe FixedCharges::UpdateService do
-  subject(:update_service) { described_class.new(fixed_charge:, params:, cascade_options:) }
+  subject(:update_service) do
+    described_class.new(fixed_charge:, params:, cascade_options:, timestamp:)
+  end
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:add_on) { create(:add_on, organization:) }
+  let(:timestamp) { Time.current.to_i }
 
   let(:fixed_charge) do
     create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false, units: 10)
@@ -250,7 +253,8 @@ RSpec.describe FixedCharges::UpdateService do
             .to have_received(:call!)
             .with(
               fixed_charge: result.fixed_charge,
-              apply_units_immediately: true
+              apply_units_immediately: true,
+              timestamp:
             )
             .once
         end
@@ -272,7 +276,8 @@ RSpec.describe FixedCharges::UpdateService do
               .to have_received(:call!)
               .with(
                 fixed_charge: result.fixed_charge,
-                apply_units_immediately: false
+                apply_units_immediately: false,
+                timestamp:
               )
               .once
           end

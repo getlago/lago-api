@@ -287,6 +287,7 @@ end
 #  audit_logs_period            :integer          default(30)
 #  authentication_methods       :string           default(["email_password", "google_oauth"]), not null, is an Array
 #  city                         :string
+#  clickhouse_deduplication_enabled :boolean          default(FALSE), not null
 #  clickhouse_events_store      :boolean          default(FALSE), not null
 #  country                      :string
 #  custom_aggregation           :boolean          default(FALSE)

@@ -4,11 +4,12 @@ module FixedCharges
   class UpdateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:, params:, cascade_options: {})
+    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {})
       @fixed_charge = fixed_charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
+      @timestamp = timestamp
 
       super
     end
@@ -37,7 +38,8 @@ module FixedCharges
         if fixed_charge.units_previously_changed?
           FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
             fixed_charge:,
-            apply_units_immediately: params[:apply_units_immediately]
+            apply_units_immediately: params[:apply_units_immediately],
+            timestamp:
           )
         end
 
@@ -62,7 +64,7 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge, :params, :cascade_options, :cascade
+    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp
 
     delegate :plan, to: :fixed_charge
   end

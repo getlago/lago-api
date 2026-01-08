@@ -13,7 +13,6 @@ module Webhooks
     def call
       webhook.endpoint = webhook.webhook_endpoint.webhook_url
 
-      http_client = LagoHttpClient::Client.new(webhook.webhook_endpoint.webhook_url, write_timeout: 30)
       response = http_client.post_with_response(webhook.payload, webhook.generate_headers)
 
       mark_webhook_as_succeeded(response)
@@ -42,6 +41,19 @@ module Webhooks
     private
 
     attr_reader :webhook
+
+    def http_client
+      @http_client ||= LagoHttpClient::Client.new(
+        webhook.webhook_endpoint.webhook_url,
+        read_timeout: timeout_seconds,
+        write_timeout: timeout_seconds,
+        open_timeout: timeout_seconds
+      )
+    end
+
+    def timeout_seconds
+      ENV.fetch("LAGO_WEBHOOK_TIMEOUT_SECONDS", 30).to_i
+    end
 
     def mark_webhook_as_succeeded(response)
       webhook.http_status = response&.code&.to_i

@@ -115,8 +115,24 @@ RSpec.describe CreditNotes::ValidateService do
       end
     end
 
+    context "when refund amount is positive but invoice is not paid" do
+      let(:refund_amount_cents) { 200 }
+
+      before do
+        create(:fee, invoice:, amount_cents: 100, taxes_rate: 20, taxes_amount_cents: 20)
+      end
+
+      it "fails the validation" do
+        expect(validator).not_to be_valid
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_amount_cents]).to eq(["cannot_refund_unpaid_invoice"])
+      end
+    end
+
     context "when refund amount is higher than invoice amount" do
       let(:refund_amount_cents) { 200 }
+      let(:total_paid_amount_cents) { 20 }
 
       before do
         invoice.payment_succeeded!
@@ -152,6 +168,7 @@ RSpec.describe CreditNotes::ValidateService do
 
       let(:credit_amount_cents) { 0 }
       let(:refund_amount_cents) { 10 }
+      let(:total_paid_amount_cents) { 5 }
 
       it "fails the validation" do
         expect(validator).not_to be_valid

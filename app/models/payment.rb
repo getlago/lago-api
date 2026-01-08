@@ -11,6 +11,7 @@ class Payment < ApplicationRecord
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
+  belongs_to :payment_method, optional: true
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
@@ -146,6 +147,7 @@ end
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
+#  payment_method_id            :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
 #  provider_payment_id          :string
@@ -159,6 +161,7 @@ end
 #  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
 #  index_payments_on_payable_id_and_payable_type_and_error_code   (payable_id,payable_type,error_code)
 #  index_payments_on_payable_type_and_payable_id                  (payable_type,payable_id)
+#  index_payments_on_payment_method_id                            (payment_method_id)
 #  index_payments_on_payment_provider_customer_id                 (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id                          (payment_provider_id)
 #  index_payments_on_payment_type                                 (payment_type)
@@ -168,5 +171,6 @@ end
 #
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (payment_method_id => payment_methods.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)
 #

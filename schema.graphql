@@ -2922,6 +2922,7 @@ input CreateInvoiceInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
   voidedInvoiceId: ID
 }
@@ -4260,6 +4261,7 @@ type CustomerPortalCustomer {
   addressLine2: String
   applicableTimezone: TimezoneEnum!
   billingConfiguration: CustomerBillingConfiguration
+  billingEntityBillingConfiguration: BillingEntityBillingConfiguration!
   city: String
   country: CountryCode
   currency: CurrencyEnum
@@ -5474,6 +5476,7 @@ input FetchDraftInvoiceTaxesInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
   voidedInvoiceId: ID
 }
@@ -8090,6 +8093,7 @@ type Payment {
   id: ID!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
+  paymentProvider: PaymentProvider
   paymentProviderType: ProviderTypeEnum
   paymentReceipt: PaymentReceipt
   paymentType: PaymentTypeEnum!

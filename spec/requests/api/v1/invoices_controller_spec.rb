@@ -6,6 +6,7 @@ RSpec.describe Api::V1::InvoicesController do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
+  let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
 
   before { tax }
 
@@ -32,7 +33,8 @@ RSpec.describe Api::V1::InvoicesController do
           {
             add_on_code: add_on_second.code
           }
-        ]
+        ],
+        invoice_custom_section: {invoice_custom_section_codes: [section_1.code]}
       }
     end
 
@@ -56,6 +58,8 @@ RSpec.describe Api::V1::InvoicesController do
 
       expect(fee[:item][:invoice_display_name]).to eq(invoice_display_name)
       expect(json[:invoice][:applied_taxes][0][:tax_code]).to eq(tax.code)
+      expect(json[:invoice][:applied_invoice_custom_sections].size).to eq(1)
+      expect(json[:invoice][:applied_invoice_custom_sections].first[:code]).to eq(section_1.code)
     end
 
     context "when customer does not exist" do

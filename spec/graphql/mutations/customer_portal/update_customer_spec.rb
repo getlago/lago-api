@@ -35,6 +35,9 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
           billingConfiguration {
             documentLocale
           }
+          billingEntityBillingConfiguration {
+            documentLocale
+          }
           shippingAddress {
             addressLine1
             addressLine2
@@ -94,6 +97,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     expect(result_data["state"]).to eq(input[:state])
     expect(result_data["country"]).to eq(input[:country])
     expect(result_data["billingConfiguration"]["documentLocale"]).to eq(input[:documentLocale])
+    expect(result_data["billingEntityBillingConfiguration"]["documentLocale"]).to eq(customer.billing_entity.document_locale)
     expect(result_data["shippingAddress"]["addressLine1"]).to eq(input[:shippingAddress][:addressLine1])
     expect(result_data["shippingAddress"]["addressLine2"]).to eq(input[:shippingAddress][:addressLine2])
     expect(result_data["shippingAddress"]["zipcode"]).to eq(input[:shippingAddress][:zipcode])

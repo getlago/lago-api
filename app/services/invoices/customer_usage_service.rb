@@ -91,22 +91,19 @@ module Invoices
     def compute_charge_fees
       fees = []
 
-      filters = event_filters(subscription, boundaries)
+      filters = event_filters(subscription, boundaries).charges
 
       subscription
         .plan
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .find_each do |charge|
-        bypass_aggregation = !filters.charge_ids.include?(charge.id)
-        fees += charge_usage(charge, bypass_aggregation)
-      end
+        .find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
-    def charge_usage(charge, bypass_aggregation)
+    def charge_usage(charge, applied_filters)
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
@@ -118,7 +115,7 @@ module Invoices
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
 
       Fees::ChargeService
-        .call(
+        .call!(
           invoice:,
           charge:,
           subscription:,
@@ -127,9 +124,8 @@ module Invoices
           cache_middleware:,
           calculate_projected_usage:,
           with_zero_units_filters:,
-          bypass_aggregation:
+          filtered_aggregations: applied_filters
         )
-        .raise_if_error!
         .fees
     end
 

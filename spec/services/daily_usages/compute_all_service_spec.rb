@@ -9,26 +9,31 @@ RSpec.describe DailyUsages::ComputeAllService do
 
   let(:organization) { create(:organization, premium_integrations:) }
   let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let(:subscriptions) { create_list(:subscription, 5, customer:) }
 
   let(:premium_integrations) do
     ["revenue_analytics"]
   end
 
-  before { subscription }
+  before { subscriptions }
 
   describe "#call" do
     it "enqueues a job to compute the daily usage" do
       expect(compute_service.call).to be_success
-      expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+      subscriptions.each do |subscription|
+        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+      end
     end
 
     context "when subscription usage was already computed" do
-      before { create(:daily_usage, subscription:, usage_date: timestamp.to_date - 1.day) }
+      before { create(:daily_usage, subscription: subscriptions.first, usage_date: timestamp.to_date - 1.day) }
 
       it "does not enqueue any job" do
         expect(compute_service.call).to be_success
-        expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+        expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
+        subscriptions[1..].each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        end
       end
     end
 
@@ -49,7 +54,9 @@ RSpec.describe DailyUsages::ComputeAllService do
 
         it "enqueues a job to compute the daily usage" do
           expect(compute_service.call).to be_success
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
         end
       end
     end
@@ -67,7 +74,9 @@ RSpec.describe DailyUsages::ComputeAllService do
 
         it "enqueues a job to compute the daily usage" do
           expect(compute_service.call).to be_success
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
         end
       end
     end

@@ -12,7 +12,7 @@ module CreditNotes
       def call
         return result.not_found_failure!(resource: "credit_note") unless credit_note
 
-        credit_note.error_details.tax_error.discard_all
+        credit_note.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
 
         tax_result = Integrations::Aggregator::Taxes::CreditNotes::CreateService.new(credit_note:).call
 

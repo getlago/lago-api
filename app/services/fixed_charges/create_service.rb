@@ -4,9 +4,10 @@ module FixedCharges
   class CreateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(plan:, params:)
+    def initialize(plan:, params:, timestamp: Time.current.to_i)
       @plan = plan
       @params = params
+      @timestamp = timestamp.to_i
 
       super
     end
@@ -42,7 +43,8 @@ module FixedCharges
 
         FixedCharges::EmitEventsForActiveSubscriptionsService.call!(
           fixed_charge:,
-          apply_units_immediately: !!params[:apply_units_immediately]
+          apply_units_immediately: !!params[:apply_units_immediately],
+          timestamp:
         )
 
         result.fixed_charge = fixed_charge
@@ -59,12 +61,12 @@ module FixedCharges
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :timestamp
 
     delegate :organization, to: :plan
 
     def add_on
-      if params[:add_on_id].present?
+      @add_on ||= if params[:add_on_id].present?
         organization.add_ons.find(params[:add_on_id])
       elsif params[:add_on_code].present?
         organization.add_ons.find_by!(code: params[:add_on_code])

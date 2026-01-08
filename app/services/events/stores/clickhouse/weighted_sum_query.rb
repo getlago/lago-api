@@ -9,9 +9,7 @@ module Events
         end
 
         def query
-          <<-SQL
-            #{events_cte_sql}
-
+          with_ctes(events_cte_sql, <<-SQL)
             SELECT sum(period_ratio) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) as period_ratio
@@ -21,9 +19,7 @@ module Events
         end
 
         def grouped_query(initial_values:)
-          <<-SQL
-            #{grouped_events_cte_sql(initial_values)}
-
+          with_ctes(grouped_events_cte_sql(initial_values), <<-SQL)
             SELECT
               #{group_names},
               SUM(period_ratio) as aggregation
@@ -39,9 +35,7 @@ module Events
 
         # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
         def breakdown_query
-          <<-SQL
-            #{events_cte_sql}
-
+          with_ctes(events_cte_sql, <<-SQL)
             SELECT
               timestamp,
               difference,
@@ -57,26 +51,27 @@ module Events
 
         attr_reader :store
 
-        delegate :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
+        delegate :arel_table, :with_ctes, :charges_duration, :events_cte_queries, :grouped_arel_columns, to: :store
 
         def events_cte_sql
-          <<~SQL
-            WITH events_data AS (
-              (#{initial_value_sql})
-              UNION ALL
-              (#{
-                events_sql(
-                  ordered: true,
-                  select: [
-                    arel_table[:timestamp].as("timestamp"),
-                    arel_table[:decimal_value].as("difference")
-                  ]
-                )
-              })
-              UNION ALL
-              (#{end_of_period_value_sql})
-            )
+          events_cte = events_cte_queries(
+            ordered: true,
+            select: [
+              arel_table[:timestamp].as("timestamp"),
+              arel_table[:decimal_value].as("difference")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          events_data = <<~SQL
+            (#{initial_value_sql})
+            UNION ALL
+            (#{events_cte["events"]})
+            UNION ALL
+            (#{end_of_period_value_sql})
           SQL
+
+          events_cte.except!("events").merge!("events_data" => events_data)
         end
 
         def initial_value_sql
@@ -118,24 +113,24 @@ module Events
 
         def grouped_events_cte_sql(initial_values)
           groups, _ = grouped_arel_columns
+          events_cte = events_cte_queries(
+            ordered: true,
+            select: groups + [
+              arel_table[:timestamp].as("timestamp"),
+              arel_table[:decimal_value].as("difference")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
 
-          <<-SQL
-            WITH events_data AS (
-              (#{grouped_initial_value_sql(initial_values)})
-              UNION ALL
-              (#{
-                events_sql(
-                  ordered: true,
-                  select: groups + [
-                    arel_table[:timestamp].as("timestamp"),
-                    arel_table[:decimal_value].as("difference")
-                  ]
-                )
-              })
-              UNION ALL
-              (#{grouped_end_of_period_value_sql(initial_values)})
-            )
+          events_data = <<-SQL
+            (#{grouped_initial_value_sql(initial_values)})
+            UNION ALL
+            (#{events_cte["events"]})
+            UNION ALL
+            (#{grouped_end_of_period_value_sql(initial_values)})
           SQL
+
+          events_cte.except!("events").merge!("events_data" => events_data)
         end
 
         def grouped_initial_value_sql(initial_values)
