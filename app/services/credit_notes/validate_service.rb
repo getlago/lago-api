@@ -80,7 +80,7 @@ module CreditNotes
       add_error(field: :base, error_code: "does_not_match_item_amounts")
     end
 
-    # NOTE: Check if refunded amount is less than or equal to invoice total amount
+    # NOTE: Check if refunded amount is less than or equal to the invoice's paid amount
     def valid_refund_amount?
       return true if credit_note.refund_amount_cents.zero?
 
