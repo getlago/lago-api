@@ -103,6 +103,78 @@ RSpec.describe WalletTransactionsQuery do
     end
   end
 
+  context "when transaction_status filter is present" do
+    # Override outer context transactions to avoid interference
+    let(:wallet_transaction_first) { nil }
+    let(:wallet_transaction_second) { nil }
+    let(:wallet_transaction_third) { nil }
+
+    let(:purchased_transaction) do
+      create(:wallet_transaction, wallet:, transaction_status: :purchased)
+    end
+    let(:granted_transaction) do
+      create(:wallet_transaction, wallet:, transaction_status: :granted)
+    end
+    let(:voided_transaction) do
+      create(:wallet_transaction, wallet:, transaction_status: :voided)
+    end
+    let(:invoiced_transaction) do
+      create(:wallet_transaction, wallet:, transaction_status: :invoiced)
+    end
+
+    before do
+      purchased_transaction
+      granted_transaction
+      voided_transaction
+      invoiced_transaction
+    end
+
+    context "with purchased status" do
+      let(:filters) { {transaction_status: "purchased"} }
+
+      it "returns only purchased transactions" do
+        expect(result).to be_success
+        expect(returned_ids).to eq([purchased_transaction.id])
+      end
+    end
+
+    context "with granted status" do
+      let(:filters) { {transaction_status: "granted"} }
+
+      it "returns only granted transactions" do
+        expect(result).to be_success
+        expect(returned_ids).to eq([granted_transaction.id])
+      end
+    end
+
+    context "with voided status" do
+      let(:filters) { {transaction_status: "voided"} }
+
+      it "returns only voided transactions" do
+        expect(result).to be_success
+        expect(returned_ids).to eq([voided_transaction.id])
+      end
+    end
+
+    context "with invoiced status" do
+      let(:filters) { {transaction_status: "invoiced"} }
+
+      it "returns only invoiced transactions" do
+        expect(result).to be_success
+        expect(returned_ids).to eq([invoiced_transaction.id])
+      end
+    end
+
+    context "with invalid transaction_status" do
+      let(:filters) { {transaction_status: "invalid"} }
+
+      it "returns all transactions" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(4)
+      end
+    end
+  end
+
   context "when wallet is not found" do
     let(:wallet_id) { "#{wallet.id}abc" }
 

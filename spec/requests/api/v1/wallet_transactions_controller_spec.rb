@@ -221,6 +221,87 @@ RSpec.describe Api::V1::WalletTransactionsController do
       end
     end
 
+    context "with transaction_status filter" do
+      # Override outer context transactions to avoid interference
+      let(:wallet_transaction_first) { nil }
+      let(:wallet_transaction_second) { nil }
+
+      let(:purchased_transaction) do
+        create(:wallet_transaction, wallet:, transaction_status: :purchased)
+      end
+      let(:granted_transaction) do
+        create(:wallet_transaction, wallet:, transaction_status: :granted)
+      end
+      let(:voided_transaction) do
+        create(:wallet_transaction, wallet:, transaction_status: :voided)
+      end
+      let(:invoiced_transaction) do
+        create(:wallet_transaction, wallet:, transaction_status: :invoiced)
+      end
+
+      before do
+        purchased_transaction
+        granted_transaction
+        voided_transaction
+        invoiced_transaction
+      end
+
+      context "with purchased status" do
+        let(:params) { {transaction_status: "purchased"} }
+
+        it "filters by purchased status" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].pluck(:lago_id)).to eq([purchased_transaction.id])
+        end
+      end
+
+      context "with granted status" do
+        let(:params) { {transaction_status: "granted"} }
+
+        it "filters by granted status" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].pluck(:lago_id)).to eq([granted_transaction.id])
+        end
+      end
+
+      context "with voided status" do
+        let(:params) { {transaction_status: "voided"} }
+
+        it "filters by voided status" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].pluck(:lago_id)).to eq([voided_transaction.id])
+        end
+      end
+
+      context "with invoiced status" do
+        let(:params) { {transaction_status: "invoiced"} }
+
+        it "filters by invoiced status" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].pluck(:lago_id)).to eq([invoiced_transaction.id])
+        end
+      end
+
+      context "with invalid transaction_status value" do
+        let(:params) { {transaction_status: "invalid"} }
+
+        it "ignores invalid transaction_status values" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].count).to eq(4)
+        end
+      end
+    end
+
     context "when wallet does not exist" do
       let(:wallet_id) { SecureRandom.uuid }
 
