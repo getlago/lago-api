@@ -258,7 +258,7 @@ RSpec.describe Api::V1::EventsController do
       context "when exceeding organization rate limit", cach: :memory do
         before do
           organization.update(api_rate_limits: {
-            "events#batch": { to: 1, within: 1 }
+            "events#batch": {to: 1, within: 1}
           })
         end
 

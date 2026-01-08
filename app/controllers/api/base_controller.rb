@@ -18,7 +18,7 @@ module Api
     def self.rate_limit_action(action, to:, within:, name: nil)
       before_action(-> do
         limit_name = "#{controller_name}##{action_name}"
-        applicable_limit = api_rate_limits&.dig(limit_name) || { "to" => to, "within" => within }
+        applicable_limit = api_rate_limits&.dig(limit_name) || {"to" => to, "within" => within}
         to = applicable_limit["to"]
         within = applicable_limit["within"]
 
