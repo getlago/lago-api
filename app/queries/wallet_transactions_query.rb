@@ -2,7 +2,7 @@
 
 class WalletTransactionsQuery < BaseQuery
   Result = BaseResult[:wallet_transactions]
-  Filters = BaseFilters[:transaction_type, :status]
+  Filters = BaseFilters[:transaction_type, :status, :transaction_status]
 
   def initialize(organization:, wallet_id:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @wallet = organization.wallets.find_by(id: wallet_id)
@@ -22,6 +22,10 @@ class WalletTransactionsQuery < BaseQuery
 
     wallet_transactions = with_status(wallet_transactions) if valid_status?(filters.status)
 
+    if valid_transaction_status?(filters.transaction_status)
+      wallet_transactions = with_transaction_status(wallet_transactions)
+    end
+
     result.wallet_transactions = wallet_transactions
     result
   end
@@ -38,11 +42,19 @@ class WalletTransactionsQuery < BaseQuery
     scope.where(status: filters.status)
   end
 
+  def with_transaction_status(scope)
+    scope.where(transaction_status: filters.transaction_status)
+  end
+
   def valid_status?(status)
     WalletTransaction.statuses.key?(status)
   end
 
   def valid_transaction_type?(transaction_type)
     WalletTransaction.transaction_types.key?(transaction_type)
+  end
+
+  def valid_transaction_status?(transaction_status)
+    WalletTransaction.transaction_statuses.key?(transaction_status)
   end
 end
