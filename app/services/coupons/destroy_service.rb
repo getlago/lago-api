@@ -17,7 +17,7 @@ module Coupons
 
       ActiveRecord::Base.transaction do
         coupon.discard!
-        coupon.coupon_targets.discard_all
+        coupon.coupon_targets.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
         coupon.applied_coupons.active.find_each do |applied_coupon|
           AppliedCoupons::TerminateService.call(applied_coupon:)

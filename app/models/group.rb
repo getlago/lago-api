@@ -24,7 +24,7 @@ class Group < ApplicationRecord
 
   # NOTE: Discard group and children with properties.
   def discard_with_properties!
-    children.each { |c| c.properties&.discard_all && c.discard! } && properties.discard_all && discard!
+    children.each { |c| c.properties&.update_all(deleted_at: Time.current) && c.discard! } && properties.update_all(deleted_at: Time.current) && discard! # rubocop:disable Rails/SkipsModelValidations
   end
 end
 
