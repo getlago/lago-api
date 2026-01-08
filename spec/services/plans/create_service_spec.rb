@@ -888,4 +888,74 @@ RSpec.describe Plans::CreateService do
       end
     end
   end
+
+  describe "metadata" do
+    let(:create_args) do
+      {
+        name: plan_name,
+        organization_id: organization.id,
+        code: "plan_with_metadata",
+        interval: "monthly",
+        pay_in_advance: false,
+        amount_cents: 100,
+        amount_currency: "EUR",
+        charges: [],
+        metadata: {key1: "value1", key2: "value2"}
+      }
+    end
+
+    it "creates plan with metadata" do
+      result = plans_service.call
+
+      expect(result).to be_success
+      expect(result.plan.metadata).to be_present
+      expect(result.plan.metadata.value).to eq("key1" => "value1", "key2" => "value2")
+    end
+
+    context "when metadata is empty" do
+      let(:create_args) do
+        {
+          name: plan_name,
+          organization_id: organization.id,
+          code: "plan_with_empty_metadata",
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_cents: 100,
+          amount_currency: "EUR",
+          charges: [],
+          metadata: {}
+        }
+      end
+
+      it "creates plan with empty metadata" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata).to be_present
+        expect(result.plan.metadata.value).to eq({})
+      end
+    end
+
+    context "when metadata is not provided" do
+      let(:create_args) do
+        {
+          name: plan_name,
+          organization_id: organization.id,
+          code: "plan_without_metadata",
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_cents: 100,
+          amount_currency: "EUR",
+          charges: []
+        }
+      end
+
+      it "creates plan without metadata" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.metadata).to be_nil
+      end
+    end
+  end
 end

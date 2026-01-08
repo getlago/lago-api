@@ -481,4 +481,47 @@ RSpec.describe Mutations::Plans::Create do
       expect(result_data["billFixedChargesMonthly"]).to be true
     end
   end
+
+  context "with metadata" do
+    let(:mutation) do
+      <<~GQL
+        mutation($input: CreatePlanInput!) {
+          createPlan(input: $input) {
+            id
+            code
+            metadata { key value }
+          }
+        }
+      GQL
+    end
+
+    it "creates plan with metadata" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan with metadata",
+            code: "plan_with_metadata",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: [],
+            metadata: [{key: "foo", value: "bar"}, {key: "baz", value: "qux"}]
+          }
+        }
+      )
+
+      result_data = result["data"]["createPlan"]
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq("plan_with_metadata")
+      expect(result_data["metadata"]).to match_array([
+        {"key" => "foo", "value" => "bar"},
+        {"key" => "baz", "value" => "qux"}
+      ])
+    end
+  end
 end

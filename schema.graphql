@@ -3035,6 +3035,7 @@ input CreatePlanInput {
   fixedCharges: [FixedChargeInput!]
   interval: PlanInterval!
   invoiceDisplayName: String
+  metadata: [MetadataInput!]
   minimumCommitment: CommitmentInput
   name: String!
   payInAdvance: Boolean!
@@ -8394,6 +8395,7 @@ type Plan {
   interval: PlanInterval!
   invoiceDisplayName: String
   isOverridden: Boolean!
+  metadata: [ItemMetadata!]
   minimumCommitment: Commitment
   name: String!
   organization: Organization
@@ -11528,6 +11530,7 @@ input UpdatePlanInput {
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
+  metadata: [MetadataInput!]
   minimumCommitment: CommitmentInput
   name: String!
   payInAdvance: Boolean!

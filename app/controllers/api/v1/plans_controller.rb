@@ -115,6 +115,7 @@ module Api
           :bill_charges_monthly,
           :bill_fixed_charges_monthly,
           :cascade_updates,
+          metadata: {},
           tax_codes: [],
           minimum_commitment: [
             :id,

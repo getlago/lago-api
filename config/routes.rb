@@ -131,6 +131,11 @@ Rails.application.routes.draw do
           resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
         end
         patch :entitlements, to: "plans/entitlements#update"
+        scope module: :plans do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
       end
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do

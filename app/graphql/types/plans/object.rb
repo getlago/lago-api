@@ -50,6 +50,8 @@ module Types
       field :is_overridden, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
+      field :metadata, [Types::Metadata::Object], null: true
+
       def entitlements
         object.entitlements.order(:created_at)
       end
@@ -125,6 +127,10 @@ module Types
 
       def has_subscriptions_on_children
         object.children.joins(:subscriptions).exists?
+      end
+
+      def metadata
+        object.metadata&.value&.map { |key, value| {key:, value:} }
       end
     end
   end

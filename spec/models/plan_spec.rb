@@ -9,6 +9,7 @@ RSpec.describe Plan do
 
   it do
     expect(subject).to have_one(:minimum_commitment)
+    expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata")
     expect(subject).to have_many(:usage_thresholds)
     expect(subject).to have_many(:commitments)
     expect(subject).to have_many(:charges).dependent(:destroy)

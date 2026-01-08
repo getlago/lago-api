@@ -1069,4 +1069,75 @@ RSpec.describe Api::V1::PlansController do
       end
     end
   end
+
+  describe "POST /api/v1/plans with metadata" do
+    subject { post_with_token(organization, "/api/v1/plans", {plan: create_params}) }
+
+    let(:create_params) do
+      {
+        name: "Plan with metadata",
+        code: "plan_with_metadata",
+        interval: "monthly",
+        amount_cents: 100,
+        amount_currency: "EUR",
+        pay_in_advance: false,
+        charges: [],
+        metadata: {foo: "bar", baz: "qux"}
+      }
+    end
+
+    include_examples "requires API permission", "plan", "write"
+
+    it "creates a plan with metadata" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:plan][:lago_id]).to be_present
+      expect(json[:plan][:code]).to eq("plan_with_metadata")
+      expect(json[:plan][:metadata]).to eq({foo: "bar", baz: "qux"})
+    end
+
+    context "when metadata is empty" do
+      let(:create_params) do
+        {
+          name: "Plan with empty metadata",
+          code: "plan_empty_metadata",
+          interval: "monthly",
+          amount_cents: 100,
+          amount_currency: "EUR",
+          pay_in_advance: false,
+          charges: [],
+          metadata: {}
+        }
+      end
+
+      it "creates a plan with empty metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:metadata]).to eq({})
+      end
+    end
+
+    context "when metadata is not provided" do
+      let(:create_params) do
+        {
+          name: "Plan without metadata",
+          code: "plan_no_metadata",
+          interval: "monthly",
+          amount_cents: 100,
+          amount_currency: "EUR",
+          pay_in_advance: false,
+          charges: []
+        }
+      end
+
+      it "creates a plan without metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:metadata]).to eq(nil)
+      end
+    end
+  end
 end
