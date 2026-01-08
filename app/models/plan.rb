@@ -13,8 +13,7 @@ class Plan < ApplicationRecord
   has_one :minimum_commitment, -> { where(commitment_type: :minimum_commitment) }, class_name: "Commitment"
   has_one :metadata,
     class_name: "Metadata::ItemMetadata",
-    as: :owner,
-    dependent: :destroy
+    as: :owner
 
   has_many :commitments
   has_many :charges, dependent: :destroy

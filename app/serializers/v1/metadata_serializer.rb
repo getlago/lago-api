@@ -3,9 +3,7 @@
 module V1
   class MetadataSerializer < ModelSerializer
     def serialize
-      return nil unless model
-
-      model.value
+      model&.value
     end
   end
 end
