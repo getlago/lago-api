@@ -11,6 +11,7 @@ RSpec.describe FixedCharges::UpdateChildrenBatchJob do
   let(:child_fixed_charge_1) { create(:fixed_charge, plan: child_plan, add_on:, parent: fixed_charge) }
   let(:child_fixed_charge_2) { create(:fixed_charge, plan: child_plan, add_on:, parent: fixed_charge) }
   let(:child_ids) { [child_fixed_charge_1.id, child_fixed_charge_2.id] }
+  let(:timestamp) { Time.current.to_i }
 
   let(:params) do
     {
@@ -31,7 +32,8 @@ RSpec.describe FixedCharges::UpdateChildrenBatchJob do
         fixed_charge:,
         params:,
         old_parent_attrs:,
-        child_ids:
+        child_ids:,
+        timestamp:
       )
       .and_call_original
   end
@@ -40,7 +42,8 @@ RSpec.describe FixedCharges::UpdateChildrenBatchJob do
     described_class.perform_now(
       child_ids:,
       params:,
-      old_parent_attrs:
+      old_parent_attrs:,
+      timestamp:
     )
 
     expect(FixedCharges::UpdateChildrenService).to have_received(:call!).once

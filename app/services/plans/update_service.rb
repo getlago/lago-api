@@ -5,6 +5,7 @@ module Plans
     def initialize(plan:, params:)
       @plan = plan
       @params = params
+      @timestamp = Time.current.to_i
       super
     end
 
@@ -81,7 +82,7 @@ module Plans
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :timestamp
 
     delegate :organization, to: :plan
 
@@ -144,6 +145,8 @@ module Plans
     def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge)
       return unless cascade_needed?
 
+      # TODO: pass timestamp to create fixed charge events at the same time
+      # TODO: kick off inovice generation for in advance fixed charges created after create
       FixedCharges::CreateChildrenJob.perform_later(fixed_charge:, payload: payload_fixed_charge)
     end
 
@@ -159,7 +162,8 @@ module Plans
       old_parent_attrs = fixed_charge.attributes
       FixedCharges::UpdateChildrenJob.perform_later(
         params: payload_fixed_charge.deep_stringify_keys,
-        old_parent_attrs:
+        old_parent_attrs:,
+        timestamp:
       )
     end
 
@@ -231,12 +235,12 @@ module Plans
 
         if fixed_charge
           cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
-          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge)
+          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:)
 
           next
         end
 
-        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge))
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge), timestamp:)
 
         after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge) }
         created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
@@ -244,6 +248,19 @@ module Plans
 
       # NOTE: Delete fixed_charges that are no more linked to the plan
       sanitize_fixed_charges(plan, hash_fixed_charges, created_fixed_charges_ids)
+
+      trigger_pay_in_advance_billing if plan.fixed_charges.pay_in_advance.exists?
+    end
+
+    def trigger_pay_in_advance_billing
+      plan.subscriptions.active.find_each do |subscription|
+        after_commit do
+          Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
+            subscription,
+            timestamp
+          )
+        end
+      end
     end
 
     def sanitize_fixed_charges(plan, args_fixed_charges, created_fixed_charges_ids)

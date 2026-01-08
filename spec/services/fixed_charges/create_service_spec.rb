@@ -356,7 +356,11 @@ RSpec.describe FixedCharges::CreateService do
 
             expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
               .to have_received(:call!)
-              .with(fixed_charge: result.fixed_charge, apply_units_immediately: true)
+              .with(
+                fixed_charge: result.fixed_charge,
+                apply_units_immediately: true,
+                timestamp: be_within(1.second).of(Time.current.to_i)
+              )
               .once
           end
         end
@@ -387,10 +391,48 @@ RSpec.describe FixedCharges::CreateService do
 
             expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
               .to have_received(:call!)
-              .with(fixed_charge: result.fixed_charge, apply_units_immediately: false)
+              .with(
+                fixed_charge: result.fixed_charge,
+                apply_units_immediately: false,
+                timestamp: be_within(1.second).of(Time.current.to_i)
+              )
               .once
           end
         end
+      end
+    end
+
+    context "when timestamp is provided" do
+      subject(:create_service) { described_class.new(plan:, params:, timestamp:) }
+
+      let(:timestamp) { 2.days.ago.to_i }
+      let(:params) do
+        {
+          add_on_id: add_on.id,
+          charge_model: "standard",
+          units: 5,
+          properties: {amount: "100"},
+          apply_units_immediately: true
+        }
+      end
+
+      before do
+        allow(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          .to receive(:call!)
+          .and_call_original
+      end
+
+      it "passes the custom timestamp to EmitEventsForActiveSubscriptionsService" do
+        result
+
+        expect(FixedCharges::EmitEventsForActiveSubscriptionsService)
+          .to have_received(:call!)
+          .with(
+            fixed_charge: result.fixed_charge,
+            apply_units_immediately: true,
+            timestamp:
+          )
+          .once
       end
     end
   end

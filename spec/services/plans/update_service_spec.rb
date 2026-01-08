@@ -1434,6 +1434,10 @@ RSpec.describe Plans::UpdateService do
       end
 
       context "when plan has no fixed_charges" do
+        before do
+          allow(FixedCharges::CreateService).to receive(:call!).and_call_original
+        end
+
         it "handles adding fixed_charges flow successfully" do
           result = plans_service.call
 
@@ -1447,6 +1451,81 @@ RSpec.describe Plans::UpdateService do
           result = plans_service.call
 
           expect(result.plan.fixed_charges.pluck(:code)).to match_array([add_on.code, "#{add_on.code}_2"])
+        end
+
+        it "calls FixedCharges::CreateService with timestamp" do
+          freeze_time do
+            plans_service.call
+
+            expect(FixedCharges::CreateService).to have_received(:call!).twice
+            expect(FixedCharges::CreateService)
+              .to have_received(:call!)
+              .with(plan:, params: fixed_charges_args.first.merge(code: add_on.code), timestamp: Time.current.to_i)
+
+            expect(FixedCharges::CreateService)
+              .to have_received(:call!)
+              .with(plan:, params: fixed_charges_args.second.merge(code: "#{add_on.code}_2"), timestamp: Time.current.to_i)
+          end
+        end
+
+        context "with plan having active subscriptions" do
+          let(:subscription) { create(:subscription, :active, plan:) }
+
+          before { subscription }
+
+          it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+            expect { plans_service.call }
+              .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+
+        context "when fixed charge params are pay in advance" do
+          let(:fixed_charges_args) do
+            [
+              {
+                add_on_id: add_on.id,
+                charge_model: "standard",
+                invoice_display_name: "fixed_charge1",
+                units: 2,
+                pay_in_advance: true,
+                properties: {amount: "150"},
+                tax_codes: [tax1.code]
+              }
+            ]
+          end
+
+          it "creates fixed charge with pay in advance" do
+            result = plans_service.call
+
+            expect(result).to be_success
+            expect(result.plan.fixed_charges.count).to eq(1)
+            expect(result.plan.fixed_charges.first).to be_pay_in_advance
+          end
+
+          context "with plan having active subscriptions" do
+            let(:subscription) { create(:subscription, :active, plan:) }
+
+            before { subscription }
+
+            it "enqueues a Invoices::CreatePayInAdvanceFixedChargesJob for active subscriptions" do
+              freeze_time do
+                expect { plans_service.call }
+                  .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+                  .with(subscription, Time.current.to_i)
+              end
+            end
+          end
+
+          context "without active subscriptions" do
+            let(:subscription) { create(:subscription, :pending, plan:) }
+
+            before { subscription }
+
+            it "does not enqueue a Invoices::CreatePayInAdvanceFixedChargesJob" do
+              expect { plans_service.call }
+                .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+            end
+          end
         end
       end
 
@@ -1493,6 +1572,8 @@ RSpec.describe Plans::UpdateService do
           fixed_charge_to_update
           fixed_charge_to_delete
           update_args[:cascade_updates] = true
+
+          allow(FixedCharges::UpdateService).to receive(:call!).and_call_original
         end
 
         it "handles update, edit and delete fixed_charges flow successfully" do
@@ -1502,6 +1583,26 @@ RSpec.describe Plans::UpdateService do
           expect(result.plan.fixed_charges.count).to eq(2)
           expect(result.plan.fixed_charges.map(&:id)).to include(fixed_charge_to_update.id)
           expect(result.plan.fixed_charges.map(&:id)).not_to include(fixed_charge_to_delete.id)
+        end
+
+        it "calls FixedCharges::UpdateService with timestamp" do
+          freeze_time do
+            plans_service.call
+
+            expect(FixedCharges::UpdateService).to have_received(:call!).with(
+              fixed_charge: fixed_charge_to_update,
+              params: {
+                id: fixed_charge_to_update.id,
+                add_on_id: add_on.id,
+                charge_model: "standard",
+                invoice_display_name: "fixed_charge1",
+                units: 2,
+                properties: {amount: "150"},
+                tax_codes: [tax1.code]
+              },
+              timestamp: Time.current.to_i
+            )
+          end
         end
 
         context "when plan has children" do

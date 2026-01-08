@@ -53,7 +53,11 @@ module Api
         end
 
         def update
-          result = FixedCharges::UpdateService.call(fixed_charge:, params: input_params.to_h.deep_symbolize_keys)
+          result = FixedCharges::UpdateService.call(
+            fixed_charge:,
+            params: input_params.to_h.deep_symbolize_keys,
+            timestamp: Time.current.to_i
+          )
 
           if result.success?
             render(
