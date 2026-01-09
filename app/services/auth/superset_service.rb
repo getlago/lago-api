@@ -8,6 +8,7 @@ module Auth
       @organization = organization
       @user = user
       @access_token = nil
+      @csrf_token = nil
       @http_client = nil
 
       super()
@@ -23,11 +24,17 @@ module Auth
 
       @access_token = auth_result[:access_token]
 
-      # Step 2: Fetch all dashboards
+      # Step 2: Get CSRF token (authenticated with Bearer token)
+      csrf_result = get_csrf_token
+      return result unless csrf_result[:success]
+
+      @csrf_token = csrf_result[:csrf_token]
+
+      # Step 3: Fetch all dashboards
       dashboards_result = fetch_dashboards
       return result unless dashboards_result[:success]
 
-      # Step 3: Process each dashboard to ensure embedded config and get guest token
+      # Step 4: Process each dashboard to ensure embedded config and get guest token
       processed_dashboards = []
       dashboards_result[:dashboards].each do |dashboard|
         embedded_config = ensure_embedded_config(dashboard["id"])
@@ -58,7 +65,7 @@ module Auth
 
     private
 
-    attr_reader :organization, :user, :access_token
+    attr_reader :organization, :user, :access_token, :csrf_token
 
     def http_client
       @http_client ||= LagoHttpClient::SessionClient.new(superset_base_url)
@@ -76,7 +83,10 @@ module Auth
     end
 
     def authenticated_api_headers(referer_path: "/")
-      api_headers(referer_path:).merge("Authorization" => "Bearer #{access_token}")
+      api_headers(referer_path:).merge(
+        "Authorization" => "Bearer #{access_token}",
+        "X-CSRFToken" => csrf_token
+      )
     end
 
     def authenticated_json_headers(referer_path: "/")
@@ -103,6 +113,23 @@ module Auth
       {success: true, access_token:}
     rescue LagoHttpClient::HttpError => e
       result.service_failure!(code: "superset_auth_failed", message: "Failed to authenticate with Superset: #{e.error_code} #{e.message}")
+      {success: false}
+    end
+
+    def get_csrf_token
+      headers = api_headers.merge("Authorization" => "Bearer #{access_token}")
+      response = http_client.get("/api/v1/security/csrf_token/", headers:)
+      parsed_response = JSON.parse(response.body)
+      csrf_token = parsed_response["result"]
+
+      unless csrf_token
+        result.service_failure!(code: "superset_no_csrf_token", message: "No CSRF token received from Superset")
+        return {success: false}
+      end
+
+      {success: true, csrf_token:}
+    rescue LagoHttpClient::HttpError => e
+      result.service_failure!(code: "superset_csrf_failed", message: "Failed to get CSRF token: #{e.error_body}")
       {success: false}
     end
 
