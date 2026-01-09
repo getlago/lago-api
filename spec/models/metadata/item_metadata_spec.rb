@@ -87,13 +87,13 @@ RSpec.describe Metadata::ItemMetadata do
         end
       end
 
-      context "when key length is more than 40" do
-        let(:value) { {("a" * 41) => "value"} }
+      context "when key length is more than 50" do
+        let(:value) { {("a" * 51) => "value"} }
 
         it "adds an error" do
-          key = "a" * 41
+          key = "a" * 51
           expect(item_metadata).not_to be_valid
-          expect(item_metadata.errors[:value]).to include("key '#{key}' must be a String up to 40 characters")
+          expect(item_metadata.errors[:value]).to include("key '#{key}' must be a String up to 50 characters")
         end
       end
 
@@ -108,9 +108,8 @@ RSpec.describe Metadata::ItemMetadata do
       context "when value is not a String" do
         let(:value) { {"foo" => 123} }
 
-        it "adds an error" do
-          expect(item_metadata).not_to be_valid
-          expect(item_metadata.errors[:value].join).to include("value for key 'foo' must be empty or a String up to 255 characters")
+        it "is valid" do
+          expect(item_metadata).to be_valid
         end
       end
 
@@ -127,7 +126,97 @@ RSpec.describe Metadata::ItemMetadata do
 
         it "adds an error" do
           expect(item_metadata).not_to be_valid
-          expect(item_metadata.errors[:value].join).to include("value for key 'foo' must be empty or a String up to 255 characters")
+          expect(item_metadata.errors[:value].join).to include("value for key 'foo' must be up to 255 characters")
+        end
+      end
+
+      context "when value has multiple value types inside" do
+        context "when value has an array" do
+          context "and array size is more than 50" do
+            let(:value) { {"foo" => Array.new(51, "item")} }
+
+            it "adds an error" do
+              expect(item_metadata).not_to be_valid
+              expect(item_metadata.errors[:value]).to include("value for key 'foo' cannot have more than 50 items")
+            end
+          end
+
+          context "and array size is 50 or less" do
+            let(:value) { {"foo" => Array.new(50, "item")} }
+
+            it "is valid" do
+              expect(item_metadata).to be_valid
+            end
+          end
+        end
+
+        context "when value has a hash" do
+          context "when hash size is more than 50" do
+            let(:value) { {"foo" => 51.times.to_h { |i| ["key#{i}", "value#{i}"] }} }
+
+            it "adds an error" do
+              expect(item_metadata).not_to be_valid
+              expect(item_metadata.errors[:value]).to include("value for key 'foo' cannot have more than 50 keys")
+            end
+          end
+
+          context "when hash size is 50 or less" do
+            let(:value) { {"foo" => 50.times.to_h { |i| ["key#{i}", "value#{i}"] }} }
+
+            it "is valid" do
+              expect(item_metadata).to be_valid
+            end
+          end
+
+          context "when one of the inner values exceeds 500 characters in JSON size" do
+            let(:large_string) { "a" * 501 }
+            let(:value) { {"foo" => {"inner_key" => large_string}} }
+
+            it "adds an error" do
+              expect(item_metadata).not_to be_valid
+              expect(item_metadata.errors[:value]).to include("all values in hash for key 'foo' must have max json size of 500 characters")
+            end
+          end
+
+          context "when inner values are within limits" do
+            let(:value) do
+              {
+                "foo" => {
+                  "inner_string" => "a" * 100,
+                  "inner_array" => Array.new(10, "item"),
+                  "inner_hash" => 10.times.to_h { |i| ["key#{i}", "value#{i}"] },
+                  "inner_bool" => true,
+                  "inner_integer" => 42,
+                  "inner_nil" => nil
+                },
+                "hash_of_hashes" => {
+                  "hash1" => 10.times.to_h { |i| ["key#{i}", "value#{i}"] },
+                  "hash2" => 5.times.to_h { |i| ["key#{i}", {"child_key" => "child_value"}] }
+                }
+              }
+            end
+
+            it "is valid" do
+              expect(item_metadata).to be_valid
+            end
+          end
+
+          context "inner values are breaking size limit" do
+            let(:value) do
+              {
+                "foo" => {
+                  "inner_hash" => {
+                    "key1" => 10.times.to_h { |i| ["key#{i}", "value#{i}_that_will_result_in_breaking_the_limits"] }
+                  }
+                }
+              }
+            end
+
+            it "adds an error" do
+              expect(item_metadata).not_to be_valid
+              expect(item_metadata.errors[:value]).to include("all values in hash for key 'foo' must have max json size of 500 characters")
+            end
+          end
         end
       end
     end

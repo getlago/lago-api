@@ -46,7 +46,7 @@ module Metadata
           end
 
           # validation: hashes inside the main object cannot be bigger than 500 characters
-          next if val.values.all? { |v| [String, Array, Hash].include?(v.class) && v.to_json.size <= MAX_INNER_HASH_SIZE }
+          next if val.values.all? { |v| [String, Array, Hash].include?(v.class) ? v.to_json.size <= MAX_INNER_HASH_SIZE : true }
           errors.add(:value, "all values in hash for key '#{key}' must have max json size of #{MAX_INNER_HASH_SIZE} characters")
         when "Array"
           if val.size > MAX_NUMBER_OF_KEYS
