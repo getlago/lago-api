@@ -59,5 +59,16 @@ RSpec.describe Roles::DestroyService do
         expect(result.error.code).to eq("role_assigned_to_members")
       end
     end
+
+    context "when role is assigned only to revoked memberships" do
+      let(:membership) { create(:membership, :revoked, organization:) }
+
+      before { create(:membership_role, membership:, role:) }
+
+      it "soft-deletes the role" do
+        expect(result).to be_success
+        expect(role.reload.deleted_at).to be_present
+      end
+    end
   end
 end

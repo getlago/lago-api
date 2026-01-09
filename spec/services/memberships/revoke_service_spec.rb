@@ -67,5 +67,22 @@ RSpec.describe Memberships::RevokeService do
         expect(result.error.code).to eq("last_admin")
       end
     end
+
+    context "when removing the last active admin (other admins have revoked membership)" do
+      let(:revoked_membership) { create(:membership, :revoked, organization:) }
+
+      before do
+        create(:membership_role, membership:, role: admin_role)
+        create(:membership_role, membership: other_membership, role: finance_role)
+        create(:membership_role, membership: revoked_membership, role: admin_role)
+      end
+
+      it "returns an error" do
+        result = revoke_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("last_admin")
+      end
+    end
   end
 end

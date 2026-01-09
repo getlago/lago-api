@@ -15,30 +15,32 @@ RSpec.describe MembershipRole do
     end
   end
 
-  describe ".admins" do
-    it "returns only admin member roles" do
-      membership_role = create(:membership_role)
-      admin_role_id = SecureRandom.uuid
+  describe "scopes" do
+    describe ".admins" do
+      it "returns only admin member roles" do
+        membership_role = create(:membership_role)
+        admin_role_id = SecureRandom.uuid
 
-      described_class.connection.execute(<<~SQL)
-        INSERT INTO roles (id, code, name, admin, permissions, created_at, updated_at)
-        VALUES ('#{admin_role_id}', 'test_admin', 'TestAdmin', true, ARRAY[]::text[], now(), now())
-      SQL
+        described_class.connection.execute(<<~SQL)
+          INSERT INTO roles (id, code, name, admin, permissions, created_at, updated_at)
+          VALUES ('#{admin_role_id}', 'test_admin', 'TestAdmin', true, ARRAY[]::text[], now(), now())
+        SQL
 
-      admin_membership_role_id = SecureRandom.uuid
-      described_class.connection.execute(<<~SQL)
-        INSERT INTO membership_roles (id, organization_id, membership_id, role_id, created_at, updated_at)
-        VALUES (
-          '#{admin_membership_role_id}',
-          '#{membership_role.organization_id}',
-          '#{membership_role.membership_id}',
-          '#{admin_role_id}',
-          now(),
-          now()
-        )
-      SQL
+        admin_membership_role_id = SecureRandom.uuid
+        described_class.connection.execute(<<~SQL)
+          INSERT INTO membership_roles (id, organization_id, membership_id, role_id, created_at, updated_at)
+          VALUES (
+            '#{admin_membership_role_id}',
+            '#{membership_role.organization_id}',
+            '#{membership_role.membership_id}',
+            '#{admin_role_id}',
+            now(),
+            now()
+          )
+        SQL
 
-      expect(described_class.admins.pluck(:id)).to eq([admin_membership_role_id])
+        expect(described_class.admins.pluck(:id)).to eq([admin_membership_role_id])
+      end
     end
   end
 
@@ -72,46 +74,28 @@ RSpec.describe MembershipRole do
 
     it "allows discarding admin role when another admin exists" do
       membership = create(:membership)
-      other_membership = create(:membership, organization: membership.organization)
-      admin_role_id = SecureRandom.uuid
-      custom_role = create(:role, organization: membership.organization)
+      organization = membership.organization
+      other_membership = create(:membership, organization:)
+      custom_role = create(:role, organization:)
 
-      described_class.connection.execute(<<~SQL)
-        INSERT INTO roles (id, code, name, admin, permissions, created_at, updated_at)
-        VALUES ('#{admin_role_id}', 'test_admin_#{admin_role_id[0..7]}', 'TestAdmin', true, ARRAY[]::text[], now(), now())
-      SQL
-
-      membership_role_id = SecureRandom.uuid
-      described_class.connection.execute(<<~SQL)
-        INSERT INTO membership_roles (id, organization_id, membership_id, role_id, created_at, updated_at)
-        VALUES (
-          '#{membership_role_id}',
-          '#{membership.organization_id}',
-          '#{membership.id}',
-          '#{admin_role_id}',
-          now(),
-          now()
-        )
-      SQL
-
-      # Add second role to membership so it's not the last
+      membership_role = create(:membership_role, :admin, membership:)
       create(:membership_role, membership:, role: custom_role)
-
-      described_class.connection.execute(<<~SQL)
-        INSERT INTO membership_roles (id, organization_id, membership_id, role_id, created_at, updated_at)
-        VALUES (
-          '#{SecureRandom.uuid}',
-          '#{other_membership.organization_id}',
-          '#{other_membership.id}',
-          '#{admin_role_id}',
-          now(),
-          now()
-        )
-      SQL
-
-      membership_role = described_class.find(membership_role_id)
+      create(:membership_role, :admin, membership: other_membership)
 
       expect(membership_role.discard).to be(true)
+    end
+
+    it "forbids discarding last admin role when other admins have revoked membership" do
+      membership = create(:membership)
+      organization = membership.organization
+      revoked_membership = create(:membership, :revoked, organization:)
+      custom_role = create(:role, organization:)
+
+      membership_role = create(:membership_role, :admin, membership:)
+      create(:membership_role, membership:, role: custom_role)
+      create(:membership_role, :admin, membership: revoked_membership)
+
+      expect(membership_role.discard).to be(false)
     end
 
     it "forbids discarding the last role of membership" do
