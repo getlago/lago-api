@@ -19,8 +19,10 @@ module Sources
 
     def fetch(role_ids)
       membership_roles = MembershipRole
+        .joins(:membership)
         .includes(:membership)
         .where(role_id: role_ids, organization: @organization)
+        .merge(Membership.active)
 
       memberships_by_role = membership_roles.group_by(&:role_id).transform_values do |mrs|
         mrs.map(&:membership)

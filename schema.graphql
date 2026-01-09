@@ -6156,12 +6156,12 @@ enum IntegrationTypeEnum {
 }
 
 type Invite {
-  acceptedAt: ISO8601DateTime!
+  acceptedAt: ISO8601DateTime
   email: String!
   id: ID!
   organization: Organization!
   recipient: Membership!
-  revokedAt: ISO8601DateTime!
+  revokedAt: ISO8601DateTime
   role: MembershipRole @deprecated(reason: "Use `roles` field instead")
   roles: [String!]!
   status: InviteStatusTypeEnum!
@@ -6518,7 +6518,7 @@ type Membership {
   id: ID!
   organization: Organization!
   permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
-  revokedAt: ISO8601DateTime!
+  revokedAt: ISO8601DateTime
   role: MembershipRole @deprecated(reason: "Use roles instead")
   roles: [String!]!
   status: MembershipStatus!

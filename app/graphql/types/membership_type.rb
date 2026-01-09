@@ -15,7 +15,7 @@ module Types
     field :status, Types::Memberships::StatusEnum, null: false
 
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-    field :revoked_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :revoked_at, GraphQL::Types::ISO8601DateTime, null: true
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
     def permissions

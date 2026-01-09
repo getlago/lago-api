@@ -16,8 +16,8 @@ module Types
       field :status, Types::Invites::StatusTypeEnum, null: false
       field :token, String, null: false
 
-      field :accepted_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :revoked_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :accepted_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :revoked_at, GraphQL::Types::ISO8601DateTime, null: true
 
       def role
         (object.roles.map(&:downcase) & %w[admin finance manager]).first
