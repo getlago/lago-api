@@ -3,8 +3,9 @@
 module Metadata
   class ItemMetadata < ApplicationRecord
     MAX_NUMBER_OF_KEYS = 50
-    MAX_KEY_LENGTH = 40
+    MAX_KEY_LENGTH = 50
     MAX_VALUE_LENGTH = 255
+    MAX_INNER_HASH_SIZE = 500
 
     belongs_to :organization
     belongs_to :owner, polymorphic: true
@@ -31,8 +32,26 @@ module Metadata
           errors.add(:value, "key '#{key}' must be a String up to #{MAX_KEY_LENGTH} characters")
         end
 
-        if val.present? && !(val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
-          errors.add(:value, "value for key '#{key}' must be empty or a String up to #{MAX_VALUE_LENGTH} characters")
+        next if value.nil?
+
+        # Metadata was implemented with very strict limits to prevent abuse, when making it flexible, we're adding some of these limits too
+        case val.class.name
+        when "String"
+          next if val.length <= MAX_VALUE_LENGTH
+
+          errors.add(:value, "value for key '#{key}' must be up to #{MAX_VALUE_LENGTH} characters")
+        when "Hash"
+          if val.size > MAX_NUMBER_OF_KEYS
+            errors.add(:value, "value for key '#{key}' cannot have more than #{MAX_NUMBER_OF_KEYS} keys")
+          end
+
+          # validation: hashes inside the main object cannot be bigger than 500 characters
+          next if val.values.all? { |v| [String, Array, Hash].include?(v.class) && v.to_json.size <= MAX_INNER_HASH_SIZE }
+          errors.add(:value, "all values in hash for key '#{key}' must have max json size of #{MAX_INNER_HASH_SIZE} characters")
+        when "Array"
+          if val.size > MAX_NUMBER_OF_KEYS
+            errors.add(:value, "value for key '#{key}' cannot have more than #{MAX_NUMBER_OF_KEYS} items")
+          end
         end
       end
     end
