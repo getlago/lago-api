@@ -12,11 +12,11 @@ module Utils
         ENV["LAGO_KAFKA_API_LOGS_TOPIC"].present?
     end
 
-    def initialize(request, response, organization:, request_id: SecureRandom.uuid, &block)
+    def initialize(request, response, organization:, &block)
       @request = request
       @response = response
       @organization = organization
-      @request_id = request_id
+      @request_id = request.request_id.presence || SecureRandom.uuid
       @block = block
     end
 
