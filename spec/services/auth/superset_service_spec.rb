@@ -47,12 +47,6 @@ RSpec.describe Auth::SupersetService do
         # Step 1: Authenticate and get access token
         stub_request(:post, "#{superset_url}/api/v1/security/login")
           .with(
-            headers: {
-              "Content-Type" => "application/json",
-              "Accept" => "application/json",
-              "Origin" => superset_url,
-              "Referer" => "#{superset_url}/login/"
-            },
             body: {username: superset_username, password: superset_password, provider: "db"}.to_json
           )
           .to_return(
@@ -63,83 +57,28 @@ RSpec.describe Auth::SupersetService do
 
         # Step 2: Fetch dashboards
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
-          .with(
-            headers: {
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            }
-          )
           .to_return(status: 200, body: dashboards_response)
 
         # Step 3a: Check embedded config for dashboard 1 (exists)
         stub_request(:get, "#{superset_url}/api/v1/dashboard/1/embedded")
-          .with(
-            headers: {
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            }
-          )
           .to_return(status: 200, body: embedded_exists_response_1)
 
         # Step 3b: Check embedded config for dashboard 2 (doesn't exist)
         stub_request(:get, "#{superset_url}/api/v1/dashboard/2/embedded")
-          .with(
-            headers: {
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            }
-          )
           .to_return(status: 404, body: {}.to_json)
 
         # Step 3c: Create embedded config for dashboard 2
         stub_request(:post, "#{superset_url}/api/v1/dashboard/2/embedded")
-          .with(
-            headers: {
-              "Content-Type" => "application/json",
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            },
-            body: {allowed_domains: []}.to_json
-          )
+          .with(body: {allowed_domains: []}.to_json)
           .to_return(status: 200, body: embedded_create_response_2)
 
         # Step 3d: Get guest tokens
         stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
-          .with(
-            headers: {
-              "Content-Type" => "application/json",
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            },
-            body: hash_including(
-              resources: [{id: "1", type: "dashboard"}]
-            )
-          )
+          .with(body: hash_including(resources: [{id: "1", type: "dashboard"}]))
           .to_return(status: 200, body: guest_token_response_1)
 
         stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
-          .with(
-            headers: {
-              "Content-Type" => "application/json",
-              "Accept" => "application/json",
-              "Authorization" => "Bearer #{access_token}",
-              "Origin" => superset_url,
-              "Referer" => superset_url
-            },
-            body: hash_including(
-              resources: [{id: "2", type: "dashboard"}]
-            )
-          )
+          .with(body: hash_including(resources: [{id: "2", type: "dashboard"}]))
           .to_return(status: 200, body: guest_token_response_2)
       end
 
