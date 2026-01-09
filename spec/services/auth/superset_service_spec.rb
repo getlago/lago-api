@@ -21,13 +21,13 @@ RSpec.describe Auth::SupersetService do
   end
 
   describe ".call" do
-    let(:csrf_token) { "csrf_token_456" }
+    let(:access_token) { "access_token_123" }
     let(:guest_token_1) { "guest_token_dashboard_1" }
     let(:guest_token_2) { "guest_token_dashboard_2" }
     let(:embedded_uuid_1) { "embedded-uuid-1" }
     let(:embedded_uuid_2) { "embedded-uuid-2" }
 
-    let(:csrf_response) { {result: csrf_token}.to_json }
+    let(:auth_response) { {access_token:}.to_json }
     let(:dashboards_response) do
       {
         result: [
@@ -44,82 +44,82 @@ RSpec.describe Auth::SupersetService do
 
     context "when authentication and dashboard processing is successful" do
       before do
-        # Step 1: Get CSRF token (unauthenticated)
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .with(headers: {"Accept" => "application/json"})
-          .to_return(
-            status: 200,
-            body: csrf_response,
-            headers: {"Set-Cookie" => "session=initial123; Path=/"}
-          )
-
-        # Step 2: Login via HTML form
-        stub_request(:post, "#{superset_url}/login/")
+        # Step 1: Authenticate and get access token
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
           .with(
             headers: {
-              "Content-Type" => "application/x-www-form-urlencoded",
-              "Referer" => "#{superset_url}/login/",
-              "Cookie" => "session=initial123"
+              "Content-Type" => "application/json",
+              "Accept" => "application/json",
+              "Origin" => superset_url,
+              "Referer" => "#{superset_url}/login/"
             },
-            body: "csrf_token=#{csrf_token}&username=#{superset_username}&password=#{superset_password}"
+            body: {username: superset_username, password: superset_password, provider: "db"}.to_json
           )
           .to_return(
-            status: 302,
-            headers: {"Set-Cookie" => "session=abc123; Path=/; HttpOnly"}
+            status: 200,
+            body: auth_response,
+            headers: {"Content-Type" => "application/json"}
           )
 
-        # Step 3: Fetch dashboards
+        # Step 2: Fetch dashboards
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
           .with(
             headers: {
               "Accept" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             }
           )
           .to_return(status: 200, body: dashboards_response)
 
-        # Step 4a: Check embedded config for dashboard 1 (exists)
+        # Step 3a: Check embedded config for dashboard 1 (exists)
         stub_request(:get, "#{superset_url}/api/v1/dashboard/1/embedded")
           .with(
             headers: {
               "Accept" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             }
           )
           .to_return(status: 200, body: embedded_exists_response_1)
 
-        # Step 4b: Check embedded config for dashboard 2 (doesn't exist)
+        # Step 3b: Check embedded config for dashboard 2 (doesn't exist)
         stub_request(:get, "#{superset_url}/api/v1/dashboard/2/embedded")
           .with(
             headers: {
               "Accept" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             }
           )
           .to_return(status: 404, body: {}.to_json)
 
-        # Step 4c: Create embedded config for dashboard 2
+        # Step 3c: Create embedded config for dashboard 2
         stub_request(:post, "#{superset_url}/api/v1/dashboard/2/embedded")
           .with(
             headers: {
               "Content-Type" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Accept" => "application/json",
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             },
             body: {allowed_domains: []}.to_json
           )
           .to_return(status: 200, body: embedded_create_response_2)
 
-        # Step 5: Get guest tokens
+        # Step 3d: Get guest tokens
         stub_request(:post, "#{superset_url}/api/v1/security/guest_token/")
           .with(
             headers: {
               "Content-Type" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Accept" => "application/json",
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             },
             body: hash_including(
               resources: [{id: "1", type: "dashboard"}]
@@ -131,8 +131,10 @@ RSpec.describe Auth::SupersetService do
           .with(
             headers: {
               "Content-Type" => "application/json",
-              "X-CSRFToken" => csrf_token,
-              "Cookie" => "session=abc123"
+              "Accept" => "application/json",
+              "Authorization" => "Bearer #{access_token}",
+              "Origin" => superset_url,
+              "Referer" => superset_url
             },
             body: hash_including(
               resources: [{id: "2", type: "dashboard"}]
@@ -170,18 +172,8 @@ RSpec.describe Auth::SupersetService do
       end
 
       before do
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(
-            status: 200,
-            body: csrf_response,
-            headers: {"Set-Cookie" => "session=initial123"}
-          )
-
-        stub_request(:post, "#{superset_url}/login/")
-          .to_return(
-            status: 302,
-            headers: {"Set-Cookie" => "session=abc123"}
-          )
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
+          .to_return(status: 200, body: auth_response, headers: {"Content-Type" => "application/json"})
 
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
           .to_return(status: 200, body: {result: [{id: "1", dashboard_title: "Test"}]}.to_json)
@@ -210,12 +202,9 @@ RSpec.describe Auth::SupersetService do
       end
     end
 
-    context "when login fails" do
+    context "when authentication fails" do
       before do
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 200, body: csrf_response)
-
-        stub_request(:post, "#{superset_url}/login/")
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
           .to_return(status: 401, body: "Invalid credentials")
       end
 
@@ -223,18 +212,30 @@ RSpec.describe Auth::SupersetService do
         result = service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq("superset_login_failed")
-        expect(result.error.error_message).to include("Failed to login to Superset")
+        expect(result.error.code).to eq("superset_auth_failed")
+        expect(result.error.error_message).to include("Failed to authenticate with Superset")
+      end
+    end
+
+    context "when authentication succeeds but no access token is returned" do
+      before do
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
+          .to_return(status: 200, body: {}.to_json, headers: {"Content-Type" => "application/json"})
+      end
+
+      it "returns a service failure" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("superset_auth_failed")
+        expect(result.error.error_message).to include("No access token received from Superset")
       end
     end
 
     context "when fetching dashboards fails" do
       before do
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 200, body: csrf_response)
-
-        stub_request(:post, "#{superset_url}/login/")
-          .to_return(status: 302)
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
+          .to_return(status: 200, body: auth_response, headers: {"Content-Type" => "application/json"})
 
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
           .to_return(status: 500, body: {message: "Internal error"}.to_json)
@@ -251,11 +252,8 @@ RSpec.describe Auth::SupersetService do
 
     context "when creating embedded config fails" do
       before do
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 200, body: csrf_response)
-
-        stub_request(:post, "#{superset_url}/login/")
-          .to_return(status: 302)
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
+          .to_return(status: 200, body: auth_response, headers: {"Content-Type" => "application/json"})
 
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
           .to_return(status: 200, body: {result: [{id: "1", dashboard_title: "Test"}]}.to_json)
@@ -277,11 +275,8 @@ RSpec.describe Auth::SupersetService do
 
     context "when no dashboards exist" do
       before do
-        stub_request(:get, "#{superset_url}/api/v1/security/csrf_token/")
-          .to_return(status: 200, body: csrf_response)
-
-        stub_request(:post, "#{superset_url}/login/")
-          .to_return(status: 302)
+        stub_request(:post, "#{superset_url}/api/v1/security/login")
+          .to_return(status: 200, body: auth_response, headers: {"Content-Type" => "application/json"})
 
         stub_request(:get, "#{superset_url}/api/v1/dashboard/")
           .to_return(status: 200, body: {result: []}.to_json)
