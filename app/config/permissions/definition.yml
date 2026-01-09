@@ -25,6 +25,18 @@ plans:
   create:
   update:
   delete:
+charges:
+  create:
+  update:
+  delete:
+fixed_charges:
+  create:
+  update:
+  delete:
+charge_filters:
+  create:
+  update:
+  delete:
 pricing_units:
   view:
   create:
