@@ -79,6 +79,10 @@ module CreditNotes
 
         credit_note.save!
 
+        if applied_to_source_invoice_amount_cents > 0
+          Credits::AppliedAfterFinalizationService.call!(credit_note:)
+        end
+
         if wallet_credit
           WalletTransactions::VoidService.call(
             wallet: associated_wallet,
