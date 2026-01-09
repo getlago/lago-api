@@ -26,6 +26,10 @@ module CreditNotes
       return result.forbidden_failure! unless should_create_credit_note?
       return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
+      unless valid_applied_to_source_invoice_amount_cents?
+        return result.single_validation_failure!(field: :applied_to_source_invoice_amount_cents, error_code: "value_is_invalid")
+      end
+
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.new(
           organization_id: invoice.organization_id,
@@ -81,9 +85,7 @@ module CreditNotes
 
         if applied_to_source_invoice_amount_cents > 0
           Credits::AppliedAfterFinalizationService.call!(credit_note:)
-        end
-
-        if wallet_credit
+        elsif wallet_credit
           WalletTransactions::VoidService.call(
             wallet: associated_wallet,
             wallet_credit:,
@@ -146,9 +148,19 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.credit? && (invoice.payment_status != "succeeded" || associated_wallet.nil?)
+
+      if invoice.credit?
+        return false unless invoice.payment_pending? || invoice.payment_succeeded?
+        return false if associated_wallet.nil?
+      end
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
+    end
+
+    def valid_applied_to_source_invoice_amount_cents?
+      return false if invoice.credit? && (@applied_to_source_invoice_amount_cents != invoice.total_amount_cents)
+
+      true
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)
