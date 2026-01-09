@@ -12,7 +12,8 @@ RSpec.describe Utils::ApiLog do
       params: {parameters: [1, 2, 3, 4]},
       path: "/api/v1/customers",
       base_url: "https://lago.test",
-      method_symbol: :post
+      method_symbol: :post,
+      request_id: "1234"
     )
   end
 
@@ -50,7 +51,7 @@ RSpec.describe Utils::ApiLog do
       end
 
       it "produces the event on kafka" do
-        api_log.produce(fake_request, fake_response, organization:, request_id: "1234")
+        api_log.produce(fake_request, fake_response, organization:)
 
         expect(karafka_producer).to have_received(:produce_async).with(
           topic: "api_logs",
@@ -71,6 +72,26 @@ RSpec.describe Utils::ApiLog do
             created_at: Time.current.iso8601[...-1]
           }.to_json
         )
+      end
+
+      context "when request_id is empty" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {parameters: [1, 2, 3, 4]},
+            path: "/api/v1/customers",
+            base_url: "https://lago.test",
+            method_symbol: :post,
+            request_id: ""
+          )
+        end
+
+        it "generates a random uuid" do
+          utils = api_log.new(fake_request, fake_response, organization:)
+          utils.produce
+          expect(utils.send(:payload)[:request_id]).to match Regex::UUID
+        end
       end
     end
 
