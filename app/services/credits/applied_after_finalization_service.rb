@@ -41,7 +41,7 @@ module Credits
       Invoices::UpdateService.call(
         invoice: invoice,
         params: {
-          payment_status: :succeeded,
+          payment_status: :succeeded
         },
         webhook_notification: true
       )
