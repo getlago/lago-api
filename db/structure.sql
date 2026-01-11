@@ -1922,7 +1922,8 @@ CREATE TABLE public.credits (
     before_taxes boolean DEFAULT false NOT NULL,
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     progressive_billing_invoice_id uuid,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    apply_after_finalization boolean DEFAULT false NOT NULL
 );
 
 
@@ -10780,6 +10781,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260109120404'),
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
@@ -11670,3 +11672,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
