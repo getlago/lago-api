@@ -12,6 +12,7 @@ module CreditNotes
       @description = args[:description]
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
+      @applied_to_source_invoice_amount_cents = args[:applied_to_source_invoice_amount_cents] || 0
       @metadata_value = args[:metadata]
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
@@ -118,6 +119,7 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
+      :applied_to_source_invoice_amount_cents,
       :metadata_value,
       :automatic,
       :context
