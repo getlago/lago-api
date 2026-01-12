@@ -21,9 +21,9 @@ RSpec.describe InvoiceMailer do
     invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
   end
 
-  describe "#finalized" do
+  describe "#created" do
     specify do
-      mailer = invoice_mailer.with(invoice:).finalized
+      mailer = invoice_mailer.with(invoice:).created
 
       expect(mailer.subject).to eq("Your Invoice from ACME Corp ##{invoice.number}")
       expect(mailer.to).to eq([invoice.customer.email])
@@ -37,7 +37,7 @@ RSpec.describe InvoiceMailer do
       before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
 
       it "does not attach the pdf" do
-        mailer = invoice_mailer.with(invoice:).finalized
+        mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.attachments).to be_empty
       end
@@ -55,7 +55,7 @@ RSpec.describe InvoiceMailer do
       end
 
       it "calls the invoice pdf generate service" do
-        mailer = invoice_mailer.with(invoice:).finalized
+        mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.to).not_to be_nil
         expect(Invoices::GeneratePdfService).to have_received(:new)
@@ -66,7 +66,7 @@ RSpec.describe InvoiceMailer do
       let(:billing_entity_email) { nil }
 
       it "returns a mailer with nil values" do
-        mailer = invoice_mailer.with(invoice:).finalized
+        mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.to).to be_nil
       end
@@ -78,7 +78,7 @@ RSpec.describe InvoiceMailer do
       end
 
       it "returns a mailer with nil values" do
-        mailer = invoice_mailer.with(invoice:).finalized
+        mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.to).to be_nil
       end
@@ -90,7 +90,7 @@ RSpec.describe InvoiceMailer do
       end
 
       it "returns a mailer with nil values" do
-        mailer = invoice_mailer.with(invoice:).finalized
+        mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.to).to be_nil
       end
