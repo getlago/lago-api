@@ -154,7 +154,7 @@ module CreditNotes
 
       if invoice.credit?
         if invoice.payment_pending?
-          return false if  credit_amount_cents.positive? || refund_amount_cents.positive?
+          return false if credit_amount_cents.positive? || refund_amount_cents.positive?
           true
         elsif !invoice.payment_succeeded?
           return false

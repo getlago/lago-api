@@ -22,8 +22,8 @@ module Types
       field :true_up_parent_fee, Types::Fees::Object, null: true
       field :wallet_transaction, Types::WalletTransactions::Object, null: true
 
-      field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
       field :applicable_to_invoice_cents, GraphQL::Types::BigInt, null: false
+      field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
       field :events_count, GraphQL::Types::BigInt, null: true
       field :fee_type, Types::Fees::TypesEnum, null: false
       field :precise_unit_amount, GraphQL::Types::Float, null: false
