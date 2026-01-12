@@ -12,4 +12,19 @@ class ApplicationMailer < ActionMailer::Base
     @lago_logo_url = "https://assets.getlago.com/lago-logo-email.png"
     @pdfs_enabled = !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
   end
+
+  # Shared interface for logging purposes
+  def loggable?
+    false
+  end
+
+  def document
+  end
+
+  def created
+  end
+
+  def log(**options)
+    Utils::EmailActivityLog.produce(document:, message:, **options) if loggable? && message.to.present?
+  end
 end

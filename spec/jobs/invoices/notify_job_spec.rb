@@ -8,7 +8,7 @@ RSpec.describe Invoices::NotifyJob do
   let(:invoice) { create(:invoice) }
 
   it "sends email" do
-    expect { subject }.to have_enqueued_mail(InvoiceMailer, :finalized)
+    expect { subject }.to have_enqueued_mail(InvoiceMailer, :created)
       .with(params: {invoice:}, args: [])
   end
 end
