@@ -7,6 +7,7 @@ module Auth
     def initialize(organization:, user: nil)
       @organization = organization
       @user = user
+      @access_token = nil
       @csrf_token = nil
       @http_client = nil
 
@@ -17,15 +18,17 @@ module Auth
       ensure_superset_configured
       return result unless result.success?
 
-      # Step 1: Get CSRF token (unauthenticated)
+      # Step 1: Authenticate and get access token
+      auth_result = authenticate_with_api
+      return result unless auth_result[:success]
+
+      @access_token = auth_result[:access_token]
+
+      # Step 2: Get CSRF token (authenticated with Bearer token)
       csrf_result = get_csrf_token
       return result unless csrf_result[:success]
 
       @csrf_token = csrf_result[:csrf_token]
-
-      # Step 2: Login via HTML form to create session
-      login_result = login_to_superset
-      return result unless login_result[:success]
 
       # Step 3: Fetch all dashboards
       dashboards_result = fetch_dashboards
@@ -62,7 +65,7 @@ module Auth
 
     private
 
-    attr_reader :organization, :user, :csrf_token
+    attr_reader :organization, :user, :access_token, :csrf_token
 
     def http_client
       @http_client ||= LagoHttpClient::SessionClient.new(superset_base_url)
@@ -80,31 +83,42 @@ module Auth
     end
 
     def authenticated_api_headers(referer_path: "/")
-      api_headers(referer_path:).merge("X-CSRFToken" => csrf_token)
+      api_headers(referer_path:).merge(
+        "Authorization" => "Bearer #{access_token}",
+        "X-CSRFToken" => csrf_token
+      )
     end
 
     def authenticated_json_headers(referer_path: "/")
       authenticated_api_headers(referer_path:).merge("Content-Type" => "application/json")
     end
 
-    def login_to_superset
+    def authenticate_with_api
       body = {
-        csrf_token: csrf_token,
         username: superset_username,
-        password: superset_password
+        password: superset_password,
+        provider: "db"
       }
 
-      headers = base_headers(referer_path: "/login/").merge("Content-Type" => "application/x-www-form-urlencoded")
-      http_client.post("/login/", body:, headers:)
+      headers = api_headers(referer_path: "/login/").merge("Content-Type" => "application/json")
+      response = http_client.post("/api/v1/security/login", body:, headers:)
+      parsed_response = JSON.parse(response.body)
+      access_token = parsed_response["access_token"]
 
-      {success: true}
+      unless access_token
+        result.service_failure!(code: "superset_auth_failed", message: "No access token received from Superset")
+        return {success: false}
+      end
+
+      {success: true, access_token:}
     rescue LagoHttpClient::HttpError => e
-      result.service_failure!(code: "superset_login_failed", message: "Failed to login to Superset: #{e.error_code} #{e.message}")
+      result.service_failure!(code: "superset_auth_failed", message: "Failed to authenticate with Superset: #{e.error_code} #{e.message}")
       {success: false}
     end
 
     def get_csrf_token
-      response = http_client.get("/api/v1/security/csrf_token/", headers: api_headers)
+      headers = api_headers.merge("Authorization" => "Bearer #{access_token}")
+      response = http_client.get("/api/v1/security/csrf_token/", headers:)
       parsed_response = JSON.parse(response.body)
       csrf_token = parsed_response["result"]
 
@@ -113,7 +127,7 @@ module Auth
         return {success: false}
       end
 
-      {success: true, csrf_token: csrf_token}
+      {success: true, csrf_token:}
     rescue LagoHttpClient::HttpError => e
       result.service_failure!(code: "superset_csrf_failed", message: "Failed to get CSRF token: #{e.error_body}")
       {success: false}
