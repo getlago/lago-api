@@ -120,6 +120,8 @@ module CreditNotes
     end
 
     def valid_applied_to_source_invoice_amount?
+      return true if credit_note.applied_to_source_invoice_amount_cents.zero?
+
       applicable_to_source_invoice_amount = invoice.total_amount_cents -
         invoice.total_paid_amount_cents -
         credited_invoice_amount_cents -
