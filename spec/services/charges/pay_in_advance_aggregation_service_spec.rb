@@ -12,7 +12,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
   let(:charge_filter) { nil }
   let(:aggregation_type) { "count_agg" }
-  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
   let(:properties) { {} }
 
   let(:customer) { create(:customer, organization:) }
@@ -51,7 +51,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration
+              charges_duration: boundaries.charges_duration,
+              max_timestamp: event.timestamp
             },
             filters: {
               event:,
@@ -97,7 +98,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration
+                charges_duration: boundaries.charges_duration,
+                max_timestamp: event.timestamp
               },
               filters: {
                 event:,
@@ -144,7 +146,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration
+                charges_duration: boundaries.charges_duration,
+                max_timestamp: event.timestamp
               },
               filters: {
                 event:,
@@ -187,7 +190,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               boundaries: {
                 from_datetime: boundaries.charges_from_datetime,
                 to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration
+                charges_duration: boundaries.charges_duration,
+                max_timestamp: event.timestamp
               },
               filters: {
                 event:,
@@ -225,7 +229,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration
+              charges_duration: boundaries.charges_duration,
+              max_timestamp: event.timestamp
             },
             filters: {
               event:,
@@ -258,7 +263,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             boundaries: {
               from_datetime: boundaries.charges_from_datetime,
               to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration
+              charges_duration: boundaries.charges_duration,
+              max_timestamp: event.timestamp
             },
             filters: {
               event:,
