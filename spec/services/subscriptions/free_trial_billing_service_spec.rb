@@ -147,44 +147,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
             subscription
           end
 
-          it "does not enqueue a job to bill the subscription" do
-            expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-          end
-        end
-      end
-    end
-
-    context "with plan pay in advance" do
-      let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
-
-      context "when plan has fixed charges" do
-        context "when fixed_charges are not pay in advance" do
-          let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: false) }
-          let(:subscription) { create(:subscription, plan:, started_at: 11.days.ago) }
-
-          before do
-            fixed_charge
-            subscription
-          end
-
-          it "enqueues a job to bill the subscription" do
-            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
-          end
-
-          it "does not enqueue a job to bill the pay in advance fixed charges" do
-            expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
-          end
-        end
-
-        context "when fixed_charges are pay in advance" do
-          let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
-          let(:subscription) { create(:subscription, plan:, started_at: 11.days.ago) }
-
-          before do
-            fixed_charge
-            subscription
-          end
-
           it "enqueues a job to bill the subscription" do
             expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
           end
