@@ -11,7 +11,7 @@ module Invoices
     end
 
     def perform(invoice:)
-      InvoiceMailer.with(invoice:).finalized.deliver_later
+      InvoiceMailer.with(invoice:).created.deliver_later
     end
   end
 end
