@@ -1,0 +1,146 @@
+# frozen_string_literal: true
+
+module Utils
+  class EmailActivityLog
+    ACTIVITY_TYPE = "email.sent"
+    TOPIC = ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"]
+    AVAILABLE = ENV["LAGO_CLICKHOUSE_ENABLED"].present? &&
+      ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? &&
+      TOPIC.present?
+    BODY_PREVIEW_LENGTH = 500
+
+    def self.produce(document:, message:, resend: false, user_id: nil, api_key_id: nil, error: nil)
+      new(document:, message:, resend:, user_id:, api_key_id:, error:).produce
+    end
+
+    def initialize(document:, message:, resend: false, user_id: nil, api_key_id: nil, error: nil)
+      @document = document
+      @message = message
+      @resend = resend
+      @user_id = user_id
+      @api_key_id = api_key_id
+      @error = error
+      @activity_id = SecureRandom.uuid
+      @current_time = Time.current.iso8601[...-1]
+    end
+
+    def produce
+      enqueue_task if AVAILABLE && document && message
+    rescue => e
+      Rails.logger.error("Failed to produce email activity log: #{e.message}")
+      nil
+    end
+
+    private
+
+    attr_reader :document, :message, :user_id, :api_key_id, :error, :activity_id, :current_time
+
+    def status
+      @status ||= if error
+        "failed"
+      elsif @resend
+        "resent"
+      else
+        "sent"
+      end
+    end
+
+    def enqueue_task
+      Karafka.producer.produce_async(
+        topic: TOPIC,
+        key: "#{organization_id}--#{activity_id}",
+        payload: {
+          activity_source:,
+          api_key_id:,
+          user_id:,
+          activity_type: ACTIVITY_TYPE,
+          activity_id:,
+          logged_at: current_time,
+          created_at: current_time,
+          resource_id: resource.id,
+          resource_type: resource.class.name,
+          organization_id:,
+          activity_object: activity_object.to_json,
+          activity_object_changes: "{}",
+          external_customer_id:,
+          external_subscription_id: nil
+        }.to_json
+      )
+    end
+
+    def activity_source
+      return :api if api_key_id
+      return :front if user_id
+
+      :system
+    end
+
+    def activity_object
+      result = {
+        status:,
+        email: email_metadata,
+        document: document_reference
+      }
+      result[:error] = error_info if error
+      result
+    end
+
+    def email_metadata
+      {
+        subject: message.subject,
+        to: Array(message.to),
+        cc: Array(message.cc),
+        bcc: Array(message.bcc),
+        body_preview: extract_body_preview
+      }
+    end
+
+    def extract_body_preview
+      body = message.text_part&.body&.decoded || message.body&.decoded || ""
+      body.to_s.truncate(BODY_PREVIEW_LENGTH)
+    end
+
+    def document_reference
+      {
+        type: document.class.name,
+        number: document_number,
+        lago_id: document.id
+      }
+    end
+
+    def document_number
+      case document
+      when Invoice
+        document.number
+      when CreditNote
+        document.number
+      when PaymentReceipt
+        document.receipt_number
+      end
+    end
+
+    def error_info
+      {
+        class: error.class.name,
+        message: error.message
+      }
+    end
+
+    def organization_id
+      document.organization_id
+    end
+
+    def resource
+      case document
+      when PaymentReceipt
+        document.payment.payable
+      else
+        document
+      end
+    end
+
+    def external_customer_id
+      document.customer&.external_id
+    end
+  end
+end
