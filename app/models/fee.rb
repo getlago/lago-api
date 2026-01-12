@@ -205,6 +205,14 @@ class Fee < ApplicationRecord
   end
   alias_method :precise_total_amount_currency, :currency
 
+  def applicable_to_invoice_cents
+    if invoice.credit? && invoice.payment_pending?
+      return amount_cents
+    end
+
+    creditable_amount_cents
+  end
+
   def creditable_amount_cents
     remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)
 

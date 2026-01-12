@@ -5359,6 +5359,7 @@ type Fee implements InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   amountDetails: FeeAmountDetails
+  applicableToInvoiceCents: BigInt!
   appliedTaxes: [FeeAppliedTax!]
   charge: Charge
   chargeFilter: ChargeFilter
