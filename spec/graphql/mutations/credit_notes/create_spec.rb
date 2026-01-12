@@ -21,7 +21,7 @@ RSpec.describe Mutations::CreditNotes::Create do
       fees_amount_cents: 100,
       taxes_amount_cents: 120,
       total_amount_cents: 120,
-      total_paid_amount_cents: 120
+      total_paid_amount_cents: 110
     )
   end
 
