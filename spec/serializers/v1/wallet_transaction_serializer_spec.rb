@@ -25,6 +25,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "transaction_type" => wallet_transaction.transaction_type,
         "amount" => wallet_transaction.amount.to_s,
         "credit_amount" => wallet_transaction.credit_amount.to_s,
+        "remaining_amount_cents" => wallet_transaction.remaining_amount_cents,
         "settled_at" => wallet_transaction.settled_at&.iso8601,
         "failed_at" => wallet_transaction.failed_at&.iso8601,
         "created_at" => wallet_transaction.created_at.iso8601,
