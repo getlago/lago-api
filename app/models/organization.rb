@@ -239,6 +239,39 @@ class Organization < ApplicationRecord
     self
   end
 
+  # Feature flag methods
+  def feature_flag_enabled?(flag)
+    flag = flag.to_s
+    FeatureFlag.validate!(flag)
+
+    return false unless FeatureFlag.valid?(flag)
+
+    feature_flags.include?(flag)
+  end
+
+  def feature_flag_disabled?(flag)
+    flag = flag.to_s
+    !feature_flag_enabled?(flag)
+  end
+
+  def enable_feature_flag!(flag)
+    flag = flag.to_s
+    FeatureFlag.validate!(flag)
+
+    return unless FeatureFlag.valid?(flag)
+
+    update!(feature_flags: feature_flags | [flag]) unless feature_flags.include?(flag)
+  end
+
+  def disable_feature_flag!(flag)
+    flag = flag.to_s
+    FeatureFlag.validate!(flag)
+
+    return unless FeatureFlag.valid?(flag)
+
+    update!(feature_flags: feature_flags - [flag]) if feature_flags.include?(flag)
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -297,6 +330,7 @@ end
 #  email                            :string
 #  email_settings                   :string           default([]), not null, is an Array
 #  eu_tax_management                :boolean          default(FALSE)
+#  feature_flags                    :string           default([]), not null, is an Array
 #  finalize_zero_amount_invoice     :boolean          default(TRUE), not null
 #  hmac_key                         :string           not null
 #  invoice_footer                   :text
