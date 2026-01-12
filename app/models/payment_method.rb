@@ -7,6 +7,8 @@ class PaymentMethod < ApplicationRecord
   self.discard_column = :deleted_at
   default_scope -> { kept }
 
+  scope :default, -> { where(is_default: true) }
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
