@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class InvoiceSettlement < ApplicationRecord
   include Currencies
 
@@ -13,7 +15,7 @@ class InvoiceSettlement < ApplicationRecord
 
   monetize :amount_cents, with_model_currency: :amount_currency
 
-  validates :amount_cents, numericality: { greater_than: 0 }
-  validates :amount_currency, inclusion: { in: currency_list }
+  validates :amount_cents, numericality: {greater_than: 0}
+  validates :amount_currency, inclusion: {in: currency_list}
   validates :settlement_type, presence: true
 end
