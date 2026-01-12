@@ -20,7 +20,7 @@ module Invoices
       if should_grant_prepaid_credits?(invoice, payment_status.to_sym)
         Wallets::ApplyPaidCreditsService.call(wallet_transaction:)
         Invoices::FinalizeOpenCreditService.call(invoice:)
-      elsif payment_status.to_sym == :failed
+      else
         WalletTransactions::MarkAsFailedService.call(wallet_transaction:)
       end
     end
