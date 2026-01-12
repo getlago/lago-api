@@ -153,7 +153,10 @@ module CreditNotes
       return true if automatic
 
       if invoice.credit?
-        return false unless invoice.payment_pending? || invoice.payment_succeeded?
+        if invoice.payment_pending?
+          return false if  credit_amount_cents.positive? || refund_amount_cents.positive?
+        end
+        return false unless invoice.payment_succeeded?
         return false if associated_wallet.nil?
       end
 
