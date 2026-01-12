@@ -3,18 +3,36 @@
 class CreditNoteMailer < ApplicationMailer
   before_action :ensure_pdf
 
+  def loggable?
+    true
+  end
+
+  def document
+    @document ||= params[:credit_note]
+  end
+
   def created
-    @credit_note = params[:credit_note]
-    @customer = @credit_note.customer
-    @billing_entity = @credit_note.billing_entity
+    @created ||= create_mail
+  end
+
+  private
+
+  def ensure_pdf
+    CreditNotes::GeneratePdfService.call(credit_note: document)
+  end
+
+  def create_mail
+    @credit_note = document
+    @customer = document.customer
+    @billing_entity = document.billing_entity
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
     return if @billing_entity.email.blank?
     return if @customer.email.blank?
 
     if @pdfs_enabled
-      @credit_note.file.open do |file|
-        attachments["credit_note-#{@credit_note.number}.pdf"] = file.read
+      document.file.open do |file|
+        attachments["credit_note-#{document.number}.pdf"] = file.read
       end
     end
 
@@ -26,17 +44,9 @@ class CreditNoteMailer < ApplicationMailer
         subject: I18n.t(
           "email.credit_note.created.subject",
           billing_entity_name: @billing_entity.name,
-          credit_note_number: @credit_note.number
+          credit_note_number: document.number
         )
       )
     end
-  end
-
-  private
-
-  def ensure_pdf
-    credit_note = params[:credit_note]
-
-    CreditNotes::GeneratePdfService.call(credit_note:)
   end
 end
