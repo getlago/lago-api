@@ -23,9 +23,7 @@ class FeatureFlag
       Organization.where.not(feature_flags: []).find_each do |organization|
         valid_flags = organization.feature_flags & valid_keys
 
-        if valid_flags != organization.feature_flags
-          organization.update!(feature_flags: valid_flags)
-        end
+        organization.update!(feature_flags: valid_flags)
       end
     end
   end
