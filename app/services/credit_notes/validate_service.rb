@@ -121,6 +121,7 @@ module CreditNotes
 
     def valid_applied_to_source_invoice_amount?
       return true if credit_note.applied_to_source_invoice_amount_cents.zero?
+      return false unless valid_credit_invoice_application?
 
       applicable_to_source_invoice_amount = invoice.total_amount_cents -
         invoice.total_paid_amount_cents -
@@ -130,6 +131,22 @@ module CreditNotes
       return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
 
       add_error(field: :applied_to_source_invoice_amount_cents, error_code: "higher_than_remaining_invoice_amount")
+    end
+
+    def valid_credit_invoice_application?
+      return true unless invoice.credit?
+
+      if invoice.total_paid_amount_cents.positive?
+        add_error(field: :applied_to_source_invoice_amount_cents, error_code: "cannot_apply_to_paid_invoice")
+        return false
+      end
+
+      if credit_note.applied_to_source_invoice_amount_cents != invoice.total_amount_cents
+        add_error(field: :applied_to_source_invoice_amount_cents, error_code: "not_equal_to_source_invoice_amount")
+        return false
+      end
+
+      true
     end
 
     # NOTE: Check if total amount is less than or equal to invoice fee amount
