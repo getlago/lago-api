@@ -53,7 +53,7 @@ module InvoiceSettlements
     def mark_invoice_as_paid
       Invoices::UpdateService.call(
         invoice: invoice,
-        params: { payment_status: :succeeded },
+        params: {payment_status: :succeeded},
         webhook_notification: true
       )
     end
