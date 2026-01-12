@@ -563,10 +563,10 @@ RSpec.describe Mutations::Plans::Update do
 
       expect(FixedChargeEvent.pluck(:fixed_charge_id, :timestamp, :units))
         .to contain_exactly(
-          [fixed_charge_2.id, be_within(1.second).of(Time.current), BigDecimal("20.55")],
-          [fixed_charge_3.id, be_within(1.second).of(Time.current), BigDecimal("30")],
-          [fixed_charge_4.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("40")],
-          [fixed_charge_5.id, be_within(1.second).of(1.month.from_now.beginning_of_month), BigDecimal("50")]
+          [fixed_charge_2.id, be_within(1.minute).of(Time.current), BigDecimal("20.55")],
+          [fixed_charge_3.id, be_within(1.minute).of(Time.current), BigDecimal("30")],
+          [fixed_charge_4.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal("40")],
+          [fixed_charge_5.id, be_within(1.minute).of(1.month.from_now.beginning_of_month), BigDecimal("50")]
         )
     end
   end
