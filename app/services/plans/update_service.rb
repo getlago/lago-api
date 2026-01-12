@@ -55,7 +55,7 @@ module Plans
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
-        process_fixed_charges(plan, params[:fixed_charges]) if params[:fixed_charges]
+        process_fixed_charges if params[:fixed_charges]
 
         if params.key?(:usage_thresholds) && License.premium?
           Plans::UpdateUsageThresholdsService.call(plan:, usage_thresholds_params: params[:usage_thresholds])
@@ -152,29 +152,10 @@ module Plans
       )
     end
 
-    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge)
-      return unless cascade_needed?
-
-      # TODO: pass timestamp to create fixed charge events at the same time
-      # TODO: kick off inovice generation for in advance fixed charges created after create
-      FixedCharges::CreateChildrenJob.perform_later(fixed_charge:, payload: payload_fixed_charge)
-    end
-
     def cascade_fixed_charge_removal(fixed_charge)
       return unless cascade_needed?
 
       FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
-    end
-
-    def cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
-      return unless cascade_needed?
-
-      old_parent_attrs = fixed_charge.attributes
-      FixedCharges::UpdateChildrenJob.perform_later(
-        params: payload_fixed_charge.deep_stringify_keys,
-        old_parent_attrs:,
-        timestamp:
-      )
     end
 
     def cascade?
@@ -236,15 +217,19 @@ module Plans
       end
     end
 
-    def process_fixed_charges(plan, params_fixed_charges)
+    def process_fixed_charges
+      cascade_fixed_charges_payload = []
       created_fixed_charges_ids = []
 
-      hash_fixed_charges = params_fixed_charges.map { |c| c.to_h.deep_symbolize_keys }
+      hash_fixed_charges = params[:fixed_charges].map { |c| c.to_h.deep_symbolize_keys }
       hash_fixed_charges.each do |payload_fixed_charge|
         fixed_charge = plan.fixed_charges.find_by(id: payload_fixed_charge[:id])
 
         if fixed_charge
-          cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
+          cascade_fixed_charges_payload << payload_fixed_charge.merge(
+            old_parent_attrs: fixed_charge.attributes,
+            action: :update
+          )
           FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:)
 
           next
@@ -252,7 +237,11 @@ module Plans
 
         create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: fixed_charge_params_with_code(payload_fixed_charge), timestamp:)
 
-        after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge) }
+        cascade_fixed_charges_payload << payload_fixed_charge.merge(
+          parent_id: create_fixed_charge_result.fixed_charge.id,
+          action: :create
+        )
+
         created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
       end
 
@@ -260,6 +249,19 @@ module Plans
       sanitize_fixed_charges(plan, hash_fixed_charges, created_fixed_charges_ids)
 
       trigger_pay_in_advance_billing if plan.fixed_charges.pay_in_advance.exists?
+
+      cascade_fixed_charges(cascade_fixed_charges_payload)
+    end
+
+    def cascade_fixed_charges(cascade_fixed_charges_payload)
+      return unless cascade_needed?
+      return unless plan.children.exists?
+
+      FixedCharges::CascadePlanUpdateJob.perform_later(
+        plan: plan,
+        cascade_fixed_charges_payload:,
+        timestamp:
+      )
     end
 
     def trigger_pay_in_advance_billing
