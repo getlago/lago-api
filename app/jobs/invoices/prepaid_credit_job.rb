@@ -17,12 +17,33 @@ module Invoices
     def perform(invoice, payment_status = :succeeded)  # Default to :succeeded for old jobs
       wallet_transaction = invoice.fees.find_by(fee_type: "credit")&.invoiceable
 
-      if payment_status.to_sym == :succeeded
+      if should_grant_prepaid_credits?(invoice, payment_status.to_sym)
         Wallets::ApplyPaidCreditsService.call(wallet_transaction:)
         Invoices::FinalizeOpenCreditService.call(invoice:)
-      elsif payment_status.to_sym == :failed
+      else
         WalletTransactions::MarkAsFailedService.call(wallet_transaction:)
       end
+    end
+
+    private
+
+    # This job also runs when an invoice is marked as paid because it was fully settled by credits.
+    # Credits with `apply_after_finalization = true` are created when a credit note is applied
+    # to the original invoice instead of to future invoices.
+    #
+    # In this scenario, the invoice is not paid via a payment, but via a credit note,
+    # so no pre-paid credits should be added to the customer's wallet.
+    def should_grant_prepaid_credits?(invoice, payment_status)
+      payment_status == :succeeded && !paid_by_credit_note?(invoice)
+    end
+
+    # For credit invoices, the credit note is always issued for the full invoice amount.
+    # That means we don't need to compare amounts here.
+    #
+    # If the invoice has any invoice_settlements with `apply_after_finalization = true`, it indicates the invoice
+    # was fully settled by a credit note (not by a payment).
+    def paid_by_credit_note?(invoice)
+      invoice.invoice_settlements.where(settlement_type: :credit_note).exists?
     end
   end
 end

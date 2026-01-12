@@ -98,17 +98,10 @@ module Invoices
     end
 
     def handle_prepaid_credits(payment_status)
-      return fail_pending_wallet_transactions if params[:apply_prepaid_credits] == false
       return unless invoice.invoice_type&.to_sym == :credit
       return unless %i[succeeded failed].include?(payment_status.to_sym)
 
       Invoices::PrepaidCreditJob.perform_after_commit(invoice, payment_status.to_sym)
-    end
-
-    def fail_pending_wallet_transactions
-      invoice.wallet_transactions.pending.find_each do |wallet_transaction|
-        WalletTransactions::MarkAsFailedService.call(wallet_transaction:)
-      end
     end
 
     def valid_metadata_count?(metadata:)

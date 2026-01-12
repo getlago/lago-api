@@ -22,6 +22,7 @@ class CreditNote < ApplicationRecord
   has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items
   has_many :refunds
+  has_many :invoice_settlements, foreign_key: :source_credit_note_id
 
   has_many :applied_taxes, class_name: "CreditNote::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
