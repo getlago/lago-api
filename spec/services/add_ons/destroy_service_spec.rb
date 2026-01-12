@@ -33,7 +33,7 @@ RSpec.describe AddOns::DestroyService do
 
       context "when failed to discard fixed charges" do
         before do
-          allow(add_on.fixed_charges).to receive(:discard_all!).and_raise(ActiveRecord::RecordInvalid.new(fixed_charges.first))
+          allow(add_on.fixed_charges).to receive(:update_all).and_raise(ActiveRecord::RecordInvalid.new(fixed_charges.first))
         end
 
         it "does not soft delete the add-on" do
