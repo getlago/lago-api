@@ -2,6 +2,16 @@
 
 class EnrichedEvent < EventsRecord
   belongs_to :event
+
+  validates :code,
+    :timestamp,
+    :transaction_id,
+    :external_subscription_id,
+    :organization_id,
+    :subscription_id,
+    :plan_id,
+    :charge_id,
+    :enriched_at, presence: true
 end
 
 # == Schema Information
