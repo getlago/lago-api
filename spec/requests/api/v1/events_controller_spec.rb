@@ -315,6 +315,62 @@ RSpec.describe Api::V1::EventsController do
         expect(json[:events].count).to eq(1)
         expect(json[:events].first[:lago_id]).to eq(event.id)
       end
+
+      context "with external_subscription_id" do
+        let(:params) { {transaction_id: event.transaction_id, external_subscription_id: event.external_subscription_id} }
+
+        it "returns events" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:events].count).to eq(1)
+          expect(json[:events].first[:lago_id]).to eq(event.id)
+        end
+      end
+
+      context "with code" do
+        let(:params) { {transaction_id: event.transaction_id, code: event.code} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(transaction_id: ["cannot be combined with code, timestamp_from_started_at, timestamp_from, or timestamp_to"])
+        end
+      end
+
+      context "with timestamp_from" do
+        let(:params) { {transaction_id: event.transaction_id, timestamp_from: 2.days.ago.to_date} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(transaction_id: ["cannot be combined with code, timestamp_from_started_at, timestamp_from, or timestamp_to"])
+        end
+      end
+
+      context "with timestamp_to" do
+        let(:params) { {transaction_id: event.transaction_id, timestamp_to: Date.tomorrow.to_date} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(transaction_id: ["cannot be combined with code, timestamp_from_started_at, timestamp_from, or timestamp_to"])
+        end
+      end
+
+      context "with timestamp_from_started_at" do
+        let(:params) { {transaction_id: event.transaction_id, timestamp_from_started_at: true, external_subscription_id: event.external_subscription_id} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to include(transaction_id: ["cannot be combined with code, timestamp_from_started_at, timestamp_from, or timestamp_to"])
+        end
+      end
     end
 
     context "with timestamp" do

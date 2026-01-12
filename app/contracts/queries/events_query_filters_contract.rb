@@ -23,5 +23,14 @@ module Queries
         key(:external_subscription_id).failure("required with timestamp_from_started_at")
       end
     end
+
+    rule(:transaction_id) do
+      next if values[:transaction_id].blank?
+
+      incompatible_filters = %i[code timestamp_from_started_at timestamp_from timestamp_to]
+      if incompatible_filters.any? { |filter| values[filter].present? }
+        key.failure("cannot be combined with code, timestamp_from_started_at, timestamp_from, or timestamp_to")
+      end
+    end
   end
 end
