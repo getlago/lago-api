@@ -25,7 +25,7 @@ module EInvoices
         case invoice.invoice_type
         when "one_off", "credit"
           invoice.created_at
-        when "subscription"
+        when "subscription", "progressive_billing"
           invoice.subscriptions.map do |subscription|
             ::Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
               .charges_from_datetime
