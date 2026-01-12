@@ -36,7 +36,7 @@ gem "rack-cors"
 
 # Database
 gem "after_commit_everywhere"
-gem "clickhouse-activerecord", "~> 1.3.0"
+gem "clickhouse-activerecord", "~> 1.5.1"
 gem "discard", "~> 1.2"
 gem "kaminari-activerecord"
 gem "paper_trail"
