@@ -1,30 +1,48 @@
 # frozen_string_literal: true
 
 class PaymentReceiptMailer < ApplicationMailer
-  before_action :ensure_payment_receipt_pdf
+  before_action :ensure_pdf
+
+  def loggable?
+    true
+  end
+
+  def document
+    @document ||= params[:payment_receipt]
+  end
 
   def created
-    @payment_receipt = params[:payment_receipt]
-    @billing_entity = @payment_receipt.billing_entity
-    @customer = @payment_receipt.payment.payable.customer
+    @created ||= create_mail
+  end
+
+  private
+
+  def ensure_pdf
+    PaymentReceipts::GeneratePdfService.new(payment_receipt: document).call
+  end
+
+  def create_mail
+    @payment_receipt = document
+    @billing_entity = document.billing_entity
+    @customer = document.payment.payable.customer
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
-    @total_due_amount = @payment_receipt.payment.payable.is_a?(Invoice) ?
-      @payment_receipt.payment.payable.total_due_amount :
-      @payment_receipt.payment.payable.amount - @payment_receipt.payment.amount
+    @total_due_amount = document.payment.payable.is_a?(Invoice) ?
+      document.payment.payable.total_due_amount :
+      document.payment.payable.amount - document.payment.amount
 
     return if @billing_entity.email.blank?
     return if @customer.email.blank?
 
-    @invoices = if @payment_receipt.payment.payable.is_a?(Invoice)
-      [@payment_receipt.payment.payable]
+    @invoices = if document.payment.payable.is_a?(Invoice)
+      [document.payment.payable]
     else
-      @payment_receipt.payment.payable.invoices
+      document.payment.payable.invoices
     end
 
     I18n.locale = @customer.preferred_document_locale
 
     if @pdfs_enabled
-      @payment_receipt.file.open { |file| attachments["receipt-#{@payment_receipt.number}.pdf"] = file.read }
+      document.file.open { |file| attachments["receipt-#{document.number}.pdf"] = file.read }
 
       @invoices.each do |invoice|
         invoice.file.open { |file| attachments["invoice-#{invoice.number}.pdf"] = file.read }
@@ -39,17 +57,9 @@ class PaymentReceiptMailer < ApplicationMailer
         subject: I18n.t(
           "email.payment_receipt.created.subject",
           billing_entity_name: @billing_entity.name,
-          payment_receipt_number: @payment_receipt.number
+          payment_receipt_number: document.number
         )
       )
     end
-  end
-
-  private
-
-  def ensure_payment_receipt_pdf
-    payment_receipt = params[:payment_receipt]
-
-    PaymentReceipts::GeneratePdfService.new(payment_receipt:).call
   end
 end
