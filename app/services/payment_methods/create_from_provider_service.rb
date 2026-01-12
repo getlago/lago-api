@@ -22,11 +22,6 @@ module PaymentMethods
         payment_method.provider_method_id = provider_method_id
         payment_method.payment_provider_id = payment_provider_id
         payment_method.is_default = !customer.payment_methods.exists?(is_default: true)
-
-        # payment_method.details
-        payment_method.details = {}
-        payment_method.details[:sync_with_provider] = !!params[:sync_with_provider] if params.key?(:sync_with_provider)
-        payment_method.details[:provider_customer_id] = payment_provider_customer.provider_customer_id if payment_provider_customer.try(:provider_customer_id).present?
       end
 
       payment_method.save!

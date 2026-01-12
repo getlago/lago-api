@@ -49,13 +49,6 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
         expect(payment_method).not_to be_nil
         expect(payment_method.payment_provider_customer).to eq(payment_provider_customer)
       end
-
-      it "has the provider_customer_id" do
-        result = create_service.call
-        payment_method = result.payment_method
-
-        expect(payment_method.details["provider_customer_id"]).to eq("cus_test")
-      end
     end
 
     describe "provider_method_type" do
@@ -120,30 +113,6 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
             payment_method = result.payment_method
 
             expect(payment_method.is_default).to be_falsey
-          end
-        end
-      end
-
-      describe "details" do
-        context "with provider_customer_id" do
-          let(:payment_provider_customer) { create(:stripe_customer, customer:, provider_customer_id: "cus_test") }
-
-          it "saves the value" do
-            result = create_service.call
-            payment_method = result.payment_method
-
-            expect(payment_method.details["provider_customer_id"]).to eq("cus_test")
-          end
-        end
-
-        context "with sync_with_provider" do
-          let(:params) { {sync_with_provider: true} }
-
-          it "saves the value" do
-            result = create_service.call
-            payment_method = result.payment_method
-
-            expect(payment_method.details["sync_with_provider"]).to be_truthy
           end
         end
       end
