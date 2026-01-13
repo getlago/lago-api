@@ -5,6 +5,7 @@ class Organization < ApplicationRecord
   include OrganizationTimezone
   include Currencies
   include Organizations::AuthenticationMethods
+  include HasFeatureFlags
 
   self.ignored_columns += [:clickhouse_aggregation]
 
@@ -297,6 +298,7 @@ end
 #  email                            :string
 #  email_settings                   :string           default([]), not null, is an Array
 #  eu_tax_management                :boolean          default(FALSE)
+#  feature_flags                    :string           default([]), not null, is an Array
 #  finalize_zero_amount_invoice     :boolean          default(TRUE), not null
 #  hmac_key                         :string           not null
 #  invoice_footer                   :text

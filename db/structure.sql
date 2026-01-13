@@ -2602,6 +2602,7 @@ CREATE TABLE public.organizations (
     audit_logs_period integer DEFAULT 30,
     pre_filter_events boolean DEFAULT false NOT NULL,
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
+    feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10780,6 +10781,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260112140805'),
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
@@ -11670,3 +11672,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

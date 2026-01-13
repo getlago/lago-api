@@ -1,0 +1,3 @@
+mutiple_payment_methods:
+  description: "Allow multiple payment methods per customer"
+  owners: ["@lovrocolic",  "@mariohd"]
