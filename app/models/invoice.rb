@@ -327,6 +327,14 @@ class Invoice < ApplicationRecord
     available_to_credit_amount_cents
   end
 
+  def applicable_to_source_invoice_amountCents
+    if credit? && payment_pending?
+      return available_to_credit_amount_cents
+    end
+
+    refundable_amount_cents
+  end
+
   # amount cents onto which we can issue a credit note as refund
   def refundable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
