@@ -89,8 +89,9 @@ html
             = I18n.t('credit_note.credited_notice', issuing_date: I18n.l(issuing_date, format: :default))
           - else
             = I18n.t('credit_note.refunded_notice', issuing_date: I18n.l(issuing_date, format: :default))
-        .body-1
-          - if applied_to_source_invoice?
+
+        - if applied_to_source_invoice?
+          .body-1
             = I18n.t('credit_note.applied_on_invoice_notice', invoice_number: invoice.number, issuing_date: I18n.l(issuing_date, format: :default))
 
 
