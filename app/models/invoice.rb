@@ -329,10 +329,10 @@ class Invoice < ApplicationRecord
 
   def applicable_to_source_invoice_amount_cents
     if credit? && payment_pending?
-      return available_to_credit_amount_cents
+      return total_amount_cents
     end
 
-    refundable_amount_cents
+    total_due_amount_cents
   end
 
   # amount cents onto which we can issue a credit note as refund
