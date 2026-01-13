@@ -14,6 +14,10 @@ module UsageMonitoring
     def call
       now = Time.current
       current = alert.find_value(current_metrics)
+
+      # NOTE: If the alert is set for a billable metric which is not part of any charges of the plan
+      return result if current.nil?
+
       crossed_threshold_values = alert.find_thresholds_crossed(current)
 
       ActiveRecord::Base.transaction do
