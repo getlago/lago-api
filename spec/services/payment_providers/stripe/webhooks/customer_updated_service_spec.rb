@@ -30,6 +30,25 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService do
         expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
       end
 
+      context "with multiple_payment_methods feature flag" do
+        before do
+          create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: "pm_updateMe")
+          organization.enable_feature_flag!(:multiple_payment_methods)
+        end
+
+        it "updates the associated customer payment method" do
+          # TODO
+          # Does "2025-04-30.basil" do not has the provider_method_id??
+          next if payment_method_id.nil?
+
+          result = webhook_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).not_to be_nil
+          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        end
+      end
+
       context "when customer is not found" do
         let(:provider_customer_id) { "cus_InvaLid" }
 

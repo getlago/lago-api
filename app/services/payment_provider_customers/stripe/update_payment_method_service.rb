@@ -17,6 +17,15 @@ module PaymentProviderCustomers
         stripe_customer.payment_method_id = payment_method_id
         stripe_customer.save!
 
+        if stripe_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+          payment_method = PaymentMethod.find_by(payment_provider_customer: stripe_customer)
+
+          if payment_method && payment_method_id
+            payment_method.update!(provider_method_id: payment_method_id)
+            result.payment_method = payment_method
+          end
+        end
+
         reprocess_pending_invoices
 
         result.stripe_customer = stripe_customer
