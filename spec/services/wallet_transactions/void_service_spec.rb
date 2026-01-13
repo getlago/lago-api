@@ -13,7 +13,8 @@ RSpec.describe WalletTransactions::VoidService do
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
-      credits_ongoing_balance: 10.0
+      credits_ongoing_balance: 10.0,
+      traceable: false
     )
   end
   let(:credit_amount) { BigDecimal("10.00") }
@@ -72,7 +73,7 @@ RSpec.describe WalletTransactions::VoidService do
 
     context "with all arguments" do
       let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
-      let(:credit_note_id) { create(:credit_note, organization: organization).id }
+      let(:credit_note_id) { create(:credit_note, organization:).id }
 
       let(:args) do
         {
@@ -122,6 +123,66 @@ RSpec.describe WalletTransactions::VoidService do
 
       it "creates a wallet transaction with nil name" do
         expect(result.wallet_transaction.name).to be_nil
+      end
+    end
+
+    context "when wallet is traceable" do
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          balance_cents: 1000,
+          credits_balance: 10.0,
+          ongoing_balance_cents: 1000,
+          credits_ongoing_balance: 10.0,
+          traceable: true
+        )
+      end
+
+      let(:inbound_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000)
+      end
+
+      before do
+        inbound_transaction
+      end
+
+      it "creates wallet transaction consumption records" do
+        expect { subject }.to change(WalletTransactionConsumption, :count).by(1)
+
+        expect(WalletTransactionConsumption.last).to have_attributes(
+          inbound_wallet_transaction_id: inbound_transaction.id,
+          outbound_wallet_transaction_id: result.wallet_transaction.id,
+          consumed_amount_cents: 1000
+        )
+
+        expect(inbound_transaction.reload.remaining_amount_cents).to eq(0)
+      end
+    end
+
+    context "when wallet is not traceable" do
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          balance_cents: 1000,
+          credits_balance: 10.0,
+          ongoing_balance_cents: 1000,
+          credits_ongoing_balance: 10.0,
+          traceable: false
+        )
+      end
+
+      it "does not create wallet transaction consumption records" do
+        expect { subject }.not_to change(WalletTransactionConsumption, :count)
       end
     end
   end
