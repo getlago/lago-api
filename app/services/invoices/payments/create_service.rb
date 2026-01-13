@@ -103,9 +103,8 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      # TODO: Replace with real feature flag once implemented
       def multiple_payment_methods_enabled?
-        customer.organization.premium_integrations.include?("manual_payments")
+        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
       end
 
       def should_process_payment?
