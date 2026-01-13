@@ -682,6 +682,12 @@
               "deprecationReason": null
             },
             {
+              "name": "email_sent",
+              "description": "email.sent",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "feature_created",
               "description": "feature.created",
               "isDeprecated": false,
@@ -55289,6 +55295,12 @@
             {
               "name": "coupon",
               "description": "Coupon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt",
+              "description": "PaymentReceipt",
               "isDeprecated": false,
               "deprecationReason": null
             },

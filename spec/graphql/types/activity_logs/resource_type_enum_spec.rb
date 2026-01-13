@@ -17,6 +17,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         coupon
         payment_request
         feature
+        payment_receipt
       ]
     )
   end
