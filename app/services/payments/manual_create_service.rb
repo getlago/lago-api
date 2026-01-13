@@ -33,10 +33,10 @@ module Payments
         )
         result.payment = payment
 
-        total_deductable_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents) + invoice.invoice_settlements.where(settlement_type: :credit_note).sum(:amount_cents)
-
-        params = {total_paid_amount_cents: total_deductable_amount_cents}
-        params[:payment_status] = "succeeded" if total_deductable_amount_cents == invoice.total_amount_cents
+        total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+        total_applied_from_credit_note = invoice.invoice_settlements.where(settlement_type: :credit_note).sum(:amount_cents)
+        params = {total_paid_amount_cents: total_paid_amount_cents}
+        params[:payment_status] = "succeeded" if (total_paid_amount_cents + total_applied_from_credit_note) == invoice.total_amount_cents
         Invoices::UpdateService.call!(invoice:, params:, webhook_notification: true)
       end
 
