@@ -139,8 +139,9 @@ class FeeBoundariesHelper
   end
 
   def self.charge_fee_billing_period(fee, invoice_subscription)
-    from = fee.properties&.dig("charges_from_datetime")
-    to = fee.properties&.dig("charges_to_datetime")
+    boundaries = fee.date_boundaries
+    from = boundaries[:from_date]
+    to = boundaries[:to_date]
 
     if from && to
       BillingPeriod.new(from_datetime: from, to_datetime: to)
