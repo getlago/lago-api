@@ -107,6 +107,10 @@ class CreditNote < ApplicationRecord
     refund_amount_cents.positive?
   end
 
+  def applied_to_source_invoice?
+    applied_to_source_invoice_amount_cents.positive?
+  end
+
   def subscription_ids
     fees.pluck(:subscription_id).uniq
   end

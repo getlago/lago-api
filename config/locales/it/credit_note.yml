@@ -2,6 +2,8 @@
 it:
   credit_note:
     amount: Importo (escl. tasse)
+    applied_on_invoice: Applicato alla fattura %{invoice_number}
+    applied_on_invoice_notice: Applicato alla fattura %{invoice_number} il %{issuing_date}
     coupon_adjustment: Correzione coupon
     credit_from: Da
     credit_note_number: Numero Nota di Credito

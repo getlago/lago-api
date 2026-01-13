@@ -2,6 +2,8 @@
 en:
   credit_note:
     amount: Amount (excl. tax)
+    applied_on_invoice: Applied on invoice %{invoice_number}
+    applied_on_invoice_notice: Applied on invoice %{invoice_number} on %{issuing_date}
     coupon_adjustment: Coupons
     credit_from: From
     credit_note_number: Credit note number

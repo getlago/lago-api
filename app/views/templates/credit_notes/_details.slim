@@ -88,6 +88,11 @@
           td.body-2
           td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
           td.body-2 = MoneyHelper.format(0.to_money(currency))
+    - if applied_to_source_invoice?
+      tr
+        td.body-2
+        td.body-2 = I18n.t('credit_note.applied_on_invoice', invoice_number: invoice.number)
+        td.body-2 = MoneyHelper.format(applied_to_source_invoice_amount)
     - if credited?
       tr
         td.body-2

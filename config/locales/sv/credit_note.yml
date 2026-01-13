@@ -2,6 +2,8 @@
 sv:
   credit_note:
     amount: Belopp (exkl. moms)
+    applied_on_invoice: Tillämpad på faktura %{invoice_number}
+    applied_on_invoice_notice: Tillämpad på faktura %{invoice_number} den %{issuing_date}
     coupon_adjustment: Rabatt
     credit_from: Avsändare
     credit_note_number: Kreditfakturanummer
