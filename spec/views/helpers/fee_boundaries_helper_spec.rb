@@ -668,6 +668,67 @@ RSpec.describe FeeBoundariesHelper do
         expect(period.to_datetime).to eq(invoice_subscription.to_datetime)
       end
     end
+
+    context "when fee is a recurring pay-in-advance charge (reconciliation fee)" do
+      # This tests the scenario where:
+      # - Plan is pay-in-arrears
+      # - Charge is pay-in-advance with a recurring billable metric
+      # - Fee has pay_in_advance: false (reconciliation fee, not instant fee)
+      # - Fee properties have charges_from_datetime matching the arrears period
+      # - But the billing period should show the pay-in-advance interval (next period)
+      let(:calendar_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          billing_time: :calendar,
+          subscription_at: DateTime.parse("2025-12-01T00:00:00"),
+          started_at: DateTime.parse("2025-12-01T00:00:00")
+        )
+      end
+      let(:calendar_invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription: calendar_subscription,
+          invoice:,
+          from_datetime: DateTime.parse("2025-12-01T00:00:00"),
+          to_datetime: DateTime.parse("2025-12-31T23:59:59"),
+          charges_from_datetime: DateTime.parse("2025-12-01T00:00:00"),
+          charges_to_datetime: DateTime.parse("2025-12-31T23:59:59"),
+          timestamp: DateTime.parse("2026-01-01T00:00:00")
+        )
+      end
+      let(:recurring_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+      let(:pay_in_advance_charge) do
+        create(:standard_charge, :pay_in_advance, plan:, billable_metric: recurring_billable_metric)
+      end
+
+      # Reconciliation fee: fee.pay_in_advance = false, charge.pay_in_advance = true
+      # Properties store the arrears period (December), but should display as January
+      let(:reconciliation_fee) do
+        create(
+          :charge_fee,
+          charge: pay_in_advance_charge,
+          subscription: calendar_subscription,
+          invoice:,
+          pay_in_advance: false,
+          properties: {
+            "charges_from_datetime" => "2025-12-01T00:00:00Z",
+            "charges_to_datetime" => "2025-12-31T23:59:59Z"
+          }
+        )
+      end
+
+      it "returns the pay-in-advance interval (next period), not the stored properties" do
+        period = helper.billing_period_for(reconciliation_fee, invoice_subscription: calendar_invoice_subscription)
+
+        # The fee properties say December, but since this is a reconciliation fee
+        # for a pay-in-advance charge on an arrears plan, it should show January
+        # (the period that was paid in advance)
+        expect(period.from_datetime.to_date).to eq(Date.new(2026, 1, 1))
+        expect(period.to_datetime.to_date).to eq(Date.new(2026, 1, 31))
+      end
+    end
   end
 
   describe ".format_billing_period" do
