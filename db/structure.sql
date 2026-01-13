@@ -946,9 +946,9 @@ DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
-DROP VIEW IF EXISTS public.exports_entitlement_entitlement_values;
 DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
+DROP VIEW IF EXISTS public.exports_entitlement_entitlement_values;
 DROP VIEW IF EXISTS public.exports_daily_usages;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
@@ -2707,6 +2707,22 @@ CREATE VIEW public.exports_daily_usages AS
 
 
 --
+-- Name: exports_entitlement_entitlement_values; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_entitlement_entitlement_values AS
+ SELECT ev.id AS lago_id,
+    ev.organization_id,
+    ev.entitlement_entitlement_id AS lago_entitlement_entitlement_id,
+    ev.entitlement_privilege_id AS lago_entitlement_privilege_id,
+    ev.value,
+    ev.deleted_at,
+    ev.created_at,
+    ev.updated_at
+   FROM public.entitlement_entitlement_values ev;
+
+
+--
 -- Name: exports_entitlement_entitlements; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -2736,22 +2752,6 @@ CREATE VIEW public.exports_entitlement_features AS
     ef.created_at,
     ef.updated_at
    FROM public.entitlement_features ef;
-
-
---
--- Name: exports_entitlement_entitlement_values; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.exports_entitlement_entitlement_values AS
- SELECT ev.id AS lago_id,
-    ev.organization_id,
-    ev.entitlement_entitlement_id AS lago_entitlement_entitlement_id,
-    ev.entitlement_privilege_id AS lago_entitlement_privilege_id,
-    ev.value,
-    ev.deleted_at,
-    ev.created_at,
-    ev.updated_at
-   FROM public.entitlement_entitlement_values ev;
 
 
 --
