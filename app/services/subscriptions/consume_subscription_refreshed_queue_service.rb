@@ -33,7 +33,7 @@ module Subscriptions
     def redis_client
       return @redis_client if defined? @redis_client
 
-      url = ENV["LAGO_REDIS_STORE_URL"].split(":")
+      url = ENV["LAGO_REDIS_STORE_URL"].gsub(/rediss?:\/\//, "").split(":")
 
       @redis_client ||= Redis.new(
         host: url.first,
@@ -42,7 +42,7 @@ module Subscriptions
         db: ENV["LAGO_REDIS_STORE_DB"],
         ssl: true,
         ssl_params: {
-          verify_mode: OpenSSL::SSL::VERIFY_PEER
+          verify_mode: OpenSSL::SSL::VERIFY_NONE
         },
         timeout: 5.0,
         reconnect_attempts: 3
