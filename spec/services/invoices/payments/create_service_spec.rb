@@ -101,7 +101,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with subscription invoice" do
-      let(:organization) { create(:organization, premium_integrations: %w[manual_payments]) } # TODO: remove later
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
       let(:subscription_payment_method) { create(:payment_method, customer:, is_default: false) }
       let(:plan) { create(:plan, organization:) }
       let(:subscription) do
@@ -166,7 +166,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with credit invoice" do
-      let(:organization) { create(:organization, premium_integrations: %w[manual_payments]) } # TODO: remove later
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
       let(:wallet) { create(:wallet, customer:, organization:) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
       let(:invoice) do
@@ -275,7 +275,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "with one-off invoice" do
-      let(:organization) { create(:organization, premium_integrations: %w[manual_payments]) } # TODO: remove later
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
       let(:invoice) do
         create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off)
       end
