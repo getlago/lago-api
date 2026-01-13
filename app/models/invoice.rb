@@ -327,7 +327,7 @@ class Invoice < ApplicationRecord
     available_to_credit_amount_cents
   end
 
-  def applicable_to_source_invoice_amountCents
+  def applicable_to_source_invoice_amount_cents
     if credit? && payment_pending?
       return available_to_credit_amount_cents
     end
