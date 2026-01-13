@@ -172,6 +172,10 @@ RSpec.shared_examples "an integration payload" do |integration_type|
     }
   end
 
+  let(:integration_item) do
+    create(:integration_item, integration:, external_account_code: "11", item_code: "some_code_addons")
+  end
+
   before do
     add_on_mapping_on_billing_entity
     billable_metric_mapping_on_billing_entity
@@ -196,6 +200,8 @@ RSpec.shared_examples "an integration payload" do |integration_type|
     fallback_item_on_billing_entity
 
     fallback_item_on_organization
+
+    integration_item
 
     integration_customer
     add_on_credit_note_item

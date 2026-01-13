@@ -18,6 +18,9 @@ module Integrations
               base_item["amount_cents"] = fee.amount_cents
             end
 
+            item_code = integration.integration_items.find { it.external_account_code == base_item["account_code"] }&.item_code
+            base_item["item_code"] = item_code if item_code
+
             base_item
           end
         end

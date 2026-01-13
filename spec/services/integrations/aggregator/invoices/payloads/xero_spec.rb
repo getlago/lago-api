@@ -25,7 +25,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
                 "external_id" => mapping_codes.dig(:add_on, :external_id),
                 "precise_unit_amount" => 100.0,
                 "taxes_amount_cents" => 2,
-                "units" => 0.2e1
+                "units" => 0.2e1,
+                "item_code" => "some_code_addons"
               },
               {
                 "account_code" => mapping_codes.dig(:billable_metric, :external_account_code),
