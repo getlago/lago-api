@@ -99,16 +99,16 @@ RSpec.describe Mutations::Invoices::Create do
           "units" => 2.0,
           "preciseUnitAmount" => 12.0,
           "properties" => {
-            "fromDatetime" => current_time.to_time.utc.iso8601,
-            "toDatetime" => current_time.to_time.utc.iso8601
+            "fromDatetime" => current_time.to_time.iso8601,
+            "toDatetime" => current_time.to_time.iso8601
           }
         },
         {
           "units" => 1.0,
           "preciseUnitAmount" => 4.0,
           "properties" => {
-            "fromDatetime" => current_time.to_time.utc.iso8601,
-            "toDatetime" => current_time.to_time.utc.iso8601
+            "fromDatetime" => current_time.to_time.iso8601,
+            "toDatetime" => current_time.to_time.iso8601
           }
         }
       )
