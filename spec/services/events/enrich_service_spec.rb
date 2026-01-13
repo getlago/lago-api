@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Events::EnrichService do
   subject(:enrich_service) do
-    described_class.new(event:, subscription:, billable_metric:, charges:)
+    described_class.new(event:, subscription:, billable_metric:, charges:, persist:)
   end
 
   let(:organization) { create(:organization) }
@@ -13,6 +13,7 @@ RSpec.describe Events::EnrichService do
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:charges) { [charge] }
+  let(:persist) { true }
 
   let(:event) do
     create(
@@ -289,6 +290,20 @@ RSpec.describe Events::EnrichService do
         expect(result.enriched_events.count).to eq(2)
 
         expect(result.enriched_events.pluck(:charge_id)).to match_array([charge.id, charge2.id])
+      end
+    end
+
+    context "when persist flag is false" do
+      let(:persist) { false }
+
+      it "creates an enriched event without persisting it" do
+        result = enrich_service.call
+
+        expect(result).to be_success
+        expect(result.enriched_events.count).to eq(1)
+
+        enriched_event = result.enriched_events.first
+        expect(enriched_event).not_to be_persisted
       end
     end
   end
