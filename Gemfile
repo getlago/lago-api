@@ -17,6 +17,7 @@ gem "puma", "~> 6.5"
 gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
+gem "sidekiq-prometheus-exporter"
 group :"sidekiq-pro", optional: true do
   source "https://gems.contribsys.com/" do
     gem "sidekiq-pro"

@@ -29,6 +29,8 @@ end
 
 if ENV["LAGO_SIDEKIQ_WEB"] == "true"
   require "sidekiq/web"
+  require "sidekiq/prometheus/exporter"
+
   Sidekiq::Web.use(ActionDispatch::Cookies)
   Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: "_interslice_session")
 end
@@ -51,6 +53,7 @@ def configure_sidekiq_pro_metrics(config)
   config.dogstatsd = -> {
     Datadog::Statsd.new(statsd_host, statsd_port.to_i,
       tags: ["env:#{config[:environment]}", "service:sidekiq"],
+
       namespace: Rails.application.name)
   }
 

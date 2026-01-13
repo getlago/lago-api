@@ -953,6 +953,9 @@ GEM
       logger
       rack (>= 2.2.4)
       redis-client (>= 0.22.2)
+    sidekiq-prometheus-exporter (0.3.0)
+      rack (>= 1.6.0)
+      sidekiq (>= 4.1.0)
     sidekiq-throttled (1.4.0)
       concurrent-ruby (>= 1.2.0)
       redis-prescription (~> 2.2)
@@ -1166,6 +1169,7 @@ DEPENDENCIES
   shoulda-matchers
   sidekiq
   sidekiq-pro!
+  sidekiq-prometheus-exporter
   sidekiq-throttled (= 1.4.0)
   simplecov
   slim
