@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ::BaseService do
   subject(:service) { described_class.new }
 
-  it { is_expected.to be_kind_of(AfterCommitEverywhere) }
+  it { is_expected.to be_a(AfterCommitEverywhere) }
   it { is_expected.to respond_to(:call) }
   it { is_expected.to respond_to(:call_async) }
   it { is_expected.to respond_to(:call_with_middlewares) }

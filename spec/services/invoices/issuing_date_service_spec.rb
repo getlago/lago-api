@@ -69,7 +69,7 @@ RSpec.describe Invoices::IssuingDateService do
       end
     end
 
-    context "with no preferences set on the customer level " do
+    context "with no preferences set on the customer level" do
       let(:billing_entity) do
         build(
           :billing_entity,
@@ -134,7 +134,7 @@ RSpec.describe Invoices::IssuingDateService do
   describe "#grace_period" do
     let(:recurring) { true }
 
-    context "with preferences set on the customer level " do
+    context "with preferences set on the customer level" do
       let(:invoice_grace_period) { 3 }
 
       it "returns value based on billing entity settings" do
@@ -142,7 +142,7 @@ RSpec.describe Invoices::IssuingDateService do
       end
     end
 
-    context "with no preferences set on the customer level " do
+    context "with no preferences set on the customer level" do
       let(:billing_entity) do
         build(
           :billing_entity,
@@ -159,7 +159,7 @@ RSpec.describe Invoices::IssuingDateService do
       end
     end
 
-    context "with no preferences set on the billing_entity level " do
+    context "with no preferences set on the billing_entity level" do
       let(:billing_entity) { build(:billing_entity, invoice_grace_period: nil) }
       let(:customer) { build(:customer, billing_entity:, invoice_grace_period: nil) }
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:disable Rails/FilePath
   describe "GET /analytics/invoice_collection" do
     subject { get_with_token(organization, "/api/v1/analytics/invoice_collection", params) }
 

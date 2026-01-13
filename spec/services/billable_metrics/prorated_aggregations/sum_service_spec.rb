@@ -766,7 +766,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         end
       end
 
-      context "when  charge is pay in advance and just upgraded" do
+      context "when charge is pay in advance and just upgraded" do
         let(:from_datetime) { Time.zone.parse("2023-05-15 00:00:00") }
         let(:is_pay_in_advance) { true }
         let(:latest_events) { nil }

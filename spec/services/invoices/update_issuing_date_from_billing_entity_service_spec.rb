@@ -157,7 +157,7 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
       end
     end
 
-    context "with preferences set on the customer level " do
+    context "with preferences set on the customer level" do
       let(:customer) do
         create(
           :customer,

@@ -289,7 +289,7 @@ RSpec.describe Fees::FixedChargeService do
       end
     end
 
-    context "with graduated charge model " do
+    context "with graduated charge model" do
       let(:fixed_charge) do
         create(
           :fixed_charge,

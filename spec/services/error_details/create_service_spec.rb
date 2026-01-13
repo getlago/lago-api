@@ -41,7 +41,7 @@ RSpec.describe ErrorDetails::CreateService do
         subject(:service_call) { described_class.call(params:, organization:, owner: nil) }
 
         it "does not create an error_detail" do
-          expect { service_call }.to change(ErrorDetail, :count).by(0)
+          expect { service_call }.not_to change(ErrorDetail, :count)
         end
 
         it "returns error for error_detail" do
@@ -62,7 +62,7 @@ RSpec.describe ErrorDetails::CreateService do
         end
 
         it "does not create an error_detail" do
-          expect { service_call }.to change(ErrorDetail, :count).by(0)
+          expect { service_call }.not_to change(ErrorDetail, :count)
         end
 
         it "returns error for error_detail" do
