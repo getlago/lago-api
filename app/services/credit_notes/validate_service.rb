@@ -124,7 +124,7 @@ module CreditNotes
       return false unless valid_credit_invoice_application?
 
       applicable_to_source_invoice_amount = invoice.total_amount_cents -
-        refunded_invoice_amount_cents-
+        refunded_invoice_amount_cents -
         credited_invoice_amount_cents -
         applied_to_source_invoice_total_amount_cents
 
