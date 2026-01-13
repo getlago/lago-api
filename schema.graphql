@@ -159,6 +159,11 @@ enum ActivityTypeEnum {
   customer_updated
 
   """
+  email.sent
+  """
+  email_sent
+
+  """
   feature.created
   """
   feature_created
@@ -10125,6 +10130,11 @@ enum ResourceTypeEnum {
   Invoice
   """
   invoice
+
+  """
+  PaymentReceipt
+  """
+  payment_receipt
 
   """
   PaymentRequest
