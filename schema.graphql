@@ -6034,6 +6034,7 @@ type Invoice {
   totalAmountCents: BigInt!
   totalDueAmountCents: BigInt!
   totalPaidAmountCents: BigInt!
+  totalSettledAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
   voidable: Boolean!
