@@ -650,6 +650,7 @@ RSpec.describe Subscriptions::OrganizationBillingService do
     end
 
     context "when grouping subscriptions by payment method" do
+      let(:organization) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
       let(:current_date) { subscription_at.next_month }
@@ -757,6 +758,21 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+
+        context "without feature flag" do
+          let(:organization) { create(:organization) }
+
+          it "does not group subscriptions into separate billing jobs" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription1, subscription2),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
         end
       end
 
