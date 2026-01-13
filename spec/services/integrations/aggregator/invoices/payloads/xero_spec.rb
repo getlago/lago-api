@@ -26,8 +26,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
                 "precise_unit_amount" => 100.0,
                 "taxes_amount_cents" => 2,
                 "units" => 0.2e1,
-                "item_code" => "some_code_addons"
-              },
+                "item_code" => integration_item_mapping[mapping_codes.dig(:add_on, :external_account_code)]
+              }.compact,
               {
                 "account_code" => mapping_codes.dig(:billable_metric, :external_account_code),
                 "description" => "Standard Charge Fee",
