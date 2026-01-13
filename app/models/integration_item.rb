@@ -29,6 +29,7 @@ end
 #  id                    :uuid             not null, primary key
 #  external_account_code :string
 #  external_name         :string
+#  item_code             :string
 #  item_type             :integer          not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null

@@ -3849,7 +3849,8 @@ CREATE TABLE public.integration_items (
     external_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    item_code character varying
 );
 
 
@@ -10781,6 +10782,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260113152403'),
 ('20260112140805'),
 ('20260106120832'),
 ('20260106120601'),

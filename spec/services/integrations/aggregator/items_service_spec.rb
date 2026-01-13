@@ -46,6 +46,37 @@ RSpec.describe Integrations::Aggregator::ItemsService do
         expect(IntegrationItem.count).to eq(5)
       end
     end
+
+    context "with item_code in response" do
+      let(:aggregator_response) do
+        {
+          "next_cursor" => nil,
+          "records" => [
+            {
+              "id" => "ceddd893-05b9-48ae-b3f2-29c504aff6b6",
+              "item_code" => "seats",
+              "name" => "Seat",
+              "description" => "Seat",
+              "account_code" => "4100",
+              "_nango_metadata" => {
+                "first_seen_at" => "2025-12-30T20:27:21.012989+00:00",
+                "last_modified_at" => "2025-12-30T20:27:21.012989+00:00",
+                "last_action" => "ADDED",
+                "deleted_at" => nil,
+                "pruned_at" => nil,
+                "cursor" => "MjAyNS0xMi0zMLThiNDdhMGM5YjliYQ=="
+              }
+            }
+          ]
+        }
+      end
+
+      it "saves item_code on integration items" do
+        result = items_service.call
+
+        expect(result.items.sole.item_code).to eq "seats"
+      end
+    end
   end
 
   describe "#action_path" do
