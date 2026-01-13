@@ -23,6 +23,10 @@ RSpec.describe Mutations::Wallets::Create do
           invoiceRequiresSuccessfulPayment
           paidTopUpMinAmountCents
           paidTopUpMaxAmountCents
+          metadata {
+            key
+            value
+          }
           recurringTransactionRules {
             lagoId
             method
@@ -202,6 +206,42 @@ RSpec.describe Mutations::Wallets::Create do
       expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
         organization_id: membership.organization.id,
         params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: nil, ignore_paid_top_up_limits: nil}
+      )
+    end
+  end
+
+  context "with metadata" do
+    it "creates a wallet with metadata" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "Wallet with Metadata",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR",
+            metadata: [
+              {key: "env", value: "production"},
+              {key: "team", value: "engineering"}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomerWallet"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["name"]).to eq("Wallet with Metadata")
+      expect(result_data["metadata"]).to contain_exactly(
+        {"key" => "env", "value" => "production"},
+        {"key" => "team", "value" => "engineering"}
       )
     end
   end

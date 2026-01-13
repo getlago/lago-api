@@ -629,5 +629,64 @@ RSpec.describe Wallets::UpdateService do
         end
       end
     end
+
+    context "with metadata" do
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "new name",
+          priority: 5,
+          metadata: {"foo" => "bar", "baz" => "qux"}
+        }
+      end
+
+      it "creates metadata" do
+        expect(result).to be_success
+        expect(result.wallet.metadata).to be_present
+        expect(result.wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+
+      context "when wallet has existing metadata" do
+        before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value", "foo" => "old"}) }
+
+        it "replaces all metadata" do
+          expect(result).to be_success
+          expect(result.wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+        end
+      end
+
+      context "when partial_metadata is true" do
+        subject(:result) { described_class.call(wallet:, params:, partial_metadata: true) }
+
+        context "when wallet has existing metadata" do
+          before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value", "foo" => "old"}) }
+
+          it "merges metadata" do
+            expect(result).to be_success
+            expect(result.wallet.metadata.value).to eq({"old" => "value", "foo" => "bar", "baz" => "qux"})
+          end
+        end
+      end
+
+      context "when metadata is nil" do
+        let(:params) do
+          {
+            id: wallet.id,
+            name: "new name",
+            priority: 5,
+            metadata: nil
+          }
+        end
+
+        context "when wallet has existing metadata" do
+          before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value"}) }
+
+          it "deletes all metadata" do
+            expect(result).to be_success
+            expect(result.wallet.reload.metadata).to be_nil
+          end
+        end
+      end
+    end
   end
 end

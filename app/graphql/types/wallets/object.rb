@@ -49,6 +49,8 @@ module Types
 
       field :applies_to, Types::Wallets::AppliesTo, null: true, method: :itself
 
+      field :metadata, [Types::Metadata::Object], null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
@@ -56,6 +58,10 @@ module Types
 
       def recurring_transaction_rules
         object.recurring_transaction_rules.active
+      end
+
+      def metadata
+        object.metadata&.value&.map { |key, value| {key:, value:} }
       end
     end
   end

@@ -33,6 +33,7 @@ module V1
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
       payload.merge!(payment_method)
+      payload.merge!(metadata) if model.metadata.present?
 
       payload
     end
@@ -71,6 +72,12 @@ module V1
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize
+    end
+
+    def metadata
+      {
+        metadata: ::V1::MetadataSerializer.new(model.metadata).serialize
+      }
     end
   end
 end

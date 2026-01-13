@@ -19,6 +19,11 @@ class Wallet < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
+  has_one :metadata,
+    class_name: "Metadata::ItemMetadata",
+    as: :owner,
+    dependent: :destroy
+
   has_many :applied_invoice_custom_sections,
     class_name: "Wallet::AppliedInvoiceCustomSection",
     dependent: :destroy

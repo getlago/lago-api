@@ -68,6 +68,8 @@ module Wallets
         billable_metrics.each do |bm|
           WalletTarget.create!(wallet:, billable_metric: bm, organization_id:)
         end
+
+        create_metadata(wallet, params[:metadata]) if !params[:metadata].nil?
       end
 
       result.wallet = wallet
@@ -171,6 +173,13 @@ module Wallets
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id:)
+    end
+
+    def create_metadata(wallet, metadata_value)
+      wallet.create_metadata!(
+        organization_id: wallet.organization_id,
+        value: metadata_value
+      )
     end
   end
 end
