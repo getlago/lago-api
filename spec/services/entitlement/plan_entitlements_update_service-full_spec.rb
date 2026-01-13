@@ -174,8 +174,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
 
       it "creates entitlement without values" do
-        expect { result }.to change { plan.entitlements.count }.by(1)
-        expect { result }.not_to change(Entitlement::EntitlementValue, :count)
+        expect { result }.to change { plan.entitlements.count }.by(1).and(not_change(Entitlement::EntitlementValue, :count))
       end
     end
 

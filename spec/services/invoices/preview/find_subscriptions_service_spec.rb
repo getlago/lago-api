@@ -55,8 +55,8 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
       context "when subscription has a next subscription" do
         let(:current_plan) { create(:plan, organization:, pay_in_advance: true) }
         let(:next_plan) { create(:plan, organization:, pay_in_advance:, amount_cents:) }
-        let(:subscription) { create(:subscription, plan: current_plan, customer:, organization:, next_subscriptions: [next_subscription]) }
-        let(:next_subscription) { create(:subscription, :pending, plan: next_plan, customer:, organization:) }
+        let!(:subscription) { create(:subscription, plan: current_plan, customer:, organization:, next_subscriptions: [next_subscription]) }
+        let!(:next_subscription) { create(:subscription, :pending, plan: next_plan, customer:, organization:) }
 
         let(:subscriptions) { [subscription] }
 
@@ -74,8 +74,7 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
             end
 
             it "does not persist any changes to the subscriptions" do
-              expect { subject }.not_to change { subscription.reload.attributes }
-              expect { subject }.not_to change { next_subscription.reload.attributes }
+              expect { subject }.to not_change { subscription.reload.attributes }.and(not_change { next_subscription.reload.attributes })
             end
           end
 
@@ -101,8 +100,7 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
             end
 
             it "does not persist any changes to the subscriptions" do
-              expect { subject }.not_to change { subscription.reload.attributes }
-              expect { subject }.not_to change { next_subscription.reload.attributes }
+              expect { subject }.to not_change { subscription.reload.attributes }.and(not_change { next_subscription.reload.attributes })
             end
           end
         end
@@ -119,8 +117,8 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
             end
 
             it "does not persist any changes to the subscriptions" do
-              expect { subject }.not_to change { subscription.reload.attributes }
-              expect { subject }.not_to change { next_subscription.reload.attributes }
+              expect { subject }.to not_change { subscription.reload.attributes }
+                .and(not_change { next_subscription.reload.attributes })
             end
           end
 
@@ -140,8 +138,7 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
             end
 
             it "does not persist any changes to the subscriptions" do
-              expect { subject }.not_to change { subscription.reload.attributes }
-              expect { subject }.not_to change { next_subscription.reload.attributes }
+              expect { subject }.to not_change { subscription.reload.attributes }.and(not_change { next_subscription.reload.attributes })
             end
           end
         end

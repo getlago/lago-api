@@ -313,15 +313,15 @@ RSpec.describe Fees::ChargeService do
 
           context "with custom aggregation" do
             let(:billable_metric) do
-              create(:custom_aggregation_billable_metric, organization:)
+              create(:custom_billable_metric, :recurring, organization:)
+            end
 
-              it "creates a fee and a cached aggregation" do
-                result = charge_subscription_service.call
-                expect(result).to be_success
+            it "creates a fee and a cached aggregation" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
 
-                expect(result.fees.count).to eq(2)
-                expect(result.cached_aggregation.count).to eq(2)
-              end
+              expect(result.fees.count).to eq(2)
+              expect(result.cached_aggregations.count).to eq(2)
             end
           end
         end
@@ -658,15 +658,15 @@ RSpec.describe Fees::ChargeService do
 
           context "with custom aggregation" do
             let(:billable_metric) do
-              create(:custom_aggregation_billable_metric, organization:)
+              create(:custom_billable_metric, :recurring, organization:)
+            end
 
-              it "creates a fee and a cached aggregation" do
-                result = charge_subscription_service.call
-                expect(result).to be_success
+            it "creates a fee and a cached aggregation" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
 
-                expect(result.fees.count).to eq(2)
-                expect(result.cached_aggregation.count).to eq(2)
-              end
+              expect(result.fees.count).to eq(2)
+              expect(result.cached_aggregations.count).to eq(2)
             end
           end
         end

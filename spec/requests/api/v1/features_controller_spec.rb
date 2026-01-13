@@ -165,8 +165,7 @@ RSpec.describe Api::V1::FeaturesController do
       end
 
       it "creates a feature without privileges" do
-        expect { subject }.to change(Entitlement::Feature, :count).by(1)
-        expect { subject }.not_to change(Entitlement::Privilege, :count)
+        expect { subject }.to change(Entitlement::Feature, :count).by(1).and(not_change(Entitlement::Privilege, :count))
 
         expect(response).to have_http_status(:success)
         expect(json[:feature][:code]).to eq("new_feature")
