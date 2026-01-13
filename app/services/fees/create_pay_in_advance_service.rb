@@ -197,9 +197,10 @@ module Fees
     end
 
     def format_grouped_by
-      return {} if properties["grouped_by"].blank?
+      grouped_by = properties["pricing_group_keys"].presence || properties["grouped_by"]
+      return {} if grouped_by.blank?
 
-      properties["grouped_by"].index_with { event.properties[it] }
+      grouped_by.index_with { event.properties[it] }
     end
 
     def customer_provider_taxation?
