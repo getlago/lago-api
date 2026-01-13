@@ -89,5 +89,30 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         expect(alert.previous_value).to eq 4
       end
     end
+
+    context "when billable metric is not part of the plan charges" do
+      let(:alert) do
+        create(
+          :billable_metric_current_usage_amount_alert,
+          thresholds: [10, 20],
+          previous_value: 0,
+          code: "test",
+          organization:,
+          subscription_external_id: subscription.external_id
+        )
+      end
+      let(:other_billable_metric) { create(:billable_metric, organization:) }
+      let(:charge) { create(:standard_charge, billable_metric: other_billable_metric) }
+      let(:fees) { [create(:charge_fee, charge:, amount_cents: 100)] }
+      let(:current_metrics) { instance_double(SubscriptionUsage, fees:) }
+
+      it "returns success without triggering alert" do
+        expect(result).to be_success
+        expect(alert.reload.last_processed_at).to be_nil
+        expect(alert.previous_value).to eq 0
+        expect(organization.triggered_alerts.count).to eq 0
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
   end
 end
