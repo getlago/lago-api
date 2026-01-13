@@ -530,6 +530,7 @@ module Subscriptions
     #   - [pm_1, provider] + [nil, provider]  → single group (both resolve to pm_1)
     #   - [pm_1, provider] + [pm_2, provider] → two groups (different resolved id)
     def group_by_payment_method(subscriptions)
+      return [subscriptions] unless organization.feature_flag_enabled?(:multiple_payment_methods)
       return [subscriptions] if subscriptions.size <= 1
 
       customer = subscriptions.first.customer
