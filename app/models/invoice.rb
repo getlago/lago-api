@@ -296,6 +296,10 @@ class Invoice < ApplicationRecord
     total_amount_cents - total_paid_amount_cents - applied_credit_notes_amount_cents
   end
 
+  def total_settled_amount_cents
+    total_paid_amount_cents + applied_credit_notes_amount_cents
+  end
+
   # amount cents onto which we can issue a credit note
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
