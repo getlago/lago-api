@@ -20,12 +20,6 @@ module Types
       field :in_advance_charges_from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :in_advance_charges_to_datetime, GraphQL::Types::ISO8601DateTime, null: true
 
-      field :fixed_charges_from_datetime, GraphQL::Types::ISO8601DateTime, null: true
-      field :fixed_charges_to_datetime, GraphQL::Types::ISO8601DateTime, null: true
-
-      field :in_advance_fixed_charges_from_datetime, GraphQL::Types::ISO8601DateTime, null: true
-      field :in_advance_fixed_charges_to_datetime, GraphQL::Types::ISO8601DateTime, null: true
-
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
 
@@ -55,32 +49,6 @@ module Types
       def charge_pay_in_advance_interval
         @charge_pay_in_advance_interval ||=
           ::Subscriptions::DatesService.charge_pay_in_advance_interval(object.timestamp, object.subscription)
-      end
-
-      def in_advance_fixed_charges_from_datetime
-        return nil unless should_use_in_advance_fixed_charges_interval?
-
-        fixed_charge_pay_in_advance_interval[:fixed_charges_from_datetime]
-      end
-
-      def in_advance_fixed_charges_to_datetime
-        return nil unless should_use_in_advance_fixed_charges_interval?
-
-        fixed_charge_pay_in_advance_interval[:fixed_charges_to_datetime]
-      end
-
-      def should_use_in_advance_fixed_charges_interval?
-        return @should_use_in_advance_fixed_charges_interval if defined? @should_use_in_advance_fixed_charges_interval
-
-        @should_use_in_advance_fixed_charges_interval =
-          object.fees.fixed_charge.any? &&
-          object.subscription.fixed_charges.pay_in_advance.any? &&
-          !object.subscription.plan.pay_in_advance?
-      end
-
-      def fixed_charge_pay_in_advance_interval
-        @fixed_charge_pay_in_advance_interval ||=
-          ::Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(object.timestamp, object.subscription)
       end
 
       def accept_new_charge_fees

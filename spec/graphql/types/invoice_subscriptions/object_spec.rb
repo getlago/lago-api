@@ -18,14 +18,8 @@ RSpec.describe Types::InvoiceSubscriptions::Object do
     expect(subject).to have_field(:charges_from_datetime).of_type("ISO8601DateTime")
     expect(subject).to have_field(:charges_to_datetime).of_type("ISO8601DateTime")
 
-    expect(subject).to have_field(:fixed_charges_from_datetime).of_type("ISO8601DateTime")
-    expect(subject).to have_field(:fixed_charges_to_datetime).of_type("ISO8601DateTime")
-
     expect(subject).to have_field(:in_advance_charges_from_datetime).of_type("ISO8601DateTime")
     expect(subject).to have_field(:in_advance_charges_to_datetime).of_type("ISO8601DateTime")
-
-    expect(subject).to have_field(:in_advance_fixed_charges_from_datetime).of_type("ISO8601DateTime")
-    expect(subject).to have_field(:in_advance_fixed_charges_to_datetime).of_type("ISO8601DateTime")
 
     expect(subject).to have_field(:from_datetime).of_type("ISO8601DateTime")
     expect(subject).to have_field(:to_datetime).of_type("ISO8601DateTime")

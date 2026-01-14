@@ -6168,13 +6168,9 @@ type InvoiceSubscription {
   chargesFromDatetime: ISO8601DateTime
   chargesToDatetime: ISO8601DateTime
   fees: [Fee!]
-  fixedChargesFromDatetime: ISO8601DateTime
-  fixedChargesToDatetime: ISO8601DateTime
   fromDatetime: ISO8601DateTime
   inAdvanceChargesFromDatetime: ISO8601DateTime
   inAdvanceChargesToDatetime: ISO8601DateTime
-  inAdvanceFixedChargesFromDatetime: ISO8601DateTime
-  inAdvanceFixedChargesToDatetime: ISO8601DateTime
   invoice: Invoice!
   subscription: Subscription!
   subscriptionAmountCents: BigInt!
