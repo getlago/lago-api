@@ -10,10 +10,10 @@ de:
     credit_to: Gutschrift für
     credited_notice: Gutschrift auf Kundenguthaben am %{issuing_date}
     credited_on_customer_balance: Auf Kundenguthaben gutgeschrieben
-    credited_refunded_notice: Auf Kundenguthaben gutgeschrieben und zurückerstattet am %{issuing_date}
     document_name: Gutschrift
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
+    issued_notice: Ausgestellt am %{issuing_date}
     item: Artikel
     powered_by: Bereitgestellt von
     prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}

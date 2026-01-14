@@ -10,10 +10,10 @@ sv:
     credit_to: Mottagare
     credited_notice: Krediterad till kundens förbetalda kontobalans den %{issuing_date}
     credited_on_customer_balance: Krediterad till kundens förbetalda kontobalans
-    credited_refunded_notice: Krediterad till kundens förbetalda kontobalans och återbetald den %{issuing_date}
     document_name: Kreditfaktura
     invoice_number: Fakturanummer
     issue_date: Fakturadatum
+    issued_notice: Utfärdad den %{issuing_date}
     item: Artikel
     powered_by: Genererad av
     prepaid_credits_for_wallet: Förbetald kontobalans - %{wallet_name}

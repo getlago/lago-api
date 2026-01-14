@@ -10,10 +10,10 @@ zh-TW:
     credit_to: 折讓至
     credited_notice: 已於 %{issuing_date} 入帳至客戶餘額
     credited_on_customer_balance: 已入帳至客戶餘額
-    credited_refunded_notice: 已於 %{issuing_date} 入帳至客戶餘額並完成退款
     document_name: 折讓單
     invoice_number: 發票號碼
     issue_date: 開立日期
+    issued_notice: 開立於 %{issuing_date}
     item: 項目
     powered_by: 技術提供
     prepaid_credits_for_wallet: 預付點數 - %{wallet_name}

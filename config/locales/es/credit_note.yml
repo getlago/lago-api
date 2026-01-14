@@ -10,10 +10,10 @@ es:
     credit_to: Crédito a
     credited_notice: Acreditado en el saldo del cliente el %{issuing_date}
     credited_on_customer_balance: Acreditado en el saldo del cliente
-    credited_refunded_notice: Acreditado en el saldo del cliente y reembolsado el %{issuing_date}
     document_name: Nota de crédito
     invoice_number: Número de factura
     issue_date: Fecha de emisión
+    issued_notice: Emitida el %{issuing_date}
     item: Item
     powered_by: Generada por
     prepaid_credits_for_wallet: Créditos prepagados - %{wallet_name}
