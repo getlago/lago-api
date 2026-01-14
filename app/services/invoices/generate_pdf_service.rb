@@ -87,6 +87,8 @@ module Invoices
         return "invoices/v3/charge" if invoice.version_number < 4
 
         "invoices/v#{invoice.version_number}/charge"
+      elsif fixed_charge?
+        "invoices/v#{invoice.version_number}/fixed_charge"
       else
         "invoices/v#{invoice.version_number}"
       end
@@ -103,7 +105,11 @@ module Invoices
     end
 
     def charge?
-      invoice.fees.present? && invoice.fees.all?(&:pay_in_advance?)
+      invoice.fees.present? && invoice.fees.all?(&:pay_in_advance?) && invoice.fees.all?(&:charge?)
+    end
+
+    def fixed_charge?
+      invoice.fees.present? && invoice.fees.all?(&:pay_in_advance?) && invoice.fees.all?(&:fixed_charge?)
     end
   end
 end
