@@ -33,8 +33,12 @@ module Subscriptions
           SendWebhookJob.perform_later("subscription.started", subscription)
           Utils::ActivityLog.produce(subscription, "subscription.started")
 
-          if subscription.billed_on_activation? && !subscription.in_trial_period?
+          next if subscription.in_trial_period?
+
+          if subscription.plan.pay_in_advance?
             BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)
+          elsif subscription.fixed_charges.pay_in_advance.any?
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
           end
         end
     end

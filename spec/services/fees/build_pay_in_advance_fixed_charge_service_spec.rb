@@ -653,4 +653,64 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
       end
     end
   end
+
+  context "when units increase and previous fee belongs to parent fixed charge" do
+    let(:parent_fixed_charge) do
+      create(:fixed_charge, add_on:, units: 5, properties: {amount: "10"}, prorated: false, pay_in_advance: true)
+    end
+
+    let(:fixed_charge) do
+      create(
+        :fixed_charge,
+        plan:,
+        add_on:,
+        units: 15,
+        properties: {amount: "10"},
+        prorated: false,
+        pay_in_advance: true,
+        parent: parent_fixed_charge
+      )
+    end
+
+    let(:boundaries) {
+      Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
+    }
+
+    let(:existing_fee) do
+      create(
+        :fee,
+        organization:,
+        subscription:,
+        fixed_charge: parent_fixed_charge,
+        fee_type: :fixed_charge,
+        units: 5,
+        amount_cents: 5_000,
+        properties: {
+          "fixed_charges_from_datetime" => boundaries[:fixed_charges_from_datetime].iso8601(3),
+          "fixed_charges_to_datetime" => boundaries[:fixed_charges_to_datetime].iso8601(3)
+        }
+      )
+    end
+
+    let(:fixed_charge_event) do
+      create(
+        :fixed_charge_event,
+        subscription:,
+        fixed_charge:,
+        units: 15,
+        timestamp: Time.zone.at(timestamp)
+      )
+    end
+
+    before do
+      existing_fee
+    end
+
+    it "creates a fee for only the delta units (15 - 5 = 10)" do
+      expect(result).to be_success
+      expect(result.fee).to be_present
+      expect(result.fee.units).to eq(10) # 15 - 5 = 10 delta units
+      expect(result.fee.amount_cents).to eq(10_000) # 10 units * $10 = $100
+    end
+  end
 end

@@ -9,17 +9,23 @@ module Subscriptions
     end
 
     def call
-      # TODO: check that it's rewritten with later Ancor's work
       ending_trial_subscriptions.each do |subscription|
-        if subscription.plan_pay_in_advance &&
-            !subscription.was_already_billed_today &&
+        if !subscription.was_already_billed_today &&
             !already_billed_on_day_one?(subscription)
-          BillSubscriptionJob.perform_later(
-            [subscription],
-            timestamp,
-            invoicing_reason: :subscription_starting,
-            skip_charges: true
-          )
+
+          if subscription.plan.pay_in_advance?
+            BillSubscriptionJob.perform_later(
+              [subscription],
+              timestamp,
+              invoicing_reason: :subscription_starting,
+              skip_charges: true
+            )
+          elsif subscription.fixed_charges.pay_in_advance.any?
+            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
+              subscription,
+              timestamp
+            )
+          end
         end
 
         subscription.update!(trial_ended_at: subscription.trial_end_utc_date_from_query)

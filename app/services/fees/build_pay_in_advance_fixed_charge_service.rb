@@ -67,7 +67,7 @@ module Fees
       existing_fees = Fee.where(
         organization:,
         subscription:,
-        fixed_charge:,
+        fixed_charge: [fixed_charge, fixed_charge.parent],
         fee_type: :fixed_charge
       ).where(
         "properties->>'fixed_charges_from_datetime' = ?",
