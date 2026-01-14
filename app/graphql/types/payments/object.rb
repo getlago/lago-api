@@ -13,6 +13,7 @@ module Types
       field :customer, Types::Customers::Object, null: false
       field :payable, Types::Payables::Object, null: false
       field :payable_payment_status, Types::Payments::PayablePaymentStatusEnum, null: true
+      field :payment_method_id, ID, null: true
       field :payment_provider, Types::PaymentProviders::Object, null: true
       field :payment_provider_type, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :payment_receipt, Types::PaymentReceipts::Object, null: true
