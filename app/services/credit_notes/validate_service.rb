@@ -127,7 +127,11 @@ module CreditNotes
         invoice.total_paid_amount_cents -
         applied_to_source_invoice_total_amount_cents
 
-      applicable_to_source_invoice_amount = [invoice_due_amount_cents, invoice.creditable_amount_cents].min
+      creditable = invoice.fee_total_amount_cents -
+                   credited_invoice_amount_cents -
+                   applied_to_source_invoice_total_amount_cents
+
+      applicable_to_source_invoice_amount = [invoice_due_amount_cents, creditable].min
 
       return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
 
