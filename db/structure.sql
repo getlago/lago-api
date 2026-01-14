@@ -931,6 +931,7 @@ DROP VIEW IF EXISTS public.exports_payment_requests;
 DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
+DROP VIEW IF EXISTS public.exports_item_metadata;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
@@ -3267,6 +3268,21 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.created_at,
     it.updated_at
    FROM public.invoices_taxes it;
+
+
+--
+-- Name: exports_item_metadata; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_item_metadata AS
+ SELECT im.id AS lago_id,
+    im.organization_id,
+    im.owner_type,
+    im.owner_id AS lago_owner_id,
+    im.value,
+    im.created_at,
+    im.updated_at
+   FROM public.item_metadata im;
 
 
 --
@@ -10798,6 +10814,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
 ('20260106120832'),
