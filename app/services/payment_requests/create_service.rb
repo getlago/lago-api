@@ -38,7 +38,7 @@ module PaymentRequests
         SendWebhookJob.perform_later("payment_request.created", payment_request)
         Utils::ActivityLog.produce(payment_request, "payment_request.created")
 
-        payment_result = PaymentRequests::Payments::CreateService.call_async(payable: payment_request)
+        payment_result = PaymentRequests::Payments::CreateService.call_async(payable: payment_request, payment_method_params: payment_method)
         PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?
       end
 
@@ -87,6 +87,10 @@ module PaymentRequests
 
     def email
       @email ||= params[:email] || customer.email
+    end
+
+    def payment_method
+      @payment_method ||= params[:payment_method]&.to_h || {}
     end
 
     def currency
