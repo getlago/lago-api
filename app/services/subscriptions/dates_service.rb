@@ -192,13 +192,13 @@ module Subscriptions
     end
 
     # Determines if charges should be billed this cycle
-    # For yearly/semiannual plans with bill_charges_monthly=false, only bill on the first month of the period
+    # general approach is: yes, some exceptions are for yearly/semiannual plans with monthly charges/fixed_charges
     def should_fill_charges_boundaries?
       true
     end
 
     # Determines if fixed charges should be billed this cycle
-    # For yearly/semiannual plans with bill_fixed_charges_monthly=false, only bill on the first month of the period
+    # general approach is: yes, some exceptions are for yearly/semiannual plans with monthly charges/fixed_charges
     def should_fill_fixed_charges_boundaries?
       true
     end

@@ -18,8 +18,8 @@ module Subscriptions
       end
 
       # if bill_charges_monthly=true, charge boundaries should be filled
-      # if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
-      # For semiannual plans with bill_charges_monthly=false, and bill_fixed_charges_monthly=false,
+      # else if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
+      # For semiannual plans with not billing charges and fixed charges mothly,
       # boundaries are always filled
       def should_fill_charges_boundaries?
         return true if plan.bill_charges_monthly?
@@ -29,9 +29,9 @@ module Subscriptions
         true
       end
 
-      # if bill_charges_monthly=true, fixed charge boundaries should be filled
-      # if bill_FIXED_charges_monthly=true, fixed charge boundaries should be filled only for the first month of the period
-      # For semiannual plans with bill_charges_monthly=false, and bill_fixed_charges_monthly=false,
+      # if bill_fixed_charges_monthly=true, fixed charge boundaries should be filled
+      # if bill_charges_monthly=true, fixed charge boundaries should be filled only for the first month of the period
+      # For semiannual plans with not billing charges and fixed charges mothly,
       # boundaries are always filled
       def should_fill_fixed_charges_boundaries?
         return true if plan.bill_fixed_charges_monthly?
