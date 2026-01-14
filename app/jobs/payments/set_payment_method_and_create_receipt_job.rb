@@ -11,11 +11,23 @@ module Payments
     retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 5
 
     def perform(payment:, provider_payment_method_id:)
+      set_payment_method(payment:, provider_payment_method_id:)
+
       ::Payments::SetPaymentMethodDataService.call!(payment:, provider_payment_method_id:)
 
       # Now that the payment method is saved in the payment, we generate the PaymentReceipt
       if payment.customer.organization.issue_receipts_enabled?
         PaymentReceipts::CreateJob.perform_later(payment)
+      end
+    end
+
+    private
+
+    def set_payment_method(payment:, provider_payment_method_id:)
+      payment_method = payment.customer.payment_methods.find_by(provider_method_id: provider_payment_method_id)
+      if payment_method.present?
+        payment.payment_method = payment_method
+        payment.save!
       end
     end
   end
