@@ -25801,6 +25801,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceName",
               "description": null,
               "args": [],

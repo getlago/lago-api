@@ -15,6 +15,7 @@ module Types
       field :fixed_charge, Types::FixedCharges::Object, null: true
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
+      field :invoice_id, ID, null: true
       field :invoice_name, String, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true

@@ -5367,6 +5367,7 @@ type Fee implements InvoiceItem {
   groupedBy: JSON!
   id: ID!
   invoiceDisplayName: String
+  invoiceId: ID
   invoiceName: String
   itemCode: String!
   itemName: String!
