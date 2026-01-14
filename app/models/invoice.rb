@@ -336,7 +336,7 @@ class Invoice < ApplicationRecord
       return total_amount_cents
     end
 
-    total_due_amount_cents
+    [total_due_amount_cents, creditable_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as refund

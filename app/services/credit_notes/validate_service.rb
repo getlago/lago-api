@@ -123,10 +123,11 @@ module CreditNotes
       return true if credit_note.applied_to_source_invoice_amount_cents.zero?
       return false unless valid_credit_invoice_application?
 
-      applicable_to_source_invoice_amount = invoice.total_amount_cents -
-        refunded_invoice_amount_cents -
-        credited_invoice_amount_cents -
+      invoice_due_amount_cents = invoice.total_amount_cents -
+        invoice.total_paid_amount_cents -
         applied_to_source_invoice_total_amount_cents
+
+      applicable_to_source_invoice_amount = [invoice_due_amount_cents, invoice.creditable_amount_cents].min
 
       return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
 
