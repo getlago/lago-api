@@ -8586,6 +8586,7 @@ input PaymentRequestCreateInput {
   email: String
   externalCustomerId: String!
   lagoInvoiceIds: [String!]
+  paymentMethod: PaymentMethodReferenceInput
 }
 
 enum PaymentTypeEnum {
