@@ -128,8 +128,8 @@ module CreditNotes
         applied_to_source_invoice_total_amount_cents
 
       creditable = invoice.fee_total_amount_cents -
-                   credited_invoice_amount_cents -
-                   applied_to_source_invoice_total_amount_cents
+        credited_invoice_amount_cents -
+        applied_to_source_invoice_total_amount_cents
 
       applicable_to_source_invoice_amount = [invoice_due_amount_cents, creditable].min
 
