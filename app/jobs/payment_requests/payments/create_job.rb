@@ -17,8 +17,8 @@ module PaymentRequests
       retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
       retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
 
-      def perform(payable:, payment_provider:)
-        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider:)
+      def perform(payable:, payment_provider:, payment_method_params: {})
+        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider:, payment_method_params:)
       end
     end
   end
