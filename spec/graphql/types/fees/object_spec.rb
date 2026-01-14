@@ -15,6 +15,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:grouped_by).of_type("JSON!")
     expect(subject).to have_field(:fixed_charge).of_type("FixedCharge")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
+    expect(subject).to have_field(:invoice_id).of_type("ID")
     expect(subject).to have_field(:invoice_name).of_type("String")
     expect(subject).to have_field(:subscription).of_type("Subscription")
     expect(subject).to have_field(:true_up_fee).of_type("Fee")
