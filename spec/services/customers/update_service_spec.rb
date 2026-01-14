@@ -395,12 +395,12 @@ RSpec.describe Customers::UpdateService do
             aggregate_failures do
               expect(result).to be_success
 
-              customer = result.customer
-              expect(customer.id).to eq(customer.id)
-              expect(customer.payment_provider).to be_nil
+              result_customer = result.customer
+              expect(result_customer.id).to eq(customer.id)
+              expect(result_customer.payment_provider).to be_nil
 
-              expect(customer.stripe_customer).to eq(stripe_customer)
-              expect(customer.stripe_customer.provider_customer_id).to be_nil
+              expect(result_customer.stripe_customer).to eq(stripe_customer)
+              expect(result_customer.stripe_customer.provider_customer_id).to be_nil
             end
           end
         end

@@ -70,3 +70,5 @@ RSpec::Matchers.define :have_enqueued_job_after_commit do |job|
     @expectation_type || :exactly
   end
 end
+
+RSpec::Matchers.define_negated_matcher :not_have_enqueued_job, :have_enqueued_job

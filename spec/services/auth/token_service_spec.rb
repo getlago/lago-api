@@ -83,7 +83,7 @@ RSpec.describe Auth::TokenService do
           renew = described_class.decode(token: subject)
 
           expect(renew["sub"]).to eq(old["sub"])
-          expect(renew["login_method"]).to eq(renew["login_method"])
+          expect(renew["login_method"]).to eq(old["login_method"])
           expect(renew["exp"].to_i).to be > old["exp"].to_i
         end
       end

@@ -203,8 +203,7 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
 
       it "creates a feature without privileges" do
-        expect { subject }.to change(Entitlement::Feature, :count).by(1)
-        expect { subject }.not_to change(Entitlement::Privilege, :count)
+        expect { subject }.to change(Entitlement::Feature, :count).by(1).and(not_change(Entitlement::Privilege, :count))
 
         result = subject
         expect(result).to be_success
