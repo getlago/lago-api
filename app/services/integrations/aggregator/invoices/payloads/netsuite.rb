@@ -23,10 +23,10 @@ module Integrations
                 "ignoreMandatoryFields" => false,
                 "fullInvoicePayload" => {
                   "invoice_payload" => ::V1::InvoiceSerializer.new(
-                      invoice,
-                      root_name: "invoice",
-                      includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections]
-                    ).serialize
+                    invoice,
+                    root_name: "invoice",
+                    includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes]
+                  ).serialize
                 }
               }
             }
