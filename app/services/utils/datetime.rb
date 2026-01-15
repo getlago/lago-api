@@ -30,7 +30,8 @@ module Utils
 
       to = to_datetime
       to = Time.zone.parse(to.to_s) unless to.is_a?(ActiveSupport::TimeWithZone)
-      to += 1.second if to == to.beginning_of_day # To make sure we do not miss a day
+      to_in_time = to.in_time_zone(timezone)
+      to += 1.second if to_in_time == to_in_time.beginning_of_day # To make sure we do not miss a day
 
       from_offset = from.in_time_zone(timezone).utc_offset
       to_offset = to.in_time_zone(timezone).utc_offset
