@@ -44,7 +44,8 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
                 "amount_cents" => -160,
                 "item_code" => mapping_codes.dig(:subscription, :external_id)
               }
-            ])
+            ]),
+            "tax_date" => credit_note.invoice.issuing_date
           }
         ]
       end

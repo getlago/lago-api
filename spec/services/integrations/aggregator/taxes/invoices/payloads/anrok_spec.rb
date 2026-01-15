@@ -47,7 +47,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Anrok do
                 "amount_cents" => 500,
                 "item_code" => mapping_codes.dig(:subscription, :external_id)
               }
-            ])
+            ]),
+            "tax_date" => invoice.issuing_date
           }
         ]
       end

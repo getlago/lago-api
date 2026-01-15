@@ -30,7 +30,8 @@ module Integrations
                     "taxable" => customer.tax_identification_number.present?,
                     "tax_number" => customer.tax_identification_number
                   },
-                  "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) }
+                  "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) },
+                  "tax_date" => credit_note.invoice.issuing_date
                 }
               ]
             end

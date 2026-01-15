@@ -30,7 +30,8 @@ module Integrations
                     "taxable" => customer.tax_identification_number.present?,
                     "tax_number" => customer.tax_identification_number
                   },
-                  "fees" => fees.map { |fee| fee_item(fee) }
+                  "fees" => fees.map { |fee| fee_item(fee) },
+                  "tax_date" => issuing_date
                 }
               ]
             end
