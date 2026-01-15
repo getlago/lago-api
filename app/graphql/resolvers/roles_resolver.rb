@@ -13,9 +13,9 @@ module Resolvers
 
     def resolve
       Role
+        .includes(active_memberships: :user)
         .where(organization_id: [nil, current_organization.id])
-        .order(Role.arel_table[:organization_id].asc.nulls_first)
-        .order(Arel::Nodes::NamedFunction.new("LOWER", [Role.arel_table[:name]]).asc)
+        .order("organization_id NULLS FIRST, LOWER(name)")
     end
   end
 end

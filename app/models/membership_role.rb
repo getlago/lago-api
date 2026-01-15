@@ -40,7 +40,7 @@ class MembershipRole < ApplicationRecord
     return if role.nil?
     return if role.organization_id.nil? || role.organization_id == organization_id
 
-    errors.add(:role, :invalid_organization)
+    errors.add(:role, "invalid_value")
   end
 
   def forbid_modification
