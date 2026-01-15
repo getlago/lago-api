@@ -2,8 +2,6 @@
 nb:
   credit_note:
     amount: Beløp (ekskl. MVA)
-    offset_invoice: Utligning på faktura %{invoice_number}
-    offset_invoice_notice: Faktura %{invoice_number} utlignet den %{issuing_date}
     coupon_adjustment: Kuponger
     credit_from: Fra
     credit_note_number: Kreditnota nummer
@@ -15,6 +13,8 @@ nb:
     issue_date: Dato
     issued_notice: Utstedt den %{issuing_date}
     item: Vare
+    offset_invoice: Utligning på faktura %{invoice_number}
+    offset_invoice_notice: Faktura %{invoice_number} utlignet den %{issuing_date}
     powered_by: Fakturering drevet av
     prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
     refunded: Refundert

@@ -2,8 +2,6 @@
 zh-TW:
   credit_note:
     amount: 金額（未稅）
-    offset_invoice: 發票 %{invoice_number} 的抵銷
-    offset_invoice_notice: 發票 %{invoice_number} 已於 %{issuing_date} 抵銷
     coupon_adjustment: 優惠券
     credit_from: 來自
     credit_note_number: 折讓單號碼
@@ -15,6 +13,8 @@ zh-TW:
     issue_date: 開立日期
     issued_notice: 開立於 %{issuing_date}
     item: 項目
+    offset_invoice: 發票 %{invoice_number} 的抵銷
+    offset_invoice_notice: 發票 %{invoice_number} 已於 %{issuing_date} 抵銷
     powered_by: 技術提供
     prepaid_credits_for_wallet: 預付點數 - %{wallet_name}
     refunded: 已退款

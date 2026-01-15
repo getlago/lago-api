@@ -2,8 +2,6 @@
 fr:
   credit_note:
     amount: Montant (HT)
-    offset_invoice: Compensation sur la facture %{invoice_number}
-    offset_invoice_notice: Facture %{invoice_number} compensée le %{issuing_date}
     coupon_adjustment: Coupons
     credit_from: De
     credit_note_number: Nº d'avoir
@@ -15,6 +13,8 @@ fr:
     issue_date: Date d'émission
     issued_notice: Émise le %{issuing_date}
     item: Article
+    offset_invoice: Compensation sur la facture %{invoice_number}
+    offset_invoice_notice: Facture %{invoice_number} compensée le %{issuing_date}
     powered_by: Généré par
     prepaid_credits_for_wallet: Crédit(s) prépayé(s) - %{wallet_name}
     refunded: Remboursement

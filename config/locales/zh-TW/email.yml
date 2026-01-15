@@ -25,7 +25,6 @@ zh-TW:
         subject: 您的 Lago API 金鑰已完成輪替
     credit_note:
       created:
-        offset_invoice_notice: 發票 %{invoice_number} 已於 %{date} 抵銷
         credit_note_from: 來自 %{billing_entity_name} 的折讓單
         credit_note_number: 折讓單號碼
         credited_notice: 已於 %{date} 入帳至客戶餘額
@@ -33,8 +32,9 @@ zh-TW:
         invoice_number: 發票號碼
         issue_date: 開立日期
         issued_notice: 開立於 %{date}
+        offset_invoice_notice: 發票 %{invoice_number} 已於 %{date} 抵銷
         refunded_notice: 已於 %{date} 退款
-        subject: "您來自 %{billing_entity_name} 的折讓單 #%{credit_note_number}"
+        subject: '您來自 %{billing_entity_name} 的折讓單 #%{credit_note_number}'
     data_export:
       completed:
         fallback_text: 若連結已過期，請從您的控制台重新產生一個新的連結。
@@ -52,7 +52,7 @@ zh-TW:
         invoice_number: 發票號碼
         issue_date: 開立日期
         issued_on: 於 %{date} 開立
-        subject: "您來自 %{billing_entity_name} 的發票 #%{invoice_number}"
+        subject: '您來自 %{billing_entity_name} 的發票 #%{invoice_number}'
     organization:
       authentication_methods_updated:
         changes: 使用者 %{user_email} 對登入驗證方式進行了以下變更。
@@ -66,7 +66,7 @@ zh-TW:
     payment_receipt:
       created:
         payment_receipt_from: 來自 %{billing_entity_name} 的付款收據
-        subject: "您來自 %{billing_entity_name} 的付款收據 #%{payment_receipt_number}"
+        subject: '您來自 %{billing_entity_name} 的付款收據 #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: 若您已完成付款，請忽略此電子郵件。

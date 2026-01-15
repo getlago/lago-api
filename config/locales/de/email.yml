@@ -3,7 +3,6 @@ de:
   email:
     credit_note:
       created:
-        offset_invoice_notice: Rechnung %{invoice_number} am %{date} ausgeglichen
         credit_note_from: Gutschriftsbeleg von %{billing_entity_name}
         credit_note_number: Gutschriftsbelegnummer
         credited_notice: Gutschrift auf Kundenkonto am %{date}
@@ -11,8 +10,9 @@ de:
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
         issued_notice: Ausgestellt am %{date}
+        offset_invoice_notice: Rechnung %{invoice_number} am %{date} ausgeglichen
         refunded_notice: Zurückerstattet am %{date}
-        subject: "Dein Gutschriftsbeleg von %{billing_entity_name} #%{credit_note_number}"
+        subject: 'Dein Gutschriftsbeleg von %{billing_entity_name} #%{credit_note_number}'
     invoice:
       finalized:
         download: Rechnung herunterladen, um Details anzuzeigen
@@ -21,11 +21,11 @@ de:
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
         issued_on: ausgestellt am %{date}
-        subject: "Deine Rechnung von %{billing_entity_name} #%{invoice_number}"
+        subject: 'Deine Rechnung von %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
         payment_receipt_from: Zahlungsquittung von %{billing_entity_name}
-        subject: "Ihre Zahlungsquittung von %{billing_entity_name} #%{payment_receipt_number}"
+        subject: 'Ihre Zahlungsquittung von %{billing_entity_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Wenn Sie die Zahlung bereits vorgenommen haben, ignorieren Sie bitte diese E-Mail.

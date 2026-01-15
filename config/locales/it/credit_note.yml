@@ -2,8 +2,6 @@
 it:
   credit_note:
     amount: Importo (escl. tasse)
-    offset_invoice: Compensazione sulla fattura %{invoice_number}
-    offset_invoice_notice: Fattura %{invoice_number} compensata il %{issuing_date}
     coupon_adjustment: Correzione coupon
     credit_from: Da
     credit_note_number: Numero Nota di Credito
@@ -15,6 +13,8 @@ it:
     issue_date: Data Emissione
     issued_notice: Emessa il %{issuing_date}
     item: Articolo
+    offset_invoice: Compensazione sulla fattura %{invoice_number}
+    offset_invoice_notice: Fattura %{invoice_number} compensata il %{issuing_date}
     powered_by: Elaborato da
     prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}
     refunded: Rimborsato

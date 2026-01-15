@@ -2,8 +2,6 @@
 en:
   credit_note:
     amount: Amount (excl. tax)
-    offset_invoice: Offset on invoice %{invoice_number}
-    offset_invoice_notice: Offset invoice %{invoice_number} on %{issuing_date}
     coupon_adjustment: Coupons
     credit_from: From
     credit_note_number: Credit note number
@@ -15,6 +13,8 @@ en:
     issue_date: Issue date
     issued_notice: Issued on %{issuing_date}
     item: Item
+    offset_invoice: Offset on invoice %{invoice_number}
+    offset_invoice_notice: Offset invoice %{invoice_number} on %{issuing_date}
     powered_by: Powered by
     prepaid_credits_for_wallet: Prepaid credits - %{wallet_name}
     refunded: Refunded

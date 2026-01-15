@@ -2,8 +2,6 @@
 sv:
   credit_note:
     amount: Belopp (exkl. moms)
-    offset_invoice: Kvittning på faktura %{invoice_number}
-    offset_invoice_notice: Faktura %{invoice_number} kvittad den %{issuing_date}
     coupon_adjustment: Rabatt
     credit_from: Avsändare
     credit_note_number: Kreditfakturanummer
@@ -15,6 +13,8 @@ sv:
     issue_date: Fakturadatum
     issued_notice: Utfärdad den %{issuing_date}
     item: Artikel
+    offset_invoice: Kvittning på faktura %{invoice_number}
+    offset_invoice_notice: Faktura %{invoice_number} kvittad den %{issuing_date}
     powered_by: Genererad av
     prepaid_credits_for_wallet: Förbetald kontobalans - %{wallet_name}
     refunded: Återbetald

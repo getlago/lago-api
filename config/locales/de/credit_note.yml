@@ -2,8 +2,6 @@
 de:
   credit_note:
     amount: Betrag (ohne Steuern)
-    offset_invoice: Verrechnung auf Rechnung %{invoice_number}
-    offset_invoice_notice: Rechnung %{invoice_number} am %{issuing_date} ausgeglichen
     coupon_adjustment: Coupons
     credit_from: Von
     credit_note_number: Gutschriftnummer
@@ -15,6 +13,8 @@ de:
     issue_date: Ausgabedatum
     issued_notice: Ausgestellt am %{issuing_date}
     item: Artikel
+    offset_invoice: Verrechnung auf Rechnung %{invoice_number}
+    offset_invoice_notice: Rechnung %{invoice_number} am %{issuing_date} ausgeglichen
     powered_by: Bereitgestellt von
     prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}
     refunded: Erstattet
