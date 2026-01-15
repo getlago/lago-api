@@ -3283,23 +3283,6 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.updated_at
    FROM public.invoices_taxes it;
 
-
---
--- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.item_metadata (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    owner_type character varying NOT NULL,
-    owner_id uuid NOT NULL,
-    value jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
-);
-
-
 --
 -- Name: exports_item_metadata; Type: VIEW; Schema: public; Owner: -
 --
@@ -10950,7 +10933,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260113102028'),
 ('20260112140805'),
 ('20260112134045'),
-('20260109120404'),
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
