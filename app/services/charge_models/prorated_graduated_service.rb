@@ -55,6 +55,23 @@ module ChargeModels
         # If we are into highest range and overflow is handled we should exit the loop if there is no more events
         break if prorated_units[index].nil?
 
+        # Skip ADD events with zero prorated value - they shouldn't affect tier assignment.
+        # For example, when a REMOVE before the current billing period.
+        if prorated_units[index].zero? && full_units[index].positive?
+          index += 1
+          next
+        end
+
+        # Skip REMOVE events whose corresponding add was skipped (orphan removes).
+        # These are identified by having zero prorated value AND would make full_sum negative
+        # (indicating the matching add event was skipped).
+        # Note: Remove events within the current period also have prorated_value = 0 by design,
+        # but they won't make full_sum negative because their matching add was processed.
+        if prorated_units[index].zero? && full_units[index].negative? && (full_sum + full_units[index]).negative?
+          index += 1
+          next
+        end
+
         full_sum += full_units[index]
         max_full_sum = full_sum if full_sum > max_full_sum
         prorated_sum += prorated_units[index]

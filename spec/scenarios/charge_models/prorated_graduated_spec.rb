@@ -1180,6 +1180,123 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false do
       end
     end
 
+    # Regression test: Users removed in previous billing period should not occupy tier slots.
+    #
+    # Reported bug: In ProratedGraduatedService.compute_amount, full_sum (which determines
+    # tier boundaries) was incrementing for ALL add events, including those with
+    # prorated_value = 0. This caused users removed before the billing period to still
+    # "occupy" a tier slot, pushing active users into higher (more expensive) tiers.
+    #
+    # Reproduction steps:
+    # - Graduated tiers: 0-3 users free, 4+ users at $10/user
+    # - Period 1: Add 5 users, then remove 1 → ends with 4 active users
+    # - Period 2: No new events, check usage
+    # - Expected: 4 units, $10 (3 free + 1 at $10)
+    # - Bug: 4 units, $20 (removed user's add event occupies tier slot)
+    context "when item is removed before billing period" do
+      let(:organization) { create(:organization, webhook_url: nil) }
+      let(:field_name) { "user_id" }
+
+      let(:charge) do
+        create(
+          :graduated_charge,
+          billable_metric:,
+          prorated: true,
+          plan:,
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 1, per_unit_amount: "0", flat_amount: "0"},
+              {from_value: 2, to_value: nil, per_unit_amount: "10", flat_amount: "0"}
+            ]
+          }
+        )
+      end
+
+      before { charge }
+
+      it "does not count removed user in tier assignment" do
+        travel_to(DateTime.new(2024, 10, 1)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 5)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "73283", operation_type: "add"}
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 6)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "73290", operation_type: "add"}
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 7)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "78924", operation_type: "add"}
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 25)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "73290", operation_type: "remove"}
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 11, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.first
+
+          expect(subscription.invoices.count).to eq(1)
+          expect(invoice).to be_present
+        end
+
+        travel_to(DateTime.new(2024, 11, 15)) do
+          fetch_current_usage(customer:)
+
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
+          expect(json[:customer_usage][:amount_cents]).to eq(1000)
+        end
+
+        travel_to(DateTime.new(2024, 12, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.order(created_at: :desc).first
+
+          expect(invoice.total_amount_cents).to eq(1000)
+        end
+      end
+    end
+
     # Customer use-case
     context "with combinations of add and remove" do
       let(:organization) { create(:organization, webhook_url: nil) }
