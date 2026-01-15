@@ -1,18 +1,10 @@
 # frozen_string_literal: true
 
-class InvoiceMailer < ApplicationMailer
+class InvoiceMailer < DocumentMailer
   before_action :ensure_pdf
-
-  def loggable?
-    true
-  end
 
   def document
     @document ||= params[:invoice]
-  end
-
-  def created
-    @created ||= create_mail
   end
 
   private
