@@ -115,6 +115,29 @@
             </tr>
             <tr class="fee">
               <td>
+                <div class="body-1">Usage Charge with Minimum</div>
+              </td>
+              <td class="body-2">0.0</td>
+              <td class="body-2">$0.00</td>
+              <td class="body-2">
+                <div>0.0%</div>
+              </td>
+              <td class="body-2">$0.00</td>
+            </tr>
+            <tr class="fee">
+              <td>
+                <div class="body-1">Usage Charge with Minimum - True-up</div>
+                <div class="body-3">Minimum spend of €100.00 prorated on days of usage</div>
+              </td>
+              <td class="body-2">1</td>
+              <td class="body-2">$30.00</td>
+              <td class="body-2">
+                <div>0.0%</div>
+              </td>
+              <td class="body-2">$30.00</td>
+            </tr>
+            <tr class="fee">
+              <td>
                 <div class="body-1">Usage Charge with Minimum • eu</div>
               </td>
               <td class="body-2">2</td>
