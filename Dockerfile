@@ -1,4 +1,4 @@
-FROM ruby:3.4.7-slim AS build
+FROM ruby:3.4.8-slim AS build
 
 ARG BUNDLE_WITH
 
@@ -26,7 +26,7 @@ RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIB
   bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3
 
-FROM ruby:3.4.7-slim
+FROM ruby:3.4.8-slim
 
 ARG BUNDLE_WITH
 
