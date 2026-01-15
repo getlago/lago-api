@@ -119,7 +119,7 @@ module CreditNotes
       end
     end
 
-    def valid_applied_to_source_invoice_amount?
+    def valid_offset_amount?
       return true if credit_note.offset_amount_cents.zero?
       return false unless valid_credit_invoice_application?
 
