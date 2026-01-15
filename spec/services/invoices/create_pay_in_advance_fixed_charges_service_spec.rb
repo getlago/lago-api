@@ -195,7 +195,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         result = invoice_service.call
 
         expect(result).to be_success
-        expect(result.invoice.fees.count).to eq(0)
+        expect(result.invoice.fees.count).to eq(1)
         expect(result.invoice.total_amount_cents).to eq(0)
         expect(result.invoice).to be_closed
         expect(result.invoice.payment_status).to eq("succeeded")
