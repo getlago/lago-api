@@ -137,6 +137,31 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService do
       end
     end
 
+    context "when one alert fails" do
+      it "still processes the other alerts and raises the first error" do
+        allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_call_original
+        allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
+          .with(alert: alert, subscription:, current_metrics: mocked_current_usage)
+          .and_raise(StandardError, "first alert failed")
+        allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
+          .with(alert: alert_2, subscription:, current_metrics: mocked_current_usage)
+        allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
+          .with(alert: alert_3, subscription:, current_metrics: mocked_current_usage)
+        allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
+          .with(alert: alert_4, subscription:, current_metrics: subscription.lifetime_usage)
+
+        expect { service.call }.to raise_error(StandardError, "first alert failed")
+
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert: alert_2, subscription:, current_metrics: mocked_current_usage)
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert: alert_3, subscription:, current_metrics: mocked_current_usage)
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert: alert_4, subscription:, current_metrics: subscription.lifetime_usage)
+        expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+
     context "when progressive_billing fail" do
       let(:premium_integrations) { %w[lifetime_usage progressive_billing] }
 

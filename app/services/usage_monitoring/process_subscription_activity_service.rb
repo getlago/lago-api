@@ -29,22 +29,21 @@ module UsageMonitoring
         exception_to_raise = e
       end
 
-      begin
-        alerts = Alert.where(
-          subscription_external_id: subscription.external_id,
-          organization_id: subscription_activity.organization_id
-        ).includes(:thresholds)
+      alerts = Alert.where(
+        subscription_external_id: subscription.external_id,
+        organization_id: subscription_activity.organization_id
+      ).includes(:thresholds)
 
-        alerts.using_current_usage.find_each do |alert|
-          ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
-        end
-
-        alerts.using_lifetime_usage.find_each do |alert|
-          ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
-        end
+      alerts.using_current_usage.find_each do |alert|
+        ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
       rescue => e
-        # If progressive billing already raised, we don't override the first error
-        exception_to_raise = e if exception_to_raise.nil?
+        exception_to_raise ||= e
+      end
+
+      alerts.using_lifetime_usage.find_each do |alert|
+        ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
+      rescue => e
+        exception_to_raise ||= e
       end
 
       subscription_activity.delete
