@@ -88,7 +88,7 @@
           td.body-2
           td.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
           td.body-2 = MoneyHelper.format(0.to_money(currency))
-    - if offset_invoice?
+    - if has_offset?
       tr
         td.body-2
         td.body-2 = I18n.t('credit_note.offset_invoice', invoice_number: invoice.number)
