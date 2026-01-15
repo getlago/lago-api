@@ -63,6 +63,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
         let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: payment_method_id) }
 
         before do
+          default_payment_method
           organization.update!(feature_flags: ["multiple_payment_methods"])
         end
 
