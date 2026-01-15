@@ -25,9 +25,7 @@ class FeeBoundariesHelper
       [from_datetime, to_datetime] <=> [other.from_datetime, other.to_datetime]
     end
 
-    def hash
-      to_grouping_key.hash
-    end
+    delegate :hash, to: :to_grouping_key
 
     def parse_datetime(value)
       return value if value.is_a?(Time) || value.is_a?(DateTime)
@@ -125,8 +123,6 @@ class FeeBoundariesHelper
     )
   end
 
-  private
-
   def self.subscription_fee_billing_period(fee, invoice_subscription)
     from = fee.properties&.dig("from_datetime")
     to = fee.properties&.dig("to_datetime")
@@ -206,4 +202,12 @@ class FeeBoundariesHelper
   def self.sort_fees_alphabetically(fees)
     fees.sort_by { |f| f.invoice_sorting_clause.to_s.downcase }
   end
+
+  private_class_method :subscription_fee_billing_period,
+    :charge_fee_billing_period,
+    :fixed_charge_fee_billing_period,
+    :commitment_fee_billing_period,
+    :derive_commitment_billing_period,
+    :fallback_billing_period,
+    :sort_fees_alphabetically
 end
