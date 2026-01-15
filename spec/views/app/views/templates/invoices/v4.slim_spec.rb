@@ -351,7 +351,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         :fixed_charge,
         :graduated,
         plan:,
-        add_on:,
+        add_on:
       )
     end
     let(:arrears_graduated_fixed_charge_fee) do
@@ -519,7 +519,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         invoice_display_name: "Minimum Commitment Fee"
       )
     end
-    
+
     before do
       invoice_subscription
       subscription_fee
@@ -934,7 +934,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         :fixed_charge,
         :graduated,
         plan:,
-        add_on:,
+        add_on:
       )
     end
     let(:arrears_graduated_fixed_charge_fee) do
@@ -1102,7 +1102,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         invoice_display_name: "Minimum Commitment Fee"
       )
     end
-    
+
     before do
       # Previous invoice subscription for the previous period
       previous_invoice_subscription

@@ -332,7 +332,7 @@ RSpec.describe FeeBoundariesHelper do
     end
 
     context "with missing properties" do
-      context "subscription fees" do
+      context "when subscription fees" do
         let(:subscription_fee_missing) do
           create(
             :fee,
@@ -353,7 +353,7 @@ RSpec.describe FeeBoundariesHelper do
         end
       end
 
-      context "charge fees" do
+      context "when charge fees" do
         let(:charge_fee_missing) do
           create(
             :charge_fee,
@@ -374,7 +374,7 @@ RSpec.describe FeeBoundariesHelper do
         end
       end
 
-      context "fixed charge fees" do
+      context "when fixed charge fees" do
         let(:add_on) { create(:add_on, organization:) }
         let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
         let(:fixed_charge_fee_missing) do
@@ -778,7 +778,7 @@ RSpec.describe FeeBoundariesHelper do
             from_datetime: DateTime.parse("2025-12-01T00:00:00"),
             to_datetime: DateTime.parse("2025-12-31T23:59:59")
           )
-  
+
           period2 = described_class::BillingPeriod.new(
             from_datetime: DateTime.parse("2025-12-01T00:00:00"),
             to_datetime: DateTime.parse("2025-12-31T23:59:59")
