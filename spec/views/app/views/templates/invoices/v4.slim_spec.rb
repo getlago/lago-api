@@ -1128,4 +1128,200 @@ RSpec.describe "templates/invoices/v4.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "when charge has filters and minimum commitment (true_up fee)" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Plan with Charge Filters"
+      )
+    end
+
+    let(:subscription) do
+      create(:subscription, customer:, plan:, status: "active")
+    end
+
+    # Charge with minimum commitment and filters
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        min_amount_cents: 10000, # $100 minimum
+        invoice_display_name: "Usage Charge with Minimum"
+      )
+    end
+
+    # Filters for the charge
+    let(:billable_metric_filter) do
+      create(:billable_metric_filter, billable_metric:, key: "region", values: ["us", "eu", "asia"])
+    end
+
+    let(:charge_filter_1) do
+      filter = create(:charge_filter, charge:, properties: {amount: "10"})
+      create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values: ["us"])
+      filter
+    end
+
+    let(:charge_filter_2) do
+      filter = create(:charge_filter, charge:, properties: {amount: "20"})
+      create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values: ["eu"])
+      filter
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-004",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 10000,
+        currency: "USD",
+        fees_amount_cents: 10000,
+        sub_total_excluding_taxes_amount_cents: 10000,
+        sub_total_including_taxes_amount_cents: 10000
+      )
+    end
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    # Base charge fee (no filter, units: 0, amount: 0) - parent of true_up fee
+    let(:base_charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        charge_filter: nil,
+        amount_cents: 0,
+        amount_currency: "USD",
+        units: 0,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0,
+        total_aggregated_units: 0,
+        invoice_display_name: nil,
+        properties: {
+          "timestamp" => "2025-08-31 23:59:59",
+          "charges_from_datetime" => "2025-08-01 00:00:00",
+          "charges_to_datetime" => "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # Filter 1 fee with amount
+    let(:filter_1_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        charge_filter: charge_filter_1,
+        amount_cents: 3000, # $30
+        amount_currency: "USD",
+        units: 3,
+        unit_amount_cents: 1000,
+        precise_unit_amount: 10.00,
+        total_aggregated_units: 3,
+        invoice_display_name: nil,
+        properties: {
+          "timestamp" => "2025-08-31 23:59:59",
+          "charges_from_datetime" => "2025-08-01 00:00:00",
+          "charges_to_datetime" => "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # Filter 2 fee with amount
+    let(:filter_2_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        charge_filter: charge_filter_2,
+        amount_cents: 4000, # $40
+        amount_currency: "USD",
+        units: 2,
+        unit_amount_cents: 2000,
+        precise_unit_amount: 20.00,
+        total_aggregated_units: 2,
+        invoice_display_name: nil,
+        properties: {
+          "timestamp" => "2025-08-31 23:59:59",
+          "charges_from_datetime" => "2025-08-01 00:00:00",
+          "charges_to_datetime" => "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    # True-up fee (minimum commitment) - $30 to reach the $100 minimum
+    # Filter 1 ($30) + Filter 2 ($40) = $70, so true_up = $100 - $70 = $30
+    let(:true_up_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        charge_filter: nil,
+        true_up_parent_fee: base_charge_fee,
+        amount_cents: 3000, # $30 true-up to reach minimum
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 3000,
+        precise_unit_amount: 30.00,
+        total_aggregated_units: 1,
+        events_count: 0,
+        invoice_display_name: nil,
+        properties: {
+          "timestamp" => "2025-08-31 23:59:59",
+          "charges_from_datetime" => "2025-08-01 00:00:00",
+          "charges_to_datetime" => "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription
+      base_charge_fee
+      filter_1_fee
+      filter_2_fee
+      true_up_fee
+    end
+
+    it "renders all charge fees including base fee and true_up fee" do
+      # The rendered template should include:
+      # 1. Filter fees (these work correctly)
+      expect(rendered_template).to include("Usage Charge with Minimum")
+      expect(rendered_template).to include("us")  # Filter 1
+      expect(rendered_template).to include("eu")  # Filter 2
+
+      # 2. True-up fee (minimum commitment) - this is the bug we're proving
+      # The true_up fee should be rendered with the "True-up" text
+      expect(rendered_template).to include("True-up")
+
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 end
