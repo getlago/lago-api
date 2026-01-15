@@ -295,6 +295,7 @@ describe Clockwork do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("redpanda:9092")
       allow(ENV).to receive(:[]).with("LAGO_REDIS_STORE_URL").and_return("redis:6379")
+      allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return("true")
     end
 
     it "enqueue a refresh flagged subscriptions job" do
