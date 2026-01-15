@@ -41,9 +41,6 @@ module Subscriptions
 
       config = {
         url:,
-        ssl_params: {
-          verify_mode: OpenSSL::SSL::VERIFY_NONE
-        },
         timeout: 5.0,
         reconnect_attempts: 3
       }
@@ -53,6 +50,10 @@ module Subscriptions
 
       if ENV["LAGO_REDIS_STORE_SSL"].present? || ENV["LAGO_REDIS_STORE_URL"].start_with?(/rediss?:/)
         config[:ssl] = true
+      end
+
+      if ENV["LAGO_REDIS_STORE_DISABLE_SSL_VERIFY"].present?
+        config[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
       end
 
       @redis_client ||= Redis.new(config)
