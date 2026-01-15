@@ -103,7 +103,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(subscription.reload.invoices.count).to eq(2)
 
         adjustment_invoice = subscription.invoices.order(:created_at).last
-        expect(adjustment_invoice.fees.count).to eq(0)
+        expect(adjustment_invoice.fees.count).to eq(1)
         expect(adjustment_invoice.fees_amount_cents).to eq(0)
       end
     end
@@ -211,7 +211,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(initial_invoice.fees_amount_cents).to eq(10_000)
 
         decrease_invoice = invoices.second
-        expect(decrease_invoice.fees.count).to eq(0)
+        expect(decrease_invoice.fees.count).to eq(1)
         expect(decrease_invoice.fees_amount_cents).to eq(0)
 
         increase_invoice = invoices.last
@@ -1326,9 +1326,8 @@ describe "Pay in advance fixed charge units change mid-period" do
         # The decrease invoice should NOT have any fees with positive units
         # because we already paid for 10 units and are decreasing to 3
         decrease_invoice = invoices.last
-        # Bug: the code incorrectly creates a fee with 3 units (the new child fixed charge units)
-        # because it can't find the previous parent fee to calculate delta
-        expect(decrease_invoice.fees.fixed_charge.count).to eq(0)
+        expect(decrease_invoice.fees.fixed_charge.count).to eq(1)
+        expect(decrease_invoice.fees.fixed_charge.first.units).to eq(0)
       end
     end
 
@@ -1395,9 +1394,9 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
         expect(initial_invoice.fees.fixed_charge.first.amount_cents).to eq(10_000)
 
-        # Decrease invoice should have no fees (no refund)
         decrease_invoice = invoices.second
-        expect(decrease_invoice.fees.count).to eq(0)
+        expect(decrease_invoice.fees.count).to eq(1)
+        expect(decrease_invoice.fees.first.units).to eq(0)
 
         # Increase invoice: should charge for 5 units only (15 - 10)
         # NOT 12 units (15 - 3), because we already paid for 10 units
