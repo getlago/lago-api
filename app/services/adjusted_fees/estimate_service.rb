@@ -209,11 +209,22 @@ module AdjustedFees
     def initialize_empty_fee(subscription, invoiceable, fee_type)
       invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
 
-      boundaries = {
-        timestamp: invoice_subscription.timestamp,
-        charges_from_datetime: invoice_subscription.charges_from_datetime,
-        charges_to_datetime: invoice_subscription.charges_to_datetime
-      }
+      boundaries = {timestamp: invoice_subscription.timestamp}
+
+      boundaries.merge!(
+        case fee_type
+        when :charge
+          {
+            charges_from_datetime: invoice_subscription.charges_from_datetime,
+            charges_to_datetime: invoice_subscription.charges_to_datetime
+          }
+        when :fixed_charge
+          {
+            fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
+            fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
+          }
+        end
+      )
 
       Fee.new(
         organization:,

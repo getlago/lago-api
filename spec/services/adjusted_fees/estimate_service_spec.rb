@@ -240,6 +240,19 @@ RSpec.describe AdjustedFees::EstimateService do
           precise_unit_amount: 30.0
         )
       end
+
+      it "sets fixed charge boundaries in properties" do
+        invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
+
+        expect(invoice_subscription.fixed_charges_from_datetime).to be_present
+        expect(invoice_subscription.fixed_charges_to_datetime).to be_present
+
+        expect(result.fee.properties).to eq(
+          "timestamp" => invoice_subscription.timestamp.iso8601(3),
+          "fixed_charges_from_datetime" => invoice_subscription.fixed_charges_from_datetime.iso8601(3),
+          "fixed_charges_to_datetime" => invoice_subscription.fixed_charges_to_datetime.iso8601(3)
+        )
+      end
     end
 
     context "when fixed_charge does not exist" do
@@ -383,6 +396,19 @@ RSpec.describe AdjustedFees::EstimateService do
           units: 5.0,
           unit_amount_cents: 3000,
           precise_unit_amount: 30.0
+        )
+      end
+
+      it "sets charge boundaries in properties" do
+        invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
+
+        expect(invoice_subscription.charges_from_datetime).to be_present
+        expect(invoice_subscription.charges_to_datetime).to be_present
+
+        expect(result.fee.properties).to eq(
+          "timestamp" => invoice_subscription.timestamp.iso8601(3),
+          "charges_from_datetime" => invoice_subscription.charges_from_datetime.iso8601(3),
+          "charges_to_datetime" => invoice_subscription.charges_to_datetime.iso8601(3)
         )
       end
     end
