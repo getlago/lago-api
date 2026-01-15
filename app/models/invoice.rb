@@ -215,15 +215,6 @@ class Invoice < ApplicationRecord
     )
   end
 
-  def existing_fixed_charge_fees_in_interval?(subscription_id:, fixed_charge_in_advance: false)
-    subscription_fees(subscription_id)
-      .fixed_charge
-      .positive_units
-      .joins(:fixed_charge)
-      .where(fixed_charge: {pay_in_advance: fixed_charge_in_advance})
-      .any?
-  end
-
   def recurring_fees(subscription_id)
     subscription_fees(subscription_id)
       .joins(charge: :billable_metric)
