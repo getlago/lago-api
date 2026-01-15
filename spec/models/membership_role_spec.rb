@@ -132,7 +132,7 @@ RSpec.describe MembershipRole do
       membership_role = build(:membership_role, role: create(:role))
 
       expect(membership_role).not_to be_valid
-      expect(membership_role.errors[:role]).to include("invalid_organization")
+      expect(membership_role.errors[:role]).to include("invalid_value")
     end
 
     it "allows predefined role (without organization)" do

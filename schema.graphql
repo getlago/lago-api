@@ -8621,6 +8621,12 @@ enum PermissionEnum {
   billing_entities_taxes_view
   billing_entities_update
   billing_entities_view
+  charge_filters_create
+  charge_filters_delete
+  charge_filters_update
+  charges_create
+  charges_delete
+  charges_update
   coupons_attach
   coupons_create
   coupons_delete
@@ -8655,6 +8661,9 @@ enum PermissionEnum {
   features_delete
   features_update
   features_view
+  fixed_charges_create
+  fixed_charges_delete
+  fixed_charges_update
   invoice_custom_sections_create
   invoice_custom_sections_delete
   invoice_custom_sections_update

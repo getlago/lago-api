@@ -9,6 +9,7 @@ class Role < ApplicationRecord
   belongs_to :organization, optional: true
   has_many :membership_roles
   has_many :memberships, through: :membership_roles
+  has_many :active_memberships, -> { active }, through: :membership_roles, source: :membership
 
   scope :admins, -> { where(admin: true) }
   scope :with_code, ->(*codes) { where(code: codes) }
