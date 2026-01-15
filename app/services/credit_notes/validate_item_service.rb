@@ -37,12 +37,12 @@ module CreditNotes
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
-    def applied_to_source_invoice_total_amount_cents
-      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:applied_to_source_invoice_amount_cents)
+    def offset_amount_cents
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:offset_amount_cents)
     end
 
     def invoice_credit_note_total_amount_cents
-      credited_invoice_amount_cents + refunded_invoice_amount_cents + applied_to_source_invoice_total_amount_cents
+      credited_invoice_amount_cents + refunded_invoice_amount_cents + offset_amount_cents
     end
 
     def total_item_amount_cents
@@ -87,7 +87,7 @@ module CreditNotes
       invoice.credit? &&
         invoice.associated_active_wallet.present? &&
         invoice.credit_notes.any? do |cn|
-          cn.applied_to_source_invoice_amount_cents == invoice.total_amount_cents
+          cn.offset_amount_cents == invoice.total_amount_cents
         end
     end
   end

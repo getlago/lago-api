@@ -24,7 +24,7 @@ module V1
         balance_amount_cents: model.balance_amount_cents,
         credit_amount_cents: model.credit_amount_cents,
         refund_amount_cents: model.refund_amount_cents,
-        applied_to_source_invoice_amount_cents: model.applied_to_source_invoice_amount_cents,
+        offset_amount_cents: model.offset_amount_cents,
         coupons_adjustment_amount_cents: model.coupons_adjustment_amount_cents,
         taxes_rate: model.taxes_rate,
         created_at: model.created_at.iso8601,

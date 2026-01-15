@@ -40,7 +40,7 @@ class CreditNote < ApplicationRecord
   monetize :credit_amount_cents
   monetize :balance_amount_cents
   monetize :refund_amount_cents
-  monetize :applied_to_source_invoice_amount_cents
+  monetize :offset_amount_cents
   monetize :total_amount_cents
   monetize :taxes_amount_cents,
     :coupons_adjustment_amount_cents,
@@ -72,7 +72,7 @@ class CreditNote < ApplicationRecord
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :credit_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :refund_amount_cents, numericality: {greater_than_or_equal_to: 0}
-  validates :applied_to_source_invoice_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :offset_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :balance_amount_cents, numericality: {greater_than_or_equal_to: 0}
 
   def self.ransackable_attributes(_auth_object = nil)
@@ -107,7 +107,7 @@ class CreditNote < ApplicationRecord
     refund_amount_cents.positive?
   end
 
-  def offset_invoice?
+  def has_offset?
     offset_amount_cents.positive?
   end
 
@@ -203,39 +203,37 @@ end
 # Table name: credit_notes
 # Database name: primary
 #
-#  id                                        :uuid             not null, primary key
-#  applied_to_source_invoice_amount_cents    :bigint           default(0), not null
-#  applied_to_source_invoice_amount_currency :string
-#  balance_amount_cents                      :bigint           default(0), not null
-#  balance_amount_currency                   :string           default("0"), not null
-#  coupons_adjustment_amount_cents           :bigint           default(0), not null
-#  credit_amount_cents                       :bigint           default(0), not null
-#  credit_amount_currency                    :string           not null
-#  credit_status                             :integer
-#  description                               :text
-#  file                                      :string
-#  issuing_date                              :date             not null
-#  number                                    :string           not null
-#  precise_coupons_adjustment_amount_cents   :decimal(30, 5)   default(0.0), not null
-#  precise_taxes_amount_cents                :decimal(30, 5)   default(0.0), not null
-#  reason                                    :integer          not null
-#  refund_amount_cents                       :bigint           default(0), not null
-#  refund_amount_currency                    :string
-#  refund_status                             :integer
-#  refunded_at                               :datetime
-#  status                                    :integer          default("finalized"), not null
-#  taxes_amount_cents                        :bigint           default(0), not null
-#  taxes_rate                                :float            default(0.0), not null
-#  total_amount_cents                        :bigint           default(0), not null
-#  total_amount_currency                     :string           not null
-#  voided_at                                 :datetime
-#  xml_file                                  :string
-#  created_at                                :datetime         not null
-#  updated_at                                :datetime         not null
-#  customer_id                               :uuid             not null
-#  invoice_id                                :uuid             not null
-#  organization_id                           :uuid             not null
-#  sequential_id                             :integer          not null
+#  id                                      :uuid             not null, primary key
+#  balance_amount_cents                    :bigint           default(0), not null
+#  balance_amount_currency                 :string           default("0"), not null
+#  coupons_adjustment_amount_cents         :bigint           default(0), not null
+#  credit_amount_cents                     :bigint           default(0), not null
+#  credit_amount_currency                  :string           not null
+#  credit_status                           :integer
+#  description                             :text
+#  file                                    :string
+#  issuing_date                            :date             not null
+#  number                                  :string           not null
+#  precise_coupons_adjustment_amount_cents :decimal(30, 5)   default(0.0), not null
+#  precise_taxes_amount_cents              :decimal(30, 5)   default(0.0), not null
+#  reason                                  :integer          not null
+#  refund_amount_cents                     :bigint           default(0), not null
+#  refund_amount_currency                  :string
+#  refund_status                           :integer
+#  refunded_at                             :datetime
+#  status                                  :integer          default("finalized"), not null
+#  taxes_amount_cents                      :bigint           default(0), not null
+#  taxes_rate                              :float            default(0.0), not null
+#  total_amount_cents                      :bigint           default(0), not null
+#  total_amount_currency                   :string           not null
+#  voided_at                               :datetime
+#  xml_file                                :string
+#  created_at                              :datetime         not null
+#  updated_at                              :datetime         not null
+#  customer_id                             :uuid             not null
+#  invoice_id                              :uuid             not null
+#  organization_id                         :uuid             not null
+#  sequential_id                           :integer          not null
 #
 # Indexes
 #

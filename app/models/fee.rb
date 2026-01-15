@@ -205,7 +205,7 @@ class Fee < ApplicationRecord
   end
   alias_method :precise_total_amount_currency, :currency
 
-  def applicable_to_invoice_cents
+  def offsettable_amount_cents
     if invoice.credit? && invoice.payment_pending?
       return amount_cents
     end

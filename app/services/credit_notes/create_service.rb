@@ -12,7 +12,7 @@ module CreditNotes
       @description = args[:description]
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
-      @applied_to_source_invoice_amount_cents = args[:applied_to_source_invoice_amount_cents] || 0
+      @offset_amount_cents = args[:offset_amount_cents] || 0
       @metadata_value = args[:metadata]
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
@@ -35,11 +35,11 @@ module CreditNotes
           total_amount_currency: invoice.currency,
           credit_amount_currency: invoice.currency,
           refund_amount_currency: invoice.currency,
-          applied_to_source_invoice_amount_currency: invoice.currency,
+          offset_amount_currency: invoice.currency,
           balance_amount_currency: invoice.currency,
           credit_amount_cents:,
           refund_amount_cents:,
-          applied_to_source_invoice_amount_cents:,
+          offset_amount_cents:,
           reason:,
           description:,
           credit_status: "available",
@@ -70,7 +70,7 @@ module CreditNotes
         credit_note.assign_attributes(
           total_amount_cents: credit_note.credit_amount_cents +
             credit_note.refund_amount_cents +
-            credit_note.applied_to_source_invoice_amount_cents,
+            credit_note.offset_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
         CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
@@ -79,11 +79,11 @@ module CreditNotes
 
         credit_note.save!
 
-        if applied_to_source_invoice_amount_cents.positive?
+        if offset_amount_cents.positive?
           InvoiceSettlements::CreateService.call!(
             invoice: invoice,
             source_credit_note: credit_note,
-            amount_cents: applied_to_source_invoice_amount_cents,
+            amount_cents: offset_amount_cents,
             amount_currency: invoice.currency
           )
         end
@@ -129,7 +129,7 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
-      :applied_to_source_invoice_amount_cents,
+      :offset_amount_cents,
       :metadata_value,
       :automatic,
       :context

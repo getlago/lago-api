@@ -1897,8 +1897,8 @@ CREATE TABLE public.credit_notes (
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
     xml_file character varying,
-    applied_to_source_invoice_amount_cents bigint DEFAULT 0 NOT NULL,
-    applied_to_source_invoice_amount_currency character varying
+    offset_amount_cents bigint DEFAULT 0 NOT NULL,
+    offset_amount_currency character varying
 );
 
 
@@ -3283,6 +3283,23 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.updated_at
    FROM public.invoices_taxes it;
 
+
+--
+-- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    owner_type character varying NOT NULL,
+    owner_id uuid NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
+);
+
+
 --
 -- Name: exports_item_metadata; Type: VIEW; Schema: public; Owner: -
 --
@@ -4020,22 +4037,6 @@ CREATE TABLE public.invoice_settlements (
     amount_currency character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.item_metadata (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    owner_type character varying NOT NULL,
-    owner_id uuid NOT NULL,
-    value jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
 );
 
 
@@ -10929,6 +10930,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260115152819'),
 ('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
@@ -10937,7 +10939,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260106120601'),
 ('20260105144123'),
 ('20251226145247'),
-('20251223123938'),
 ('20251222163416'),
 ('20251219115429'),
 ('20251216100247'),

@@ -10638,7 +10638,7 @@
               "deprecationReason": null
             },
             {
-              "name": "appliedToSourceInvoiceAmountCents",
+              "name": "creditAmountCents",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -10650,7 +10650,7 @@
               "deprecationReason": null
             },
             {
-              "name": "creditAmountCents",
+              "name": "offsetAmountCents",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -14372,22 +14372,6 @@
               "deprecationReason": null
             },
             {
-              "name": "appliedToSourceInvoiceAmountCents",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "balanceAmountCents",
               "description": null,
               "args": [],
@@ -14697,6 +14681,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "offsetAmountCents",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -15280,7 +15280,7 @@
               "deprecationReason": null
             },
             {
-              "name": "maxApplicableToSourceInvoiceAmountCents",
+              "name": "maxCreditableAmountCents",
               "description": null,
               "args": [],
               "type": {
@@ -15296,7 +15296,7 @@
               "deprecationReason": null
             },
             {
-              "name": "maxCreditableAmountCents",
+              "name": "maxOffsettableAmountCents",
               "description": null,
               "args": [],
               "type": {
@@ -25673,22 +25673,6 @@
               "deprecationReason": null
             },
             {
-              "name": "applicableToInvoiceCents",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "appliedTaxes",
               "description": null,
               "args": [],
@@ -25926,6 +25910,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "offsettableAmountCents",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },
@@ -30246,22 +30246,6 @@
               "deprecationReason": null
             },
             {
-              "name": "applicableToSourceInvoiceAmountCents",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "appliedTaxes",
               "description": null,
               "args": [],
@@ -30723,6 +30707,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "offsettableAmountCents",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },

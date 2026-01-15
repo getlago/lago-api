@@ -7,7 +7,7 @@ module CreditNotes
       valid_items_amount?
       valid_refund_amount?
       valid_credit_amount?
-      valid_applied_to_source_invoice_amount?
+      valid_offset_amount?
       valid_remaining_invoice_amount?
       valid_total_amount_positive?
 
@@ -30,7 +30,7 @@ module CreditNotes
     def total_amount_cents
       credit_note.credit_amount_cents +
         credit_note.refund_amount_cents +
-        credit_note.applied_to_source_invoice_amount_cents
+        credit_note.offset_amount_cents
     end
 
     def refunded_invoice_amount_cents
@@ -41,12 +41,12 @@ module CreditNotes
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
-    def applied_to_source_invoice_total_amount_cents
-      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:applied_to_source_invoice_amount_cents)
+    def offset_amount_cents
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:offset_amount_cents)
     end
 
     def invoice_credit_note_total_amount_cents
-      credited_invoice_amount_cents + refunded_invoice_amount_cents + applied_to_source_invoice_total_amount_cents
+      credited_invoice_amount_cents + refunded_invoice_amount_cents + offset_amount_cents
     end
 
     def precise_total_items_amount_cents
@@ -110,7 +110,7 @@ module CreditNotes
 
       creditable = invoice.fee_total_amount_cents -
         credited_invoice_amount_cents -
-        applied_to_source_invoice_total_amount_cents
+        offset_amount_cents
 
       return true if credit_note.credit_amount_cents <= creditable
 
@@ -120,34 +120,34 @@ module CreditNotes
     end
 
     def valid_applied_to_source_invoice_amount?
-      return true if credit_note.applied_to_source_invoice_amount_cents.zero?
+      return true if credit_note.offset_amount_cents.zero?
       return false unless valid_credit_invoice_application?
 
       invoice_due_amount_cents = invoice.total_amount_cents -
         invoice.total_paid_amount_cents -
-        applied_to_source_invoice_total_amount_cents
+        offset_amount_cents
 
       creditable = invoice.fee_total_amount_cents -
         credited_invoice_amount_cents -
-        applied_to_source_invoice_total_amount_cents
+        offset_amount_cents
 
-      applicable_to_source_invoice_amount = [invoice_due_amount_cents, creditable].min
+      offsettable_amount = [invoice_due_amount_cents, creditable].min
 
-      return true if credit_note.applied_to_source_invoice_amount_cents <= applicable_to_source_invoice_amount
+      return true if credit_note.offset_amount_cents <= offsettable_amount
 
-      add_error(field: :applied_to_source_invoice_amount_cents, error_code: "higher_than_remaining_invoice_amount")
+      add_error(field: :offset_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
 
     def valid_credit_invoice_application?
       return true unless invoice.credit?
 
       if invoice.total_paid_amount_cents.positive?
-        add_error(field: :applied_to_source_invoice_amount_cents, error_code: "cannot_apply_to_paid_invoice")
+        add_error(field: :offset_amount_cents, error_code: "cannot_apply_to_paid_invoice")
         return false
       end
 
-      if credit_note.applied_to_source_invoice_amount_cents != invoice.total_amount_cents
-        add_error(field: :applied_to_source_invoice_amount_cents, error_code: "not_equal_to_source_invoice_amount")
+      if credit_note.offset_amount_cents != invoice.total_amount_cents
+        add_error(field: :offset_amount_cents, error_code: "not_equal_to_source_invoice_amount")
         return false
       end
 

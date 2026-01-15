@@ -11,7 +11,7 @@ module PaymentRequests
         return if !payable || payment_status.to_sym != :succeeded
 
         payable.invoices.each do |invoice|
-          Invoices::UpdateService.call!(invoice:, params: {total_paid_amount_cents: invoice.total_amount_cents})
+          Invoices::UpdateService.call!(invoice:, params: {total_paid_amount_cents: invoice.total_due_amount_cents})
         end
       end
     end

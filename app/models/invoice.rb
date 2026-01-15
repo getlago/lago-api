@@ -288,16 +288,16 @@ class Invoice < ApplicationRecord
     }
   end
 
-  def applied_credit_notes_amount_cents
-    credit_notes.finalized.sum(:applied_to_source_invoice_amount_cents)
+  def offset_amount_cents
+    credit_notes.finalized.sum(:offset_amount_cents)
   end
 
   def total_due_amount_cents
-    total_amount_cents - total_paid_amount_cents - applied_credit_notes_amount_cents
+    total_amount_cents - total_paid_amount_cents - offset_amount_cents
   end
 
   def total_settled_amount_cents
-    total_paid_amount_cents + applied_credit_notes_amount_cents
+    total_paid_amount_cents + offset_amount_cents
   end
 
   # amount cents onto which we can issue a credit note
@@ -331,7 +331,7 @@ class Invoice < ApplicationRecord
     available_to_credit_amount_cents
   end
 
-  def applicable_to_source_invoice_amount_cents
+  def offsettable_amount_cents
     if credit? && payment_pending?
       return total_amount_cents
     end
