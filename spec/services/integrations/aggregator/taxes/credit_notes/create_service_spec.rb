@@ -108,7 +108,8 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::CreateService do
             "item_code" => "1",
             "amount_cents" => -200
           }
-        ]
+        ],
+        "tax_date" => credit_note.invoice.issuing_date
       }
     ]
   end
