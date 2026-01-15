@@ -6,10 +6,11 @@ RSpec.describe Payments::SetPaymentMethodDataService do
   subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
   let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
+  let(:organization) { create(:organization) }
 
   describe "#call" do
     context "with Stripe" do
-      let(:payment) { create(:payment, payment_provider: create(:stripe_provider)) }
+      let(:payment) { create(:payment, payment_provider: create(:stripe_provider), organization:) }
 
       it "updates the payment method data" do
         stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
@@ -24,6 +25,7 @@ RSpec.describe Payments::SetPaymentMethodDataService do
           "brand" => "visa",
           "last4" => "4242"
         })
+        expect(result.payment&.payment_method&.details).to be_nil
       end
 
       context "when the payment method id is already set" do
