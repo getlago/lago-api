@@ -3,13 +3,14 @@ es:
   email:
     credit_note:
       created:
+        applied_on_invoice_notice: Aplicado a la factura %{invoice_number} el %{date}
         credit_note_from: Nota de crédito de %{billing_entity_name}
         credit_note_number: Número de nota de crédito
         credited_notice: Acreditado en el saldo del cliente el %{date}
-        credited_refunded_notice: Acreditado en el saldo del cliente y reembolsado el %{date}
         download: Descargar nota de crédito para más detalles
         invoice_number: Número de factura
         issue_date: Fecha de emisión
+        issued_notice: Emitida el %{date}
         refunded_notice: Reembolso hecho el %{date}
         subject: 'Tu nota de crédito de %{billing_entity_name} #%{credit_note_number}'
     invoice:

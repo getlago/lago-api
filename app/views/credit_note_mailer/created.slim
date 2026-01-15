@@ -7,12 +7,17 @@ table cellpadding="0" cellspacing="0" style="margin: auto; padding-bottom: 24px"
       = @credit_note.total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
   tr
     td style="color: #66758f; font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: center;"
-      - if @credit_note.credited? && @credit_note.refunded?
-        = I18n.t('email.credit_note.created.credited_refunded_notice', date: I18n.l(@credit_note.issuing_date, format: :default))
+      - formatted_date = I18n.l(@credit_note.issuing_date, format: :default)
+
+      - if [@credit_note.credited?, @credit_note.refunded?, @credit_note.applied_to_source_invoice?].count(true) > 1
+          = I18n.t("email.credit_note.created.issued_notice", date: formatted_date)
       - elsif @credit_note.credited?
-        = I18n.t('email.credit_note.created.credited_notice', date: I18n.l(@credit_note.issuing_date, format: :default))
-      - else
-        = I18n.t('email.credit_note.created.refunded_notice', date: I18n.l(@credit_note.issuing_date, format: :default))
+          = I18n.t("email.credit_note.created.credited_notice", date: formatted_date)
+      - elsif @credit_note.refunded?
+          = I18n.t("email.credit_note.created.refunded_notice", date: formatted_date)
+      - elsif @credit_note.applied_to_source_invoice?
+          = I18n.t('email.credit_note.created.applied_on_invoice_notice', invoice_number: @credit_note.invoice.number, date: formatted_date)
+
 table cellpadding="0" cellspacing="0" style="width: 100%; padding: 24px 0; border-top: 1px solid #d9dee7; border-bottom: 1px solid #d9dee7;"
   tr
     td

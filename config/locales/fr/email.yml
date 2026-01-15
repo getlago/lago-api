@@ -3,13 +3,14 @@ fr:
   email:
     credit_note:
       created:
+        applied_on_invoice_notice: Appliqué à la facture %{invoice_number} le %{date}
         credit_note_from: Votre avoir de %{billing_entity_name}
         credit_note_number: Avoir nº
         credited_notice: Crédité sur le solde du client le %{date}
-        credited_refunded_notice: Crédité sur le solde du client et remboursé le %{date}
         download: Télécharger l'avoir pour plus de détails
         invoice_number: Facture nº
         issue_date: Date d'émission
+        issued_notice: Émis le %{date}
         refunded_notice: Remboursé le %{date}
         subject: Votre avoir nº  %{credit_note_number} de %{billing_entity_name}
     invoice:

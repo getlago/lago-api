@@ -25,15 +25,16 @@ en:
         subject: Your Lago API key has been rolled
     credit_note:
       created:
+        applied_on_invoice_notice: Applied on invoice %{invoice_number} on %{date}
         credit_note_from: Credit Note from %{billing_entity_name}
         credit_note_number: Credit note number
         credited_notice: Credited on customer balance on %{date}
-        credited_refunded_notice: Credited on customer balance and refunded on %{date}
         download: Download credit note for details
         invoice_number: Invoice number
         issue_date: Issue date
+        issued_notice: Issued on %{date}
         refunded_notice: Refunded on %{date}
-        subject: 'Your credit note from %{billing_entity_name} #%{credit_note_number}'
+        subject: "Your credit note from %{billing_entity_name} #%{credit_note_number}"
     data_export:
       completed:
         fallback_text: If the link has expired, please generate a new one from your Dashboard.
@@ -51,7 +52,7 @@ en:
         invoice_number: Invoice Number
         issue_date: Issue Date
         issued_on: issued on %{date}
-        subject: 'Your Invoice from %{billing_entity_name} #%{invoice_number}'
+        subject: "Your Invoice from %{billing_entity_name} #%{invoice_number}"
     organization:
       authentication_methods_updated:
         changes: The user %{user_email} made the following changes to authentication methods.
@@ -65,7 +66,7 @@ en:
     payment_receipt:
       created:
         payment_receipt_from: Payment receipt from %{billing_entity_name}
-        subject: 'Your payment receipt from %{billing_entity_name} #%{payment_receipt_number}'
+        subject: "Your payment receipt from %{billing_entity_name} #%{payment_receipt_number}"
     payment_request:
       requested:
         already_paid: If you have already made the payment, please disregard this email.

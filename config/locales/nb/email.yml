@@ -3,13 +3,14 @@ nb:
   email:
     credit_note:
       created:
+        applied_on_invoice_notice: Anvendt på faktura %{invoice_number} den %{date}
         credit_note_from: Kreditnota fra %{billing_entity_name}
         credit_note_number: Kreditnota nummer
         credited_notice: Kreditert til kontobalanse %{date}
-        credited_refunded_notice: Kreditert til kontobalanse og refundert %{date}
         download: Last ned kreditnota for detaljer
         invoice_number: Faktura nummer
         issue_date: Dato
+        issued_notice: Utstedt den %{date}
         refunded_notice: Refundert %{date}
         subject: 'Kreditnota din fra %{billing_entity_name} #%{credit_note_number}'
     invoice:

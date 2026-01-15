@@ -25,13 +25,14 @@ pt-BR:
         subject: Sua API Key do Lago foi rotacionada
     credit_note:
       created:
+        applied_on_invoice_notice: Aplicado à fatura %{invoice_number} em %{date}
         credit_note_from: Nota de Crédito de %{billing_entity_name}
         credit_note_number: Número da nota de crédito
         credited_notice: Creditado no saldo do cliente em %{date}
-        credited_refunded_notice: Creditado no saldo do cliente e reembolsado em %{date}
         download: Baixar nota de crédito para detalhes
         invoice_number: Número da fatura
         issue_date: Data de emissão
+        issued_notice: Emitida em %{date}
         refunded_notice: Reembolsado em %{date}
         subject: 'Sua nota de crédito de %{billing_entity_name} #%{credit_note_number}'
     data_export:
