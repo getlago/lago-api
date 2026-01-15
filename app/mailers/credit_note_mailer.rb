@@ -1,18 +1,10 @@
 # frozen_string_literal: true
 
-class CreditNoteMailer < ApplicationMailer
+class CreditNoteMailer < DocumentMailer
   before_action :ensure_pdf
-
-  def loggable?
-    true
-  end
 
   def document
     @document ||= params[:credit_note]
-  end
-
-  def created
-    @created ||= create_mail
   end
 
   private

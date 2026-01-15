@@ -14,17 +14,13 @@ class ApplicationMailer < ActionMailer::Base
   end
 
   # Shared interface for logging purposes
+
+  # Define if sending this email should be logged
   def loggable?
     false
   end
 
-  def document
-  end
-
-  def created
-  end
-
   def log(**options)
-    Utils::EmailActivityLog.produce(document:, message:, **options) if loggable? && message.to.present?
+    Utils::EmailActivityLog.produce(message:, **options) if loggable?
   end
 end

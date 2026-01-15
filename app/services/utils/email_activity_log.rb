@@ -9,12 +9,13 @@ module Utils
       TOPIC.present?
     BODY_PREVIEW_LENGTH = 500
 
-    def self.produce(document:, message:, resend: false, user_id: nil, api_key_id: nil, error: nil)
-      new(document:, message:, resend:, user_id:, api_key_id:, error:).produce
+    def self.produce(document:, message:, organization_id: nil, resend: false, user_id: nil, api_key_id: nil, error: nil)
+      new(document:, message:, organization_id:, resend:, user_id:, api_key_id:, error:).produce
     end
 
-    def initialize(document:, message:, resend: false, user_id: nil, api_key_id: nil, error: nil)
+    def initialize(document:, message:, organization_id: nil, resend: false, user_id: nil, api_key_id: nil, error: nil)
       @document = document
+      @organization_id = organization_id || document&.organization_id
       @message = message
       @resend = resend
       @user_id = user_id
@@ -25,7 +26,7 @@ module Utils
     end
 
     def produce
-      enqueue_task if AVAILABLE && document && message
+      enqueue_task if AVAILABLE && message.present? && organization_id.present?
     rescue => e
       Rails.logger.error("Failed to produce email activity log: #{e.message}")
       nil
@@ -33,7 +34,7 @@ module Utils
 
     private
 
-    attr_reader :document, :message, :user_id, :api_key_id, :error, :activity_id, :current_time
+    attr_reader :document, :organization_id, :message, :user_id, :api_key_id, :error, :activity_id, :current_time
 
     def status
       @status ||= if error
@@ -101,11 +102,13 @@ module Utils
     end
 
     def document_reference
-      {
-        type: document.class.name,
-        number: document_number,
-        lago_id: document.id
-      }
+      if document.present?
+        {
+          type: document.class.name,
+          number: document_number,
+          lago_id: document.id
+        }
+      end
     end
 
     def document_number
@@ -126,10 +129,6 @@ module Utils
       }
     end
 
-    def organization_id
-      document.organization_id
-    end
-
     def resource
       case document
       when PaymentReceipt
@@ -140,7 +139,7 @@ module Utils
     end
 
     def external_customer_id
-      document.customer&.external_id
+      document&.customer&.external_id
     end
   end
 end
