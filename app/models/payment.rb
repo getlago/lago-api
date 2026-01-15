@@ -80,7 +80,7 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
-  def payment_method_display
+  def method_display_name
     return nil if provider_payment_method_data.blank?
 
     type = provider_payment_method_data["type"]

@@ -29,10 +29,10 @@ html
                 td.body-2
                   a style="text-decoration: none" target="_blank" href=payment.payable.file_url
                     = payment.payable.number
-            -if payment.payment_method_display.present?
+            -if payment.method_display_name.present?
               tr
                 td.body-1 = I18n.t('payment_receipt.payment_method')
-                td.body-2 = payment.payment_method_display
+                td.body-2 = payment.method_display_name
             tr
               td.body-1 = I18n.t('payment_receipt.payment_date')
               td.body-2 = I18n.l(payment.created_at.to_date, format: :default)

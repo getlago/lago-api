@@ -395,14 +395,14 @@ RSpec.describe Payment do
     end
   end
 
-  describe "#payment_method_display" do
-    subject(:payment_method_display) { payment.payment_method_display }
+  describe "#method_display_name" do
+    subject(:method_display_name) { payment.method_display_name }
 
     context "when provider_payment_method_data is empty" do
       let(:payment) { build(:payment, provider_payment_method_data: {}) }
 
       it "returns nil" do
-        expect(payment_method_display).to be_nil
+        expect(method_display_name).to be_nil
       end
     end
 
@@ -416,7 +416,7 @@ RSpec.describe Payment do
       end
 
       it "returns formatted card details" do
-        expect(payment_method_display).to eq("Visa **** 1234")
+        expect(method_display_name).to eq("Visa **** 1234")
       end
     end
 
@@ -428,7 +428,7 @@ RSpec.describe Payment do
       end
 
       it "returns the payment method type" do
-        expect(payment_method_display).to eq("Bank Transfer")
+        expect(method_display_name).to eq("Bank Transfer")
       end
     end
   end
