@@ -112,11 +112,7 @@ module Invoices
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        if multiple_payment_methods_enabled?
-          determine_payment_method.present?
-        else
-          current_payment_provider_customer&.provider_customer_id
-        end
+        current_payment_provider_customer&.provider_customer_id
       end
 
       def current_payment_provider
