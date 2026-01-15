@@ -577,6 +577,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
                   "amount_cents" => 10
                 }
               ],
+              "tax_date" => Time.zone.today.to_s,
               "id" => a_kind_of(String)
             }
           ]

@@ -93,7 +93,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             "item_code" => "1",
             "amount_cents" => 200
           }
-        ]
+        ],
+        "tax_date" => invoice.issuing_date
       }
     ]
   end

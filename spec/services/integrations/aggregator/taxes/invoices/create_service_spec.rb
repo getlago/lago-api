@@ -94,6 +94,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             "amount_cents" => 200
           }
         ],
+        "tax_date" => invoice.issuing_date.to_s,
         "id" => invoice.id
       }
     ]
