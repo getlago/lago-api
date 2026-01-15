@@ -71,7 +71,7 @@ module PaymentProviders
 
         def stripe_payment_method
           payment_method_id = if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method.provider_method_id
+            payment&.payment_method&.provider_method_id
           else
             provider_customer.payment_method_id
           end
