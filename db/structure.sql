@@ -898,7 +898,6 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.item_metadata;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -931,6 +930,8 @@ DROP VIEW IF EXISTS public.exports_payment_requests;
 DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
+DROP VIEW IF EXISTS public.exports_item_metadata;
+DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
@@ -3270,6 +3271,37 @@ CREATE VIEW public.exports_invoices_taxes AS
 
 
 --
+-- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    owner_type character varying NOT NULL,
+    owner_id uuid NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
+);
+
+
+--
+-- Name: exports_item_metadata; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_item_metadata AS
+ SELECT im.id AS lago_id,
+    im.organization_id,
+    im.owner_type,
+    im.owner_id AS lago_owner_id,
+    im.value,
+    im.created_at,
+    im.updated_at
+   FROM public.item_metadata im;
+
+
+--
 -- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3972,22 +4004,6 @@ CREATE TABLE public.invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
-);
-
-
---
--- Name: item_metadata; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.item_metadata (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    owner_type character varying NOT NULL,
-    owner_id uuid NOT NULL,
-    value jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT item_metadata_value_must_be_json_object CHECK ((jsonb_typeof(value) = 'object'::text))
 );
 
 
@@ -10798,6 +10814,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
 ('20260106120832'),
