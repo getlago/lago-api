@@ -33,20 +33,29 @@ module Subscriptions
     def redis_client
       return @redis_client if defined? @redis_client
 
-      url = ENV["LAGO_REDIS_STORE_URL"].split(":")
+      url = if ENV["LAGO_REDIS_STORE_URL"].start_with?("redis://")
+        ENV["LAGO_REDIS_STORE_URL"]
+      else
+        "redis://#{ENV["LAGO_REDIS_STORE_URL"]}"
+      end
 
-      @redis_client ||= Redis.new(
-        host: url.first,
-        port: url.last,
-        password: ENV["LAGO_REDIS_STORE_PASSWORD"].presence,
-        db: ENV["LAGO_REDIS_STORE_DB"],
-        ssl: true,
+      config = {
+        url:,
         ssl_params: {
-          verify_mode: OpenSSL::SSL::VERIFY_PEER
+          verify_mode: OpenSSL::SSL::VERIFY_NONE
         },
         timeout: 5.0,
         reconnect_attempts: 3
-      )
+      }
+
+      config[:password] = ENV["LAGO_REDIS_STORE_PASSWORD"] if ENV["LAGO_REDIS_STORE_PASSWORD"].present?
+      config[:db] = ENV["LAGO_REDIS_STORE_DB"] if ENV["LAGO_REDIS_STORE_DB"].present?
+
+      if ENV["LAGO_REDIS_STORE_SSL"].present? || ENV["LAGO_REDIS_STORE_URL"].start_with?(/rediss?:/)
+        config[:ssl] = true
+      end
+
+      @redis_client ||= Redis.new(config)
     end
   end
 end
