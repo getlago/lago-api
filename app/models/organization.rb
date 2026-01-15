@@ -34,6 +34,9 @@ class Organization < ApplicationRecord
   has_many :admins, through: :admins_memberships, source: :user
   has_many :billable_metrics
   has_many :plans
+  has_many :charges
+  has_many :fixed_charges
+  has_many :charge_filters
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions

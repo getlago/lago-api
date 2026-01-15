@@ -26,6 +26,18 @@ module Types
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
 
+    field :create_charge, mutation: Mutations::Charges::Create
+    field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :update_charge, mutation: Mutations::Charges::Update
+
+    field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
+    field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy
+    field :update_charge_filter, mutation: Mutations::ChargeFilters::Update
+
+    field :create_fixed_charge, mutation: Mutations::FixedCharges::Create
+    field :destroy_fixed_charge, mutation: Mutations::FixedCharges::Destroy
+    field :update_fixed_charge, mutation: Mutations::FixedCharges::Update
+
     field :create_customer, mutation: Mutations::Customers::Create
     field :destroy_customer, mutation: Mutations::Customers::Destroy
     field :update_customer, mutation: Mutations::Customers::Update

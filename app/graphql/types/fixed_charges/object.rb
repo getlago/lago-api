@@ -5,8 +5,10 @@ module Types
     class Object < Types::BaseObject
       graphql_name "FixedCharge"
 
+      field :code, String, null: true
       field :id, ID, null: false
       field :invoice_display_name, String, null: true
+      field :parent_id, ID, null: true
 
       field :add_on, Types::AddOns::Object, null: false
       field :charge_model, Types::FixedCharges::ChargeModelEnum, null: false

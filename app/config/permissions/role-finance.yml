@@ -19,6 +19,18 @@ plans:
   create: false
   update: false
   delete: false
+charges:
+  create: false
+  update: false
+  delete: false
+fixed_charges:
+  create: false
+  update: false
+  delete: false
+charge_filters:
+  create: false
+  update: false
+  delete: false
 pricing_units:
   view: true
   create: false

@@ -1,0 +1,29 @@
+# frozen_string_literal: true
+
+module Mutations
+  module FixedCharges
+    class Update < BaseMutation
+      include AuthenticableApiUser
+      include RequiredOrganization
+
+      REQUIRED_PERMISSION = "fixed_charges:update"
+
+      graphql_name "UpdateFixedCharge"
+      description "Updates an existing Fixed Charge"
+
+      input_object_class Types::FixedCharges::UpdateInput
+      type Types::FixedCharges::Object
+
+      def resolve(**args)
+        fixed_charge = current_organization.fixed_charges.parents.find_by(id: args[:id])
+
+        params = args.except(:id).to_h.deep_symbolize_keys
+        params[:properties] = params[:properties].to_h if params[:properties]
+
+        result = ::FixedCharges::UpdateService.call(fixed_charge:, params:, timestamp: Time.current.to_i)
+
+        result.success? ? result.fixed_charge : result_error(result)
+      end
+    end
+  end
+end
