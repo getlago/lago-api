@@ -25,7 +25,7 @@ pt-BR:
         subject: Sua API Key do Lago foi rotacionada
     credit_note:
       created:
-        applied_on_invoice_notice: Aplicado à fatura %{invoice_number} em %{date}
+        offset_invoice_notice: Fatura %{invoice_number} compensada em %{date}
         credit_note_from: Nota de Crédito de %{billing_entity_name}
         credit_note_number: Número da nota de crédito
         credited_notice: Creditado no saldo do cliente em %{date}
@@ -34,7 +34,7 @@ pt-BR:
         issue_date: Data de emissão
         issued_notice: Emitida em %{date}
         refunded_notice: Reembolsado em %{date}
-        subject: 'Sua nota de crédito de %{billing_entity_name} #%{credit_note_number}'
+        subject: "Sua nota de crédito de %{billing_entity_name} #%{credit_note_number}"
     data_export:
       completed:
         fallback_text: Se o link expirou, por favor gere um novo no seu Dashboard.
@@ -52,13 +52,13 @@ pt-BR:
         invoice_number: Número da Fatura
         issue_date: Data de Emissão
         issued_on: emitida em %{date}
-        subject: 'Sua Fatura de %{billing_entity_name} #%{invoice_number}'
+        subject: "Sua Fatura de %{billing_entity_name} #%{invoice_number}"
     password_reset:
       subject: Redefinir sua senha do Lago
     payment_receipt:
       created:
         payment_receipt_from: Recibo de pagamento de %{billing_entity_name}
-        subject: 'Seu recibo de pagamento de %{billing_entity_name} #%{payment_receipt_number}'
+        subject: "Seu recibo de pagamento de %{billing_entity_name} #%{payment_receipt_number}"
     payment_request:
       requested:
         already_paid: Se você já fez o pagamento, por favor desconsidere este email.

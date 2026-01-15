@@ -2,8 +2,8 @@
 fr:
   credit_note:
     amount: Montant (HT)
-    applied_on_invoice: Appliqué à la facture %{invoice_number}
-    applied_on_invoice_notice: Appliqué à la facture %{invoice_number} le %{issuing_date}
+    offset_invoice: Compensation sur la facture %{invoice_number}
+    offset_invoice_notice: Facture %{invoice_number} compensée le %{issuing_date}
     coupon_adjustment: Coupons
     credit_from: De
     credit_note_number: Nº d'avoir

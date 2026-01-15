@@ -3,7 +3,7 @@ nb:
   email:
     credit_note:
       created:
-        applied_on_invoice_notice: Anvendt på faktura %{invoice_number} den %{date}
+        offset_invoice_notice: Faktura %{invoice_number} utlignet den %{date}
         credit_note_from: Kreditnota fra %{billing_entity_name}
         credit_note_number: Kreditnota nummer
         credited_notice: Kreditert til kontobalanse %{date}
@@ -12,7 +12,7 @@ nb:
         issue_date: Dato
         issued_notice: Utstedt den %{date}
         refunded_notice: Refundert %{date}
-        subject: 'Kreditnota din fra %{billing_entity_name} #%{credit_note_number}'
+        subject: "Kreditnota din fra %{billing_entity_name} #%{credit_note_number}"
     invoice:
       finalized:
         download: Last ned faktura for detaljer
@@ -21,11 +21,11 @@ nb:
         invoice_number: Fakturanummer
         issue_date: Dato
         issued_on: utstedt den %{date}
-        subject: 'Faktura fra %{billing_entity_name} #%{invoice_number}'
+        subject: "Faktura fra %{billing_entity_name} #%{invoice_number}"
     payment_receipt:
       created:
         payment_receipt_from: Betalingskvittering fra %{billing_entity_name}
-        subject: 'Din betalingskvittering fra %{billing_entity_name} #%{payment_receipt_number}'
+        subject: "Din betalingskvittering fra %{billing_entity_name} #%{payment_receipt_number}"
     payment_request:
       requested:
         already_paid: Hvis du allerede har foretatt betalingen, vennligst se bort fra denne e-posten.

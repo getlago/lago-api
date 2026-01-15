@@ -2,8 +2,8 @@
 de:
   credit_note:
     amount: Betrag (ohne Steuern)
-    applied_on_invoice: Angewendet auf Rechnung %{invoice_number}
-    applied_on_invoice_notice: Angewendet auf Rechnung %{invoice_number} am %{issuing_date}
+    offset_invoice: Verrechnung auf Rechnung %{invoice_number}
+    offset_invoice_notice: Rechnung %{invoice_number} am %{issuing_date} ausgeglichen
     coupon_adjustment: Coupons
     credit_from: Von
     credit_note_number: Gutschriftnummer

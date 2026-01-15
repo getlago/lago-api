@@ -2,8 +2,8 @@
 zh-TW:
   credit_note:
     amount: 金額（未稅）
-    applied_on_invoice: 已套用至發票 %{invoice_number}
-    applied_on_invoice_notice: 已於 %{issuing_date} 套用至發票 %{invoice_number}
+    offset_invoice: 發票 %{invoice_number} 的抵銷
+    offset_invoice_notice: 發票 %{invoice_number} 已於 %{issuing_date} 抵銷
     coupon_adjustment: 優惠券
     credit_from: 來自
     credit_note_number: 折讓單號碼

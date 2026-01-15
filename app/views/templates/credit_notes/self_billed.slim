@@ -84,7 +84,7 @@ html
         h2.title-2.mb-8 = MoneyHelper.format(total_amount)
         - formatted_date = I18n.l(issuing_date, format: :default)
 
-        - if [credited?, refunded?, applied_to_source_invoice?].count(true) > 1
+        - if [credited?, refunded?, offset_invoice?].count(true) > 1
           .body-1
             = I18n.t("credit_note.issued_notice", issuing_date: formatted_date)
         - elsif credited?
@@ -93,9 +93,9 @@ html
         - elsif refunded?
           .body-1
             = I18n.t("credit_note.refunded_notice", issuing_date: formatted_date)
-        - elsif applied_to_source_invoice?
+        - elsif offset_invoice?
           .body-1
-            = I18n.t('credit_note.applied_on_invoice_notice', invoice_number: invoice.number, issuing_date: formatted_date)
+            = I18n.t('credit_note.offset_invoice_notice', invoice_number: invoice.number, issuing_date: formatted_date)
 
       == SlimHelper.render('templates/credit_notes/_details', self)
       == SlimHelper.render('templates/credit_notes/_eu_tax_management', self)

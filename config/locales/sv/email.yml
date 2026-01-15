@@ -3,7 +3,7 @@ sv:
   email:
     credit_note:
       created:
-        applied_on_invoice_notice: Tillämpad på faktura %{invoice_number} den %{date}
+        offset_invoice_notice: Faktura %{invoice_number} kvittad den %{date}
         credit_note_from: Kreditfaktura från %{billing_entity_name}
         credit_note_number: Kreditfakturanummer
         credited_notice: Krediterad till kundens förbetalda kontobalans den %{date}
@@ -12,7 +12,7 @@ sv:
         issue_date: Fakturadatum
         issued_notice: Utfärdad den %{date}
         refunded_notice: Återbetald den %{date}
-        subject: 'Din kreditfaktura från %{billing_entity_name} #%{credit_note_number}'
+        subject: "Din kreditfaktura från %{billing_entity_name} #%{credit_note_number}"
     invoice:
       finalized:
         download: Ladda ner fakturan för ytterligare information
@@ -21,11 +21,11 @@ sv:
         invoice_number: Fakturanummer
         issue_date: Fakturadatum
         issued_on: utfärdad den %{date}
-        subject: 'Din faktura från %{billing_entity_name} #%{invoice_number}'
+        subject: "Din faktura från %{billing_entity_name} #%{invoice_number}"
     payment_receipt:
       created:
         payment_receipt_from: Betalningskvitto från %{billing_entity_name}
-        subject: 'Ditt betalningskvitto från %{billing_entity_name} #%{payment_receipt_number}'
+        subject: "Ditt betalningskvitto från %{billing_entity_name} #%{payment_receipt_number}"
     payment_request:
       requested:
         already_paid: Om du redan har gjort betalningen, vänligen bortse från detta mejl.

@@ -2,8 +2,8 @@
 es:
   credit_note:
     amount: Total (excl. impuestos)
-    applied_on_invoice: Aplicado a la factura %{invoice_number}
-    applied_on_invoice_notice: Aplicado a la factura %{invoice_number} el %{issuing_date}
+    offset_invoice: Compensación en la factura %{invoice_number}
+    offset_invoice_notice: Factura %{invoice_number} compensada el %{issuing_date}
     coupon_adjustment: Descuento
     credit_from: Desde
     credit_note_number: Número de nota de crédito

@@ -2,8 +2,8 @@
 nb:
   credit_note:
     amount: Beløp (ekskl. MVA)
-    applied_on_invoice: Brukt på faktura %{invoice_number}
-    applied_on_invoice_notice: Brukt på faktura %{invoice_number} den %{issuing_date}
+    offset_invoice: Utligning på faktura %{invoice_number}
+    offset_invoice_notice: Faktura %{invoice_number} utlignet den %{issuing_date}
     coupon_adjustment: Kuponger
     credit_from: Fra
     credit_note_number: Kreditnota nummer
