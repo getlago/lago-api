@@ -129,11 +129,11 @@ RSpec.describe Invoices::Payments::CreateService do
           create(:subscription, customer:, plan:, organization:, payment_method_type: "manual")
         end
 
-        it "does not create a payment" do
+        it "does not attach payment method to a payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
 
@@ -156,11 +156,11 @@ RSpec.describe Invoices::Payments::CreateService do
         end
         let(:default_payment_method) { nil }
 
-        it "does not create a payment" do
+        it "does not attach a payment method to a payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
     end
@@ -196,11 +196,11 @@ RSpec.describe Invoices::Payments::CreateService do
           create(:wallet_transaction, wallet:, invoice:, source: :manual, payment_method_type: "manual")
         end
 
-        it "does not create a payment" do
+        it "does not attach a payment method to a payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
 
@@ -233,11 +233,11 @@ RSpec.describe Invoices::Payments::CreateService do
 
         before { recurring_rule }
 
-        it "does not create a payment" do
+        it "does not attach a payment method to payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
 
@@ -256,11 +256,11 @@ RSpec.describe Invoices::Payments::CreateService do
       context "when manual payment method is attached to wallet" do
         let(:wallet) { create(:wallet, customer:, organization:, payment_method_type: "manual") }
 
-        it "does not create a payment" do
+        it "does not attach a payment method method to payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
 
@@ -283,11 +283,11 @@ RSpec.describe Invoices::Payments::CreateService do
       context "when manual payment method is passed in params" do
         let(:payment_method_params) { {payment_method_type: "manual"} }
 
-        it "does not create a payment" do
+        it "does not attach a payment method to payment" do
           result = create_service.call
 
           expect(result).to be_success
-          expect(result.payment).to be_nil
+          expect(result.payment.payment_method_id).to be_nil
         end
       end
 
