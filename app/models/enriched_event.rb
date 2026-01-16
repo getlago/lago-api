@@ -40,6 +40,7 @@ end
 #
 #  idx_billing_on_enriched_events     (organization_id,subscription_id,charge_id,charge_filter_id,timestamp)
 #  idx_lookup_on_enriched_events      (organization_id,external_subscription_id,code,timestamp)
+#  idx_unique_on_enriched_events      (organization_id,external_subscription_id,transaction_id,timestamp,charge_id) UNIQUE
 #  index_enriched_events_on_event_id  (event_id)
 #
 # Foreign Keys

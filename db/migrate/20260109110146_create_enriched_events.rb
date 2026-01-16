@@ -22,6 +22,7 @@ class CreateEnrichedEvents < ActiveRecord::Migration[8.0]
 
       t.index %i[organization_id subscription_id charge_id charge_filter_id timestamp], name: "idx_billing_on_enriched_events"
       t.index %i[organization_id external_subscription_id code timestamp], name: "idx_lookup_on_enriched_events"
+      t.index %i[organization_id external_subscription_id transaction_id timestamp charge_id], unique: true, name: "idx_unique_on_enriched_events"
     end
   end
 end
