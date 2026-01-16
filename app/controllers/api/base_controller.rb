@@ -15,9 +15,28 @@ module Api
 
     rescue_from ActionController::ParameterMissing, with: :bad_request_error
 
+    def self.rate_limit_action(action, to:, within:, name: nil)
+      before_action(-> do
+        limit_name = "#{controller_name}##{action_name}"
+        applicable_limit = api_rate_limits&.dig(limit_name) || {"to" => to, "within" => within}
+        to = applicable_limit["to"]
+        within = applicable_limit["within"]
+
+        rate_limiting(
+          to:,
+          within:,
+          by: -> { current_organization.id },
+          with: -> { render_rate_limit_exceeded(within.to_i) },
+          store: Rails.cache,
+          name:
+        )
+      end, only: action)
+    end
+
     private
 
     attr_reader :current_api_key, :current_organization
+    delegate :api_rate_limits, to: :current_organization
 
     def ensure_organization_uses_clickhouse
       forbidden_error(code: "endpoint_not_available") unless current_organization.clickhouse_events_store?

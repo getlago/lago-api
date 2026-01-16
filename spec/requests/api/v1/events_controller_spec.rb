@@ -235,6 +235,47 @@ RSpec.describe Api::V1::EventsController do
         end
       end
     end
+
+    context "with rate limiting" do
+      context "when exceeding the default rate limit", cache: :memory do
+        it "returns 429 Too Many Requests" do
+          11.times do
+            post_with_token(organization, "/api/v1/events/batch", events: [
+              {
+                code: metric.code,
+                transaction_id: SecureRandom.uuid,
+                external_subscription_id: subscription.external_id,
+                timestamp: Time.current.to_i
+              }
+            ])
+          end
+
+          expect(response).to have_http_status(:too_many_requests)
+          expect(json[:code]).to eq("rate_limit_exceeded")
+        end
+      end
+
+      context "when exceeding organization rate limit", cach: :memory do
+        before do
+          organization.update(api_rate_limits: {
+            "events#batch": {to: 1, within: 1}
+          })
+        end
+
+        it "returns 429 Too Many Requests" do
+          2.times do
+            post_with_token(organization, "/api/v1/events/batch", events: [{
+              code: metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: subscription.external_id,
+              timestamp: Time.current.to_i
+            }])
+          end
+
+          expect(response).to have_http_status(:too_many_requests)
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/events" do

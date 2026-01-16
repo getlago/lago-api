@@ -2603,6 +2603,7 @@ CREATE TABLE public.organizations (
     authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     audit_logs_period integer DEFAULT 30,
     pre_filter_events boolean DEFAULT false NOT NULL,
+    api_rate_limits jsonb DEFAULT '{}'::jsonb NOT NULL,
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
@@ -10820,6 +10821,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
+('20260105143503'),
 ('20251226145247'),
 ('20251222163416'),
 ('20251219115429'),
@@ -11707,3 +11709,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

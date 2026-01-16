@@ -287,6 +287,7 @@ end
 #  address_line1                    :string
 #  address_line2                    :string
 #  api_key                          :string
+#  api_rate_limits                  :jsonb            not null
 #  audit_logs_period                :integer          default(30)
 #  authentication_methods           :string           default(["email_password", "google_oauth"]), not null, is an Array
 #  city                             :string

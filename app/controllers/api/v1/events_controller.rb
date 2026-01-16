@@ -6,6 +6,7 @@ module Api
       skip_audit_logs!
 
       before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]
+      rate_limit_action(:batch, to: 10, within: 1)
 
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
 
