@@ -9,6 +9,7 @@ RSpec.describe InvoiceSettlement do
     it do
       expect(subject)
         .to define_enum_for(:settlement_type)
+        .backed_by_column_of_type(:enum)
         .with_values(payment: "payment", credit_note: "credit_note")
     end
   end

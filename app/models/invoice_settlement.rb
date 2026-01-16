@@ -3,10 +3,7 @@
 class InvoiceSettlement < ApplicationRecord
   include Currencies
 
-  SETTLEMENT_TYPES = {
-    payment: "payment",
-    credit_note: "credit_note"
-  }.freeze
+  SETTLEMENT_TYPES = {payment: "payment", credit_note: "credit_note"}.freeze
 
   belongs_to :organization
   belongs_to :billing_entity
