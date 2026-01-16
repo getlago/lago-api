@@ -12,7 +12,6 @@ RSpec.describe Types::Invites::Object do
     expect(subject).to have_field(:recipient).of_type("Membership!")
 
     expect(subject).to have_field(:email).of_type("String!")
-    expect(subject).to have_field(:role).of_type("MembershipRole")
     expect(subject).to have_field(:roles).of_type("[String!]!")
     expect(subject).to have_field(:status).of_type("InviteStatusTypeEnum!")
     expect(subject).to have_field(:token).of_type("String!")
