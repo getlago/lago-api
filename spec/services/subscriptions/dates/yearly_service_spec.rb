@@ -410,7 +410,7 @@ RSpec.describe Subscriptions::Dates::YearlyService do
       context "when charges should not be billed" do
         let(:billing_at) { Time.zone.parse("01 Feb 2023") }
 
-        it " does not return charges_from_datetime" do
+        it "does not return charges_from_datetime" do
           expect(result).to eq("")
         end
       end
@@ -560,7 +560,7 @@ RSpec.describe Subscriptions::Dates::YearlyService do
       context "when charges should not be billed" do
         let(:billing_at) { Time.zone.parse("01 Feb 2023") }
 
-        it " does not return charges_to_datetime" do
+        it "does not return charges_to_datetime" do
           expect(result).to eq("")
         end
       end

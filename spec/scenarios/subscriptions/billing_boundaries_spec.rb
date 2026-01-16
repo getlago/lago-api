@@ -1083,4 +1083,221 @@ describe "Billing Boundaries Scenario" do
     end
     # NOTE: there are no quarterly with charges monthly!
   end
+
+  context "with progressive billing thresholds", transaction: false do
+    let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
+    let(:plan_interval) { :monthly }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "amount") }
+    let(:progressive_charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "2"})
+    end
+    let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 20_000) }
+
+    around { |test| lago_premium!(&test) }
+
+    before do
+      progressive_charge
+      usage_threshold
+    end
+
+    it "creates invoices with correct boundaries when progressive billing thresholds are crossed" do
+      # Start subscription on Jan 15
+      travel_to(Time.zone.parse("2024-01-15T10:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time:
+          }
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      # February billing - regular billing (no progressive billing yet)
+      travel_to(Time.zone.parse("2024-02-15T02:00:00Z")) do
+        expect { perform_billing }.to change { subscription.reload.invoices.subscription.count }.by(1)
+      end
+
+      invoice = subscription.invoices.subscription.order(created_at: :desc).first
+      invoice_subscription = invoice.invoice_subscriptions.first
+
+      expect(invoice_subscription.from_datetime).to match_datetime("2024-01-15T00:00:00Z")
+      expect(invoice_subscription.to_datetime).to match_datetime("2024-02-14T23:59:59Z")
+      expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-01-15T10:00:00Z")
+      expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-02-14T23:59:59Z")
+      expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-01-15T10:00:00Z")
+      expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-02-14T23:59:59Z")
+
+      progressive_invoices_before = Invoice.progressive_billing.count
+
+      # Send enough usage to cross threshold (progressive billing invoice)
+      travel_to(Time.zone.parse("2024-02-20T10:00:00Z")) do
+        ingest_event(subscription, billable_metric, 100)
+        perform_all_enqueued_jobs
+        expect(Invoice.progressive_billing.count).to eq(progressive_invoices_before + 1)
+      end
+
+      progressive_invoice = Invoice.progressive_billing.order(created_at: :desc).first
+      # Progressive billing invoice should have been created
+      expect(progressive_invoice.total_amount_cents).to be > 0
+      progressive_invoice_subscription = progressive_invoice.invoice_subscriptions.first
+      expect(progressive_invoice_subscription.from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(progressive_invoice_subscription.to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+      expect(progressive_invoice_subscription.charges_from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(progressive_invoice_subscription.charges_to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+      expect(progressive_invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(progressive_invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+
+      # March billing - end of period with progressive billing credits
+      travel_to(Time.zone.parse("2024-03-15T02:00:00Z")) do
+        expect { perform_billing }.to change { subscription.reload.invoices.subscription.count }.by(1)
+      end
+
+      invoice = subscription.invoices.subscription.order(created_at: :desc).first
+      invoice_subscription = invoice.invoice_subscriptions.first
+
+      expect(invoice_subscription.from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(invoice_subscription.to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+      expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+      expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-02-15T00:00:00Z")
+      expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-03-14T23:59:59Z")
+
+      # Verify progressive billing credits were applied (amount should match the progressive invoice)
+      expect(invoice.progressive_billing_credit_amount_cents).to eq(progressive_invoice.total_amount_cents)
+    end
+  end
+
+  context "with charges paid in advance" do
+    let(:plan_interval) { :monthly }
+    let(:billing_time) { "calendar" }
+
+    let(:sum_billable_metric) { create(:sum_billable_metric, organization:, field_name: "amount") }
+    let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "seats") }
+
+    # Charge combinations:
+    # 1. pay_in_advance: false, recurring: false (default arrears charge)
+    let(:arrears_charge) do
+      create(:standard_charge, plan:, billable_metric: sum_billable_metric, properties: {amount: "1"})
+    end
+
+    # 2. pay_in_advance: true, recurring: false (advance charge, not recurring)
+    let(:advance_charge) do
+      create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true, properties: {amount: "2"})
+    end
+
+    # 3. pay_in_advance: false, recurring: true (arrears recurring charge)
+    let(:arrears_recurring_charge) do
+      create(:standard_charge, plan:, billable_metric: recurring_billable_metric, properties: {amount: "5"})
+    end
+
+    # 4. pay_in_advance: true, recurring: true (advance recurring charge)
+    let(:advance_recurring_charge) do
+      create(
+        :standard_charge,
+        :pay_in_advance,
+        plan:,
+        billable_metric: recurring_billable_metric,
+        invoiceable: true,
+        properties: {amount: "10"}
+      )
+    end
+
+    before do
+      arrears_charge
+      advance_charge
+      arrears_recurring_charge
+      advance_recurring_charge
+    end
+
+    it "creates invoices with correct boundaries for different charge types" do
+      # Start subscription on Jan 1
+      travel_to(Time.zone.parse("2024-01-01T10:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time:
+          }
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      # Send usage for arrears charge (sum_billable_metric)
+      travel_to(Time.zone.parse("2024-01-10T10:00:00Z")) do
+        create_event(
+          {
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            code: sum_billable_metric.code,
+            properties: {sum_billable_metric.field_name => 100}
+          }
+        )
+      end
+
+      # Send usage for pay_in_advance charge
+      travel_to(Time.zone.parse("2024-01-15T10:00:00Z")) do
+        create_event(
+          {
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {billable_metric.field_name => 50}
+          }
+        )
+      end
+
+      # Send usage for recurring billable metrics
+      travel_to(Time.zone.parse("2024-01-20T10:00:00Z")) do
+        create_event(
+          {
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            code: recurring_billable_metric.code,
+            properties: {recurring_billable_metric.field_name => 10}
+          }
+        )
+      end
+
+      expect(subscription.invoices.subscription.count).to eq(2) # pay in advance events
+
+      # February billing - end of January period
+      travel_to(Time.zone.parse("2024-02-01T02:00:00Z")) do
+        expect { perform_billing }.to change { subscription.reload.invoices.subscription.count }.by(1)
+      end
+
+      invoice = subscription.invoices.subscription.order(created_at: :desc).first
+      invoice_subscription = invoice.invoice_subscriptions.first
+
+      # Verify boundaries are set correctly for the billing period invoice
+      expect(invoice_subscription.from_datetime).to match_datetime("2024-01-01T00:00:00Z")
+      expect(invoice_subscription.to_datetime).to match_datetime("2024-01-31T23:59:59Z")
+      expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-01-01T10:00:00Z")
+      expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-01-31T23:59:59Z")
+      expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-01-01T10:00:00Z")
+      expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-01-31T23:59:59Z")
+
+      # Verify the invoice has fees for charges
+      expect(invoice.fees.charge.count).to be >= 1
+
+      # March billing - second period
+      travel_to(Time.zone.parse("2024-03-01T02:00:00Z")) do
+        expect { perform_billing }.to change { subscription.reload.invoices.subscription.count }.by(1)
+      end
+
+      invoice = subscription.invoices.subscription.order(created_at: :desc).first
+      invoice_subscription = invoice.invoice_subscriptions.first
+
+      expect(invoice_subscription.from_datetime).to match_datetime("2024-02-01T00:00:00Z")
+      expect(invoice_subscription.to_datetime).to match_datetime("2024-02-29T23:59:59Z")
+      expect(invoice_subscription.charges_from_datetime).to match_datetime("2024-02-01T00:00:00Z")
+      expect(invoice_subscription.charges_to_datetime).to match_datetime("2024-02-29T23:59:59Z")
+      expect(invoice_subscription.fixed_charges_from_datetime).to match_datetime("2024-02-01T00:00:00Z")
+      expect(invoice_subscription.fixed_charges_to_datetime).to match_datetime("2024-02-29T23:59:59Z")
+    end
+  end
 end
