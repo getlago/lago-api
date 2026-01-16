@@ -161,8 +161,7 @@ module Wallets
     def update_metadata!
       return unless params.key?(:metadata)
 
-      value = params[:metadata]&.then { |m| m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m.to_h }
-      Metadata::UpdateItemService.call!(owner: wallet, value:, partial: partial_metadata.present?)
+      Metadata::UpdateItemService.call!(owner: wallet, value: params[:metadata], partial: partial_metadata.present?)
     end
   end
 end

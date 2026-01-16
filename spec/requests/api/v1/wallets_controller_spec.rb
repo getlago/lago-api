@@ -482,6 +482,31 @@ RSpec.describe Api::V1::WalletsController do
         end
       end
     end
+
+    context "with wallet metadata" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          metadata: {"meta_key_1" => "meta_value_1", "meta_key_2" => "meta_value_2"}
+        }
+      end
+
+      it "creates a wallet with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to be_present
+        expect(json[:wallet][:metadata]).to eq(
+          {
+            meta_key_1: "meta_value_1",
+            meta_key_2: "meta_value_2"
+          }
+        )
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
@@ -864,6 +889,28 @@ RSpec.describe Api::V1::WalletsController do
             end
           end
         end
+      end
+    end
+
+    context "with wallet metadata" do
+      let(:update_params) do
+        {
+          name: "wallet1",
+          metadata: {"meta_key_1" => "updated_meta_value_1", "meta_key_3" => "meta_value_3"}
+        }
+      end
+
+      it "updates a wallet with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:metadata]).to eq(
+          {
+            meta_key_1: "updated_meta_value_1",
+            meta_key_3: "meta_value_3"
+          }
+        )
       end
     end
   end

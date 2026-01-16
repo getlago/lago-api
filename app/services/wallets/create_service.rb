@@ -176,10 +176,11 @@ module Wallets
     end
 
     def create_metadata(wallet, metadata_value)
-      wallet.create_metadata!(
-        organization_id: wallet.organization_id,
-        value: metadata_value
-      )
+      Metadata::UpdateItemService.new(
+        owner: wallet,
+        value: metadata_value,
+        partial: false
+      ).call
     end
   end
 end
