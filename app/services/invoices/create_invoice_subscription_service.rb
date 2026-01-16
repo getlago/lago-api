@@ -81,17 +81,17 @@ module Invoices
     end
 
     def calculate_boundaries(subscription)
-      ds = date_service(subscription)
+      date_service = date_service(subscription)
 
       BillingPeriodBoundaries.new(
-        from_datetime: ds.from_datetime,
-        to_datetime: ds.to_datetime,
-        charges_from_datetime: ds.charges_from_datetime,
-        charges_to_datetime: ds.charges_to_datetime,
-        charges_duration: ds.charges_duration_in_days,
-        fixed_charges_from_datetime: ds.fixed_charges_from_datetime,
-        fixed_charges_to_datetime: ds.fixed_charges_to_datetime,
-        fixed_charges_duration: ds.fixed_charges_duration_in_days,
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime,
+        charges_duration: date_service.charges_duration_in_days,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
+        fixed_charges_duration: date_service.fixed_charges_duration_in_days,
         timestamp: datetime
       )
     end
@@ -124,18 +124,18 @@ module Invoices
       return boundaries unless (datetime - dates_service.charges_to_datetime) < 1.day
 
       # We should calculate boundaries as if subscription was not terminated
-      ds = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
+      dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
 
       previous_period_boundaries = BillingPeriodBoundaries.new(
-        from_datetime: ds.from_datetime,
-        to_datetime: ds.to_datetime,
-        charges_from_datetime: ds.charges_from_datetime,
-        charges_to_datetime: ds.charges_to_datetime,
-        fixed_charges_from_datetime: ds.fixed_charges_from_datetime,
-        fixed_charges_to_datetime: ds.fixed_charges_to_datetime,
+        from_datetime: dates_service.from_datetime,
+        to_datetime: dates_service.to_datetime,
+        charges_from_datetime: dates_service.charges_from_datetime,
+        charges_to_datetime: dates_service.charges_to_datetime,
+        fixed_charges_from_datetime: dates_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: dates_service.fixed_charges_to_datetime,
         timestamp: datetime,
-        charges_duration: ds.charges_duration_in_days,
-        fixed_charges_duration: ds.fixed_charges_duration_in_days
+        charges_duration: dates_service.charges_duration_in_days,
+        fixed_charges_duration: dates_service.fixed_charges_duration_in_days
       )
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
