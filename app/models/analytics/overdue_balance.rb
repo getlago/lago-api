@@ -59,11 +59,21 @@ module Analytics
             SELECT
               DATE_TRUNC('month', payment_due_date) AS month,
               i.currency,
-              COALESCE(SUM(total_amount_cents - total_paid_amount_cents), 0) AS total_amount_cents,
+              COALESCE(SUM(
+                i.total_amount_cents -
+                i.total_paid_amount_cents -
+                COALESCE(cn.offset_amount_cents_sum, 0)
+               ), 0) AS total_amount_cents,
               array_agg(DISTINCT i.id) AS ids
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
             LEFT JOIN billing_entities be ON i.billing_entity_id = be.id
+            LEFT JOIN (
+              SELECT invoice_id, SUM(offset_amount_cents) AS offset_amount_cents_sum
+              FROM credit_notes
+              WHERE status = 1
+              GROUP BY invoice_id
+            ) cn ON cn.invoice_id = i.id
             WHERE i.organization_id = :organization_id
             AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE

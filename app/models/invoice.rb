@@ -278,8 +278,16 @@ class Invoice < ApplicationRecord
     }
   end
 
+  def offset_amount_cents
+    credit_notes.finalized.sum(:offset_amount_cents)
+  end
+
   def total_due_amount_cents
-    total_amount_cents - total_paid_amount_cents
+    total_amount_cents - total_paid_amount_cents - offset_amount_cents
+  end
+
+  def total_settled_amount_cents
+    total_paid_amount_cents + offset_amount_cents
   end
 
   # amount cents onto which we can issue a credit note
@@ -311,6 +319,14 @@ class Invoice < ApplicationRecord
   def creditable_amount_cents
     return 0 if credit?
     available_to_credit_amount_cents
+  end
+
+  def offsettable_amount_cents
+    if credit? && payment_pending?
+      return total_amount_cents
+    end
+
+    [total_due_amount_cents, creditable_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as refund

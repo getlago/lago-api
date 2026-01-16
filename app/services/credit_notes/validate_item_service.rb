@@ -37,8 +37,12 @@ module CreditNotes
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
+    def offset_amount_cents
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:offset_amount_cents)
+    end
+
     def invoice_credit_note_total_amount_cents
-      credited_invoice_amount_cents + refunded_invoice_amount_cents
+      credited_invoice_amount_cents + refunded_invoice_amount_cents + offset_amount_cents
     end
 
     def total_item_amount_cents
@@ -63,6 +67,7 @@ module CreditNotes
     # NOTE: Check if item amount is less than or equal to fee remaining creditable amount
     def valid_individual_amount?
       return true if item.amount_cents <= fee.creditable_amount_cents
+      return true if cancelling_prepaid_credits?
 
       if invoice.credit? && item.amount_cents > invoice.associated_active_wallet&.balance_cents
         add_error(field: :amount_cents, error_code: "higher_than_wallet_balance")
@@ -76,6 +81,14 @@ module CreditNotes
       return true if total_item_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
       add_error(field: :amount_cents, error_code: "higher_than_remaining_invoice_amount")
+    end
+
+    def cancelling_prepaid_credits?
+      invoice.credit? &&
+        invoice.associated_active_wallet.present? &&
+        invoice.credit_notes.any? do |cn|
+          cn.offset_amount_cents == invoice.total_amount_cents
+        end
     end
   end
 end
