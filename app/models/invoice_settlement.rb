@@ -3,7 +3,10 @@
 class InvoiceSettlement < ApplicationRecord
   include Currencies
 
-  SETTLEMENT_TYPES = %i[payment credit_note].freeze
+  SETTLEMENT_TYPES = {
+    payment: "payment",
+    credit_note: "credit_note"
+  }.freeze
 
   belongs_to :organization
   belongs_to :billing_entity
@@ -18,6 +21,28 @@ class InvoiceSettlement < ApplicationRecord
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_currency, inclusion: {in: currency_list}
   validates :settlement_type, presence: true
+  validate :validate_source_presence
+
+  private
+
+  def validate_source_presence
+    case settlement_type
+    when "payment"
+      if source_payment_id.blank?
+        errors.add(:source_payment_id, "must be present when settlement type is payment")
+      end
+      if source_credit_note_id.present?
+        errors.add(:source_credit_note_id, "must be blank when settlement type is payment")
+      end
+    when "credit_note"
+      if source_credit_note_id.blank?
+        errors.add(:source_credit_note_id, "must be present when settlement type is credit_note")
+      end
+      if source_payment_id.present?
+        errors.add(:source_payment_id, "must be blank when settlement type is credit_note")
+      end
+    end
+  end
 end
 
 # == Schema Information

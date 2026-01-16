@@ -29,5 +29,39 @@ RSpec.describe InvoiceSettlement do
       expect(subject).to validate_inclusion_of(:amount_currency).in_array(described_class.currency_list)
       expect(subject).to validate_presence_of(:settlement_type)
     end
+
+    describe "source presence validation" do
+      context "when settlement_type is payment" do
+        subject(:invoice_settlement) { build(:invoice_settlement, settlement_type: :payment) }
+
+        it "requires source_payment_id" do
+          invoice_settlement.source_payment_id = nil
+          expect(invoice_settlement).not_to be_valid
+          expect(invoice_settlement.errors[:source_payment_id]).to include("must be present when settlement type is payment")
+        end
+
+        it "does not allow source_credit_note_id" do
+          invoice_settlement.source_credit_note_id = create(:credit_note).id
+          expect(invoice_settlement).not_to be_valid
+          expect(invoice_settlement.errors[:source_credit_note_id]).to include("must be blank when settlement type is payment")
+        end
+      end
+
+      context "when settlement_type is credit_note" do
+        subject(:invoice_settlement) { build(:invoice_settlement, settlement_type: :credit_note) }
+
+        it "requires source_credit_note_id" do
+          invoice_settlement.source_credit_note_id = nil
+          expect(invoice_settlement).not_to be_valid
+          expect(invoice_settlement.errors[:source_credit_note_id]).to include("must be present when settlement type is credit_note")
+        end
+
+        it "does not allow source_payment_id" do
+          invoice_settlement.source_payment_id = create(:payment).id
+          expect(invoice_settlement).not_to be_valid
+          expect(invoice_settlement.errors[:source_payment_id]).to include("must be blank when settlement type is credit_note")
+        end
+      end
+    end
   end
 end
