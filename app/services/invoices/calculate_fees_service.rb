@@ -101,6 +101,8 @@ module Invoices
 
     def charge_boundaries_valid?(boundaries)
       # TODO: Investigate why invalid boundaries are even possible
+      return false if boundaries.charges_from_datetime.blank? || boundaries.charges_to_datetime.blank?
+
       boundaries.charges_from_datetime < boundaries.charges_to_datetime
     end
 
