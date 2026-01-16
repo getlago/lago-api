@@ -42,8 +42,7 @@ module LagoApi
       "--if-exists",
       "--no-comments",
       "--no-publications",
-      "--exclude-table=enriched_events_p*",
-      "--exclude-table=enriched_events_default",
+      "--exclude-table=enriched_events_p*"
     ]
 
     config.i18n.load_path += Dir[Rails.root.join("config/locales/**/*.{rb,yml}")]

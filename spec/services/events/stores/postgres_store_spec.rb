@@ -255,7 +255,7 @@ RSpec.describe Events::Stores::PostgresStore do
           external_subscription_id: subscription.external_id,
           external_customer_id: customer.external_id,
           code:,
-          timestamp: boundaries[:from_datetime] + 12.day,
+          timestamp: boundaries[:from_datetime] + 12.days,
           properties: {billable_metric.field_name => 12}
         )
       end
