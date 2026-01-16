@@ -177,6 +177,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_5a4b906a16;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
@@ -203,6 +204,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_3d568ff9de;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_3cfe1d68d7;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_3c7c3920c0;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_3b7dad8e9c;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
@@ -218,6 +220,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_32600e5a72;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_310fcb3585;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_3092f5f2e0;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_2ffeff5323;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd7ee65e6;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2fb2147151;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db3a4c;
@@ -231,6 +234,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_268c288aaa;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_257af22645;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_2561c00887;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_2539663124;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_25267b0e17;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_25232a0ec3;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
@@ -271,6 +275,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1c
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_04388258ff;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
@@ -456,6 +461,11 @@ DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_boundaries;
+DROP INDEX IF EXISTS public.index_invoice_settlements_on_target_invoice_id;
+DROP INDEX IF EXISTS public.index_invoice_settlements_on_source_payment_id;
+DROP INDEX IF EXISTS public.index_invoice_settlements_on_source_credit_note_id;
+DROP INDEX IF EXISTS public.index_invoice_settlements_on_organization_id;
+DROP INDEX IF EXISTS public.index_invoice_settlements_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id_and_key;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id;
@@ -798,6 +808,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoi
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS invoices_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS invoices_payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS invoice_subscriptions_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS invoice_settlements_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS invoice_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS invoice_custom_section_selections_pkey;
@@ -898,6 +909,7 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
+DROP TABLE IF EXISTS public.invoice_settlements;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -4008,6 +4020,25 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
+-- Name: invoice_settlements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_settlements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid NOT NULL,
+    target_invoice_id uuid NOT NULL,
+    settlement_type character varying NOT NULL,
+    source_payment_id uuid,
+    source_credit_note_id uuid,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -5093,6 +5124,14 @@ ALTER TABLE ONLY public.invoice_custom_sections
 
 ALTER TABLE ONLY public.invoice_metadata
     ADD CONSTRAINT invoice_metadata_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: invoice_settlements invoice_settlements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT invoice_settlements_pkey PRIMARY KEY (id);
 
 
 --
@@ -7534,6 +7573,41 @@ CREATE INDEX index_invoice_metadata_on_organization_id ON public.invoice_metadat
 
 
 --
+-- Name: index_invoice_settlements_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_settlements_on_billing_entity_id ON public.invoice_settlements USING btree (billing_entity_id);
+
+
+--
+-- Name: index_invoice_settlements_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_settlements_on_organization_id ON public.invoice_settlements USING btree (organization_id);
+
+
+--
+-- Name: index_invoice_settlements_on_source_credit_note_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_settlements_on_source_credit_note_id ON public.invoice_settlements USING btree (source_credit_note_id);
+
+
+--
+-- Name: index_invoice_settlements_on_source_payment_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_settlements_on_source_payment_id ON public.invoice_settlements USING btree (source_payment_id);
+
+
+--
+-- Name: index_invoice_settlements_on_target_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_settlements_on_target_invoice_id ON public.invoice_settlements USING btree (target_invoice_id);
+
+
+--
 -- Name: index_invoice_subscriptions_boundaries; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8712,6 +8786,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: invoice_settlements fk_rails_04388258ff; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT fk_rails_04388258ff FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: subscription_fixed_charge_units_overrides fk_rails_0480ef4ad3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9032,6 +9114,14 @@ ALTER TABLE ONLY public.refunds
 
 
 --
+-- Name: invoice_settlements fk_rails_2539663124; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT fk_rails_2539663124 FOREIGN KEY (source_payment_id) REFERENCES public.payments(id);
+
+
+--
 -- Name: adjusted_fees fk_rails_2561c00887; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9133,6 +9223,14 @@ ALTER TABLE ONLY public.payment_requests
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_2fd7ee65e6 FOREIGN KEY (progressive_billing_invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: invoice_settlements fk_rails_2ffeff5323; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT fk_rails_2ffeff5323 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --
@@ -9253,6 +9351,14 @@ ALTER TABLE ONLY public.payments
 
 ALTER TABLE ONLY public.group_properties
     ADD CONSTRAINT fk_rails_3acf9e789c FOREIGN KEY (charge_id) REFERENCES public.charges(id) ON DELETE CASCADE;
+
+
+--
+-- Name: invoice_settlements fk_rails_3b7dad8e9c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT fk_rails_3b7dad8e9c FOREIGN KEY (target_invoice_id) REFERENCES public.invoices(id);
 
 
 --
@@ -9461,6 +9567,14 @@ ALTER TABLE ONLY public.customers
 
 ALTER TABLE ONLY public.data_exports
     ADD CONSTRAINT fk_rails_5a43da571b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: invoice_settlements fk_rails_5a4b906a16; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_settlements
+    ADD CONSTRAINT fk_rails_5a4b906a16 FOREIGN KEY (source_credit_note_id) REFERENCES public.credit_notes(id);
 
 
 --
@@ -10814,6 +10928,7 @@ ALTER TABLE ONLY public.wallet_transactions_invoice_custom_sections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260116110125'),
 ('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
