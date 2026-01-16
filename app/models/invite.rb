@@ -38,7 +38,7 @@ end
 #  accepted_at     :datetime
 #  email           :string           not null
 #  revoked_at      :datetime
-#  role            :integer          default("admin"), not null
+#  role            :integer
 #  roles           :string           default([]), not null, is an Array
 #  status          :integer          default("pending"), not null
 #  token           :string           not null

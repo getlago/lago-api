@@ -4007,7 +4007,7 @@ CREATE TABLE public.invites (
     revoked_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    role integer DEFAULT 0 NOT NULL,
+    role integer,
     roles character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
@@ -10996,6 +10996,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251231162838'),
 ('20251226145247'),
 ('20251222163416'),
+('20251222151519'),
 ('20251222151015'),
 ('20251221174946'),
 ('20251221174938'),
