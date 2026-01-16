@@ -39,7 +39,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           invoice_custom_section_codes: [section_1.code]
         },
         payment_method: {
-          payment_method_id: payment_method.id,
+          payment_method_id: payment_method&.id,
           payment_method_type: "provider"
         },
         plan_overrides: {
@@ -353,6 +353,7 @@ RSpec.describe Api::V1::SubscriptionsController do
         context "when customer has no payment method" do
           let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
           let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
+          let(:payment_method) { nil }
 
           context "when customer has a default payment method on Stripe" do
             it do
