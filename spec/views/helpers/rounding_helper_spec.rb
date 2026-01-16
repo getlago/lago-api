@@ -33,5 +33,9 @@ RSpec.describe RoundingHelper do
     it "handles negative numbers correctly" do
       expect(helper.round_decimal_part(-123.456789123)).to eq("-123.456789")
     end
+
+    it "handles zero correctly" do
+      expect(helper.round_decimal_part(0)).to eq("0")
+    end
   end
 end
