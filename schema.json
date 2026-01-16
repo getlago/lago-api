@@ -40764,6 +40764,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentMethodId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProvider",
               "description": null,
               "args": [],
@@ -41721,6 +41733,18 @@
                     "ofType": null
                   }
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentMethod",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentMethodReferenceInput",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
