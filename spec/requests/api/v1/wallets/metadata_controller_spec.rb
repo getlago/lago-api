@@ -75,12 +75,12 @@ RSpec.describe Api::V1::Wallets::MetadataController do
     context "when metadata param is not provided" do
       subject { post_with_token(organization, "/api/v1/wallets/#{wallet_id}/metadata", {}) }
 
-      it "creates metadata with empty hash" do
+      it "does not create empty metadata" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:metadata]).to eq({})
-        expect(wallet.reload.metadata.value).to eq({})
+        expect(json[:metadata]).to eq(nil)
+        expect(wallet.reload.metadata).to eq(nil)
       end
     end
   end
@@ -159,6 +159,18 @@ RSpec.describe Api::V1::Wallets::MetadataController do
         expect(response).to have_http_status(:success)
         expect(json[:metadata]).to be_nil
         expect(wallet.reload.metadata).to be_nil
+      end
+
+      context "when metadata existed before" do
+        before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value"}) }
+
+        it "keeps existing metadata unchanged" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:metadata]).to eq(old: "value")
+          expect(wallet.reload.metadata.value).to eq("old" => "value")
+        end
       end
     end
   end

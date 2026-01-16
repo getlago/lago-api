@@ -74,12 +74,12 @@ RSpec.describe Api::V1::Plans::MetadataController do
     context "when metadata param is not provided" do
       subject { post_with_token(organization, "/api/v1/plans/#{plan_code}/metadata", {}) }
 
-      it "creates metadata with empty hash" do
+      it "does not create metadata" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:metadata]).to eq({})
-        expect(plan.reload.metadata.value).to eq({})
+        expect(json[:metadata]).to eq(nil)
+        expect(plan.reload.metadata).to eq(nil)
       end
     end
   end

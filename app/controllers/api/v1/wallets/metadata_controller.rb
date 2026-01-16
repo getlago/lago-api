@@ -49,7 +49,7 @@ module Api
         private
 
         def metadata_params
-          {metadata: params.fetch(:metadata, {}).permit!.to_h}
+          params.permit(metadata: {}).to_h
         end
 
         def render_metadata
