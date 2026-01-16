@@ -71,6 +71,7 @@ module Events
     end
 
     def create_enriched_events
+      return unless organization.feature_flag_enabled?(:postgres_enriched_events)
       return if active_subscriptions.blank?
       return nil unless billable_metric
 

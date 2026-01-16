@@ -1,3 +1,6 @@
 multiple_payment_methods:
   description: "Allow multiple payment methods per customer"
-  owners: ["@lovrocolic",  "@mariohd"]
+  owners: ["@lovrocolic", "@mariohd"]
+postgres_enriched_events:
+  description: "Turn on events pre-enrichement for organizations using the PG event store"
+  owners: ["@vpochet"]

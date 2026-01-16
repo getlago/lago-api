@@ -48,8 +48,18 @@ RSpec.describe Events::PostProcessService do
         .with(subscription:, organization:)
     end
 
-    it "creates an enriched event" do
-      expect { process_service.call }.to change(EnrichedEvent, :count).by(1)
+    context "with events enrichment" do
+      it "does not create an enriched event" do
+        expect { process_service.call }.not_to change(EnrichedEvent, :count)
+      end
+
+      context "when the feature flag is enabled" do
+        let(:organization) { create(:organization, feature_flags: [:postgres_enriched_events]) }
+
+        it "creates enriched event" do
+          expect { process_service.call }.to change(EnrichedEvent, :count).by(1)
+        end
+      end
     end
 
     context "when event matches an pay_in_advance charge" do
