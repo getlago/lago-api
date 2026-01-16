@@ -11,14 +11,16 @@ module Mutations
       graphql_name "CreateInvite"
       description "Creates a new Invite"
 
-      input_object_class Types::Invites::CreateInput
+      argument :email, String, required: true
+      argument :roles, [String], required: true
+
       type Types::Invites::Object
 
       def resolve(**args)
         result = ::Invites::CreateService.call(
           current_organization:,
           email: args[:email],
-          roles: args[:roles].presence || [args[:role]]
+          roles: args[:roles]
         )
 
         result.success? ? result.invite : result_error(result)

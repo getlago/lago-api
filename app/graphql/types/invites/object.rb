@@ -11,17 +11,12 @@ module Types
       field :id, ID, null: false
 
       field :email, String, null: false
-      field :role, Types::Memberships::RoleEnum, deprecation_reason: "Use `roles` field instead"
       field :roles, [String], null: false
       field :status, Types::Invites::StatusTypeEnum, null: false
       field :token, String, null: false
 
       field :accepted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :revoked_at, GraphQL::Types::ISO8601DateTime, null: true
-
-      def role
-        (object.roles.map(&:downcase) & %w[admin finance manager]).first
-      end
     end
   end
 end
