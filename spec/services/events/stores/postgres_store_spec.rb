@@ -243,5 +243,46 @@ RSpec.describe Events::Stores::PostgresStore do
         expect(group.first["operation_type"]).to eq("add")
       end
     end
+
+    describe "#distinct_charges_and_filters" do
+      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      let(:event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          external_customer_id: customer.external_id,
+          code:,
+          timestamp: boundaries[:from_datetime] + 12.day,
+          properties: {billable_metric.field_name => 12}
+        )
+      end
+
+      before do
+        create(
+          :enriched_event,
+          subscription:,
+          event:,
+          charge:,
+          charge_filter_id: charge_filter&.id,
+          value: 12,
+          decimal_value: 12.0
+        )
+      end
+
+      it "returns distinct charges and filters" do
+        expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
+      end
+
+      context "when charge_filter is nil" do
+        let(:charge_filter) { nil }
+
+        it "returns the distinct event codes" do
+          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, ""]])
+        end
+      end
+    end
   end
 end
