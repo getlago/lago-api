@@ -6,10 +6,11 @@ RSpec.describe Payments::SetPaymentMethodDataService do
   subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
   let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
+  let(:organization) { create(:organization) }
 
   describe "#call" do
     context "with Stripe" do
-      let(:payment) { create(:payment, payment_provider: create(:stripe_provider)) }
+      let(:payment) { create(:payment, payment_provider: create(:stripe_provider), organization:) }
 
       it "updates the payment method data" do
         stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
@@ -24,6 +25,33 @@ RSpec.describe Payments::SetPaymentMethodDataService do
           "brand" => "visa",
           "last4" => "4242"
         })
+        expect(result.payment&.payment_method&.details).to be_nil
+      end
+
+      context "with multiple payment methods enabled" do
+        let(:organization) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
+        let(:payment_method) { create(:payment_method, organization:) }
+        let(:payment) { create(:payment, payment_provider: create(:stripe_provider), organization:, payment_method:) }
+
+        it "updates payment data and the payment method details" do
+          stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
+            status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json")
+          )
+
+          result = service.call
+
+          expect(result.payment.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+          expect(result.payment.provider_payment_method_data).to eq({
+            "type" => "card",
+            "brand" => "visa",
+            "last4" => "4242"
+          })
+          expect(result.payment.payment_method.reload.details).to eq({
+            "type" => "card",
+            "brand" => "visa",
+            "last4" => "4242"
+          })
+        end
       end
 
       context "when the payment method id is already set" do

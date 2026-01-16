@@ -108,6 +108,32 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       expect(Stripe::PaymentIntent).to have_received(:create)
     end
 
+    context "when multiple payment methods are enabled" do
+      let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
+
+      before do
+        payment.update!(payment_method: default_payment_method)
+        organization.update!(feature_flags: ["multiple_payment_methods"])
+      end
+
+      it "creates a stripe payment and a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payment.id).to be_present
+        expect(result.payment.payable).to eq(invoice)
+        expect(result.payment.payment_provider).to eq(stripe_payment_provider)
+        expect(result.payment.payment_provider_customer).to eq(stripe_customer)
+        expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
+        expect(result.payment.amount_currency).to eq(invoice.currency)
+        expect(result.payment.status).to eq("succeeded")
+        expect(result.payment.payable_payment_status).to eq("succeeded")
+
+        expect(Stripe::PaymentIntent).to have_received(:create)
+      end
+    end
+
     context "when customer does not have a payment method" do
       let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider) }
 
