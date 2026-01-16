@@ -108,7 +108,7 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
 
         it "is not valid" do
           expect(mapping).not_to be_valid
-          expect(mapping.errors[:billing_entity]).to include("is invalid")
+          expect(mapping.errors[:billing_entity]).to include("value_is_invalid")
         end
       end
 

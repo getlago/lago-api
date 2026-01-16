@@ -32,7 +32,7 @@ RSpec.describe Mutations::Roles::Create do
   let(:code) { "custom_role" }
   let(:name) { "Custom Role" }
   let(:description) { "A custom role" }
-  let(:role_permissions) { %w[customers:view customers:create] }
+  let(:role_permissions) { %w[customers_view customers_create] }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -53,8 +53,21 @@ RSpec.describe Mutations::Roles::Create do
       expect(role_response).to include(
         "name" => name,
         "description" => description,
-        "permissions" => role_permissions.map { |p| p.tr(":", "_") }
+        "permissions" => role_permissions
       )
+    end
+
+    context "when permissions are sent with underscores" do
+      let(:role_permissions) { %w[customers_view customers_create] }
+
+      it "stores permissions with colons and returns them with underscores" do
+        role_response = result["data"]["createRole"]
+
+        expect(role_response["permissions"]).to match_array(%w[customers_view customers_create])
+
+        created_role = Role.find(role_response["id"])
+        expect(created_role.permissions).to match_array(%w[customers:view customers:create])
+      end
     end
   end
 
@@ -71,6 +84,37 @@ RSpec.describe Mutations::Roles::Create do
   context "without premium license" do
     it "returns an error" do
       expect_graphql_error(result:, message: "feature_unavailable")
+    end
+  end
+
+  describe "with admin role permissions" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: membership.permissions_hash,
+        query:,
+        variables: {input: {code:, name:, description:, permissions: role_permissions}}
+      )
+    end
+
+    let!(:membership) { create(:membership, organization:, roles: [:admin]) }
+
+    context "with premium organization and custom_roles integration" do
+      around { |test| lago_premium!(&test) }
+
+      before { organization.update!(premium_integrations: ["custom_roles"]) }
+
+      it "allows admin to create a role" do
+        expect { result }.to change(Role, :count).by(1)
+      end
+    end
+
+    context "without premium license" do
+      it "returns feature_unavailable error" do
+        expect_graphql_error(result:, message: "feature_unavailable")
+      end
     end
   end
 end

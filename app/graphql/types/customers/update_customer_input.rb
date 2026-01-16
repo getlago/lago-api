@@ -42,9 +42,9 @@ module Types
       argument :integration_customers, [Types::IntegrationCustomers::Input], required: false, permission: "customers:update"
 
       # Customer settings
-      argument :invoice_grace_period, Integer, required: false, permissions: %w[customer_settings:update:grace_period customers:update]
-      argument :net_payment_term, Integer, required: false, permissions: %w[customer_settings:update:payment_terms customers:update]
-      argument :tax_codes, [String], required: false, permissions: %w[customer_settings:update:tax_rates customers:update]
+      argument :invoice_grace_period, Integer, required: false, permissions: %w[customers:update]
+      argument :net_payment_term, Integer, required: false, permissions: %w[customers:update]
+      argument :tax_codes, [String], required: false, permissions: %w[customers:update]
 
       argument :billing_configuration, Types::Customers::BillingConfigurationInput, required: false
       argument :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, required: false

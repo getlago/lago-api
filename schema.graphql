@@ -2977,7 +2977,8 @@ input CreateInviteInput {
   """
   clientMutationId: String
   email: String!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use roles argument instead")
+  roles: [String!] = []
 }
 
 """
@@ -3171,7 +3172,7 @@ input CreateRoleInput {
   code: String!
   description: String
   name: String!
-  permissions: [String!]!
+  permissions: [PermissionEnum!]!
 }
 
 """
@@ -6160,13 +6161,14 @@ enum IntegrationTypeEnum {
 }
 
 type Invite {
-  acceptedAt: ISO8601DateTime!
+  acceptedAt: ISO8601DateTime
   email: String!
   id: ID!
   organization: Organization!
   recipient: Membership!
-  revokedAt: ISO8601DateTime!
-  role: MembershipRole!
+  revokedAt: ISO8601DateTime
+  role: MembershipRole @deprecated(reason: "Use `roles` field instead")
+  roles: [String!]!
   status: InviteStatusTypeEnum!
   token: String!
 }
@@ -6523,9 +6525,9 @@ type Membership {
   id: ID!
   organization: Organization!
   permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
-  revokedAt: ISO8601DateTime!
-  role: MembershipRole! @deprecated(reason: "Use roleDetails instead")
-  roles: [Role!]!
+  revokedAt: ISO8601DateTime
+  role: MembershipRole @deprecated(reason: "Use roles instead")
+  roles: [String!]!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
   user: User!
@@ -8638,13 +8640,6 @@ enum PermissionEnum {
   credit_notes_update
   credit_notes_view
   credit_notes_void
-  customer_settings_update_grace_period
-  customer_settings_update_issuing_date_adjustment
-  customer_settings_update_issuing_date_anchor
-  customer_settings_update_lang
-  customer_settings_update_payment_terms
-  customer_settings_update_tax_rates
-  customer_settings_view
   customers_create
   customers_delete
   customers_update
@@ -8766,13 +8761,6 @@ type Permissions {
   creditNotesUpdate: Boolean!
   creditNotesView: Boolean!
   creditNotesVoid: Boolean!
-  customerSettingsUpdateGracePeriod: Boolean!
-  customerSettingsUpdateIssuingDateAdjustment: Boolean!
-  customerSettingsUpdateIssuingDateAnchor: Boolean!
-  customerSettingsUpdateLang: Boolean!
-  customerSettingsUpdatePaymentTerms: Boolean!
-  customerSettingsUpdateTaxRates: Boolean!
-  customerSettingsView: Boolean!
   customersCreate: Boolean!
   customersDelete: Boolean!
   customersUpdate: Boolean!
@@ -10292,6 +10280,7 @@ input RevokeMembershipInput {
 
 type Role {
   admin: Boolean!
+  code: String!
   createdAt: ISO8601DateTime!
   description: String
   id: ID!
@@ -11894,7 +11883,8 @@ input UpdateInviteInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use `roles` instead")
+  roles: [String!]
 }
 
 """
@@ -11935,7 +11925,8 @@ input UpdateMembershipInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole!
+  role: MembershipRole @deprecated(reason: "Use `roles` instead")
+  roles: [String!]
 }
 
 """
@@ -12113,7 +12104,7 @@ input UpdateRoleInput {
   description: String
   id: ID!
   name: String
-  permissions: [String!]
+  permissions: [PermissionEnum!]
 }
 
 """

@@ -11,7 +11,7 @@ module Permission
   private
 
   def yaml_to_hash(filename)
-    h = YAML.parse_file(Rails.root.join("app/config", filename)).to_ruby
+    h = YAML.parse_file(Rails.root.join("config", filename)).to_ruby
     DottedHash.new(h, separator: ":").transform_values(&:to_a)
   end
 

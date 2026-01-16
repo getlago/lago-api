@@ -98,15 +98,7 @@ RSpec.describe Mutations::Customers::Update do
   end
 
   it_behaves_like "requires current user"
-  it_behaves_like "requires permission", %w[
-    customers:update
-    customer_settings:update:tax_rates
-    customer_settings:update:payment_terms
-    customer_settings:update:grace_period
-    customer_settings:update:lang
-    customer_settings:update:issuing_date_anchor
-    customer_settings:update:issuing_date_adjustment
-  ]
+  it_behaves_like "requires permission", %w[customers:update]
 
   it "updates a customer" do
     stripe_provider
@@ -179,18 +171,13 @@ RSpec.describe Mutations::Customers::Update do
     end
   end
 
-  context "when user can only update customer settings" do
+  context "when user can update customers" do
     around { |test| lago_premium!(&test) }
 
     it "updates a customer" do
       result = execute_graphql(
         current_user: membership.user,
-        permissions: %w[
-          customer_settings:update:tax_rates
-          customer_settings:update:payment_terms
-          customer_settings:update:grace_period
-          customer_settings:update:lang
-        ],
+        permissions: %w[customers:update],
         query: mutation,
         variables: {
           input: input.merge({
@@ -209,16 +196,14 @@ RSpec.describe Mutations::Customers::Update do
         expect(result_data["netPaymentTerm"]).to eq(3)
         expect(result_data["invoiceGracePeriod"]).to eq 2
         expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
-
-        # What should not have changed
-        expect(result_data["name"]).not_to eq("Updated customer")
-        expect(result_data["taxIdentificationNumber"]).to be_nil
-        expect(result_data["externalId"]).not_to eq(external_id)
-        expect(result_data["paymentProvider"]).to be_nil
-        expect(result_data["currency"]).to eq("EUR")
-        expect(result_data["timezone"]).to be_nil
-        expect(result_data["providerCustomer"]).to be_nil
-        expect(result_data["metadata"]).to be_empty
+        expect(result_data["name"]).to eq("Updated customer")
+        expect(result_data["taxIdentificationNumber"]).to eq("2246")
+        expect(result_data["externalId"]).to eq(external_id)
+        expect(result_data["paymentProvider"]).to eq("stripe")
+        expect(result_data["currency"]).to eq("USD")
+        expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
+        expect(result_data["providerCustomer"]).to be_present
+        expect(result_data["metadata"]).to be_present
       end
     end
   end

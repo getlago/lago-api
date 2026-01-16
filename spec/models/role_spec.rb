@@ -84,6 +84,7 @@ RSpec.describe Role do
         %w[UPPER Code-with-dash code.with.dot code\ with\ space].each do |code|
           role.code = code
           expect(role).not_to be_valid
+          expect(role.errors[:code]).to include("value_is_invalid")
         end
       end
 

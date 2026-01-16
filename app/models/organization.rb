@@ -35,8 +35,8 @@ class Organization < ApplicationRecord
   has_many :admins_memberships, -> { active.admins }, class_name: "Membership"
   has_many :admins, through: :admins_memberships, source: :user
   # New way to access admin users
-  has_many :membership_roles, through: :memberships
-  has_many :admin_membership_roles, -> { admins }, class_name: "MembershipRole"
+  has_many :membership_roles, through: :active_memberships
+  has_many :admin_membership_roles, -> { admins }, through: :active_memberships, source: :membership_roles
   has_many :admin_memberships, through: :admin_membership_roles, source: :membership
   has_many :admin_users, through: :admin_memberships, source: :user
 

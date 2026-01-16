@@ -59,6 +59,71 @@ RSpec.describe Resolvers::RoleResolver do
         "admin" => true
       )
     end
+
+    it "returns all permissions for admin role" do
+      result = execute_graphql(
+        current_user:,
+        current_organization:,
+        permissions:,
+        query:,
+        variables: {roleId: admin_role.id}
+      )
+
+      all_permissions = Permission.permissions_hash.each_key.map { |p| p.tr(":", "_") }
+      expect(result["data"]["role"]["permissions"]).to match_array(all_permissions)
+    end
+  end
+
+  context "with finance role" do
+    let(:finance_role) { create(:role, :finance) }
+
+    it "returns finance-specific permissions" do
+      result = execute_graphql(
+        current_user:,
+        current_organization:,
+        permissions:,
+        query:,
+        variables: {roleId: finance_role.id}
+      )
+
+      finance_permissions = Permission.permissions_hash("finance").filter_map { |k, v| k.tr(":", "_") if v }
+      expect(result["data"]["role"]["permissions"]).to match_array(finance_permissions)
+    end
+  end
+
+  context "with manager role" do
+    let(:manager_role) { create(:role, :manager) }
+
+    it "returns manager-specific permissions" do
+      result = execute_graphql(
+        current_user:,
+        current_organization:,
+        permissions:,
+        query:,
+        variables: {roleId: manager_role.id}
+      )
+
+      manager_permissions = Permission.permissions_hash("manager").filter_map { |k, v| k.tr(":", "_") if v }
+      expect(result["data"]["role"]["permissions"]).to match_array(manager_permissions)
+    end
+  end
+
+  context "with custom role having explicit permissions" do
+    let(:custom_role) do
+      create(:role, organization: current_organization, name: "Custom", permissions: %w[addons:view customers:create])
+    end
+
+    it "returns custom role permissions with underscores" do
+      result = execute_graphql(
+        current_user:,
+        current_organization:,
+        permissions:,
+        query:,
+        variables: {roleId: custom_role.id}
+      )
+
+      expect(result["data"]["role"]["permissions"]).to match_array(%w[addons_view customers_create])
+    end
   end
 
   context "when role is not found" do

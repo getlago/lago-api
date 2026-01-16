@@ -12,6 +12,7 @@ en:
         greater_than: value_is_out_of_range
         greater_than_or_equal_to: value_is_out_of_range
         inclusion: value_is_invalid
+        invalid: value_is_invalid
         invalid_aggregation_type_or_charge_model: invalid_aggregation_type_or_charge_model
         invalid_amount: invalid_amount
         invalid_billable_metric_or_charge_model: invalid_billable_metric_or_charge_model

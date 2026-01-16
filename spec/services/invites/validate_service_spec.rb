@@ -12,9 +12,11 @@ RSpec.describe Invites::ValidateService do
     {
       current_organization: organization,
       email: Faker::Internet.email,
-      role: :admin
+      roles: %w[admin]
     }
   end
+
+  before { create(:role, :admin) }
 
   describe "#valid?" do
     it "returns true" do
@@ -28,7 +30,7 @@ RSpec.describe Invites::ValidateService do
         {
           current_organization: organization,
           email: user.email,
-          role: :admin
+          roles: %w[admin]
         }
       end
 
@@ -43,7 +45,7 @@ RSpec.describe Invites::ValidateService do
         {
           current_organization: organization,
           email: user.email,
-          role: :admin
+          roles: %w[admin]
         }
       end
 
@@ -53,18 +55,18 @@ RSpec.describe Invites::ValidateService do
       end
     end
 
-    context "when role is invalid" do
+    context "when roles is invalid" do
       let(:args) do
         {
           current_organization: organization,
           email: Faker::Internet.email,
-          role: "super_admin"
+          roles: %w[super_admin]
         }
       end
 
       it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:role]).to eq(["invalid_role"])
+        expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
     end
   end

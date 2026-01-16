@@ -12,7 +12,7 @@ module Roles
     def call
       return result.not_found_failure!(resource: "role") unless role
       return result.forbidden_failure!(code: "predefined_role") if predefined_role?
-      return result.forbidden_failure!(code: "role_assigned_to_members") if role.membership_roles.kept.exists?
+      return result.forbidden_failure!(code: "role_assigned_to_members") if role.active_memberships.exists?
 
       role.discard!
 

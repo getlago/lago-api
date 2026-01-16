@@ -11,14 +11,13 @@ module Mutations
       graphql_name "UpdateMembership"
       description "Update a membership"
 
-      argument :id, ID, required: true
-      argument :role, Types::Memberships::RoleEnum, required: true
-
+      input_object_class Types::Memberships::UpdateInput
       type Types::MembershipType
 
       def resolve(**args)
         membership = current_organization.memberships.find_by(id: args[:id])
-        result = ::Memberships::UpdateService.call(membership:, params: args)
+        roles = args[:roles].presence || [args[:role]]
+        result = ::Memberships::UpdateService.call(membership:, params: {roles:})
         result.success? ? result.membership : result_error(result)
       end
     end

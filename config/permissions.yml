@@ -86,15 +86,6 @@ customers:
     - manager
   delete:
     - manager
-customer_settings:
-  view:
-  update:
-    tax_rates:
-    payment_terms:
-    grace_period:
-    lang:
-    issuing_date_anchor:
-    issuing_date_adjustment:
 data_api:
   view:
     - finance

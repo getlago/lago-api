@@ -35,5 +35,14 @@ RSpec.describe Sources::MembershipsForRole do
       expect(result[0]).to contain_exactly(membership)
       expect(result[0]).not_to include(other_membership)
     end
+
+    it "does not return revoked memberships" do
+      revoked_membership = create(:membership, :revoked, organization:)
+      create(:membership_role, membership: revoked_membership, role:, organization:)
+
+      result = source.fetch([role.id])
+
+      expect(result[0]).to contain_exactly(membership)
+    end
   end
 end

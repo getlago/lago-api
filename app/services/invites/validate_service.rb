@@ -5,7 +5,7 @@ module Invites
     def valid?
       valid_invite?
       valid_user?
-      valid_role?
+      valid_roles?
 
       if errors?
         result.validation_failure!(errors:)
@@ -33,10 +33,16 @@ module Invites
       add_error(field: :email, error_code: "email_already_used")
     end
 
-    def valid_role?
-      return true if args[:role].present? && Membership::ROLES[args[:role].to_sym].present?
+    def valid_roles?
+      roles = args[:roles]
+      return add_error(field: :roles, error_code: "invalid_role") if roles.blank?
 
-      add_error(field: :role, error_code: "invalid_role")
+      organization_id = args[:current_organization]&.id
+      found = Role.with_code(*roles).with_organization(organization_id).pluck(:code)
+      missed = roles - found
+      return true if missed.empty?
+
+      add_error(field: :roles, error_code: "invalid_role")
     end
   end
 end

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::RegisterUser do
+  before { create(:role, :admin) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: RegisterUserInput!) {
