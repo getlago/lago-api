@@ -8300,6 +8300,7 @@ input OktaLoginInput {
 
 enum OnTerminationCreditNoteEnum {
   credit
+  offset
   refund
   skip
 }
