@@ -15,7 +15,7 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService do
     it "tracks activity" do
       create(:usage_threshold, plan: subscription.plan)
       expect { subject.call }.to change { organization.subscription_activities.count }.by(1)
-      expect { subject.call }.to change { organization.subscription_activities.count }.by(0)
+      expect { subject.call }.not_to change { organization.subscription_activities.count }
     end
   end
 

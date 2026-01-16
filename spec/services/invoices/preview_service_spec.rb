@@ -2047,7 +2047,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           organization.update!(premium_integrations: ["preview"])
         end
 
-        context "with no preferences set on the customer level " do
+        context "with no preferences set on the customer level" do
           let(:billing_entity) do
             create(
               :billing_entity,

@@ -217,18 +217,18 @@ module Invoices
           }
         )
         .find_each do |charge|
-        next if should_not_create_charge_fee?(charge, subscription)
+          next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.call!(
-          invoice: nil,
-          charge:,
-          subscription:,
-          context: :recurring,
-          boundaries:,
-          apply_taxes: invoice.customer.tax_customer.blank?
-        )
+          fee_result = Fees::ChargeService.call!(
+            invoice: nil,
+            charge:,
+            subscription:,
+            context: :recurring,
+            boundaries:,
+            apply_taxes: invoice.customer.tax_customer.blank?
+          )
 
-        result.non_invoiceable_fees.concat(fee_result.fees)
+          result.non_invoiceable_fees.concat(fee_result.fees)
       end
     end
 

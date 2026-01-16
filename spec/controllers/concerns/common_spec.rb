@@ -49,7 +49,7 @@ RSpec.describe Common do
     context "when a malformed date sis provided" do
       let(:date) { "not-a-date" }
 
-      it "returns false " do
+      it "returns false" do
         expect(subject).to be false
       end
     end

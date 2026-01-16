@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::V1::ChargesController do # rubocop:disable RSpec/FilePath
+RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePath
   def post_with_data_api_key(path, params = {})
     headers = {
       "Content-Type" => "application/json",

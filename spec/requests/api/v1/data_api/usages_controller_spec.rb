@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/FilePath
   describe "GET /analytics/usage" do
     subject { get_with_token(organization, "/api/v1/analytics/usage", params) }
 

@@ -441,7 +441,7 @@ RSpec.describe CustomersQuery do
       let(:filters) { {metadata: {id: "1", name: "Jane Smith"}} }
 
       it "returns only the customers with the metadata" do
-        expect(returned_ids).to match_array([])
+        expect(returned_ids).to be_empty
       end
     end
 

@@ -144,6 +144,8 @@ group :development, :test do
   gem "rubocop-graphql", require: false
   gem "rubocop-performance", require: false
   gem "rubocop-rspec", require: false
+  gem "rubocop-rspec_rails", require: false
+  gem "rubocop-factory_bot", require: false
   gem "rubocop-thread_safety", require: false
 
   gem "vernier", "~> 1.0", require: false

@@ -245,7 +245,7 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
         end
       end
 
-      context "with no preferences set on the customer level " do
+      context "with no preferences set on the customer level" do
         let(:billing_entity) do
           create(
             :billing_entity,

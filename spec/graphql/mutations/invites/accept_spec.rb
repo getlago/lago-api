@@ -25,7 +25,7 @@ RSpec.describe Mutations::Invites::Accept do
     context "with a new user" do
       let(:invite) { create(:invite, organization:) }
 
-      it "accepts the invite " do
+      it "accepts the invite" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,

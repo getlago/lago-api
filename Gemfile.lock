@@ -24,7 +24,7 @@ GIT
 
 GIT
   remote: https://github.com/glebm/i18n-tasks.git
-  revision: b7db1cb2fe1484d93ee1cf14b5100c321d16392a
+  revision: 799cc333012ae43d3ee021d90d3ca1bfcd265d7c
   specs:
     i18n-tasks (1.1.2)
       activesupport (>= 4.0.2)
@@ -376,7 +376,8 @@ GEM
       reline
     htmlbeautifier (1.4.3)
     httpclient (2.8.3)
-    httplog (1.7.3)
+    httplog (1.8.0)
+      benchmark
       rack (>= 2.0)
       rainbow (>= 2.0.0)
     i18n (1.14.7)
@@ -436,7 +437,7 @@ GEM
       karafka-core (>= 2.5.0, < 2.6.0)
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
-    knapsack_pro (9.0.0)
+    knapsack_pro (9.2.1)
       rake
     language_server-protocol (3.17.0.5)
     libdatadog (22.0.1.1.0)
@@ -872,7 +873,7 @@ GEM
       awesome_print (> 1.0.0)
       rspec (> 3.0.0)
     rspec-support (3.13.2)
-    rubocop (1.81.7)
+    rubocop (1.82.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -880,14 +881,12 @@ GEM
       parser (>= 3.3.0.2)
       rainbow (>= 2.2.2, < 4.0)
       regexp_parser (>= 2.9.3, < 3.0)
-      rubocop-ast (>= 1.47.1, < 2.0)
+      rubocop-ast (>= 1.48.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
     rubocop-ast (1.48.0)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
-    rubocop-capybara (2.21.0)
-      rubocop (~> 1.41)
     rubocop-factory_bot (2.28.0)
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
@@ -898,19 +897,19 @@ GEM
       lint_roller (~> 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.47.1, < 2.0)
-    rubocop-rails (2.34.2)
+    rubocop-rails (2.34.3)
       activesupport (>= 4.2.0)
       lint_roller (~> 1.1)
       rack (>= 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.44.0, < 2.0)
-    rubocop-rspec (2.31.0)
-      rubocop (~> 1.40)
-      rubocop-capybara (~> 2.17)
-      rubocop-factory_bot (~> 2.22)
-      rubocop-rspec_rails (~> 2.28)
-    rubocop-rspec_rails (2.29.1)
-      rubocop (~> 1.61)
+    rubocop-rspec (3.9.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.81)
+    rubocop-rspec_rails (2.32.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.72, >= 1.72.1)
+      rubocop-rspec (~> 3.5)
     rubocop-thread_safety (0.7.3)
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
@@ -987,10 +986,10 @@ GEM
       activesupport (>= 6.1)
       sprockets (>= 3.0.0)
     stackprof (0.2.27)
-    standard (1.52.0)
+    standard (1.53.0)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
-      rubocop (~> 1.81.7)
+      rubocop (~> 1.82.0)
       standard-custom (~> 1.0.0)
       standard-performance (~> 1.8)
     standard-custom (1.0.2)
@@ -1151,10 +1150,12 @@ DEPENDENCIES
   rspec-graphql_matchers
   rspec-rails
   rspec-snapshot (~> 2.0)
+  rubocop-factory_bot
   rubocop-graphql
   rubocop-performance
   rubocop-rails
   rubocop-rspec
+  rubocop-rspec_rails
   rubocop-thread_safety
   ruby-lsp-rails
   sass-rails

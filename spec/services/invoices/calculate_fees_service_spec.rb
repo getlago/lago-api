@@ -2499,7 +2499,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
           context "when subscription is not terminated" do
             context "when it's the first month" do
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end
@@ -2529,7 +2529,7 @@ RSpec.describe Invoices::CalculateFeesService do
             context "when it's the first month" do
               let(:timestamp) { DateTime.parse("01 Jan 2023") }
 
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end
@@ -2746,7 +2746,7 @@ RSpec.describe Invoices::CalculateFeesService do
 
           context "when subscription is not terminated" do
             context "when it's the first month" do
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end
@@ -2754,7 +2754,7 @@ RSpec.describe Invoices::CalculateFeesService do
             context "when it's the seventh month" do
               let(:timestamp) { DateTime.parse("01 Oct 2022") }
 
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end
@@ -2784,7 +2784,7 @@ RSpec.describe Invoices::CalculateFeesService do
             context "when it's the first month" do
               let(:timestamp) { DateTime.parse("01 Jan 2023") }
 
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end
@@ -2792,7 +2792,7 @@ RSpec.describe Invoices::CalculateFeesService do
             context "when it's the seventh month" do
               let(:timestamp) { DateTime.parse("01 Jul 2023") }
 
-              it "returns true " do
+              it "returns true" do
                 expect(subject).to eq(true)
               end
             end

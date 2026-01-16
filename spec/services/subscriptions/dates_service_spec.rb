@@ -30,7 +30,7 @@ RSpec.describe Subscriptions::DatesService do
       let(:interval) { :weekly }
 
       it "returns a weekly service instance" do
-        expect(result).to be_kind_of(Subscriptions::Dates::WeeklyService)
+        expect(result).to be_a(Subscriptions::Dates::WeeklyService)
       end
     end
 
@@ -38,7 +38,7 @@ RSpec.describe Subscriptions::DatesService do
       let(:interval) { :quarterly }
 
       it "returns a quarterly service instance" do
-        expect(result).to be_kind_of(Subscriptions::Dates::QuarterlyService)
+        expect(result).to be_a(Subscriptions::Dates::QuarterlyService)
       end
     end
 
@@ -46,7 +46,7 @@ RSpec.describe Subscriptions::DatesService do
       let(:interval) { :monthly }
 
       it "returns a monthly service instance" do
-        expect(result).to be_kind_of(Subscriptions::Dates::MonthlyService)
+        expect(result).to be_a(Subscriptions::Dates::MonthlyService)
       end
     end
 
@@ -54,7 +54,7 @@ RSpec.describe Subscriptions::DatesService do
       let(:interval) { :yearly }
 
       it "returns a yearly service instance" do
-        expect(result).to be_kind_of(Subscriptions::Dates::YearlyService)
+        expect(result).to be_a(Subscriptions::Dates::YearlyService)
       end
     end
 
@@ -62,7 +62,7 @@ RSpec.describe Subscriptions::DatesService do
       let(:interval) { :semiannual }
 
       it "returns a semiannual service instance" do
-        expect(result).to be_kind_of(Subscriptions::Dates::SemiannualService)
+        expect(result).to be_a(Subscriptions::Dates::SemiannualService)
       end
     end
 

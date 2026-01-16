@@ -189,7 +189,7 @@ describe "Subscriptions Termination Scenario" do
         )
       end
 
-      it "does not issue credit note and does not bill previous period " do
+      it "does not issue credit note and does not bill previous period" do
         subscription = nil
 
         travel_to(creation_time) do

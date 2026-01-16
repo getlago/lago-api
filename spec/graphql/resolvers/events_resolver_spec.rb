@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::EventsResolver, transaction: false, clickhouse: true do
+RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false do
   let(:query) do
     <<~GQL
       query($page: Int) {

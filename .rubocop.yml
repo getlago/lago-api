@@ -8,11 +8,11 @@ plugins:
   - rubocop-factory_bot
   - rubocop-performance
   - rubocop-thread_safety
+  - rubocop-rspec
+  - rubocop-rspec_rails
 
 require:
   - standard
-  - rubocop-rspec
-  - rubocop-rspec_rails
   - ./dev/cops/service_call_cop.rb
   - ./dev/cops/discard_all_cop.rb
 
@@ -93,6 +93,31 @@ RSpec/NamedSubject:
 RSpec/DescribeClass:
   Exclude:
     - "spec/scenarios/**/*"
+
+# RSpec rules below are enabled by default in rubocop-rspec 3.X but we disabled to ease migration.
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/MatchArray:
+  Enabled: false
+
+RSpec/MetadataStyle:
+  Enabled: false
+
+RSpec/NoExpectationExample:
+  Enabled: false
+
+RSpec/ReceiveMessages:
+  Enabled: false
+
+RSpec/VerifiedDoubleReference:
+  Enabled: false
+
+RSpec/BeEq:
+  Enabled: false
+
+RSpec/BeNil:
+  Enabled: false
 
 # GraphQL
 
