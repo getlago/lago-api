@@ -55,7 +55,7 @@ organizations_data.each do |org_data|
     invoice_footer: "Hooli is a fictional company."
   })
   BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
-  membership = Membership.find_or_create_by!(user:, organization:, role: :admin)
+  membership = Membership.find_or_create_by!(user:, organization:)
 
   # Ensure the membership has an admin role in the new roles system
   admin_role = Role.find_by!(admin: true)

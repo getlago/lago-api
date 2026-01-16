@@ -13,9 +13,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
           email
           premium
           memberships {
-            role
             roles
-            permissions { invoicesView }
             status
             organization {
               name
@@ -40,8 +38,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
       expect(result["data"]["currentUser"]["email"]).to eq(user.email)
       expect(result["data"]["currentUser"]["id"]).to eq(user.id)
       expect(result["data"]["currentUser"]["premium"]).to be_falsey
-      expect(result["data"]["currentUser"]["memberships"][0]["role"]).to eq "admin"
-      expect(result["data"]["currentUser"]["memberships"][0]["permissions"]).to eq({"invoicesView" => true})
+      expect(result["data"]["currentUser"]["memberships"][0]["roles"]).to eq ["Admin"]
       expect(result["data"]["currentUser"]["memberships"][0]["organization"]["name"]).not_to be_empty
     end
   end

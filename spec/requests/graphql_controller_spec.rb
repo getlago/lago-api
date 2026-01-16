@@ -75,7 +75,6 @@ RSpec.describe GraphqlController do
               id
               premium
               memberships {
-                role
                 status
                 organization {
                   id
@@ -242,7 +241,6 @@ RSpec.describe GraphqlController do
               id
               premium
               memberships {
-                role
                 status
                 organization {
                   id

@@ -15,14 +15,7 @@ class Membership < ApplicationRecord
     :revoked
   ].freeze
 
-  ROLES = {
-    admin: 0,
-    manager: 1,
-    finance: 2
-  }.freeze
-
   enum :status, STATUSES
-  enum :role, ROLES
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
 

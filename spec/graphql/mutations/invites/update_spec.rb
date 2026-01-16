@@ -13,7 +13,6 @@ RSpec.describe Mutations::Invites::Update do
       mutation($input: UpdateInviteInput!) {
         updateInvite(input: $input) {
           id
-          role
           roles
         }
       }
@@ -39,7 +38,6 @@ RSpec.describe Mutations::Invites::Update do
           variables: {
             input: {
               id: invite.id,
-              role: "finance",
               roles: %w[finance]
             }
           }
@@ -48,7 +46,6 @@ RSpec.describe Mutations::Invites::Update do
         data = result["data"]["updateInvite"]
 
         expect(data["id"]).to eq(invite.id)
-        expect(data["role"]).to eq("finance")
         expect(data["roles"]).to eq(%w[finance])
       end
     end
@@ -63,7 +60,7 @@ RSpec.describe Mutations::Invites::Update do
           current_user: user,
           query: mutation,
           variables: {
-            input: {id: invite.id, role: "finance"}
+            input: {id: invite.id, roles: %w[finance]}
           }
         )
 
