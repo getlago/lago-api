@@ -41,9 +41,8 @@
               td.body-2 = MoneyHelper.format(subscription_fee.amount)
 
           / 2. Fixed charge fees (alphabetically ordered, already filtered for positive units)
-          - fee_group.fixed_charge_fees.group_by(&:fixed_charge_id).each do |_fixed_charge_id, fees|
-            - fees.each do |fee|
-              == SlimHelper.render('templates/invoices/v4/_fixed_charge_fee', fee)
+          - fee_group.fixed_charge_fees.each do |fee|
+            == SlimHelper.render('templates/invoices/v4/_fixed_charge_fee', fee)
 
           / 3. Charge fees (alphabetically ordered, already filtered for positive units and no true-up parent)
           - fee_group.charge_fees.group_by(&:charge_id).each do |_charge_id, fees|
