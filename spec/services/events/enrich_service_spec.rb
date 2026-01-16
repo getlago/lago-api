@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Events::EnrichService do
   subject(:enrich_service) do
-    described_class.new(event:, subscription:, billable_metric:, charges:, persist:)
+    described_class.new(event:, subscription:, billable_metric:, charges_and_filters:, persist:)
   end
 
   let(:organization) { create(:organization) }
@@ -12,7 +12,8 @@ RSpec.describe Events::EnrichService do
   let(:plan) { subscription.plan }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
-  let(:charges) { [charge] }
+  let(:charges_and_filters) { {charge => charge_filter} }
+  let(:charge_filter) { nil }
   let(:persist) { true }
 
   let(:event) do
@@ -281,7 +282,7 @@ RSpec.describe Events::EnrichService do
 
     context "when multiple charges matches the event" do
       let(:charge2) { create(:standard_charge, plan:, billable_metric:) }
-      let(:charges) { [charge, charge2] }
+      let(:charges_and_filters) { {charge => nil, charge2 => nil} }
 
       it "creates an enriched event for each charge" do
         result = enrich_service.call

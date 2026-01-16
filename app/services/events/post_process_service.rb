@@ -11,7 +11,8 @@ module Events
     end
 
     def call
-      expire_cached_charges(subscriptions)
+      expire_cached_charges
+      create_enriched_events
       track_subscription_activity
       customer&.flag_wallets_for_refresh
 
@@ -50,26 +51,31 @@ module Events
         .order("terminated_at DESC NULLS FIRST, started_at DESC")
     end
 
+    def active_subscriptions
+      @active_subscriptions ||= subscriptions.select(&:active?)
+    end
+
     def billable_metric
       @billable_metric ||= organization.billable_metrics.find_by(code: event.code)
     end
 
-    def expire_cached_charges(subscriptions)
-      active_subscription = subscriptions.select(&:active?)
-      return if active_subscription.blank?
+    def expire_cached_charges
+      return if active_subscriptions.blank?
       return unless billable_metric
 
-      charges = billable_metric.charges
-        .joins(:plan)
-        .where(plans: {id: active_subscription.map(&:plan_id)})
-        .includes(filters: {values: :billable_metric_filter})
-
-      charges.each do |charge|
-        charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-
-        active_subscription.each do |subscription|
-          Subscriptions::ChargeCacheService.expire_cache(subscription:, charge:, charge_filter:)
+      charges_and_filters.each do |charge, filter|
+        active_subscriptions.each do |subscription|
+          Subscriptions::ChargeCacheService.expire_cache(subscription:, charge:, charge_filter: filter)
         end
+      end
+    end
+
+    def create_enriched_events
+      return if active_subscriptions.blank?
+      return nil unless billable_metric
+
+      active_subscriptions.each do |subscription|
+        Events::EnrichService.call!(event:, subscription:, billable_metric:, charges_and_filters:)
       end
     end
 
@@ -102,6 +108,18 @@ module Events
 
     def deliver_error_webhook(error:)
       SendWebhookJob.perform_later("event.error", event, {error:})
+    end
+
+    def charges_and_filters
+      return @charges_and_filters if @charges_and_filters.present?
+
+      charges = billable_metric.charges
+        .joins(:plan)
+        .where(plans: {id: active_subscriptions.map(&:plan_id)})
+        .includes(filters: {values: :billable_metric_filter})
+
+      @charges_and_filters = charges
+        .index_with { |c| ChargeFilters::EventMatchingService.call(charge: c, event:).charge_filter }
     end
   end
 end

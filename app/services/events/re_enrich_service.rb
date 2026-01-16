@@ -21,9 +21,12 @@ module Events
             billable_metric = billable_metrics[event.code]
             next [] unless billable_metric
 
+            charges_and_filters = charges[event.code]
+              .index_with { |c| ChargeFilters::EventMatchingService.call(charge: c, event:).charge_filter }
+
             # Only returns unpersisted enriched events
             Events::EnrichService
-              .call!(event:, subscription:, billable_metric:, charges: charges[event.code], persist: false)
+              .call!(event:, subscription:, billable_metric:, charges_and_filters:, persist: false)
               .enriched_events
           end
 

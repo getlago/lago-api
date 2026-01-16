@@ -4,11 +4,11 @@ module Events
   class EnrichService < BaseService
     Result = BaseResult[:enriched_events]
 
-    def initialize(event:, subscription:, billable_metric:, charges:, persist: true)
+    def initialize(event:, subscription:, billable_metric:, charges_and_filters:, persist: true)
       @event = event
       @subscription = subscription
       @billable_metric = billable_metric
-      @charges = charges
+      @charges_and_filters = charges_and_filters
       @persist = persist
 
       super
@@ -18,13 +18,12 @@ module Events
       enriched_event = init_enriched_event
 
       EnrichedEvent.transaction do
-        result.enriched_events = charges.map do |charge|
+        result.enriched_events = charges_and_filters.map do |charge, filter|
           ev = enriched_event.dup
           ev.charge_id = charge.id
 
-          charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-          ev.charge_filter_id = charge_filter&.id
-          ev.grouped_by = format_grouped_by(charge_filter&.pricing_group_keys.presence || charge.pricing_group_keys)
+          ev.charge_filter_id = filter&.id
+          ev.grouped_by = format_grouped_by(filter&.pricing_group_keys.presence || charge.pricing_group_keys)
           ev.save! if persist
           ev
         end
@@ -35,7 +34,7 @@ module Events
 
     private
 
-    attr_reader :event, :subscription, :billable_metric, :charges, :persist
+    attr_reader :event, :subscription, :billable_metric, :charges_and_filters, :persist
 
     def init_enriched_event
       enriched_event = EnrichedEvent.new
