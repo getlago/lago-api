@@ -16,6 +16,8 @@ module Subscriptions
         billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
       end
 
+      private
+
       # if bill_charges_monthly=true, charge boundaries should be filled
       # if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
       # For yearly plans with bill_charges_monthly=false, and bill_fixed_charges_monthly=false,
@@ -39,8 +41,6 @@ module Subscriptions
 
         true
       end
-
-      private
 
       def compute_base_date
         billing_date - 1.year

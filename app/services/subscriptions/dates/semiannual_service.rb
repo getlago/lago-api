@@ -17,6 +17,8 @@ module Subscriptions
         billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
       end
 
+      private
+
       # if bill_charges_monthly=true, charge boundaries should be filled
       # else if bill_FIXED_charges_monthly=true, charge boundaries should be filled only for the first month of the period
       # For semiannual plans with not billing charges and fixed charges mothly,
@@ -40,8 +42,6 @@ module Subscriptions
 
         true
       end
-
-      private
 
       def monthly_service
         @monthly_service ||= Subscriptions::Dates::MonthlyService.new(subscription, billing_date, current_usage)
