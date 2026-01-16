@@ -206,8 +206,8 @@ RSpec.describe Subscriptions::UpdateService do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
 
-          context "when plan has fixed charges" do
-            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+          context "when plan has pay in advance fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
 
             before { fixed_charge }
 
@@ -215,6 +215,10 @@ RSpec.describe Subscriptions::UpdateService do
               expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
               expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                 .to contain_exactly([fixed_charge.id, be_within(1.second).of(subscription.started_at)])
+            end
+
+            it "does not enqueue a job to bill the pay in advance fixed charges" do
+              expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
             end
           end
         end
@@ -316,6 +320,22 @@ RSpec.describe Subscriptions::UpdateService do
               it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
                 expect { update_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
               end
+            end
+          end
+        end
+
+        context "when subscription_at is in the past" do
+          it "does not enqueue a job to bill the subscription" do
+            expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          context "when plan has pay in advance fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
+
+            before { fixed_charge }
+
+            it "does not enqueue a job to bill the pay in advance fixed charges" do
+              expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
             end
           end
         end
