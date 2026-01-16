@@ -94,7 +94,6 @@ module Subscriptions
 
     def charges_from_datetime
       return unless subscription.started_at
-      return unless should_fill_charges_boundaries?
 
       datetime = customer_timezone_shift(compute_charges_from_date)
 
@@ -116,7 +115,6 @@ module Subscriptions
 
     def charges_to_datetime
       return unless subscription.started_at
-      return unless should_fill_charges_boundaries?
 
       datetime = customer_timezone_shift(compute_charges_to_date, end_of_day: true)
       datetime = subscription.terminated_at if subscription.terminated? && subscription.terminated_at <= datetime
@@ -127,7 +125,6 @@ module Subscriptions
 
     def fixed_charges_from_datetime
       return unless subscription.started_at
-      return unless should_fill_fixed_charges_boundaries?
 
       datetime = customer_timezone_shift(compute_fixed_charges_from_date)
 
@@ -149,7 +146,6 @@ module Subscriptions
 
     def fixed_charges_to_datetime
       return unless subscription.started_at
-      return unless should_fill_fixed_charges_boundaries?
 
       datetime = customer_timezone_shift(compute_fixed_charges_to_date, end_of_day: true)
       datetime = subscription.terminated_at if subscription.terminated? && subscription.terminated_at <= datetime
@@ -200,18 +196,6 @@ module Subscriptions
     attr_accessor :subscription, :billing_at, :current_usage
 
     delegate :plan, :calendar?, :customer, to: :subscription
-
-    # Determines if charges should be billed this cycle
-    # general approach is: yes, some exceptions are for yearly/semiannual plans with monthly charges/fixed_charges
-    def should_fill_charges_boundaries?
-      true
-    end
-
-    # Determines if fixed charges should be billed this cycle
-    # general approach is: yes, some exceptions are for yearly/semiannual plans with monthly charges/fixed_charges
-    def should_fill_fixed_charges_boundaries?
-      true
-    end
 
     def billing_date
       @billing_date ||= billing_at.in_time_zone(customer.applicable_timezone).to_date
