@@ -564,11 +564,11 @@ RSpec.describe Api::V1::CreditNotesController do
     context "with credit invoices" do
       let(:wallet) { create(:wallet, customer:, balance_cents: 100) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice: credit_invoice, organization:) }
-      let(:credit_fee) { create(:credit_fee, invoice: credit_invoice, wallet_transaction:, organization:) }
+      let(:credit_fee) { create(:credit_fee, invoice: credit_invoice, wallet_transaction:, organization:, amount_cents: 100, taxes_amount_cents: 0) }
 
       context "when payment is pending" do
         let(:credit_invoice) do
-          create(:invoice, organization:, customer:, invoice_type: :credit, payment_status: "pending", currency: "EUR")
+          create(:invoice, organization:, customer:, invoice_type: :credit, payment_status: "pending", currency: "EUR", total_amount_cents: 100, fees_amount_cents: 100)
         end
 
         context "with offset_amount_cents" do
