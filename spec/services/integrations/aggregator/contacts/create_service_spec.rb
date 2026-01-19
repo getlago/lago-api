@@ -239,39 +239,71 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
       context "when it is a server error" do
         let(:error_code) { Faker::Number.between(from: 500, to: 599) }
-        let(:code) { "action_script_runtime_error" }
-        let(:message) { "submitFields: Missing a required argument: type" }
 
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
           File.read(path)
         end
 
-        it "returns an error" do
-          result = service_call
+        it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
+        [
+          {
+            ctx: "when error is nested in `error.payload.error`",
+            payload: {
+              integration: "netsuite-tba",
+              action: "netsuite-create-contact",
+              connection: "netsuite-tba-xyz",
+              error: {
+                message: "An error occurred during an HTTP call",
+                payload: {
+                  error: {
+                    code: "INVALID_LOGIN_ATTEMPT",
+                    message: "Invalid login attempt."
+                  }
+                }
+              }
+            },
+            code: "INVALID_LOGIN_ATTEMPT",
+            message: "Invalid login attempt."
+          },
+          {
+            ctx: "when error is nested in `payload.message`",
+            payload: {
+              type: "action_script_runtime_error",
+              payload: {
+                message: "submitFields: Missing a required argument: type"
+              }
+            },
+            code: "action_script_runtime_error",
+            message: "submitFields: Missing a required argument: type"
+          }
+        ].each do |test_case|
+          ctx, payload, code, message = test_case.values_at(:ctx, :payload, :code, :message)
+          context ctx do
+            let(:body) { payload.to_json }
+            let(:error_code) { 500 }
+            let(:result) { service_call }
+
+            it "returns an error" do
+              expect { result }.to enqueue_job(SendWebhookJob)
+                .with(
+                  "customer.accounting_provider_error",
+                  customer,
+                  provider: "netsuite",
+                  provider_code: integration.code,
+                  provider_error: {
+                    message:,
+                    error_code: code
+                  }
+                )
+
+              expect(result).not_to be_success
+              expect(result.error.code).to eq(code)
+              expect(result.error.message).to eq("#{code}: #{message}")
+            end
           end
         end
-
-        it "delivers an error webhook" do
-          expect { service_call }.to enqueue_job(SendWebhookJob)
-            .with(
-              "customer.accounting_provider_error",
-              customer,
-              provider: "netsuite",
-              provider_code: integration.code,
-              provider_error: {
-                message:,
-                error_code: code
-              }
-            )
-        end
-
-        it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
       end
 
       context "when it is a server payload error" do
