@@ -118,6 +118,24 @@ module Api
         credit_note_index(external_customer_id:)
       end
 
+      def resend_email
+        credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
+        return not_found_error(resource: "credit_note") unless credit_note
+
+        result = Emails::ResendService.call(
+          resource: credit_note,
+          to: resend_email_params[:to],
+          cc: resend_email_params[:cc],
+          bcc: resend_email_params[:bcc]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
       def estimate
         result = ::CreditNotes::EstimateService.call(
           invoice: current_organization.invoices.visible.find_by(id: estimate_params[:invoice_id]),
@@ -167,6 +185,10 @@ module Api
               :amount_cents
             ]
           )
+      end
+
+      def resend_email_params
+        params.permit(to: [], cc: [], bcc: [])
       end
 
       def resource_name
