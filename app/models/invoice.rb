@@ -30,6 +30,7 @@ class Invoice < ApplicationRecord
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
+  has_many :invoice_settlements, foreign_key: :target_invoice_id
 
   has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes

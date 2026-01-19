@@ -16,6 +16,7 @@ RSpec.describe CreditNote do
   it { is_expected.to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy) }
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
+  it { is_expected.to have_many(:invoice_settlements).with_foreign_key(:source_credit_note_id) }
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }

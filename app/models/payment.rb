@@ -15,6 +15,7 @@ class Payment < ApplicationRecord
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
+  has_one :invoice_settlement, foreign_key: :source_payment_id
   has_one :payment_receipt, dependent: :destroy
 
   alias_attribute :currency, :amount_currency
