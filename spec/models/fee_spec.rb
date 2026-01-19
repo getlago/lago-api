@@ -668,6 +668,106 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#offsettable_amount_cents" do
+    subject { fee.offsettable_amount_cents }
+
+    let(:fee) { create(:fee, fee_type:, amount_cents:, invoice:) }
+    let(:amount_cents) { 1000 }
+
+    context "when invoice is a credit invoice with payment pending" do
+      let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :pending) }
+      let(:fee_type) { "credit" }
+
+      it "returns the full amount_cents" do
+        expect(subject).to eq(1000)
+      end
+
+      context "with existing credit note items" do
+        before do
+          create(:credit_note_item, fee:, amount_cents: 300)
+        end
+
+        it "returns full amount_cents ignoring credit notes" do
+          expect(subject).to eq(1000)
+        end
+      end
+    end
+
+    context "when invoice is a credit invoice with payment succeeded" do
+      let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :succeeded) }
+      let(:fee_type) { "credit" }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
+
+      before { fee.update(invoiceable: wallet_transaction) }
+
+      it "returns creditable_amount_cents" do
+        expect(subject).to eq(500)
+      end
+    end
+
+    context "when invoice is not a credit invoice" do
+      let(:invoice) { create(:invoice, invoice_type: :subscription) }
+      let(:fee_type) { "subscription" }
+
+      it "returns creditable_amount_cents" do
+        expect(subject).to eq(1000)
+      end
+
+      context "with existing credit note items" do
+        before do
+          create(:credit_note_item, fee:, amount_cents: 300)
+        end
+
+        it "deducts credit note items from amount" do
+          expect(subject).to eq(700) # 1000 - 300
+        end
+      end
+    end
+
+    context "when invoice is a credit invoice with payment failed" do
+      let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :failed) }
+      let(:fee_type) { "credit" }
+
+      it "returns creditable_amount_cents (zero when no wallet)" do
+        expect(subject).to eq(0)
+      end
+    end
+
+    context "when fee is a charge fee on regular invoice" do
+      let(:invoice) { create(:invoice, invoice_type: :subscription) }
+      let(:fee_type) { "charge" }
+      let(:charge) { create(:standard_charge) }
+      let(:fee) { create(:charge_fee, amount_cents:, invoice:, charge:) }
+
+      it "returns creditable_amount_cents" do
+        expect(subject).to eq(1000)
+      end
+
+      context "with multiple credit note items" do
+        before do
+          create(:credit_note_item, fee:, amount_cents: 200)
+          create(:credit_note_item, fee:, amount_cents: 150)
+        end
+
+        it "deducts all credit note items" do
+          expect(subject).to eq(650) # 1000 - 200 - 150
+        end
+      end
+    end
+
+    context "when fee is an add-on fee" do
+      let(:invoice) { create(:invoice, invoice_type: :subscription) }
+      let(:fee_type) { "add_on" }
+      let(:applied_add_on) { create(:applied_add_on) }
+      let(:fee) { create(:add_on_fee, amount_cents:, invoice:, applied_add_on:) }
+
+      it "returns creditable_amount_cents" do
+        expect(subject).to eq(1000)
+      end
+    end
+  end
+
   describe "#basic_rate_percentage?" do
     let(:fee) { create(:fee, fee_type: :charge, charge:, amount_cents: 1000, total_aggregated_units: 1) }
     let(:charge) { create(:standard_charge) }

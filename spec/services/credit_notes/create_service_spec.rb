@@ -805,5 +805,193 @@ RSpec.describe CreditNotes::CreateService do
         )
       end
     end
+
+    context "with offset_amount_cents" do
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 0 }
+      let(:args) { {offset_amount_cents: 18} }
+
+      it "creates a credit note with offset amount" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note.offset_amount_cents).to eq(18)
+        expect(credit_note.total_amount_cents).to eq(18)
+      end
+
+      it "creates an invoice settlement for the offset amount" do
+        expect { create_service.call }.to change(InvoiceSettlement, :count).by(1)
+
+        invoice_settlement = InvoiceSettlement.last
+        expect(invoice_settlement.amount_cents).to eq(18)
+        expect(invoice_settlement.settlement_type).to eq("credit_note")
+        expect(invoice_settlement.target_invoice).to eq(invoice)
+      end
+
+      context "when offset_amount_cents is zero" do
+        let(:args) { {offset_amount_cents: 0} }
+        let(:credit_amount_cents) { 10 }
+
+        it "does not create an invoice settlement" do
+          expect { create_service.call }.not_to change(InvoiceSettlement, :count)
+        end
+      end
+
+      context "when context is preview" do
+        let(:context) { :preview }
+
+        it "does not create an invoice settlement" do
+          expect { create_service.call }.not_to change(InvoiceSettlement, :count)
+        end
+      end
+    end
+
+    context "when invoice is credit with pending payment" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :credit,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 1000,
+          total_amount_cents: 1000,
+          total_paid_amount_cents: 0,
+          payment_status: :pending
+        )
+      end
+      let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount: 10, credits_balance: 1 }
+      let(:wallet_transaction) { create :wallet_transaction, wallet: }
+      let(:fee) { create :fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000 }
+      let(:items) do
+        [
+          {
+            fee_id: fee.id,
+            amount_cents: 500
+          }
+        ]
+      end
+      let(:automatic) { false }
+
+      before do
+        wallet
+        fee
+      end
+
+      around { |test| lago_premium!(&test) }
+
+      context "with offset_amount_cents only" do
+        let(:credit_amount_cents) { 0 }
+        let(:refund_amount_cents) { 0 }
+        let(:args) { {offset_amount_cents: 1000} }
+        let(:items) do
+          [
+            {
+              fee_id: fee.id,
+              amount_cents: 1000
+            }
+          ]
+        end
+
+        it "creates credit note successfully" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note.offset_amount_cents).to eq(1000)
+          expect(credit_note.credit_amount_cents).to eq(0)
+          expect(credit_note.refund_amount_cents).to eq(0)
+        end
+      end
+
+      context "with credit_amount_cents" do
+        let(:credit_amount_cents) { 500 }
+        let(:refund_amount_cents) { 0 }
+
+        it "returns error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
+        end
+      end
+
+      context "with refund_amount_cents" do
+        let(:credit_amount_cents) { 0 }
+        let(:refund_amount_cents) { 500 }
+
+        it "returns error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
+        end
+      end
+
+      context "with both credit and offset amounts" do
+        let(:credit_amount_cents) { 300 }
+        let(:refund_amount_cents) { 0 }
+        let(:args) { {offset_amount_cents: 200} }
+
+        it "returns error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
+        end
+      end
+    end
+
+    context "when invoice is credit with failed payment" do
+      let(:invoice) do
+        create(
+          :invoice,
+          :credit,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 1000,
+          total_amount_cents: 1000,
+          total_paid_amount_cents: 0,
+          payment_status: :failed
+        )
+      end
+      let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount: 10, credits_balance: 1 }
+      let(:wallet_transaction) { create :wallet_transaction, wallet: }
+      let(:fee) { create :fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000 }
+      let(:items) do
+        [
+          {
+            fee_id: fee.id,
+            amount_cents: 500
+          }
+        ]
+      end
+      let(:automatic) { false }
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 0 }
+      let(:args) { {offset_amount_cents: 500} }
+
+      before do
+        wallet
+        fee
+      end
+
+      around { |test| lago_premium!(&test) }
+
+      it "returns error for failed payment credit invoice" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invalid_type_or_status")
+      end
+    end
   end
 end

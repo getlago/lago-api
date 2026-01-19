@@ -60,7 +60,7 @@ module Analytics
               DATE_TRUNC('month', payment_due_date) AS month,
               i.currency,
               COALESCE(SUM(
-                i.total_amount_cents -
+                i.total_amount_cents - 
                 i.total_paid_amount_cents -
                 COALESCE(cn.offset_amount_cents_sum, 0)
                ), 0) AS total_amount_cents,

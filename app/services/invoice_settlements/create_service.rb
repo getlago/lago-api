@@ -11,6 +11,8 @@ module InvoiceSettlements
       @source_credit_note = source_credit_note
       @source_payment = source_payment
 
+      validate_single_source!
+
       super
     end
 
@@ -39,11 +41,19 @@ module InvoiceSettlements
 
     attr_reader :invoice, :amount_cents, :amount_currency, :source_credit_note, :source_payment
 
+    def validate_single_source!
+      if source_credit_note.nil? && source_payment.nil?
+        raise ArgumentError, "Must provide either source_credit_note or source_payment"
+      end
+
+      if source_credit_note.present? && source_payment.present?
+        raise ArgumentError, "Cannot provide both source_credit_note and source_payment"
+      end
+    end
+
     def settlement_type
       return :credit_note if source_credit_note
-      return :payment if source_payment
-
-      raise ArgumentError, "Must provide a source"
+      :payment if source_payment
     end
 
     def invoice_fully_settled?

@@ -70,5 +70,70 @@ RSpec.describe Invoices::PrepaidCreditJob do
       expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
       expect(wallet_transaction.reload.status).to eq("failed")
     end
+
+    it "does not grant prepaid credits" do
+      expect {
+        described_class.perform_now(invoice, :failed)
+      }.not_to change { wallet.reload.balance_cents }
+    end
+
+    it "does not finalize the invoice" do
+      allow(Invoices::FinalizeOpenCreditService).to receive(:call)
+      described_class.perform_now(invoice, :failed)
+      expect(Invoices::FinalizeOpenCreditService).not_to have_received(:call)
+    end
+  end
+
+  context "when invoice is paid by credit note" do
+    let(:source_credit_note) { create(:credit_note, invoice:, customer:) }
+
+    before do
+      create(:invoice_settlement, target_invoice: invoice, source_credit_note:, settlement_type: :credit_note)
+    end
+
+    it "does not grant prepaid credits" do
+      expect {
+        described_class.perform_now(invoice, :succeeded)
+      }.not_to change { wallet.reload.balance_cents }
+    end
+
+    it "marks the wallet transaction as failed" do
+      allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
+      described_class.perform_now(invoice, :succeeded)
+      expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
+      expect(wallet_transaction.reload.status).to eq("failed")
+    end
+
+    it "does not finalize the invoice" do
+      allow(Invoices::FinalizeOpenCreditService).to receive(:call)
+      described_class.perform_now(invoice, :succeeded)
+      expect(Invoices::FinalizeOpenCreditService).not_to have_received(:call)
+    end
+  end
+
+  context "when payment_status is not provided" do
+    it "defaults to :succeeded and grants prepaid credits" do
+      described_class.perform_now(invoice)
+
+      expect(wallet.reload.balance_cents).to eq(2500)
+      expect(wallet_transaction.reload.status).to eq("settled")
+    end
+  end
+
+  describe "#lock_key_arguments" do
+    it "returns invoice and payment_status" do
+      job = described_class.new(invoice, :succeeded)
+      expect(job.lock_key_arguments).to eq([invoice, :succeeded])
+    end
+
+    it "defaults payment_status to :succeeded when not provided" do
+      job = described_class.new(invoice)
+      expect(job.lock_key_arguments).to eq([invoice, :succeeded])
+    end
+
+    it "converts payment_status string to symbol" do
+      job = described_class.new(invoice, "failed")
+      expect(job.lock_key_arguments).to eq([invoice, :failed])
+    end
   end
 end

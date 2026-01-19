@@ -147,7 +147,7 @@ module CreditNotes
       end
 
       if credit_note.offset_amount_cents != invoice.total_amount_cents
-        add_error(field: :offset_amount_cents, error_code: "not_equal_to_offset_amount")
+        add_error(field: :offset_amount_cents, error_code: "not_equal_to_total_amount")
         return false
       end
 
