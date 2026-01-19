@@ -45,7 +45,7 @@ jobs:
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4.7"
+          ruby-version: "3.4.8"
           bundler-cache: true
       - name: Install pg 14
         uses: tj-actions/install-postgresql@v3
