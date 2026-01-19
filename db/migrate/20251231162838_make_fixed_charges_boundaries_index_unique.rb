@@ -36,6 +36,11 @@ class MakeFixedChargesBoundariesIndexUnique < ActiveRecord::Migration[8.0]
       name: :index_invoice_subscriptions_on_fixed_charges_boundaries,
       if_exists: true
 
+    # Remove the unique index if it already exists (in case migration ran partially before)
+    remove_index :invoice_subscriptions,
+      name: :index_uniq_invoice_subscriptions_on_fixed_charges_boundaries,
+      if_exists: true
+
     # Add unique index (only for non-NULL fixed_charges boundaries)
     add_index :invoice_subscriptions,
       [:subscription_id, :fixed_charges_from_datetime, :fixed_charges_to_datetime],
