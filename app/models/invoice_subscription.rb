@@ -137,13 +137,13 @@ end
 #
 #  idx_invoice_subscriptions_on_subscription_with_timestamps      (subscription_id, COALESCE(to_datetime, created_at) DESC)
 #  index_invoice_subscriptions_boundaries                         (subscription_id,from_datetime,to_datetime)
-#  index_invoice_subscriptions_on_fixed_charges_boundaries        (subscription_id,fixed_charges_from_datetime,fixed_charges_to_datetime) WHERE ((recurring IS TRUE) AND (regenerated_invoice_id IS NULL))
 #  index_invoice_subscriptions_on_invoice_id                      (invoice_id)
 #  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE WHERE (created_at >= '2023-11-23 00:00:00'::timestamp without time zone)
 #  index_invoice_subscriptions_on_organization_id                 (organization_id)
 #  index_invoice_subscriptions_on_regenerated_invoice_id          (regenerated_invoice_id)
 #  index_invoice_subscriptions_on_subscription_id                 (subscription_id)
 #  index_uniq_invoice_subscriptions_on_charges_from_to_datetime   (subscription_id,charges_from_datetime,charges_to_datetime) UNIQUE WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL))
+#  index_uniq_invoice_subscriptions_on_fixed_charges_boundaries   (subscription_id,fixed_charges_from_datetime,fixed_charges_to_datetime) UNIQUE WHERE ((fixed_charges_from_datetime IS NOT NULL) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL))
 #  index_unique_starting_invoice_subscription                     (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_starting'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
 #  index_unique_terminating_invoice_subscription                  (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
 #
