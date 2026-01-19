@@ -1034,6 +1034,7 @@ DROP TYPE IF EXISTS public.subscription_invoice_issuing_date_adjustments;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
+DROP TYPE IF EXISTS public.invoice_settlement_settlement_type;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
 DROP TYPE IF EXISTS public.fixed_charge_charge_model;
@@ -1151,6 +1152,16 @@ CREATE TYPE public.inbound_webhook_status AS ENUM (
 CREATE TYPE public.invoice_custom_section_type AS ENUM (
     'manual',
     'system_generated'
+);
+
+
+--
+-- Name: invoice_settlement_settlement_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.invoice_settlement_settlement_type AS ENUM (
+    'payment',
+    'credit_note'
 );
 
 
@@ -4028,7 +4039,7 @@ CREATE TABLE public.invoice_settlements (
     organization_id uuid NOT NULL,
     billing_entity_id uuid NOT NULL,
     target_invoice_id uuid NOT NULL,
-    settlement_type character varying NOT NULL,
+    settlement_type public.invoice_settlement_settlement_type NOT NULL,
     source_payment_id uuid,
     source_credit_note_id uuid,
     amount_cents bigint NOT NULL,
@@ -11823,3 +11834,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

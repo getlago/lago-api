@@ -50,7 +50,7 @@ end
 #  id                    :uuid             not null, primary key
 #  amount_cents          :bigint           not null
 #  amount_currency       :string           not null
-#  settlement_type       :string           not null
+#  settlement_type       :enum             not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  billing_entity_id     :uuid             not null
