@@ -147,13 +147,17 @@ module Integrations
 
       def code(error)
         json = error.json_message
-        json["type"].presence || json.dig("error", "payload", "name").presence || json.dig("error", "code")
+        json["type"].presence ||
+          json.dig("error", "payload", "name").presence ||
+          json.dig("error", "payload", "error", "code").presence ||
+          json.dig("error", "code")
       end
 
       def message(error)
         json = error.json_message
         json.dig("payload", "message").presence ||
           json.dig("error", "payload", "message").presence ||
+          json.dig("error", "payload", "error", "message").presence ||
           json.dig("error", "message")
       end
 
