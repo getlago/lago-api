@@ -63,25 +63,29 @@ RSpec.describe Invoices::PrepaidCreditJob do
     end
   end
 
-  context "when payment fails" do
+  shared_examples "does not grant credits" do |payment_status|
     it "marks the wallet transaction as failed" do
       allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
-      described_class.perform_now(invoice, :failed)
+      described_class.perform_now(invoice, payment_status)
       expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
       expect(wallet_transaction.reload.status).to eq("failed")
     end
 
     it "does not grant prepaid credits" do
       expect {
-        described_class.perform_now(invoice, :failed)
+        described_class.perform_now(invoice, payment_status)
       }.not_to change { wallet.reload.balance_cents }
     end
 
     it "does not finalize the invoice" do
       allow(Invoices::FinalizeOpenCreditService).to receive(:call)
-      described_class.perform_now(invoice, :failed)
+      described_class.perform_now(invoice, payment_status)
       expect(Invoices::FinalizeOpenCreditService).not_to have_received(:call)
     end
+  end
+
+  context "when payment fails" do
+    it_behaves_like "does not grant credits", :failed
   end
 
   context "when invoice is paid by credit note" do
@@ -91,24 +95,7 @@ RSpec.describe Invoices::PrepaidCreditJob do
       create(:invoice_settlement, target_invoice: invoice, source_credit_note:, settlement_type: :credit_note)
     end
 
-    it "does not grant prepaid credits" do
-      expect {
-        described_class.perform_now(invoice, :succeeded)
-      }.not_to change { wallet.reload.balance_cents }
-    end
-
-    it "marks the wallet transaction as failed" do
-      allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
-      described_class.perform_now(invoice, :succeeded)
-      expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
-      expect(wallet_transaction.reload.status).to eq("failed")
-    end
-
-    it "does not finalize the invoice" do
-      allow(Invoices::FinalizeOpenCreditService).to receive(:call)
-      described_class.perform_now(invoice, :succeeded)
-      expect(Invoices::FinalizeOpenCreditService).not_to have_received(:call)
-    end
+    it_behaves_like "does not grant credits", :succeeded
   end
 
   context "when payment_status is not provided" do

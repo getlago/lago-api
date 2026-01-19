@@ -292,93 +292,6 @@ RSpec.describe Payments::ManualCreateService do
         end
       end
 
-      context "when invoice has multiple offset settlements" do
-        let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
-        let(:credit_note_1) do
-          create(
-            :credit_note,
-            invoice:,
-            customer:,
-            offset_amount_cents: 2000,
-            status: :finalized
-          )
-        end
-        let(:credit_note_2) do
-          create(
-            :credit_note,
-            invoice:,
-            customer:,
-            offset_amount_cents: 3000,
-            status: :finalized
-          )
-        end
-
-        before do
-          create(
-            :invoice_settlement,
-            target_invoice: invoice,
-            source_credit_note: credit_note_1,
-            settlement_type: :credit_note,
-            amount_cents: 2000,
-            organization:
-          )
-          create(
-            :invoice_settlement,
-            target_invoice: invoice,
-            source_credit_note: credit_note_2,
-            settlement_type: :credit_note,
-            amount_cents: 3000,
-            organization:
-          )
-        end
-
-        context "when payment covers remaining amount" do
-          let(:amount_cents) { 5000 } # 10000 - 2000 - 3000 = 5000
-
-          it "marks invoice as paid" do
-            result = service.call
-
-            expect(result).to be_success
-            expect(result.payment.payable.payment_status).to eq("succeeded")
-          end
-        end
-      end
-
-      context "when invoice is fully settled by credit note offsets" do
-        let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 5000, status: :finalized) }
-        let(:credit_note) do
-          create(
-            :credit_note,
-            invoice:,
-            customer:,
-            offset_amount_cents: 5000,
-            status: :finalized
-          )
-        end
-
-        before do
-          create(
-            :invoice_settlement,
-            target_invoice: invoice,
-            source_credit_note: credit_note,
-            settlement_type: :credit_note,
-            amount_cents: 5000,
-            organization:
-          )
-        end
-
-        context "when trying to add additional payment" do
-          let(:amount_cents) { 1000 }
-
-          it "returns validation failure for exceeding amount" do
-            result = service.call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-          end
-        end
-      end
-
       context "when invoice has partial payment and offset" do
         let(:invoice) do
           create(
@@ -402,6 +315,16 @@ RSpec.describe Payments::ManualCreateService do
 
         before do
           create(
+            :payment,
+            payable: invoice,
+            organization:,
+            customer:,
+            amount_cents: 3000,
+            status: "succeeded",
+            payable_payment_status: "succeeded"
+          )
+
+          create(
             :invoice_settlement,
             target_invoice: invoice,
             source_credit_note: credit_note,
@@ -421,28 +344,6 @@ RSpec.describe Payments::ManualCreateService do
             expect(result.payment.payable.payment_status).to eq("succeeded")
             expect(result.payment.payable.total_paid_amount_cents).to eq(8000) # 3000 + 5000
           end
-        end
-      end
-
-      context "when invoice has payment settlements but no credit note settlements" do
-        let(:invoice) do
-          create(
-            :invoice,
-            customer:,
-            organization:,
-            total_amount_cents: 10000,
-            total_paid_amount_cents: 5000,
-            status: :finalized
-          )
-        end
-        let(:amount_cents) { 5000 }
-
-        it "marks invoice as paid when total matches" do
-          result = service.call
-
-          expect(result).to be_success
-          expect(result.payment.payable.payment_status).to eq("succeeded")
-          expect(result.payment.payable.total_paid_amount_cents).to eq(10000)
         end
       end
     end

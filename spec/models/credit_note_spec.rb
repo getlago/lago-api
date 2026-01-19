@@ -28,15 +28,6 @@ RSpec.describe CreditNote do
     it { is_expected.to validate_numericality_of(:refund_amount_cents).is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_numericality_of(:offset_amount_cents).is_greater_than_or_equal_to(0) }
     it { is_expected.to validate_numericality_of(:balance_amount_cents).is_greater_than_or_equal_to(0) }
-
-    context "when offset_amount_cents is negative" do
-      let(:credit_note) { build(:credit_note, offset_amount_cents: -100) }
-
-      it "is invalid" do
-        expect(credit_note).not_to be_valid
-        expect(credit_note.errors[:offset_amount_cents]).to include("value_is_out_of_range")
-      end
-    end
   end
 
   describe "sequential_id" do
@@ -156,128 +147,87 @@ RSpec.describe CreditNote do
     it { expect(credit_note.refund_amount_cents).to be_zero }
   end
 
-  describe "#has_offset?" do
-    let(:credit_note) { build(:credit_note, offset_amount_cents: 0) }
+  describe "offset amount" do
+    describe "#has_offset?" do
+      it "returns false when offset is zero" do
+        credit_note = build(:credit_note, offset_amount_cents: 0)
+        expect(credit_note).not_to have_offset
+      end
 
-    it { expect(credit_note).not_to have_offset }
-
-    context "when offset amount is present" do
-      let(:credit_note) { build(:credit_note, offset_amount_cents: 100) }
-
-      it { expect(credit_note).to have_offset }
+      it "returns true when offset is present" do
+        credit_note = build(:credit_note, offset_amount_cents: 100)
+        expect(credit_note).to have_offset
+      end
     end
-  end
 
-  describe "#offset_amount_cents" do
-    let(:credit_note) { build(:credit_note) }
+    describe "#offset_amount_cents" do
+      it "defaults to zero" do
+        credit_note = build(:credit_note)
+        expect(credit_note.offset_amount_cents).to be_zero
+      end
 
-    it { expect(credit_note.offset_amount_cents).to be_zero }
-
-    context "when offset amount is set" do
-      let(:credit_note) { build(:credit_note, offset_amount_cents: 500) }
-
-      it "returns the offset amount" do
+      it "returns the set value" do
+        credit_note = build(:credit_note, offset_amount_cents: 500)
         expect(credit_note.offset_amount_cents).to eq(500)
       end
     end
-  end
 
-  describe "offset_amount monetization" do
-    let(:credit_note) do
-      build(:credit_note,
-        offset_amount_cents: 1234,
-        offset_amount_currency: "USD")
-    end
-
-    it "provides offset_amount as a Money object" do
-      expect(credit_note.offset_amount).to be_a(Money)
-      expect(credit_note.offset_amount.cents).to eq(1234)
-      expect(credit_note.offset_amount.currency.to_s).to eq("USD")
+    describe "monetization" do
+      it "provides offset_amount as a Money object" do
+        credit_note = build(:credit_note, offset_amount_cents: 1234, offset_amount_currency: "USD")
+        expect(credit_note.offset_amount).to be_a(Money)
+        expect(credit_note.offset_amount.cents).to eq(1234)
+        expect(credit_note.offset_amount.currency.to_s).to eq("USD")
+      end
     end
   end
 
   describe "invoice_settlements association" do
-    let(:credit_note) { create(:credit_note) }
-    let(:invoice_settlement) do
-      create(:invoice_settlement,
-        target_invoice: credit_note.invoice,
-        source_credit_note: credit_note,
-        settlement_type: :credit_note,
-        amount_cents: 100)
-    end
-
-    before { invoice_settlement }
-
     it "returns associated invoice settlements" do
-      expect(credit_note.invoice_settlements).to include(invoice_settlement)
-    end
+      credit_note = create(:credit_note)
+      invoice_settlement = create(:invoice_settlement,
+        target_invoice: credit_note.invoice, source_credit_note: credit_note,
+        settlement_type: :credit_note, amount_cents: 100)
 
-    it "returns the correct settlement amount" do
+      expect(credit_note.invoice_settlements).to include(invoice_settlement)
       expect(credit_note.invoice_settlements.first.amount_cents).to eq(100)
     end
   end
 
-  describe "total amount with offset" do
-    context "when credit note has credit, refund, and offset amounts" do
-      let(:credit_note) do
-        build(:credit_note,
-          credit_amount_cents: 1000,
-          refund_amount_cents: 500,
-          offset_amount_cents: 300,
-          total_amount_cents: 1800)
-      end
-
-      it "total amount includes all three components" do
-        expect(credit_note.total_amount_cents).to eq(1800) # 1000 + 500 + 300
-      end
+  describe "total amount calculation" do
+    it "includes all components when all are present" do
+      credit_note = build(:credit_note,
+        credit_amount_cents: 1000, refund_amount_cents: 500,
+        offset_amount_cents: 300, total_amount_cents: 1800)
+      expect(credit_note.total_amount_cents).to eq(1800) # 1000 + 500 + 300
     end
 
-    context "when credit note has only offset amount" do
-      let(:credit_note) do
-        build(:credit_note,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          offset_amount_cents: 750,
-          total_amount_cents: 750)
-      end
-
-      it "total amount equals offset amount" do
-        expect(credit_note.total_amount_cents).to eq(750)
-      end
+    it "equals offset amount when only offset is present" do
+      credit_note = build(:credit_note,
+        credit_amount_cents: 0, refund_amount_cents: 0,
+        offset_amount_cents: 750, total_amount_cents: 750)
+      expect(credit_note.total_amount_cents).to eq(750)
     end
 
-    context "when credit note has no offset amount" do
-      let(:credit_note) do
-        build(:credit_note,
-          credit_amount_cents: 1000,
-          refund_amount_cents: 500,
-          offset_amount_cents: 0,
-          total_amount_cents: 1500)
-      end
-
-      it "total amount excludes offset" do
-        expect(credit_note.total_amount_cents).to eq(1500) # 1000 + 500
-      end
+    it "excludes offset when offset is zero" do
+      credit_note = build(:credit_note,
+        credit_amount_cents: 1000, refund_amount_cents: 500,
+        offset_amount_cents: 0, total_amount_cents: 1500)
+      expect(credit_note.total_amount_cents).to eq(1500) # 1000 + 500
     end
   end
 
   describe "#for_credit_invoice?" do
-    context "when invoice is a credit invoice" do
-      let(:credit_invoice) { create(:invoice, invoice_type: :credit) }
-      let(:credit_note) { build(:credit_note, invoice: credit_invoice) }
-
-      it "returns true" do
-        expect(credit_note.for_credit_invoice?).to eq(true)
-      end
+    it "returns true for credit invoices" do
+      credit_invoice = create(:invoice, invoice_type: :credit)
+      credit_note = build(:credit_note, invoice: credit_invoice)
+      expect(credit_note.for_credit_invoice?).to eq(true)
     end
 
-    context "when invoice is not a credit invoice" do
-      let(:regular_invoice) { create(:invoice, invoice_type: :subscription) }
-      let(:credit_note) { build(:credit_note, invoice: regular_invoice) }
-
-      it "returns false" do
-        expect(credit_note.for_credit_invoice?).to eq(false)
-      end
+    it "returns false for non-credit invoices" do
+      regular_invoice = create(:invoice, invoice_type: :subscription)
+      credit_note = build(:credit_note, invoice: regular_invoice)
+      expect(credit_note.for_credit_invoice?).to eq(false)
     end
   end
 

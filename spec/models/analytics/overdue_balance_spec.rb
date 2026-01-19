@@ -158,147 +158,129 @@ RSpec.describe Analytics::OverdueBalance do
       end
     end
 
-    context "with credit notes offsetting invoice amounts" do
+    context "with special invoice scenarios" do
       let(:args) { {} }
-      let(:invoice_with_credit) do
-        create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
-          total_amount_cents: 1000, billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
-      let(:credit_note) do
-        create(:credit_note, invoice: invoice_with_credit, customer:, status: :finalized,
-          total_amount_cents: 300, credit_amount_cents: 300, balance_amount_cents: 300,
-          refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
+
+      context "with credit notes offsetting invoice amounts" do
+        let(:invoice_with_credit) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 1000, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before do
+          invoice_with_credit
+          credit_note = create(:credit_note, invoice: invoice_with_credit, customer:, status: :finalized,
+            total_amount_cents: 300, credit_amount_cents: 300, balance_amount_cents: 300,
+            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
+          credit_note.update!(offset_amount_cents: 300)
+        end
+
+        it "deducts credit note offset from the overdue amount" do
+          result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(invoice_with_credit.id) }
+          expect(result["amount_cents"]).to eq(800) # invoice1 (100) + invoice_with_credit (1000 - 300)
+        end
       end
 
-      before do
-        invoice_with_credit
-        credit_note.update!(offset_amount_cents: 300)
+      context "with self-billed invoices" do
+        let(:self_billed_invoice) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 5000, billing_entity: billing_entity1, issuing_date: 1.month.ago, self_billed: true)
+        end
+
+        before { self_billed_invoice }
+
+        it "excludes self-billed invoices from overdue balances" do
+          invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+          expect(invoice_ids).not_to include(self_billed_invoice.id)
+        end
       end
 
-      it "deducts credit note offset from the overdue amount" do
-        result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(invoice_with_credit.id) }
-        expect(result["amount_cents"]).to eq(800) # invoice1 (100) + invoice_with_credit (1000 - 300)
+      context "with partially paid invoices" do
+        let(:partially_paid_invoice) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 1000, total_paid_amount_cents: 400, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before { partially_paid_invoice }
+
+        it "calculates overdue amount as total minus paid amount" do
+          result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(partially_paid_invoice.id) }
+          expect(result["amount_cents"]).to eq(700) # invoice1 (100) + partially_paid_invoice (1000 - 400)
+        end
+      end
+
+      context "with only finalized credit notes" do
+        let(:invoice_with_draft_credit) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 1000, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before do
+          invoice_with_draft_credit
+          draft_credit_note = create(:credit_note, invoice: invoice_with_draft_credit, customer:, status: :draft,
+            total_amount_cents: 200, credit_amount_cents: 200, balance_amount_cents: 200,
+            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
+          draft_credit_note.update!(offset_amount_cents: 200)
+        end
+
+        it "only includes finalized credit notes in offset calculation" do
+          result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(invoice_with_draft_credit.id) }
+          expect(result["amount_cents"]).to eq(1100) # invoice1 (100) + invoice_with_draft_credit (1000, draft credit note not applied)
+        end
       end
     end
 
-    context "with self-billed invoices" do
-      let(:args) { {} }
-      let(:self_billed_invoice) do
-        create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
-          total_amount_cents: 5000, billing_entity: billing_entity1, issuing_date: 1.month.ago,
-          self_billed: true)
+    context "with filters" do
+      context "with currency filter" do
+        let(:args) { {currency: "USD"} }
+        let(:usd_invoice) do
+          create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+            total_amount_cents: 500, currency: "USD", billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before { usd_invoice }
+
+        it "returns only invoices with the specified currency" do
+          expect(overdue_balances.map { |r| r["currency"] }.uniq).to eq(["USD"])
+          result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(usd_invoice.id) }
+          expect(result).to be_present
+        end
+
+        it "excludes invoices with different currencies" do
+          invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+          expect(invoice_ids).not_to include(invoice1.id, invoice4.id) # EUR invoices
+        end
       end
 
-      before do
-        self_billed_invoice
+      context "with external_customer_id filter" do
+        let(:args) { {external_customer_id: customer.external_id} }
+        let(:other_customer) { create(:customer, organization:, external_id: "other_customer") }
+        let(:other_invoice) do
+          create(:invoice, customer: other_customer, organization:, payment_overdue: true,
+            payment_due_date: 1.month.ago, total_amount_cents: 999, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
+
+        before { other_invoice }
+
+        it "returns only overdue balances for the specified customer" do
+          invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+          expect(invoice_ids).to include(invoice1.id)
+          expect(invoice_ids).not_to include(other_invoice.id)
+        end
       end
 
-      it "excludes self-billed invoices from overdue balances" do
-        invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
-        expect(invoice_ids).not_to include(self_billed_invoice.id)
-      end
-    end
+      context "with deleted customer" do
+        let(:deleted_customer) { create(:customer, organization:, deleted_at: 1.day.ago) }
+        let(:args) { {external_customer_id: deleted_customer.external_id} }
 
-    context "with partially paid invoices" do
-      let(:args) { {} }
-      let(:partially_paid_invoice) do
-        create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
-          total_amount_cents: 1000, total_paid_amount_cents: 400,
-          billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
+        before do
+          create(:invoice, customer: deleted_customer, organization:, payment_overdue: true,
+            payment_due_date: 1.month.ago, total_amount_cents: 888, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+        end
 
-      before do
-        partially_paid_invoice
-      end
-
-      it "calculates overdue amount as total minus paid amount" do
-        result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(partially_paid_invoice.id) }
-        expect(result["amount_cents"]).to eq(700) # invoice1 (100) + partially_paid_invoice (1000 - 400)
-      end
-    end
-
-    context "with currency filter" do
-      let(:args) { {currency: "USD"} }
-      let(:usd_invoice) do
-        create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
-          total_amount_cents: 500, currency: "USD", billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
-
-      before do
-        usd_invoice
-      end
-
-      it "returns only invoices with the specified currency" do
-        expect(overdue_balances.map { |r| r["currency"] }.uniq).to eq(["USD"])
-        result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(usd_invoice.id) }
-        expect(result).to be_present
-      end
-
-      it "excludes invoices with different currencies" do
-        invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
-        expect(invoice_ids).not_to include(invoice1.id) # EUR invoice
-        expect(invoice_ids).not_to include(invoice4.id) # EUR invoice
-      end
-    end
-
-    context "with external_customer_id filter" do
-      let(:other_customer) { create(:customer, organization:, external_id: "other_customer") }
-      let(:other_invoice) do
-        create(:invoice, customer: other_customer, organization:, payment_overdue: true,
-          payment_due_date: 1.month.ago, total_amount_cents: 999,
-          billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
-      let(:args) { {external_customer_id: customer.external_id} }
-
-      before do
-        other_invoice
-      end
-
-      it "returns only overdue balances for the specified customer" do
-        invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
-        expect(invoice_ids).to include(invoice1.id)
-        expect(invoice_ids).not_to include(other_invoice.id)
-      end
-    end
-
-    context "with deleted customer" do
-      let(:deleted_customer) { create(:customer, organization:, deleted_at: 1.day.ago) }
-      let(:deleted_customer_invoice) do
-        create(:invoice, customer: deleted_customer, organization:, payment_overdue: true,
-          payment_due_date: 1.month.ago, total_amount_cents: 888,
-          billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
-      let(:args) { {external_customer_id: deleted_customer.external_id} }
-
-      before do
-        deleted_customer_invoice
-      end
-
-      it "excludes invoices from deleted customers when filtering by external_customer_id" do
-        expect(overdue_balances).to be_empty
-      end
-    end
-
-    context "with only finalized credit notes" do
-      let(:args) { {} }
-      let(:invoice_with_draft_credit) do
-        create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
-          total_amount_cents: 1000, billing_entity: billing_entity1, issuing_date: 1.month.ago)
-      end
-      let(:draft_credit_note) do
-        create(:credit_note, invoice: invoice_with_draft_credit, customer:, status: :draft,
-          total_amount_cents: 200, credit_amount_cents: 200, balance_amount_cents: 200,
-          refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
-      end
-
-      before do
-        invoice_with_draft_credit
-        draft_credit_note.update!(offset_amount_cents: 200)
-      end
-
-      it "only includes finalized credit notes in offset calculation" do
-        result = overdue_balances.find { |r| r["lago_invoice_ids"].include?(invoice_with_draft_credit.id) }
-        expect(result["amount_cents"]).to eq(1100) # invoice1 (100) + invoice_with_draft_credit (1000, draft credit note not applied)
+        it "excludes invoices from deleted customers" do
+          expect(overdue_balances).to be_empty
+        end
       end
     end
   end

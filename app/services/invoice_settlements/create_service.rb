@@ -11,12 +11,12 @@ module InvoiceSettlements
       @source_credit_note = source_credit_note
       @source_payment = source_payment
 
-      validate_single_source!
-
       super
     end
 
     def call
+      validate_single_source!
+
       ActiveRecord::Base.transaction do
         invoice_settlement = InvoiceSettlement.create!(
           organization_id: invoice.organization_id,

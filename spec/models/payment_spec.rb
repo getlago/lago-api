@@ -201,111 +201,44 @@ RSpec.describe Payment do
             end
           end
 
-          context "when invoice has offset amounts from credit notes" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 3000)
-            end
-            let(:amount_cents) { 5000 }
+          context "with offset amounts from credit notes" do
+            let(:payable) { create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 3000) }
 
-            before do
+            it "allows payment within remaining due amount after offset" do
               create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 5000 # total_due = 10000 - 3000 - 2000 = 5000
               payment.save
-            end
-
-            it "does not add error when amount is within total_due_amount" do
-              # total_due = 10000 - 3000 - 2000 = 5000
-              # payment amount = 5000, which equals total_due
               expect(errors.where(:amount_cents, :greater_than)).not_to be_present
             end
-          end
 
-          context "when payment exceeds total_due_amount with offsets" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 3000)
-            end
-            let(:amount_cents) { 6000 }
-
-            before do
+            it "rejects payment exceeding remaining due amount after offset" do
               create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 6000 # total_due = 10000 - 3000 - 2000 = 5000
               payment.save
-            end
-
-            it "adds error when amount exceeds total_due_amount" do
-              # total_due = 10000 - 3000 - 2000 = 5000
-              # payment amount = 6000, which exceeds total_due
               expect(errors.where(:amount_cents, :greater_than)).to be_present
             end
-          end
 
-          context "when invoice is fully settled by payments and offsets" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 6000)
-            end
-            let(:amount_cents) { 1 }
-
-            before do
-              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 4000)
-              payment.save
-            end
-
-            it "adds error when trying to pay already settled invoice" do
-              # total_due = 10000 - 6000 - 4000 = 0
-              # payment amount = 1, which exceeds total_due of 0
-              expect(errors.where(:amount_cents, :greater_than)).to be_present
-            end
-          end
-
-          context "when invoice has partial offset" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 2000)
-            end
-            let(:amount_cents) { 7000 }
-
-            before do
-              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1000)
-              payment.save
-            end
-
-            it "does not add error when amount equals remaining due" do
-              # total_due = 10000 - 2000 - 1000 = 7000
-              # payment amount = 7000, which equals total_due
-              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
-            end
-          end
-
-          context "when invoice has multiple offset credit notes" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 1000)
-            end
-            let(:amount_cents) { 6500 }
-
-            before do
+            it "sums multiple offset amounts correctly" do
               create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1500)
               create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1000)
+              payment.amount_cents = 4500 # total_due = 10000 - 3000 - 2500 = 4500
               payment.save
-            end
-
-            it "does not add error when considering all offsets" do
-              # total_due = 10000 - 1000 - 1500 - 1000 = 6500
-              # payment amount = 6500, which equals total_due
               expect(errors.where(:amount_cents, :greater_than)).not_to be_present
             end
-          end
 
-          context "when invoice has draft credit notes with offsets" do
-            let(:payable) do
-              create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 2000)
-            end
-            let(:amount_cents) { 8000 }
-
-            before do
-              create(:credit_note, invoice: payable, status: :draft, offset_amount_cents: 1000)
+            it "rejects payment when invoice is fully settled by offsets" do
+              payable.update!(total_paid_amount_cents: 6000)
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 4000)
+              payment.amount_cents = 1 # total_due = 10000 - 6000 - 4000 = 0
               payment.save
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
             end
 
-            it "does not consider draft credit notes in total_due calculation" do
-              # total_due = 10000 - 2000 - 0 (draft excluded) = 8000
-              # payment amount = 8000, which equals total_due
+            it "ignores draft credit notes when calculating due amount" do
+              payable.update!(total_paid_amount_cents: 2000)
+              create(:credit_note, invoice: payable, status: :draft, offset_amount_cents: 1000)
+              payment.amount_cents = 8000 # total_due = 10000 - 2000 = 8000 (draft ignored)
+              payment.save
               expect(errors.where(:amount_cents, :greater_than)).not_to be_present
             end
           end

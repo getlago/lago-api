@@ -561,108 +561,70 @@ RSpec.describe Api::V1::CreditNotesController do
       end
     end
 
-    context "with offset_amount_cents on credit invoice with payment_pending" do
+    context "with credit invoices" do
       let(:wallet) { create(:wallet, customer:, balance_cents: 100) }
-      let(:credit_invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          invoice_type: :credit,
-          payment_status: "pending",
-          currency: "EUR",
-          fees_amount_cents: 100,
-          total_amount_cents: 100
-        )
-      end
       let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice: credit_invoice, organization:) }
       let(:credit_fee) { create(:credit_fee, invoice: credit_invoice, wallet_transaction:, organization:) }
-      let(:create_params) do
-        {
-          invoice_id: credit_invoice.id,
-          reason: "other",
-          description: "Offset to parent invoice",
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          offset_amount_cents: 100,
-          items: [{fee_id: credit_fee.id, amount_cents: 100}]
-        }
+
+      context "when payment is pending" do
+        let(:credit_invoice) do
+          create(:invoice, organization:, customer:, invoice_type: :credit, payment_status: "pending", currency: "EUR")
+        end
+
+        context "with offset_amount_cents" do
+          let(:create_params) do
+            {
+              invoice_id: credit_invoice.id,
+              reason: "other",
+              offset_amount_cents: 100,
+              items: [{fee_id: credit_fee.id, amount_cents: 100}]
+            }
+          end
+
+          it "creates credit note successfully" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:credit_note][:offset_amount_cents]).to eq(100)
+          end
+        end
+
+        context "with credit_amount_cents" do
+          let(:create_params) do
+            {
+              invoice_id: credit_invoice.id,
+              reason: "other",
+              credit_amount_cents: 50,
+              items: [{fee_id: credit_fee.id, amount_cents: 50}]
+            }
+          end
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:method_not_allowed)
+          end
+        end
       end
 
-      it "allows creating credit note with offset for pending payment credit invoice" do
-        subject
+      context "when payment failed" do
+        let(:credit_invoice) do
+          create(:invoice, organization:, customer:, invoice_type: :credit, payment_status: "failed", currency: "EUR")
+        end
+        let(:create_params) do
+          {
+            invoice_id: credit_invoice.id,
+            reason: "other",
+            offset_amount_cents: 50,
+            items: [{fee_id: credit_fee.id, amount_cents: 50}]
+          }
+        end
 
-        expect(response).to have_http_status(:success)
-        expect(json[:credit_note][:offset_amount_cents]).to eq(100)
-      end
-    end
+        it "returns an error" do
+          subject
 
-    context "with offset_amount_cents on credit invoice with failed payment" do
-      let(:wallet) { create(:wallet, customer:, balance_cents: 100) }
-      let(:credit_invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          invoice_type: :credit,
-          payment_status: "failed",
-          currency: "EUR",
-          fees_amount_cents: 100,
-          total_amount_cents: 100
-        )
-      end
-      let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice: credit_invoice, organization:) }
-      let(:credit_fee) { create(:credit_fee, invoice: credit_invoice, wallet_transaction:, organization:) }
-      let(:create_params) do
-        {
-          invoice_id: credit_invoice.id,
-          reason: "other",
-          description: "Offset to parent invoice",
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          offset_amount_cents: 50,
-          items: [{fee_id: credit_fee.id, amount_cents: 50}]
-        }
-      end
-
-      it "returns an error for failed payment credit invoice" do
-        subject
-
-        expect(response).to have_http_status(:method_not_allowed)
-      end
-    end
-
-    context "with credit_amount_cents on pending credit invoice" do
-      let(:wallet) { create(:wallet, customer:, balance_cents: 100) }
-      let(:credit_invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          invoice_type: :credit,
-          payment_status: "pending",
-          currency: "EUR",
-          fees_amount_cents: 100,
-          total_amount_cents: 100
-        )
-      end
-      let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice: credit_invoice, organization:) }
-      let(:credit_fee) { create(:credit_fee, invoice: credit_invoice, wallet_transaction:, organization:) }
-      let(:create_params) do
-        {
-          invoice_id: credit_invoice.id,
-          reason: "other",
-          description: "Credit to wallet",
-          credit_amount_cents: 50,
-          refund_amount_cents: 0,
-          items: [{fee_id: credit_fee.id, amount_cents: 50}]
-        }
-      end
-
-      it "returns an error when trying to add credit for pending payment" do
-        subject
-
-        expect(response).to have_http_status(:method_not_allowed)
+          expect(response).to have_http_status(:method_not_allowed)
+        end
       end
     end
   end

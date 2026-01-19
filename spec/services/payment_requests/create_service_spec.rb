@@ -154,213 +154,61 @@ RSpec.describe PaymentRequests::CreateService do
       )
     end
 
-    context "with credit notes having offset amounts" do
-      let(:credit_note_1) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 50,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 50,
-          status: :finalized
-        )
-      end
+    context "with offset amounts from credit notes" do
+      it "deducts finalized offset amounts from total" do
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 50,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 50, status: :finalized)
+        create(:credit_note, invoice: second_invoice, customer:, offset_amount_cents: 100,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 100, status: :finalized)
 
-      let(:credit_note_2) do
-        create(
-          :credit_note,
-          invoice: second_invoice,
-          customer:,
-          offset_amount_cents: 100,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 100,
-          status: :finalized
-        )
-      end
-
-      before do
-        credit_note_1
-        credit_note_2
-      end
-
-      it "deducts offset amounts from total amount" do
         result = create_service.call
-
-        # Original: (200 - 100) + (500 - 200) = 400
-        # With offsets: 400 - 50 - 100 = 250
-        expect(result.payment_request.amount_cents).to eq(250)
-      end
-
-      it "creates a payment request with correct amount" do
-        result = create_service.call
-
         expect(result).to be_success
-        expect(result.payment_request.amount_cents).to eq(250)
-      end
-    end
-
-    context "with draft credit notes having offset amounts" do
-      let(:draft_credit_note) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 50,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 50,
-          status: :draft
-        )
+        expect(result.payment_request.amount_cents).to eq(250) # 400 - 50 - 100
       end
 
-      before { draft_credit_note }
+      it "ignores draft credit note offsets" do
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 50,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 50, status: :draft)
 
-      it "does not deduct draft credit note offsets from total amount" do
         result = create_service.call
-
-        # Draft credit notes should not be counted
-        # Original: (200 - 100) + (500 - 200) = 400
-        expect(result.payment_request.amount_cents).to eq(400)
-      end
-    end
-
-    context "with only finalized credit notes counted" do
-      let(:finalized_credit_note) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 30,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 30,
-          status: :finalized
-        )
+        expect(result.payment_request.amount_cents).to eq(400) # Draft not counted
       end
 
-      let(:draft_credit_note) do
-        create(
-          :credit_note,
-          invoice: second_invoice,
-          customer:,
-          offset_amount_cents: 80,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 80,
-          status: :draft
-        )
-      end
+      it "only deducts finalized offsets when both draft and finalized exist" do
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 30,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 30, status: :finalized)
+        create(:credit_note, invoice: second_invoice, customer:, offset_amount_cents: 80,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 80, status: :draft)
 
-      before do
-        finalized_credit_note
-        draft_credit_note
-      end
-
-      it "only deducts finalized credit note offsets" do
         result = create_service.call
-
-        # Original: (200 - 100) + (500 - 200) = 400
-        # With only finalized offset: 400 - 30 = 370
-        expect(result.payment_request.amount_cents).to eq(370)
-      end
-    end
-
-    context "when invoice is fully offset by credit notes" do
-      let(:first_invoice) do
-        create(:invoice, customer:, payment_overdue: true, total_amount_cents: 100, total_paid_amount_cents: 0)
+        expect(result.payment_request.amount_cents).to eq(370) # 400 - 30
       end
 
-      let(:credit_note) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 100,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 100,
-          status: :finalized
-        )
-      end
+      it "excludes invoice when fully offset by credit notes" do
+        first_invoice.update!(total_amount_cents: 100, total_paid_amount_cents: 0)
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 100,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 100, status: :finalized)
 
-      before { credit_note }
-
-      it "calculates remaining amount correctly" do
         result = create_service.call
-
-        # First invoice: 100 - 0 - 100 = 0
-        # Second invoice: 500 - 200 = 300
-        # Total: 300
-        expect(result.payment_request.amount_cents).to eq(300)
-      end
-    end
-
-    context "with credit notes that have credit and offset amounts" do
-      let(:credit_note) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 25,
-          credit_amount_cents: 25,
-          refund_amount_cents: 0,
-          total_amount_cents: 50,
-          status: :finalized
-        )
+        expect(result.payment_request.amount_cents).to eq(300) # Second invoice only: 500 - 200
       end
 
-      before { credit_note }
+      it "deducts only offset amounts, not credit or refund amounts" do
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 25,
+          credit_amount_cents: 25, refund_amount_cents: 0, total_amount_cents: 50, status: :finalized)
 
-      it "only deducts offset amounts, not credit amounts" do
         result = create_service.call
-
-        # Original: (200 - 100) + (500 - 200) = 400
-        # Only offset is deducted: 400 - 25 = 375
-        expect(result.payment_request.amount_cents).to eq(375)
-      end
-    end
-
-    context "with multiple credit notes on same invoice" do
-      let(:credit_note_1) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 20,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 20,
-          status: :finalized
-        )
+        expect(result.payment_request.amount_cents).to eq(375) # 400 - 25 (not - 50)
       end
 
-      let(:credit_note_2) do
-        create(
-          :credit_note,
-          invoice: first_invoice,
-          customer:,
-          offset_amount_cents: 30,
-          credit_amount_cents: 0,
-          refund_amount_cents: 0,
-          total_amount_cents: 30,
-          status: :finalized
-        )
-      end
+      it "sums multiple offset amounts on same invoice" do
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 20,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 20, status: :finalized)
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 30,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 30, status: :finalized)
 
-      before do
-        credit_note_1
-        credit_note_2
-      end
-
-      it "deducts all offset amounts from same invoice" do
         result = create_service.call
-
-        # Original: (200 - 100) + (500 - 200) = 400
-        # With offsets on first invoice: 400 - 20 - 30 = 350
-        expect(result.payment_request.amount_cents).to eq(350)
+        expect(result.payment_request.amount_cents).to eq(350) # 400 - 20 - 30
       end
     end
   end
