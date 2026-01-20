@@ -65,7 +65,13 @@ module PaymentProviders
           ).response
 
           payment_method_id = result["storedPaymentMethods"]&.first&.dig("id")
-          provider_customer.update!(payment_method_id:) if payment_method_id
+
+          if payment_method_id
+            provider_customer.update!(payment_method_id:)
+            if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
+              payment.payment_method.presence&.update(provider_method_id: payment_method_id)
+            end
+          end
         end
 
         def create_adyen_payment
@@ -93,7 +99,7 @@ module PaymentProviders
             reference: reference,
             paymentMethod: {
               type: "scheme",
-              storedPaymentMethodId: provider_customer.payment_method_id
+              storedPaymentMethodId: payment_method_id
             },
             shopperReference: provider_customer.provider_customer_id,
             merchantAccount: payment_provider.merchant_account,
@@ -102,6 +108,14 @@ module PaymentProviders
           }
           prms[:shopperEmail] = customer.email if customer.email
           prms
+        end
+
+        def payment_method_id
+          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
+            payment.payment_method&.provider_method_id
+          else
+            provider_customer.payment_method_id
+          end
         end
 
         def prepare_failed_result(error, reraise: false)
