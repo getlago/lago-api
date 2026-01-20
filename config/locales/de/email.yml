@@ -6,10 +6,11 @@ de:
         credit_note_from: Gutschriftsbeleg von %{billing_entity_name}
         credit_note_number: Gutschriftsbelegnummer
         credited_notice: Gutschrift auf Kundenkonto am %{date}
-        credited_refunded_notice: Dem Kundenguthaben gutgeschrieben und am %{date} zurückerstattet
         download: Gutschriftsbeleg herunterladen, um Details anzuzeigen
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
+        issued_notice: Ausgestellt am %{date}
+        offset_invoice_notice: Rechnung %{invoice_number} am %{date} ausgeglichen
         refunded_notice: Zurückerstattet am %{date}
         subject: 'Dein Gutschriftsbeleg von %{billing_entity_name} #%{credit_note_number}'
     invoice:

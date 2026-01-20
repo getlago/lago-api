@@ -25,6 +25,7 @@ module Types
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
       field :events_count, GraphQL::Types::BigInt, null: true
       field :fee_type, Types::Fees::TypesEnum, null: false
+      field :offsettable_amount_cents, GraphQL::Types::BigInt, null: false
       field :precise_unit_amount, GraphQL::Types::Float, null: false
       field :succeeded_at, GraphQL::Types::ISO8601DateTime, null: true
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false

@@ -24,6 +24,7 @@ module Types
       field :balance_amount_cents, GraphQL::Types::BigInt, null: false
       field :coupons_adjustment_amount_cents, GraphQL::Types::BigInt, null: false
       field :credit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :offset_amount_cents, GraphQL::Types::BigInt, null: false
       field :refund_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false

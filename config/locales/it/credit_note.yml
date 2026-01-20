@@ -8,11 +8,13 @@ it:
     credit_to: Credito a
     credited_notice: Accreditato sul saldo cliente il %{issuing_date}
     credited_on_customer_balance: Accreditato sul saldo cliente
-    credited_refunded_notice: Accreditato sul saldo cliente e rimborsato il %{issuing_date}
     document_name: Nota di Credito
     invoice_number: Numero Fattura
     issue_date: Data Emissione
+    issued_notice: Emessa il %{issuing_date}
     item: Articolo
+    offset_invoice: Compensazione sulla fattura %{invoice_number}
+    offset_invoice_notice: Fattura %{invoice_number} compensata il %{issuing_date}
     powered_by: Elaborato da
     prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}
     refunded: Rimborsato
