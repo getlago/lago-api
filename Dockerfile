@@ -13,7 +13,7 @@ ARG BUNDLE_WITH
 WORKDIR /app
 
 RUN apt update && apt upgrade -y
-RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev libreadline-dev -y && \
+RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 COPY ./Gemfile /app/Gemfile
