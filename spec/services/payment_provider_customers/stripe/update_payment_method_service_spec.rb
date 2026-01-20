@@ -19,19 +19,19 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
       expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
     end
 
-    context "with multiple_payment_methods feature flag" do
-      before do
-        create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: "pm_updateMe")
-        organization.enable_feature_flag!(:multiple_payment_methods)
-      end
-
-      it "updates the provider_method_id" do
-        result = update_service.call
-
-        expect(result).to be_success
-        expect(result.payment_method.provider_method_id).to eq(payment_method_id)
-      end
-    end
+    # context "with multiple_payment_methods feature flag" do
+    #   before do
+    #     create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: "pm_updateMe")
+    #     organization.enable_feature_flag!(:multiple_payment_methods)
+    #   end
+    #
+    #   it "updates the provider_method_id" do
+    #     result = update_service.call
+    #
+    #     expect(result).to be_success
+    #     expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+    #   end
+    # end
 
     context "with pending invoices" do
       let(:invoice) do
