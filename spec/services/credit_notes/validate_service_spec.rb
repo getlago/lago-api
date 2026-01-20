@@ -11,6 +11,7 @@ RSpec.describe CreditNotes::ValidateService do
   let(:refund_amount_cents) { 0 }
   let(:precise_taxes_amount_cents) { 2 }
   let(:precise_coupons_adjustment_amount_cents) { 0 }
+  let(:offset_amount_cents) { 0 }
 
   let(:credit_note) do
     create(
@@ -19,6 +20,7 @@ RSpec.describe CreditNotes::ValidateService do
       customer:,
       credit_amount_cents:,
       refund_amount_cents:,
+      offset_amount_cents:,
       precise_coupons_adjustment_amount_cents:,
       precise_taxes_amount_cents:
     )
@@ -289,6 +291,155 @@ RSpec.describe CreditNotes::ValidateService do
 
       it "passes the validation" do
         expect(validator).to be_valid
+      end
+    end
+
+    context "when credit amount exceeds remaining after offset" do
+      let(:credit_amount_cents) { 100 }
+      let(:precise_taxes_amount_cents) { 0 }
+
+      before do
+        # With offset of 21, only 99 is creditable (120 - 21)
+        create(
+          :credit_note,
+          invoice:,
+          customer:,
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          offset_amount_cents: 22, # we have an offset of 1 cent becouse of rounding issues
+          status: :finalized
+        )
+      end
+
+      it "fails validation" do
+        expect(validator).not_to be_valid
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:credit_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
+      end
+    end
+
+    context "when offset_amount_cents exceeds invoice due amount" do
+      let(:credit_amount_cents) { 0 }
+      let(:offset_amount_cents) { 24 }
+      let(:invoice) {
+        create(:invoice,
+          total_amount_cents: 12,
+          total_paid_amount_cents: 12)
+      }
+
+      it "fails validation" do
+        expect(validator).not_to be_valid
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:offset_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
+      end
+    end
+
+    context "with combined credit, refund, and offset amounts" do
+      let(:amount_cents) { 50 }
+      let(:offset_amount_cents) { 20 }
+      let(:credit_amount_cents) { 10 }
+      let(:refund_amount_cents) { 20 }
+      let(:total_paid_amount_cents) { 50 }
+      let(:precise_taxes_amount_cents) { 0 }
+
+      before do
+        invoice.payment_succeeded!
+      end
+
+      it "includes all three in total_amount_cents calculation" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when total with offset is zero" do
+      let(:amount_cents) { 0 }
+      let(:offset_amount_cents) { 0 }
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 0 }
+      let(:precise_taxes_amount_cents) { 0 }
+
+      it "fails validation" do
+        expect(validator).not_to be_valid
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["total_amount_must_be_positive"])
+      end
+    end
+
+    context "when invoice is type credit and payment status is succeeded" do
+      let(:invoice) {
+        create(:invoice,
+          :credit,
+          total_amount_cents: 12,
+          total_paid_amount_cents: 12,
+          payment_status: :succeeded)
+      }
+
+      context "when credit_amount_cents is set" do
+        let(:credit_amount_cents) { 12 }
+
+        it "fails validation for credit invoice with credit_amount" do
+          expect(validator).not_to be_valid
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:credit_amount_cents]).to eq(["cannot_credit_invoice"])
+        end
+      end
+
+      context "when offset_amount_cents is set not convering the full invoice" do
+        let(:credit_amount_cents) { 0 }
+        let(:offset_amount_cents) { 7 }
+
+        it "fails validation for credit invoice with offset_amount_cents when is paid" do
+          expect(validator).not_to be_valid
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:offset_amount_cents]).to eq(["cannot_apply_to_paid_invoice"])
+        end
+      end
+
+      context "when offset_amount_cents is set fully covering the invoice" do
+        let(:credit_amount_cents) { 0 }
+        let(:offset_amount_cents) { 12 }
+
+        it "fails validation for credit invoice with offset_amount_cents when is paid" do
+          expect(validator).not_to be_valid
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:offset_amount_cents]).to eq(["cannot_apply_to_paid_invoice"])
+        end
+      end
+    end
+
+    context "when invoice is type credit but not paid" do
+      let(:invoice) {
+        create(:invoice,
+          :credit,
+          total_amount_cents: 12,
+          total_paid_amount_cents: 0,
+          payment_status: :pending)
+      }
+
+      context "when offset_amount_cents is set not covering the full invoice" do
+        let(:credit_amount_cents) { 0 }
+        let(:offset_amount_cents) { 7 }
+
+        it "fails validation for credit invoice" do
+          expect(validator).not_to be_valid
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:offset_amount_cents]).to eq(["not_equal_to_total_amount"])
+        end
+      end
+
+      context "when offset_amount_cents is set fully covering the invoice" do
+        let(:credit_amount_cents) { 0 }
+        let(:offset_amount_cents) { 12 }
+
+        it "passes the validation" do
+          expect(validator).to be_valid
+        end
       end
     end
   end
