@@ -5,7 +5,7 @@ ARG BUNDLE_WITH
 WORKDIR /app
 
 RUN apt update && apt upgrade -y
-RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev libreadline-dev -y && \
+RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_x86_64.tar.xz -o pdfcpu.tar.xz \
