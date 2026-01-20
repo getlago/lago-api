@@ -1,4 +1,3 @@
-ARG PDFCPU_VERSION=0.11.1
 ARG GO_VERSION=1.25.8
 
 FROM golang:${GO_VERSION} AS pdfcpu-build
@@ -7,14 +6,14 @@ ARG PDFCPU_VERSION
 
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
-FROM ruby:3.4.8-slim AS build
+FROM ruby:4.0.1-slim AS build
 
 ARG BUNDLE_WITH
 
 WORKDIR /app
 
 RUN apt update && apt upgrade -y
-RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
+RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev libreadline-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 COPY ./Gemfile /app/Gemfile
@@ -27,10 +26,10 @@ RUN gem install bundler --no-document -v '2.6.8'
 ENV BUNDLE_WITH=${BUNDLE_WITH:-}
 ENV BUNDLE_WITHOUT="development test"
 RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIBSYS__COM \
-  bundle config build.nokogiri --use-system-libraries &&\
+  bundle config set build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3
 
-FROM ruby:3.4.8-slim
+FROM ruby:4.0.1-slim
 
 ARG BUNDLE_WITH
 
