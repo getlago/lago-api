@@ -25,7 +25,8 @@ module PaymentProviders
               params: {provider_payment_methods: stripe_customer.provider_payment_methods},
               provider_method_id: payment_method_id,
               payment_provider_id: stripe_customer.payment_provider_id,
-              payment_provider_customer: stripe_customer
+              payment_provider_customer: stripe_customer,
+              details: payment_method_details
             )
 
             result.payment_method = pm_result.payment_method
@@ -54,10 +55,27 @@ module PaymentProviders
         end
 
         def valid_payment_method?
-          ::Stripe::PaymentMethod.retrieve(
+          stripe_payment_method.customer.present?
+        end
+
+        def stripe_payment_method
+          @stripe_payment_method ||= ::Stripe::PaymentMethod.retrieve(
             payment_method_id,
             {api_key: stripe_payment_provider.secret_key}
-          ).customer.present?
+          )
+        end
+
+        def payment_method_details
+          data = {type: stripe_payment_method.type}
+
+          if stripe_payment_method.respond_to?(:card) && stripe_payment_method.card
+            data[:last4] = stripe_payment_method.card.last4
+            data[:brand] = stripe_payment_method.card.display_brand
+            data[:expiration_month] = stripe_payment_method.card.exp_month
+            data[:expiration_year] = stripe_payment_method.card.exp_year
+          end
+
+          data
         end
 
         def update_stripe_customer_default_payment_method

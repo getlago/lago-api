@@ -89,13 +89,16 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
         context "when multiple_payment_methods feature flag" do
           before { organization.enable_feature_flag!(:multiple_payment_methods) }
 
-          it "create a customer payment_method" do
+          it "create a customer payment_method with details" do
             result = webhook_service.call
 
             expect(result).to be_success
             expect(result.payment_method).not_to be_nil
             expect(result.payment_method.customer).to eq(customer)
             expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+            expect(result.payment_method.details["type"]).to eq("card")
+            expect(result.payment_method.details["last4"]).to eq("4242")
+            expect(result.payment_method.details["brand"]).to eq("visa")
           end
         end
       end

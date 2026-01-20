@@ -2,12 +2,13 @@
 
 module PaymentMethods
   class CreateFromProviderService < BaseService
-    def initialize(customer:, params:, provider_method_id:, payment_provider_id: nil, payment_provider_customer: nil)
+    def initialize(customer:, params:, provider_method_id:, payment_provider_id: nil, payment_provider_customer: nil, details: nil)
       @customer = customer
       @params = params || {}
       @provider_method_id = provider_method_id
       @payment_provider_id = payment_provider_id
       @payment_provider_customer = payment_provider_customer
+      @details = details
 
       super
     end
@@ -22,6 +23,7 @@ module PaymentMethods
         payment_method.provider_method_id = provider_method_id
         payment_method.payment_provider_id = payment_provider_id
         payment_method.is_default = !customer.payment_methods.exists?(is_default: true)
+        payment_method.details = details if details.present?
       end
 
       payment_method.save!
@@ -32,7 +34,7 @@ module PaymentMethods
 
     private
 
-    attr_accessor :customer, :params, :provider_method_id, :payment_provider_id, :payment_provider_customer
+    attr_accessor :customer, :params, :provider_method_id, :payment_provider_id, :payment_provider_customer, :details
 
     def provider_method_type
       if (provider_payment_methods = params[:provider_payment_methods]).present?
