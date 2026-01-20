@@ -46,6 +46,7 @@ gem "ransack"
 gem "scenic"
 gem "with_advisory_lock"
 gem "strong_migrations"
+gem "connection_pool", "<3" # Temporary fix. See https://github.com/mperham/connection_pool/issues/212
 
 # Currencies, Countries, Timezones...
 gem "bigdecimal"
