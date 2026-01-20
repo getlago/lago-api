@@ -714,7 +714,7 @@ GEM
       opentelemetry-api (~> 1.0)
     optimist (3.2.1)
     os (1.1.4)
-    ostruct (0.6.1)
+    ostruct (0.6.3)
     paper_trail (16.0.0)
       activerecord (>= 6.1)
       request_store (~> 1.4)
