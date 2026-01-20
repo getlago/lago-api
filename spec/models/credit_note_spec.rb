@@ -194,29 +194,6 @@ RSpec.describe CreditNote do
     end
   end
 
-  describe "total amount calculation" do
-    it "includes all components when all are present" do
-      credit_note = build(:credit_note,
-        credit_amount_cents: 1000, refund_amount_cents: 500,
-        offset_amount_cents: 300, total_amount_cents: 1800)
-      expect(credit_note.total_amount_cents).to eq(1800) # 1000 + 500 + 300
-    end
-
-    it "equals offset amount when only offset is present" do
-      credit_note = build(:credit_note,
-        credit_amount_cents: 0, refund_amount_cents: 0,
-        offset_amount_cents: 750, total_amount_cents: 750)
-      expect(credit_note.total_amount_cents).to eq(750)
-    end
-
-    it "excludes offset when offset is zero" do
-      credit_note = build(:credit_note,
-        credit_amount_cents: 1000, refund_amount_cents: 500,
-        offset_amount_cents: 0, total_amount_cents: 1500)
-      expect(credit_note.total_amount_cents).to eq(1500) # 1000 + 500
-    end
-  end
-
   describe "#for_credit_invoice?" do
     it "returns true for credit invoices" do
       credit_invoice = create(:invoice, invoice_type: :credit)

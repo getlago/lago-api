@@ -33,6 +33,12 @@ module CreditNotes
         credit_note.offset_amount_cents
     end
 
+    def creditable_amount_cents
+      invoice.fee_total_amount_cents -
+        credited_invoice_amount_cents -
+        offset_amount_cents
+    end
+
     def refunded_invoice_amount_cents
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:refund_amount_cents)
     end
@@ -52,8 +58,8 @@ module CreditNotes
     def precise_total_items_amount_cents
       (
         credit_note.items.sum(&:precise_amount_cents) -
-        credit_note.precise_coupons_adjustment_amount_cents +
-        credit_note.precise_taxes_amount_cents
+          credit_note.precise_coupons_adjustment_amount_cents +
+          credit_note.precise_taxes_amount_cents
       ).round
     end
 
@@ -106,15 +112,12 @@ module CreditNotes
     def valid_credit_amount?
       if invoice.credit? && credit_note.credit_amount_cents > 0
         add_error(field: :credit_amount_cents, error_code: "cannot_credit_invoice")
+        return false
       end
 
-      creditable = invoice.fee_total_amount_cents -
-        credited_invoice_amount_cents -
-        offset_amount_cents
+      return true if credit_note.credit_amount_cents <= creditable_amount_cents
 
-      return true if credit_note.credit_amount_cents <= creditable
-
-      if (credit_note.credit_amount_cents - creditable).abs > 1
+      if (credit_note.credit_amount_cents - creditable_amount_cents).abs > 1
         add_error(field: :credit_amount_cents, error_code: "higher_than_remaining_invoice_amount")
       end
     end
@@ -127,11 +130,7 @@ module CreditNotes
         invoice.total_paid_amount_cents -
         offset_amount_cents
 
-      creditable = invoice.fee_total_amount_cents -
-        credited_invoice_amount_cents -
-        offset_amount_cents
-
-      offsettable_amount = [invoice_due_amount_cents, creditable].min
+      offsettable_amount = [invoice_due_amount_cents, creditable_amount_cents].min
 
       return true if credit_note.offset_amount_cents <= offsettable_amount
 

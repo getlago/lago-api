@@ -71,7 +71,7 @@ module Analytics
             LEFT JOIN (
               SELECT invoice_id, SUM(offset_amount_cents) AS offset_amount_cents_sum
               FROM credit_notes
-              WHERE status = 1
+              WHERE status = #{CreditNote.statuses[:finalized]}
               GROUP BY invoice_id
             ) cn ON cn.invoice_id = i.id
             WHERE i.organization_id = :organization_id

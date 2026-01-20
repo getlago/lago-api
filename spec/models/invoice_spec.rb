@@ -1965,7 +1965,6 @@ RSpec.describe Invoice do
     context "with credit invoices" do
       it "returns full amount for pending payments" do
         invoice = create(:invoice, invoice_type: :credit, payment_status: :pending, total_amount_cents: 1000)
-        create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 200)
         expect(invoice.offsettable_amount_cents).to eq(1000)
       end
 

@@ -169,10 +169,9 @@ RSpec.describe Analytics::OverdueBalance do
 
         before do
           invoice_with_credit
-          credit_note = create(:credit_note, invoice: invoice_with_credit, customer:, status: :finalized,
+          create(:credit_note, invoice: invoice_with_credit, customer:, status: :finalized,
             total_amount_cents: 300, credit_amount_cents: 300, balance_amount_cents: 300,
-            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
-          credit_note.update!(offset_amount_cents: 300)
+            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0, offset_amount_cents: 300)
         end
 
         it "deducts credit note offset from the overdue amount" do
@@ -217,10 +216,9 @@ RSpec.describe Analytics::OverdueBalance do
 
         before do
           invoice_with_draft_credit
-          draft_credit_note = create(:credit_note, invoice: invoice_with_draft_credit, customer:, status: :draft,
+          create(:credit_note, invoice: invoice_with_draft_credit, customer:, status: :draft,
             total_amount_cents: 200, credit_amount_cents: 200, balance_amount_cents: 200,
-            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0)
-          draft_credit_note.update!(offset_amount_cents: 200)
+            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0, offset_amount_cents: 200)
         end
 
         it "only includes finalized credit notes in offset calculation" do

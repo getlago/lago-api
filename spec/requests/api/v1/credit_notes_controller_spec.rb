@@ -522,6 +522,8 @@ RSpec.describe Api::V1::CreditNotesController do
 
         expect(response).to have_http_status(:success)
         expect(json[:credit_note][:offset_amount_cents]).to eq(8)
+        expect(json[:credit_note][:credit_amount_cents]).to eq(10)
+        expect(json[:credit_note][:refund_amount_cents]).to eq(5)
         expect(json[:credit_note][:total_amount_cents]).to eq(23) # 10 + 5 + 8
       end
 

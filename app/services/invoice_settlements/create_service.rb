@@ -50,6 +50,7 @@ module InvoiceSettlements
         raise ArgumentError, "Cannot provide both source_credit_note and source_payment"
       end
     end
+
     def settlement_type
       source_credit_note.present? ? :credit_note : :payment
     end

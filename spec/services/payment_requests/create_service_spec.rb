@@ -185,9 +185,9 @@ RSpec.describe PaymentRequests::CreateService do
       end
 
       it "excludes invoice when fully offset by credit notes" do
-        first_invoice.update!(total_amount_cents: 100, total_paid_amount_cents: 0)
-        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 100,
-          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 100, status: :finalized)
+        first_invoice.update!(total_amount_cents: 200, total_paid_amount_cents: 0)
+        create(:credit_note, invoice: first_invoice, customer:, offset_amount_cents: 200,
+          credit_amount_cents: 0, refund_amount_cents: 0, total_amount_cents: 200, status: :finalized)
 
         result = create_service.call
         expect(result.payment_request.amount_cents).to eq(300) # Second invoice only: 500 - 200
