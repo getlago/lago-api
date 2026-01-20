@@ -1238,7 +1238,8 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
 CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
     'credit',
     'skip',
-    'refund'
+    'refund',
+    'offset'
 );
 
 
@@ -10940,6 +10941,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260116110125'),
+('20260115164124'),
 ('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
