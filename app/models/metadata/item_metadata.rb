@@ -3,7 +3,7 @@
 module Metadata
   class ItemMetadata < ApplicationRecord
     MAX_NUMBER_OF_KEYS = 50
-    MAX_KEY_LENGTH = 40
+    MAX_KEY_LENGTH = 100
     MAX_VALUE_LENGTH = 255
 
     belongs_to :organization

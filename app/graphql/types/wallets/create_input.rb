@@ -26,6 +26,8 @@ module Types
 
       argument :applies_to, Types::Wallets::AppliesToInput, required: false
 
+      argument :metadata, [Types::Metadata::Input], required: false, **Types::Metadata::Input::ARGUMENT_OPTIONS
+
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
     end
   end

@@ -672,5 +672,54 @@ RSpec.describe Wallets::CreateService do
         expect(service_result.error.messages[:organization_id]).to eq(["invalid"])
       end
     end
+
+    context "with metadata" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          metadata: {"foo" => "bar", "baz" => "qux"}
+        }
+      end
+
+      it "creates a wallet with metadata" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.metadata).to be_present
+        expect(wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+    end
+
+    context "when metadata is nil" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          metadata: nil
+        }
+      end
+
+      it "creates a wallet without metadata" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.metadata).to be_nil
+      end
+    end
   end
 end

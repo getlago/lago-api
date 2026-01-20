@@ -2804,6 +2804,7 @@ input CreateCustomerWalletInput {
   ignorePaidTopUpLimitsOnCreation: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  metadata: [MetadataInput!]
   name: String
   paidCredits: String!
   paidTopUpMaxAmountCents: BigInt
@@ -11516,6 +11517,7 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  metadata: [MetadataInput!]
   name: String
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
@@ -12066,6 +12068,7 @@ type Wallet {
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   lastOngoingBalanceSyncAt: ISO8601DateTime
+  metadata: [ItemMetadata!]
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!

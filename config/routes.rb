@@ -142,7 +142,13 @@ Rails.application.routes.draw do
         post :payment_url, on: :member
       end
       get "/wallets/:id/wallet_transactions", to: "wallet_transactions#index"
-      resources :wallets, only: %i[create update show index]
+      resources :wallets, only: %i[create update show index] do
+        scope module: :wallets do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
+      end
       delete "/wallets/:id", to: "wallets#terminate"
       post "/events/batch", to: "events#batch"
 

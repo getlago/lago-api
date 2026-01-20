@@ -2,9 +2,10 @@
 
 module Wallets
   class UpdateService < BaseService
-    def initialize(wallet:, params:)
+    def initialize(wallet:, params:, partial_metadata: false)
       @wallet = wallet
       @params = params
+      @partial_metadata = partial_metadata
 
       super
     end
@@ -48,6 +49,8 @@ module Wallets
         process_billable_metrics
 
         wallet.save!
+
+        update_metadata!
       end
 
       InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
@@ -64,7 +67,7 @@ module Wallets
 
     private
 
-    attr_reader :wallet, :params
+    attr_reader :wallet, :params, :partial_metadata
 
     def validate_rule!(rule:)
       return unless rule.fixed?
@@ -153,6 +156,12 @@ module Wallets
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: wallet.organization_id)
+    end
+
+    def update_metadata!
+      return unless params.key?(:metadata)
+
+      Metadata::UpdateItemService.call!(owner: wallet, value: params[:metadata], partial: partial_metadata.present?)
     end
   end
 end

@@ -6,7 +6,7 @@ module Api
       include WalletIndex
 
       def create
-        result = Wallets::CreateService.call(
+        result = ::Wallets::CreateService.call(
           params: input_params
             .merge(organization_id: current_organization.id)
             .merge(customer:).to_h.deep_symbolize_keys
@@ -20,7 +20,7 @@ module Api
       end
 
       def update
-        result = Wallets::UpdateService.call(
+        result = ::Wallets::UpdateService.call(
           wallet: current_organization.wallets.find_by(id: params[:id]),
           params: update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
         )
@@ -34,7 +34,7 @@ module Api
 
       def terminate
         wallet = current_organization.wallets.find_by(id: params[:id])
-        result = Wallets::TerminateService.call(wallet:)
+        result = ::Wallets::TerminateService.call(wallet:)
 
         if result.success?
           render_wallet(result.wallet)
@@ -76,6 +76,7 @@ module Api
           :paid_top_up_max_amount_cents,
           :ignore_paid_top_up_limits_on_creation,
           :transaction_name,
+          metadata: {},
           transaction_metadata: [
             :key,
             :value
@@ -133,6 +134,7 @@ module Api
           :invoice_requires_successful_payment,
           :paid_top_up_min_amount_cents,
           :paid_top_up_max_amount_cents,
+          metadata: {},
           recurring_transaction_rules: [
             :lago_id,
             :interval,

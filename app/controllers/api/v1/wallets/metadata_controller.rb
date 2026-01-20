@@ -2,10 +2,10 @@
 
 module Api
   module V1
-    module Plans
+    module Wallets
       class MetadataController < BaseController
         def create
-          result = ::Plans::UpdateService.call(plan:, params: metadata_params)
+          result = ::Wallets::UpdateService.call(wallet:, params: metadata_params)
 
           if result.success?
             render_metadata
@@ -15,7 +15,7 @@ module Api
         end
 
         def update
-          result = ::Plans::UpdateService.call(plan:, partial_metadata: true, params: metadata_params)
+          result = ::Wallets::UpdateService.call(wallet:, partial_metadata: true, params: metadata_params)
 
           if result.success?
             render_metadata
@@ -25,7 +25,7 @@ module Api
         end
 
         def destroy
-          result = ::Plans::UpdateService.call(plan:, params: {metadata: nil})
+          result = ::Wallets::UpdateService.call(wallet:, params: {metadata: nil})
 
           if result.success?
             render_metadata
@@ -35,9 +35,9 @@ module Api
         end
 
         def destroy_key
-          return not_found_error(resource: "metadata") unless plan.metadata
+          return not_found_error(resource: "metadata") unless wallet.metadata
 
-          result = Metadata::DeleteItemKeyService.call(item: plan.metadata, key: params[:key])
+          result = Metadata::DeleteItemKeyService.call(item: wallet.metadata, key: params[:key])
 
           if result.success?
             render_metadata
@@ -53,7 +53,7 @@ module Api
         end
 
         def render_metadata
-          render(json: {metadata: plan.reload.metadata&.value})
+          render(json: {metadata: wallet.reload.metadata&.value})
         end
       end
     end

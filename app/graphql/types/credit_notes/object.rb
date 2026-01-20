@@ -56,7 +56,7 @@ module Types
       field :tax_provider_syncable, GraphQL::Types::Boolean, null: false
 
       def metadata
-        object.metadata&.value&.map { |key, value| {key:, value:} }
+        object.metadata&.value
       end
 
       def applied_taxes

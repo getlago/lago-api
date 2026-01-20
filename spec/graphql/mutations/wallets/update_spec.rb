@@ -25,6 +25,10 @@ RSpec.describe Mutations::Wallets::Update do
           invoiceRequiresSuccessfulPayment
           paidTopUpMinAmountCents
           paidTopUpMaxAmountCents
+          metadata {
+            key
+            value
+          }
           recurringTransactionRules {
             lagoId
             method
@@ -141,5 +145,36 @@ RSpec.describe Mutations::Wallets::Update do
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+  end
+
+  context "with metadata" do
+    it "updates a wallet with metadata" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            name: "Wallet with Metadata",
+            priority: 22,
+            metadata: [
+              {key: "env", value: "staging"},
+              {key: "region", value: "us-east"}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["id"]).to eq(wallet.id)
+      expect(result_data["name"]).to eq("Wallet with Metadata")
+      expect(result_data["metadata"]).to contain_exactly(
+        {"key" => "env", "value" => "staging"},
+        {"key" => "region", "value" => "us-east"}
+      )
+    end
   end
 end
