@@ -77,7 +77,7 @@ RSpec.describe Invoices::PrepaidCreditJob do
       }.not_to change { wallet.reload.balance_cents }
     end
 
-    it "does not finalize the invoice" do
+    it "does not call the invoice FinalizeOpenCreditService" do
       allow(Invoices::FinalizeOpenCreditService).to receive(:call)
       described_class.perform_now(invoice, payment_status)
       expect(Invoices::FinalizeOpenCreditService).not_to have_received(:call)
@@ -98,7 +98,7 @@ RSpec.describe Invoices::PrepaidCreditJob do
     it_behaves_like "does not grant credits", :succeeded
   end
 
-  context "when payment_status is not provided" do
+  context "when payment_status is not provided (Default to :succeeded for old jobs)" do
     it "defaults to :succeeded and grants prepaid credits" do
       described_class.perform_now(invoice)
 
