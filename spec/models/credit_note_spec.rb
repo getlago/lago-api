@@ -22,6 +22,14 @@ RSpec.describe CreditNote do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
 
+  describe "validations" do
+    it { is_expected.to validate_numericality_of(:total_amount_cents).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_numericality_of(:credit_amount_cents).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_numericality_of(:refund_amount_cents).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_numericality_of(:offset_amount_cents).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_numericality_of(:balance_amount_cents).is_greater_than_or_equal_to(0) }
+  end
+
   describe "sequential_id" do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }
@@ -137,6 +145,67 @@ RSpec.describe CreditNote do
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note.refund_amount_cents).to be_zero }
+  end
+
+  describe "offset amount" do
+    describe "#has_offset?" do
+      it "returns false when offset is zero" do
+        credit_note = build(:credit_note, offset_amount_cents: 0)
+        expect(credit_note).not_to have_offset
+      end
+
+      it "returns true when offset is present" do
+        credit_note = build(:credit_note, offset_amount_cents: 100)
+        expect(credit_note).to have_offset
+      end
+    end
+
+    describe "#offset_amount_cents" do
+      it "defaults to zero" do
+        credit_note = build(:credit_note)
+        expect(credit_note.offset_amount_cents).to be_zero
+      end
+
+      it "returns the set value" do
+        credit_note = build(:credit_note, offset_amount_cents: 500)
+        expect(credit_note.offset_amount_cents).to eq(500)
+      end
+    end
+
+    describe "monetization" do
+      it "provides offset_amount as a Money object" do
+        credit_note = build(:credit_note, offset_amount_cents: 1234, offset_amount_currency: "USD")
+        expect(credit_note.offset_amount).to be_a(Money)
+        expect(credit_note.offset_amount.cents).to eq(1234)
+        expect(credit_note.offset_amount.currency.to_s).to eq("USD")
+      end
+    end
+  end
+
+  describe "invoice_settlements association" do
+    it "returns associated invoice settlements" do
+      credit_note = create(:credit_note)
+      invoice_settlement = create(:invoice_settlement,
+        target_invoice: credit_note.invoice, source_credit_note: credit_note,
+        settlement_type: :credit_note, amount_cents: 100)
+
+      expect(credit_note.invoice_settlements).to include(invoice_settlement)
+      expect(credit_note.invoice_settlements.first.amount_cents).to eq(100)
+    end
+  end
+
+  describe "#for_credit_invoice?" do
+    it "returns true for credit invoices" do
+      credit_invoice = create(:invoice, invoice_type: :credit)
+      credit_note = build(:credit_note, invoice: credit_invoice)
+      expect(credit_note.for_credit_invoice?).to eq(true)
+    end
+
+    it "returns false for non-credit invoices" do
+      regular_invoice = create(:invoice, invoice_type: :subscription)
+      credit_note = build(:credit_note, invoice: regular_invoice)
+      expect(credit_note.for_credit_invoice?).to eq(false)
+    end
   end
 
   describe "#subscription_ids" do
