@@ -19,18 +19,6 @@ module PaymentProviders
             payment_method_id: payment_method_id
           ).raise_if_error!
 
-          if stripe_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-            pm_result = PaymentMethods::CreateFromProviderService.call(
-              customer:,
-              params: {provider_payment_methods: stripe_customer.provider_payment_methods},
-              provider_method_id: payment_method_id,
-              payment_provider_id: stripe_customer.payment_provider_id,
-              payment_provider_customer: stripe_customer
-            )
-
-            result.payment_method = pm_result.payment_method
-          end
-
           result.stripe_customer = stripe_customer
           result
         rescue ::Stripe::PermissionError => e

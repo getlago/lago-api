@@ -21,10 +21,9 @@ module PaymentMethods
         payment_method.provider_method_type = provider_method_type
         payment_method.provider_method_id = provider_method_id
         payment_method.payment_provider_id = payment_provider_id
-        payment_method.is_default = !customer.payment_methods.exists?(is_default: true)
       end
-
       payment_method.save!
+      PaymentMethods::SetAsDefaultService.call(payment_method:)
 
       result.payment_method = payment_method
       result
