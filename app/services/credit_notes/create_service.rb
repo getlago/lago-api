@@ -153,16 +153,20 @@ module CreditNotes
       return true if automatic
 
       if invoice.credit?
-        if invoice.payment_pending?
-          return false if credit_amount_cents.positive? || refund_amount_cents.positive?
-          true
-        elsif !invoice.payment_succeeded?
-          return false
-        end
         return false if associated_wallet.nil?
+
+        if invoice.payment_pending?
+          return false if non_offset_amounts_present?
+        else
+          return false unless invoice.payment_succeeded?
+        end
       end
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
+    end
+
+    def non_offset_amounts_present?
+      credit_amount_cents.positive? || refund_amount_cents.positive?
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)
