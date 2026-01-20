@@ -104,6 +104,9 @@
         </div>
       </div>
       <div class="invoice-resume mb-24 overflow-auto">
+        <h2 class="title-2 mb-24">
+          Monthly Plan details
+        </h2>
         <table class="invoice-resume-table" width="100%">
           <tr>
             <td class="body-2">Item</td>
