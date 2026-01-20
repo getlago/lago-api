@@ -13,7 +13,7 @@ RSpec.describe Invoices::Payments::RetryService do
     it "enqueues a job to create a new stripe payment" do
       expect do
         retry_service.call
-      end.to have_enqueued_job(Invoices::Payments::CreateJob).with(invoice:, payment_provider: payment_provider.to_sym)
+      end.to have_enqueued_job(Invoices::Payments::CreateJob).with(invoice:, payment_provider: payment_provider.to_sym, payment_method_params: {})
     end
 
     context "with gocardless payment provider" do
@@ -22,7 +22,7 @@ RSpec.describe Invoices::Payments::RetryService do
       it "enqueues a job to create a gocardless payment" do
         expect do
           retry_service.call
-        end.to have_enqueued_job(Invoices::Payments::CreateJob).with(invoice:, payment_provider: payment_provider.to_sym)
+        end.to have_enqueued_job(Invoices::Payments::CreateJob).with(invoice:, payment_provider: payment_provider.to_sym, payment_method_params: {})
       end
     end
 

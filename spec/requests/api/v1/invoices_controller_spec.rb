@@ -700,8 +700,9 @@ RSpec.describe Api::V1::InvoicesController do
   end
 
   describe "POST /api/v1/invoices/:id/retry_payment" do
-    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/retry_payment") }
+    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/retry_payment", payment_params) }
 
+    let(:payment_params) { {} }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
     let(:retry_service) { instance_double(Invoices::Payments::RetryService) }
@@ -719,6 +720,25 @@ RSpec.describe Api::V1::InvoicesController do
       aggregate_failures do
         expect(response).to have_http_status(:success)
         expect(retry_service).to have_received(:call)
+      end
+    end
+
+    context "with payment method" do
+      let(:payment_params) do
+        {
+          payment_method: {
+            payment_method_type: "manual"
+          }
+        }
+      end
+
+      it "calls retry service" do
+        subject
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          expect(retry_service).to have_received(:call)
+        end
       end
     end
 
