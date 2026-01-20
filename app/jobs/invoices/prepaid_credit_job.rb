@@ -27,8 +27,10 @@ module Invoices
 
     private
 
-    # This job also runs when an invoice is marked as paid because it was fully settled by credits.
-    # This occurs when a credit note is applied to the original invoice instead of to future invoices.
+    # This job also runs when an invoice is marked as paid because it was fully settled by credit note
+    # with offset.
+    # This occurs when a credit note is applied to the original invoice ( offset value)
+    # instead of to future invoices.
     #
     # In this scenario, the invoice is not paid via a payment, but via a credit note,
     # so no pre-paid credits should be added to the customer's wallet.
