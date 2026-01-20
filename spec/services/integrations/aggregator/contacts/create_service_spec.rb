@@ -249,6 +249,28 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
         [
           {
+            ctx: "when the error is not handled specifically",
+            payload: {
+              error: "An unexpected error occurred"
+            },
+            code: "unexpected_error",
+            message: "{\"error\":\"An unexpected error occurred\"}"
+          },
+          {
+            ctx: "when error is nested in `error.payload`",
+            payload: {
+              error: {
+                message: "The action script failed with an error: {}",
+                code: "action_script_failure",
+                payload: {
+                  error: "Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}"
+                }
+              }
+            },
+            code: "action_script_failure",
+            message: "Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}"
+          },
+          {
             ctx: "when error is nested in `error.payload.error`",
             payload: {
               integration: "netsuite-tba",
