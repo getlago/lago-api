@@ -147,18 +147,27 @@ module Integrations
 
       def code(error)
         json = error.json_message
-        json["type"].presence ||
-          json.dig("error", "payload", "name").presence ||
-          json.dig("error", "payload", "error", "code").presence ||
-          json.dig("error", "code")
+        safe_dig_str(json, "type") ||
+          safe_dig_str(json, "error", "payload", "name") ||
+          safe_dig_str(json, "error", "payload", "error", "code") ||
+          safe_dig_str(json, "error", "code") ||
+          "unexpected_error"
       end
 
       def message(error)
         json = error.json_message
-        json.dig("payload", "message").presence ||
-          json.dig("error", "payload", "message").presence ||
-          json.dig("error", "payload", "error", "message").presence ||
-          json.dig("error", "message")
+        safe_dig_str(json, "payload", "message") ||
+          safe_dig_str(json, "error", "payload", "message") ||
+          safe_dig_str(json, "error", "payload", "error") ||
+          safe_dig_str(json, "error", "payload", "error", "message") ||
+          safe_dig_str(json, "error", "message") ||
+          json.to_json
+      end
+
+      # Safe dig method for nested hashes as #dig breaks on non-Hash values
+      def safe_dig_str(obj, *keys)
+        value = keys.reduce(obj) { |o, k| o.is_a?(Hash) ? o[k].presence : nil }
+        value.is_a?(String) ? value : nil
       end
 
       def request_limit_error?(http_error)
