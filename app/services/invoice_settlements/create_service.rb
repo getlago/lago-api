@@ -31,7 +31,7 @@ module InvoiceSettlements
 
         result.invoice_settlement = invoice_settlement
 
-        mark_invoice_as_paid if invoice_fully_settled?
+        mark_invoice_as_paid! if invoice_fully_settled?
       end
 
       result
@@ -50,18 +50,16 @@ module InvoiceSettlements
         raise ArgumentError, "Cannot provide both source_credit_note and source_payment"
       end
     end
-
     def settlement_type
-      return :credit_note if source_credit_note
-      :payment if source_payment
+      source_credit_note.present? ? :credit_note : :payment
     end
 
     def invoice_fully_settled?
       invoice.total_due_amount_cents <= 0
     end
 
-    def mark_invoice_as_paid
-      Invoices::UpdateService.call(
+    def mark_invoice_as_paid!
+      Invoices::UpdateService.call!(
         invoice: invoice,
         params: {payment_status: :succeeded},
         webhook_notification: true
