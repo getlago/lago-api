@@ -55,6 +55,7 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
       subject(:create_service) do
         described_class.new(customer:, params:, provider_method_id:, payment_provider_id:, payment_provider_customer:, details:)
       end
+
       let(:details) do
         {
           type: "card",
