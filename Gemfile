@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.4.8"
+ruby "4.0.1"
 
 # Core
 gem "aasm"
@@ -52,7 +52,7 @@ gem "bigdecimal"
 gem "countries"
 gem "money-rails"
 gem "timecop", require: false
-gem "tzinfo-data", platforms: %i[mingw mswin x64_mingw jruby]
+gem "tzinfo-data", platforms: %i[windows jruby]
 
 # GraphQL
 gem "graphql"
@@ -83,7 +83,7 @@ gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
 gem "yabeda"
-gem "yabeda-rails", github: "getlago/yabeda-rails", glob: "yabeda-rails.gemspec", ref: "6dd4d74"
+gem "yabeda-rails"
 gem "yabeda-puma-plugin"
 gem "yabeda-prometheus"
 
@@ -114,7 +114,7 @@ gem "valvat"
 gem "csv", "~> 3.0"
 gem "ostruct"
 
-gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", tag: "v0.2.0"
+gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "0ff1b8d"
 
 group :development, :test, :staging do
   gem "factory_bot_rails"
@@ -124,7 +124,7 @@ end
 group :development, :test do
   gem "bullet"
   gem "clockwork-test"
-  gem "debug", platforms: %i[mri mingw x64_mingw], require: false
+  gem "debug", platforms: %i[mri windows], require: false
   gem "dotenv"
   gem "fuubar"
   gem "rspec-rails"
@@ -139,7 +139,7 @@ group :development, :test do
   gem "rspec-graphql_matchers"
   gem "shoulda-matchers"
 
-  gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git", require: false
+  gem "i18n-tasks", require: false
 
   gem "rubocop-rails", require: false
   gem "rubocop-graphql", require: false
@@ -164,7 +164,7 @@ end
 
 group :development do
   gem "coffee-rails"
-  gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
+  gem "graphiql-rails"
   gem "httplog"
 
   gem "standard", require: false
