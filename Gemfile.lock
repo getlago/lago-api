@@ -925,9 +925,9 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
-    slim (4.1.0)
-      temple (>= 0.7.6, < 0.9)
-      tilt (>= 2.0.6, < 2.1)
+    slim (5.2.1)
+      temple (~> 0.10.0)
+      tilt (>= 2.1.0)
     slim-rails (3.6.3)
       actionpack (>= 3.1)
       railties (>= 3.1)
@@ -964,13 +964,13 @@ GEM
       attr_extras (>= 6.2.4)
       diff-lcs
       patience_diff
-    temple (0.8.2)
+    temple (0.10.4)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
     thor (1.5.0)
     throttling (0.4.1)
       logger
-    tilt (2.0.11)
+    tilt (2.7.0)
     timecop (0.9.10)
     timeout (0.6.0)
     trailblazer-option (0.1.2)
