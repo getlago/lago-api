@@ -1014,7 +1014,7 @@ GEM
       logger
     tilt (2.0.11)
     timecop (0.9.10)
-    timeout (0.4.3)
+    timeout (0.6.0)
     trailblazer-option (0.1.2)
     tsort (0.2.0)
     tzinfo (2.0.6)
