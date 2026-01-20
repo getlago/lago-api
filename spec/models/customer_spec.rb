@@ -1085,7 +1085,8 @@ RSpec.describe Customer do
       create(
         :customer,
         last_dunning_campaign_attempt: 5,
-        last_dunning_campaign_attempt_at: 1.day.ago
+        last_dunning_campaign_attempt_at: 1.day.ago,
+        dunning_campaign_ended_at: 1.day.ago
       )
     end
 
@@ -1093,6 +1094,16 @@ RSpec.describe Customer do
       expect { customer.reset_dunning_campaign! && customer.reload }
         .to change(customer, :last_dunning_campaign_attempt).to(0)
         .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
+        .and change(customer, :dunning_campaign_ended_at).to(nil)
+    end
+  end
+
+  describe "#dunning_campaign_ended?" do
+    it do
+      customer.dunning_campaign_ended_at = nil
+      expect(customer.dunning_campaign_ended?).to be false
+      customer.dunning_campaign_ended_at = Time.current
+      expect(customer.dunning_campaign_ended?).to be true
     end
   end
 
