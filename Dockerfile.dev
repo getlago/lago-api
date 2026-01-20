@@ -8,7 +8,7 @@ ENV POSTGRES_VERSION=15
 ARG PDFCPU_VERSION
 
 RUN apt update -qq && \
-  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev libreadline-dev -y && \
+  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
