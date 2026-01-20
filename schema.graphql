@@ -8603,7 +8603,6 @@ enum PermissionEnum {
   addons_view
   ai_conversations_create
   ai_conversations_view
-  analytics_overdue_balances_view
   analytics_view
   audit_logs_view
   authentication_methods_update
@@ -8614,18 +8613,8 @@ enum PermissionEnum {
   billable_metrics_view
   billing_entities_create
   billing_entities_delete
-  billing_entities_dunning_campaigns_update
-  billing_entities_emails_update
-  billing_entities_emails_view
-  billing_entities_invoices_update
-  billing_entities_invoices_view
-  billing_entities_taxes_update
-  billing_entities_taxes_view
   billing_entities_update
   billing_entities_view
-  charge_filters_create
-  charge_filters_delete
-  charge_filters_update
   charges_create
   charges_delete
   charges_update
@@ -8647,7 +8636,6 @@ enum PermissionEnum {
   data_api_view
   developers_keys_manage
   developers_manage
-  draft_invoices_update
   dunning_campaigns_create
   dunning_campaigns_delete
   dunning_campaigns_update
@@ -8656,9 +8644,6 @@ enum PermissionEnum {
   features_delete
   features_update
   features_view
-  fixed_charges_create
-  fixed_charges_delete
-  fixed_charges_update
   invoice_custom_sections_create
   invoice_custom_sections_delete
   invoice_custom_sections_update
@@ -8689,11 +8674,8 @@ enum PermissionEnum {
   payment_methods_delete
   payment_methods_update
   payment_methods_view
-  payment_requests_create
-  payment_requests_view
   payments_create
   payments_view
-  permissions_view
   plans_create
   plans_delete
   plans_update
@@ -8724,7 +8706,6 @@ type Permissions {
   addonsView: Boolean!
   aiConversationsCreate: Boolean!
   aiConversationsView: Boolean!
-  analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
   auditLogsView: Boolean!
   authenticationMethodsUpdate: Boolean!
@@ -8735,18 +8716,8 @@ type Permissions {
   billableMetricsView: Boolean!
   billingEntitiesCreate: Boolean!
   billingEntitiesDelete: Boolean!
-  billingEntitiesDunningCampaignsUpdate: Boolean!
-  billingEntitiesEmailsUpdate: Boolean!
-  billingEntitiesEmailsView: Boolean!
-  billingEntitiesInvoicesUpdate: Boolean!
-  billingEntitiesInvoicesView: Boolean!
-  billingEntitiesTaxesUpdate: Boolean!
-  billingEntitiesTaxesView: Boolean!
   billingEntitiesUpdate: Boolean!
   billingEntitiesView: Boolean!
-  chargeFiltersCreate: Boolean!
-  chargeFiltersDelete: Boolean!
-  chargeFiltersUpdate: Boolean!
   chargesCreate: Boolean!
   chargesDelete: Boolean!
   chargesUpdate: Boolean!
@@ -8768,7 +8739,6 @@ type Permissions {
   dataApiView: Boolean!
   developersKeysManage: Boolean!
   developersManage: Boolean!
-  draftInvoicesUpdate: Boolean!
   dunningCampaignsCreate: Boolean!
   dunningCampaignsDelete: Boolean!
   dunningCampaignsUpdate: Boolean!
@@ -8777,9 +8747,6 @@ type Permissions {
   featuresDelete: Boolean!
   featuresUpdate: Boolean!
   featuresView: Boolean!
-  fixedChargesCreate: Boolean!
-  fixedChargesDelete: Boolean!
-  fixedChargesUpdate: Boolean!
   invoiceCustomSectionsCreate: Boolean!
   invoiceCustomSectionsDelete: Boolean!
   invoiceCustomSectionsUpdate: Boolean!
@@ -8810,11 +8777,8 @@ type Permissions {
   paymentMethodsDelete: Boolean!
   paymentMethodsUpdate: Boolean!
   paymentMethodsView: Boolean!
-  paymentRequestsCreate: Boolean!
-  paymentRequestsView: Boolean!
   paymentsCreate: Boolean!
   paymentsView: Boolean!
-  permissionsView: Boolean!
   plansCreate: Boolean!
   plansDelete: Boolean!
   plansUpdate: Boolean!

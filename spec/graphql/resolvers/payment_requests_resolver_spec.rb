@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PaymentRequestsResolver do
-  let(:required_permission) { "payment_requests:view" }
+  let(:required_permission) { "payments:view" }
   let(:filters) { "limit: 5" }
   let(:query) do
     <<~GQL
@@ -32,7 +32,7 @@ RSpec.describe Resolvers::PaymentRequestsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "payment_requests:view"
+  it_behaves_like "requires permission", "payments:view"
 
   it "returns a list of payment_requests", :aggregate_failures do
     result = execute_graphql(

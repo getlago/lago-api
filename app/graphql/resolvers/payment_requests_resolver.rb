@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "payment_requests:view"
+    REQUIRED_PERMISSION = "payments:view"
 
     description "Query payment requests of an organization"
 

@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "charge_filters:update"
+      REQUIRED_PERMISSION = "charges:update"
 
       graphql_name "UpdateChargeFilter"
       description "Updates an existing Charge Filter"

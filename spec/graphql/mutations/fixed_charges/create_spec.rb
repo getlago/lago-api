@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::FixedCharges::Create, type: :graphql do
-  let(:required_permission) { "fixed_charges:create" }
+  let(:required_permission) { "charges:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
@@ -33,7 +33,7 @@ RSpec.describe Mutations::FixedCharges::Create, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "fixed_charges:create"
+  it_behaves_like "requires permission", "charges:create"
 
   it "creates a fixed charge" do
     result = execute_graphql(
