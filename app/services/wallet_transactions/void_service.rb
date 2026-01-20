@@ -29,6 +29,7 @@ module WalletTransactions
           transaction_status: :voided,
           **transaction_params
         ).wallet_transaction
+        # TODO: should we also send this WT?
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
       end

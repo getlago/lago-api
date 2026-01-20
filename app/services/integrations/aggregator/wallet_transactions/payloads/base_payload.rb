@@ -17,20 +17,19 @@ module Integrations
               {
                 "external_contact_id" => integration_customer.external_customer_id,
                 "status" => "AUTHORISED",
-                "issuing_date" => @wallet_transaction.created_at.to_time.utc.iso8601,
-                "number" => invoice.number,
+                "issuing_date" => @wallet_transaction.created_at.to_time.utc.iso8601
               }
             ]
           end
 
-          def integration_invoice
-            @integration_invoice ||=
-              IntegrationResource.find_by(integration:, syncable: invoice, resource_type: "invoice")
+          def integration_wallet_transaction
+            @integration_wallet_transaction ||=
+              IntegrationResource.find_by(integration:, syncable: wallet_transaction, resource_type: "wallet_transaction")
           end
 
           private
 
-          attr_reader :integration_customer, :invoice
+          attr_reader :integration_customer, :wallet_transaction
           attr_accessor :remaining_taxes_amount_cents
         end
       end
