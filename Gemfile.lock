@@ -258,7 +258,8 @@ GEM
     ffi (1.17.3-x86_64-darwin)
     ffi (1.17.3-x86_64-linux-gnu)
     fiber-storage (1.0.1)
-    formatador (1.1.0)
+    formatador (1.2.3)
+      reline
     fuubar (2.5.1)
       rspec-core (~> 3.0)
       ruby-progressbar (~> 1.4)
@@ -328,9 +329,10 @@ GEM
       logger
     graphql-pagination (2.4.1)
       graphql (>= 2.4.7)
-    guard (2.18.1)
+    guard (2.20.0)
       formatador (>= 0.2.4)
       listen (>= 2.7, < 4.0)
+      logger (~> 1.6)
       lumberjack (>= 1.0.12, < 2.0)
       nenv (~> 0.1)
       notiffany (~> 0.0)
@@ -415,11 +417,11 @@ GEM
     karafka-testing (2.5.5)
       karafka (>= 2.5.0, < 2.6.0)
       waterdrop (>= 2.8.0)
-    karafka-web (0.11.3)
+    karafka-web (0.11.5)
       erubi (~> 1.4)
-      karafka (>= 2.5.0, < 2.6.0)
+      karafka (>= 2.5.2, < 2.6.0)
       karafka-core (>= 2.5.0, < 2.6.0)
-      roda (~> 3.68, >= 3.69)
+      roda (~> 3.69, >= 3.69)
       tilt (~> 2.0)
     knapsack_pro (9.2.1)
       rake
@@ -438,7 +440,8 @@ GEM
     libddwaf (1.30.0.0.0-x86_64-linux)
       ffi (~> 1.0)
     lint_roller (1.1.0)
-    listen (3.9.0)
+    listen (3.10.0)
+      logger
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
     logger (1.7.0)
@@ -451,7 +454,7 @@ GEM
     loofah (2.25.0)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
-    lumberjack (1.2.10)
+    lumberjack (1.4.2)
     mail (2.8.1)
       mini_mime (>= 0.1.1)
       net-imap
@@ -488,7 +491,8 @@ GEM
       timeout
     net-smtp (0.5.1)
       net-protocol
-    newrelic_rpm (9.18.0)
+    newrelic_rpm (10.0.0)
+      logger
     nio4r (2.7.5)
     nokogiri (1.19.0-aarch64-linux-gnu)
       racc (~> 1.4)
@@ -722,7 +726,7 @@ GEM
     parallel (1.27.0)
     parallel_tests (5.5.0)
       parallel
-    parser (3.3.10.0)
+    parser (3.3.10.1)
       ast (~> 2.4.1)
       racc
     patience_diff (1.2.0)
@@ -734,9 +738,10 @@ GEM
     prism (1.8.0)
     prometheus-client (4.2.5)
       base64
-    pry (0.14.2)
+    pry (0.16.0)
       coderay (~> 1.1)
       method_source (~> 1.0)
+      reline (>= 0.6.0)
     pry-byebug (3.12.0)
       byebug (~> 13.0)
       pry (>= 0.13, < 0.17)
@@ -828,7 +833,7 @@ GEM
       rack (>= 1.4)
     retriable (3.1.2)
     rexml (3.4.4)
-    roda (3.96.0)
+    roda (3.100.0)
       rack
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
