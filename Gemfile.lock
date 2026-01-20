@@ -993,7 +993,8 @@ GEM
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
     thor (1.4.0)
-    throttling (0.4.0)
+    throttling (0.4.1)
+      logger
     tilt (2.0.11)
     timecop (0.9.10)
     timeout (0.4.3)
