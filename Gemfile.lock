@@ -773,7 +773,7 @@ GEM
       ffi (~> 1.0)
     rb_sys (0.9.124)
       rake-compiler-dock (= 1.11.0)
-    rbs (3.6.1)
+    rbs (3.10.2)
       logger
     rdoc (7.1.0)
       erb
