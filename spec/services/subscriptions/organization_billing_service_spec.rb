@@ -648,5 +648,313 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         end
       end
     end
+
+    context "when grouping subscriptions by payment method" do
+      let(:organization) { create(:organization, feature_flags: ["multiple_payment_methods"]) }
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      before { subscription.destroy }
+
+      context "when customer has multiple subscriptions with same payment method type (provider)" do
+        let(:customer3) { create(:customer, organization:) }
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription3) do
+          create(
+            :subscription,
+            customer: customer3,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+          subscription3
+        end
+
+        it "groups them into a single billing job for a customer" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              [subscription3],
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when customer has subscriptions with different payment method types" do
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "manual"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into separate billing jobs" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+
+        context "without feature flag" do
+          let(:organization) { create(:organization) }
+
+          it "does not group subscriptions into separate billing jobs" do
+            billing_service.call
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with(
+                contain_exactly(subscription1, subscription2),
+                current_date.to_i,
+                invoicing_reason: :subscription_periodic
+              )
+          end
+        end
+      end
+
+      context "when subscriptions have different explicit payment_method_ids" do
+        let(:customer3) { create(:customer, organization:) }
+        let(:payment_method1) { create(:payment_method, customer:, organization:, is_default: true) }
+        let(:payment_method2) { create(:payment_method, customer:, organization:, is_default: false, provider_method_id: "ext_456") }
+
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: payment_method1,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: payment_method2,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription3) do
+          create(
+            :subscription,
+            customer: customer3,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+          subscription3
+        end
+
+        it "groups them into separate billing jobs" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription3], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when subscription with nil payment_method_id resolves to same as explicit one" do
+        let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
+
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: payment_method,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: nil,
+            payment_method_type: "provider"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when customer has default payment method" do
+        let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
+
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: nil,
+            payment_method_type: "provider"
+          )
+        end
+        let(:subscription2) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method: nil,
+            payment_method_type: "provider"
+          )
+        end
+
+        before do
+          subscription1
+          subscription2
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when single subscription exists" do
+        let(:subscription1) do
+          create(
+            :subscription,
+            customer:,
+            plan:,
+            subscription_at:,
+            started_at: current_date - 10.days,
+            billing_time:,
+            created_at:,
+            payment_method_type: "provider"
+          )
+        end
+
+        before { subscription1 }
+
+        it "returns single group without grouping logic" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+    end
   end
 end
