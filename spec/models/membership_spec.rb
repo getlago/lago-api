@@ -59,7 +59,7 @@ RSpec.describe Membership do
       let(:membership) { create(:membership, roles: %i[admin]) }
 
       it "includes all existing permissions" do
-        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+        expect(permissions_hash.keys).to match_array(Permission.permissions_hash.keys)
       end
 
       it "returns all permissions as true" do
@@ -71,7 +71,7 @@ RSpec.describe Membership do
       let(:membership) { create(:membership, roles: %i[finance]) }
 
       it "includes all existing permissions" do
-        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+        expect(permissions_hash.keys).to match_array(Permission.permissions_hash.keys)
       end
 
       it "returns true for finance-specific permissions" do
@@ -87,7 +87,7 @@ RSpec.describe Membership do
       let(:membership) { create(:membership, roles: %i[manager]) }
 
       it "includes all existing permissions" do
-        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+        expect(permissions_hash.keys).to match_array(Permission.permissions_hash.keys)
       end
 
       it "returns true for manager-specific permissions" do
@@ -105,7 +105,7 @@ RSpec.describe Membership do
       let(:membership) { create(:membership, organization:, role:) }
 
       it "includes all existing permissions" do
-        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+        expect(permissions_hash.keys).to match_array(Permission.permissions_hash.keys)
       end
 
       it "excludes non-existing permissions" do
@@ -127,7 +127,7 @@ RSpec.describe Membership do
       let(:membership) { create(:membership, organization:, role:, roles: %i[finance]) }
 
       it "includes all existing permissions" do
-        expect(permissions_hash.keys).to contain_exactly(*Permission.permissions_hash.keys)
+        expect(permissions_hash.keys).to match_array(Permission.permissions_hash.keys)
       end
 
       it "excludes non-existing permissions" do
