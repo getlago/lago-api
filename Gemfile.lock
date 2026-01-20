@@ -1016,7 +1016,7 @@ GEM
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
     vernier (1.9.0)
-    version_gem (1.1.4)
+    version_gem (1.1.9)
     waterdrop (2.8.15)
       karafka-core (>= 2.4.9, < 3.0.0)
       karafka-rdkafka (>= 0.23.1)
