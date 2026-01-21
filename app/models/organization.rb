@@ -319,6 +319,7 @@ end
 #  legal_name                       :string
 #  legal_number                     :string
 #  logo                             :string
+#  max_wallets                      :integer
 #  name                             :string           not null
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null
