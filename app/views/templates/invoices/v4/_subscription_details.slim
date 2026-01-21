@@ -1,7 +1,7 @@
 - if subscription?
   - subscriptions.each do |subscription|
     - invoice_subscription = invoice_subscription(subscription.id)
-    h2.title-2.mb-24 class="#{'invoice-details-title' if subscriptions.count > 1}" = I18n.t('invoice.details', resource: subscription.invoice_name)
+    == SlimHelper.render('templates/invoices/v4/_subscription_name', self, subscription: subscription, page_break: subscriptions.count > 1)
 
     / Group all fees by their billing period (with eager loading and DB-level filtering to avoid N+1 queries)
     - base_fees = subscription_fees(subscription.id).includes(:true_up_parent_fee, :true_up_fee, :charge_filter, charge: :billable_metric, fixed_charge: :add_on)

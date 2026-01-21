@@ -457,7 +457,7 @@ html
 
       .invoice-resume.mb-24.overflow-auto
         - invoice_subscription = invoice_subscriptions.first
-        h2.title-2.mb-24 = I18n.t('invoice.details', resource: invoice_subscription.subscription.invoice_name)
+        == SlimHelper.render('templates/invoices/v4/_subscription_name', self, subscription: invoice_subscription.subscription, page_break: false)
         == SlimHelper.render('templates/invoices/v4/_charge', self)
 
       == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
