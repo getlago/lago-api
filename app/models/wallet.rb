@@ -115,6 +115,7 @@ end
 #  allowed_fee_types                   :string           default([]), not null, is an Array
 #  balance_cents                       :bigint           default(0), not null
 #  balance_currency                    :string           not null
+#  code                                :string           not null
 #  consumed_amount_cents               :bigint           default(0), not null
 #  consumed_amount_currency            :string           not null
 #  consumed_credits                    :decimal(30, 5)   default(0.0), not null
@@ -149,6 +150,7 @@ end
 # Indexes
 #
 #  index_wallets_on_customer_id            (customer_id)
+#  index_wallets_on_customer_id_and_code   (customer_id,code) UNIQUE
 #  index_wallets_on_organization_id        (organization_id)
 #  index_wallets_on_payment_method_id      (payment_method_id)
 #  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed

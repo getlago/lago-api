@@ -318,6 +318,7 @@ DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallets_on_customer_id_and_code;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
@@ -3740,7 +3741,8 @@ CREATE TABLE public.wallets (
     paid_top_up_max_amount_cents bigint,
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    code character varying NOT NULL
 );
 
 
@@ -8744,6 +8746,13 @@ CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (custome
 
 
 --
+-- Name: index_wallets_on_customer_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_wallets_on_customer_id_and_code ON public.wallets USING btree (customer_id, code);
+
+
+--
 -- Name: index_wallets_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11065,6 +11074,10 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260121112929'),
+('20260121111432'),
+('20260121111431'),
+('20260120200341'),
+('20260120195822'),
 ('20260119162712'),
 ('20260116162519'),
 ('20260116110125'),

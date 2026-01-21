@@ -19,6 +19,8 @@ module Wallets
 
       return result unless valid?
 
+      code = params[:code] || params[:name].to_s.parameterize(separator: "_") || "default"
+      params[:code] = "#{code}_#{Time.current.to_i}}" if Wallet.exists?(customer_id: customer.id, name: params[:name])
       attributes = {
         organization_id:,
         customer_id: customer.id,
