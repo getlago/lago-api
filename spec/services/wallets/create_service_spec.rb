@@ -855,11 +855,13 @@ RSpec.describe Wallets::CreateService do
         end
 
         it "creates a wallet with timestamp in the code" do
-          expect { service_result }.to change(Wallet, :count).by(1)
-          expect(service_result).to be_success
+          Timecop.freeze do
+            expect { service_result }.to change(Wallet, :count).by(1)
+            expect(service_result).to be_success
 
-          wallet = service_result.wallet
-          expect(wallet.code).to eq("default_#{wallet.created_at.to_i}")
+            wallet = service_result.wallet
+            expect(wallet.code).to eq("default_#{wallet.created_at.to_i}")
+          end
         end
       end
     end

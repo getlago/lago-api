@@ -20,7 +20,8 @@ module Wallets
       return result unless valid?
 
       code = params[:code] || params[:name].to_s.parameterize(separator: "_").presence || "default"
-      code = "#{code}_#{Time.current.to_i}" if Wallet.where(customer_id: customer.id).where("name ILIKE ?", params[:name]).exists?
+      scope = Wallet.where(organization_id:, customer_id: customer.id)
+      code = "#{code}_#{Time.current.to_i}" if params[:name].nil? ? scope.where(name: nil).exists? : scope.where("LOWER(name) = LOWER(?)", params[:name]).exists?
 
       attributes = {
         organization_id:,
