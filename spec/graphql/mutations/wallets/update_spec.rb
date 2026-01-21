@@ -223,7 +223,7 @@ RSpec.describe Mutations::Wallets::Update do
         }
       )
 
-      expect_graphql_error(result:, message: "value_already_exist")
+      expect_unprocessable_entity(result, details: {code: ["value_already_exist"]})
     end
   end
 end

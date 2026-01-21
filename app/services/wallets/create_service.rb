@@ -20,8 +20,9 @@ module Wallets
       return result unless valid?
 
       code = params[:code] || params[:name].to_s.parameterize(separator: "_").presence || "default"
-      scope = Wallet.where(organization_id:, customer_id: customer.id)
-      code = "#{code}_#{Time.current.to_i}" if params[:name].nil? ? scope.where(name: nil).exists? : scope.where("LOWER(name) = LOWER(?)", params[:name]).exists?
+      existing_wallet = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
+      # if code is provided but is already taken, we won't modify it, just raise validation error later
+      code = "#{code}_#{Time.current.to_i}" if params[:code].nil? && existing_wallet
 
       attributes = {
         organization_id:,

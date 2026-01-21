@@ -990,6 +990,41 @@ RSpec.describe Api::V1::WalletsController do
         )
       end
     end
+
+    context "when updating code" do
+      let(:update_params) do
+        {
+          code: "updated_wallet_code"
+        }
+      end
+
+      it "updates the wallet code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:code]).to eq("updated_wallet_code")
+      end
+    end
+
+    context "when updating code to a value already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "taken_code")
+      end
+
+      let(:update_params) do
+        {
+          code: "taken_code"
+        }
+      end
+
+      it "returns an error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:code]).to eq(["value_already_exist"])
+      end
+    end
   end
 
   describe "GET /api/v1/wallets/:id" do
