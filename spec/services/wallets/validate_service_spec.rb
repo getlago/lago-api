@@ -280,6 +280,37 @@ RSpec.describe Wallets::ValidateService do
           expect(result.error.messages[:customer]).to eq(["wallet_limit_reached"])
         end
       end
+
+      context "when org has setting of having more wallets per customer" do
+        before do
+          organization.update!(max_wallets: max_wallets_limit + 2)
+        end
+
+        context "when event_wallet_target premium integration is not enabled" do
+          before do
+            create_list(:wallet, max_wallets_limit + 1, customer:)
+          end
+
+          it "returns false and result has errors" do
+            expect(validate_service).not_to be_valid
+            expect(result.error.messages[:customer]).to eq(["wallet_limit_reached"])
+          end
+        end
+
+        context "when event_wallet_target premium integration is enabled" do
+          before do
+            organization.update!(premium_integrations: ["event_wallet_target"])
+            create_list(:wallet, max_wallets_limit + 1, customer:)
+          end
+
+          around { |test| lago_premium!(&test) }
+
+          it "returns true and result has no errors" do
+            expect(validate_service).to be_valid
+            expect(result.error).to be_nil
+          end
+        end
+      end
     end
 
     context "with payment method" do

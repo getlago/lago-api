@@ -30,6 +30,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       forecasted_usage
       projected_usage
       custom_roles
+      event_wallet_target
     ]
   end
 
