@@ -1896,7 +1896,9 @@ CREATE TABLE public.credit_notes (
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
-    xml_file character varying
+    xml_file character varying,
+    offset_amount_cents bigint DEFAULT 0 NOT NULL,
+    offset_amount_currency character varying
 );
 
 
@@ -10830,6 +10832,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260119162712'),
+('20260116162519'),
 ('20260116110125'),
 ('20260115164124'),
 ('20260114153728'),
