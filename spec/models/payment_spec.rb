@@ -200,6 +200,48 @@ RSpec.describe Payment do
               expect(errors.where(:amount_cents, :greater_than)).to be_present
             end
           end
+
+          context "with offset amounts from credit notes" do
+            let(:payable) { create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 3000) }
+
+            it "allows payment within remaining due amount after offset" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 5000 # total_due = 10000 - 3000 - 2000 = 5000
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+
+            it "rejects payment exceeding remaining due amount after offset" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 6000 # total_due = 10000 - 3000 - 2000 = 5000
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+
+            it "sums multiple offset amounts correctly" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1500)
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1000)
+              payment.amount_cents = 4500 # total_due = 10000 - 3000 - 2500 = 4500
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+
+            it "rejects payment when invoice is fully settled by offsets" do
+              payable.update!(total_paid_amount_cents: 6000)
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 4000)
+              payment.amount_cents = 1 # total_due = 10000 - 6000 - 4000 = 0
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+
+            it "ignores draft credit notes when calculating due amount" do
+              payable.update!(total_paid_amount_cents: 2000)
+              create(:credit_note, invoice: payable, status: :draft, offset_amount_cents: 1000)
+              payment.amount_cents = 8000 # total_due = 10000 - 2000 = 8000 (draft ignored)
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+          end
         end
       end
     end

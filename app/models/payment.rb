@@ -112,7 +112,7 @@ class Payment < ApplicationRecord
 
   def max_invoice_paid_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider?
-    return if amount_cents + payable.total_paid_amount_cents <= payable.total_amount_cents
+    return if amount_cents <= payable.total_due_amount_cents
 
     errors.add(:amount_cents, :greater_than)
   end
