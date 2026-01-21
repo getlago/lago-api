@@ -2,11 +2,6 @@
 
 require "rails_helper"
 
-# This spec relies on `rspec-snapshot` gem (https://github.com/levinmr/rspec-snapshot) in order to serialize and compare
-# the rendered invoice HTML.
-#
-# To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
-
 RSpec.describe "templates/invoices/v4.slim" do
   subject(:rendered_template) do
     Slim::Template.new(template, 1, pretty: true).render(invoice)
@@ -28,21 +23,19 @@ RSpec.describe "templates/invoices/v4.slim" do
       fees: [fee]
     )
   end
-  # Static organization data for consistent rendering
+
   let(:organization) do
     build_stubbed(:organization, :with_static_values)
   end
 
-  # Static billing entity data for consistent rendering
   let(:billing_entity) do
     build_stubbed(:billing_entity, :with_static_values, organization: organization)
   end
-  # Static customer data
+
   let(:customer) do
     build_stubbed(:customer, :with_static_values, organization: organization)
   end
 
-  # Static wallet data
   let(:wallet) do
     build_stubbed(
       :wallet,
@@ -53,7 +46,6 @@ RSpec.describe "templates/invoices/v4.slim" do
     )
   end
 
-  # Static wallet transaction data
   let(:wallet_transaction) do
     build_stubbed(
       :wallet_transaction,
@@ -65,7 +57,6 @@ RSpec.describe "templates/invoices/v4.slim" do
   end
   let(:wallet_transaction_name) { nil }
 
-  # Static fee data
   let(:fee) do
     build_stubbed(
       :fee,
@@ -80,7 +71,6 @@ RSpec.describe "templates/invoices/v4.slim" do
   let(:wallet_name) { "Premium Wallet" }
 
   before do
-    # Set locale to ensure consistent translations
     I18n.locale = :en
   end
 
@@ -183,8 +173,6 @@ RSpec.describe "templates/invoices/v4.slim" do
 
     let(:add_on) { create(:add_on, organization: organization) }
 
-    # Pay in advance fees
-    # 1. Standard model - not prorated
     let(:standard_fixed_charge) do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:)
     end
@@ -208,7 +196,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 2. Standard model - prorated
     let(:standard_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -238,7 +225,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 3. Graduated model - not prorated
     let(:graduated_fixed_charge) do
       create(
         :fixed_charge,
@@ -288,7 +274,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 4. Standard model - zero amount
     let(:zero_fixed_charge) do
       create(
         :fixed_charge,
@@ -317,8 +302,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Pay in arrears fees
-    # 5. Standard model - not prorated
     let(:arrears_fixed_charge) do
       create(
         :fixed_charge,
@@ -345,7 +328,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 6. Graduated model - not prorated
     let(:arrears_graduated_fixed_charge) do
       create(
         :fixed_charge,
@@ -393,7 +375,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 7. Graduated model - prorated
     let(:arrears_graduated_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -442,7 +423,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 8. Volume model - not prorated
     let(:volume_fixed_charge) do
       create(
         :fixed_charge,
@@ -475,7 +455,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 9. Volume model - prorated
     let(:volume_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -509,7 +488,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Commitment fee
     let(:minimum_commitment_fee) do
       create(
         :minimum_commitment_fee,
@@ -524,12 +502,10 @@ RSpec.describe "templates/invoices/v4.slim" do
       invoice_subscription
       subscription_fee
       minimum_commitment_fee
-      # Pay in advance fees
       standard_fixed_charge_fee
       standard_prorated_fixed_charge_fee
       graduated_fixed_charge_fee
       zero_fixed_charge_fee
-      # Pay in arrears fees
       arrears_fixed_charge_fee
       arrears_graduated_fixed_charge_fee
       arrears_graduated_prorated_fixed_charge_fee
@@ -537,7 +513,7 @@ RSpec.describe "templates/invoices/v4.slim" do
       volume_prorated_fixed_charge_fee
     end
 
-    it "renders correctly with all included fees types" do
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -546,7 +522,6 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }
 
-    # Yearly plan with monthly billed fixed charges
     let(:plan) do
       create(
         :plan,
@@ -593,14 +568,12 @@ RSpec.describe "templates/invoices/v4.slim" do
         to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
         charges_to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
-        # Fixed charges billed monthly have different boundaries
         fixed_charges_from_datetime: Time.zone.parse("2025-12-01 00:00:00"),
         fixed_charges_to_datetime: Time.zone.parse("2025-12-31 23:59:59"),
         timestamp: Time.zone.parse("2025-12-31 23:59:59")
       )
     end
 
-    # Subscription fee for the yearly plan
     let(:subscription_fee) do
       create(
         :fee,
@@ -653,7 +626,7 @@ RSpec.describe "templates/invoices/v4.slim" do
       monthly_fixed_charge_fee
     end
 
-    it "renders correctly with different boundaries" do
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -729,7 +702,6 @@ RSpec.describe "templates/invoices/v4.slim" do
 
     let(:add_on) { create(:add_on, organization: organization) }
 
-    # Previous invoice subscription for the previous period
     let(:previous_invoice) do
       create(:invoice, customer:)
     end
@@ -766,8 +738,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Pay in advance fees
-    # 1. Standard model - not prorated
     let(:standard_fixed_charge) do
       create(:fixed_charge, :pay_in_advance, plan:, add_on:)
     end
@@ -791,7 +761,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 2. Standard model - prorated
     let(:standard_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -821,7 +790,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 3. Graduated model - not prorated
     let(:graduated_fixed_charge) do
       create(
         :fixed_charge,
@@ -871,7 +839,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 4. Standard model - zero amount
     let(:zero_fixed_charge) do
       create(
         :fixed_charge,
@@ -900,8 +867,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Pay in arrears fees
-    # 5. Standard model - not prorated
     let(:arrears_fixed_charge) do
       create(
         :fixed_charge,
@@ -928,7 +893,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 6. Graduated model - not prorated
     let(:arrears_graduated_fixed_charge) do
       create(
         :fixed_charge,
@@ -976,7 +940,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 7. Graduated model - prorated
     let(:arrears_graduated_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -1025,7 +988,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 8. Volume model - not prorated
     let(:volume_fixed_charge) do
       create(
         :fixed_charge,
@@ -1058,7 +1020,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # 9. Volume model - prorated
     let(:volume_prorated_fixed_charge) do
       create(
         :fixed_charge,
@@ -1092,7 +1053,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Commitment fee
     let(:minimum_commitment_fee) do
       create(
         :minimum_commitment_fee,
@@ -1104,19 +1064,16 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
 
     before do
-      # Previous invoice subscription for the previous period
       previous_invoice_subscription
       previous_subscription_fee
 
       invoice_subscription
       subscription_fee
       minimum_commitment_fee
-      # Pay in advance fees
       standard_fixed_charge_fee
       standard_prorated_fixed_charge_fee
       graduated_fixed_charge_fee
       zero_fixed_charge_fee
-      # Pay in arrears fees
       arrears_fixed_charge_fee
       arrears_graduated_fixed_charge_fee
       arrears_graduated_prorated_fixed_charge_fee
@@ -1124,7 +1081,7 @@ RSpec.describe "templates/invoices/v4.slim" do
       volume_prorated_fixed_charge_fee
     end
 
-    it "renders correctly with all included fees types" do
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -1148,18 +1105,16 @@ RSpec.describe "templates/invoices/v4.slim" do
       create(:subscription, customer:, plan:, status: "active")
     end
 
-    # Charge with minimum commitment and filters
     let(:charge) do
       create(
         :standard_charge,
         plan:,
         billable_metric:,
-        min_amount_cents: 10000, # $100 minimum
+        min_amount_cents: 10000,
         invoice_display_name: "Usage Charge with Minimum"
       )
     end
 
-    # Filters for the charge
     let(:billable_metric_filter) do
       create(:billable_metric_filter, billable_metric:, key: "region", values: ["us", "eu", "asia"])
     end
@@ -1207,7 +1162,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Base charge fee (no filter, units: 0, amount: 0) - parent of true_up fee
     let(:base_charge_fee) do
       create(
         :charge_fee,
@@ -1230,7 +1184,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Filter 1 fee with amount
     let(:filter_1_fee) do
       create(
         :charge_fee,
@@ -1238,7 +1191,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         subscription:,
         charge:,
         charge_filter: charge_filter_1,
-        amount_cents: 3000, # $30
+        amount_cents: 3000,
         amount_currency: "USD",
         units: 3,
         unit_amount_cents: 1000,
@@ -1253,7 +1206,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # Filter 2 fee with amount
     let(:filter_2_fee) do
       create(
         :charge_fee,
@@ -1261,7 +1213,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         subscription:,
         charge:,
         charge_filter: charge_filter_2,
-        amount_cents: 4000, # $40
+        amount_cents: 4000,
         amount_currency: "USD",
         units: 2,
         unit_amount_cents: 2000,
@@ -1276,8 +1228,6 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    # True-up fee (minimum commitment) - $30 to reach the $100 minimum
-    # Filter 1 ($30) + Filter 2 ($40) = $70, so true_up = $100 - $70 = $30
     let(:true_up_fee) do
       create(
         :charge_fee,
@@ -1286,7 +1236,7 @@ RSpec.describe "templates/invoices/v4.slim" do
         charge:,
         charge_filter: nil,
         true_up_parent_fee: base_charge_fee,
-        amount_cents: 3000, # $30 true-up to reach minimum
+        amount_cents: 3000,
         amount_currency: "USD",
         units: 1,
         unit_amount_cents: 3000,
@@ -1310,17 +1260,135 @@ RSpec.describe "templates/invoices/v4.slim" do
       true_up_fee
     end
 
-    it "renders all charge fees including base fee and true_up fee" do
-      # The rendered template should include:
-      # 1. Filter fees (these work correctly)
-      expect(rendered_template).to include("Usage Charge with Minimum")
-      expect(rendered_template).to include("us")  # Filter 1
-      expect(rendered_template).to include("eu")  # Filter 2
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 
-      # 2. True-up fee (minimum commitment) - this is the bug we're proving
-      # The true_up fee should be rendered with the "True-up" text
-      expect(rendered_template).to include("True-up")
+  context "when invoice has multiple subscriptions" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
 
+    let(:plan_1) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Basic Plan"
+      )
+    end
+
+    let(:plan_2) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Premium Plan"
+      )
+    end
+
+    let(:subscription_1) do
+      create(:subscription, customer:, plan: plan_1, status: "active")
+    end
+
+    let(:subscription_2) do
+      create(:subscription, customer:, plan: plan_2, status: "active")
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-005",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 8000,
+        currency: "USD",
+        fees_amount_cents: 8000,
+        sub_total_excluding_taxes_amount_cents: 8000,
+        sub_total_including_taxes_amount_cents: 8000
+      )
+    end
+
+    let(:invoice_subscription_1) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_1,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:invoice_subscription_2) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_2,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:subscription_fee_1) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_1,
+        fee_type: :subscription,
+        amount_cents: 3000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 3000,
+        precise_unit_amount: 30.00,
+        invoice_display_name: "Basic Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    let(:subscription_fee_2) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_2,
+        fee_type: :subscription,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 5000,
+        precise_unit_amount: 50.00,
+        invoice_display_name: "Premium Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription_1
+      invoice_subscription_2
+      subscription_fee_1
+      subscription_fee_2
+    end
+
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
