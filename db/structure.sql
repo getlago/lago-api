@@ -321,6 +321,7 @@ DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallets_on_customer_id_and_code;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
@@ -9021,6 +9022,13 @@ CREATE UNIQUE INDEX index_wallets_invoice_custom_sections_unique ON public.walle
 --
 
 CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (customer_id);
+
+
+--
+-- Name: index_wallets_on_customer_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_wallets_on_customer_id_and_code ON public.wallets USING btree (customer_id, code);
 
 
 --
