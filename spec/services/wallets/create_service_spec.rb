@@ -721,5 +721,147 @@ RSpec.describe Wallets::CreateService do
         expect(wallet.metadata).to be_nil
       end
     end
+
+    context "when code is provided" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          code: "custom_code",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with the provided code" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("custom_code")
+      end
+
+      context "when code is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, code: "existing_code")
+        end
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            code: "existing_code",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "returns an error" do
+          expect { service_result }.not_to change(Wallet, :count)
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+      end
+    end
+
+    context "when code is not provided but name is" do
+      let(:params) do
+        {
+          name: "My Premium Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with code derived from name" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("my_premium_wallet")
+      end
+
+      context "when name is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, name: "Existing Name")
+        end
+
+        let(:params) do
+          {
+            name: "existing name",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "creates a wallet with timestamp in the code" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.code).to eq("existing_name_#{wallet.created_at.to_i}")
+        end
+      end
+    end
+
+    context "when neither code nor name is provided" do
+      let(:params) do
+        {
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with default code" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("default")
+      end
+
+      context "when default code is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, name: nil, code: "default")
+        end
+
+        let(:params) do
+          {
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "creates a wallet with timestamp in the code" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.code).to eq("default_#{wallet.created_at.to_i}")
+        end
+      end
+    end
   end
 end

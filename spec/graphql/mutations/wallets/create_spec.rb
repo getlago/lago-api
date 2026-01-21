@@ -14,6 +14,7 @@ RSpec.describe Mutations::Wallets::Create do
       mutation($input: CreateCustomerWalletInput!) {
         createCustomerWallet(input: $input) {
           id
+          code
           name
           priority
           rateAmount
@@ -109,6 +110,7 @@ RSpec.describe Mutations::Wallets::Create do
     result_data = result["data"]["createCustomerWallet"]
 
     expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq("first_wallet")
     expect(result_data["name"]).to eq("First Wallet")
     expect(result_data["priority"]).to eq(9)
     expect(result_data["invoiceRequiresSuccessfulPayment"]).to eq(true)
@@ -140,7 +142,7 @@ RSpec.describe Mutations::Wallets::Create do
   end
 
   context "when name is not present" do
-    it "creates a wallet" do
+    it "creates a wallet with default code" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -164,6 +166,67 @@ RSpec.describe Mutations::Wallets::Create do
 
       expect(result_data["id"]).to be_present
       expect(result_data["name"]).to be_nil
+      expect(result_data["code"]).to eq("default")
+    end
+  end
+
+  context "when code is provided" do
+    it "creates a wallet with the provided code" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "My Wallet",
+            code: "custom_code",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR"
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomerWallet"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq("custom_code")
+      expect(result_data["name"]).to eq("My Wallet")
+    end
+  end
+
+  context "when code is already taken for the customer" do
+    before do
+      create(:wallet, customer:, code: "existing_code")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "My Wallet",
+            code: "existing_code",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR"
+          }
+        }
+      )
+
+      expect_graphql_error(result:, message: "value_already_exist")
     end
   end
 

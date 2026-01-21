@@ -507,6 +507,83 @@ RSpec.describe Api::V1::WalletsController do
         )
       end
     end
+
+    context "when code is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          code: "custom_wallet_code",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with the provided code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("custom_wallet_code")
+      end
+    end
+
+    context "when code is not provided but name is" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "My Premium Wallet",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with code derived from name" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("my_premium_wallet")
+      end
+    end
+
+    context "when neither code nor name is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with default code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("default")
+      end
+    end
+
+    context "when code is already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "existing_code")
+      end
+
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          code: "existing_code",
+          currency: "EUR"
+        }
+      end
+
+      it "returns an error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:code]).to eq(["value_already_exist"])
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do

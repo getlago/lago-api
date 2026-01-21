@@ -10,6 +10,7 @@ module Types
 
       field :customer, Types::Customers::Object
 
+      field :code, String, null: false
       field :currency, Types::CurrencyEnum, null: false
       field :name, String, null: true
       field :priority, Integer, null: false

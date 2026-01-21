@@ -18,6 +18,7 @@ RSpec.describe Mutations::Wallets::Update do
       mutation($input: UpdateCustomerWalletInput!) {
         updateCustomerWallet(input: $input) {
           id
+          code
           name
           priority
           status
@@ -115,6 +116,7 @@ RSpec.describe Mutations::Wallets::Update do
 
     expect(result_data).to include(
       "id" => wallet.id,
+      "code" => wallet.code,
       "name" => "New name",
       "priority" => 22,
       "status" => "active",
@@ -175,6 +177,53 @@ RSpec.describe Mutations::Wallets::Update do
         {"key" => "env", "value" => "staging"},
         {"key" => "region", "value" => "us-east"}
       )
+    end
+  end
+
+  context "when updating code" do
+    it "updates a wallet with the new code" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            code: "updated_code",
+            priority: 22
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["id"]).to eq(wallet.id)
+      expect(result_data["code"]).to eq("updated_code")
+    end
+  end
+
+  context "when updating code to a value already taken for the customer" do
+    before do
+      create(:wallet, customer:, code: "existing_code")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            code: "existing_code",
+            priority: 22
+          }
+        }
+      )
+
+      expect_graphql_error(result:, message: "value_already_exist")
     end
   end
 end
