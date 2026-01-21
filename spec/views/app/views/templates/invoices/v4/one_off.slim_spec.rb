@@ -59,11 +59,7 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
 
     before { add_on_fee }
 
-    it "renders single add-on fee" do
-      expect(rendered_template).to include("Setup Fee")
-      expect(rendered_template).to include("One-time setup fee")
-      expect(rendered_template).to include("Item")
-      expect(rendered_template).to include("Units")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -105,9 +101,7 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
       add_on_fee_2
     end
 
-    it "renders multiple add-on fees" do
-      expect(rendered_template).to include("Setup Fee")
-      expect(rendered_template).to include("Training Session")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -135,10 +129,7 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
 
     before { add_on_fee }
 
-    it "renders add-on fee with date range" do
-      expect(rendered_template).to include("Premium Support")
-      expect(rendered_template).to include("Sep 01, 2025")
-      expect(rendered_template).to include("Sep 30, 2025")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -194,9 +185,7 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
       credit
     end
 
-    it "renders with coupon discount applied to total" do
-      # Note: one_off template doesn't display coupon name, but total reflects the discount
-      expect(rendered_template).to include("$80.00") # Total after $20 discount
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -258,10 +247,7 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
       applied_tax
     end
 
-    it "renders with tax breakdown" do
-      expect(rendered_template).to include("Professional Services")
-      expect(rendered_template).to include("Sales Tax")
-      expect(rendered_template).to include("10")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end

@@ -60,11 +60,7 @@ RSpec.describe "templates/invoices/v4/self_billed.slim" do
 
     before { add_on_fee }
 
-    it "renders self-billed one-off invoice with swapped billing parties" do
-      # In self-billed invoices, customer is the issuer (Bill from) and billing_entity is recipient (Bill to)
-      expect(rendered_template).to include("Self-billing invoice")
-      expect(rendered_template).to include("Partner Commission")
-      expect(rendered_template).to include("This self-billing invoice was issued by the client")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -140,9 +136,7 @@ RSpec.describe "templates/invoices/v4/self_billed.slim" do
       subscription_fee
     end
 
-    it "renders self-billed subscription invoice" do
-      expect(rendered_template).to include("Self-billing invoice")
-      expect(rendered_template).to include("Partner Plan details")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -211,9 +205,7 @@ RSpec.describe "templates/invoices/v4/self_billed.slim" do
       credit_fee
     end
 
-    it "renders self-billed credit invoice" do
-      expect(rendered_template).to include("Self-billing invoice")
-      expect(rendered_template).to include("Prepaid Credits")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -276,9 +268,7 @@ RSpec.describe "templates/invoices/v4/self_billed.slim" do
       applied_tax
     end
 
-    it "renders self-billed invoice with tax breakdown" do
-      expect(rendered_template).to include("VAT")
-      expect(rendered_template).to include("20")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
