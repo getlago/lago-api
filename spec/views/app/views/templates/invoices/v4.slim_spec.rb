@@ -1264,4 +1264,132 @@ RSpec.describe "templates/invoices/v4.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "when invoice has multiple subscriptions" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+
+    let(:plan_1) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Basic Plan"
+      )
+    end
+
+    let(:plan_2) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Premium Plan"
+      )
+    end
+
+    let(:subscription_1) do
+      create(:subscription, customer:, plan: plan_1, status: "active")
+    end
+
+    let(:subscription_2) do
+      create(:subscription, customer:, plan: plan_2, status: "active")
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-005",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 8000,
+        currency: "USD",
+        fees_amount_cents: 8000,
+        sub_total_excluding_taxes_amount_cents: 8000,
+        sub_total_including_taxes_amount_cents: 8000
+      )
+    end
+
+    let(:invoice_subscription_1) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_1,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:invoice_subscription_2) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_2,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:subscription_fee_1) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_1,
+        fee_type: :subscription,
+        amount_cents: 3000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 3000,
+        precise_unit_amount: 30.00,
+        invoice_display_name: "Basic Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    let(:subscription_fee_2) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_2,
+        fee_type: :subscription,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 5000,
+        precise_unit_amount: 50.00,
+        invoice_display_name: "Premium Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription_1
+      invoice_subscription_2
+      subscription_fee_1
+      subscription_fee_2
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 end
