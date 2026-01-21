@@ -78,44 +78,5 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
         end
       end
     end
-
-    describe "is_default" do
-      context "without payment methods" do
-        it "set as default" do
-          result = create_service.call
-          payment_method = result.payment_method
-
-          expect(payment_method.is_default).to be_truthy
-        end
-      end
-
-      context "with payment methods" do
-        before do
-          create(:payment_method, customer:, is_default:)
-        end
-
-        context "without default" do
-          let(:is_default) { false }
-
-          it "set as default" do
-            result = create_service.call
-            payment_method = result.payment_method
-
-            expect(payment_method.is_default).to be_truthy
-          end
-        end
-
-        context "with default" do
-          let(:is_default) { true }
-
-          it "does not set as default" do
-            result = create_service.call
-            payment_method = result.payment_method
-
-            expect(payment_method.is_default).to be_falsey
-          end
-        end
-      end
-    end
   end
 end

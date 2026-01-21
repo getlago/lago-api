@@ -56,8 +56,12 @@ module PaymentProviders
           )
         end
 
+        def customer
+          @customer ||= stripe_customer.customer
+        end
+
         def stripe_payment_provider
-          @stripe_payment_provider ||= payment_provider(stripe_customer.customer)
+          @stripe_payment_provider ||= payment_provider(customer)
         end
       end
     end

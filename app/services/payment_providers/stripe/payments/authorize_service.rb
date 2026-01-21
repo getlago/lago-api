@@ -6,11 +6,11 @@ module PaymentProviders
       class AuthorizeService < BaseService
         Result = BaseResult[:stripe_payment_intent]
 
-        def initialize(amount:, currency:, provider_customer:, unique_id:, metadata: {})
+        def initialize(amount:, currency:, provider_customer:, payment_method:, unique_id:, metadata: {})
           @amount = amount
           @currency = currency
           @provider_customer = provider_customer
-          @payment_method_id = provider_customer.payment_method_id
+          @payment_method = payment_method
           @unique_id = unique_id
           @metadata = metadata
 
@@ -18,35 +18,41 @@ module PaymentProviders
         end
 
         def call
-          if payment_method_id.blank?
-            # If the customer doesn't have a payment_method_id on Lago, we check on Stripe before returning the error,
-            # because it could be that it was just added and the webhook wasn't processed yet
-            # The preauth api call requires a payment_method_id
-            latest_id = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(provider_customer:).payment_method_id
+          find_provider_method_id
 
-            if latest_id
-              @payment_method_id = latest_id
-            else
-              return result.single_validation_failure!(field: :payment_method_id, error_code: "customer_has_no_payment_method")
-            end
+          if payment_method_id.nil?
+            return result.single_validation_failure!(
+              field: :payment_method_id,
+              error_code: "customer_has_no_payment_method"
+            )
           end
 
-          pi = create_payment_intent
+          payment_intent = create_payment_intent
 
-          result.stripe_payment_intent = pi
+          result.stripe_payment_intent = payment_intent
 
           result
         rescue ::Stripe::StripeError => e
           result.provider_failure!(provider: payment_provider, error: e)
         ensure
-          if pi
+          if payment_intent.present?
             PaymentProviders::CancelPaymentAuthorizationJob.perform_later(
-              payment_provider: provider_customer.payment_provider, id: pi.id
+              payment_provider: provider_customer.payment_provider, id: payment_intent.id
             )
           end
         end
 
         private
+
+        def find_provider_method_id
+          @payment_method_id = if payment_method.present?
+            payment_method.provider_method_id
+          elsif provider_customer.payment_method_id.present?
+            provider_customer.payment_method_id
+          else
+            PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(provider_customer:).payment_method_id
+          end
+        end
 
         def create_payment_intent
           ::Stripe::PaymentIntent.create(
@@ -76,7 +82,7 @@ module PaymentProviders
           )
         end
 
-        attr_reader :amount, :currency, :provider_customer, :payment_method_id, :unique_id, :metadata
+        attr_reader :amount, :currency, :provider_customer, :payment_method, :payment_method_id, :unique_id, :metadata
       end
     end
   end
