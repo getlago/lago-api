@@ -34,10 +34,12 @@ module Payments
         result.payment = payment
 
         total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
-
-        params = {total_paid_amount_cents:}
-        params[:payment_status] = "succeeded" if total_paid_amount_cents == invoice.total_amount_cents
-        Invoices::UpdateService.call!(invoice:, params:, webhook_notification: true)
+        total_applied_from_credit_note = invoice.invoice_settlements.where(settlement_type: :credit_note).sum(:amount_cents)
+        update_params = {total_paid_amount_cents: total_paid_amount_cents}
+        if (total_paid_amount_cents + total_applied_from_credit_note) == invoice.total_amount_cents
+          update_params[:payment_status] = "succeeded"
+        end
+        Invoices::UpdateService.call!(invoice:, params: update_params, webhook_notification: true)
       end
 
       after_commit do

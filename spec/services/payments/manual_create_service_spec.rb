@@ -220,6 +220,132 @@ RSpec.describe Payments::ManualCreateService do
           end
         end
       end
+
+      context "when invoice has offset amounts from credit notes" do
+        let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice:,
+            customer:,
+            offset_amount_cents: 3000,
+            credit_amount_cents: 0,
+            refund_amount_cents: 0,
+            total_amount_cents: 3000,
+            status: :finalized
+          )
+        end
+        let(:invoice_settlement) do
+          create(
+            :invoice_settlement,
+            target_invoice: invoice,
+            source_credit_note: credit_note,
+            settlement_type: :credit_note,
+            amount_cents: 3000,
+            organization:
+          )
+        end
+
+        before { invoice_settlement }
+
+        context "when payment covers remaining amount after offset" do
+          let(:amount_cents) { 7000 } # 10000 total - 3000 offset = 7000 remaining
+
+          it "marks invoice as paid" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment.payable.payment_status).to eq("succeeded")
+          end
+
+          it "updates total_paid_amount_cents correctly" do
+            result = service.call
+
+            expect(result.payment.payable.total_paid_amount_cents).to eq(7000)
+          end
+
+          it "sends payment status updated webhook" do
+            service.call
+
+            expect(SendWebhookJob).to have_been_enqueued.with(
+              "invoice.payment_status_updated",
+              invoice
+            )
+          end
+        end
+
+        context "when payment is less than remaining amount after offset" do
+          let(:amount_cents) { 5000 }
+
+          it "does not mark invoice as paid" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment.payable.payment_status).not_to eq("succeeded")
+          end
+
+          it "updates total_paid_amount_cents correctly" do
+            result = service.call
+
+            expect(result.payment.payable.total_paid_amount_cents).to eq(5000)
+          end
+        end
+      end
+
+      context "when invoice has partial payment and offset" do
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            organization:,
+            total_amount_cents: 10000,
+            total_paid_amount_cents: 3000,
+            status: :finalized
+          )
+        end
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice:,
+            customer:,
+            offset_amount_cents: 2000,
+            status: :finalized
+          )
+        end
+
+        before do
+          create(
+            :payment,
+            payable: invoice,
+            organization:,
+            customer:,
+            amount_cents: 3000,
+            status: "succeeded",
+            payable_payment_status: "succeeded"
+          )
+
+          create(
+            :invoice_settlement,
+            target_invoice: invoice,
+            source_credit_note: credit_note,
+            settlement_type: :credit_note,
+            amount_cents: 2000,
+            organization:
+          )
+        end
+
+        context "when final payment covers remaining" do
+          let(:amount_cents) { 5000 } # 10000 - 3000 paid - 2000 offset = 5000
+
+          it "marks invoice as paid" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment.payable.payment_status).to eq("succeeded")
+            expect(result.payment.payable.total_paid_amount_cents).to eq(8000) # 3000 + 5000
+          end
+        end
+      end
     end
   end
 end
