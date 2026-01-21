@@ -25,7 +25,15 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
   end
 
   let(:subscription) do
-    create(:subscription, customer:, plan:, status: "active")
+    create(
+      :subscription,
+      customer:,
+      plan:,
+      status: "active",
+      started_at: Time.zone.parse("2025-09-01 00:00:00"),
+      subscription_at: Time.zone.parse("2025-09-01 00:00:00"),
+      billing_time: :calendar
+    )
   end
 
   let(:invoice) do
@@ -250,6 +258,17 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
       create(:standard_charge, :pay_in_advance, plan:, billable_metric: recurring_billable_metric, prorated: true)
     end
 
+    let(:pay_in_advance_event) do
+      create(
+        :event,
+        organization:,
+        subscription:,
+        customer:,
+        code: recurring_billable_metric.code,
+        timestamp: Time.zone.parse("2025-09-15 10:00:00")
+      )
+    end
+
     let(:prorated_fee) do
       create(
         :charge_fee,
@@ -257,6 +276,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
         charge: prorated_charge,
         subscription:,
         pay_in_advance: true,
+        pay_in_advance_event_id: pay_in_advance_event.id,
         amount_cents: 2500,
         amount_currency: "USD",
         units: 5,
