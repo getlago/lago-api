@@ -2,11 +2,6 @@
 
 require "rails_helper"
 
-# This spec relies on `rspec-snapshot` gem (https://github.com/levinmr/rspec-snapshot) in order to serialize and compare
-# the rendered invoice HTML.
-#
-# To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
-
 RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
   subject(:rendered_template) do
     Slim::Template.new(template, 1, pretty: true).render(invoice)
@@ -98,9 +93,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
 
     before { fixed_charge_fee }
 
-    it "renders with billing period header" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("Standard Fixed Charge")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -159,11 +152,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
       october_fee
     end
 
-    it "renders fees grouped by their billing period" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("September Fixed Charge")
-      expect(rendered_template).to include("Fees from Oct 01, 2025 to Oct 31, 2025")
-      expect(rendered_template).to include("October Fixed Charge")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -222,10 +211,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
       fixed_charge_fee_2
     end
 
-    it "renders all fees under the same billing period" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("Fixed Charge A")
-      expect(rendered_template).to include("Fixed Charge B")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -277,9 +263,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
 
     before { graduated_fixed_charge_fee }
 
-    it "renders with graduated breakdown" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("Graduated Fixed Charge")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -311,10 +295,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
 
     before { prorated_fixed_charge_fee }
 
-    it "renders with prorated indicator" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("Prorated Fixed Charge")
-      expect(rendered_template).to include("prorated")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -346,9 +327,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
 
     before { zero_fixed_charge_fee }
 
-    it "renders zero amount fee using default fee template" do
-      expect(rendered_template).to include("Fees from Sep 01, 2025 to Sep 30, 2025")
-      expect(rendered_template).to include("Zero Amount Fixed Charge")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -413,8 +392,7 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
       credit
     end
 
-    it "renders with coupon discount" do
-      expect(rendered_template).to include("10% Off Coupon")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end

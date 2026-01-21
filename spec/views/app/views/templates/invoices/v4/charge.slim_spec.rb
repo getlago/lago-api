@@ -2,11 +2,6 @@
 
 require "rails_helper"
 
-# This spec relies on `rspec-snapshot` gem (https://github.com/levinmr/rspec-snapshot) in order to serialize and compare
-# the rendered invoice HTML.
-#
-# To update a snapshot, either delete it, or run the tests with `UPDATE_SNAPSHOTS=true` environment variable.
-
 RSpec.describe "templates/invoices/v4/charge.slim" do
   subject(:rendered_template) do
     Slim::Template.new(template, 1, pretty: true).render(invoice)
@@ -98,8 +93,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { charge_fee }
 
-    it "renders charge fee with item details" do
-      expect(rendered_template).to include("API Calls")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -162,9 +156,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
       charge_fee_2
     end
 
-    it "renders all charge fees" do
-      expect(rendered_template).to include("API Calls")
-      expect(rendered_template).to include("Storage GB")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -203,9 +195,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { percentage_fee }
 
-    it "renders percentage charge with rate" do
-      expect(rendered_template).to include("Transaction Fee")
-      expect(rendered_template).to include("5.55%")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -248,8 +238,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { percentage_fee }
 
-    it "renders percentage charge with breakdown details" do
-      expect(rendered_template).to include("Payment Processing Fee")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -285,8 +274,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { prorated_fee }
 
-    it "renders prorated charge with proration details" do
-      expect(rendered_template).to include("Prorated Seats")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -321,9 +309,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { non_invoiceable_fee }
 
-    it "renders non-invoiceable charge with succeeded date" do
-      expect(rendered_template).to include("One-time Setup")
-      expect(rendered_template).to include("Sep 05, 2025")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -362,8 +348,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
 
     before { filtered_fee }
 
-    it "renders charge with filter" do
-      expect(rendered_template).to include("Filtered Charge")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -430,8 +415,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
       credit
     end
 
-    it "renders with coupon discount" do
-      expect(rendered_template).to include("20% Discount")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
@@ -505,10 +489,7 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
       applied_tax
     end
 
-    it "renders with tax breakdown" do
-      expect(rendered_template).to include("Taxable Charge")
-      expect(rendered_template).to include("VAT")
-      expect(rendered_template).to include("20")
+    it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
   end
