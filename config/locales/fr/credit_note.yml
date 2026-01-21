@@ -8,11 +8,13 @@ fr:
     credit_to: Crédité à
     credited_notice: Crédité sur le solde du client le %{issuing_date}
     credited_on_customer_balance: Crédit sur le solde du client
-    credited_refunded_notice: Crédité sur le solde du client et remboursée le %{issuing_date}
     document_name: Avoir
     invoice_number: Nº de facture
     issue_date: Date d'émission
+    issued_notice: Émise le %{issuing_date}
     item: Article
+    offset_invoice: Compensation sur la facture %{invoice_number}
+    offset_invoice_notice: Facture %{invoice_number} compensée le %{issuing_date}
     powered_by: Généré par
     prepaid_credits_for_wallet: Crédit(s) prépayé(s) - %{wallet_name}
     refunded: Remboursement

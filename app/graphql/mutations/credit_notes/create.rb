@@ -16,6 +16,7 @@ module Mutations
       argument :reason, Types::CreditNotes::ReasonTypeEnum, required: true
 
       argument :credit_amount_cents, GraphQL::Types::BigInt, required: false
+      argument :offset_amount_cents, GraphQL::Types::BigInt, required: false
       argument :refund_amount_cents, GraphQL::Types::BigInt, required: false
 
       argument :items, [Types::CreditNoteItems::Input], required: true

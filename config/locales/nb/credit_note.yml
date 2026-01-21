@@ -8,11 +8,13 @@ nb:
     credit_to: Til
     credited_notice: Kreditert til kontobalanse %{issuing_date}
     credited_on_customer_balance: Kreditert til kontobalanse
-    credited_refunded_notice: Kreditert til kontobalanse og refundert %{issuing_date}
     document_name: Kreditnota
     invoice_number: Fakturanummer
     issue_date: Dato
+    issued_notice: Utstedt den %{issuing_date}
     item: Vare
+    offset_invoice: Utligning på faktura %{invoice_number}
+    offset_invoice_notice: Faktura %{invoice_number} utlignet den %{issuing_date}
     powered_by: Fakturering drevet av
     prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
     refunded: Refundert

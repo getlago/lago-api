@@ -38,6 +38,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:total_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:total_due_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:total_paid_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:total_settled_amount_cents).of_type("BigInt!")
 
     expect(subject).to have_field(:issuing_date).of_type("ISO8601Date!")
     expect(subject).to have_field(:expected_finalization_date).of_type("ISO8601Date!")
@@ -51,6 +52,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
 
     expect(subject).to have_field(:creditable_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:offsettable_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:refundable_amount_cents).of_type("BigInt!")
 
     expect(subject).to have_field(:file_url).of_type("String")

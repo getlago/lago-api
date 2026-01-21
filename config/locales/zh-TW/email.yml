@@ -28,10 +28,11 @@ zh-TW:
         credit_note_from: 來自 %{billing_entity_name} 的折讓單
         credit_note_number: 折讓單號碼
         credited_notice: 已於 %{date} 入帳至客戶餘額
-        credited_refunded_notice: 已於 %{date} 入帳至客戶餘額並完成退款
         download: 下載折讓單以查看詳細資訊
         invoice_number: 發票號碼
         issue_date: 開立日期
+        issued_notice: 開立於 %{date}
+        offset_invoice_notice: 發票 %{invoice_number} 已於 %{date} 抵銷
         refunded_notice: 已於 %{date} 退款
         subject: '您來自 %{billing_entity_name} 的折讓單 #%{credit_note_number}'
     data_export:

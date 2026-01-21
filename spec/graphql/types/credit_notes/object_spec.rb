@@ -26,6 +26,7 @@ RSpec.describe Types::CreditNotes::Object do
     expect(subject).to have_field(:coupons_adjustment_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:credit_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:refund_amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:offset_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:sub_total_excluding_taxes_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:taxes_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:total_amount_cents).of_type("BigInt!")
