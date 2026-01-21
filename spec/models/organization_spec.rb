@@ -525,5 +525,51 @@ RSpec.describe Organization do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)
     end
+
+  end
+
+  # this requires double confirmation: value on the org + premium integration
+  describe "#maximum_wallets_per_customer" do
+    let(:organization) { create(:organization, max_wallets:, premium_integrations:) }
+    let(:max_wallets) { nil }
+    let(:premium_integrations) { [] }
+
+    subject { organization.maximum_wallets_per_customer }
+
+    around { |test| lago_premium!(&test) }
+
+    context "when no event_wallet_targets premium integration is enabled" do
+      context "when org has max_wallets set" do
+        let(:max_wallets) { 15 }
+
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
+
+      context "when org has no max_wallets set" do
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
+    end
+
+    context "when event_wallet_targets premium integration is enabled" do
+      let(:premium_integrations) { ["event_wallet_targets"] }
+
+      context "when org has max_wallets set" do
+        let(:max_wallets) { 15 }
+
+        it "returns max value" do
+          expect(subject).to eq(15)
+        end
+      end
+
+      context "when org has no max_wallets set" do
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
+    end
   end
 end

@@ -136,6 +136,7 @@ class Organization < ApplicationRecord
     forecasted_usage
     projected_usage
     custom_roles
+    event_wallet_target
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
@@ -251,6 +252,10 @@ class Organization < ApplicationRecord
   # This is added to have a common interface for all organization-related models to access the organization.
   def organization
     self
+  end
+
+  def maximum_wallets_per_customer
+    max_wallets if event_wallet_target_enabled?
   end
 
   private
