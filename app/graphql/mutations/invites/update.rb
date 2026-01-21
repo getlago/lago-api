@@ -11,14 +11,13 @@ module Mutations
       graphql_name "UpdateInvite"
       description "Update an invite"
 
-      argument :id, ID, required: true
-      argument :role, Types::Memberships::RoleEnum, required: true
-
+      input_object_class Types::Invites::UpdateInput
       type Types::Invites::Object
 
       def resolve(**args)
         invite = current_organization.invites.pending.find_by(id: args[:id])
-        result = ::Invites::UpdateService.call(invite:, params: args)
+        roles = args[:roles].presence || [args[:role]]
+        result = ::Invites::UpdateService.call(invite:, params: {roles:})
         result.success? ? result.invite : result_error(result)
       end
     end

@@ -43,6 +43,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
     end
 
     before do
+      create(:role, :admin)
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("ADMIN_API_KEY").and_return("super-secret")
     end

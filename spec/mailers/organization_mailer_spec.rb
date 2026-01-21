@@ -11,9 +11,9 @@ RSpec.describe OrganizationMailer do
   let(:additions) { ["okta"] }
   let(:deletions) { ["google_oauth"] }
 
-  let(:admin0) { create(:membership, organization:, role: :admin, user: create(:user)).user }
-  let(:admin1) { create(:membership, organization:, role: :admin, user: create(:user)).user }
-  let(:admin2) { create(:membership, organization:, role: :admin, user: create(:user)).user }
+  let(:admin0) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
+  let(:admin1) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
+  let(:admin2) { create(:membership, organization:, roles: [:admin], user: create(:user)).user }
 
   before do
     admin0
@@ -24,7 +24,7 @@ RSpec.describe OrganizationMailer do
   describe "#authentication_methods_updated" do
     specify do
       expect(subject.subject).to eq("Login method updated in your Lago workspace")
-      expect(subject.bcc).to eq([admin0.email, admin1.email, admin2.email])
+      expect(subject.bcc).to contain_exactly(admin0.email, admin1.email, admin2.email)
       expect(subject.from).to eq(["noreply@getlago.com"])
       expect(subject.reply_to).to eq(["noreply@getlago.com"])
 

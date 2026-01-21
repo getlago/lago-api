@@ -8,7 +8,7 @@ module Types
     #       `billing_metrics:view` becomes `billing_metrics_view` which becomes `billingMetricsView`
     #       https://spec.graphql.org/October2021/#sec-Punctuators
     #       https://spec.graphql.org/October2021/#sec-Names
-    Permission::DEFAULT_PERMISSIONS_HASH.keys.each do |permissions|
+    Permission.permissions_hash.keys.each do |permissions|
       field permissions.tr(":", "_"), Boolean, null: false
     end
   end

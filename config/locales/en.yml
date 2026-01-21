@@ -12,6 +12,7 @@ en:
         greater_than: value_is_out_of_range
         greater_than_or_equal_to: value_is_out_of_range
         inclusion: value_is_invalid
+        invalid: value_is_invalid
         invalid_aggregation_type_or_charge_model: invalid_aggregation_type_or_charge_model
         invalid_amount: invalid_amount
         invalid_billable_metric_or_charge_model: invalid_billable_metric_or_charge_model
@@ -28,6 +29,7 @@ en:
         invalid_free_units_per_events: invalid_free_units_per_events
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation
         invalid_graduated_ranges: invalid_graduated_ranges
+        invalid_organization: invalid_organization
         invalid_package_size: invalid_package_size
         invalid_per_unit_amount: invalid_per_unit_amount
         invalid_rate: invalid_rate
@@ -43,6 +45,7 @@ en:
             attributes:
               permissions:
                 forbidden_key: 'contains forbidden keys: %{keys}'
+        modification_not_allowed: modification_not_allowed
         must_be_greater_than_or_equal_min: must_be_greater_than_or_equal_min
         must_be_true_unless_pay_in_advance: must_be_true_unless_pay_in_advance
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type

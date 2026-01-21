@@ -24,10 +24,13 @@ RSpec.describe Mutations::Invites::Create do
           token
           email
           role
+          roles
         }
       }
     GQL
   end
+
+  before { create(:role, :finance) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -51,7 +54,78 @@ RSpec.describe Mutations::Invites::Create do
 
     expect(data["email"]).to eq(email)
     expect(data["role"]).to eq(role)
+    expect(data["roles"]).to eq([role])
     expect(data["token"]).to be_present
+  end
+
+  it "creates an invite with admin role using roles param" do
+    create(:role, :admin)
+
+    roles_mutation = <<~GQL
+      mutation($input: CreateInviteInput!) {
+        createInvite(input: $input) {
+          id
+          token
+          email
+          role
+          roles
+        }
+      }
+    GQL
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: roles_mutation,
+      variables: {
+        input: {
+          email:,
+          roles: ["admin"]
+        }
+      }
+    )
+
+    data = result["data"]["createInvite"]
+
+    expect(data["email"]).to eq(email)
+    expect(data["role"]).to eq("admin")
+    expect(data["roles"]).to eq(["admin"])
+  end
+
+  it "creates an invite with custom role and returns null for deprecated role field" do
+    create(:role, code: "developer", name: "Developer", organization:, permissions: %w[organization:view])
+
+    roles_mutation = <<~GQL
+      mutation($input: CreateInviteInput!) {
+        createInvite(input: $input) {
+          id
+          token
+          email
+          role
+          roles
+        }
+      }
+    GQL
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: roles_mutation,
+      variables: {
+        input: {
+          email:,
+          roles: ["developer"]
+        }
+      }
+    )
+
+    data = result["data"]["createInvite"]
+
+    expect(data["email"]).to eq(email)
+    expect(data["role"]).to be_nil
+    expect(data["roles"]).to eq(["developer"])
   end
 
   it "creates an invite for a revoked user" do

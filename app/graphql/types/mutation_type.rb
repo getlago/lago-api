@@ -205,6 +205,10 @@ module Types
     field :create_pricing_unit, mutation: Mutations::PricingUnits::Create
     field :update_pricing_unit, mutation: Mutations::PricingUnits::Update
 
+    field :create_role, mutation: Mutations::Roles::Create
+    field :destroy_role, mutation: Mutations::Roles::Destroy
+    field :update_role, mutation: Mutations::Roles::Update
+
     field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
     field :destroy_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Destroy
     field :update_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Update

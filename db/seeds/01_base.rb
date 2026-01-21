@@ -3,6 +3,26 @@
 require "faker"
 require "factory_bot_rails"
 
+# Enable premium features for seeding
+License.instance_variable_set(:@premium, true)
+
+# Ensure predefined roles exist (normally created by migration)
+Role.find_or_create_by!(code: "admin", organization_id: nil) do |role|
+  role.admin = true
+  role.name = "Admin"
+  role.description = "Administrator having all permissions"
+end
+
+Role.find_or_create_by!(code: "finance", organization_id: nil) do |role|
+  role.name = "Finance"
+  role.description = "Finance role with permissions to manage financial data"
+end
+
+Role.find_or_create_by!(code: "manager", organization_id: nil) do |role|
+  role.name = "Manager"
+  role.description = "The predefined manager role"
+end
+
 # NOTE: create a user and an organization
 user = User.create_with(password: "ILoveLago")
   .find_or_create_by(email: "gavin@hooli.com")
@@ -35,7 +55,11 @@ organizations_data.each do |org_data|
     invoice_footer: "Hooli is a fictional company."
   })
   BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
-  Membership.find_or_create_by!(user:, organization:, role: :admin)
+  membership = Membership.find_or_create_by!(user:, organization:, role: :admin)
+
+  # Ensure the membership has an admin role in the new roles system
+  admin_role = Role.find_by!(admin: true)
+  MembershipRole.find_or_create_by!(membership:, organization:, role: admin_role)
   if Rails.env.development?
     # In development, we create a webhook endpoint to the local webhook-tester service.
     WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook/#{organization.id}")

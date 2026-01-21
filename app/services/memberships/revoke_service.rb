@@ -12,7 +12,7 @@ module Memberships
     def call
       return result.not_found_failure!(resource: "membership") unless membership
       return result.not_allowed_failure!(code: "cannot_revoke_own_membership") if user.id == membership.user.id
-      return result.not_allowed_failure!(code: "last_admin") if membership.organization.memberships.admin.count == 1 && membership.admin?
+      return result.not_allowed_failure!(code: "last_admin") if membership.admin? && membership.organization.admin_membership_roles.count == 1
 
       membership.mark_as_revoked!
 

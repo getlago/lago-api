@@ -5,15 +5,7 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = %w[
-        customers:update
-        customer_settings:update:tax_rates
-        customer_settings:update:payment_terms
-        customer_settings:update:grace_period
-        customer_settings:update:lang
-        customer_settings:update:issuing_date_anchor
-        customer_settings:update:issuing_date_adjustment
-      ]
+      REQUIRED_PERMISSION = %w[customers:update]
 
       graphql_name "UpdateCustomer"
       description "Updates an existing Customer"
