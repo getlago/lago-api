@@ -110,12 +110,12 @@
             <td class="body-2">Amount</td>
           </tr>
           <tr>
-            <td class="body-1">Basic Plan</td>
-            <td class="body-2">€30.00</td>
+            <td class="body-1">Zebra Plan</td>
+            <td class="body-2">€50.00</td>
           </tr>
           <tr>
-            <td class="body-1">Premium Plan</td>
-            <td class="body-2">€50.00</td>
+            <td class="body-1">Alpha Plan</td>
+            <td class="body-2">€30.00</td>
           </tr>
         </table>
         <table class="total-table" width="100%">
@@ -147,7 +147,7 @@
         <span class="body-2">Powered by &nbsp;</span>
         <img alt="Lago Logo" src="lago-logo-invoice.png" />
       </div>
-      <h2 class="title-2 mb-24 invoice-details-title">Basic Plan details</h2>
+      <h2 class="title-2 mb-24 invoice-details-title">Alpha Plan details</h2>
       <div class="invoice-resume overflow-auto">
         <table class="invoice-resume-table" width="100%">
           <tr class="first_child">
@@ -158,7 +158,7 @@
             <td class="body-2">Amount</td>
           </tr>
           <tr class="fee">
-            <td class="body-1">Basic Plan Subscription</td>
+            <td class="body-1">Alpha Plan Subscription</td>
             <td class="body-2">1.0</td>
             <td class="body-2">$30.00</td>
             <td class="body-2">
@@ -177,7 +177,7 @@
           </tr>
         </table>
       </div>
-      <h2 class="title-2 mb-24 invoice-details-title">Premium Plan details</h2>
+      <h2 class="title-2 mb-24 invoice-details-title">Zebra Plan details</h2>
       <div class="invoice-resume overflow-auto">
         <table class="invoice-resume-table" width="100%">
           <tr class="first_child">
@@ -188,7 +188,7 @@
             <td class="body-2">Amount</td>
           </tr>
           <tr class="fee">
-            <td class="body-1">Premium Plan Subscription</td>
+            <td class="body-1">Zebra Plan Subscription</td>
             <td class="body-2">1.0</td>
             <td class="body-2">$50.00</td>
             <td class="body-2">

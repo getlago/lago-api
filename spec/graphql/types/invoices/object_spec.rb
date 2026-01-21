@@ -80,4 +80,47 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:voided_invoice_id).of_type("String")
   end
+
+  describe "subscriptions ordering" do
+    let(:invoice) { create(:invoice) }
+    let(:organization) { invoice.organization }
+    let(:customer) { invoice.customer }
+
+    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
+
+    let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
+    let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
+    let(:subscription_custom) { create(:subscription, customer:, plan: plan_zebra, name: "AAA Custom") }
+
+    before do
+      create(:invoice_subscription, invoice:, subscription: subscription_zebra)
+      create(:invoice_subscription, invoice:, subscription: subscription_alpha)
+      create(:invoice_subscription, invoice:, subscription: subscription_custom)
+    end
+
+    it "returns subscriptions ordered alphabetically by invoice_name" do
+      object = described_class.send(:new, invoice, {})
+
+      result = object.subscriptions
+
+      expect(result.map(&:invoice_name)).to eq([
+        "AAA Custom",
+        "Alpha Plan",
+        "Zebra Plan"
+      ])
+    end
+
+    it "returns invoice_subscriptions ordered alphabetically by subscription invoice_name" do
+      object = described_class.send(:new, invoice, {})
+
+      result = object.invoice_subscriptions
+
+      expect(result.map { |is| is.subscription.invoice_name }).to eq([
+        "AAA Custom",
+        "Alpha Plan",
+        "Zebra Plan"
+      ])
+    end
+  end
 end

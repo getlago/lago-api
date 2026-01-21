@@ -175,6 +175,14 @@ module Types
         object.associated_active_wallet.present?
       end
 
+      def invoice_subscriptions
+        object.sorted_invoice_subscriptions
+      end
+
+      def subscriptions
+        object.sorted_subscriptions
+      end
+
       def tax_provider_id
         integration_customer = object.customer&.tax_customer
         return nil unless integration_customer

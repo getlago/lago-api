@@ -96,6 +96,47 @@ RSpec.describe ::V1::InvoiceSerializer do
     end
   end
 
+  context "when including subscriptions with multiple subscriptions" do
+    let(:includes) { %i[subscriptions billing_periods] }
+    let(:organization) { invoice.organization }
+    let(:customer) { invoice.customer }
+
+    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
+
+    let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
+    let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
+    let(:subscription_custom) { create(:subscription, customer:, plan: plan_zebra, name: "AAA Custom") }
+
+    before do
+      create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_zebra)
+      create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_alpha)
+      create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_custom)
+    end
+
+    it "orders subscriptions alphabetically by invoice_name" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["subscriptions"].map { |s| s["name"] }).to eq([
+        "AAA Custom",
+        nil,
+        nil
+      ])
+    end
+
+    it "orders billing_periods alphabetically by subscription invoice_name" do
+      result = JSON.parse(serializer.to_json)
+
+      billing_period_subscription_ids = result["invoice"]["billing_periods"].pluck("lago_subscription_id")
+
+      expect(billing_period_subscription_ids).to eq([
+        subscription_custom.id,
+        subscription_alpha.id,
+        subscription_zebra.id
+      ])
+    end
+  end
+
   context "when the tax was deleted" do
     let(:includes) { %i[applied_taxes] }
 

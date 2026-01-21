@@ -1,5 +1,5 @@
 - if subscription?
-  - subscriptions.each do |subscription|
+  - sorted_subscriptions.each do |subscription|
     - invoice_subscription = invoice_subscription(subscription.id)
     == SlimHelper.render('templates/invoices/v4/_subscription_name', self, subscription: subscription, page_break: subscriptions.count > 1)
 
