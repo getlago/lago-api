@@ -57,19 +57,6 @@ class FillWalletCodes < ActiveRecord::Migration[8.0]
   end
 
   def down
-    # Also batch the rollback for large datasets
-    safety_assured do
-      loop do
-        result = execute(<<-SQL)
-          UPDATE wallets
-          SET code = NULL
-          WHERE id IN (
-            SELECT id FROM wallets WHERE code IS NOT NULL LIMIT #{BATCH_SIZE}
-          )
-        SQL
-
-        break if result.cmd_tuples.zero?
-      end
-    end
+    # do nothing in down
   end
 end
