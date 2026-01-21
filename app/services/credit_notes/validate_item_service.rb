@@ -37,8 +37,12 @@ module CreditNotes
       invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:credit_amount_cents)
     end
 
+    def offset_amount_cents
+      invoice.credit_notes.finalized.where.not(id: credit_note.id).sum(:offset_amount_cents)
+    end
+
     def invoice_credit_note_total_amount_cents
-      credited_invoice_amount_cents + refunded_invoice_amount_cents
+      credited_invoice_amount_cents + refunded_invoice_amount_cents + offset_amount_cents
     end
 
     def total_item_amount_cents
