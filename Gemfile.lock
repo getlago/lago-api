@@ -106,7 +106,7 @@ GEM
     addressing (1.1.0)
     adyen-ruby-api-library (7.3.1)
       faraday
-    after_commit_everywhere (1.4.0)
+    after_commit_everywhere (1.6.0)
       activerecord (>= 4.2)
       activesupport
     analytics-ruby (2.4.0)
