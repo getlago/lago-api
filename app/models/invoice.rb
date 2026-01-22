@@ -287,6 +287,11 @@ class Invoice < ApplicationRecord
   end
 
   def offset_amount_cents
+    # Avoid N+1 queries if credit_notes preloaded with includes(:credit_notes)
+    if association(:credit_notes).loaded?
+      return credit_notes.select(&:finalized?).sum(&:offset_amount_cents)
+    end
+
     credit_notes.finalized.sum(:offset_amount_cents)
   end
 
