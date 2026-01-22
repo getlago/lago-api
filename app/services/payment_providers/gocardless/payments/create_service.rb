@@ -68,9 +68,7 @@ module PaymentProviders
 
           raise MandateNotFoundError unless mandate
 
-          provider_customer.provider_mandate_id = mandate.id
-          provider_customer.save!
-
+          set_provider_method_id(provider_method_id: mandate.id)
           mandate.id
         end
 
@@ -99,6 +97,21 @@ module PaymentProviders
           payment.update!(status: :failed, payable_payment_status: :failed)
 
           result.service_failure!(code: "gocardless_error", message: "#{error.code}: #{error.message}")
+        end
+
+        def set_provider_method_id(provider_method_id:)
+          provider_customer.provider_mandate_id = provider_method_id
+          provider_customer.save!
+
+          if customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+            PaymentMethods::FindOrCreateFromProviderService.call(
+              customer:,
+              payment_provider_customer: provider_customer,
+              provider_method_id:,
+              params: {provider_payment_methods: "mandate"},
+              set_as_default: true
+            )
+          end
         end
       end
     end
