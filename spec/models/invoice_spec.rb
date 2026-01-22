@@ -1930,6 +1930,11 @@ RSpec.describe Invoice do
       expect(invoice.total_due_amount_cents).to eq(700)
     end
 
+    it "returns 0 when invoice is voided" do
+      invoice.update!(status: :voided)
+      expect(invoice.total_due_amount_cents).to eq(0)
+    end
+
     it "deducts offset amount from total due" do
       create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 200)
       expect(invoice.total_due_amount_cents).to eq(500) # 1000 - 300 - 200
