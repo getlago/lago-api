@@ -961,8 +961,8 @@ GEM
       rubocop-performance (~> 1.26.0)
     stringio (3.2.0)
     stripe (6.5.0)
-    strong_migrations (2.0.2)
-      activerecord (>= 6.1)
+    strong_migrations (2.5.2)
+      activerecord (>= 7.1)
     super_diff (0.18.0)
       attr_extras (>= 6.2.4)
       diff-lcs
