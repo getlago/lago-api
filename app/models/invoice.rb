@@ -331,7 +331,7 @@ class Invoice < ApplicationRecord
   end
 
   def offsettable_amount_cents
-    if credit? && (payment_pending? || payment_failed?)
+    if credit? && (payment_pending? || payment_failed?) && total_due_amount_cents.positive?
       return total_amount_cents
     end
 
