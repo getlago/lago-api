@@ -330,6 +330,8 @@ class Invoice < ApplicationRecord
     available_to_credit_amount_cents
   end
 
+  # amount cents onto which we can issue a credit note as offset
+  # when invoice type is credit theres no partial payments/refund/offset only full amount
   def offsettable_amount_cents
     due_amount_cents = total_due_amount_cents
 
@@ -473,12 +475,6 @@ class Invoice < ApplicationRecord
   end
 
   private
-
-  def full_offset_allowed?
-    credit? &&
-      total_due_amount_cents.positive? &&
-      (payment_pending? || payment_failed?)
-  end
 
   # Checks that every charge has at least one fee without a filter (charge_filter_id IS NULL)
   # This "base fee" is created for charges without filters, or for unmatched events when filters exist
