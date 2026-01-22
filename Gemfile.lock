@@ -171,7 +171,7 @@ GEM
     connection_pool (2.5.5)
     countries (8.1.0)
       unaccent (~> 0.3)
-    crack (0.4.6)
+    crack (1.0.1)
       bigdecimal
       rexml
     crass (1.0.6)
