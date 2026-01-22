@@ -716,7 +716,7 @@ GEM
       date
       stringio
     public_suffix (7.0.2)
-    puma (6.5.0)
+    puma (6.6.1)
       nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.2.4)
@@ -1019,7 +1019,7 @@ GEM
       prometheus-client (>= 3.0, < 5.0)
       rack
       yabeda (~> 0.10)
-    yabeda-puma-plugin (0.7.1)
+    yabeda-puma-plugin (0.9.0)
       json
       puma
       yabeda (~> 0.5)
