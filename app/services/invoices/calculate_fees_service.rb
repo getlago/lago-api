@@ -343,8 +343,6 @@ module Invoices
     end
 
     def should_create_fixed_charge_fees?(subscription, boundaries)
-      return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
-
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
       #       fee if the fixed_charge is pay in arrears, otherwise this fee will never
       #       be created.

@@ -150,9 +150,9 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
           .and have_enqueued_job(BillSubscriptionJob).once
       end
 
-      it do
+      it "enqueues CreatePayInAdvanceFixedChargesJob for pay-in-advance fixed charges even during trial" do
         expect { activate_service.activate_all_pending }
-          .not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob).once
       end
     end
   end
