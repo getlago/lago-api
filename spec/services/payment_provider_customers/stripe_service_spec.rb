@@ -446,6 +446,43 @@ RSpec.describe PaymentProviderCustomers::StripeService do
       end
     end
 
+    context "when multiple_payment_methods feature flag is enabled" do
+      let(:payment_method) do
+        create(:payment_method, customer:, provider_method_id: payment_method_id)
+      end
+
+      before do
+        organization.enable_feature_flag!(:multiple_payment_methods)
+        payment_method
+      end
+
+      it "discards the payment method" do
+        result = stripe_service.delete_payment_method(
+          organization_id: organization.id,
+          stripe_customer_id: stripe_customer.provider_customer_id,
+          payment_method_id:
+        )
+
+        expect(result).to be_success
+        expect(result.stripe_customer.payment_method_id).to be_nil
+        expect(result.payment_method).to eq(payment_method)
+        expect(payment_method.reload.discarded?).to be true
+      end
+
+      context "when payment method does not exist" do
+        it "does not raise an error" do
+          result = stripe_service.delete_payment_method(
+            organization_id: organization.id,
+            stripe_customer_id: stripe_customer.provider_customer_id,
+            payment_method_id: "non_existent_pm"
+          )
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+        end
+      end
+    end
+
     context "when customer is not found" do
       it "returns an empty result" do
         result = stripe_service.delete_payment_method(

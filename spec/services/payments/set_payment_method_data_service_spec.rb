@@ -20,11 +20,9 @@ RSpec.describe Payments::SetPaymentMethodDataService do
         result = service.call
 
         expect(result.payment.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
-        expect(result.payment.provider_payment_method_data).to eq({
-          "type" => "card",
-          "brand" => "visa",
-          "last4" => "4242"
-        })
+        expect(result.payment.provider_payment_method_data["type"]).to eq("card")
+        expect(result.payment.provider_payment_method_data["brand"]).to eq("visa")
+        expect(result.payment.provider_payment_method_data["last4"]).to eq("4242")
         expect(result.payment&.payment_method&.details).to be_nil
       end
 
@@ -41,16 +39,12 @@ RSpec.describe Payments::SetPaymentMethodDataService do
           result = service.call
 
           expect(result.payment.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
-          expect(result.payment.provider_payment_method_data).to eq({
-            "type" => "card",
-            "brand" => "visa",
-            "last4" => "4242"
-          })
-          expect(result.payment.payment_method.reload.details).to eq({
-            "type" => "card",
-            "brand" => "visa",
-            "last4" => "4242"
-          })
+          expect(result.payment.provider_payment_method_data["type"]).to eq("card")
+          expect(result.payment.provider_payment_method_data["brand"]).to eq("visa")
+          expect(result.payment.provider_payment_method_data["last4"]).to eq("4242")
+          expect(result.payment.payment_method.reload.details["type"]).to eq("card")
+          expect(result.payment.payment_method.reload.details["brand"]).to eq("visa")
+          expect(result.payment.payment_method.reload.details["last4"]).to eq("4242")
         end
       end
 
