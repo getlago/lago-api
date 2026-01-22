@@ -101,7 +101,16 @@ module DataExports
       end
 
       def collection
-        Invoice.includes(:credit_notes).find(data_export_part.object_ids)
+        invoices = Invoice.find(data_export_part.object_ids)
+
+        # Preload only needed credit_notes columns to reduce memory usage
+        ActiveRecord::Associations::Preloader.new(
+          records: invoices,
+          associations: :credit_notes,
+          scope: CreditNote.select(:id, :invoice_id, :status, :offset_amount_cents)
+        ).call
+
+        invoices
       end
 
       def organization
