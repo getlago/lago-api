@@ -65,7 +65,9 @@ module V1
 
     def subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: "subscriptions"
+        model.sorted_invoice_subscriptions.includes(subscription: [:customer, :plan]).map(&:subscription),
+        ::V1::SubscriptionSerializer,
+        collection_name: "subscriptions"
       ).serialize
     end
 
@@ -144,7 +146,7 @@ module V1
 
     def billing_periods
       ::CollectionSerializer.new(
-        model.invoice_subscriptions,
+        model.sorted_invoice_subscriptions,
         ::V1::Invoices::BillingPeriodSerializer,
         collection_name: "billing_periods"
       ).serialize

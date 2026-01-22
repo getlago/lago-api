@@ -1269,32 +1269,35 @@ RSpec.describe "templates/invoices/v4.slim" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }
 
-    let(:plan_1) do
+    # Plans are named to test alphabetical ordering - Zebra comes after Alpha alphabetically
+    # but we create Zebra first to verify the ordering is by name, not insertion order
+    let(:plan_zebra) do
       create(
         :plan,
         organization:,
         interval: "monthly",
         pay_in_advance: false,
-        invoice_display_name: "Basic Plan"
+        invoice_display_name: "Zebra Plan"
       )
     end
 
-    let(:plan_2) do
+    let(:plan_alpha) do
       create(
         :plan,
         organization:,
         interval: "monthly",
         pay_in_advance: false,
-        invoice_display_name: "Premium Plan"
+        invoice_display_name: "Alpha Plan"
       )
     end
 
-    let(:subscription_1) do
-      create(:subscription, customer:, plan: plan_1, status: "active")
+    # Create Zebra subscription first to ensure ordering is alphabetical, not by insertion
+    let(:subscription_zebra) do
+      create(:subscription, customer:, plan: plan_zebra, status: "active")
     end
 
-    let(:subscription_2) do
-      create(:subscription, customer:, plan: plan_2, status: "active")
+    let(:subscription_alpha) do
+      create(:subscription, customer:, plan: plan_alpha, status: "active")
     end
 
     let(:invoice) do
@@ -1313,11 +1316,12 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    let(:invoice_subscription_1) do
+    # Create Zebra invoice_subscription first (will be created before Alpha)
+    let(:invoice_subscription_zebra) do
       create(
         :invoice_subscription,
         invoice:,
-        subscription: subscription_1,
+        subscription: subscription_zebra,
         from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
         to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
@@ -1328,11 +1332,11 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    let(:invoice_subscription_2) do
+    let(:invoice_subscription_alpha) do
       create(
         :invoice_subscription,
         invoice:,
-        subscription: subscription_2,
+        subscription: subscription_alpha,
         from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
         to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
         charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
@@ -1343,18 +1347,18 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    let(:subscription_fee_1) do
+    let(:subscription_fee_zebra) do
       create(
         :fee,
         invoice:,
-        subscription: subscription_1,
+        subscription: subscription_zebra,
         fee_type: :subscription,
-        amount_cents: 3000,
+        amount_cents: 5000,
         amount_currency: "USD",
         units: 1,
-        unit_amount_cents: 3000,
-        precise_unit_amount: 30.00,
-        invoice_display_name: "Basic Plan Subscription",
+        unit_amount_cents: 5000,
+        precise_unit_amount: 50.00,
+        invoice_display_name: "Zebra Plan Subscription",
         properties: {
           from_datetime: "2025-08-01 00:00:00",
           to_datetime: "2025-08-31 23:59:59"
@@ -1362,18 +1366,18 @@ RSpec.describe "templates/invoices/v4.slim" do
       )
     end
 
-    let(:subscription_fee_2) do
+    let(:subscription_fee_alpha) do
       create(
         :fee,
         invoice:,
-        subscription: subscription_2,
+        subscription: subscription_alpha,
         fee_type: :subscription,
-        amount_cents: 5000,
+        amount_cents: 3000,
         amount_currency: "USD",
         units: 1,
-        unit_amount_cents: 5000,
-        precise_unit_amount: 50.00,
-        invoice_display_name: "Premium Plan Subscription",
+        unit_amount_cents: 3000,
+        precise_unit_amount: 30.00,
+        invoice_display_name: "Alpha Plan Subscription",
         properties: {
           from_datetime: "2025-08-01 00:00:00",
           to_datetime: "2025-08-31 23:59:59"
@@ -1382,10 +1386,11 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
 
     before do
-      invoice_subscription_1
-      invoice_subscription_2
-      subscription_fee_1
-      subscription_fee_2
+      # Create Zebra first, then Alpha - but rendered output should show Alpha first (alphabetical)
+      invoice_subscription_zebra
+      invoice_subscription_alpha
+      subscription_fee_zebra
+      subscription_fee_alpha
     end
 
     it "renders correctly" do

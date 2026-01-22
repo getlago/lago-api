@@ -206,6 +206,14 @@ class Invoice < ApplicationRecord
     invoice_subscriptions.find_by(subscription_id:)
   end
 
+  def sorted_invoice_subscriptions
+    invoice_subscriptions.order_by_subscription_invoice_name
+  end
+
+  def sorted_subscriptions
+    sorted_invoice_subscriptions.map(&:subscription)
+  end
+
   def subscription_fees(subscription_id)
     invoice_subscription(subscription_id).fees
   end

@@ -27,6 +27,50 @@ RSpec.describe InvoiceSubscription do
 
   it { is_expected.to belong_to(:organization) }
 
+  describe ".order_by_subscription_invoice_name" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+
+    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
+    let(:plan_beta) { create(:plan, organization:, name: "Beta Plan", invoice_display_name: "Custom Beta") }
+
+    let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
+    let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
+    let(:subscription_custom) { create(:subscription, customer:, plan: plan_beta, name: "AAA Custom Name") }
+
+    before do
+      create(:invoice_subscription, invoice:, subscription: subscription_zebra)
+      create(:invoice_subscription, invoice:, subscription: subscription_alpha)
+      create(:invoice_subscription, invoice:, subscription: subscription_custom)
+    end
+
+    it "orders by COALESCE(subscription.name, plan.invoice_display_name, plan.name) ASC" do
+      result = invoice.invoice_subscriptions.order_by_subscription_invoice_name
+
+      expect(result.map { |is| is.subscription.invoice_name }).to eq([
+        "AAA Custom Name",
+        "Alpha Plan",
+        "Zebra Plan"
+      ])
+    end
+
+    it "uses plan.invoice_display_name when subscription.name is nil" do
+      subscription_alpha.update!(name: nil)
+      plan_alpha.update!(invoice_display_name: "ZZZ Display Name")
+
+      result = invoice.invoice_subscriptions.order_by_subscription_invoice_name
+
+      # Alphabetical order: AAA < ZZZ < Zebra
+      expect(result.map { |is| is.subscription.invoice_name }).to eq([
+        "AAA Custom Name",
+        "ZZZ Display Name",
+        "Zebra Plan"
+      ])
+    end
+  end
+
   describe ".matching?" do
     subject(:matching?) { described_class.matching?(subscription, boundaries) }
 
