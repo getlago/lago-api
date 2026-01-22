@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::ChargeFilters::Destroy, type: :graphql do
-  let(:required_permission) { "charge_filters:delete" }
+  let(:required_permission) { "charges:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
@@ -23,7 +23,7 @@ RSpec.describe Mutations::ChargeFilters::Destroy, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "charge_filters:delete"
+  it_behaves_like "requires permission", "charges:delete"
 
   it "destroys a charge filter" do
     result = execute_graphql(

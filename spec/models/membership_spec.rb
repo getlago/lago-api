@@ -95,7 +95,7 @@ RSpec.describe Membership do
       end
 
       it "returns false for non-manager permissions" do
-        expect(permissions_hash).to include("analytics:view" => false)
+        expect(permissions_hash).to include("pricing_units:view" => false)
       end
     end
 

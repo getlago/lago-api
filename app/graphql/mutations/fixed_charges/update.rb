@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "fixed_charges:update"
+      REQUIRED_PERMISSION = "charges:update"
 
       graphql_name "UpdateFixedCharge"
       description "Updates an existing Fixed Charge"

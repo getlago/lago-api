@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::PaymentRequests::Create do
-  let(:required_permission) { "payment_requests:create" }
+  let(:required_permission) { "payments:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }

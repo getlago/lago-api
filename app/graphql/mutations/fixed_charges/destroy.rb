@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "fixed_charges:delete"
+      REQUIRED_PERMISSION = "charges:delete"
 
       graphql_name "DestroyFixedCharge"
       description "Deletes a Fixed Charge"

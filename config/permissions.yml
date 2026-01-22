@@ -15,12 +15,9 @@ authentication_methods:
   view:
   update:
 analytics:
-  overdue_balances:
-    view:
-      - finance
-      - manager
   view:
     - finance
+    - manager
 billable_metrics:
   view:
   create:
@@ -36,29 +33,7 @@ billing_entities:
     - finance
   delete:
     - finance
-  invoices:
-    view:
-      - finance
-    update:
-      - finance
-  taxes:
-    view:
-      - finance
-    update:
-      - finance
-  emails:
-    view:
-      - finance
-    update:
-      - finance
-  dunning_campaigns:
-    update:
-      - finance
 charges:
-  create:
-  update:
-  delete:
-charge_filters:
   create:
   update:
   delete:
@@ -93,8 +68,6 @@ developers:
   manage:
   keys:
     manage:
-draft_invoices:
-  update:
 dunning_campaigns:
   view:
     - finance
@@ -107,10 +80,6 @@ dunning_campaigns:
     - finance
 features:
   view:
-  create:
-  update:
-  delete:
-fixed_charges:
   create:
   update:
   delete:
@@ -176,15 +145,6 @@ payment_methods:
   create:
   update:
   delete:
-payment_requests:
-  view:
-    - finance
-    - manager
-  create:
-    - finance
-    - manager
-permissions:
-  view:
 plans:
   view:
   create:

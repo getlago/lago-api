@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Analytics::OverdueBalancesResolver do
-  let(:required_permission) { "analytics:overdue_balances:view" }
+  let(:required_permission) { "analytics:view" }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean) {
@@ -24,7 +24,7 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "analytics:overdue_balances:view"
+  it_behaves_like "requires permission", "analytics:view"
 
   it "returns a list of overdue balances" do
     result = execute_graphql(

@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "charge_filters:delete"
+      REQUIRED_PERMISSION = "charges:delete"
 
       graphql_name "DestroyChargeFilter"
       description "Deletes a Charge Filter"

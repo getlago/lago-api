@@ -14,7 +14,7 @@ RSpec.describe Mutations::Invites::Create do
   end
   let(:organization) { membership.organization }
   let(:email) { Faker::Internet.email }
-  let(:role) { "finance" }
+  let(:roles) { %w[finance] }
 
   let(:mutation) do
     <<~GQL
@@ -23,7 +23,6 @@ RSpec.describe Mutations::Invites::Create do
           id
           token
           email
-          role
           roles
         }
       }
@@ -45,7 +44,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -53,8 +52,7 @@ RSpec.describe Mutations::Invites::Create do
     data = result["data"]["createInvite"]
 
     expect(data["email"]).to eq(email)
-    expect(data["role"]).to eq(role)
-    expect(data["roles"]).to eq([role])
+    expect(data["roles"]).to eq(roles)
     expect(data["token"]).to be_present
   end
 
@@ -67,7 +65,6 @@ RSpec.describe Mutations::Invites::Create do
           id
           token
           email
-          role
           roles
         }
       }
@@ -89,11 +86,10 @@ RSpec.describe Mutations::Invites::Create do
     data = result["data"]["createInvite"]
 
     expect(data["email"]).to eq(email)
-    expect(data["role"]).to eq("admin")
     expect(data["roles"]).to eq(["admin"])
   end
 
-  it "creates an invite with custom role and returns null for deprecated role field" do
+  it "creates an invite with custom role" do
     create(:role, code: "developer", name: "Developer", organization:, permissions: %w[organization:view])
 
     roles_mutation = <<~GQL
@@ -102,7 +98,6 @@ RSpec.describe Mutations::Invites::Create do
           id
           token
           email
-          role
           roles
         }
       }
@@ -124,7 +119,6 @@ RSpec.describe Mutations::Invites::Create do
     data = result["data"]["createInvite"]
 
     expect(data["email"]).to eq(email)
-    expect(data["role"]).to be_nil
     expect(data["roles"]).to eq(["developer"])
   end
 
@@ -137,7 +131,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: revoked_membership.user.email,
-          role:
+          roles:
         }
       }
     )
@@ -159,7 +153,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -178,7 +172,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: membership.user.email,
-          role:
+          roles:
         }
       }
     )

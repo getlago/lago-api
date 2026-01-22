@@ -135,7 +135,7 @@ RSpec.describe Mutations::BillingEntities::Update do
 
   context "with extra view permissions" do
     let(:permissions) do
-      [required_permission].concat(%w[billing_entities:emails:view billing_entities:invoices:view])
+      [required_permission].concat(%w[billing_entities:view])
     end
 
     it "includes the email settings and billing configuration in the response" do

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::ChargeFilters::Create, type: :graphql do
-  let(:required_permission) { "charge_filters:create" }
+  let(:required_permission) { "charges:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
@@ -29,7 +29,7 @@ RSpec.describe Mutations::ChargeFilters::Create, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "charge_filters:create"
+  it_behaves_like "requires permission", "charges:create"
 
   it "creates a charge filter" do
     result = execute_graphql(

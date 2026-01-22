@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "charge_filters:create"
+      REQUIRED_PERMISSION = "charges:create"
 
       graphql_name "CreateChargeFilter"
       description "Creates a new Charge Filter"
