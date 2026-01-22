@@ -283,6 +283,7 @@ class Invoice < ApplicationRecord
   end
 
   def total_due_amount_cents
+    return 0 if voided?
     total_amount_cents - total_paid_amount_cents - offset_amount_cents
   end
 
