@@ -19,10 +19,14 @@ module Wallets
 
       return result unless valid?
 
-      code = params[:code] || params[:name].to_s.parameterize(separator: "_").presence || "default"
-      existing_wallet = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
-      # if code is provided but is already taken, we won't modify it, just raise validation error later
-      code = "#{code}_#{Time.current.to_i}" if params[:code].nil? && existing_wallet
+      code = params[:code]
+
+      # only adjust generated code if it's taken
+      if code.blank?
+        code = params[:name].to_s.parameterize(separator: "_").presence || "default"
+        code_taken = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
+        code += "_#{Time.current.to_i}" if code_taken
+      end
 
       attributes = {
         organization_id:,

@@ -44,7 +44,7 @@ class Wallet < ApplicationRecord
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
   validate :paid_top_up_max_greater_than_or_equal_min
-  validate :unique_code_per_customer
+  validate :unique_code_per_customer, if: :code_changed?
 
   STATUSES = [
     :active,
