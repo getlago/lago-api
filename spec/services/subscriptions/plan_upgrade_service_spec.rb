@@ -214,11 +214,65 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
     end
 
-    context "when new subscription is payed in advance" do
+    context "when new subscription is pay in advance" do
       let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true) }
 
-      it "enqueues a job to bill the existing subscription" do
-        expect { result }.to have_enqueued_job(BillSubscriptionJob)
+      it "includes new subscription in BillSubscriptionJob" do
+        new_subscription = result.subscription
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+      end
+    end
+
+    context "when new subscription is pay in arrears with pay in advance fixed charges" do
+      let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: false) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+      before { fixed_charge }
+
+      it "includes new subscription in BillSubscriptionJob" do
+        new_subscription = result.subscription
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+      end
+    end
+
+    context "when new subscription is pay in arrears without pay in advance fixed charges" do
+      let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: false) }
+
+      it "does not include new subscription in BillSubscriptionJob" do
+        result.subscription
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with([subscription], kind_of(Integer), invoicing_reason: :upgrading)
+      end
+    end
+
+    context "when new subscription is pay in advance and has trial period" do
+      let(:plan) { create(:plan, amount_cents: 200, organization:, pay_in_advance: true, trial_period: 3) }
+
+      context "without pay in advance fixed charges" do
+        it "does not include new subscription in BillSubscriptionJob" do
+          result.subscription
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], kind_of(Integer), invoicing_reason: :upgrading)
+        end
+      end
+
+      context "with pay in advance fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        before { fixed_charge }
+
+        it "includes new subscription in BillSubscriptionJob for fixed charges" do
+          new_subscription = result.subscription
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription, new_subscription], kind_of(Integer), invoicing_reason: :upgrading)
+        end
       end
     end
 

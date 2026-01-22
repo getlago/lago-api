@@ -114,7 +114,10 @@ module Subscriptions
         [current_subscription]
       end.to_a
 
-      billable_subscriptions << new_subscription if (new_subscription.plan.pay_in_advance? || new_subscription.fixed_charges.pay_in_advance.any?) && !new_subscription.in_trial_period?
+      has_billable_fixed_charges = new_subscription.fixed_charges.pay_in_advance.any?
+      plan_billable = new_subscription.plan.pay_in_advance? && !new_subscription.in_trial_period?
+
+      billable_subscriptions << new_subscription if has_billable_fixed_charges || plan_billable
 
       billable_subscriptions
     end
