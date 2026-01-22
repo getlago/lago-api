@@ -122,7 +122,7 @@ end
 #  allowed_fee_types                   :string           default([]), not null, is an Array
 #  balance_cents                       :bigint           default(0), not null
 #  balance_currency                    :string           not null
-#  code                                :string           not null
+#  code                                :string
 #  consumed_amount_cents               :bigint           default(0), not null
 #  consumed_amount_currency            :string           not null
 #  consumed_credits                    :decimal(30, 5)   default(0.0), not null

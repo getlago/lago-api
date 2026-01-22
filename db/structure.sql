@@ -3742,7 +3742,7 @@ CREATE TABLE public.wallets (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    code character varying NOT NULL
+    code character varying
 );
 
 
@@ -11076,7 +11076,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260121112929'),
 ('20260121111432'),
 ('20260121111431'),
-('20260120200341'),
 ('20260120195822'),
 ('20260119162712'),
 ('20260116162519'),
