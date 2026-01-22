@@ -1984,6 +1984,13 @@ RSpec.describe Invoice do
         allow(invoice).to receive(:creditable_amount_cents).and_return(800)
         expect(invoice.offsettable_amount_cents).to eq(0) # total_due is 0
       end
+
+      it "returns 0 when failed but fully offsetted by credit note" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :failed,
+          total_amount_cents: 1000, total_paid_amount_cents: 0)
+        allow(invoice).to receive(:total_due_amount_cents).and_return(0) # simulate credit note with offset_amount_cents
+        expect(invoice.offsettable_amount_cents).to eq(0) # min(0, 800) since due is 0
+      end
     end
 
     context "with regular invoices" do

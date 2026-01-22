@@ -331,11 +331,13 @@ class Invoice < ApplicationRecord
   end
 
   def offsettable_amount_cents
-    if credit? && (payment_pending? || payment_failed?) && total_due_amount_cents.positive?
-      return total_amount_cents
-    end
+    due_amount_cents = total_due_amount_cents
 
-    [total_due_amount_cents, creditable_amount_cents].min
+    return total_amount_cents if credit? &&
+                                 due_amount_cents.positive? &&
+                                 (payment_pending? || payment_failed?)
+
+    [due_amount_cents, creditable_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as refund
@@ -471,6 +473,12 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def full_offset_allowed?
+    credit? &&
+      total_due_amount_cents.positive? &&
+      (payment_pending? || payment_failed?)
+  end
 
   # Checks that every charge has at least one fee without a filter (charge_filter_id IS NULL)
   # This "base fee" is created for charges without filters, or for unmatched events when filters exist
