@@ -150,7 +150,7 @@ GEM
     byebug (13.0.0)
       reline (>= 0.6.0)
     cgi (0.5.1)
-    clickhouse-activerecord (1.5.1)
+    clickhouse-activerecord (1.6.1)
       activerecord (>= 7.1, < 9.0)
       bundler (>= 1.13.4)
     clockwork (3.0.2)
@@ -1058,7 +1058,7 @@ DEPENDENCIES
   bigdecimal
   bootsnap
   bullet
-  clickhouse-activerecord (~> 1.5.1)
+  clickhouse-activerecord (~> 1.6.1)
   clockwork
   clockwork-test
   coffee-rails
