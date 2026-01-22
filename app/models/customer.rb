@@ -298,8 +298,13 @@ class Customer < ApplicationRecord
   def reset_dunning_campaign!
     update!(
       last_dunning_campaign_attempt: 0,
-      last_dunning_campaign_attempt_at: nil
+      last_dunning_campaign_attempt_at: nil,
+      dunning_campaign_ended_at: nil
     )
+  end
+
+  def dunning_campaign_ended?
+    dunning_campaign_ended_at.present?
   end
 
   def flag_wallets_for_refresh
@@ -339,6 +344,7 @@ end
 #  customer_type                                :enum
 #  deleted_at                                   :datetime
 #  document_locale                              :string
+#  dunning_campaign_ended_at                    :datetime
 #  email                                        :string
 #  exclude_from_dunning_campaign                :boolean          default(FALSE), not null
 #  finalize_zero_amount_invoice                 :integer          default("inherit"), not null
