@@ -70,15 +70,6 @@ module PaymentProviderCustomers
       if event["success"] == "true"
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
 
-        if organization.feature_flag_enabled?(:multiple_payment_methods)
-          PaymentMethods::FindOrCreateFromProviderService.call(
-            customer:,
-            payment_provider_customer: adyen_customer,
-            provider_method_id: payment_method_id,
-            set_as_default: true
-          )
-        end
-
         SendWebhookJob.perform_later("customer.payment_provider_created", customer)
       else
         deliver_error_webhook(Adyen::AdyenError.new(nil, nil, event["reason"], event["eventCode"]))
