@@ -33,6 +33,7 @@ class BillingEntity < ApplicationRecord
   has_many :customers
   has_many :fees
   has_many :invoices
+  has_many :pending_vies_checks
   has_many :payment_receipts
   has_many :applied_invoice_custom_sections,
     class_name: "BillingEntity::AppliedInvoiceCustomSection",

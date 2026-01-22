@@ -111,6 +111,7 @@ class Customer < ApplicationRecord
   has_one :moneyhash_customer, class_name: "PaymentProviderCustomers::MoneyhashCustomer"
 
   has_one :default_payment_method, -> { where(is_default: true) }, class_name: "PaymentMethod"
+  has_one :pending_vies_check
 
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
