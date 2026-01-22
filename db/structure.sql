@@ -102,6 +102,7 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_99326fb65d;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_9881e28151;
+ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_96fc54cd9a;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
@@ -149,6 +150,7 @@ ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_710f37148d;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_6eb8abe6cb;
+ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_6e238f3bfc;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_6e148ccbb1;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_6d465e6b10;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
@@ -275,6 +277,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_04388258ff;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
+ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
@@ -392,6 +395,9 @@ DROP INDEX IF EXISTS public.index_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
 DROP INDEX IF EXISTS public.index_plans_on_created_at;
 DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
+DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
+DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
+DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -791,6 +797,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricin
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
+ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
 ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
@@ -902,6 +909,7 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
+DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
 DROP TABLE IF EXISTS public.payment_methods;
@@ -4233,6 +4241,25 @@ CREATE TABLE public.payment_receipts (
 
 
 --
+-- Name: pending_vies_checks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pending_vies_checks (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    attempts_count integer DEFAULT 0 NOT NULL,
+    last_attempt_at timestamp(6) without time zone,
+    tax_identification_number character varying,
+    last_error_type character varying,
+    last_error_message text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: pricing_unit_usages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5325,6 +5352,14 @@ ALTER TABLE public.payments
 
 ALTER TABLE ONLY public.payments
     ADD CONSTRAINT payments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pending_vies_checks pending_vies_checks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_vies_checks
+    ADD CONSTRAINT pending_vies_checks_pkey PRIMARY KEY (id);
 
 
 --
@@ -8148,6 +8183,27 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 
 
 --
+-- Name: index_pending_vies_checks_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_vies_checks_on_billing_entity_id ON public.pending_vies_checks USING btree (billing_entity_id);
+
+
+--
+-- Name: index_pending_vies_checks_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_pending_vies_checks_on_customer_id ON public.pending_vies_checks USING btree (customer_id);
+
+
+--
+-- Name: index_pending_vies_checks_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_vies_checks_on_organization_id ON public.pending_vies_checks USING btree (organization_id);
+
+
+--
 -- Name: index_plans_on_bill_fixed_charges_monthly; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8846,6 +8902,14 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 ALTER TABLE ONLY public.payment_methods
     ADD CONSTRAINT fk_rails_00e7a45b0b FOREIGN KEY (payment_provider_id) REFERENCES public.payment_providers(id);
+
+
+--
+-- Name: pending_vies_checks fk_rails_019e2289e5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_vies_checks
+    ADD CONSTRAINT fk_rails_019e2289e5 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
 
 
 --
@@ -9857,6 +9921,14 @@ ALTER TABLE ONLY public.invoices_taxes
 
 
 --
+-- Name: pending_vies_checks fk_rails_6e238f3bfc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_vies_checks
+    ADD CONSTRAINT fk_rails_6e238f3bfc FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
 -- Name: subscriptions_invoice_custom_sections fk_rails_6eb8abe6cb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10230,6 +10302,14 @@ ALTER TABLE ONLY public.customers
 
 ALTER TABLE ONLY public.entitlement_subscription_feature_removals
     ADD CONSTRAINT fk_rails_95df3194c5 FOREIGN KEY (entitlement_privilege_id) REFERENCES public.entitlement_privileges(id);
+
+
+--
+-- Name: pending_vies_checks fk_rails_96fc54cd9a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_vies_checks
+    ADD CONSTRAINT fk_rails_96fc54cd9a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -11031,6 +11111,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251106092231'),
 ('20251106091730'),
 ('20251106072629'),
+('20251031112354'),
 ('20251029140035'),
 ('20251024200950'),
 ('20251024130659'),
