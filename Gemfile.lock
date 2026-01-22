@@ -904,12 +904,12 @@ GEM
     shellany (0.0.1)
     shoulda-matchers (7.0.1)
       activesupport (>= 7.1)
-    sidekiq (7.3.9)
+    sidekiq (7.3.10)
       base64
-      connection_pool (>= 2.3.0)
+      connection_pool (>= 2.3.0, < 3)
       logger
-      rack (>= 2.2.4)
-      redis-client (>= 0.22.2)
+      rack (>= 2.2.4, < 3.3)
+      redis-client (>= 0.23.0, < 1)
     sidekiq-prometheus-exporter (0.3.0)
       rack (>= 1.6.0)
       sidekiq (>= 4.1.0)
