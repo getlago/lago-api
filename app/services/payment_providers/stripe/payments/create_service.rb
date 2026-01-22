@@ -93,7 +93,8 @@ module PaymentProviders
           ).first
 
           if invoice.organization.feature_flag_enabled?(:multiple_payment_methods)
-            payment.payment_method.update!(provider_method_id: payment_method&.id) # TODO: Double check
+            # TODO: Double check
+            # payment.payment_method.update!(provider_method_id: payment_method&.id) if payment.payment_method
           else
             provider_customer.update!(payment_method_id: payment_method&.id)
           end
