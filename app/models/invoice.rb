@@ -336,8 +336,8 @@ class Invoice < ApplicationRecord
     due_amount_cents = total_due_amount_cents
 
     return total_amount_cents if credit? &&
-                                 due_amount_cents.positive? &&
-                                 (payment_pending? || payment_failed?)
+      due_amount_cents.positive? &&
+      (payment_pending? || payment_failed?)
 
     [due_amount_cents, creditable_amount_cents].min
   end
