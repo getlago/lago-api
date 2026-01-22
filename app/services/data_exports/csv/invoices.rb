@@ -42,6 +42,9 @@ module DataExports
           payment_due_date
           payment_dispute_lost_at
           payment_overdue
+          total_due_amount_cents
+          total_paid_amount_cents
+          total_credit_note_settled_amount_cents
         ]
       end
 
@@ -86,7 +89,10 @@ module DataExports
           serialized_invoice[:total_amount_cents],
           serialized_invoice[:payment_due_date],
           serialized_invoice[:payment_dispute_lost_at],
-          serialized_invoice[:payment_overdue]
+          serialized_invoice[:payment_overdue],
+          serialized_invoice[:total_due_amount_cents],
+          serialized_invoice[:total_paid_amount_cents],
+          serialized_invoice[:total_credit_note_settled_amount_cents]
         ]
 
         row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled
@@ -95,7 +101,7 @@ module DataExports
       end
 
       def collection
-        Invoice.find(data_export_part.object_ids)
+        Invoice.includes(:credit_notes).find(data_export_part.object_ids)
       end
 
       def organization
