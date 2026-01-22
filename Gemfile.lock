@@ -445,7 +445,8 @@ GEM
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
     lumberjack (1.4.2)
-    mail (2.8.1)
+    mail (2.9.0)
+      logger
       mini_mime (>= 0.1.1)
       net-imap
       net-pop
@@ -466,7 +467,7 @@ GEM
       monetize (~> 2.0)
       money (~> 7.0)
       railties (>= 7.0)
-    msgpack (1.7.5)
+    msgpack (1.8.0)
     multi_json (1.19.1)
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
@@ -475,7 +476,7 @@ GEM
     nenv (0.3.0)
     net-http (0.9.1)
       uri (>= 0.11.1)
-    net-imap (0.5.12)
+    net-imap (0.6.2)
       date
       net-protocol
     net-pop (0.1.2)
