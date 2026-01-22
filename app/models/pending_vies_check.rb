@@ -4,6 +4,9 @@ class PendingViesCheck < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :customer
+
+  validates :customer_id, uniqueness: true
+  validates :attempts_count, numericality: {greater_than_or_equal_to: 0}
 end
 
 # == Schema Information
