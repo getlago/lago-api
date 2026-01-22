@@ -69,6 +69,8 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
           "status" => "paid_out"
         ))
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
+
+      organization.enable_feature_flag!(:multiple_payment_methods)
     end
 
     it "creates a gocardless payment" do
@@ -85,6 +87,9 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
       expect(result.payment.status).to eq("paid_out")
       expect(result.payment.payable_payment_status).to eq("succeeded")
       expect(gocardless_customer.reload.provider_mandate_id).to eq("mandate_id")
+
+      expect(customer.payment_methods.count).to be(1)
+      expect(customer.default_payment_method.provider_method_id).to eq("mandate_id")
 
       expect(gocardless_payments_service).to have_received(:create)
     end
