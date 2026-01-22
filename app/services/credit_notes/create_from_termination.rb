@@ -4,12 +4,12 @@ module CreditNotes
   class CreateFromTermination < BaseService
     Result = CreditNotes::CreateService::Result
 
-    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, on_termination_credit_note: :credit)
+    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, on_termination: :credit)
       @subscription = subscription
       @reason = reason
       @upgrade = upgrade
       @context = context
-      @on_termination_credit_note = on_termination_credit_note
+      @on_termination = on_termination
 
       super
     end
@@ -45,16 +45,16 @@ module CreditNotes
 
     private
 
-    attr_accessor :subscription, :reason, :context, :on_termination_credit_note, :upgrade
+    attr_accessor :subscription, :reason, :context, :on_termination, :upgrade
 
     delegate :plan, :terminated_at, :customer, to: :subscription
 
     def refund?
-      on_termination_credit_note == :refund
+      on_termination == :refund
     end
 
     def offset?
-      on_termination_credit_note == :offset
+      on_termination == :offset
     end
 
     def calculate_base_creditable_amount
@@ -130,7 +130,7 @@ module CreditNotes
       creditable_amount_cents = total_creditable_amount - refund_amount_cents
 
       # [credit_amount, refund_amount, offset_amount]
-      case on_termination_credit_note
+      case on_termination
       when :credit
         [total_creditable_amount, 0, 0]
       when :refund

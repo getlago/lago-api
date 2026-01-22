@@ -230,7 +230,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
     end
 
     context "when refund is requested" do
-      subject(:create_service) { described_class.new(subscription:, on_termination_credit_note: :refund, context:) }
+      subject(:create_service) { described_class.new(subscription:, on_termination: :refund, context:) }
 
       let(:fee_and_invoice) { generate_invoice_and_fee(plan_amount_cents, with_second_subscription: true) }
 
@@ -502,7 +502,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
       end
 
       context "when it's an upgrade" do
-        subject(:create_service) { described_class.new(subscription:, on_termination_credit_note: :refund, upgrade: true, context:) }
+        subject(:create_service) { described_class.new(subscription:, on_termination: :refund, upgrade: true, context:) }
 
         it "raises NotImplementedError" do
           expect { create_service.call }.to raise_error(NotImplementedError)
@@ -553,7 +553,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
     end
 
     context "when offset is requested" do
-      subject(:create_service) { described_class.new(subscription:, on_termination_credit_note: :offset, context:) }
+      subject(:create_service) { described_class.new(subscription:, on_termination: :offset, context:) }
 
       let(:fee_and_invoice) { generate_invoice_and_fee(plan_amount_cents, with_second_subscription: true) }
 
@@ -825,7 +825,7 @@ RSpec.describe CreditNotes::CreateFromTermination do
       end
 
       context "when it's an upgrade" do
-        subject(:create_service) { described_class.new(subscription:, on_termination_credit_note: :offset, upgrade: true, context:) }
+        subject(:create_service) { described_class.new(subscription:, on_termination: :offset, upgrade: true, context:) }
 
         it "raises NotImplementedError" do
           expect { create_service.call }.to raise_error(NotImplementedError)

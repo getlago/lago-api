@@ -44,7 +44,7 @@ module Subscriptions
               subscription:,
               reason: "order_cancellation",
               upgrade: upgrade,
-              on_termination_credit_note:
+              on_termination: on_termination_credit_note
             )
           end
 
