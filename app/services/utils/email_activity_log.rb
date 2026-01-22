@@ -113,12 +113,8 @@ module Utils
 
     def document_number
       case document
-      when Invoice
+      when Invoice, CreditNote, PaymentReceipt
         document.number
-      when CreditNote
-        document.number
-      when PaymentReceipt
-        document.receipt_number
       end
     end
 

@@ -114,5 +114,54 @@ RSpec.describe Utils::EmailActivityLog do
       expect(result).to be_nil
       expect(Rails.logger).to have_received(:error).with("Failed to produce email activity log: Kafka down")
     end
+
+    context "with credit_note document" do
+      let(:credit_note) { create(:credit_note, invoice:, customer:) }
+
+      it "includes credit_note number in document reference" do
+        described_class.produce(document: credit_note, message:)
+
+        payload = JSON.parse(produced_args.first[:payload])
+        activity_object = JSON.parse(payload["activity_object"])
+
+        expect(activity_object["document"]["type"]).to eq("CreditNote")
+        expect(activity_object["document"]["number"]).to eq(credit_note.number)
+      end
+    end
+
+    context "with payment_receipt document" do
+      let(:payment_receipt) do
+        payment = create(
+          :payment,
+          payable: invoice,
+          customer:,
+          payment_provider: nil,
+          payment_provider_customer: nil,
+          payment_type: "manual",
+          reference: "manual-payment-ref",
+          amount_cents: invoice.total_amount_cents
+        )
+        create(:payment_receipt, payment:, organization:)
+      end
+
+      it "includes payment_receipt number in document reference" do
+        described_class.produce(document: payment_receipt, message:)
+
+        payload = JSON.parse(produced_args.first[:payload])
+        activity_object = JSON.parse(payload["activity_object"])
+
+        expect(activity_object["document"]["type"]).to eq("PaymentReceipt")
+        expect(activity_object["document"]["number"]).to eq(payment_receipt.number)
+      end
+
+      it "uses payable as resource" do
+        described_class.produce(document: payment_receipt, message:)
+
+        payload = JSON.parse(produced_args.first[:payload])
+
+        expect(payload["resource_type"]).to eq("Invoice")
+        expect(payload["resource_id"]).to eq(invoice.id)
+      end
+    end
   end
 end
