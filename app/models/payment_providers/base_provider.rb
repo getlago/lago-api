@@ -29,6 +29,11 @@ module PaymentProviders
 
     settings_accessors :webhook_secret, :success_redirect_url
 
+    def self.register_services(services)
+      provider_name = name.demodulize.underscore.sub(/_provider$/, "")
+      PaymentProviders::Registry.register(provider_name.to_sym, services)
+    end
+
     def determine_payment_status(payment_status)
       return :processing if self.class::PROCESSING_STATUSES.include?(payment_status)
       return :succeeded if self.class::SUCCESS_STATUSES.include?(payment_status)
