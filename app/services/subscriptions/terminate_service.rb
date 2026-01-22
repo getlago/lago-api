@@ -44,7 +44,7 @@ module Subscriptions
               subscription:,
               reason: "order_cancellation",
               upgrade: upgrade,
-              refund: !upgrade && on_termination_credit_note == :refund
+              on_termination_credit_note:
             )
           end
 
@@ -200,7 +200,7 @@ module Subscriptions
     def generate_credit_note_for_unconsumed_subscription?
       pay_in_advance? &&
         pay_in_advance_invoice_issued? &&
-        (on_termination_credit_note == :credit || on_termination_credit_note == :refund)
+        on_termination_credit_note.in?(%i[credit refund offset])
     end
 
     def pay_in_advance?
