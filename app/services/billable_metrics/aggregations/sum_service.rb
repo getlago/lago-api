@@ -35,7 +35,7 @@ module BillableMetrics
       #       containing the aggregation result of each group.
       #
       #       This logic is only applicable for in arrears aggregation
-      #       (exept for the current_usage update)
+      #       (except for the current_usage update)
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
@@ -46,11 +46,20 @@ module BillableMetrics
 
         counts = event_store.grouped_count
 
-        result.aggregations = aggregations.map do |aggregation|
-          group_result = BaseService::Result.new
-          group_result.grouped_by = aggregation[:groups]
+        merged_hash = {}
+        aggregations.each do |aggregation|
+          merged_hash[aggregation[:groups]] = {aggregation: aggregation[:value]}
+        end
+        counts.each do |count|
+          next unless merged_hash[count[:groups]]
+          merged_hash[count[:groups]] = merged_hash[count[:groups]].merge({count: count[:value]})
+        end
 
-          aggregation_value = aggregation[:value]
+        result.aggregations = merged_hash.map do |groups, merged_aggregation_count|
+          group_result = BaseService::Result.new
+          group_result.grouped_by = groups
+
+          aggregation_value = merged_aggregation_count[:aggregation]
 
           if options[:is_pay_in_advance] && options[:is_current_usage]
             handle_in_advance_current_usage(aggregation_value, target_result: group_result)
@@ -58,8 +67,7 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
-          count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
-          group_result.count = count[:value] || 0
+          group_result.count = merged_aggregation_count[:count] || 0
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
         end
