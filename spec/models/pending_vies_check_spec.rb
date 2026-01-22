@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe PendingViesCheck, type: :model do
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to belong_to(:billing_entity) }
-  it { is_expected.to belong_to(:customer) }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:billing_entity)
+      expect(subject).to belong_to(:customer)
+    end
+  end
 end

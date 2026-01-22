@@ -25,6 +25,7 @@ RSpec.describe Customer do
   it { is_expected.to have_one(:salesforce_customer) }
 
   it { is_expected.to have_one(:default_payment_method) }
+  it { is_expected.to have_one(:pending_vies_check) }
 
   it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Customer::AppliedInvoiceCustomSection").dependent(:destroy) }
   it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
