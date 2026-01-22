@@ -65,7 +65,7 @@ gem "gocardless_pro", "~> 2.34"
 gem "stripe"
 
 # Analytics
-gem "analytics-ruby", "~> 2.4.0", require: "segment/analytics"
+gem "analytics-ruby", require: "segment/analytics"
 
 # SSE
 gem "event_stream_parser"

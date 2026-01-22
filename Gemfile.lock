@@ -109,7 +109,7 @@ GEM
     after_commit_everywhere (1.6.0)
       activerecord (>= 4.2)
       activesupport
-    analytics-ruby (2.4.0)
+    analytics-ruby (2.5.0)
     annotaterb (4.20.0)
       activerecord (>= 6.0.0)
       activesupport (>= 6.0.0)
@@ -1051,7 +1051,7 @@ DEPENDENCIES
   addressing
   adyen-ruby-api-library
   after_commit_everywhere
-  analytics-ruby (~> 2.4.0)
+  analytics-ruby
   annotaterb
   awesome_print
   aws-sdk-s3
