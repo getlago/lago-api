@@ -68,9 +68,6 @@ module PaymentProviders
 
           if payment_method_id
             provider_customer.update!(payment_method_id:)
-            if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
-              payment.payment_method.presence&.update(provider_method_id: payment_method_id)
-            end
           end
         end
 
