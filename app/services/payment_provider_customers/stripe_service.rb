@@ -60,6 +60,14 @@ module PaymentProviderCustomers
       # NOTE: check if payment_method was the default one
       stripe_customer.payment_method_id = nil if stripe_customer.payment_method_id == payment_method_id
 
+      if customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+        payment_method = customer.payment_methods.find_by(provider_method_id: payment_method_id)
+        if payment_method
+          destroy_result = PaymentMethods::DestroyService.call(payment_method:)
+          result.payment_method = destroy_result.payment_method
+        end
+      end
+
       result.stripe_customer = stripe_customer
       result
     rescue ActiveRecord::RecordInvalid => e

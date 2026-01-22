@@ -51,6 +51,37 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
       end
     end
 
+    context "with details" do
+      subject(:create_service) do
+        described_class.new(customer:, params:, provider_method_id:, payment_provider_id:, payment_provider_customer:, details:)
+      end
+      let(:details) do
+        {
+          type: "card",
+          last4: "4242",
+          brand: "visa",
+          expiration_month: 12,
+          expiration_year: 2028
+        }
+      end
+
+      it "saves the details" do
+        result = create_service.call
+        payment_method = result.payment_method
+
+        expect(payment_method).not_to be_nil
+        expect(payment_method.details).to eq(
+          {
+            "type" => "card",
+            "last4" => "4242",
+            "brand" => "visa",
+            "expiration_month" => 12,
+            "expiration_year" => 2028
+          }
+        )
+      end
+    end
+
     describe "provider_method_type" do
       context "when included in params" do
         let(:params) do

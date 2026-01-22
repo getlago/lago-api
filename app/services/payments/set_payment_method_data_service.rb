@@ -50,9 +50,11 @@ module Payments
         type: pm.type
       }
 
-      if pm.respond_to?(:card)
+      if pm.respond_to?(:card) && pm.card
         data[:last4] = pm.card.last4
         data[:brand] = pm.card.display_brand
+        data[:expiration_month] = pm.card.exp_month
+        data[:expiration_year] = pm.card.exp_year
       end
 
       data

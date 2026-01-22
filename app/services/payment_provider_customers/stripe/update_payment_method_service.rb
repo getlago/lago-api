@@ -3,9 +3,10 @@
 module PaymentProviderCustomers
   module Stripe
     class UpdatePaymentMethodService < BaseService
-      def initialize(stripe_customer:, payment_method_id:)
+      def initialize(stripe_customer:, payment_method_id:, payment_method_details: {})
         @stripe_customer = stripe_customer
         @payment_method_id = payment_method_id
+        @payment_method_details = payment_method_details
 
         super
       end
@@ -30,7 +31,8 @@ module PaymentProviderCustomers
               params: {provider_payment_methods: stripe_customer.provider_payment_methods},
               provider_method_id: payment_method_id,
               payment_provider_id: stripe_customer.payment_provider_id,
-              payment_provider_customer: stripe_customer
+              payment_provider_customer: stripe_customer,
+              details: payment_method_details
             ).payment_method
 
             PaymentMethods::SetAsDefaultService.call(payment_method:)
@@ -47,7 +49,7 @@ module PaymentProviderCustomers
 
       private
 
-      attr_reader :stripe_customer, :payment_method_id
+      attr_reader :stripe_customer, :payment_method_id, :payment_method_details
 
       def customer
         @customer ||= stripe_customer.customer
