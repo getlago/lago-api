@@ -903,10 +903,36 @@ RSpec.describe CreditNotes::CreateService do
             fees_amount_cents: 1000, total_amount_cents: 1000, payment_status: :failed)
         end
 
-        it "rejects offset_amount_cents" do
+        it "allows offset_amount_cents only" do
+          service = described_class.new(
+            invoice:, items: [{fee_id: fee.id, amount_cents: 1000}],
+            reason: "other",
+            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000
+          )
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.credit_note.offset_amount_cents).to eq(1000)
+          expect(result.credit_note.credit_amount_cents).to eq(0)
+          expect(result.credit_note.refund_amount_cents).to eq(0)
+        end
+
+        it "rejects credit_amount_cents" do
           service = described_class.new(
             invoice:, items:, reason: "other",
-            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 500
+            credit_amount_cents: 500, refund_amount_cents: 0
+          )
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
+        end
+
+        it "rejects refund_amount_cents" do
+          service = described_class.new(
+            invoice:, items:, reason: "other",
+            credit_amount_cents: 0, refund_amount_cents: 500
           )
           result = service.call
 

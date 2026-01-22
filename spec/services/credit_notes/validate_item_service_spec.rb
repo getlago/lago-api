@@ -141,6 +141,14 @@ RSpec.describe CreditNotes::ValidateItemService do
         expect(validator).to be_valid
       end
 
+      it "allows offsetting full amount when cancelling prepaid credits with failed payment" do
+        invoice.update!(invoice_type: :credit, total_amount_cents: 1000, payment_status: :failed)
+        create(:credit_note, invoice:, customer:,
+          credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000, status: :finalized)
+        item.amount_cents = 1000
+        expect(validator).to be_valid
+      end
+
       it "allows offsetting full amount with succeeded payment" do
         invoice.update!(invoice_type: :credit, total_amount_cents: 500, payment_status: :succeeded)
         fee.update!(amount_cents: 500)
