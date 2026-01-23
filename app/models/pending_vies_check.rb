@@ -1,12 +1,28 @@
 # frozen_string_literal: true
 
 class PendingViesCheck < ApplicationRecord
+  ERROR_TYPE_MAPPING = {
+    Valvat::RateLimitError => "rate_limit",
+    Valvat::Timeout => "timeout",
+    Valvat::BlockedError => "blocked",
+    Valvat::InvalidRequester => "invalid_requester",
+    Valvat::ServiceUnavailable => "service_unavailable",
+    Valvat::MemberStateUnavailable => "member_state_unavailable"
+  }.freeze
+
+  KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["unknown"]).freeze
+
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :customer
 
   validates :customer_id, uniqueness: true
   validates :attempts_count, numericality: {greater_than_or_equal_to: 0}
+  validates :last_error_type, inclusion: {in: KNOWN_ERROR_TYPES}
+
+  def self.error_type_for(exception)
+    ERROR_TYPE_MAPPING.fetch(exception.class, "unknown")
+  end
 end
 
 # == Schema Information
