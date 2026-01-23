@@ -47,6 +47,7 @@ RSpec.describe DataExports::ProcessPartService do
   end
 
   before do
+    create(:credit_note, offset_amount_cents: 334, invoice:)
     allow(V1::InvoiceSerializer)
       .to receive(:new)
       .and_return(invoice_serializer)

@@ -84,6 +84,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
   before do
     invoice
+    create(:credit_note, offset_amount_cents: 334, invoice:)
 
     allow(serializer_klass)
       .to receive(:new)
