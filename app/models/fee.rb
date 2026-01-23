@@ -120,7 +120,7 @@ class Fee < ApplicationRecord
   def item_name
     return billable_metric.name if charge?
     return add_on.name if add_on?
-    return invoiceable.name.presence || fee_type if credit?
+    return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge_add_on.name if fixed_charge?
 
     subscription.plan.name

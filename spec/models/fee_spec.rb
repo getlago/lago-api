@@ -286,6 +286,14 @@ RSpec.describe Fee do
           expect(fee.item_name).to eq("credit")
         end
       end
+
+      context "when invoiceable is nil" do
+        let(:fee) { described_class.new(fee_type: "credit", invoiceable: nil) }
+
+        it "returns 'credit'" do
+          expect(fee.item_name).to eq("credit")
+        end
+      end
     end
 
     context "when it is an pay_in_advance charge fee" do
