@@ -12,8 +12,13 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
   let(:async) { true }
 
   let(:provider_payment_methods) { %w[card] }
+  let(:feature_flags) { ["multiple_payment_methods"] }
 
   describe ".call" do
+    before do
+      customer.organization.update!(feature_flags:)
+    end
+
     it "creates a payment_provider_customer" do
       result = create_service.call
 
@@ -83,6 +88,11 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
       it "enqueues a job to create the customer on the provider" do
         expect { create_service.call }.to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
       end
+
+      it "does not enqueue FetchDefaultPaymentMethodJob" do
+        expect { create_service.call }
+          .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
+      end
     end
 
     context "when removing the provider customer id and should create on service" do
@@ -108,6 +118,11 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
 
           expect(result.provider_customer.provider_customer_id).to be_nil
         end.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
+      end
+
+      it "does not enqueue FetchDefaultPaymentMethodJob" do
+        expect { create_service.call }
+          .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
       end
     end
 
@@ -149,6 +164,20 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
 
           it "does not create customer" do
             expect { create_service.call }.not_to have_enqueued_job(PaymentProviderCustomers::StripeCreateJob)
+          end
+
+          it "enqueues FetchDefaultPaymentMethodJob" do
+            expect { create_service.call }
+              .to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
+          end
+
+          context "without feature flag" do
+            let(:feature_flags) { [] }
+
+            it "does not enqueue FetchDefaultPaymentMethodJob" do
+              expect { create_service.call }
+                .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
+            end
           end
         end
 
