@@ -236,6 +236,12 @@ class Customer < ApplicationRecord
       wallets.none?
   end
 
+  def vies_check_in_progress?
+    return false unless billing_entity.eu_tax_management?
+
+    pending_vies_check.present?
+  end
+
   def preferred_document_locale
     return document_locale.to_sym if document_locale?
 
