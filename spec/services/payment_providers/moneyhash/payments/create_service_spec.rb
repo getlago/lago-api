@@ -63,11 +63,10 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
 
     context "when multiple_payment_methods feature flag is enabled" do
       let(:payment_method) do
-        create(:payment_method, 
+        create(:payment_method,
           customer:,
           payment_provider_customer: moneyhash_customer,
-          provider_method_id: "pm_test_123"
-        )
+          provider_method_id: "pm_test_123")
       end
 
       before do
@@ -91,8 +90,7 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
         create(:moneyhash_customer,
           customer:,
           payment_provider: moneyhash_provider,
-          payment_method_id: "legacy_pm_456"
-        )
+          payment_method_id: "legacy_pm_456")
       end
 
       before do

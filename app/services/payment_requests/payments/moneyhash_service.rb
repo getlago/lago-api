@@ -14,7 +14,7 @@ module PaymentRequests
       def create
         result.payable = payable
         return result.not_found_failure!(resource: "moneyhash_customer") if customer&.moneyhash_customer&.provider_customer_id.blank?
-        return result.not_found_failure!(resource: "payment_method") if moneyhash_payment_method.nil?
+        return result.not_found_failure!(resource: "payment_method") if moneyhash_payment_method_id.nil?
         return result unless should_process_payment?
 
         unless payable.total_amount_cents.positive?
@@ -121,8 +121,12 @@ module PaymentRequests
         )
       end
 
-      def moneyhash_payment_method
-        customer.moneyhash_customer.payment_method_id
+      def moneyhash_payment_method_id
+        if organization.feature_flag_enabled?(:multiple_payment_methods)
+          customer.payment_methods.find_by(is_default: true)&.provider_method_id
+        else
+          customer.moneyhash_customer.payment_method_id
+        end
       end
 
       def should_process_payment?
@@ -157,7 +161,7 @@ module PaymentRequests
           webhook_url: moneyhash_payment_provider.webhook_end_point,
           merchant_initiated: true,
           payment_type: "UNSCHEDULED",
-          card_token: moneyhash_payment_method,
+          card_token: moneyhash_payment_method_id,
           recurring_data: {
             agreement_id: customer.id
           },
