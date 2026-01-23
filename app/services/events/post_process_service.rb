@@ -15,6 +15,7 @@ module Events
       create_enriched_events
       track_subscription_activity
       customer&.flag_wallets_for_refresh
+      check_targeted_wallets if organization.event_wallet_target_enabled? && event.properties['target_wallet_code'].present?
 
       handle_pay_in_advance
 
@@ -86,6 +87,17 @@ module Events
       subscriptions.select(&:active?).each do |subscription|
         UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:)
       end
+    end
+
+    def check_targeted_wallets
+      return unless subscriptions.first&.plan&.charges&.where(billable_metric:, accepts_target_wallet: true)&.exists?
+      return if customer.wallets.where(code: event.properties['target_wallet_code']).exists?
+
+      SendWebhookJob.perform_later(
+        "event.error",
+        event,
+        {error: {target_wallet_code: ["target_wallet_code_not_found"]}}
+      )
     end
 
     def handle_pay_in_advance
