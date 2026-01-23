@@ -74,7 +74,7 @@ RSpec.describe DataExports::Csv::Invoices do
       payment_overdue: false,
       total_due_amount_cents: 27511,
       total_paid_amount_cents: 50000,
-      total_credit_note_settled_amount_cents: 334,
+      total_offsetted_credit_note_amount_cents: 334,
       progressive_billing_credit_amount_cents: 999,
       billing_entity_code: "the-test-bil-ent"
     }

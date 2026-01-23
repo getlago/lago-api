@@ -27,7 +27,7 @@ module V1
         total_amount_cents: model.total_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
         total_paid_amount_cents: model.total_paid_amount_cents,
-        total_credit_note_settled_amount_cents: model.offset_amount_cents,
+        total_offsetted_credit_note_amount_cents: model.offset_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
         xml_url: model.xml_url,

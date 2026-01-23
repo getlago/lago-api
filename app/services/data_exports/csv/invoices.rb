@@ -44,7 +44,7 @@ module DataExports
           payment_overdue
           total_due_amount_cents
           total_paid_amount_cents
-          total_credit_note_settled_amount_cents
+          total_offsetted_credit_note_amount_cents
         ]
       end
 
@@ -57,7 +57,7 @@ module DataExports
 
       private
 
-      attr_reader :data_export_part, :serializer_klass, :progressive_billing_enabled
+      attr_reader :data_export_part, :serializer_klass, :progressive_billing_enabled, :offset_amounts
 
       def serialize_item(invoice, csv)
         serialized_invoice = serializer_klass
@@ -92,7 +92,7 @@ module DataExports
           serialized_invoice[:payment_overdue],
           serialized_invoice[:total_due_amount_cents],
           serialized_invoice[:total_paid_amount_cents],
-          serialized_invoice[:total_credit_note_settled_amount_cents]
+          offset_amounts[invoice.id] || 0
         ]
 
         row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled
@@ -101,16 +101,16 @@ module DataExports
       end
 
       def collection
-        invoices = Invoice.find(data_export_part.object_ids)
+        preload_offset_amounts
+        Invoice.find(data_export_part.object_ids)
+      end
 
-        # Preload only needed credit_notes columns to reduce memory usage
-        ActiveRecord::Associations::Preloader.new(
-          records: invoices,
-          associations: :credit_notes,
-          scope: CreditNote.select(:id, :invoice_id, :status, :offset_amount_cents)
-        ).call
-
-        invoices
+      def preload_offset_amounts
+        @offset_amounts = CreditNote
+          .where(invoice_id: data_export_part.object_ids)
+          .finalized
+          .group(:invoice_id)
+          .sum(:offset_amount_cents)
       end
 
       def organization

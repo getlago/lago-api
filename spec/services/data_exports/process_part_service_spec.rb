@@ -39,7 +39,7 @@ RSpec.describe DataExports::ProcessPartService do
       payment_overdue: false,
       total_due_amount_cents: 27511,
       total_paid_amount_cents: 50000,
-      total_credit_note_settled_amount_cents: 334
+      total_offsetted_credit_note_amount_cents: 334
     }
   end
   let(:invoice_serializer) do
