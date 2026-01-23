@@ -123,7 +123,7 @@ module PaymentRequests
 
       def moneyhash_payment_method_id
         if organization.feature_flag_enabled?(:multiple_payment_methods)
-          customer.payment_methods.find_by(is_default: true)&.provider_method_id
+          customer.default_payment_method&.provider_method_id
         else
           customer.moneyhash_customer.payment_method_id
         end
