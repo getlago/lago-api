@@ -67,7 +67,7 @@ module CreditNotes
     # NOTE: Check if item amount is less than or equal to fee remaining creditable amount
     def valid_individual_amount?
       return true if item.amount_cents <= fee.creditable_amount_cents
-      return true if invoice.credit? && invoice.payment_pending?
+      return true if invoice.credit? && (invoice.payment_pending? || invoice.payment_failed?)
 
       if invoice.credit? && item.amount_cents > invoice.associated_active_wallet&.balance_cents
         add_error(field: :amount_cents, error_code: "higher_than_wallet_balance")

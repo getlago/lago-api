@@ -1973,11 +1973,23 @@ RSpec.describe Invoice do
         expect(invoice.offsettable_amount_cents).to eq(1000)
       end
 
+      it "returns full amount for failed payments" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :failed, total_amount_cents: 1000)
+        expect(invoice.offsettable_amount_cents).to eq(1000)
+      end
+
       it "returns 0 for succeeded payments when fully paid" do
         invoice = create(:invoice, invoice_type: :credit, payment_status: :succeeded,
           total_amount_cents: 1000, total_paid_amount_cents: 1000)
         allow(invoice).to receive(:creditable_amount_cents).and_return(800)
         expect(invoice.offsettable_amount_cents).to eq(0) # total_due is 0
+      end
+
+      it "returns 0 when failed but fully offsetted by credit note" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :failed,
+          total_amount_cents: 1000, total_paid_amount_cents: 0)
+        create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 1000)
+        expect(invoice.offsettable_amount_cents).to eq(0)
       end
     end
 

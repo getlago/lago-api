@@ -330,12 +330,16 @@ class Invoice < ApplicationRecord
     available_to_credit_amount_cents
   end
 
+  # amount cents onto which we can issue a credit note as offset
+  # when invoice type is credit theres no partial payments/refund/offset only full amount
   def offsettable_amount_cents
-    if credit? && payment_pending?
-      return total_amount_cents
-    end
+    due_amount_cents = total_due_amount_cents
 
-    [total_due_amount_cents, creditable_amount_cents].min
+    return total_amount_cents if credit? &&
+      due_amount_cents.positive? &&
+      (payment_pending? || payment_failed?)
+
+    [due_amount_cents, creditable_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as refund

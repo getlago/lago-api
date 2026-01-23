@@ -695,8 +695,7 @@ RSpec.describe Fee do
       context "when payment is pending" do
         let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :pending) }
 
-        it "returns full amount ignoring credit notes" do
-          create(:credit_note_item, fee:, amount_cents: 300)
+        it "returns full amount" do
           expect(subject).to eq(1000)
         end
       end
@@ -715,8 +714,8 @@ RSpec.describe Fee do
       context "when payment failed" do
         let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :failed) }
 
-        it "returns zero when no wallet" do
-          expect(subject).to eq(0)
+        it "returns full amount" do
+          expect(subject).to eq(1000)
         end
       end
     end

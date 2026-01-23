@@ -611,21 +611,47 @@ RSpec.describe Api::V1::CreditNotesController do
 
       context "when payment failed" do
         let(:credit_invoice) do
-          create(:invoice, organization:, customer:, invoice_type: :credit, payment_status: "failed", currency: "EUR")
-        end
-        let(:create_params) do
-          {
-            invoice_id: credit_invoice.id,
-            reason: "other",
-            offset_amount_cents: 50,
-            items: [{fee_id: credit_fee.id, amount_cents: 50}]
-          }
+          create(:invoice, organization:, customer:,
+            invoice_type: :credit,
+            payment_status: "failed",
+            currency: "EUR",
+            total_amount_cents: 100,
+            fees_amount_cents: 100)
         end
 
-        it "returns an error" do
-          subject
+        context "with offset_amount_cents" do
+          let(:create_params) do
+            {
+              invoice_id: credit_invoice.id,
+              reason: "other",
+              offset_amount_cents: 100,
+              items: [{fee_id: credit_fee.id, amount_cents: 100}]
+            }
+          end
 
-          expect(response).to have_http_status(:method_not_allowed)
+          it "creates credit note successfully" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:credit_note][:offset_amount_cents]).to eq(100)
+          end
+        end
+
+        context "with credit_amount_cents" do
+          let(:create_params) do
+            {
+              invoice_id: credit_invoice.id,
+              reason: "other",
+              credit_amount_cents: 50,
+              items: [{fee_id: credit_fee.id, amount_cents: 50}]
+            }
+          end
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:method_not_allowed)
+          end
         end
       end
     end

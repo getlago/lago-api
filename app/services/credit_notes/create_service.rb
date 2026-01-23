@@ -155,7 +155,7 @@ module CreditNotes
       if invoice.credit?
         return false if associated_wallet.nil?
 
-        if invoice.payment_pending?
+        if invoice.payment_pending? || invoice.payment_failed?
           return false if non_offset_amounts_present?
         else
           return false unless invoice.payment_succeeded?
