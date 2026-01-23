@@ -3,6 +3,8 @@
 ---
 addons:
   view:
+    - finance
+    - manager
   create:
   update:
   delete:
@@ -17,7 +19,6 @@ authentication_methods:
 analytics:
   view:
     - finance
-    - manager
 billable_metrics:
   view:
   create:
@@ -39,6 +40,8 @@ charges:
   delete:
 coupons:
   view:
+    - finance
+    - manager
   create:
   update:
   delete:
@@ -48,12 +51,23 @@ coupons:
     - manager
 credit_notes:
   view:
+    - finance
+    - manager
   create:
+    - finance
+    - manager
   update:
+    - finance
+    - manager
   void:
+    - finance
+    - manager
   export:
+    - finance
+    - manager
 customers:
   view:
+    - finance
     - manager
   create:
     - manager
@@ -88,12 +102,20 @@ invoices:
     - finance
     - manager
   send:
+    - finance
+    - manager
   create:
     - finance
     - manager
   update:
+    - finance
+    - manager
   void:
+    - finance
+    - manager
   export:
+    - finance
+    - manager
 invoice_custom_sections:
   view:
     - finance
@@ -147,6 +169,8 @@ payment_methods:
   delete:
 plans:
   view:
+    - finance
+    - manager
   create:
   update:
   delete:
@@ -162,6 +186,7 @@ roles:
   delete:
 subscriptions:
   view:
+    - finance
     - manager
   create:
     - manager
