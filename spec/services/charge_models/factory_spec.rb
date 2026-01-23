@@ -31,6 +31,13 @@ RSpec.describe ChargeModels::Factory do
 
           it { expect(result).to be_a(ChargeModels::GroupedService) }
         end
+
+        context "when charge accepts target wallet" do
+          let(:charge) { build(:standard_charge, accepts_target_wallet: true) }
+          let(:aggregation_result) { BaseService::Result.new.tap { |r| r.aggregations = [BaseService::Result.new] } }
+
+          it { expect(result).to be_a(ChargeModels::GroupedService) }
+        end
       end
 
       context "with graduated charge model" do

@@ -6,6 +6,7 @@ FactoryBot.define do
     organization { customer&.organization || association(:organization) }
     name { Faker::Name.name }
     code { name&.parameterize(separator: "_") || "default" }
+    code { name.to_s.parameterize(separator: "_").presence || "default" }
     status { "active" }
     rate_amount { "1.00" }
     currency { "EUR" }
