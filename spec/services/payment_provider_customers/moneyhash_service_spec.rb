@@ -155,6 +155,101 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         expect(result).to be_failure
         expect(result.error.to_s).to eq("moneyhash_customer_not_found")
       end
+
+      context "when multiple_payment_methods feature flag is enabled" do
+        before { organization.update!(feature_flags: ["multiple_payment_methods"]) }
+
+        it "creates a PaymentMethod record" do
+          expect {
+            moneyhash_service.update_payment_method(
+              organization_id: organization.id,
+              customer_id: customer.id,
+              payment_method_id: payment_method_id,
+              metadata: custom_fields
+            )
+          }.to change(PaymentMethod, :count).by(1)
+
+          payment_method = PaymentMethod.last
+          expect(payment_method).to have_attributes(
+            customer: customer,
+            payment_provider_customer: moneyhash_customer,
+            provider_method_id: payment_method_id,
+            provider_method_type: "card",
+            is_default: true
+          )
+        end
+
+        it "returns the payment_method in the result", aggregate_failures: true do
+          result = moneyhash_service.update_payment_method(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            payment_method_id: payment_method_id,
+            metadata: custom_fields
+          )
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_present
+          expect(result.payment_method.provider_method_id).to eq(payment_method_id)
+        end
+
+        it "finds existing PaymentMethod instead of creating duplicate" do
+          existing_payment_method = create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: moneyhash_customer,
+            provider_method_id: payment_method_id,
+            is_default: false
+          )
+
+          expect {
+            moneyhash_service.update_payment_method(
+              organization_id: organization.id,
+              customer_id: customer.id,
+              payment_method_id: payment_method_id,
+              metadata: custom_fields
+            )
+          }.not_to change(PaymentMethod, :count)
+
+          expect(existing_payment_method.reload.is_default).to be(true)
+        end
+
+        it "does not create PaymentMethod when payment_method_id is nil" do
+          expect {
+            moneyhash_service.update_payment_method(
+              organization_id: organization.id,
+              customer_id: customer.id,
+              payment_method_id: nil,
+              metadata: custom_fields
+            )
+          }.not_to change(PaymentMethod, :count)
+        end
+      end
+
+      context "when multiple_payment_methods feature flag is disabled" do
+        it "does not create a PaymentMethod record" do
+          expect {
+            moneyhash_service.update_payment_method(
+              organization_id: organization.id,
+              customer_id: customer.id,
+              payment_method_id: payment_method_id,
+              metadata: custom_fields
+            )
+          }.not_to change(PaymentMethod, :count)
+        end
+
+        it "still updates the legacy payment_method_id", aggregate_failures: true do
+          result = moneyhash_service.update_payment_method(
+            organization_id: organization.id,
+            customer_id: customer.id,
+            payment_method_id: payment_method_id,
+            metadata: custom_fields
+          )
+
+          expect(result).to be_success
+          expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
+          expect(result.payment_method).to be_nil
+        end
+      end
     end
   end
 end

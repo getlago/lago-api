@@ -47,7 +47,7 @@ module PaymentProviders
             recurring_data: {
               agreement_id: customer.id
             },
-            card_token: provider_customer.payment_method_id,
+            card_token: moneyhash_payment_method_id,
             custom_fields: {
               # plan/subscription
               lago_plan_id: invoice.subscriptions&.first&.plan_id.to_s,
@@ -84,6 +84,14 @@ module PaymentProviders
 
         def moneyhash_payment_provider
           @moneyhash_payment_provider ||= payment_provider(provider_customer.customer)
+        end
+
+        def moneyhash_payment_method_id
+          if payment.organization.feature_flag_enabled?(:multiple_payment_methods)
+            payment.payment_method&.provider_method_id
+          else
+            provider_customer.payment_method_id
+          end
         end
 
         def prepare_failed_result(error, reraise: false)
