@@ -47,7 +47,7 @@ module PaymentProviders
 
           details = {type: pm.type}
 
-          if pm&.card
+          if pm.card
             details[:last4] = pm.card.last4
             details[:brand] = pm.card.display_brand
             details[:expiration_month] = pm.card.exp_month
