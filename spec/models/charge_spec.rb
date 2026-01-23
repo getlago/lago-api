@@ -771,6 +771,58 @@ RSpec.describe Charge do
     end
   end
 
+  describe "#validate_accepts_target_wallet" do
+    let(:organization) { create(:organization) }
+    let(:plan) { create(:plan, organization:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    context "when accepts_target_wallet is false" do
+      it "is valid" do
+        charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: false)
+        expect(charge).to be_valid
+      end
+    end
+
+    context "when accepts_target_wallet is true" do
+      context "when feature is not enabled" do
+        it "returns an error" do
+          charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
+
+          aggregate_failures do
+            expect(charge).not_to be_valid
+            expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
+          end
+        end
+      end
+
+      context "when premium license is active but integration is not enabled" do
+        around { |test| lago_premium!(&test) }
+
+        it "returns an error" do
+          charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
+
+          aggregate_failures do
+            expect(charge).not_to be_valid
+            expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
+          end
+        end
+      end
+
+      context "when feature is enabled" do
+        around { |test| lago_premium!(&test) }
+
+        before do
+          organization.update!(premium_integrations: ["event_wallet_target"])
+        end
+
+        it "is valid" do
+          charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
+          expect(charge).to be_valid
+        end
+      end
+    end
+  end
+
   describe "#equal_applied_pricing_unit_rate?" do
     subject { charge.equal_applied_pricing_unit_rate?(another_charge) }
 
