@@ -41,7 +41,7 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
         result = service.call
 
         expect(result).to be_success
-        expect(PaymentMethods::CreateFromProviderService).not_to receive(:call)
+        expect(customer.payment_methods.empty?).to be true
       end
     end
 
@@ -52,7 +52,7 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
         result = service.call
 
         expect(result).to be_success
-        expect(PaymentMethods::CreateFromProviderService).not_to receive(:call)
+        expect(customer.payment_methods.empty?).to be true
       end
     end
 
@@ -84,6 +84,11 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
 
         expect(result).to be_success
         expect(payment_method.provider_method_id).to eq(payment_method_id)
+        expect(payment_method.details["type"]). to eq("card")
+        expect(payment_method.details["last4"]). to eq("4242")
+        expect(payment_method.details["brand"]). to eq("visa")
+        expect(payment_method.details["expiration_month"]).to eq(12)
+        expect(payment_method.details["expiration_year"]).to eq(2025)
       end
     end
   end
