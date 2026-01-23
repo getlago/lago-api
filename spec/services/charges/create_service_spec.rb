@@ -92,6 +92,7 @@ RSpec.describe Charges::CreateService do
             invoiceable: true,
             parent_id: parent_charge.id,
             min_amount_cents: 10,
+            accepts_target_wallet: true,
             filters: [
               {
                 invoice_display_name: "Card filter",
@@ -148,6 +149,26 @@ RSpec.describe Charges::CreateService do
               .and have_attributes(invoiceable: true, min_amount_cents: 10)
           end
 
+          context "with accepts_target_wallet" do
+            context "when event_wallet_target is enabled" do
+              before do
+                organization.update!(premium_integrations: ["event_wallet_target"])
+              end
+
+              it "sets accepts_target_wallet from params" do
+                expect(result.charge).to be_persisted
+                expect(result.charge.accepts_target_wallet).to be true
+              end
+            end
+
+            context "when event_wallet_target is not enabled" do
+              it "does not set accepts_target_wallet" do
+                expect(result.charge).to be_persisted
+                expect(result.charge.accepts_target_wallet).to be false
+              end
+            end
+          end
+
           context "when applied pricing unit params are valid" do
             it "creates applied pricing unit" do
               expect { subject }.to change(AppliedPricingUnit, :count).by(1)
@@ -190,6 +211,11 @@ RSpec.describe Charges::CreateService do
 
           it "does not create applied pricing units" do
             expect { subject }.not_to change(AppliedPricingUnit, :count)
+          end
+
+          it "ignores accepts_target_wallet from params" do
+            expect(result.charge).to be_persisted
+            expect(result.charge.accepts_target_wallet).to be false
           end
         end
       end

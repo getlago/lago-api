@@ -854,6 +854,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           pay_in_advance: false,
           prorated: false,
           min_amount_cents: 6000,
+          accepts_target_wallet: false,
           properties: {
             amount: "60",
             free_units: 200,
@@ -1077,6 +1078,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               pay_in_advance: false,
               prorated: false,
               min_amount_cents: 0,
+              accepts_target_wallet: false,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               applied_pricing_unit: nil,
               lago_parent_id: nil,
@@ -1114,6 +1116,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               prorated: false,
               min_amount_cents: 6000,
               applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
+              accepts_target_wallet: false,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               lago_parent_id: nil,
               filters: [],

@@ -19,6 +19,7 @@ RSpec.describe ::V1::ChargeSerializer do
     expect(result["charge"]["created_at"]).to eq(charge.created_at.iso8601)
     expect(result["charge"]["charge_model"]).to eq(charge.charge_model)
     expect(result["charge"]["pay_in_advance"]).to eq(charge.pay_in_advance)
+    expect(result["charge"]["accepts_target_wallet"]).to eq(charge.accepts_target_wallet)
     expect(result["charge"]["properties"]).to eq(charge.properties)
     expect(result["charge"]["filters"]).to eq([])
     expect(result["charge"]["applied_pricing_unit"]).to eq nil
