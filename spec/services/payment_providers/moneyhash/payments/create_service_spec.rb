@@ -14,29 +14,99 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
   let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
   let(:payment) { create(:payment, payable: invoice, payment_provider: moneyhash_provider, payment_provider_customer: moneyhash_customer) }
 
-  let(:request_payload) { JSON.parse(File.read("spec/fixtures/moneyhash/recurring_mit_payment_payload.json")) }
   let(:failure_response) { JSON.parse(File.read("spec/fixtures/moneyhash/recurring_mit_payment_failure_response.json")) }
   let(:success_response) { JSON.parse(File.read("spec/fixtures/moneyhash/recurring_mit_payment_success_response.json")) }
 
+  let(:lago_client) { instance_double(LagoHttpClient::Client) }
+  let(:response) { instance_double(Net::HTTPOK) }
+  let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
+
   describe "#call" do
-    it "succeeds for a successful payment of invoices" do
-      allow_any_instance_of(described_class).to receive(:create_moneyhash_payment).and_return(success_response) # rubocop:disable RSpec/AnyInstance
-      result = described_class.call(payment: payment, reference:, metadata:)
-      expect(result).to be_success
-      expect(result.payment.status).to eq("PROCESSED")
-      expect(result.payment.provider_payment_id).to eq(success_response.dig("data", "id"))
-      expect(result.payment.payable_payment_status).to eq("succeeded")
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
     end
 
-    it "fails if error raised" do
-      allow_any_instance_of(described_class).to receive(:moneyhash_payment_provider).and_return(moneyhash_provider) # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(LagoHttpClient::Client).to receive(:post_with_response).and_raise(LagoHttpClient::HttpError.new(400, failure_response, "")) # rubocop:disable RSpec/AnyInstance
-      result = described_class.call(payment: payment, reference:, metadata:)
-      expect(result).to be_failure
-      expect(result.error_code).to eq(400)
-      expect(result.error_message).to eq(failure_response)
-      expect(payment.status).to eq("PENDING")
-      expect(payment.payable_payment_status).to eq("processing")
+    context "when payment succeeds" do
+      before do
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(success_response.to_json)
+      end
+
+      it "returns success with payment details", aggregate_failures: true do
+        result = described_class.call(payment:, reference:, metadata:)
+
+        expect(result).to be_success
+        expect(result.payment).to have_attributes(
+          status: "PROCESSED",
+          provider_payment_id: success_response.dig("data", "id"),
+          payable_payment_status: "succeeded"
+        )
+      end
+    end
+
+    context "when payment fails" do
+      before do
+        allow(lago_client).to receive(:post_with_response)
+          .and_raise(LagoHttpClient::HttpError.new(400, failure_response, ""))
+      end
+
+      it "returns failure with error details", aggregate_failures: true do
+        result = described_class.call(payment:, reference:, metadata:)
+
+        expect(result).to be_failure
+        expect(result.error_code).to eq(400)
+        expect(result.error_message).to eq(failure_response)
+        expect(payment.status).to eq("PENDING")
+        expect(payment.payable_payment_status).to eq("processing")
+      end
+    end
+
+    context "when multiple_payment_methods feature flag is enabled" do
+      let(:payment_method) do
+        create(:payment_method, 
+          customer:,
+          payment_provider_customer: moneyhash_customer,
+          provider_method_id: "pm_test_123"
+        )
+      end
+
+      before do
+        organization.update!(feature_flags: ["multiple_payment_methods"])
+        payment.update!(payment_method:)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(success_response.to_json)
+      end
+
+      it "uses payment_method provider_method_id as card_token" do
+        described_class.call(payment:, reference:, metadata:)
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:card_token]).to eq("pm_test_123")
+        end
+      end
+    end
+
+    context "when multiple_payment_methods feature flag is disabled" do
+      let(:moneyhash_customer) do
+        create(:moneyhash_customer,
+          customer:,
+          payment_provider: moneyhash_provider,
+          payment_method_id: "legacy_pm_456"
+        )
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(success_response.to_json)
+      end
+
+      it "uses provider_customer payment_method_id as card_token" do
+        described_class.call(payment:, reference:, metadata:)
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:card_token]).to eq("legacy_pm_456")
+        end
+      end
     end
   end
 end
