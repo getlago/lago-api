@@ -103,7 +103,10 @@ module Subscriptions
     end
 
     def fixed_charges_billed_today?(sub)
-      sub.active? && sub.fixed_charges.pay_in_advance.any? && !sub.plan.pay_in_advance? && sub.started_at.today? && !sub.in_trial_period?
+      return false if !(sub.active? && sub.started_at.today?)
+      return false if sub.fixed_charges.pay_in_advance.none?
+
+      !sub.plan.pay_in_advance? || sub.in_trial_period?
     end
 
     def create_subscription

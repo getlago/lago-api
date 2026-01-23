@@ -1460,11 +1460,11 @@ RSpec.describe Invoices::CalculateFeesService do
           end
         end
 
-        it "does not create a fixed charge fee" do
+        it "creates a fixed charge fee even during trial period" do
           result = invoice_service.call
 
           expect(result).to be_success
-          expect(invoice.fees.fixed_charge.count).to eq(0)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
         end
       end
 
