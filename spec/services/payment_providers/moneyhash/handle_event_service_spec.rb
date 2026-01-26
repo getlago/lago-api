@@ -143,8 +143,8 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
         expect(payment_method.details).to include(
           "brand" => "Visa",
           "last4" => "0000",
-          "expiry_month" => "02",
-          "expiry_year" => "26",
+          "expiration_month" => "02",
+          "expiration_year" => "26",
           "card_holder_name" => "Kevin Smith",
           "issuer" => "test"
         )

@@ -139,15 +139,15 @@ module PaymentProviders
       def extract_card_details
         return {} unless card_token
 
-        {
-          brand: card_token["brand"],
+        PaymentMethods::CardDetails.new(
+          type: card_token["type"],
           last4: card_token["last_4"],
-          card_type: card_token["type"],
-          expiry_month: card_token["expiry_month"],
-          expiry_year: card_token["expiry_year"],
+          brand: card_token["brand"],
+          expiration_month: card_token["expiry_month"],
+          expiration_year: card_token["expiry_year"],
           card_holder_name: card_token["card_holder_name"],
           issuer: card_token["issuer"]
-        }.compact
+        ).to_h
       end
     end
   end

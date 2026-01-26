@@ -197,8 +197,8 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
             {
               brand: "Visa",
               last4: "4242",
-              expiry_month: "12",
-              expiry_year: "25",
+              expiration_month: "12",
+              expiration_year: "25",
               card_holder_name: "John Doe"
             }
           end
@@ -216,8 +216,8 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
             expect(result.payment_method.details).to include(
               "brand" => "Visa",
               "last4" => "4242",
-              "expiry_month" => "12",
-              "expiry_year" => "25",
+              "expiration_month" => "12",
+              "expiration_year" => "25",
               "card_holder_name" => "John Doe"
             )
           end
@@ -225,7 +225,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
         context "when card_details is empty" do
           it "does not call UpdateDetailsService" do
-            expect(PaymentMethods::UpdateDetailsService).not_to receive(:call)
+            allow(PaymentMethods::UpdateDetailsService).to receive(:call)
 
             moneyhash_service.update_payment_method(
               organization_id: organization.id,
@@ -234,6 +234,8 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
               metadata: custom_fields,
               card_details: {}
             )
+
+            expect(PaymentMethods::UpdateDetailsService).not_to have_received(:call)
           end
         end
 
@@ -379,7 +381,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       context "when multiple_payment_methods feature flag is disabled" do
         it "does not call DestroyService" do
-          expect(PaymentMethods::DestroyService).not_to receive(:call)
+          allow(PaymentMethods::DestroyService).to receive(:call)
 
           moneyhash_service.delete_payment_method(
             organization_id: organization.id,
@@ -387,6 +389,8 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
             payment_method_id: payment_method_id,
             metadata: custom_fields
           )
+
+          expect(PaymentMethods::DestroyService).not_to have_received(:call)
         end
       end
 

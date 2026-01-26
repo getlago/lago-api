@@ -45,16 +45,15 @@ module PaymentProviders
             {api_key: provider_customer.payment_provider.secret_key}
           )
 
-          details = {type: pm.type}
-
-          if pm.card
-            details[:last4] = pm.card.last4
-            details[:brand] = pm.card.display_brand
-            details[:expiration_month] = pm.card.exp_month
-            details[:expiration_year] = pm.card.exp_year
-          end
-
-          details
+          PaymentMethods::CardDetails.new(
+            type: pm.type,
+            last4: pm.card&.last4,
+            brand: pm.card&.display_brand,
+            expiration_month: pm.card&.exp_month,
+            expiration_year: pm.card&.exp_year,
+            card_holder_name: nil,
+            issuer: nil
+          ).to_h
         end
       end
     end
