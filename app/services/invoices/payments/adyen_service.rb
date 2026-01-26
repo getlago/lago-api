@@ -98,56 +98,6 @@ module Invoices
         @adyen_payment_provider ||= payment_provider(customer)
       end
 
-      def update_payment_method_id
-        result = client.checkout.payments_api.payment_methods(
-          Lago::Adyen::Params.new(payment_method_params).to_h
-        ).response
-
-        payment_method_id = result["storedPaymentMethods"]&.first&.dig("id")
-        customer.adyen_customer.update!(payment_method_id:) if payment_method_id
-      end
-
-      def create_adyen_payment
-        update_payment_method_id
-
-        client.checkout.payments_api.payments(Lago::Adyen::Params.new(payment_params).to_h)
-      rescue Adyen::AuthenticationError, Adyen::ValidationError => e
-        deliver_error_webhook(e)
-        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-        nil
-      rescue Adyen::AdyenError => e
-        deliver_error_webhook(e)
-        update_invoice_payment_status(payment_status: :failed, deliver_webhook: false)
-        raise e
-      end
-
-      def payment_method_params
-        {
-          merchantAccount: adyen_payment_provider.merchant_account,
-          shopperReference: customer.adyen_customer.provider_customer_id
-        }
-      end
-
-      def payment_params
-        prms = {
-          amount: {
-            currency: invoice.currency.upcase,
-            value: invoice.total_due_amount_cents
-          },
-          reference: invoice.number,
-          paymentMethod: {
-            type: "scheme",
-            storedPaymentMethodId: customer.adyen_customer.payment_method_id
-          },
-          shopperReference: customer.adyen_customer.provider_customer_id,
-          merchantAccount: adyen_payment_provider.merchant_account,
-          shopperInteraction: "ContAuth",
-          recurringProcessingModel: "UnscheduledCardOnFile"
-        }
-        prms[:shopperEmail] = customer.email if customer.email
-        prms
-      end
-
       def payment_url_params(payment_intent)
         prms = {
           reference: invoice.number,
