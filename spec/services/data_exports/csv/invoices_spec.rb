@@ -130,4 +130,42 @@ RSpec.describe DataExports::Csv::Invoices do
       end
     end
   end
+
+  describe "offset amount preloading" do
+    let(:invoice1) { create(:invoice, organization:) }
+    let(:invoice2) { create(:invoice, organization:) }
+    let(:data_export_part) do
+      data_export.data_export_parts.create(
+        object_ids: [invoice1.id, invoice2.id],
+        index: 1,
+        organization:
+      )
+    end
+
+    before do
+      create(:credit_note, invoice: invoice1, offset_amount_cents: 100)
+      create(:credit_note, invoice: invoice2, offset_amount_cents: 200)
+    end
+
+    it "uses preloaded offset amounts without additional queries during CSV generation" do
+      service = described_class.new(data_export_part:)
+
+      # Preloading should result in only ONE query to credit_notes (the GROUP BY SUM query)
+      query_count = 0
+      counter = ->(_name, _start, _finish, _id, payload) {
+        query_count += 1 if payload[:sql] =~ /SELECT.*FROM.*credit_notes/i
+      }
+
+      result = nil
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+        result = service.call
+        expect(result).to be_success
+      end
+
+      expect(query_count).to eq(1), "Expected single query to credit_notes table, but got #{query_count}"
+
+      result.csv_file.close
+      File.unlink(result.csv_file.path)
+    end
+  end
 end
