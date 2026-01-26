@@ -138,8 +138,10 @@ module Credits
           fee.precise_credit_notes_amount_cents
 
         next if cap <= 0
-        target_wallet_code = fee.grouped_by&.dig("target_wallet_code")
-        key = [fee.fee_type, fee.charge&.billable_metric_id, target_wallet_code]
+        key = [fee.fee_type, fee.charge&.billable_metric_id]
+        if fee.organization.events_targeting_wallets_enabled? && fee.charge&.accepts_target_wallet
+          key << fee.grouped_by&.dig("target_wallet_code")
+        end
         remaining[key] += cap
       end
 

@@ -239,7 +239,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       create(
         :standard_charge,
         :pay_in_advance,
-        invoiceable: false,
+        invoiceable: true,
         plan:,
         billable_metric:,
         accepts_target_wallet: true,
@@ -335,7 +335,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     end
 
     let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
-    let(:default_wallet) { create(:wallet, customer:, code: nil, name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0) }
+    let(:default_wallet) { create(:wallet, customer:, code: "default_wallet", name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0, priority: 1) }
 
     before do
       organization.update!(premium_integrations: ["events_targeting_wallets"])
@@ -380,6 +380,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
         # wallet_1 should have ongoing usage for targeted events
         expect(wallet1.reload.ongoing_usage_balance_cents).to eq(10_000)
+        # default_wallet should have ongoing usage for non-targeted events
+        expect(default_wallet.reload.ongoing_usage_balance_cents).to eq(5_000)
       end
 
       # Bill at end of month
@@ -416,6 +418,116 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
       expect(default_wallet_tx.count).to eq(1)
       expect(default_wallet_tx.first.amount_cents).to eq(5_000)
+    end
+  end
+
+  describe "events with target_wallet_code when feature is disabled" do
+    around { |test| lago_premium!(&test) }
+
+    let(:plan) { create(:plan, organization:, amount_cents: 0) }
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
+
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        accepts_target_wallet: false,
+        properties: {amount: "10"}
+      )
+    end
+
+    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0) }
+    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
+
+    before do
+      # Organization does NOT have events_targeting_wallets enabled
+      organization.update!(premium_integrations: [])
+      charge
+    end
+
+    it "ignores target_wallet_code and applies standard wallet logic" do
+      jan15 = DateTime.new(2023, 1, 15)
+
+      travel_to(jan15) do
+        wallet1
+        wallet2
+
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: "sub_no_targeting",
+          plan_code: plan.code
+        })
+      end
+
+      subscription = customer.subscriptions.find_by(external_id: "sub_no_targeting")
+
+      # Send events with target_wallet_code - should be ignored
+      travel_to(jan15 + 1.day) do
+        create_event({
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: {value: "10", target_wallet_code: "wallet_1"}
+        })
+
+        create_event({
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: {value: "5", target_wallet_code: "wallet_1"}
+        })
+
+        create_event({
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          properties: {value: "20", target_wallet_code: "wallet_2"}
+        })
+
+        # Refresh wallets
+        Customers::RefreshWalletsService.call(customer:)
+
+        # Without wallet targeting, all usage should be attributed to oldest wallet (wallet1)
+        # Total: 35 units * $10 = $350
+        expect(wallet1.reload.ongoing_usage_balance_cents).to eq(35_000)
+        expect(wallet2.reload.ongoing_usage_balance_cents).to eq(0)
+      end
+
+      # Bill at end of month
+      travel_to(DateTime.new(2023, 2, 1)) do
+        perform_billing
+      end
+
+      invoice = subscription.invoices.first
+      expect(invoice).to be_present
+
+      charge_fees = invoice.fees.charge
+
+      # Should have only 1 fee (not grouped by target_wallet_code)
+      expect(charge_fees.count).to eq(1)
+
+      fee = charge_fees.first
+      expect(fee.units).to eq(35)
+      expect(fee.amount_cents).to eq(35_000)
+      expect(fee.grouped_by).to be_empty
+
+      # Credits applied using standard logic - oldest wallet first (wallet1)
+      # wallet1 had $200, total fee is $350, so wallet1 should be depleted
+      expect(wallet1.reload.balance_cents).to eq(0)
+
+      # Remaining $150 should come from wallet2 (had $250, now $100)
+      expect(wallet2.reload.balance_cents).to eq(10_000)
+
+      # Verify wallet transactions
+      wallet1_tx = wallet1.wallet_transactions.where(invoice:)
+      wallet2_tx = wallet2.wallet_transactions.where(invoice:)
+
+      expect(wallet1_tx.count).to eq(1)
+      expect(wallet1_tx.first.amount_cents).to eq(20_000)
+
+      expect(wallet2_tx.count).to eq(1)
+      expect(wallet2_tx.first.amount_cents).to eq(15_000)
     end
   end
 end

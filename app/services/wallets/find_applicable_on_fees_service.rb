@@ -12,10 +12,12 @@ module Wallets
 
     def call
       # Priority 1: Check for target_wallet_code in fee.grouped_by
-      target_wallet_code = fee.grouped_by&.dig("target_wallet_code")
-      if target_wallet_code.present?
-        targeted_wallet = find_wallet_by_code(target_wallet_code)
-        return result_with([targeted_wallet.id]) if targeted_wallet
+      if fee.organization.events_targeting_wallets_enabled? && fee.charge&.accepts_target_wallet
+        target_wallet_code = fee.grouped_by&.dig("target_wallet_code")
+        if target_wallet_code.present?
+          targeted_wallet = find_wallet_by_code(target_wallet_code)
+          return result_with([targeted_wallet.id]) if targeted_wallet
+        end
       end
 
       bm_id = fee.charge&.billable_metric_id
