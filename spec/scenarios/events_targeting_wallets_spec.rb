@@ -26,7 +26,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
 
     before do
-      organization.update!(premium_integrations: ["event_wallet_target"])
+      organization.update!(premium_integrations: ["events_targeting_wallets"])
       charge
     end
 
@@ -251,7 +251,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 10_000, credits_balance: 100.0) }
 
     before do
-      organization.update!(premium_integrations: ["event_wallet_target"])
+      organization.update!(premium_integrations: ["events_targeting_wallets"])
       charge
     end
 
@@ -338,7 +338,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     let(:default_wallet) { create(:wallet, customer:, code: nil, name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0) }
 
     before do
-      organization.update!(premium_integrations: ["event_wallet_target"])
+      organization.update!(premium_integrations: ["events_targeting_wallets"])
       charge
     end
 

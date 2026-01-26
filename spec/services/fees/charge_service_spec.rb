@@ -712,7 +712,7 @@ RSpec.describe Fees::ChargeService do
         end
 
         before do
-          organization.update!(premium_integrations: ["event_wallet_target"])
+          organization.update!(premium_integrations: ["events_targeting_wallets"])
           event_wallet_1
           event_wallet_2
         end

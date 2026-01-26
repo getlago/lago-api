@@ -83,11 +83,11 @@ RSpec.describe Events::PostProcessService do
       around { |test| lago_premium!(&test) }
 
       before do
-        organization.update!(premium_integrations: ["event_wallet_target"])
+        organization.update!(premium_integrations: ["events_targeting_wallets"])
         charge
       end
 
-      context "when event_wallet_target feature is not enabled" do
+      context "when events_targeting_wallets feature is not enabled" do
         before do
           organization.update!(premium_integrations: [])
         end
