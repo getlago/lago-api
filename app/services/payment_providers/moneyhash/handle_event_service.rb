@@ -84,32 +84,37 @@ module PaymentProviders
       end
 
       def handle_card_event
-        service = PaymentProviderCustomers::MoneyhashService.new
-
         case event_code
         when "card_token.deleted"
-          payment_method_id = @event_json.dig("data", "card_token", "id")
-          customer_id = @event_json.dig("data", "card_token", "custom_fields", "lago_customer_id")
-          customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
-
-          selected_payment_method_id = (customer&.payment_method_id&.present? && (customer&.payment_method_id == payment_method_id)) ? nil : customer&.payment_method_id
-          service
-            .update_payment_method(
-              organization_id: @organization.id,
-              customer_id: customer_id,
-              payment_method_id: selected_payment_method_id,
-              metadata: @event_json.dig("data", "card_token", "custom_fields")
-            ).raise_if_error!
-
+          handle_card_token_deleted
         when "card_token.created", "card_token.updated"
-          service
-            .update_payment_method(
-              organization_id: @organization.id,
-              customer_id: @event_json.dig("data", "card_token", "custom_fields", "lago_customer_id"),
-              payment_method_id: @event_json.dig("data", "card_token", "id"),
-              metadata: @event_json.dig("data", "card_token", "custom_fields")
-            ).raise_if_error!
+          handle_card_token_created_or_updated
         end
+      end
+
+      def handle_card_token_deleted
+        PaymentProviderCustomers::MoneyhashService.new
+          .delete_payment_method(
+            organization_id: organization.id,
+            customer_id: card_token.dig("custom_fields", "lago_customer_id"),
+            payment_method_id: card_token["id"],
+            metadata: card_token["custom_fields"]
+          ).raise_if_error!
+      end
+
+      def handle_card_token_created_or_updated
+        PaymentProviderCustomers::MoneyhashService.new
+          .update_payment_method(
+            organization_id: organization.id,
+            customer_id: card_token.dig("custom_fields", "lago_customer_id"),
+            payment_method_id: card_token["id"],
+            metadata: card_token["custom_fields"],
+            card_details: extract_card_details
+          ).raise_if_error!
+      end
+
+      def card_token
+        @card_token ||= event_json.dig("data", "card_token")
       end
 
       def event_to_payment_status(event_code)
@@ -129,6 +134,20 @@ module PaymentProviders
           code: "webhook_error",
           message: "No handler for event code: #{event_code}"
         )
+      end
+
+      def extract_card_details
+        return {} unless card_token
+
+        {
+          brand: card_token["brand"],
+          last4: card_token["last_4"],
+          card_type: card_token["type"],
+          expiry_month: card_token["expiry_month"],
+          expiry_year: card_token["expiry_year"],
+          card_holder_name: card_token["card_holder_name"],
+          issuer: card_token["issuer"]
+        }.compact
       end
     end
   end
