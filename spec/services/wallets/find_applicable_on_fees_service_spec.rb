@@ -139,5 +139,60 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
         expect(result.top_priority_wallet).to be_nil
       end
     end
+
+    context "when fee has target_wallet_code in grouped_by" do
+      let(:customer) { create(:customer) }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:wallet) { create(:wallet, customer:, code: "target_wallet") }
+      let(:fee) { create(:charge_fee, subscription:, grouped_by: {"target_wallet_code" => "target_wallet"}) }
+
+      let(:allocation_rules) do
+        {
+          bm_map: {},
+          type_map: {},
+          unrestricted: [SecureRandom.uuid, SecureRandom.uuid]
+        }
+      end
+
+      before { wallet }
+
+      it "returns the wallet matching target_wallet_code" do
+        expect(result).to be_success
+        expect(result.top_priority_wallet).to eq(wallet.id)
+      end
+
+      context "when target wallet does not exist" do
+        let(:fee) { create(:charge_fee, subscription:, grouped_by: {"target_wallet_code" => "nonexistent"}) }
+
+        it "falls back to allocation rules" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+        end
+      end
+
+      context "when target wallet exists but is not active" do
+        before { wallet.update!(status: :terminated) }
+
+        it "falls back to allocation rules" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+        end
+      end
+
+      context "when target_wallet_code takes priority over billable metric wallets" do
+        let(:allocation_rules) do
+          {
+            bm_map: {fee.charge.billable_metric_id => [SecureRandom.uuid]},
+            type_map: {},
+            unrestricted: []
+          }
+        end
+
+        it "returns the wallet matching target_wallet_code" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(wallet.id)
+        end
+      end
+    end
   end
 end

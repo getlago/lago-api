@@ -417,6 +417,81 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "with target_wallet_code in fee grouped_by" do
+      let(:wallet_with_code) do
+        create(:wallet, name: "wallet with code", customer:, code: "target_wallet", balance_cents: 1000, credits_balance: 10.0)
+      end
+      let(:another_wallet_with_code) do
+        create(:wallet, name: "another wallet", customer:, code: "another_wallet", balance_cents: 1000, credits_balance: 10.0)
+      end
+      let(:wallets) { [normal_wallet, wallet_with_code, another_wallet_with_code] }
+      let(:fee) do
+        create(:charge_fee, invoice:, subscription:,
+          amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+          taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target_wallet"})
+      end
+
+      it "applies credits from the targeted wallet" do
+        expect(result).to be_success
+        expect(result.wallet_transactions.count).to eq(1)
+        expect(result.wallet_transactions.first.wallet_id).to eq(wallet_with_code.id)
+        expect(wallet_with_code.reload.balance_cents).to eq(900)
+      end
+
+      context "when there are multiple fees with different target_wallet_codes" do
+        let(:amount_cents) { 200 }
+        let(:fee_amount_cents) { 100 }
+        let(:fee2) do
+          create(:charge_fee, invoice:, subscription:,
+            amount_cents: 100, precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "another_wallet"})
+        end
+
+        before { fee2 }
+
+        it "applies credits from respective targeted wallets" do
+          expect(result).to be_success
+          expect(result.wallet_transactions.count).to eq(2)
+
+          wallet_tx = result.wallet_transactions.find { |tx| tx.wallet_id == wallet_with_code.id }
+          another_wallet_tx = result.wallet_transactions.find { |tx| tx.wallet_id == another_wallet_with_code.id }
+
+          expect(wallet_tx.amount_cents).to eq(100)
+          expect(another_wallet_tx.amount_cents).to eq(100)
+          expect(wallet_with_code.reload.balance_cents).to eq(900)
+          expect(another_wallet_with_code.reload.balance_cents).to eq(900)
+        end
+      end
+
+      context "when target wallet does not exist" do
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:,
+            amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+            taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "nonexistent"})
+        end
+
+        it "does not apply credits from any wallet for that fee" do
+          expect(result).to be_success
+          expect(result.wallet_transactions).to be_empty
+          expect(result.prepaid_credit_amount_cents).to eq(0)
+        end
+      end
+
+      context "when fee has no target_wallet_code" do
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:,
+            amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+            taxes_precise_amount_cents: 0, grouped_by: {})
+        end
+
+        it "falls back to normal wallet allocation" do
+          expect(result).to be_success
+          expect(result.wallet_transactions.count).to eq(1)
+          expect(result.wallet_transactions.first.wallet_id).to eq(normal_wallet.id)
+        end
+      end
+    end
+
     context "when wallet optimistic lock fails" do
       def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
         attempts = 0
