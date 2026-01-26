@@ -427,8 +427,8 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(json[:wallet_transaction_consumptions].count).to eq(2)
         expect(json[:wallet_transaction_consumptions].first[:lago_id]).to eq(consumption2.id)
         expect(json[:wallet_transaction_consumptions].first[:amount_cents]).to eq(300)
-        expect(json[:wallet_transaction_consumptions].first[:outbound_wallet_transaction]).to be_present
-        expect(json[:wallet_transaction_consumptions].first[:outbound_wallet_transaction][:lago_id]).to eq(consumption2.outbound_wallet_transaction_id)
+        expect(json[:wallet_transaction_consumptions].first[:wallet_transaction]).to be_present
+        expect(json[:wallet_transaction_consumptions].first[:wallet_transaction][:lago_id]).to eq(consumption2.outbound_wallet_transaction_id)
         expect(json[:meta]).to be_present
       end
     end
@@ -543,8 +543,8 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(json[:wallet_transaction_fundings].count).to eq(2)
         expect(json[:wallet_transaction_fundings].first[:lago_id]).to eq(funding2.id)
         expect(json[:wallet_transaction_fundings].first[:amount_cents]).to eq(300)
-        expect(json[:wallet_transaction_fundings].first[:inbound_wallet_transaction]).to be_present
-        expect(json[:wallet_transaction_fundings].first[:inbound_wallet_transaction][:lago_id]).to eq(inbound_transaction2.id)
+        expect(json[:wallet_transaction_fundings].first[:wallet_transaction]).to be_present
+        expect(json[:wallet_transaction_fundings].first[:wallet_transaction][:lago_id]).to eq(inbound_transaction2.id)
         expect(json[:meta]).to be_present
       end
     end
