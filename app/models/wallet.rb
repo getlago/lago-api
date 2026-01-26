@@ -159,7 +159,6 @@ end
 #
 #  index_uniq_wallet_code_per_customer     (customer_id,code) UNIQUE
 #  index_wallets_on_customer_id            (customer_id)
-#  index_wallets_on_customer_id_and_code   (customer_id,code) UNIQUE
 #  index_wallets_on_organization_id        (organization_id)
 #  index_wallets_on_payment_method_id      (payment_method_id)
 #  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
