@@ -26,6 +26,8 @@ module V1
         sub_total_including_taxes_amount_cents: model.sub_total_including_taxes_amount_cents,
         total_amount_cents: model.total_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
+        total_paid_amount_cents: model.total_paid_amount_cents,
+        total_offsetted_credit_note_amount_cents: model.offset_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
         file_url: model.file_url,
         xml_url: model.xml_url,
