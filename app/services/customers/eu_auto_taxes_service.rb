@@ -24,6 +24,12 @@ module Customers
         process_not_vies_tax
       end
 
+      if customer.tax_identification_number.present?
+        after_commit do
+          SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: vies_api_response.presence || error_vies_check)
+        end
+      end
+
       delete_pending_vies_check_if_exists
       result
     rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
@@ -47,11 +53,7 @@ module Customers
       # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
       # Check the Unavailable sheet per UE country.
       # https://ec.europa.eu/taxation_customs/vies/#/help
-      response = Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
-
-      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
-
-      response
+      Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
     end
 
     def error_vies_check
