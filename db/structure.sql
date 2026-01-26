@@ -318,7 +318,6 @@ DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
-DROP INDEX IF EXISTS public.index_wallets_on_customer_id_and_code;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
@@ -345,6 +344,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
@@ -8564,6 +8564,13 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries
 
 
 --
+-- Name: index_uniq_wallet_code_per_customer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING btree (customer_id, code);
+
+
+--
 -- Name: index_unique_applied_to_organization_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8743,13 +8750,6 @@ CREATE UNIQUE INDEX index_wallets_invoice_custom_sections_unique ON public.walle
 --
 
 CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (customer_id);
-
-
---
--- Name: index_wallets_on_customer_id_and_code; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_wallets_on_customer_id_and_code ON public.wallets USING btree (customer_id, code);
 
 
 --
@@ -11074,7 +11074,6 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260121112929'),
-('20260121111432'),
 ('20260121111431'),
 ('20260120195822'),
 ('20260119162712'),
