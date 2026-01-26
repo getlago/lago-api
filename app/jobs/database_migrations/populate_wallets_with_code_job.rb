@@ -6,7 +6,7 @@ module DatabaseMigrations
     unique :until_executed
 
     # Number of distinct customers to process per batch
-    BATCH_SIZE = 5_000
+    BATCH_SIZE = 1_000
 
     def perform(batch_number = 1)
       # Check if there are any wallets without code
