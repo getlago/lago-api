@@ -132,5 +132,15 @@ RSpec.describe Utils::Datetime do
         expect(result).to eq(7)
       end
     end
+
+    context "with to date at the beginning of the day in timezone" do
+      let(:from_datetime) { Time.zone.parse("2023-12-01T00:00:00").in_time_zone(timezone).beginning_of_day.utc }
+      let(:to_datetime) { Time.zone.parse("2023-12-07T00:00:00").in_time_zone(timezone).beginning_of_day.utc }
+      let(:timezone) { "America/New_York" }
+
+      it "ensures it counts the full days" do
+        expect(result).to eq(7)
+      end
+    end
   end
 end
