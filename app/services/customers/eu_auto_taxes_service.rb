@@ -28,11 +28,11 @@ module Customers
       result
     rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
       Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
+      create_or_update_pending_vies_check(e)
       after_commit do
         SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
-        RetryViesCheckJob.set(wait: 5.minutes).perform_later(customer.id)
+        RetryViesCheckJob.set(wait: retry_delay).perform_later(customer.id)
       end
-      create_or_update_pending_vies_check(e)
       result.service_failure!(code: "vies_check_failed", message: e.message)
     end
 
@@ -122,6 +122,18 @@ module Customers
 
     def delete_pending_vies_check_if_exists
       customer.pending_vies_check&.destroy!
+    end
+
+    def retry_delay
+      attempts = customer.reload.pending_vies_check&.attempts_count.to_i
+
+      case attempts
+      when 0..1 then 5.minutes
+      when 2 then 10.minutes
+      when 3 then 20.minutes
+      when 4 then 40.minutes
+      else 1.hour
+      end
     end
 
     def error_type_for(exception)
