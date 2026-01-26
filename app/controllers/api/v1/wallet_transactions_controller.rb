@@ -124,6 +124,7 @@ module Api
           :invoice_requires_successful_payment,
           :name,
           :ignore_paid_top_up_limits,
+          :priority,
           payment_method: [
             :payment_method_type,
             :payment_method_id
