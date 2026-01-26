@@ -31,6 +31,7 @@ module Customers
         SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
         RetryViesCheckJob.set(wait: 5.minutes).perform_later(customer.id)
       end
+      create_or_update_pending_vies_check(e)
       result.service_failure!(code: "vies_check_failed", message: e.message)
     end
 
@@ -102,6 +103,32 @@ module Customers
       non_existing_eu_taxes = customer.taxes.where("code ILIKE ?", "lago_eu%").none?
 
       non_existing_eu_taxes || tax_attributes_changed
+    end
+
+    def create_or_update_pending_vies_check(exception)
+      pending_check = PendingViesCheck.find_or_initialize_by(customer:)
+      pending_check.assign_attributes(
+        organization: customer.organization,
+        billing_entity: customer.billing_entity,
+        tax_identification_number: customer.tax_identification_number,
+        attempts_count: pending_check.attempts_count + 1,
+        last_attempt_at: Time.current,
+        last_error_type: error_type_for(exception),
+        last_error_message: exception.message
+      )
+      pending_check.save!
+    end
+
+    def error_type_for(exception)
+      case exception
+      when Valvat::RateLimitError then "rate_limit"
+      when Valvat::Timeout then "timeout"
+      when Valvat::BlockedError then "blocked"
+      when Valvat::InvalidRequester then "invalid_requester"
+      when Valvat::ServiceUnavailable then "service_unavailable"
+      when Valvat::MemberStateUnavailable then "member_state_unavailable"
+      else "unknown"
+      end
     end
   end
 end

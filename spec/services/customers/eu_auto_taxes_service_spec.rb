@@ -12,6 +12,66 @@ RSpec.describe Customers::EuAutoTaxesService do
   let(:tax_attributes_changed) { true }
   let(:tax_identification_number) { "IT12345678901" }
 
+  shared_examples "a VIES check error" do |exception_class:, error_message:, error_type:|
+    let(:full_error_message) { "The  web service returned the error: #{error_message}" }
+
+    before do
+      allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+        .and_raise(exception_class.new(error_message, nil))
+      customer.update!(country: "DE")
+    end
+
+    it "returns an error" do
+      result = eu_tax_service.call
+
+      expect(result).not_to be_success
+      expect(result.tax_code).to be_nil
+      expect(result.error.code).to eq("vies_check_failed")
+      expect(result.error.message).to eq("vies_check_failed: #{full_error_message}")
+
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+        valid: false,
+        valid_format: true,
+        error: full_error_message
+      }).once
+    end
+
+    it "enqueues RetryViesCheckJob" do
+      eu_tax_service.call
+
+      expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+    end
+
+    it "creates a pending_vies_check record" do
+      expect { eu_tax_service.call }.to change(PendingViesCheck, :count).by(1)
+
+      pending_check = customer.pending_vies_check
+      expect(pending_check).to have_attributes(
+        organization: customer.organization,
+        billing_entity: customer.billing_entity,
+        tax_identification_number: customer.tax_identification_number,
+        attempts_count: 1,
+        last_error_type: error_type,
+        last_error_message: full_error_message
+      )
+      expect(pending_check.last_attempt_at).to be_present
+    end
+
+    context "when pending_vies_check already exists" do
+      let(:existing_check) { create(:pending_vies_check, customer:, attempts_count: 2, last_error_type: "unknown") }
+
+      before { existing_check }
+
+      it "updates the existing record and increments attempts_count" do
+        expect { eu_tax_service.call }.not_to change(PendingViesCheck, :count)
+
+        existing_check.reload
+        expect(existing_check.attempts_count).to eq(3)
+        expect(existing_check.last_error_type).to eq(error_type)
+      end
+    end
+  end
+
   describe ".call" do
     before do
       allow_any_instance_of(Valvat).to receive(:exists?).and_return(vies_response) # rubocop:disable RSpec/AnyInstance
@@ -53,178 +113,46 @@ RSpec.describe Customers::EuAutoTaxesService do
         end
       end
 
-      context "when VIES check raises an error" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::RateLimitError.new("rate limit reached", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: rate limit reached")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: rate limit reached"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+      context "when VIES check raises RateLimitError" do
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::RateLimitError,
+          error_message: "rate limit reached",
+          error_type: "rate_limit"
       end
 
       context "when VIES check raises MemberStateUnavailable error" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::MemberStateUnavailable.new("member state unavailable", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: member state unavailable")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: member state unavailable"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::MemberStateUnavailable,
+          error_message: "member state unavailable",
+          error_type: "member_state_unavailable"
       end
 
       context "when VIES check raises ServiceUnavailable error" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::ServiceUnavailable.new("service unavailable", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: service unavailable")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: service unavailable"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::ServiceUnavailable,
+          error_message: "service unavailable",
+          error_type: "service_unavailable"
       end
 
       context "when VIES check raises Timeout error" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::Timeout.new("connection timed out", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: connection timed out")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: connection timed out"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::Timeout,
+          error_message: "connection timed out",
+          error_type: "timeout"
       end
 
       context "when VIES check raises BlockedError" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::BlockedError.new("request blocked", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: request blocked")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: request blocked"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::BlockedError,
+          error_message: "request blocked",
+          error_type: "blocked"
       end
 
       context "when VIES check raises InvalidRequester error" do
-        before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-            .and_raise(Valvat::InvalidRequester.new("invalid requester", nil))
-          customer.update!(country: "DE")
-        end
-
-        it "returns an error" do
-          result = eu_tax_service.call
-
-          expect(result).not_to be_success
-          expect(result.tax_code).to be_nil
-          expect(result.error.code).to eq("vies_check_failed")
-          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: invalid requester")
-
-          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
-            valid: false,
-            valid_format: true,
-            error: "The  web service returned the error: invalid requester"
-          }).once
-        end
-
-        it "enqueues RetryViesCheckJob" do
-          eu_tax_service.call
-
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
-        end
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::InvalidRequester,
+          error_message: "invalid requester",
+          error_type: "invalid_requester"
       end
 
       context "when eu_tax_management is false" do
