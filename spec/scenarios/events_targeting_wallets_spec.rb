@@ -22,15 +22,15 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1") }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2") }
+    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0) }
+    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
 
     before do
       organization.update!(premium_integrations: ["event_wallet_target"])
       charge
     end
 
-    it "groups fees by target_wallet_code in invoice" do
+    it "groups fees by target_wallet_code and applies credits from correct wallets" do
       jan15 = DateTime.new(2023, 1, 15)
 
       travel_to(jan15) do
@@ -68,6 +68,15 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
           external_subscription_id: subscription.external_id,
           properties: {value: "20", target_wallet_code: "wallet_2"}
         })
+
+        # Refresh wallets to update ongoing balance
+        Customers::RefreshWalletsService.call(customer:)
+
+        # Verify ongoing balance reflects targeted usage
+        # wallet_1: 15 units * $10 = $150 ongoing usage
+        expect(wallet1.reload.ongoing_usage_balance_cents).to eq(15_000)
+        # wallet_2: 20 units * $10 = $200 ongoing usage
+        expect(wallet2.reload.ongoing_usage_balance_cents).to eq(20_000)
       end
 
       # Bill the subscription at end of month
@@ -90,6 +99,25 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
       expect(wallet2_fee.units).to eq(20)
       expect(wallet2_fee.amount_cents).to eq(20_000)
+
+      # Verify credits were applied from correct wallets
+      expect(invoice.prepaid_credit_amount_cents).to eq(35_000)
+
+      # wallet_1: had $200, used $150, should have $50 left
+      expect(wallet1.reload.balance_cents).to eq(5_000)
+
+      # wallet_2: had $250, used $200, should have $50 left
+      expect(wallet2.reload.balance_cents).to eq(5_000)
+
+      # Verify wallet transactions
+      wallet1_tx = wallet1.wallet_transactions.where(invoice:)
+      wallet2_tx = wallet2.wallet_transactions.where(invoice:)
+
+      expect(wallet1_tx.count).to eq(1)
+      expect(wallet1_tx.first.amount_cents).to eq(15_000)
+
+      expect(wallet2_tx.count).to eq(1)
+      expect(wallet2_tx.first.amount_cents).to eq(20_000)
     end
 
     context "with pricing_group_keys and wallet targeting combined" do
@@ -106,7 +134,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         )
       end
 
-      it "groups fees by both pricing_group_keys and target_wallet_code" do
+      it "groups fees by both pricing_group_keys and target_wallet_code and applies credits correctly" do
         jan15 = DateTime.new(2023, 1, 15)
 
         travel_to(jan15) do
@@ -124,7 +152,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
         # Send events with different combinations of region and target_wallet_code
         travel_to(jan15 + 1.day) do
-          # wallet_1, region: eu
+          # wallet_1, region: eu - 10 units * $5 = $50
           create_event({
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
@@ -132,7 +160,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
             properties: {value: "10", region: "eu", target_wallet_code: "wallet_1"}
           })
 
-          # wallet_1, region: us
+          # wallet_1, region: us - 15 units * $5 = $75
           create_event({
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
@@ -140,13 +168,21 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
             properties: {value: "15", region: "us", target_wallet_code: "wallet_1"}
           })
 
-          # wallet_2, region: eu
+          # wallet_2, region: eu - 20 units * $5 = $100
           create_event({
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             properties: {value: "20", region: "eu", target_wallet_code: "wallet_2"}
           })
+
+          # Refresh wallets to check ongoing balance
+          Customers::RefreshWalletsService.call(customer:)
+
+          # wallet_1: $50 (eu) + $75 (us) = $125 ongoing usage
+          expect(wallet1.reload.ongoing_usage_balance_cents).to eq(12_500)
+          # wallet_2: $100 (eu) ongoing usage
+          expect(wallet2.reload.ongoing_usage_balance_cents).to eq(10_000)
         end
 
         # Bill at end of month
@@ -172,6 +208,23 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
         expect(wallet2_eu_fee.units).to eq(20)
         expect(wallet2_eu_fee.amount_cents).to eq(10_000)
+
+        # Verify credits applied from correct wallets
+        # wallet_1: had $200, used $125 ($50 + $75), should have $75 left
+        expect(wallet1.reload.balance_cents).to eq(7_500)
+
+        # wallet_2: had $250, used $100, should have $150 left
+        expect(wallet2.reload.balance_cents).to eq(15_000)
+
+        # Verify wallet transactions
+        wallet1_tx = wallet1.wallet_transactions.where(invoice:)
+        wallet2_tx = wallet2.wallet_transactions.where(invoice:)
+
+        expect(wallet1_tx.count).to eq(1)
+        expect(wallet1_tx.first.amount_cents).to eq(12_500)
+
+        expect(wallet2_tx.count).to eq(1)
+        expect(wallet2_tx.first.amount_cents).to eq(10_000)
       end
     end
   end
@@ -194,15 +247,15 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1") }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2") }
+    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
+    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 10_000, credits_balance: 100.0) }
 
     before do
       organization.update!(premium_integrations: ["event_wallet_target"])
       charge
     end
 
-    it "creates pay_in_advance fees grouped by target_wallet_code" do
+    it "creates pay_in_advance fees and deducts from correct wallets" do
       jan15 = DateTime.new(2023, 1, 15)
 
       travel_to(jan15) do
@@ -218,7 +271,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
       subscription = customer.subscriptions.find_by(external_id: "sub_advance")
 
-      # Send events - each should create a pay_in_advance fee
+      # Send events - each should create a pay_in_advance fee and deduct from targeted wallet
       travel_to(jan15 + 1.day) do
         expect do
           create_event({
@@ -234,6 +287,11 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         expect(fee1.units).to eq(10)
         expect(fee1.amount_cents).to eq(10_000)
         expect(fee1.grouped_by["target_wallet_code"]).to eq("wallet_1")
+
+        # wallet_1 should have $100 deducted (had $150, now $50)
+        expect(wallet1.reload.balance_cents).to eq(5_000)
+        # wallet_2 should be unchanged
+        expect(wallet2.reload.balance_cents).to eq(10_000)
       end
 
       travel_to(jan15 + 2.days) do
@@ -251,6 +309,11 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         expect(fee2.units).to eq(5)
         expect(fee2.amount_cents).to eq(5_000)
         expect(fee2.grouped_by["target_wallet_code"]).to eq("wallet_2")
+
+        # wallet_1 should still have $50
+        expect(wallet1.reload.balance_cents).to eq(5_000)
+        # wallet_2 should have $50 deducted (had $100, now $50)
+        expect(wallet2.reload.balance_cents).to eq(5_000)
       end
     end
   end
@@ -271,18 +334,20 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1") }
+    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 15_000, credits_balance: 150.0) }
+    let(:default_wallet) { create(:wallet, customer:, code: nil, name: "Default Wallet", balance_cents: 10_000, credits_balance: 100.0) }
 
     before do
       organization.update!(premium_integrations: ["event_wallet_target"])
       charge
     end
 
-    it "handles mix of events with and without target_wallet_code" do
+    it "applies credits from targeted wallet and default wallet for non-targeted fees" do
       jan15 = DateTime.new(2023, 1, 15)
 
       travel_to(jan15) do
         wallet1
+        default_wallet
 
         create_subscription({
           external_customer_id: customer.external_id,
@@ -309,6 +374,12 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
           external_subscription_id: subscription.external_id,
           properties: {value: "5"}
         })
+
+        # Refresh wallets to check ongoing balance
+        Customers::RefreshWalletsService.call(customer:)
+
+        # wallet_1 should have ongoing usage for targeted events
+        expect(wallet1.reload.ongoing_usage_balance_cents).to eq(10_000)
       end
 
       # Bill at end of month
@@ -329,6 +400,22 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
 
       expect(no_wallet_fee.units).to eq(5)
       expect(no_wallet_fee.amount_cents).to eq(5_000)
+
+      # wallet_1 should have $100 deducted for targeted fee (had $150, now $50)
+      expect(wallet1.reload.balance_cents).to eq(5_000)
+
+      # default_wallet should have $50 deducted for non-targeted fee (had $100, now $50)
+      expect(default_wallet.reload.balance_cents).to eq(5_000)
+
+      # Verify wallet transactions
+      wallet1_tx = wallet1.wallet_transactions.where(invoice:)
+      default_wallet_tx = default_wallet.wallet_transactions.where(invoice:)
+
+      expect(wallet1_tx.count).to eq(1)
+      expect(wallet1_tx.first.amount_cents).to eq(10_000)
+
+      expect(default_wallet_tx.count).to eq(1)
+      expect(default_wallet_tx.first.amount_cents).to eq(5_000)
     end
   end
 end
