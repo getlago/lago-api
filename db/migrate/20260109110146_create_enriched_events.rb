@@ -1,8 +1,22 @@
 # frozen_string_literal: true
 
 class CreateEnrichedEvents < ActiveRecord::Migration[8.0]
-  def change
-    create_table :enriched_events, id: false, primary_key: %i[id timestamp], options: "PARTITION BY RANGE (timestamp)" do |t|
+  def up
+    # Check if pg_partman is available on the server
+    result = safety_assured do
+      execute <<~SQL
+        SELECT 1 FROM pg_available_extensions WHERE name = 'pg_partman';
+      SQL
+    end
+
+    options = if result.ntuples.zero?
+      Rails.logger.debug "pg_partman extension is not available on this PostgreSQL server, skipping partitioning"
+      ""
+    else
+      "PARTITION BY RANGE (timestamp)"
+    end
+
+    create_table :enriched_events, id: false, primary_key: %i[id timestamp], options: do |t|
       t.uuid :id, null: false, default: -> { "gen_random_uuid()" }
       t.uuid :organization_id, null: false
       t.uuid :event_id, null: false
@@ -24,5 +38,9 @@ class CreateEnrichedEvents < ActiveRecord::Migration[8.0]
       t.index %i[organization_id external_subscription_id code timestamp], name: "idx_lookup_on_enriched_events"
       t.index %i[organization_id external_subscription_id transaction_id timestamp charge_id], unique: true, name: "idx_unique_on_enriched_events"
     end
+  end
+
+  def down
+    drop_table :enriched_events
   end
 end
