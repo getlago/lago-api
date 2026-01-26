@@ -75,6 +75,7 @@ RSpec.describe Wallets::CreateService do
           source: :manual,
           metadata: nil,
           name: nil,
+          priority: nil,
           ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
         }
       })
