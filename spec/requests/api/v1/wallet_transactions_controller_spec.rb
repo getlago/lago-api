@@ -115,6 +115,28 @@ RSpec.describe Api::V1::WalletTransactionsController do
       end
     end
 
+    context "when priority is present" do
+      let(:params) do
+        {
+          wallet_id:,
+          paid_credits: "10",
+          granted_credits: "10",
+          priority: 1
+        }
+      end
+
+      it "creates the wallet transactions with correct priority" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet_transactions = json[:wallet_transactions]
+
+        expect(wallet_transactions.count).to eq(2)
+        expect(wallet_transactions).to all(include(priority: 1))
+      end
+    end
+
     context "when wallet does not exist" do
       let(:wallet_id) { "#{wallet.id}123" }
 
