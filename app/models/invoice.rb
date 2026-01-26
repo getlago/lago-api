@@ -286,7 +286,13 @@ class Invoice < ApplicationRecord
     }
   end
 
+  def preload_offset_amount_cents(offset_amount_cents)
+    @preloaded_offset_amount_cents = offset_amount_cents
+  end
+
   def offset_amount_cents
+    return @preloaded_offset_amount_cents if instance_variable_defined?(:@preloaded_offset_amount_cents)
+
     credit_notes.finalized.sum(:offset_amount_cents)
   end
 

@@ -103,8 +103,6 @@ module DataExports
       def collection
         invoices = Invoice.find(data_export_part.object_ids)
         preload_offset_amounts(invoices)
-
-        invoices
       end
 
       def preload_offset_amounts(invoices)
@@ -115,8 +113,10 @@ module DataExports
           .sum(:offset_amount_cents)
 
         invoices.each do |invoice|
-          invoice.define_singleton_method(:offset_amount_cents) { offset_amounts[invoice.id] || 0 }
+          invoice.preload_offset_amount_cents(offset_amounts[invoice.id] || 0)
         end
+
+        invoices
       end
 
       def organization
