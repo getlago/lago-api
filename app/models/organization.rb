@@ -137,6 +137,7 @@ class Organization < ApplicationRecord
     forecasted_usage
     projected_usage
     custom_roles
+    events_targeting_wallets
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
@@ -254,6 +255,10 @@ class Organization < ApplicationRecord
     self
   end
 
+  def maximum_wallets_per_customer
+    max_wallets if events_targeting_wallets_enabled?
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -320,6 +325,7 @@ end
 #  legal_name                       :string
 #  legal_number                     :string
 #  logo                             :string
+#  max_wallets                      :integer
 #  name                             :string           not null
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null

@@ -2651,6 +2651,7 @@ CREATE TABLE public.organizations (
     pre_filter_events boolean DEFAULT false NOT NULL,
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    max_wallets integer,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -11063,6 +11064,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260121112929'),
 ('20260119162712'),
 ('20260116162519'),
 ('20260116110125'),

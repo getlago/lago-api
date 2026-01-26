@@ -6139,6 +6139,7 @@ enum IntegrationTypeEnum {
   avalara
   beta_payment_authorization
   custom_roles
+  events_targeting_wallets
   forecasted_usage
   from_email
   hubspot
@@ -8912,6 +8913,7 @@ enum PremiumIntegrationTypeEnum {
   avalara
   beta_payment_authorization
   custom_roles
+  events_targeting_wallets
   forecasted_usage
   from_email
   hubspot

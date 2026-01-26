@@ -31321,6 +31321,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "events_targeting_wallets",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -45517,6 +45523,12 @@
             },
             {
               "name": "custom_roles",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "events_targeting_wallets",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

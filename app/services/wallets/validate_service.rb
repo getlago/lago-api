@@ -47,8 +47,9 @@ module Wallets
 
     def valid_wallet_limit?
       return true unless customer
+      customer_allowed_wallets = customer.organization.maximum_wallets_per_customer || MAXIMUM_WALLETS_PER_CUSTOMER
 
-      if customer.wallets.active.count >= MAXIMUM_WALLETS_PER_CUSTOMER
+      if customer.wallets.active.count >= customer_allowed_wallets
         return add_error(field: :customer, error_code: "wallet_limit_reached")
       end
 
