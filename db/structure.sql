@@ -30,7 +30,6 @@ ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_e95f72749e;
-ALTER TABLE IF EXISTS public.enriched_events DROP CONSTRAINT IF EXISTS fk_rails_e91ee1df05;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
@@ -774,7 +773,6 @@ DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
-DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
@@ -5683,20 +5681,6 @@ ALTER TABLE ONLY public.webhooks
 
 
 --
--- Name: index_enriched_events_on_event_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_enriched_events_on_event_id ON ONLY public.enriched_events USING btree (event_id);
-
-
---
--- Name: enriched_events_default_event_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX enriched_events_default_event_id_idx ON public.enriched_events_default USING btree (event_id);
-
-
---
 -- Name: idx_unique_on_enriched_events; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8980,13 +8964,6 @@ CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment
 
 
 --
--- Name: enriched_events_default_event_id_idx; Type: INDEX ATTACH; Schema: public; Owner: -
---
-
-ALTER INDEX public.index_enriched_events_on_event_id ATTACH PARTITION public.enriched_events_default_event_id_idx;
-
-
---
 -- Name: enriched_events_default_organization_id_external_subscript_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
 --
 
@@ -11074,14 +11051,6 @@ ALTER TABLE ONLY public.plans_taxes
 
 ALTER TABLE ONLY public.recurring_transaction_rules
     ADD CONSTRAINT fk_rails_e8bac9c5bb FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
-
-
---
--- Name: enriched_events fk_rails_e91ee1df05; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.enriched_events
-    ADD CONSTRAINT fk_rails_e91ee1df05 FOREIGN KEY (event_id) REFERENCES public.events(id);
 
 
 --

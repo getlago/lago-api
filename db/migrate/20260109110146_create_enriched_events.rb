@@ -5,7 +5,7 @@ class CreateEnrichedEvents < ActiveRecord::Migration[8.0]
     create_table :enriched_events, id: false, primary_key: %i[id timestamp], options: "PARTITION BY RANGE (timestamp)" do |t|
       t.uuid :id, null: false, default: -> { "gen_random_uuid()" }
       t.uuid :organization_id, null: false
-      t.references :event, null: false, foreign_key: true, type: :uuid
+      t.uuid :event_id, null: false
       t.string :transaction_id, null: false
       t.string :external_subscription_id, null: false
       t.string :code, null: false
