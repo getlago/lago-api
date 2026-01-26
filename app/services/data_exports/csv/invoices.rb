@@ -115,8 +115,7 @@ module DataExports
           .sum(:offset_amount_cents)
 
         invoices.each do |invoice|
-          cached_value = offset_amounts[invoice.id] || 0
-          invoice.define_singleton_method(:offset_amount_cents) { cached_value }
+          invoice.define_singleton_method(:offset_amount_cents) { offset_amounts[invoice.id] || 0 }
         end
       end
 
