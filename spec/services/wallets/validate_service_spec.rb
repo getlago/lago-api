@@ -286,7 +286,7 @@ RSpec.describe Wallets::ValidateService do
           organization.update!(max_wallets: max_wallets_limit + 2)
         end
 
-        context "when event_wallet_target premium integration is not enabled" do
+        context "when events_targeting_wallets premium integration is not enabled" do
           before do
             create_list(:wallet, max_wallets_limit + 1, customer:)
           end
@@ -297,9 +297,9 @@ RSpec.describe Wallets::ValidateService do
           end
         end
 
-        context "when event_wallet_target premium integration is enabled" do
+        context "when events_targeting_wallets premium integration is enabled" do
           before do
-            organization.update!(premium_integrations: ["event_wallet_target"])
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
             create_list(:wallet, max_wallets_limit + 1, customer:)
           end
 

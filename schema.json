@@ -31323,7 +31323,7 @@
               "deprecationReason": null
             },
             {
-              "name": "event_wallet_target",
+              "name": "events_targeting_wallets",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -45924,7 +45924,7 @@
               "deprecationReason": null
             },
             {
-              "name": "event_wallet_target",
+              "name": "events_targeting_wallets",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

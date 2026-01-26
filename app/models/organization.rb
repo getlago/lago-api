@@ -136,7 +136,7 @@ class Organization < ApplicationRecord
     forecasted_usage
     projected_usage
     custom_roles
-    event_wallet_target
+    events_targeting_wallets
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
@@ -255,7 +255,7 @@ class Organization < ApplicationRecord
   end
 
   def maximum_wallets_per_customer
-    max_wallets if event_wallet_target_enabled?
+    max_wallets if events_targeting_wallets_enabled?
   end
 
   private

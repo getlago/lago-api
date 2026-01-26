@@ -537,7 +537,7 @@ RSpec.describe Organization do
 
     around { |test| lago_premium!(&test) }
 
-    context "when no event_wallet_targets premium integration is enabled" do
+    context "when no events_targeting_wallets premium integration is enabled" do
       context "when org has max_wallets set" do
         let(:max_wallets) { 15 }
 
@@ -553,8 +553,8 @@ RSpec.describe Organization do
       end
     end
 
-    context "when event_wallet_targets premium integration is enabled" do
-      let(:premium_integrations) { ["event_wallet_target"] }
+    context "when events_targeting_wallets premium integration is enabled" do
+      let(:premium_integrations) { ["events_targeting_wallets"] }
 
       context "when org has max_wallets set" do
         let(:max_wallets) { 15 }
