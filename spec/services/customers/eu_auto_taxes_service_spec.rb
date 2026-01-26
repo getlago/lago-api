@@ -69,6 +69,24 @@ RSpec.describe Customers::EuAutoTaxesService do
         expect(existing_check.attempts_count).to eq(3)
         expect(existing_check.last_error_type).to eq(error_type)
       end
+
+      it "uses exponential backoff for retry delay" do
+        eu_tax_service.call
+
+        expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(19.minutes.from_now..21.minutes.from_now).with(customer.id)
+      end
+    end
+
+    context "when pending_vies_check has many attempts" do
+      let(:existing_check) { create(:pending_vies_check, customer:, attempts_count: 5, last_error_type: "unknown") }
+
+      before { existing_check }
+
+      it "caps retry delay at 1 hour" do
+        eu_tax_service.call
+
+        expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(59.minutes.from_now..61.minutes.from_now).with(customer.id)
+      end
     end
   end
 
