@@ -60,15 +60,25 @@ RSpec.describe Customers::EuAutoTaxesService do
           customer.update!(country: "DE")
         end
 
-        it "returns the default tax code" do
+        it "returns an error" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: rate limit reached")
+
           expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
             valid: false,
             valid_format: true,
             error: "The  web service returned the error: rate limit reached"
           }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
         end
       end
 
@@ -79,10 +89,14 @@ RSpec.describe Customers::EuAutoTaxesService do
           customer.update!(country: "DE")
         end
 
-        it "returns the default tax code" do
+        it "returns an error" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: member state unavailable")
+
           expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
             valid: false,
             valid_format: true,
@@ -104,14 +118,105 @@ RSpec.describe Customers::EuAutoTaxesService do
           customer.update!(country: "DE")
         end
 
-        it "returns the default tax code" do
+        it "returns an error" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: service unavailable")
+
           expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
             valid: false,
             valid_format: true,
             error: "The  web service returned the error: service unavailable"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+        end
+      end
+
+      context "when VIES check raises Timeout error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::Timeout.new("connection timed out", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns an error" do
+          result = eu_tax_service.call
+
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: connection timed out")
+
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: connection timed out"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+        end
+      end
+
+      context "when VIES check raises BlockedError" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::BlockedError.new("request blocked", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns an error" do
+          result = eu_tax_service.call
+
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: request blocked")
+
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: request blocked"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+        end
+      end
+
+      context "when VIES check raises InvalidRequester error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::InvalidRequester.new("invalid requester", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns an error" do
+          result = eu_tax_service.call
+
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+          expect(result.error.message).to eq("vies_check_failed: The  web service returned the error: invalid requester")
+
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: invalid requester"
           }).once
         end
 
