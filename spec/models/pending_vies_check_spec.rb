@@ -14,6 +14,8 @@ RSpec.describe PendingViesCheck, type: :model do
   end
 
   describe "validations" do
+    subject(:pending_vies_check) { create(:pending_vies_check) }
+
     it do
       expect(subject).to validate_uniqueness_of(:customer_id).ignoring_case_sensitivity
       expect(subject).to validate_numericality_of(:attempts_count).is_greater_than_or_equal_to(0)
