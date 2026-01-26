@@ -184,7 +184,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         around { |test| lago_premium!(&test) }
 
         before do
-          organization.update!(premium_integrations: ["event_wallet_target"])
+          organization.update!(premium_integrations: ["events_targeting_wallets"])
         end
 
         it "includes target_wallet_code in grouped_by_values" do

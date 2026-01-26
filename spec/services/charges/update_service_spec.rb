@@ -115,9 +115,9 @@ RSpec.describe Charges::UpdateService do
         end
 
         context "with accepts_target_wallet" do
-          context "when event_wallet_target is enabled" do
+          context "when events_targeting_wallets is enabled" do
             before do
-              charge.organization.update!(premium_integrations: ["event_wallet_target"])
+              charge.organization.update!(premium_integrations: ["events_targeting_wallets"])
             end
 
             it "updates accepts_target_wallet to true" do
@@ -142,7 +142,7 @@ RSpec.describe Charges::UpdateService do
             end
           end
 
-          context "when event_wallet_target is not enabled" do
+          context "when events_targeting_wallets is not enabled" do
             it "does not update accepts_target_wallet" do
               expect { subject }.not_to change { charge.reload.accepts_target_wallet }
             end

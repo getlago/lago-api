@@ -261,7 +261,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
       context "when license is premium" do
         around { |test| lago_premium!(&test) }
 
-        context "when event_wallet_target is not enabled" do
+        context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject
 
@@ -270,9 +270,9 @@ RSpec.describe Api::V1::Plans::ChargesController do
           end
         end
 
-        context "when event_wallet_target is enabled" do
+        context "when events_targeting_wallets is enabled" do
           before do
-            organization.update!(premium_integrations: ["event_wallet_target"])
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
           end
 
           it "sets accepts_target_wallet" do
@@ -360,7 +360,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
       context "when license is premium" do
         around { |test| lago_premium!(&test) }
 
-        context "when event_wallet_target is not enabled" do
+        context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject
 
@@ -369,9 +369,9 @@ RSpec.describe Api::V1::Plans::ChargesController do
           end
         end
 
-        context "when event_wallet_target is enabled" do
+        context "when events_targeting_wallets is enabled" do
           before do
-            organization.update!(premium_integrations: ["event_wallet_target"])
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
           end
 
           it "sets accepts_target_wallet" do

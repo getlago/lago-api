@@ -169,7 +169,7 @@ class Charge < ApplicationRecord
   def validate_accepts_target_wallet
     return unless accepts_target_wallet
 
-    errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.event_wallet_target_enabled?
+    errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.events_targeting_wallets_enabled?
   end
 end
 

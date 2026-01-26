@@ -14,7 +14,7 @@ module Events
       expire_cached_charges(subscriptions)
       track_subscription_activity
       customer&.flag_wallets_for_refresh
-      check_targeted_wallets if organization.event_wallet_target_enabled? && event.properties['target_wallet_code'].present?
+      check_targeted_wallets if organization.events_targeting_wallets_enabled? && event.properties["target_wallet_code"].present?
 
       handle_pay_in_advance
 
@@ -84,7 +84,7 @@ module Events
 
     def check_targeted_wallets
       return unless subscriptions.first&.plan&.charges&.where(billable_metric:, accepts_target_wallet: true)&.exists?
-      return if customer.wallets.where(code: event.properties['target_wallet_code']).exists?
+      return if customer.wallets.where(code: event.properties["target_wallet_code"]).exists?
 
       SendWebhookJob.perform_later(
         "event.error",

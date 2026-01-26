@@ -151,9 +151,9 @@ RSpec.describe Api::V1::PlansController do
             create_params[:charges].first[:accepts_target_wallet] = true
           end
 
-          context "when event_wallet_target is enabled" do
+          context "when events_targeting_wallets is enabled" do
             before do
-              organization.update!(premium_integrations: ["event_wallet_target"])
+              organization.update!(premium_integrations: ["events_targeting_wallets"])
             end
 
             it "sets accepts_target_wallet on charge" do
@@ -164,7 +164,7 @@ RSpec.describe Api::V1::PlansController do
             end
           end
 
-          context "when event_wallet_target is not enabled" do
+          context "when events_targeting_wallets is not enabled" do
             it "does not set accepts_target_wallet on charge" do
               subject
 
@@ -593,9 +593,9 @@ RSpec.describe Api::V1::PlansController do
           charges_params.first[:accepts_target_wallet] = true
         end
 
-        context "when event_wallet_target is enabled" do
+        context "when events_targeting_wallets is enabled" do
           before do
-            organization.update!(premium_integrations: ["event_wallet_target"])
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
           end
 
           it "sets accepts_target_wallet on charge" do
@@ -606,7 +606,7 @@ RSpec.describe Api::V1::PlansController do
           end
         end
 
-        context "when event_wallet_target is not enabled" do
+        context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet on charge" do
             subject
 
