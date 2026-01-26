@@ -11,6 +11,13 @@ module Wallets
     end
 
     def call
+      # Priority 1: Check for target_wallet_code in fee.grouped_by
+      target_wallet_code = fee.grouped_by&.dig("target_wallet_code")
+      if target_wallet_code.present?
+        targeted_wallet = find_wallet_by_code(target_wallet_code)
+        return result_with([targeted_wallet.id]) if targeted_wallet
+      end
+
       bm_id = fee.charge&.billable_metric_id
 
       bm_wallets = allocation_rules[:bm_map][bm_id]
@@ -28,6 +35,13 @@ module Wallets
     private
 
     attr_reader :allocation_rules, :fee
+
+    def find_wallet_by_code(code)
+      wallet_customer = fee.subscription&.customer || fee.invoice&.customer
+      return nil unless wallet_customer
+
+      wallet_customer.wallets.active.find_by(code: code)
+    end
 
     def result_with(wallets)
       result.top_priority_wallet = wallets.first
