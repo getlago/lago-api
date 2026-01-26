@@ -24,6 +24,7 @@ module Customers
         process_not_vies_tax
       end
 
+      delete_pending_vies_check_if_exists
       result
     rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
       Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
@@ -117,6 +118,10 @@ module Customers
         last_error_message: exception.message
       )
       pending_check.save!
+    end
+
+    def delete_pending_vies_check_if_exists
+      customer.pending_vies_check&.destroy!
     end
 
     def error_type_for(exception)

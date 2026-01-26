@@ -223,6 +223,17 @@ RSpec.describe Customers::EuAutoTaxesService do
             .with("customer.vies_check", customer, vies_check: vies_response)
             .once
         end
+
+        context "when a pending_vies_check exists from a previous failure" do
+          let(:pending_check) { create(:pending_vies_check, customer:) }
+
+          before { pending_check }
+
+          it "deletes the pending_vies_check record" do
+            expect { eu_tax_service.call }.to change(PendingViesCheck, :count).by(-1)
+            expect(customer.reload.pending_vies_check).to be_nil
+          end
+        end
       end
 
       context "with a different country from the billing_entity one" do
