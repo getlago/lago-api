@@ -418,6 +418,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     end
 
     context "with target_wallet_code in fee grouped_by" do
+      around { |test| lago_premium!(&test) }
+
       let(:wallet_with_code) do
         create(:wallet, name: "wallet with code", customer:, code: "target_wallet", balance_cents: 1000, credits_balance: 10.0)
       end
@@ -425,10 +427,19 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         create(:wallet, name: "another wallet", customer:, code: "another_wallet", balance_cents: 1000, credits_balance: 10.0)
       end
       let(:wallets) { [normal_wallet, wallet_with_code, another_wallet_with_code] }
-      let(:fee) do
-        create(:charge_fee, invoice:, subscription:,
+      let(:targeting_charge) do
+        create(:standard_charge, organization: customer.organization, accepts_target_wallet: true)
+      end
+      let(:targeted_fee) do
+        create(:charge_fee, invoice:, subscription:, charge: targeting_charge,
           amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
           taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target_wallet"})
+      end
+      let(:fee) { nil }
+
+      before do
+        customer.organization.update!(premium_integrations: ["events_targeting_wallets"])
+        targeted_fee
       end
 
       it "applies credits from the targeted wallet" do
@@ -442,7 +453,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         let(:amount_cents) { 200 }
         let(:fee_amount_cents) { 100 }
         let(:fee2) do
-          create(:charge_fee, invoice:, subscription:,
+          create(:charge_fee, invoice:, subscription:, charge: targeting_charge,
             amount_cents: 100, precise_amount_cents: 100,
             taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "another_wallet"})
         end
@@ -464,8 +475,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       context "when target wallet does not exist" do
-        let(:fee) do
-          create(:charge_fee, invoice:, subscription:,
+        let(:targeted_fee) do
+          create(:charge_fee, invoice:, subscription:, charge: targeting_charge,
             amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
             taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "nonexistent"})
         end
@@ -478,8 +489,8 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       context "when fee has no target_wallet_code" do
-        let(:fee) do
-          create(:charge_fee, invoice:, subscription:,
+        let(:targeted_fee) do
+          create(:charge_fee, invoice:, subscription:, charge: targeting_charge,
             amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
             taxes_precise_amount_cents: 0, grouped_by: {})
         end
@@ -488,6 +499,47 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
           expect(result).to be_success
           expect(result.wallet_transactions.count).to eq(1)
           expect(result.wallet_transactions.first.wallet_id).to eq(normal_wallet.id)
+        end
+      end
+
+      context "when organization does not have events_targeting_wallets integration" do
+        let(:wallets) { [priority_wallet, wallet_with_code, another_wallet_with_code] }
+        let(:non_targeting_charge) { create(:standard_charge, organization: customer.organization) }
+        let(:targeted_fee) do
+          create(:charge_fee, invoice:, subscription:, charge: non_targeting_charge,
+            amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+            taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target_wallet"})
+        end
+
+        before do
+          customer.organization.update!(premium_integrations: [])
+          targeted_fee
+        end
+
+        it "ignores target_wallet_code and applies credits from top-priority wallet" do
+          expect(result).to be_success
+          expect(result.wallet_transactions.count).to eq(1)
+          expect(result.wallet_transactions.first.wallet_id).to eq(priority_wallet.id)
+          expect(priority_wallet.reload.balance_cents).to eq(900)
+          expect(wallet_with_code.reload.balance_cents).to eq(1000)
+        end
+      end
+
+      context "when charge does not accept target wallet" do
+        let(:wallets) { [priority_wallet, wallet_with_code, another_wallet_with_code] }
+        let(:non_targeting_charge) { create(:standard_charge, organization: customer.organization) }
+        let(:targeted_fee) do
+          create(:charge_fee, invoice:, subscription:, charge: non_targeting_charge,
+            amount_cents: fee_amount_cents, precise_amount_cents: fee_amount_cents,
+            taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target_wallet"})
+        end
+
+        it "ignores target_wallet_code and applies credits from top-priority wallet" do
+          expect(result).to be_success
+          expect(result.wallet_transactions.count).to eq(1)
+          expect(result.wallet_transactions.first.wallet_id).to eq(priority_wallet.id)
+          expect(priority_wallet.reload.balance_cents).to eq(900)
+          expect(wallet_with_code.reload.balance_cents).to eq(1000)
         end
       end
     end
