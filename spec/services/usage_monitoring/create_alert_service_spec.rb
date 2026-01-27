@@ -104,7 +104,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory value_is_invalid])
+        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory])
       end
     end
 

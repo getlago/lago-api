@@ -6,14 +6,31 @@ module UsageMonitoring
 
     Result = BaseResult[:alert]
 
-    def initialize(organization:, subscription:, params:)
+    def initialize(organization:, subscription: nil, wallet: nil, params:)
       @organization = organization
       @subscription = subscription
+      @wallet = wallet
       @params = params
       super
     end
 
     def call
+      if params[:alert_type].blank?
+        return result.single_validation_failure!(field: :alert_type, error_code: "value_is_mandatory")
+      end
+
+      unless Alert::STI_MAPPING.key?(params[:alert_type])
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
+      end
+
+      if wallet && !Alert::WALLET_TYPES.include?(params[:alert_type])
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_for_wallet")
+      end
+
+      if subscription && Alert::WALLET_TYPES.include?(params[:alert_type])
+        return result.single_validation_failure!(field: :alert_type, error_code: "invalid_for_subscription")
+      end
+
       if params[:alert_type] == "lifetime_usage_amount" && !organization.using_lifetime_usage?
         return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
       end
@@ -36,9 +53,10 @@ module UsageMonitoring
 
       ActiveRecord::Base.transaction do
         alert = Alert.create!(
-          organization: organization,
-          subscription_external_id: subscription.external_id,
-          billable_metric: billable_metric,
+          organization:,
+          subscription_external_id: subscription&.external_id,
+          wallet:,
+          billable_metric:,
           alert_type: params[:alert_type].to_s,
           name: params[:name],
           code: params[:code]
@@ -55,7 +73,7 @@ module UsageMonitoring
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
-      if e.message.include?("idx_alerts_code_unique_per_subscription")
+      if e.message.include?("idx_alerts_code_unique_per_subscription") || e.message.include?("idx_alerts_code_unique_per_wallet")
         result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       else
         # Only one alert per [alert_type, billable_metric] pair is allowed.
@@ -65,6 +83,6 @@ module UsageMonitoring
 
     private
 
-    attr_reader :organization, :subscription, :params
+    attr_reader :organization, :subscription, :wallet, :params
   end
 end

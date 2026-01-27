@@ -14,6 +14,9 @@ class Wallet < ApplicationRecord
   has_many :wallet_targets
   has_many :billable_metrics, through: :wallet_targets
 
+  has_many :usage_monitoring_alerts, class_name: "UsageMonitoring::Alert"
+  has_many :usage_monitoring_triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
+
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",

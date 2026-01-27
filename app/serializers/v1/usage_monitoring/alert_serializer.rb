@@ -9,6 +9,8 @@ module V1
           lago_organization_id: model.organization_id,
           subscription_external_id: model.subscription_external_id, # DEPRECATED
           external_subscription_id: model.subscription_external_id,
+          lago_wallet_id: model.wallet_id,
+          # TODO: Add wallet_code once wallet `code` attribute is added
           alert_type: model.alert_type,
           code: model.code,
           name: model.name,

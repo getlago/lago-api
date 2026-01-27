@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  class LifetimeUsageAmountAlert < Alert
-    def find_value(lifetime_usage)
-      lifetime_usage.total_amount_cents
+  class WalletCreditsBalanceAlert < Alert
+    def find_value(wallet)
+      wallet.credits_balance
     end
   end
 end

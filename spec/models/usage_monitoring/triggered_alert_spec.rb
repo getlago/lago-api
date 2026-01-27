@@ -8,7 +8,8 @@ RSpec.describe UsageMonitoring::TriggeredAlert do
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
-      expect(subject).to belong_to(:subscription)
+      expect(subject).to belong_to(:subscription).optional
+      expect(subject).to belong_to(:wallet).optional
       expect(subject).to belong_to(:alert).class_name("UsageMonitoring::Alert")
         .with_foreign_key(:usage_monitoring_alert_id)
     end

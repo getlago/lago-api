@@ -11,17 +11,20 @@ module UsageMonitoring
       "current_usage_amount" => "UsageMonitoring::CurrentUsageAmountAlert",
       "billable_metric_current_usage_amount" => "UsageMonitoring::BillableMetricCurrentUsageAmountAlert",
       "billable_metric_current_usage_units" => "UsageMonitoring::BillableMetricCurrentUsageUnitsAlert",
-
-      "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert"
+      "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert",
+      "wallet_balance_amount" => "UsageMonitoring::WalletBalanceAmountAlert",
+      "wallet_credits_balance" => "UsageMonitoring::WalletCreditsBalanceAlert"
     }
 
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
     BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units]
+    WALLET_TYPES = %w[wallet_balance_amount wallet_credits_balance]
 
     default_scope -> { kept }
 
     belongs_to :organization
     belongs_to :billable_metric, -> { with_discarded }, optional: true
+    belongs_to :wallet, optional: true
 
     has_many :thresholds,
       foreign_key: :usage_monitoring_alert_id,
@@ -36,9 +39,11 @@ module UsageMonitoring
     validates :code, presence: true
     validates :billable_metric, presence: true, if: :need_billable_metric?
     validates :billable_metric, absence: true, unless: :need_billable_metric?
+    validates :wallet, presence: true, if: :need_wallet?
 
     scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
     scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
+    scope :using_wallet, -> { where(alert_type: WALLET_TYPES) }
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
@@ -98,6 +103,10 @@ module UsageMonitoring
       BILLABLE_METRIC_TYPES.include?(alert_type)
     end
 
+    def need_wallet?
+      WALLET_TYPES.include?(alert_type)
+    end
+
     def find_recurring_thresholds_crossed(previous, current, step, initial)
       return [] unless step
 
@@ -130,19 +139,24 @@ end
 #  updated_at               :datetime         not null
 #  billable_metric_id       :uuid
 #  organization_id          :uuid             not null
-#  subscription_external_id :string           not null
+#  subscription_external_id :string
+#  wallet_id                :uuid
 #
 # Indexes
 #
 #  idx_alerts_code_unique_per_subscription                    (code,subscription_external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_alerts_unique_per_type_per_subscription                (subscription_external_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))
 #  idx_alerts_unique_per_type_per_subscription_with_bm        (subscription_external_id,organization_id,alert_type,billable_metric_id) UNIQUE WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL))
+#  idx_alerts_unique_per_type_per_wallet                      (wallet_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))
+#  idx_alerts_unique_per_type_per_wallet_with_bm              (wallet_id,organization_id,alert_type,billable_metric_id) UNIQUE WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL))
 #  index_usage_monitoring_alerts_on_billable_metric_id        (billable_metric_id)
 #  index_usage_monitoring_alerts_on_organization_id           (organization_id)
 #  index_usage_monitoring_alerts_on_subscription_external_id  (subscription_external_id)
+#  index_usage_monitoring_alerts_on_wallet_id                 (wallet_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (billable_metric_id => billable_metrics.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (wallet_id => wallets.id)
 #

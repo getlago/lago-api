@@ -14,6 +14,7 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     payload = result["alert"]
     expect(payload["lago_id"]).to eq(alert.id)
     expect(payload["external_subscription_id"]).to eq("ext-id")
+    expect(payload["lago_wallet_id"]).to be_nil
     expect(payload["name"]).to eq("General Alert")
     expect(payload["code"]).to eq("yolo")
     expect(payload["alert_type"]).to eq("current_usage_amount")
@@ -38,6 +39,19 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
       expect(payload["lago_id"]).to eq alert.billable_metric.id
       expect(payload["code"]).to eq alert.billable_metric.code
       expect(payload["field_name"]).to be_nil
+    end
+  end
+
+  context "with wallet_balance_amount alert" do
+    let(:alert) { create(:wallet_balance_amount_alert, :processed, code: :wallet_alert) }
+
+    it "serializes the wallet alert" do
+      payload = result["alert"]
+      expect(payload["lago_id"]).to eq(alert.id)
+      expect(payload["external_subscription_id"]).to be_nil
+      expect(payload["lago_wallet_id"]).to eq(alert.wallet_id)
+      expect(payload["alert_type"]).to eq("wallet_balance_amount")
+      expect(payload["code"]).to eq("wallet_alert")
     end
   end
 end

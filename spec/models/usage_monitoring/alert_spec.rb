@@ -9,6 +9,7 @@ RSpec.describe UsageMonitoring::Alert do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:billable_metric).optional
+      expect(subject).to belong_to(:wallet).optional
       expect(subject).to have_many(:thresholds).class_name("UsageMonitoring::AlertThreshold")
         .with_foreign_key(:usage_monitoring_alert_id).dependent(:delete_all)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
@@ -25,6 +26,14 @@ RSpec.describe UsageMonitoring::Alert do
       end
     end
 
+    context "when type requires wallet_id" do
+      it do
+        alert = build(:wallet_balance_amount_alert, wallet_id: nil)
+        expect(alert).to be_invalid
+        expect(alert.errors[:wallet]).to eq ["value_is_mandatory"]
+      end
+    end
+
     context "when code is not unique for a subscription" do
       it "raises an error" do
         expect {
@@ -38,6 +47,8 @@ RSpec.describe UsageMonitoring::Alert do
     it "returns correct constant for known alert types" do
       expect(described_class.find_sti_class("current_usage_amount")).to eq(UsageMonitoring::CurrentUsageAmountAlert)
       expect(described_class.find_sti_class("billable_metric_current_usage_amount")).to eq(UsageMonitoring::BillableMetricCurrentUsageAmountAlert)
+      expect(described_class.find_sti_class("wallet_balance_amount")).to eq(UsageMonitoring::WalletBalanceAmountAlert)
+      expect(described_class.find_sti_class("wallet_credits_balance")).to eq(UsageMonitoring::WalletCreditsBalanceAlert)
     end
 
     it "raises KeyError for unknown alert type" do
