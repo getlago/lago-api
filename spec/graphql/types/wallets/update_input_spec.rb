@@ -8,6 +8,7 @@ RSpec.describe Types::Wallets::UpdateInput do
   it do
     expect(subject).to accept_argument(:expiration_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:id).of_type("ID!")
+    expect(subject).to accept_argument(:code).of_type("String")
     expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:priority).of_type("Int!")

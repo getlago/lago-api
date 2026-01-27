@@ -9,7 +9,7 @@ module Types
 
         field :id, ID, null: false
 
-        field :code, String, null: false
+        field :code, String, null: true
         field :currency, Types::CurrencyEnum, null: false
         field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
         field :name, String, null: true

@@ -107,7 +107,7 @@ class Wallet < ApplicationRecord
   end
 
   def unique_code_per_customer
-    if Wallet.where(customer_id: customer_id, code: code).where.not(id: id).exists?
+    if code && Wallet.where(customer_id: customer_id, code: code).where.not(id: id).exists?
       errors.add(:code, :taken)
     end
   end

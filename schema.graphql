@@ -4402,7 +4402,7 @@ CustomerPortalWallet
 """
 type CustomerPortalWallet {
   balanceCents: BigInt!
-  code: String!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   creditsBalance: Float!
@@ -12251,7 +12251,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
-  code: String!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   createdAt: ISO8601DateTime!
