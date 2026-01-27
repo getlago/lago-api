@@ -36,7 +36,7 @@ module Events
           .where(timestamp: from_datetime..to_datetime)
           .distinct
           .pluck(:charge_filter_id, :charge_id)
-          .map { |charge_filter_id, charge_id| [charge_id, charge_filter_id || ""] }
+          .map { |charge_filter_id, charge_id| [charge_id, charge_filter_id] }
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

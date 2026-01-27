@@ -565,7 +565,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
           let(:charge_filter) { nil }
 
           it "returns the distinct event codes" do
-            expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, ""]])
+            expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
           end
         end
       end
@@ -606,7 +606,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         let(:charge_filter) { nil }
 
         it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, ""]])
+          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
         end
       end
     end
