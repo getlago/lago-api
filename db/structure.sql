@@ -920,7 +920,6 @@ DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.membership_roles;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoice_settlements;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -962,6 +961,8 @@ DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
 DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
+DROP VIEW IF EXISTS public.exports_invoice_settlements;
+DROP TABLE IF EXISTS public.invoice_settlements;
 DROP VIEW IF EXISTS public.exports_integration_customers;
 DROP TABLE IF EXISTS public.integration_customers;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
@@ -3094,6 +3095,44 @@ CREATE VIEW public.exports_integration_customers AS
 
 
 --
+-- Name: invoice_settlements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_settlements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid NOT NULL,
+    target_invoice_id uuid NOT NULL,
+    settlement_type public.invoice_settlement_settlement_type NOT NULL,
+    source_payment_id uuid,
+    source_credit_note_id uuid,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_invoice_settlements; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoice_settlements AS
+ SELECT ins.id AS lago_id,
+    ins.organization_id,
+    ins.billing_entity_id AS lago_billing_entity_id,
+    ins.target_invoice_id AS lago_target_invoice_id,
+    ins.settlement_type,
+    ins.source_payment_id AS lago_source_payment_id,
+    ins.source_credit_note_id AS lago_source_credit_note_id,
+    ins.amount_cents,
+    ins.amount_currency,
+    ins.created_at,
+    ins.updated_at
+   FROM public.invoice_settlements ins;
+
+
+--
 -- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4053,25 +4092,6 @@ CREATE TABLE public.invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
-);
-
-
---
--- Name: invoice_settlements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_settlements (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    billing_entity_id uuid NOT NULL,
-    target_invoice_id uuid NOT NULL,
-    settlement_type public.invoice_settlement_settlement_type NOT NULL,
-    source_payment_id uuid,
-    source_credit_note_id uuid,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -11071,6 +11091,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260127114700'),
 ('20260121112929'),
 ('20260121111431'),
 ('20260120195822'),
