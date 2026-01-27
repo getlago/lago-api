@@ -280,7 +280,7 @@ RSpec.describe Events::Stores::PostgresStore do
         let(:charge_filter) { nil }
 
         it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, ""]])
+          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
         end
       end
     end
