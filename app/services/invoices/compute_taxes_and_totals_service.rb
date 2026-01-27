@@ -12,24 +12,21 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
-      if invoice.customer.vies_check_in_progress?
-        invoice.status = "pending" if finalizing
-        invoice.tax_status = "pending"
-        invoice.save!
+      # Tax provider takes precedence - VIES is irrelevant for these customers
+      if customer_provider_taxation? && invoice.should_apply_provider_tax?
+        set_pending_tax_status!
+        after_commit { Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:) }
+        return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
+      end
 
+      # For local tax customers, block if VIES validation is pending
+      if invoice.customer.vies_check_in_progress?
+        set_pending_tax_status!
         return result.unknown_tax_failure!(code: "vies_check_pending", message: "VIES validation pending")
       end
 
-      if customer_provider_taxation? && invoice.should_apply_provider_tax?
-        invoice.status = "pending" if finalizing
-        invoice.tax_status = "pending"
-        invoice.save!
-        after_commit { Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:) }
-
-        return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
-      else
-        Invoices::ComputeAmountsFromFees.call(invoice:)
-      end
+      # Apply local taxes
+      Invoices::ComputeAmountsFromFees.call(invoice:)
 
       result.invoice = invoice
       result
@@ -38,6 +35,12 @@ module Invoices
     private
 
     attr_reader :invoice, :finalizing
+
+    def set_pending_tax_status!
+      invoice.status = "pending" if finalizing
+      invoice.tax_status = "pending"
+      invoice.save!
+    end
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer

@@ -106,6 +106,24 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
           expect(invoice.reload.tax_status).to eq("pending")
         end
       end
+
+      context "when customer also has tax provider" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "uses tax provider instead of blocking for VIES" do
+          expect { totals_service.call }
+            .to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
+
+        it "does not return vies_check_pending error" do
+          result = totals_service.call
+
+          expect(result.error.code).to eq("tax_error")
+        end
+      end
     end
 
     context "when there is tax provider" do
