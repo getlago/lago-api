@@ -57,7 +57,7 @@ module DataExports
 
       private
 
-      attr_reader :data_export_part, :serializer_klass, :progressive_billing_enabled, :offset_amounts
+      attr_reader :data_export_part, :serializer_klass, :progressive_billing_enabled
 
       def serialize_item(invoice, csv)
         serialized_invoice = serializer_klass
@@ -92,7 +92,7 @@ module DataExports
           serialized_invoice[:payment_overdue],
           serialized_invoice[:total_due_amount_cents],
           serialized_invoice[:total_paid_amount_cents],
-          offset_amounts[invoice.id] || 0
+          serialized_invoice[:total_offsetted_credit_note_amount_cents]
         ]
 
         row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled
@@ -101,16 +101,22 @@ module DataExports
       end
 
       def collection
-        preload_offset_amounts
-        Invoice.find(data_export_part.object_ids)
+        invoices = Invoice.find(data_export_part.object_ids)
+        preload_offset_amounts(invoices)
       end
 
-      def preload_offset_amounts
-        @offset_amounts = CreditNote
+      def preload_offset_amounts(invoices)
+        offset_amounts = CreditNote
           .where(invoice_id: data_export_part.object_ids)
           .finalized
           .group(:invoice_id)
           .sum(:offset_amount_cents)
+
+        invoices.each do |invoice|
+          invoice.save_precalculated_offset_amount_cents(offset_amounts[invoice.id] || 0)
+        end
+
+        invoices
       end
 
       def organization
