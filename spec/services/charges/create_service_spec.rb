@@ -150,9 +150,9 @@ RSpec.describe Charges::CreateService do
           end
 
           context "with accepts_target_wallet" do
-            context "when event_wallet_target is enabled" do
+            context "when events_targeting_wallets is enabled" do
               before do
-                organization.update!(premium_integrations: ["event_wallet_target"])
+                organization.update!(premium_integrations: ["events_targeting_wallets"])
               end
 
               it "sets accepts_target_wallet from params" do
@@ -161,7 +161,7 @@ RSpec.describe Charges::CreateService do
               end
             end
 
-            context "when event_wallet_target is not enabled" do
+            context "when events_targeting_wallets is not enabled" do
               it "does not set accepts_target_wallet" do
                 expect(result.charge).to be_persisted
                 expect(result.charge.accepts_target_wallet).to be false
