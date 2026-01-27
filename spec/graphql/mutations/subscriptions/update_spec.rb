@@ -96,6 +96,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
           updateSubscription(input: $input) {
             id
             usageThresholds {
+              id
               amountCents
               thresholdDisplayName
               recurring
@@ -127,18 +128,22 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       result = subject
 
       result_data = result["data"]["updateSubscription"]
+      thresholds = result_data["usageThresholds"]
 
-      expect(result_data["usageThresholds"]).to match_array([
-        {
+      expect(thresholds.size).to eq(2)
+      expect(thresholds).to match_array([
+        hash_including(
+          "id" => String,
           "amountCents" => "10000",
           "thresholdDisplayName" => "First threshold",
           "recurring" => false
-        },
-        {
+        ),
+        hash_including(
+          "id" => String,
           "amountCents" => "50000",
           "thresholdDisplayName" => "Second threshold",
           "recurring" => true
-        }
+        )
       ])
     end
   end
