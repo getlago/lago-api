@@ -4,12 +4,16 @@ module CreditNotes
   class CreateFromTermination < BaseService
     Result = CreditNotes::CreateService::Result
 
-    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, refund: false)
+    # on_termination controls what to do with the unused subscription amount:
+    #   :credit - credits all unused amount back to the customer
+    #   :refund - refunds the unused paid amount, credits any updaid unused amount back to the customer
+    #   :offset - refunds the unused paid amount, offsets the invoice by the updaid unused amount
+    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, on_termination: :credit)
       @subscription = subscription
       @reason = reason
       @upgrade = upgrade
       @context = context
-      @refund = refund
+      @on_termination = on_termination
 
       super
     end
@@ -17,18 +21,20 @@ module CreditNotes
     def call
       return result if (last_subscription_fee&.amount_cents || 0).zero? || last_subscription_fee.invoice.voided?
 
-      raise NotImplementedError, "Upgrade and refund are not supported together" if upgrade && refund
+      raise NotImplementedError, "Upgrade and refund are not supported together" if upgrade && refund?
+      raise NotImplementedError, "Upgrade and offset are not supported together" if upgrade && offset?
 
       base_creditable_amount = calculate_base_creditable_amount
 
       return result if base_creditable_amount.zero?
 
-      credit_amount_cents, refund_amount_cents = calculate_credit_and_refund_amounts(base_creditable_amount)
+      credit_amount_cents, refund_amount_cents, offset_amount_cents = calculate_amounts(base_creditable_amount)
 
       CreditNotes::CreateService.call(
         invoice: last_subscription_fee.invoice,
         credit_amount_cents:,
         refund_amount_cents:,
+        offset_amount_cents:,
         items: [
           {
             fee_id: last_subscription_fee.id,
@@ -43,9 +49,17 @@ module CreditNotes
 
     private
 
-    attr_accessor :subscription, :reason, :context, :refund, :upgrade
+    attr_accessor :subscription, :reason, :context, :on_termination, :upgrade
 
     delegate :plan, :terminated_at, :customer, to: :subscription
+
+    def refund?
+      on_termination == :refund
+    end
+
+    def offset?
+      on_termination == :offset
+    end
 
     def calculate_base_creditable_amount
       amount = calculate_base_unused_amount
@@ -112,15 +126,22 @@ module CreditNotes
       duration.negative? ? 0 : duration
     end
 
-    def calculate_credit_and_refund_amounts(base_creditable_amount)
+    def calculate_amounts(base_creditable_amount)
       # Calculate the total creditable amount (including taxes)
       total_creditable_amount = adjust_for_coupon_and_taxes(base_creditable_amount)
 
-      return [total_creditable_amount, 0] if credit_only?
-
       refund_amount_cents = calculate_refund(total_creditable_amount)
-      credit_amount_cents = total_creditable_amount - refund_amount_cents
-      [credit_amount_cents, refund_amount_cents]
+      creditable_amount_cents = total_creditable_amount - refund_amount_cents
+
+      # [credit_amount, refund_amount, offset_amount]
+      case on_termination
+      when :credit
+        [total_creditable_amount, 0, 0]
+      when :refund
+        [creditable_amount_cents, refund_amount_cents, 0]
+      when :offset
+        [0, refund_amount_cents, creditable_amount_cents]
+      end
     end
 
     def adjust_for_coupon_and_taxes(item_amount)
