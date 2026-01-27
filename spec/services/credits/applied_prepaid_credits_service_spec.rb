@@ -480,5 +480,132 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         end
       end
     end
+
+    context "with wallet_id in fee grouped_by" do
+      let(:target_wallet) do
+        create(:wallet, name: "target wallet", customer:, balance_cents: 500, credits_balance: 5.0)
+      end
+      let(:other_wallet) do
+        create(:wallet, name: "other wallet", customer:, balance_cents: 1000, credits_balance: 10.0, priority: 1)
+      end
+      let(:wallets) { [target_wallet, other_wallet] }
+      let(:amount_cents) { 100 }
+
+      context "when fee has wallet_id matching an existing wallet" do
+        let(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0,
+            grouped_by: {"wallet_id" => target_wallet.id}
+          )
+        end
+
+        it "applies credits only from the matching wallet" do
+          expect(result).to be_success
+          expect(result.prepaid_credit_amount_cents).to eq(100)
+
+          expect(target_wallet.reload.balance_cents).to eq(400)
+          expect(other_wallet.reload.balance_cents).to eq(1000)
+        end
+
+        it "creates wallet transaction for the matching wallet" do
+          expect(result.wallet_transactions.count).to eq(1)
+          expect(result.wallet_transactions.first.wallet_id).to eq(target_wallet.id)
+        end
+      end
+
+      context "when fee has wallet_id not matching any wallet" do
+        let(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0,
+            grouped_by: {"wallet_id" => SecureRandom.uuid}
+          )
+        end
+
+        it "does not apply credits from any wallet for that fee" do
+          expect(result).to be_success
+          expect(result.prepaid_credit_amount_cents).to eq(0)
+
+          expect(target_wallet.reload.balance_cents).to eq(500)
+          expect(other_wallet.reload.balance_cents).to eq(1000)
+        end
+      end
+
+      context "when multiple fees have different wallet_ids" do
+        let(:amount_cents) { 200 }
+        let(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0,
+            grouped_by: {"wallet_id" => target_wallet.id}
+          )
+        end
+        let(:fee2) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0,
+            grouped_by: {"wallet_id" => other_wallet.id}
+          )
+        end
+
+        before { fee2 }
+
+        it "applies credits from respective wallets" do
+          expect(result).to be_success
+          expect(result.prepaid_credit_amount_cents).to eq(200)
+
+          expect(target_wallet.reload.balance_cents).to eq(400)
+          expect(other_wallet.reload.balance_cents).to eq(900)
+        end
+
+        it "creates wallet transactions for both wallets" do
+          expect(result.wallet_transactions.count).to eq(2)
+          wallet_ids = result.wallet_transactions.map(&:wallet_id)
+          expect(wallet_ids).to contain_exactly(target_wallet.id, other_wallet.id)
+        end
+      end
+
+      context "when fee has wallet_id and wallet balance is insufficient" do
+        let(:target_wallet) do
+          create(:wallet, name: "target wallet", customer:, balance_cents: 50, credits_balance: 0.5)
+        end
+        let(:fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            subscription:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0,
+            grouped_by: {"wallet_id" => target_wallet.id}
+          )
+        end
+
+        it "applies only available credits from the matching wallet" do
+          expect(result).to be_success
+          expect(result.prepaid_credit_amount_cents).to eq(50)
+
+          expect(target_wallet.reload.balance_cents).to eq(0)
+          expect(other_wallet.reload.balance_cents).to eq(1000)
+        end
+      end
+    end
   end
 end

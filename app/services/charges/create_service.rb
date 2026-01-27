@@ -23,7 +23,8 @@ module Charges
           charge_model: params[:charge_model],
           parent_id: params[:parent_id],
           pay_in_advance: params[:pay_in_advance] || false,
-          prorated: params[:prorated] || false
+          prorated: params[:prorated] || false,
+          group_by_wallet: params[:group_by_wallet] || false
         )
 
         properties = params[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(charge.charge_model)

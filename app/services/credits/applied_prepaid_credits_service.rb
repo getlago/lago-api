@@ -37,7 +37,7 @@ module Credits
           ordered_remaining_amounts.each do |fee_key, remaining_amount|
             next if remaining_amount <= 0
 
-            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array)
+            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array, wallet:)
 
             used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
             remaining_wallet_balance = wallet.balance_cents - used_amount
@@ -105,7 +105,10 @@ module Credits
         cap = [cap, invoice_cap].min
 
         next if cap <= 0
-        key = [fee.fee_type, fee.charge&.billable_metric_id]
+
+        # Include wallet_id from grouped_by in the key if present
+        wallet_id = fee.grouped_by&.dig("wallet_id")
+        key = [fee.fee_type, fee.charge&.billable_metric_id, wallet_id]
         remaining[key] += cap
         invoice_cap -= cap
       end
@@ -150,9 +153,18 @@ module Credits
       end
     end
 
-    def applicable_fee?(fee_key:, targets:, types:)
-      target_match = targets.include?(fee_key)
-      type_match = types.include?(fee_key.first)
+    def applicable_fee?(fee_key:, targets:, types:, wallet:)
+      fee_type, billable_metric_id, fee_wallet_id = fee_key
+
+      # If fee has a specific wallet_id, only that wallet can apply
+      if fee_wallet_id.present?
+        return wallet.id == fee_wallet_id
+      end
+
+      # Use original logic: [fee_type, billable_metric_id] for target matching
+      original_key = [fee_type, billable_metric_id]
+      target_match = targets.include?(original_key)
+      type_match = types.include?(fee_type)
       unrestricted_wallet = targets.empty? && types.empty?
 
       target_match || type_match || unrestricted_wallet

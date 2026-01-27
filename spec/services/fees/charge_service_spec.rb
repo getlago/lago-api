@@ -2793,5 +2793,134 @@ RSpec.describe Fees::ChargeService do
         end
       end
     end
+
+    context "with group_by_wallet enabled" do
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric:,
+          group_by_wallet: true,
+          properties: {amount: "10"}
+        )
+      end
+
+      let(:wallet1) { create(:wallet, customer:) }
+      let(:wallet2) { create(:wallet, customer:) }
+
+      before do
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {value: 5, wallet_id: wallet1.id}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-17"),
+          properties: {value: 10, wallet_id: wallet2.id}
+        )
+      end
+
+      it "creates fees grouped by wallet_id" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        expect(result.fees.count).to eq(2)
+
+        fee1 = result.fees.find { |f| f.grouped_by["wallet_id"] == wallet1.id }
+        expect(fee1).to have_attributes(
+          units: 5,
+          grouped_by: {"wallet_id" => wallet1.id}
+        )
+
+        fee2 = result.fees.find { |f| f.grouped_by["wallet_id"] == wallet2.id }
+        expect(fee2).to have_attributes(
+          units: 10,
+          grouped_by: {"wallet_id" => wallet2.id}
+        )
+      end
+
+      context "with events without wallet_id" do
+        before do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-18"),
+            properties: {value: 3}
+          )
+        end
+
+        it "creates a fee with nil wallet_id" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.count).to eq(3)
+
+          fee_without_wallet = result.fees.find { |f| f.grouped_by["wallet_id"].nil? }
+          expect(fee_without_wallet).to have_attributes(units: 3)
+        end
+      end
+
+      context "when combined with pricing_group_keys" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            group_by_wallet: true,
+            properties: {amount: "10", pricing_group_keys: ["region"]}
+          )
+        end
+
+        before do
+          Event.destroy_all
+
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {value: 5, wallet_id: wallet1.id, region: "us"}
+          )
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-17"),
+            properties: {value: 10, wallet_id: wallet1.id, region: "eu"}
+          )
+        end
+
+        it "creates fees grouped by both wallet_id and pricing_group_keys" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+
+          fee_us = result.fees.find { |f| f.grouped_by["region"] == "us" }
+          expect(fee_us).to have_attributes(
+            units: 5,
+            grouped_by: {"region" => "us", "wallet_id" => wallet1.id}
+          )
+
+          fee_eu = result.fees.find { |f| f.grouped_by["region"] == "eu" }
+          expect(fee_eu).to have_attributes(
+            units: 10,
+            grouped_by: {"region" => "eu", "wallet_id" => wallet1.id}
+          )
+        end
+      end
+    end
   end
 end
