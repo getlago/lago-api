@@ -907,6 +907,47 @@ RSpec.describe Customers::UpsertFromApiService do
           expect(result.customer.stripe_customer).not_to be_present
         end
       end
+
+      context "when switching from stripe to gocardless" do
+        let!(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
+        let!(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
+        let!(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+        let(:external_id) { SecureRandom.uuid }
+        let!(:customer) do
+          create(
+            :customer,
+            organization:,
+            external_id:,
+            payment_provider: "stripe",
+            payment_provider_code: "stripe_1"
+          )
+        end
+
+        let(:create_args) do
+          {
+            external_id:,
+            billing_configuration: {
+              payment_provider: "gocardless",
+              payment_provider_code: "gocardless_1",
+              provider_customer_id: "gocardless_id"
+            }
+          }
+        end
+
+        before do
+          create(:gocardless_provider, organization:, code: "gocardless_1")
+        end
+
+        it "discards the old provider customer and payment methods" do
+          expect(result).to be_success
+          expect(result.customer.payment_provider).to eq("gocardless")
+          expect(result.customer.gocardless_customer).to be_present
+          expect(result.customer.gocardless_customer.provider_customer_id).to eq("gocardless_id")
+
+          expect(stripe_customer.reload).to be_discarded
+          expect(payment_method.reload).to be_discarded
+        end
+      end
     end
   end
 
