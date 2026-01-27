@@ -8,7 +8,7 @@ module LifetimeUsages
       def initialize(lifetime_usage:, progressive_billed_amount: 0)
         @lifetime_usage = lifetime_usage
         @progressive_billed_amount = progressive_billed_amount
-        @thresholds = lifetime_usage.subscription.plan.usage_thresholds
+        @thresholds = lifetime_usage.subscription.applicable_usage_thresholds
         super
       end
 
