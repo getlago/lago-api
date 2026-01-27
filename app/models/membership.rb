@@ -48,7 +48,6 @@ end
 #
 #  id              :uuid             not null, primary key
 #  revoked_at      :datetime
-#  role            :integer
 #  status          :integer          default("active"), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null

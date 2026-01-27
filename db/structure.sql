@@ -4016,7 +4016,6 @@ CREATE TABLE public.invites (
     revoked_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    role integer,
     roles character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
@@ -4152,7 +4151,6 @@ CREATE TABLE public.memberships (
     user_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    role integer,
     status integer DEFAULT 0 NOT NULL,
     revoked_at timestamp(6) without time zone
 );
@@ -11067,6 +11065,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260121112929'),
 ('20260119162712'),
 ('20260116162519'),
+('20260116121019'),
+('20260116121015'),
 ('20260116110125'),
 ('20260115164124'),
 ('20260114153728'),
