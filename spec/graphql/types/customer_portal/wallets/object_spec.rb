@@ -8,6 +8,7 @@ RSpec.describe Types::CustomerPortal::Wallets::Object do
   it do
     expect(subject).to have_field(:id).of_type("ID!")
 
+    expect(subject).to have_field(:code).of_type("String")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:expiration_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:name).of_type("String")

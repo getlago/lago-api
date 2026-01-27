@@ -630,6 +630,56 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when updating code" do
+      let(:params) do
+        {
+          id: wallet.id,
+          code: "updated_code",
+          priority: 5
+        }
+      end
+
+      it "updates the wallet code" do
+        expect(result).to be_success
+        expect(result.wallet.code).to eq("updated_code")
+      end
+    end
+
+    context "when code is not provided in params" do
+      let(:wallet) { create(:wallet, customer:, code: "existing_code") }
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "updated name",
+          priority: 5
+        }
+      end
+
+      it "keeps the existing code" do
+        expect(result).to be_success
+        expect(result.wallet.code).to eq("existing_code")
+      end
+    end
+
+    context "when updating code to a value already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "taken_code")
+      end
+
+      let(:params) do
+        {
+          id: wallet.id,
+          code: "taken_code",
+          priority: 5
+        }
+      end
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
+      end
+    end
+
     context "with metadata" do
       let(:params) do
         {

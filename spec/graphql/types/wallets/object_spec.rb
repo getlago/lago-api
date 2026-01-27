@@ -8,6 +8,7 @@ RSpec.describe Types::Wallets::Object do
   it do
     expect(subject).to have_field(:customer).of_type("Customer")
 
+    expect(subject).to have_field(:code).of_type("String")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:name).of_type("String")
     expect(subject).to have_field(:priority).of_type("Int!")

@@ -344,6 +344,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
@@ -3740,7 +3741,8 @@ CREATE TABLE public.wallets (
     paid_top_up_max_amount_cents bigint,
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    code character varying
 );
 
 
@@ -8560,6 +8562,13 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries
 
 
 --
+-- Name: index_uniq_wallet_code_per_customer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING btree (customer_id, code);
+
+
+--
 -- Name: index_unique_applied_to_organization_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11063,6 +11072,8 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260121112929'),
+('20260121111431'),
+('20260120195822'),
 ('20260119162712'),
 ('20260116162519'),
 ('20260116121019'),

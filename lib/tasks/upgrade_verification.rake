@@ -11,7 +11,7 @@ namespace :upgrade do
     Rails.logger.level = Logger::Severity::ERROR
 
     resources_to_fill = [
-      {model: Payment, job: DatabaseMigrations::PopulatePaymentsWithCustomerId}
+      {model: Wallet, job: DatabaseMigrations::PopulateWalletsWithCodeJob},
     ]
 
     puts "##################################\nStarting required jobs"
@@ -22,7 +22,7 @@ namespace :upgrade do
     resources_to_fill.each do |resource|
       model = resource[:model]
       pp "- Checking #{model.name}: 🔎"
-      count = model.where(customer_id: nil).count
+      count = model.where(code: nil).count
 
       if count > 0
         to_fill << resource

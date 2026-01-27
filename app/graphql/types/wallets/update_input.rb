@@ -5,6 +5,7 @@ module Types
     class UpdateInput < Types::BaseInputObject
       description "Update Wallet Input"
 
+      argument :code, String, required: false
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :id, ID, required: true
       argument :invoice_requires_successful_payment, Boolean, required: false

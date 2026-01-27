@@ -19,10 +19,20 @@ module Wallets
 
       return result unless valid?
 
+      code = params[:code]
+
+      # only adjust generated code if it's taken
+      if code.blank?
+        code = params[:name].to_s.parameterize(separator: "_").presence || "default"
+        code_taken = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
+        code += "_#{Time.current.to_i}" if code_taken
+      end
+
       attributes = {
         organization_id:,
         customer_id: customer.id,
         name: params[:name],
+        code: code,
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
         status: :active,

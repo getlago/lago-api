@@ -2798,6 +2798,7 @@ input CreateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
@@ -4400,6 +4401,7 @@ CustomerPortalWallet
 """
 type CustomerPortalWallet {
   balanceCents: BigInt!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   creditsBalance: Float!
@@ -11682,6 +11684,7 @@ input UpdateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   expirationAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -12237,6 +12240,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   createdAt: ISO8601DateTime!

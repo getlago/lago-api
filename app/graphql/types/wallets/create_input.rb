@@ -5,6 +5,7 @@ module Types
     class CreateInput < Types::BaseInputObject
       description "Create Wallet Input"
 
+      argument :code, String, required: false
       argument :currency, Types::CurrencyEnum, required: true
       argument :customer_id, ID, required: true
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
