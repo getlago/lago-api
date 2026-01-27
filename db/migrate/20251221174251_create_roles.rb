@@ -60,7 +60,7 @@ class CreateRoles < ActiveRecord::Migration[8.0]
               now(),
               now()
             );
-  
+
         CREATE FUNCTION ensure_role_consistency() RETURNS TRIGGER AS $$
           BEGIN
             IF OLD.organization_id IS NULL THEN
