@@ -941,7 +941,6 @@ RSpec.describe Customers::UpsertFromApiService do
         it "discards the old provider customer and payment methods" do
           expect(result).to be_success
           expect(result.customer.payment_provider).to eq("gocardless")
-          expect(result.customer.gocardless_customer).to be_present
           expect(result.customer.gocardless_customer.provider_customer_id).to eq("gocardless_id")
 
           expect(stripe_customer.reload).to be_discarded
