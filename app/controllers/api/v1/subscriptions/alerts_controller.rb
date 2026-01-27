@@ -40,7 +40,7 @@ module Api
         def create
           result = UsageMonitoring::CreateAlertService.call(
             organization: current_organization,
-            subscription:,
+            alertable: subscription,
             params: create_params.to_h
           )
 

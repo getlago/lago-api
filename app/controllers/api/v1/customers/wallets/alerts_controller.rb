@@ -41,7 +41,7 @@ module Api
           def create
             result = UsageMonitoring::CreateAlertService.call(
               organization: current_organization,
-              wallet:,
+              alertable: wallet,
               params: create_params.to_h
             )
 

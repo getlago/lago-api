@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
-    subject(:result) { described_class.call(organization:, subscription:, params:) }
+    subject(:result) { described_class.call(organization:, alertable: subscription, params:) }
 
     let(:organization) { create(:organization, premium_integrations:) }
     let(:premium_integrations) { [] }

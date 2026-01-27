@@ -6,10 +6,9 @@ module UsageMonitoring
 
     Result = BaseResult[:alert]
 
-    def initialize(organization:, subscription: nil, wallet: nil, params:)
+    def initialize(organization:, alertable:, params:)
       @organization = organization
-      @subscription = subscription
-      @wallet = wallet
+      @alertable = alertable
       @params = params
       super
     end
@@ -23,11 +22,11 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
       end
 
-      if wallet && !Alert::WALLET_TYPES.include?(params[:alert_type])
+      if alertable.is_a?(Wallet) && !Alert::WALLET_TYPES.include?(params[:alert_type])
         return result.single_validation_failure!(field: :alert_type, error_code: "invalid_for_wallet")
       end
 
-      if subscription && Alert::WALLET_TYPES.include?(params[:alert_type])
+      if alertable.is_a?(Subscription) && Alert::WALLET_TYPES.include?(params[:alert_type])
         return result.single_validation_failure!(field: :alert_type, error_code: "invalid_for_subscription")
       end
 
@@ -55,7 +54,7 @@ module UsageMonitoring
         alert = Alert.create!(
           organization:,
           subscription_external_id: subscription&.external_id,
-          wallet:,
+          wallet: wallet,
           billable_metric:,
           alert_type: params[:alert_type].to_s,
           name: params[:name],
@@ -83,6 +82,14 @@ module UsageMonitoring
 
     private
 
-    attr_reader :organization, :subscription, :wallet, :params
+    attr_reader :organization, :alertable, :params
+
+    def subscription
+      alertable if alertable.is_a?(Subscription)
+    end
+
+    def wallet
+      alertable if alertable.is_a?(Wallet)
+    end
   end
 end
