@@ -4,6 +4,10 @@ module CreditNotes
   class CreateFromTermination < BaseService
     Result = CreditNotes::CreateService::Result
 
+    # on_termination controls what to do with the unused subscription amount:
+    #   :credit - credits all unused amount back to the customer
+    #   :refund - refunds the unused paid amount, credits any updaid unused amount back to the customer
+    #   :offset - refunds the unused paid amount, offsets the invoice by the updaid unused amount
     def initialize(subscription:, reason: "order_change", upgrade: false, context: nil, on_termination: :credit)
       @subscription = subscription
       @reason = reason
