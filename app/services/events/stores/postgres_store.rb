@@ -30,6 +30,15 @@ module Events
           .pluck("DISTINCT(code)")
       end
 
+      def distinct_charges_and_filters
+        EnrichedEvent.where(organization_id: subscription.organization_id)
+          .where(subscription_id: subscription.id)
+          .where(timestamp: from_datetime..to_datetime)
+          .distinct
+          .pluck(:charge_filter_id, :charge_id)
+          .map { |charge_filter_id, charge_id| [charge_id, charge_filter_id || ""] }
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         field_name = sanitized_property_name
         field_name = "(#{field_name})::numeric" if numeric_property
