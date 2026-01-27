@@ -12,9 +12,7 @@ module Api
           attr_reader :wallet
 
           def find_wallet
-            # TODO: Once wallet `code` attribute is added, retrieve wallet by code instead of id
-            # @wallet = customer.wallets.find_by!(code: params[:wallet_code])
-            @wallet = customer.wallets.find_by!(id: params[:wallet_id])
+            @wallet = customer.wallets.find_by!(code: params[:wallet_code])
           rescue ActiveRecord::RecordNotFound
             not_found_error(resource: "wallet")
           end

@@ -80,7 +80,6 @@ module Api
           attr_reader :alert
 
           def find_alert
-            # TODO: Once wallet `code` attribute is added, update this to use wallet_code in the lookup
             @alert = current_organization.alerts.find_by!(
               wallet_id: wallet.id,
               code: params[:code]

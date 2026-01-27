@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe Api::V1::Customers::Wallets::AlertsController do
   let(:organization) { create(:organization) }
+  let(:customer_external_id) { customer.external_id }
+  let(:wallet_code) { wallet.code }
   let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:) }
   let(:code) { "my-wallet-alert" }
@@ -25,7 +27,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
   end
 
   RSpec.shared_examples "returns error if wallet not found" do
-    let(:wallet_id) { "00000000-0000-0000-0000-000000000000" }
+    let(:wallet_code) { "not-found-code" }
 
     it do
       subject
@@ -33,12 +35,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     end
   end
 
-  let(:customer_external_id) { customer.external_id }
-  # TODO: Once wallet `code` attribute is added, change to wallet.code
-  let(:wallet_id) { wallet.id }
-
-  describe "GET /api/v1/customers/:external_id/wallets/:wallet_id/alerts" do
-    subject { get_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_id}/alerts") }
+  describe "GET /api/v1/customers/:external_id/wallets/:wallet_code/alerts" do
+    subject { get_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts") }
 
     it_behaves_like "requires API permission", "alert", "read"
     it_behaves_like "returns error if customer not found"
@@ -76,8 +74,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     end
   end
 
-  describe "POST /api/v1/customers/:external_id/wallets/:wallet_id/alerts" do
-    subject { post_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_id}/alerts", {alert: params}) }
+  describe "POST /api/v1/customers/:external_id/wallets/:wallet_code/alerts" do
+    subject { post_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts", {alert: params}) }
 
     let(:alert) { nil }
     let(:params) do
@@ -198,8 +196,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     end
   end
 
-  describe "GET /api/v1/customers/:external_id/wallets/:wallet_id/alerts/:code" do
-    subject { get_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_id}/alerts/#{code}") }
+  describe "GET /api/v1/customers/:external_id/wallets/:wallet_code/alerts/:code" do
+    subject { get_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts/#{code}") }
 
     it_behaves_like "requires API permission", "alert", "read"
     it_behaves_like "returns error if customer not found"
@@ -227,8 +225,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     end
   end
 
-  describe "PUT /api/v1/customers/:external_id/wallets/:wallet_id/alerts/:code" do
-    subject { put_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_id}/alerts/#{code}", {alert: params}) }
+  describe "PUT /api/v1/customers/:external_id/wallets/:wallet_code/alerts/:code" do
+    subject { put_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts/#{code}", {alert: params}) }
 
     let(:params) do
       {
@@ -265,8 +263,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
     end
   end
 
-  describe "DELETE /api/v1/customers/:external_id/wallets/:wallet_id/alerts/:code" do
-    subject { delete_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_id}/alerts/#{code}") }
+  describe "DELETE /api/v1/customers/:external_id/wallets/:wallet_code/alerts/:code" do
+    subject { delete_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts/#{code}") }
 
     it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if customer not found"
