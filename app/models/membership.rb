@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Membership < ApplicationRecord
-  self.ignored_columns += %i[role]
-
   include PaperTrailTraceable
 
   belongs_to :organization
