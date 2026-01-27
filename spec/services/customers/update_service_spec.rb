@@ -440,7 +440,6 @@ RSpec.describe Customers::UpdateService do
           expect(result).to be_success
 
           customer = result.customer
-          expect(customer.id).to eq(customer.id)
           expect(customer.payment_provider).to be_nil
           expect(customer.payment_provider_code).to be_nil
 
