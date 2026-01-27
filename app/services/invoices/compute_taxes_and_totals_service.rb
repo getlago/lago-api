@@ -12,6 +12,14 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
+      if invoice.customer.vies_check_in_progress?
+        invoice.status = "pending" if finalizing
+        invoice.tax_status = "pending"
+        invoice.save!
+
+        return result.unknown_tax_failure!(code: "vies_check_pending", message: "VIES validation pending")
+      end
+
       if customer_provider_taxation? && invoice.should_apply_provider_tax?
         invoice.status = "pending" if finalizing
         invoice.tax_status = "pending"
