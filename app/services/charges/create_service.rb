@@ -44,6 +44,10 @@ module Charges
           charge.invoiceable = params[:invoiceable] unless params[:invoiceable].nil?
           charge.regroup_paid_fees = params[:regroup_paid_fees] if params.key?(:regroup_paid_fees)
           charge.min_amount_cents = params[:min_amount_cents] || 0
+
+          if plan.organization.events_targeting_wallets_enabled?
+            charge.accepts_target_wallet = params[:accepts_target_wallet] || false
+          end
         end
 
         charge.save!

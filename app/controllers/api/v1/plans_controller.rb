@@ -134,6 +134,7 @@ module Api
             :invoiceable,
             :regroup_paid_fees,
             :min_amount_cents,
+            :accepts_target_wallet,
             {
               properties: {}
             },

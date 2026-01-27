@@ -651,6 +651,7 @@ DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_charges_on_accepts_target_wallet;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
@@ -1784,7 +1785,8 @@ CREATE TABLE public.charges (
     regroup_paid_fees integer,
     parent_id uuid,
     organization_id uuid NOT NULL,
-    code character varying
+    code character varying,
+    accepts_target_wallet boolean DEFAULT false NOT NULL
 );
 
 
@@ -6419,6 +6421,13 @@ CREATE INDEX index_charge_filters_on_deleted_at ON public.charge_filters USING b
 --
 
 CREATE INDEX index_charge_filters_on_organization_id ON public.charge_filters USING btree (organization_id);
+
+
+--
+-- Name: index_charges_on_accepts_target_wallet; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_on_accepts_target_wallet ON public.charges USING btree (accepts_target_wallet) WHERE (accepts_target_wallet = true);
 
 
 --
@@ -11073,6 +11082,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260123102258'),
+('20260123102257'),
 ('20260121112929'),
 ('20260121111431'),
 ('20260120195822'),

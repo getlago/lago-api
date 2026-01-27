@@ -32,6 +32,7 @@ RSpec.describe Charges::UpdateService do
         create(
           :standard_charge,
           plan:,
+          organization:,
           billable_metric_id: sum_billable_metric.id,
           amount_currency: "USD",
           properties: {
@@ -55,6 +56,7 @@ RSpec.describe Charges::UpdateService do
           pay_in_advance: true,
           prorated: true,
           invoiceable: false,
+          accepts_target_wallet: true,
           properties: {
             amount: "400"
           }.merge(pricing_group_keys),
@@ -100,7 +102,7 @@ RSpec.describe Charges::UpdateService do
       it "does not update premium attributes" do
         subject
 
-        expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true)
+        expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true, accepts_target_wallet: false)
       end
 
       context "when premium" do
@@ -110,6 +112,41 @@ RSpec.describe Charges::UpdateService do
           subject
 
           expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
+        end
+
+        context "with accepts_target_wallet" do
+          context "when events_targeting_wallets is enabled" do
+            before do
+              charge.organization.update!(premium_integrations: ["events_targeting_wallets"])
+            end
+
+            it "updates accepts_target_wallet to true" do
+              expect { subject }.to change { charge.reload.accepts_target_wallet }.from(false).to(true)
+            end
+
+            context "when accepts_target_wallet is false in params" do
+              let(:params) do
+                {
+                  id: charge.id,
+                  charge_model: "standard",
+                  accepts_target_wallet: false,
+                  properties: {amount: "400"}
+                }
+              end
+
+              it "updates accepts_target_wallet to false" do
+                charge.update!(accepts_target_wallet: true)
+
+                expect { subject }.to change { charge.reload.accepts_target_wallet }.from(true).to(false)
+              end
+            end
+          end
+
+          context "when events_targeting_wallets is not enabled" do
+            it "does not update accepts_target_wallet" do
+              expect { subject }.not_to change { charge.reload.accepts_target_wallet }
+            end
+          end
         end
       end
 

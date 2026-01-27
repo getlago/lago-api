@@ -55,6 +55,7 @@ class Charge < ApplicationRecord
   validate :validate_min_amount_cents
   validate :validate_custom_model
   validate :validate_invoiceable_unless_pay_in_advance
+  validate :validate_accepts_target_wallet, if: -> { accepts_target_wallet_changed? }
 
   default_scope -> { kept }
 
@@ -164,6 +165,12 @@ class Charge < ApplicationRecord
     charge = plan.charges.parents.where(code:).first
     errors.add(:code, :taken) if charge && charge != self
   end
+
+  def validate_accepts_target_wallet
+    return unless accepts_target_wallet
+
+    errors.add(:accepts_target_wallet, :feature_unavailable) unless organization.events_targeting_wallets_enabled?
+  end
 end
 
 # == Schema Information
@@ -171,28 +178,31 @@ end
 # Table name: charges
 # Database name: primary
 #
-#  id                   :uuid             not null, primary key
-#  amount_currency      :string
-#  charge_model         :integer          default("standard"), not null
-#  code                 :string
-#  deleted_at           :datetime
-#  invoice_display_name :string
-#  invoiceable          :boolean          default(TRUE), not null
-#  min_amount_cents     :bigint           default(0), not null
-#  pay_in_advance       :boolean          default(FALSE), not null
-#  properties           :jsonb            not null
-#  prorated             :boolean          default(FALSE), not null
-#  regroup_paid_fees    :integer
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  billable_metric_id   :uuid
-#  organization_id      :uuid             not null
-#  parent_id            :uuid
-#  plan_id              :uuid
+#  id                    :uuid             not null, primary key
+#  accepts_target_wallet :boolean          default(FALSE), not null
+#  amount_currency       :string
+#  charge_model          :integer          default("standard"), not null
+#  code                  :string
+#  deleted_at            :datetime
+#  group_by_wallet       :boolean          default(FALSE), not null
+#  invoice_display_name  :string
+#  invoiceable           :boolean          default(TRUE), not null
+#  min_amount_cents      :bigint           default(0), not null
+#  pay_in_advance        :boolean          default(FALSE), not null
+#  properties            :jsonb            not null
+#  prorated              :boolean          default(FALSE), not null
+#  regroup_paid_fees     :integer
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  billable_metric_id    :uuid
+#  organization_id       :uuid             not null
+#  parent_id             :uuid
+#  plan_id               :uuid
 #
 # Indexes
 #
 #  idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb  (plan_id,billable_metric_id,pay_in_advance) WHERE (deleted_at IS NULL)
+#  index_charges_on_accepts_target_wallet                       (accepts_target_wallet) WHERE (accepts_target_wallet = true)
 #  index_charges_on_billable_metric_id                          (billable_metric_id) WHERE (deleted_at IS NULL)
 #  index_charges_on_deleted_at                                  (deleted_at)
 #  index_charges_on_organization_id                             (organization_id)
