@@ -113,7 +113,7 @@ module DataExports
           .sum(:offset_amount_cents)
 
         invoices.each do |invoice|
-          invoice.preload_offset_amount_cents(offset_amounts[invoice.id] || 0)
+          invoice.save_precalculated_offset_amount_cents(offset_amounts[invoice.id] || 0)
         end
 
         invoices

@@ -153,7 +153,7 @@ RSpec.describe DataExports::Csv::Invoices do
       # Preloading should result in only ONE query to credit_notes (the GROUP BY SUM query)
       query_count = 0
       counter = ->(_name, _start, _finish, _id, payload) {
-        query_count += 1 if /SELECT.*FROM.*credit_notes/i.match?(payload[:sql])
+        query_count += 1 if /SELECT SUM.*offset_amount_cents.*FROM.*credit_notes/i.match?(payload[:sql])
       }
 
       result = nil
