@@ -61,6 +61,7 @@ Rails.application.routes.draw do
           resources :subscriptions, only: %i[index]
           resources :wallets, only: %i[create update show index], param: :code do
             scope module: :wallets do
+              resources :alerts, only: %i[create index update show destroy], param: :code
               resource :metadata, only: %i[create update destroy] do
                 delete ":key", action: :destroy_key, on: :member
               end

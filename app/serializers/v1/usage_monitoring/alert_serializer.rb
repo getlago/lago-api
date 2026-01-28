@@ -9,9 +9,12 @@ module V1
           lago_organization_id: model.organization_id,
           subscription_external_id: model.subscription_external_id, # DEPRECATED
           external_subscription_id: model.subscription_external_id,
+          lago_wallet_id: model.wallet_id,
+          wallet_code: model.wallet&.code,
           alert_type: model.alert_type,
           code: model.code,
           name: model.name,
+          direction: model.direction,
           previous_value: model.previous_value,
           last_processed_at: model.last_processed_at&.iso8601,
           thresholds: formatted_thresholds,

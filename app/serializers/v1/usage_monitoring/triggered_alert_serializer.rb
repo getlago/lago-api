@@ -10,7 +10,9 @@ module V1
           lago_alert_id: alert.id,
           lago_subscription_id: model.subscription_id,
           external_subscription_id: alert.subscription_external_id,
-          external_customer_id: model.subscription.customer.external_id,
+          lago_wallet_id: model.wallet_id,
+          # TODO: Add wallet_code once wallet `code` attribute is added
+          external_customer_id:,
           billable_metric_code: alert.billable_metric&.code,
           alert_name: alert.name,
           alert_code: alert.code,
@@ -21,13 +23,21 @@ module V1
           triggered_at: model.triggered_at.iso8601,
 
           subscription_external_id: alert.subscription_external_id, # DEPRECATED
-          customer_external_id: model.subscription.customer.external_id # DEPRECATED
+          customer_external_id: external_customer_id # DEPRECATED
         }
       end
 
       private
 
       delegate :alert, to: :model
+
+      def external_customer_id
+        if model.subscription
+          model.subscription.customer.external_id
+        elsif model.wallet
+          model.wallet.customer.external_id
+        end
+      end
     end
   end
 end
