@@ -232,6 +232,7 @@ module Customers
 
       old_provider_customer = customer.provider_customer
       old_payment_provider = customer.payment_provider
+      old_payment_provider_code = customer.payment_provider_code
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
@@ -251,10 +252,17 @@ module Customers
       return unless update_provider_customer
 
       create_or_update_provider_customer(customer, billing)
+      
+      if old_provider_customer
+        provider_changed = old_payment_provider != billing[:payment_provider]
+        provider_code_changed = old_payment_provider_code != billing[:payment_provider_code]
 
-      if old_provider_customer && old_payment_provider != billing[:payment_provider]
-        old_provider_customer.payment_methods.find_each(&:discard!)
-        old_provider_customer.discard!
+        if provider_changed || provider_code_changed
+          old_provider_customer.payment_methods.find_each do |payment_method|
+            PaymentMethods::DestroyService.call(payment_method: payment_method)
+          end
+        end
+        old_provider_customer.discard! if provider_changed
       end
 
       if customer.provider_customer&.provider_customer_id
