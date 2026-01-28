@@ -18,25 +18,14 @@ module PaymentProviderCustomers
         stripe_customer.save!
 
         if stripe_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
-          if payment_method_id
-            payment_method = PaymentMethod.find_by(
-              customer:,
-              payment_provider_customer: stripe_customer,
-              provider_method_id: payment_method_id
-            )
-
-            payment_method ||= PaymentMethods::CreateFromProviderService.call(
-              customer:,
-              params: {provider_payment_methods: stripe_customer.provider_payment_methods},
-              provider_method_id: payment_method_id,
-              payment_provider_id: stripe_customer.payment_provider_id,
-              payment_provider_customer: stripe_customer
-            ).payment_method
-
-            PaymentMethods::SetAsDefaultService.call(payment_method:)
-
-            result.payment_method = payment_method
-          end
+          find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
+            customer:,
+            payment_provider_customer: stripe_customer,
+            provider_method_id: payment_method_id,
+            params: {provider_payment_methods: stripe_customer.provider_payment_methods},
+            set_as_default: true
+          )
+          result.payment_method = find_or_create_result.payment_method
         end
 
         reprocess_pending_invoices
