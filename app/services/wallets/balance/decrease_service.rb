@@ -31,7 +31,10 @@ module Wallets
           )
         end
 
-        after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
+        after_commit do
+          SendWebhookJob.perform_later("wallet.updated", wallet)
+          UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
+        end
 
         result.wallet = wallet
         result
