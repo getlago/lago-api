@@ -72,6 +72,60 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
       end
     end
 
+    context "when customer has VIES check in progress" do
+      let(:billing_entity) { create(:billing_entity, organization:, eu_tax_management: true) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:pending_vies_check) { create(:pending_vies_check, customer:) }
+
+      before { pending_vies_check }
+
+      it "returns an unknown tax failure" do
+        result = totals_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::UnknownTaxFailure)
+        expect(result.error.code).to eq("vies_check_pending")
+      end
+
+      it "sets invoice status to pending" do
+        totals_service.call
+
+        expect(invoice.reload.status).to eq("pending")
+        expect(invoice.reload.tax_status).to eq("pending")
+      end
+
+      context "when not finalizing" do
+        subject(:totals_service) { described_class.new(invoice:, finalizing: false) }
+
+        before { invoice.update!(status: :draft) }
+
+        it "does not change invoice status but sets tax_status" do
+          totals_service.call
+
+          expect(invoice.reload.status).to eq("draft")
+          expect(invoice.reload.tax_status).to eq("pending")
+        end
+      end
+
+      context "when customer also has tax provider" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        it "uses tax provider instead of blocking for VIES" do
+          expect { totals_service.call }
+            .to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
+
+        it "does not return vies_check_pending error" do
+          result = totals_service.call
+
+          expect(result.error.code).to eq("tax_error")
+        end
+      end
+    end
+
     context "when there is tax provider" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
