@@ -31,7 +31,7 @@ module Charges
         end
 
         accepts_target_wallet = params.delete(:accepts_target_wallet)
-        if License.premium? && plan.organization.events_targeting_wallets_enabled?
+        if plan.organization.events_targeting_wallets_enabled?
           charge.accepts_target_wallet = accepts_target_wallet
         end
 
