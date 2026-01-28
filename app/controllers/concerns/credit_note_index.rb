@@ -27,7 +27,8 @@ module CreditNoteIndex
         issuing_date_to: (Date.iso8601(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
         reason: params[:reason],
         refund_status: params[:refund_status],
-        self_billed: params[:self_billed]
+        self_billed: params[:self_billed],
+        types: params[:types]
       }
     )
 
