@@ -8474,6 +8474,7 @@ type PaymentMethod {
   isDefault: Boolean!
   paymentProviderCode: String
   paymentProviderCustomerId: ID
+  paymentProviderName: String
   paymentProviderType: ProviderTypeEnum
   updatedAt: ISO8601DateTime
 }

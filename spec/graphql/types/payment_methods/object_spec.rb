@@ -12,6 +12,7 @@ RSpec.describe Types::PaymentMethods::Object do
   it { is_expected.to have_field(:is_default).of_type("Boolean!") }
   it { is_expected.to have_field(:payment_provider_code).of_type("String") }
   it { is_expected.to have_field(:payment_provider_customer_id).of_type("ID") }
+  it { is_expected.to have_field(:payment_provider_name).of_type("String") }
   it { is_expected.to have_field(:payment_provider_type).of_type("ProviderTypeEnum") }
 
   it { is_expected.to have_field(:created_at).of_type("ISO8601DateTime!") }
