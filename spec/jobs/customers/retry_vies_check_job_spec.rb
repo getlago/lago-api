@@ -44,6 +44,39 @@ RSpec.describe Customers::RetryViesCheckJob do
       expect(Customers::ApplyTaxesService).to have_received(:call)
         .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
     end
+
+    context "when customer has pending invoices blocked by VIES" do
+      let(:pending_invoice) do
+        create(:invoice, :pending, customer:, organization: customer.organization, tax_status: "pending")
+      end
+      let(:finalized_invoice) do
+        create(:invoice, :finalized, customer:, organization: customer.organization)
+      end
+      let(:pending_but_tax_succeeded_invoice) do
+        create(:invoice, :pending, customer:, organization: customer.organization, tax_status: "succeeded")
+      end
+
+      before do
+        pending_invoice
+        finalized_invoice
+        pending_but_tax_succeeded_invoice
+      end
+
+      it "enqueues FinalizePendingViesInvoiceJob for pending invoices with pending tax_status" do
+        expect { described_class.perform_now(customer.id) }
+          .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_invoice)
+      end
+
+      it "does not enqueue job for finalized invoices" do
+        expect { described_class.perform_now(customer.id) }
+          .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(finalized_invoice)
+      end
+
+      it "does not enqueue job for pending invoices with succeeded tax_status" do
+        expect { described_class.perform_now(customer.id) }
+          .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_but_tax_succeeded_invoice)
+      end
+    end
   end
 
   context "when valvat has an error" do
