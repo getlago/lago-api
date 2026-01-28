@@ -22,6 +22,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["lago_alert_id"]).to eq(triggered_alert.alert.id)
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
       expect(payload["external_subscription_id"]).to eq("ext-id")
+      expect(payload["lago_wallet_id"]).to be_nil
       expect(payload["external_customer_id"]).to eq("cust-ext-id")
       expect(payload["billable_metric_code"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
@@ -61,6 +62,28 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
         expect(payload["lago_alert_id"]).to eq alert.id
         expect(payload["billable_metric_code"]).to eq alert.billable_metric.code
       end
+    end
+  end
+
+  context "with wallet_balance_amount alert" do
+    let(:customer) { create(:customer, external_id: "wallet-cust-ext-id") }
+    let(:wallet) { create(:wallet, customer:, organization: customer.organization) }
+    let(:alert) { create(:wallet_balance_amount_alert, wallet:, organization: wallet.organization, code: "wallet-alert") }
+    let(:triggered_alert) do
+      create(:triggered_alert, alert:, subscription: nil, wallet:, triggered_at: DateTime.new(2000, 1, 1, 12, 0, 0))
+    end
+
+    it "serializes the wallet triggered alert" do
+      result = JSON.parse(serializer.to_json)
+
+      payload = result["triggered_alert"]
+      expect(payload["lago_id"]).to eq(triggered_alert.id)
+      expect(payload["lago_subscription_id"]).to be_nil
+      expect(payload["external_subscription_id"]).to be_nil
+      expect(payload["lago_wallet_id"]).to eq(wallet.id)
+      expect(payload["external_customer_id"]).to eq("wallet-cust-ext-id")
+      expect(payload["alert_type"]).to eq("wallet_balance_amount")
+      expect(payload["alert_code"]).to eq("wallet-alert")
     end
   end
 end

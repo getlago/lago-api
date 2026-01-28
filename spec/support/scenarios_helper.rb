@@ -192,6 +192,17 @@ module ScenariosHelper
     end
   end
 
+  def create_wallet_alert(customer_external_id, wallet_code, params, as: :json, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(
+        organization,
+        "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts",
+        {alert: params}
+      )
+    end
+    parse_result(as, UsageMonitoring::Alert, :alert)
+  end
+
   ### Invoices
 
   def refresh_invoice(invoice, **kwargs)

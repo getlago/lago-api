@@ -18,7 +18,7 @@ module Mutations
         def resolve(**args)
           result = ::UsageMonitoring::CreateAlertService.call(
             organization: current_organization,
-            subscription: current_organization.subscriptions.find(args[:subscription_id]),
+            alertable: current_organization.subscriptions.find(args[:subscription_id]),
             params: args
           )
 

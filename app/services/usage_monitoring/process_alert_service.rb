@@ -4,9 +4,9 @@ module UsageMonitoring
   class ProcessAlertService < BaseService
     Result = BaseResult[:alert]
 
-    def initialize(alert:, subscription:, current_metrics:)
+    def initialize(alert:, current_metrics:, alertable:)
       @alert = alert
-      @subscription = subscription
+      @alertable = alertable
       @current_metrics = current_metrics
       super
     end
@@ -25,7 +25,8 @@ module UsageMonitoring
           triggered_alert = TriggeredAlert.create!(
             alert:,
             organization: alert.organization,
-            subscription: subscription,
+            subscription:,
+            wallet:,
             current_value: current,
             previous_value: alert.previous_value,
             crossed_thresholds: alert.formatted_crossed_thresholds(crossed_threshold_values),
@@ -46,6 +47,14 @@ module UsageMonitoring
 
     private
 
-    attr_reader :alert, :subscription, :current_metrics
+    attr_reader :alert, :alertable, :current_metrics
+
+    def subscription
+      alertable if alertable.is_a?(Subscription)
+    end
+
+    def wallet
+      alertable if alertable.is_a?(Wallet)
+    end
   end
 end
