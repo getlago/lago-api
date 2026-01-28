@@ -15,7 +15,7 @@
                 Invoice Number
               </td>
               <td class="body-2">
-                LAGO-202509-007
+                LAGO-202509-CH-004
               </td>
             </tr>
             <tr>
@@ -23,7 +23,7 @@
                 Issue Date
               </td>
               <td class="body-2">
-                Sep 04, 2025
+                Sep 01, 2025
               </td>
             </tr>
             <tr>
@@ -97,90 +97,64 @@
       </div>
       <div class="mb-24">
         <h2 class="title-2 mb-4">
-          $62.00
+          $40.00
         </h2>
         <div class="body-1">
-          Due Sep 19, 2025
+          Due Sep 15, 2025
         </div>
       </div>
       <div class="invoice-resume mb-24 overflow-auto">
-        <h2 class="title-2 mb-24">Plan with Pay-in-Advance Charges details</h2>
-        <div class="invoice-resume overflow-auto">
-          <table class="invoice-resume-table" width="100%">
-            <tr class="first_child">
-              <td class="body-2">Fees from Aug 01, 2025 to Aug 31, 2025</td>
-              <td class="body-2">Units</td>
-              <td class="body-2">Unit price</td>
-              <td class="body-2">Tax rate</td>
-              <td class="body-2">Amount</td>
-            </tr>
-            <tr class="fee">
-              <td class="body-1">Subscription Fee</td>
-              <td class="body-2">1.0</td>
-              <td class="body-2">$20.00</td>
-              <td class="body-2">
-                <div>0.0%</div>
-              </td>
-              <td class="body-2">$20.00</td>
-            </tr>
-          </table>
-        </div>
-        <div class="invoice-resume overflow-auto mt-24">
-          <table class="invoice-resume-table" width="100%">
-            <tr class="first_child">
-              <td class="body-2">Fees from Sep 01, 2025 to Sep 30, 2025</td>
-              <td class="body-2">Units</td>
-              <td class="body-2">Unit price</td>
-              <td class="body-2">Tax rate</td>
-              <td class="body-2">Amount</td>
-            </tr>
-            <tr class="fee">
-              <td>
-                <div class="body-1">Pay-in-Advance Fixed Charge Fee</div>
-              </td>
-              <td class="body-2">2</td>
-              <td class="body-2">$25.00</td>
-              <td class="body-2">
-                <div>0.0%</div>
-              </td>
-              <td class="body-2">$50.00</td>
-            </tr>
-          </table>
-        </div>
-        <div class="invoice-resume overflow-auto">
-          <table class="total-table" width="100%">
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-2">Subtotal (excl. tax)</td>
-              <td class="body-2">$70.00</td>
-            </tr>
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-2">Tax (0%)</td>
-              <td class="body-2">$0.00</td>
-            </tr>
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-2">Subtotal (incl. tax)</td>
-              <td class="body-2">$70.00</td>
-            </tr>
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-2">Free credits</td>
-              <td class="body-2">-$3.00</td>
-            </tr>
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-2">Prepaid credits</td>
-              <td class="body-2">-$5.00</td>
-            </tr>
-            <tr>
-              <td class="body-2"></td>
-              <td class="body-1">Total</td>
-              <td class="body-1">$62.00</td>
-            </tr>
-          </table>
-        </div>
+        <h2 class="title-2 mb-24">Monthly Plan details</h2>
+        <table class="invoice-resume-table" width="100%">
+          <tr>
+            <td class="body-2">Item</td>
+            <td class="body-2">Units</td>
+            <td class="body-2">Unit price</td>
+            <td class="body-2">Tax rate</td>
+            <td class="body-2">Amount</td>
+          </tr>
+          <tr class="fee">
+            <td class="body-1">API Calls</td>
+            <td class="body-2">10</td>
+            <td class="body-2">$5.00</td>
+            <td class="body-2">
+              <div>0.0%</div>
+            </td>
+            <td class="body-2">$50.00</td>
+          </tr>
+        </table>
+        <table class="total-table" width="100%">
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-2">Subtotal (excl. tax)</td>
+            <td class="body-2">$50.00</td>
+          </tr>
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-2">Tax (0%)</td>
+            <td class="body-2">$0.00</td>
+          </tr>
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-2">Subtotal (incl. tax)</td>
+            <td class="body-2">$50.00</td>
+          </tr>
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-2">Free credits</td>
+            <td class="body-2">-$4.00</td>
+          </tr>
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-2">Prepaid credits</td>
+            <td class="body-2">-$6.00</td>
+          </tr>
+          <tr>
+            <td class="body-2"></td>
+            <td class="body-1">Total</td>
+            <td class="body-1">$40.00</td>
+          </tr>
+        </table>
       </div>
       <p class="body-3 mb-24">
       </p>
