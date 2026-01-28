@@ -14,6 +14,7 @@ module Types
       field :payment_provider_customer_id, ID, null: true
       field :payment_provider_name, String, null: true
       field :payment_provider_type, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :provider_method_id, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
