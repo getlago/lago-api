@@ -42,6 +42,8 @@ RSpec.describe ::V1::InvoiceSerializer do
         "coupons_amount_cents" => invoice.coupons_amount_cents,
         "credit_notes_amount_cents" => invoice.credit_notes_amount_cents,
         "prepaid_credit_amount_cents" => invoice.prepaid_credit_amount_cents,
+        "prepaid_granted_credit_amount_cents" => invoice.prepaid_granted_credit_amount_cents,
+        "prepaid_purchased_credit_amount_cents" => invoice.prepaid_purchased_credit_amount_cents,
         "taxes_amount_cents" => invoice.taxes_amount_cents,
         "sub_total_excluding_taxes_amount_cents" => invoice.sub_total_excluding_taxes_amount_cents,
         "sub_total_including_taxes_amount_cents" => invoice.sub_total_including_taxes_amount_cents,
