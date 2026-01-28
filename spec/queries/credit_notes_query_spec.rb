@@ -121,6 +121,86 @@ RSpec.describe CreditNotesQuery do
     end
   end
 
+  context "when types filter applied" do
+    let(:filters) { {types: types} }
+
+    let!(:credit_only) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 0, offset_amount_cents: 0)
+    end
+
+    let!(:refund_only) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    let!(:offset_only) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 10)
+    end
+
+    let!(:credit_and_refund) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    let!(:credit_and_offset) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 0, offset_amount_cents: 10)
+    end
+
+    context "with one type" do
+      context "when type is credit" do
+        let(:types) { "credit" }
+
+        it "returns credit notes with positive credit amount" do
+          expect(result).to be_success
+          expect(returned_ids).to match_array([credit_only.id, credit_and_refund.id, credit_and_offset.id])
+        end
+      end
+
+      context "when type is refund" do
+        let(:types) { "refund" }
+
+        it "returns credit notes with positive refund amount" do
+          expect(result).to be_success
+          expect(returned_ids).to match_array([refund_only.id, credit_and_refund.id])
+        end
+      end
+
+      context "when type is offset" do
+        let(:types) { "offset" }
+
+        it "returns credit notes with positive offset amount" do
+          expect(result).to be_success
+          expect(returned_ids).to match_array([offset_only.id, credit_and_offset.id])
+        end
+      end
+    end
+
+    context "with multiple types" do
+      let(:types) { %w[credit refund] }
+
+      it "returns credit notes matching any of the given types" do
+        expect(result).to be_success
+        expect(returned_ids).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+
+    context "with comma separated values" do
+      let(:types) { "credit,refund" }
+
+      it "returns credit notes matching any of the given types" do
+        expect(result).to be_success
+        expect(returned_ids).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+
+    context "with invalid type" do
+      let(:types) { "invalid-type" }
+
+      it "returns all credit notes" do
+        expect(result).to be_success
+        expect(returned_ids).to match_array([credit_only.id, refund_only.id, offset_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+  end
+
   context "when credit status filter applied" do
     let(:matching_credit_statuses) { CreditNote::CREDIT_STATUS.sample(2) }
 
