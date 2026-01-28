@@ -140,7 +140,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {alert_type: ["invalid_type"]},
+          error_details: {alert_type: ["value_is_invalid"]},
           status: 422
         })
       end
@@ -424,7 +424,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
         errors = json[:error_details]
         alert_params = params[:alerts]
         expect(errors[:"1"][:params]).to eq(alert_params[1])
-        expect(errors[:"1"][:errors]).to include("invalid_type")
+        expect(errors[:"1"][:errors]).to include("value_is_invalid")
 
         expect(errors[:"2"][:params]).to eq(alert_params[2])
         expect(errors[:"2"][:errors]).to include("billable_metric_not_found")
