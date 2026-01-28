@@ -214,7 +214,9 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
       context "when recurring invoice with keep_anchor adjustment" do
         before do
+          # rubocop:disable Rails/SkipsModelValidations
           invoice.invoice_subscriptions.update_all(recurring: true)
+          # rubocop:enable Rails/SkipsModelValidations
           customer.update!(subscription_invoice_issuing_date_adjustment: "keep_anchor")
         end
 
@@ -227,7 +229,9 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
       context "when not keeping anchor" do
         before do
+          # rubocop:disable Rails/SkipsModelValidations
           invoice.invoice_subscriptions.update_all(recurring: false)
+          # rubocop:enable Rails/SkipsModelValidations
         end
 
         it "updates issuing_date to current date" do
