@@ -33,9 +33,8 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     fixed_charge_event
   end
 
-  describe "call" do
+  describe "#call" do
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
@@ -79,7 +78,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -558,6 +557,57 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
         expect(result).to be_success
         expect(result.invoice).to be_nil
+      end
+    end
+
+    context "when there is a concurrent lock", transaction: false do
+      let(:lock_released_after) { 0.1.seconds }
+
+      before do
+        stub_const("Invoices::CreatePayInAdvanceFixedChargesService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+      end
+
+      around do |test|
+        customer_id = customer.id
+        queue = Queue.new
+        thread = start_lock_thread(queue, customer_id)
+        test.run
+      ensure
+        stop_thread(thread, queue) if thread
+      end
+
+      def start_lock_thread(queue, customer_id)
+        Thread.start do
+          start_time = Time.zone.now
+          ApplicationRecord.transaction do
+            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
+              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
+                sleep 0.01
+              end
+            end
+          end
+        end
+      end
+
+      def stop_thread(thread, queue)
+        queue.push(true)
+        thread.join
+      end
+
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 2.seconds }
+
+        it "raises a WithAdvisoryLock::FailedToAcquireLock error" do
+          expect { invoice_service.call }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+
+          expect(customer.invoices.count).to eq(0)
+        end
+      end
+
+      context "when the lock is acquired" do
+        it "creates the invoice" do
+          expect { invoice_service.call }.to change(Invoice, :count).by(1)
+        end
       end
     end
   end
