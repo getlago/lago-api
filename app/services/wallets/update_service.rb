@@ -24,6 +24,7 @@ module Wallets
 
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
+        wallet.code = params[:code] if params.key?(:code)
         wallet.priority = params[:priority] if params.key?(:priority)
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
         if params.key?(:invoice_requires_successful_payment)

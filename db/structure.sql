@@ -344,6 +344,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
@@ -919,7 +920,6 @@ DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.membership_roles;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoice_settlements;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -961,6 +961,8 @@ DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
 DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
+DROP VIEW IF EXISTS public.exports_invoice_settlements;
+DROP TABLE IF EXISTS public.invoice_settlements;
 DROP VIEW IF EXISTS public.exports_integration_customers;
 DROP TABLE IF EXISTS public.integration_customers;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
@@ -2651,6 +2653,7 @@ CREATE TABLE public.organizations (
     pre_filter_events boolean DEFAULT false NOT NULL,
     clickhouse_deduplication_enabled boolean DEFAULT false NOT NULL,
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    max_wallets integer,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -3089,6 +3092,44 @@ CREATE VIEW public.exports_integration_customers AS
     ic.created_at,
     ic.updated_at
    FROM public.integration_customers ic;
+
+
+--
+-- Name: invoice_settlements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_settlements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    billing_entity_id uuid NOT NULL,
+    target_invoice_id uuid NOT NULL,
+    settlement_type public.invoice_settlement_settlement_type NOT NULL,
+    source_payment_id uuid,
+    source_credit_note_id uuid,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_invoice_settlements; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoice_settlements AS
+ SELECT ins.id AS lago_id,
+    ins.organization_id,
+    ins.billing_entity_id AS lago_billing_entity_id,
+    ins.target_invoice_id AS lago_target_invoice_id,
+    ins.settlement_type,
+    ins.source_payment_id AS lago_source_payment_id,
+    ins.source_credit_note_id AS lago_source_credit_note_id,
+    ins.amount_cents,
+    ins.amount_currency,
+    ins.created_at,
+    ins.updated_at
+   FROM public.invoice_settlements ins;
 
 
 --
@@ -3739,7 +3780,8 @@ CREATE TABLE public.wallets (
     paid_top_up_max_amount_cents bigint,
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    code character varying
 );
 
 
@@ -4051,25 +4093,6 @@ CREATE TABLE public.invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
-);
-
-
---
--- Name: invoice_settlements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_settlements (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    billing_entity_id uuid NOT NULL,
-    target_invoice_id uuid NOT NULL,
-    settlement_type public.invoice_settlement_settlement_type NOT NULL,
-    source_payment_id uuid,
-    source_credit_note_id uuid,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -8561,6 +8584,13 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries
 
 
 --
+-- Name: index_uniq_wallet_code_per_customer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING btree (customer_id, code);
+
+
+--
 -- Name: index_unique_applied_to_organization_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11063,6 +11093,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260127114700'),
+('20260121112929'),
+('20260121111431'),
+('20260120195822'),
 ('20260119162712'),
 ('20260116162519'),
 ('20260116110125'),

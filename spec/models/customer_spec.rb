@@ -566,6 +566,36 @@ RSpec.describe Customer do
     end
   end
 
+  describe "#vies_check_in_progress?" do
+    subject(:vies_check_in_progress) { customer.vies_check_in_progress? }
+
+    context "when billing entity does not have eu_tax_management enabled" do
+      before { customer.billing_entity.update!(eu_tax_management: false) }
+
+      it "returns false" do
+        expect(vies_check_in_progress).to eq(false)
+      end
+    end
+
+    context "when billing entity has eu_tax_management enabled" do
+      before { customer.billing_entity.update!(eu_tax_management: true) }
+
+      context "when customer has no pending_vies_check" do
+        it "returns false" do
+          expect(vies_check_in_progress).to eq(false)
+        end
+      end
+
+      context "when customer has a pending_vies_check" do
+        before { create(:pending_vies_check, customer:) }
+
+        it "returns true" do
+          expect(vies_check_in_progress).to eq(true)
+        end
+      end
+    end
+  end
+
   describe "#provider_customer" do
     subject(:customer) { create(:customer, organization:, payment_provider:) }
 

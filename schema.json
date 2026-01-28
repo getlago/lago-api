@@ -11851,6 +11851,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "currency",
               "description": null,
               "type": {
@@ -13078,6 +13090,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "email",
               "description": null,
               "type": {
@@ -13094,44 +13118,24 @@
               "deprecationReason": null
             },
             {
-              "name": "role",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": true,
-              "deprecationReason": "Use roles argument instead"
-            },
-            {
               "name": "roles",
               "description": null,
               "type": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
+                  "kind": "LIST",
                   "name": null,
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
                   }
                 }
-              },
-              "defaultValue": "[]",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -20090,6 +20094,18 @@
                   "name": "BigInt",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -31321,6 +31337,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "events_targeting_wallets",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -31417,18 +31439,6 @@
               },
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "role",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
-              },
-              "isDeprecated": true,
-              "deprecationReason": "Use `roles` field instead"
             },
             {
               "name": "roles",
@@ -34462,8 +34472,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": true,
-              "deprecationReason": "Use permissions enum instead"
+              "isDeprecated": false,
+              "deprecationReason": null
             },
             {
               "name": "revokedAt",
@@ -34476,18 +34486,6 @@
               },
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "role",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
-              },
-              "isDeprecated": true,
-              "deprecationReason": "Use roles instead"
             },
             {
               "name": "roles",
@@ -34616,35 +34614,6 @@
           "inputFields": null,
           "interfaces": [],
           "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "ENUM",
-          "name": "MembershipRole",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "admin",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "manager",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "finance",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
           "possibleTypes": null
         },
         {
@@ -41423,6 +41392,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentProviderName",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "paymentProviderType",
               "description": null,
               "args": [],
@@ -41430,6 +41411,22 @@
                 "kind": "ENUM",
                 "name": "ProviderTypeEnum",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "providerMethodId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -45541,6 +45538,12 @@
             },
             {
               "name": "custom_roles",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "events_targeting_wallets",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -61264,6 +61267,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "code",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "expirationAt",
               "description": null,
               "type": {
@@ -62264,6 +62279,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -62280,44 +62307,24 @@
               "deprecationReason": null
             },
             {
-              "name": "role",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": true,
-              "deprecationReason": "Use `roles` instead"
-            },
-            {
               "name": "roles",
               "description": null,
               "type": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
+                  "kind": "LIST",
                   "name": null,
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
                   }
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -62505,6 +62512,18 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -62521,44 +62540,24 @@
               "deprecationReason": null
             },
             {
-              "name": "role",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "MembershipRole",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": true,
-              "deprecationReason": "Use `roles` instead"
-            },
-            {
               "name": "roles",
               "description": null,
               "type": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
+                  "kind": "LIST",
                   "name": null,
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
+                    }
                   }
                 }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -65299,6 +65298,18 @@
                   "name": "BigInt",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null

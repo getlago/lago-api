@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invite < ApplicationRecord
+  self.ignored_columns += %i[role]
+
   include PaperTrailTraceable
 
   belongs_to :organization
@@ -37,7 +39,6 @@ end
 #  accepted_at     :datetime
 #  email           :string           not null
 #  revoked_at      :datetime
-#  role            :integer
 #  roles           :string           default([]), not null, is an Array
 #  status          :integer          default("pending"), not null
 #  token           :string           not null

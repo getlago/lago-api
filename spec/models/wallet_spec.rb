@@ -73,6 +73,23 @@ RSpec.describe Wallet do
       expect(subject).to be_valid
       expect(subject.errors).to be_empty
     end
+
+    it "validates uniqueness of code per customer" do
+      customer = create(:customer)
+      existing_wallet = create(:wallet, customer:, code: "unique_code")
+
+      subject.customer = customer
+      subject.code = existing_wallet.code
+
+      expect(subject).not_to be_valid
+      expect(subject.errors["code"]).to eq ["value_already_exist"]
+
+      # Same code with different customer should be valid
+      other_customer = create(:customer, organization: customer.organization)
+      subject.customer = other_customer
+      expect(subject).to be_valid
+      expect(subject.errors).to be_empty
+    end
   end
 
   describe "currency=" do

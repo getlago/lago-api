@@ -7,14 +7,15 @@ FactoryBot.define do
     }
     billing_entity { customer&.billing_entity || association(:billing_entity) }
     customer
-    attempts_count { 0 }
+    attempts_count { 1 }
+    last_attempt_at { Time.current }
+    last_error_type { "timeout" }
     tax_identification_number { customer&.tax_identification_number || "EU123456789" }
 
-    trait :failed do
+    trait :with_multiple_attempts do
       attempts_count { 3 }
-      last_attempt_at { 1.hour.ago }
-      last_error_message { "Network error" }
-      last_error_type { "TimeoutError" }
+      last_error_message { "Service temporarily unavailable" }
+      last_error_type { "service_unavailable" }
     end
   end
 end

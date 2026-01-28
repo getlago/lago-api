@@ -6,6 +6,7 @@ RSpec.describe Types::Wallets::CreateInput do
   subject { described_class }
 
   it do
+    expect(subject).to accept_argument(:code).of_type("String")
     expect(subject).to accept_argument(:currency).of_type("CurrencyEnum!")
     expect(subject).to accept_argument(:customer_id).of_type("ID!")
     expect(subject).to accept_argument(:expiration_at).of_type("ISO8601DateTime")

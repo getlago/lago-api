@@ -7,8 +7,6 @@ module V1
         lago_id: model.id,
         lago_user_id: model.user_id,
         lago_organization_id: model.organization_id,
-        # DEPRECATED: Will be removed in future versions
-        role: model.roles.first&.name,
         roles: model.roles.pluck(:name)
       }
     end

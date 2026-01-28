@@ -5,68 +5,37 @@ require "rails_helper"
 RSpec.describe Fees::ProjectionService do
   subject(:service) { described_class.new(fees: fees) }
 
+  let(:organization) { create(:organization) }
+
   let(:fees) { [fee] }
   let(:fee) do
-    instance_double(
-      "Fee",
+    build(:fee,
       charge: charge,
       subscription: subscription,
       charge_filter: charge_filter,
-      properties: fee_properties
-    )
+      properties: fee_properties,
+      amount_cents: 100,
+      amount_currency: currency)
   end
 
   let(:billable_metric) do
-    instance_double(
-      "BillableMetric",
-      recurring?: false
-    )
+    create(:billable_metric, recurring: false, organization:)
   end
 
   let(:charge) do
-    instance_double(
-      "Charge",
-      id: SecureRandom.uuid,
-      properties: charge_properties,
+    create(:standard_charge,
       applied_pricing_unit: applied_pricing_unit,
       filters: [],
-      pricing_group_keys: nil,
-      billable_metric: billable_metric
-    )
+      billable_metric: billable_metric)
   end
 
-  let(:subscription) do
-    instance_double(
-      "Subscription",
-      plan: plan
-    )
-  end
-
-  let(:plan) do
-    instance_double(
-      "Plan",
-      amount: amount
-    )
-  end
-
-  let(:amount) do
-    instance_double(
-      "Money",
-      currency: currency
-    )
-  end
-
-  let(:currency) do
-    instance_double(
-      "Currency",
-      exponent: 2,
-      subunit_to_unit: 100
-    )
-  end
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, plan:, organization:, customer:) }
+  let(:plan) { create(:plan, amount_cents: 100, amount_currency: currency) }
+  let(:currency) { "EUR" }
 
   let(:charge_filter) { nil }
   let(:applied_pricing_unit) { nil }
-  let(:charge_properties) { {} }
 
   let(:fee_properties) do
     {
@@ -171,8 +140,8 @@ RSpec.describe Fees::ProjectionService do
           charge: charge,
           subscription: subscription,
           boundaries: {
-            from_datetime: from_datetime.to_date,
-            to_datetime: to_datetime.to_date,
+            from_datetime: match_datetime(from_datetime),
+            to_datetime: match_datetime(to_datetime),
             charges_duration: charges_duration
           },
           filters: {charge_id: charge.id},
@@ -195,7 +164,7 @@ RSpec.describe Fees::ProjectionService do
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
           chargeable: charge,
           aggregation_result:,
-          properties: charge_properties,
+          properties: charge.properties,
           period_ratio: expected_period_ratio,
           calculate_projected_usage: true
         )
@@ -204,11 +173,7 @@ RSpec.describe Fees::ProjectionService do
 
     context "with charge filter" do
       let(:charge_filter) do
-        instance_double(
-          "ChargeFilter",
-          properties: {"key" => "value"},
-          pricing_group_keys: []
-        )
+        create(:charge_filter, properties: {"amount" => "1000"})
       end
 
       let(:filter_service_result) do
@@ -233,8 +198,8 @@ RSpec.describe Fees::ProjectionService do
           charge: charge,
           subscription: subscription,
           boundaries: {
-            from_datetime: from_datetime.to_date,
-            to_datetime: to_datetime.to_date,
+            from_datetime: match_datetime(from_datetime),
+            to_datetime: match_datetime(to_datetime),
             charges_duration: charges_duration
           },
           filters: {
@@ -249,7 +214,7 @@ RSpec.describe Fees::ProjectionService do
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
           chargeable: charge,
           aggregation_result:,
-          properties: {"key" => "value"},
+          properties: charge_filter.properties,
           period_ratio: 0.5,
           calculate_projected_usage: true
         )
@@ -259,7 +224,7 @@ RSpec.describe Fees::ProjectionService do
     end
 
     context "with applied pricing unit" do
-      let(:applied_pricing_unit) { instance_double("AppliedPricingUnit") }
+      let(:applied_pricing_unit) { build(:applied_pricing_unit) }
       let(:pricing_unit_usage) do
         instance_double(
           "PricingUnitUsage",
@@ -288,27 +253,33 @@ RSpec.describe Fees::ProjectionService do
   end
 
   describe "period_ratio calculation" do
-    let(:from_date) { Date.current.beginning_of_month }
-    let(:to_date) { Date.current.end_of_month }
-    let(:from_datetime) { from_date.beginning_of_day }
-    let(:to_datetime) { to_date.end_of_day }
+    let(:from_datetime) { Time.zone.parse("2025-01-01T00:00:00") }
+    let(:to_datetime) { Time.zone.parse("2025-01-31T23:59:59") }
 
     context "when current date is in the middle of period" do
-      before { travel_to(from_date + 10.days) }
+      before { travel_to(from_datetime + 10.days) }
 
       it "calculates correct ratio" do
-        from_date_calc = from_datetime.to_date
-        to_date_calc = to_datetime.to_date
-        current_date_calc = Time.current.to_date
-
-        total_days = (to_date_calc - from_date_calc).to_i + 1
-        days_passed = (current_date_calc - from_date_calc).to_i + 1
-        expected_ratio = days_passed.fdiv(total_days)
-
         service.call
 
         expect(ChargeModels::Factory).to have_received(:new_instance).with(
-          hash_including(period_ratio: expected_ratio)
+          hash_including(period_ratio: 11.fdiv(31)) # January has 31 days
+        )
+      end
+    end
+
+    context "when customer is in a different timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+      let(:from_datetime) { Time.zone.parse("2025-01-01T05:00:00") }
+      let(:to_datetime) { Time.zone.parse("2025-02-01T04:59:59") }
+
+      before { travel_to(from_datetime + 10.days) }
+
+      it "calculates correct ratio" do
+        service.call
+
+        expect(ChargeModels::Factory).to have_received(:new_instance).with(
+          hash_including(period_ratio: 11.fdiv(31))
         )
       end
     end
@@ -337,19 +308,29 @@ RSpec.describe Fees::ProjectionService do
     end
 
     context "when currency has different exponent" do
-      let(:currency) do
-        instance_double(
-          "Currency",
-          exponent: 3,
-          subunit_to_unit: 1000
-        )
-      end
+      let(:currency) { "KWD" }
 
       it "rounds and converts correctly" do
         result = service.call
 
         expect(result).to be_success
         expect(result.projected_amount_cents).to eq(100500) # 100.50 * 1000
+      end
+    end
+
+    context "when on the last day of the period" do
+      let(:from_datetime) { Time.current.beginning_of_month }
+      let(:to_datetime) { Time.current.end_of_month }
+
+      before { travel_to(to_datetime - 5.hours) }
+
+      it "returns projected values" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.projected_amount_cents).to eq(10050) # 100.50 * 100
+        expect(result.projected_units).to eq(BigDecimal(10))
+        expect(result.projected_pricing_unit_amount_cents).to eq(nil) # No applied_pricing_unit
       end
     end
   end

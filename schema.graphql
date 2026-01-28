@@ -2798,6 +2798,7 @@ input CreateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
@@ -2977,8 +2978,7 @@ input CreateInviteInput {
   """
   clientMutationId: String
   email: String!
-  role: MembershipRole @deprecated(reason: "Use roles argument instead")
-  roles: [String!] = []
+  roles: [String!]!
 }
 
 """
@@ -4401,6 +4401,7 @@ CustomerPortalWallet
 """
 type CustomerPortalWallet {
   balanceCents: BigInt!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   creditsBalance: Float!
@@ -6139,6 +6140,7 @@ enum IntegrationTypeEnum {
   avalara
   beta_payment_authorization
   custom_roles
+  events_targeting_wallets
   forecasted_usage
   from_email
   hubspot
@@ -6167,7 +6169,6 @@ type Invite {
   organization: Organization!
   recipient: Membership!
   revokedAt: ISO8601DateTime
-  role: MembershipRole @deprecated(reason: "Use `roles` field instead")
   roles: [String!]!
   status: InviteStatusTypeEnum!
   token: String!
@@ -6524,9 +6525,8 @@ type Membership {
   createdAt: ISO8601DateTime!
   id: ID!
   organization: Organization!
-  permissions: Permissions! @deprecated(reason: "Use permissions enum instead")
+  permissions: Permissions!
   revokedAt: ISO8601DateTime
-  role: MembershipRole @deprecated(reason: "Use roles instead")
   roles: [String!]!
   status: MembershipStatus!
   updatedAt: ISO8601DateTime!
@@ -6546,12 +6546,6 @@ type MembershipCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: Metadata!
-}
-
-enum MembershipRole {
-  admin
-  finance
-  manager
 }
 
 enum MembershipStatus {
@@ -8481,7 +8475,9 @@ type PaymentMethod {
   isDefault: Boolean!
   paymentProviderCode: String
   paymentProviderCustomerId: ID
+  paymentProviderName: String
   paymentProviderType: ProviderTypeEnum
+  providerMethodId: String!
   updatedAt: ISO8601DateTime
 }
 
@@ -8914,6 +8910,7 @@ enum PremiumIntegrationTypeEnum {
   avalara
   beta_payment_authorization
   custom_roles
+  events_targeting_wallets
   forecasted_usage
   from_email
   hubspot
@@ -11692,6 +11689,7 @@ input UpdateCustomerWalletInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String
   expirationAt: ISO8601DateTime
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -11850,8 +11848,7 @@ input UpdateInviteInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole @deprecated(reason: "Use `roles` instead")
-  roles: [String!]
+  roles: [String!]!
 }
 
 """
@@ -11892,8 +11889,7 @@ input UpdateMembershipInput {
   """
   clientMutationId: String
   id: ID!
-  role: MembershipRole @deprecated(reason: "Use `roles` instead")
-  roles: [String!]
+  roles: [String!]!
 }
 
 """
@@ -12249,6 +12245,7 @@ type Wallet {
   activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
+  code: String
   consumedAmountCents: BigInt!
   consumedCredits: Float!
   createdAt: ISO8601DateTime!

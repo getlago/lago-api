@@ -11,10 +11,10 @@ module Fees
       @charge = @first_fee&.charge
       @subscription = @first_fee&.subscription
       @charge_filter = @first_fee&.charge_filter
-      @from_datetime = @first_fee&.properties&.dig("from_datetime")
-      @to_datetime = @first_fee&.properties&.dig("to_datetime")
+      @from_datetime = Time.zone.parse(@first_fee&.properties&.dig("from_datetime"))
+      @to_datetime = Time.zone.parse(@first_fee&.properties&.dig("to_datetime"))
       @charges_duration_in_days = @first_fee&.properties&.dig("charges_duration")
-      @currency = @subscription&.plan&.amount&.currency
+      @currency = @first_fee&.amount&.currency
       @properties_for_charge_model = @charge_filter&.properties&.presence || @charge&.properties
 
       super(nil)
@@ -35,7 +35,7 @@ module Fees
         return result
       end
 
-      if fees.blank? || !(period_ratio > 0 && period_ratio < 1)
+      if fees.blank? || !(period_ratio > 0 && period_ratio <= 1)
         result.projected_amount_cents = BigDecimal(0)
         result.projected_units = BigDecimal(0)
         result.projected_pricing_unit_amount_cents = BigDecimal(0)
@@ -77,16 +77,21 @@ module Fees
     def period_ratio
       return @period_ratio if defined?(@period_ratio)
 
-      from_date = from_datetime.to_date
-      to_date = to_datetime.to_date
-      current_date = Time.current.to_date
+      current_time = Time.current
+      return @period_ratio = 1.0 if current_time >= to_datetime
+      return @period_ratio = 0.0 if current_time < from_datetime
 
-      total_days = (to_date - from_date).to_i + 1
+      total_days = Utils::Datetime.date_diff_with_timezone(
+        from_datetime,
+        to_datetime,
+        subscription.customer.applicable_timezone
+      )
 
-      return @period_ratio = 1.0 if current_date >= to_date
-      return @period_ratio = 0.0 if current_date < from_date
-
-      days_passed = (current_date - from_date).to_i + 1
+      days_passed = Utils::Datetime.date_diff_with_timezone(
+        from_datetime,
+        current_time,
+        subscription.customer.applicable_timezone
+      )
 
       ratio = days_passed.fdiv(total_days)
       @period_ratio = ratio.clamp(0.0, 1.0)
@@ -94,8 +99,8 @@ module Fees
 
     def run_aggregation
       boundaries = {
-        from_datetime: from_datetime.to_date,
-        to_datetime: to_datetime.to_date,
+        from_datetime: from_datetime,
+        to_datetime: to_datetime,
         charges_duration: charges_duration_in_days
       }
 

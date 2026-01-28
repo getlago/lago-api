@@ -37,6 +37,7 @@ module DataExports
           taxes_amount_cents
           sub_total_excluding_taxes_amount_cents
           coupons_adjustment_amount_cents
+          offset_amount_cents
           credit_amount_cents
           balance_amount_cents
           refund_amount_cents
@@ -79,6 +80,7 @@ module DataExports
           serialized_note[:taxes_amount_cents],
           serialized_note[:sub_total_excluding_taxes_amount_cents],
           serialized_note[:coupons_adjustment_amount_cents],
+          serialized_note[:offset_amount_cents],
           serialized_note[:credit_amount_cents],
           serialized_note[:balance_amount_cents],
           serialized_note[:refund_amount_cents],

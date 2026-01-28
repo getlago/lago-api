@@ -10,6 +10,7 @@ module V1
         status: model.status,
         currency: model.currency,
         name: model.name,
+        code: model.code,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
         credits_ongoing_balance: model.credits_ongoing_balance,

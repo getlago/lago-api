@@ -7,10 +7,7 @@ module Types
     field :organization, Types::Organizations::OrganizationType, null: false
     field :user, Types::UserType, null: false
 
-    field :permissions, Types::PermissionsType, null: false,
-      deprecation_reason: "Use permissions enum instead"
-    field :role, Types::Memberships::RoleEnum,
-      deprecation_reason: "Use roles instead"
+    field :permissions, Types::PermissionsType, null: false
     field :roles, [String], null: false
     field :status, Types::Memberships::StatusEnum, null: false
 
@@ -22,12 +19,8 @@ module Types
       object.permissions_hash.transform_keys { |key| key.tr(":", "_") }
     end
 
-    def role
-      (roles.map(&:downcase) & %w[admin finance manager]).first
-    end
-
     def roles
-      @roles ||= object.roles.pluck(:name)
+      object.roles.pluck(:name)
     end
   end
 end
