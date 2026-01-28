@@ -14,6 +14,7 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result unless invoice.pending? && invoice.tax_pending?
       return result if customer.tax_customer
+      return result if customer.vies_check_in_progress?
 
       ActiveRecord::Base.transaction do
         invoice.issuing_date = issuing_date

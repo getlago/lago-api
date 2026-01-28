@@ -115,6 +115,21 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
       end
     end
 
+    context "when VIES check is still in progress" do
+      let(:billing_entity) { create(:billing_entity, organization:, eu_tax_management: true) }
+      let(:pending_vies_check) { create(:pending_vies_check, customer:) }
+
+      before { pending_vies_check }
+
+      it "does not change the invoice" do
+        expect { finalize_service.call }.not_to change { invoice.reload.attributes }
+      end
+
+      it "returns success" do
+        expect(finalize_service.call).to be_success
+      end
+    end
+
     context "when invoice is finalized successfully" do
       it "changes status from pending to finalized" do
         expect { finalize_service.call }
