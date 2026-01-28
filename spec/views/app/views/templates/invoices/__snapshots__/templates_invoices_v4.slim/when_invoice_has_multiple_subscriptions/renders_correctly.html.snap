@@ -110,12 +110,12 @@
             <td class="body-2">Amount</td>
           </tr>
           <tr>
-            <td class="body-1">Zebra Plan</td>
-            <td class="body-2">€50.00</td>
-          </tr>
-          <tr>
             <td class="body-1">Alpha Plan</td>
             <td class="body-2">€30.00</td>
+          </tr>
+          <tr>
+            <td class="body-1">Zebra Plan</td>
+            <td class="body-2">€50.00</td>
           </tr>
         </table>
         <table class="total-table" width="100%">
