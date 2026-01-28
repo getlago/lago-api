@@ -24,7 +24,22 @@ module Customers
         process_not_vies_tax
       end
 
+      if customer.tax_identification_number.present?
+        after_commit do
+          SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: vies_api_response.presence || error_vies_check)
+        end
+      end
+
+      delete_pending_vies_check_if_exists
       result
+    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
+      Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
+      create_or_update_pending_vies_check(e)
+      after_commit do
+        SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
+        RetryViesCheckJob.set(wait: retry_delay).perform_later(customer.id)
+      end
+      result.service_failure!(code: "vies_check_failed", message: e.message)
     end
 
     private
@@ -38,19 +53,7 @@ module Customers
       # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
       # Check the Unavailable sheet per UE country.
       # https://ec.europa.eu/taxation_customs/vies/#/help
-      response = Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
-
-      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
-
-      response
-    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
-      Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
-      after_commit do
-        SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
-        # Enqueue a job to retry the VIES check after a delay
-        RetryViesCheckJob.set(wait: 5.minutes).perform_later(customer.id)
-      end
-      nil
+      Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
     end
 
     def error_vies_check
@@ -103,6 +106,48 @@ module Customers
       non_existing_eu_taxes = customer.taxes.where("code ILIKE ?", "lago_eu%").none?
 
       non_existing_eu_taxes || tax_attributes_changed
+    end
+
+    def create_or_update_pending_vies_check(exception)
+      pending_check = PendingViesCheck.find_or_initialize_by(customer:)
+      pending_check.assign_attributes(
+        organization: customer.organization,
+        billing_entity: customer.billing_entity,
+        tax_identification_number: customer.tax_identification_number,
+        attempts_count: pending_check.attempts_count + 1,
+        last_attempt_at: Time.current,
+        last_error_type: error_type_for(exception),
+        last_error_message: exception.message
+      )
+      pending_check.save!
+    end
+
+    def delete_pending_vies_check_if_exists
+      customer.pending_vies_check&.destroy!
+    end
+
+    def retry_delay
+      attempts = customer.reload.pending_vies_check&.attempts_count.to_i
+
+      case attempts
+      when 0..1 then 5.minutes
+      when 2 then 10.minutes
+      when 3 then 20.minutes
+      when 4 then 40.minutes
+      else 1.hour
+      end
+    end
+
+    def error_type_for(exception)
+      case exception
+      when Valvat::RateLimitError then "rate_limit"
+      when Valvat::Timeout then "timeout"
+      when Valvat::BlockedError then "blocked"
+      when Valvat::InvalidRequester then "invalid_requester"
+      when Valvat::ServiceUnavailable then "service_unavailable"
+      when Valvat::MemberStateUnavailable then "member_state_unavailable"
+      else "unknown"
+      end
     end
   end
 end
