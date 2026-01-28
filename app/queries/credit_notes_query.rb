@@ -179,7 +179,7 @@ class CreditNotesQuery < BaseQuery
       .flat_map { |value| value.to_s.split(",") }
       .map(&:strip)
       .reject(&:blank?)
-      .select { |type| %w[credit refund offset].include?(type) }
+      .select { |type| CreditNote::TYPES.include?(type) }
       .uniq
   end
 end
