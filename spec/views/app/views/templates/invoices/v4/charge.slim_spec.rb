@@ -513,4 +513,67 @@ RSpec.describe "templates/invoices/v4/charge.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "with prepaid credits" do
+    let(:charge) do
+      create(:standard_charge, :pay_in_advance, plan:, billable_metric:)
+    end
+
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        charge:,
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 10,
+        unit_amount_cents: 500,
+        precise_unit_amount: 5.00,
+        invoice_display_name: "API Calls",
+        properties: {
+          "from_datetime" => "2025-09-01 00:00:00",
+          "to_datetime" => "2025-09-30 23:59:59",
+          "charges_from_datetime" => "2025-09-01 00:00:00",
+          "charges_to_datetime" => "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    let(:wallet) { create(:wallet, customer:) }
+    let(:wallet_transaction) do
+      create(:wallet_transaction, wallet:, invoice:, amount: 10, credit_amount: 10)
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        number: "LAGO-202509-CH-004",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 4000,
+        currency: "USD",
+        fees_amount_cents: 5000,
+        coupons_amount_cents: 0,
+        sub_total_excluding_taxes_amount_cents: 5000,
+        sub_total_including_taxes_amount_cents: 5000,
+        prepaid_credit_amount_cents: 1000,
+        prepaid_granted_credit_amount_cents: 400,
+        prepaid_purchased_credit_amount_cents: 600
+      )
+    end
+
+    before do
+      charge_fee
+      wallet_transaction
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 end
