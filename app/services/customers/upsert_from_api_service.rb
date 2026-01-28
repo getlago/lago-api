@@ -252,7 +252,7 @@ module Customers
       return unless update_provider_customer
 
       create_or_update_provider_customer(customer, billing)
-      
+
       if old_provider_customer
         provider_changed = old_payment_provider != billing[:payment_provider]
         provider_code_changed = old_payment_provider_code != billing[:payment_provider_code]
