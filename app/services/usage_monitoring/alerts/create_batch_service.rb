@@ -5,16 +5,16 @@ module UsageMonitoring
     class CreateBatchService < BaseService
       Result = BaseResult[:alerts, :errors]
 
-      def initialize(organization:, subscription:, alerts_params:)
+      def initialize(organization:, alertable:, alerts_params:)
         @organization = organization
-        @subscription = subscription
+        @alertable = alertable
         @alerts_params = alerts_params
         super
       end
 
       def call
         return result.not_found_failure!(resource: "organization") unless organization
-        return result.not_found_failure!(resource: "subscription") unless subscription
+        return result.not_found_failure!(resource: "alertable") unless alertable
 
         if alerts_params.blank?
           return result.single_validation_failure!(error_code: "no_alerts", field: :alerts)
@@ -28,7 +28,7 @@ module UsageMonitoring
             ActiveRecord::Base.transaction(requires_new: true) do
               create_result = CreateAlertService.call(
                 organization:,
-                subscription:,
+                alertable:,
                 params: alert_params.to_h
               )
 
@@ -57,7 +57,7 @@ module UsageMonitoring
 
       private
 
-      attr_reader :organization, :subscription, :alerts_params
+      attr_reader :organization, :alertable, :alerts_params
     end
   end
 end

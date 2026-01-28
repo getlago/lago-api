@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  class CurrentUsageAmountAlert < Alert
-    def find_value(current_usage)
-      current_usage.amount_cents
+  class WalletBalanceAmountAlert < Alert
+    def find_value(wallet)
+      wallet.balance_cents
     end
   end
 end

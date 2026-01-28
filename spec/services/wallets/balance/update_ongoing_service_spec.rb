@@ -62,6 +62,10 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         subject
         expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:)
       end
+
+      it "enqueues a ProcessWalletAlertsJob" do
+        expect { subject }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+      end
     end
 
     context "when ongoing balance is depleted" do
