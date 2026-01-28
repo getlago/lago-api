@@ -132,6 +132,25 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
       expect(moneyhash_customer.payment_method_id).to eq(event_json.dig("data", "card_token", "id"))
     end
 
+    context "when multiple_payment_methods feature flag is enabled" do
+      before { organization.update!(feature_flags: ["multiple_payment_methods"]) }
+
+      it "extracts and stores card details in PaymentMethod.details" do
+        result = event_service.call
+
+        expect(result).to be_success
+        payment_method = PaymentMethod.last
+        expect(payment_method.details).to include(
+          "brand" => "Visa",
+          "last4" => "0000",
+          "expiration_month" => "02",
+          "expiration_year" => "26",
+          "card_holder_name" => "Kevin Smith",
+          "issuer" => "test"
+        )
+      end
+    end
+
     context "when event is card_token.updated" do
       let(:event_json) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/card_token.updated.json"))) }
 
@@ -141,6 +160,18 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
         expect(result).to be_success
         moneyhash_customer.reload
         expect(moneyhash_customer.payment_method_id).to eq(event_json.dig("data", "card_token", "id"))
+      end
+
+      context "when multiple_payment_methods feature flag is enabled" do
+        before { organization.update!(feature_flags: ["multiple_payment_methods"]) }
+
+        it "updates card details in existing PaymentMethod.details" do
+          result = event_service.call
+
+          expect(result).to be_success
+          payment_method = PaymentMethod.last
+          expect(payment_method.details).to include("brand", "last4")
+        end
       end
     end
 
@@ -161,12 +192,31 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
       context "when not the same card" do
         let(:payment_method_id) { "test_payment_id" }
 
-        it "ignores the event" do
+        it "does not clear the default payment_method_id" do
           result = event_service.call
 
           expect(result).to be_success
           moneyhash_customer.reload
           expect(moneyhash_customer.payment_method_id).to eq("test_payment_id")
+        end
+      end
+
+      context "when multiple_payment_methods feature flag is enabled" do
+        let!(:payment_method) do
+          create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: moneyhash_customer,
+            provider_method_id: payment_method_id
+          )
+        end
+
+        before do
+          organization.update!(feature_flags: ["multiple_payment_methods"])
+        end
+
+        it "soft-deletes the PaymentMethod record" do
+          expect { event_service.call }.to change { payment_method.reload.discarded? }.from(false).to(true)
         end
       end
     end
