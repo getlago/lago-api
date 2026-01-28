@@ -22,6 +22,17 @@ module Customers
           tax_codes: [tax_code]
         )
       end
+
+      # Finalize any invoices that were blocked by VIES
+      enqueue_pending_invoice_finalization(customer)
+    end
+
+    private
+
+    def enqueue_pending_invoice_finalization(customer)
+      customer.invoices.pending.where(tax_status: "pending").find_each do |invoice|
+        Invoices::FinalizePendingViesInvoiceJob.perform_later(invoice)
+      end
     end
   end
 end
