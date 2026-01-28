@@ -339,7 +339,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
       end
 
       context "when multiple_payment_methods feature flag is enabled" do
-        let(:payment_method) do
+        let!(:payment_method) do
           create(
             :payment_method,
             customer:,
@@ -350,19 +350,17 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
         before do
           organization.update!(feature_flags: ["multiple_payment_methods"])
-          payment_method
         end
 
         it "soft-deletes the PaymentMethod record" do
-          result = moneyhash_service.delete_payment_method(
-            organization_id: organization.id,
-            customer_id: customer.id,
-            payment_method_id: payment_method_id,
-            metadata: custom_fields
-          )
-
-          expect(result).to be_success
-          expect(payment_method.reload.deleted_at).to be_present
+          expect {
+            moneyhash_service.delete_payment_method(
+              organization_id: organization.id,
+              customer_id: customer.id,
+              payment_method_id: payment_method_id,
+              metadata: custom_fields
+            )
+          }.to change { payment_method.reload.discarded? }.from(false).to(true)
         end
 
         it "does not fail when PaymentMethod record does not exist" do

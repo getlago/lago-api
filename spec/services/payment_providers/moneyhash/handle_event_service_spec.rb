@@ -202,7 +202,7 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
       end
 
       context "when multiple_payment_methods feature flag is enabled" do
-        let(:payment_method) do
+        let!(:payment_method) do
           create(
             :payment_method,
             customer:,
@@ -213,7 +213,6 @@ RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
 
         before do
           organization.update!(feature_flags: ["multiple_payment_methods"])
-          payment_method
         end
 
         it "soft-deletes the PaymentMethod record" do
