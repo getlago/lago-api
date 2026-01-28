@@ -150,5 +150,15 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect(alert.reload.thresholds.map(&:value)).to eq [100, 200.5]
       end
     end
+
+    context "with direction param" do
+      let(:alert) { create(:alert, thresholds: [1, 50], organization: organization, direction: "increasing") }
+      let(:params) { {direction: "decreasing"} }
+
+      it "ignores direction param and does not modify it" do
+        expect(result).to be_success
+        expect(alert.reload.direction).to eq("increasing")
+      end
+    end
   end
 end
