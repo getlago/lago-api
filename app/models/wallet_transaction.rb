@@ -74,6 +74,11 @@ class WalletTransaction < ApplicationRecord
 
     update!(status: :failed, failed_at: timestamp)
   end
+
+  # note: outbound wallet transactions are synced as part of invoice syncing
+  def should_sync_wallet_transaction?
+    settled? && inbound? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+  end
 end
 
 # == Schema Information

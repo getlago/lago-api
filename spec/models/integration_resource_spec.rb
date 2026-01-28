@@ -6,7 +6,7 @@ RSpec.describe IntegrationResource do
   subject(:integration_resource) { build(:integration_resource) }
 
   let(:resource_types) do
-    %i[invoice sales_order_deprecated payment credit_note subscription]
+    %i[invoice sales_order_deprecated payment credit_note subscription wallet_transaction]
   end
 
   it_behaves_like "paper_trail traceable"
