@@ -5,10 +5,20 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::Alert do
   let(:alert) { create(:alert, code: "my-code", thresholds: [10, 30, 50], recurring_threshold: 100) }
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:direction)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(increasing: "increasing", decreasing: "decreasing")
+    end
+  end
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:billable_metric).optional
+      expect(subject).to belong_to(:wallet).optional
       expect(subject).to have_many(:thresholds).class_name("UsageMonitoring::AlertThreshold")
         .with_foreign_key(:usage_monitoring_alert_id).dependent(:delete_all)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
@@ -25,6 +35,24 @@ RSpec.describe UsageMonitoring::Alert do
       end
     end
 
+    context "when type requires wallet_id" do
+      it do
+        alert = build(:wallet_balance_amount_alert, wallet_id: nil)
+        expect(alert).to be_invalid
+        expect(alert.errors[:wallet]).to eq ["value_is_mandatory"]
+      end
+    end
+
+    context "when billable_metric is set on a wallet alert" do
+      it "is invalid" do
+        wallet = create(:wallet)
+        billable_metric = create(:billable_metric, organization: wallet.organization)
+        alert = build(:wallet_balance_amount_alert, wallet:, billable_metric:)
+        expect(alert).to be_invalid
+        expect(alert.errors[:billable_metric]).to eq(["value_must_be_blank"])
+      end
+    end
+
     context "when code is not unique for a subscription" do
       it "raises an error" do
         expect {
@@ -38,6 +66,8 @@ RSpec.describe UsageMonitoring::Alert do
     it "returns correct constant for known alert types" do
       expect(described_class.find_sti_class("current_usage_amount")).to eq(UsageMonitoring::CurrentUsageAmountAlert)
       expect(described_class.find_sti_class("billable_metric_current_usage_amount")).to eq(UsageMonitoring::BillableMetricCurrentUsageAmountAlert)
+      expect(described_class.find_sti_class("wallet_balance_amount")).to eq(UsageMonitoring::WalletBalanceAmountAlert)
+      expect(described_class.find_sti_class("wallet_credits_balance")).to eq(UsageMonitoring::WalletCreditsBalanceAlert)
     end
 
     it "raises KeyError for unknown alert type" do
@@ -62,22 +92,51 @@ RSpec.describe UsageMonitoring::Alert do
   end
 
   describe "#find_thresholds_crossed" do
-    it "returns threshold values between previous_value and current (inclusive)" do
-      alert.previous_value = 8
-      expect(alert.find_thresholds_crossed(8)).to eq([]) # exclude previous_values
-      expect(alert.find_thresholds_crossed(30)).to eq([10, 30])
-      alert.previous_value = 31
-      expect(alert.find_thresholds_crossed(60)).to eq([50])
+    context "when direction is increasing" do
+      it "returns threshold values between previous_value and current (inclusive)" do
+        alert.previous_value = 8
+        expect(alert.find_thresholds_crossed(8)).to eq([]) # exclude previous_values
+        expect(alert.find_thresholds_crossed(30)).to eq([10, 30])
+        alert.previous_value = 31
+        expect(alert.find_thresholds_crossed(60)).to eq([50])
+      end
+
+      it "returns empty array if no thresholds crossed" do
+        alert.previous_value = 30
+        expect(alert.find_thresholds_crossed(29)).to be_empty
+      end
+
+      it "returns recurring threshold if crossed" do
+        alert.previous_value = 33
+        expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
+      end
     end
 
-    it "returns empty array if no thresholds crossed" do
-      alert.previous_value = 30
-      expect(alert.find_thresholds_crossed(29)).to be_empty
-    end
+    context "when direction is decreasing" do
+      let(:alert) { create(:alert, code: "my-code", thresholds: [200, 500, 800], recurring_threshold: 100, direction: "decreasing") }
 
-    it "returns recurring threshold if crossed" do
-      alert.previous_value = 33
-      expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
+      it "returns threshold values between current and previous_value (inclusive)" do
+        alert.previous_value = 1000
+        expect(alert.find_thresholds_crossed(1000)).to eq([]) # exclude previous_values
+        expect(alert.find_thresholds_crossed(500)).to eq([500, 800])
+        alert.previous_value = 450
+        expect(alert.find_thresholds_crossed(100)).to eq([200])
+      end
+
+      it "returns empty array if value increases" do
+        alert.previous_value = 400
+        expect(alert.find_thresholds_crossed(450)).to be_empty
+      end
+
+      it "returns empty array if no thresholds crossed" do
+        alert.previous_value = 700
+        expect(alert.find_thresholds_crossed(600)).to be_empty
+      end
+
+      it "returns recurring thresholds if crossed" do
+        alert.previous_value = 200
+        expect(alert.find_thresholds_crossed(-100)).to eq([-100, 0, 100])
+      end
     end
   end
 
