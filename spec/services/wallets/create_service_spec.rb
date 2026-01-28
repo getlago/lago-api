@@ -202,6 +202,26 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when priority is nil" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          priority: nil
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.priority).to eq(50)
+      end
+    end
+
     context "when invoice_requires_successful_payment is set" do
       let(:params) do
         {
