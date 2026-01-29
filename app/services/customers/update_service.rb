@@ -128,7 +128,7 @@ module Customers
             args.key?(:provider_customer) && args[:provider_customer].nil? &&
             args.key?(:payment_provider) && args[:payment_provider].nil?
           old_provider_customer.payment_methods.find_each do |payment_method|
-            PaymentMethods::DestroyService.call(payment_method: payment_method)
+            PaymentMethods::DestroyService.call(payment_method:)
           end
           old_provider_customer.discard!
 
