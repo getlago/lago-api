@@ -82,11 +82,7 @@
         td.body-2
         td.body-2 = I18n.t('invoice.credit_notes')
         td.body-2 = '-' +  MoneyHelper.format(credit_notes_amount)
-    - if wallet_transactions.exists?
-      tr
-        td.body-2
-        td.body-2 = I18n.t('invoice.prepaid_credits')
-        td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
+    == SlimHelper.render('templates/invoices/v4/_prepaid_credits', self)
     tr
       td.body-2
       td.body-1 = I18n.t('invoice.total')

@@ -104,6 +104,102 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
+  context "when invoice_type is subscription with prepaid credits" do
+    let(:organization) { create(:organization, :with_static_values, webhook_url: nil) }
+    let(:billing_entity) { create(:billing_entity, :with_static_values, organization:) }
+    let(:customer) { create(:customer, :with_static_values, organization:, billing_entity:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly", name: "Basic Plan", invoice_display_name: "Basic Plan", code: "basic_plan", amount_cents: 5000, amount_currency: "USD") }
+    let(:subscription) { create(:subscription, customer:, organization:, plan:, external_id: "sub_123") }
+    let(:wallet) { create(:wallet, customer:, organization:, rate_amount: BigDecimal("1.0"), balance_currency: "USD") }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, credit_amount: BigDecimal("5.0"), amount: BigDecimal("5.0")) }
+    let(:subscription_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription:,
+        fee_type: :subscription,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 1,
+        invoice_display_name: "Basic Plan - Monthly"
+      )
+    end
+    let(:invoice) do
+      create(
+        :invoice,
+        invoice_type: :subscription,
+        organization:,
+        billing_entity:,
+        customer:,
+        number: "LAGO-202509-002",
+        payment_due_date: Date.parse("2025-09-04"),
+        issuing_date: Date.parse("2025-09-04"),
+        fees_amount_cents: 5000,
+        sub_total_excluding_taxes_amount_cents: 5000,
+        sub_total_including_taxes_amount_cents: 5000,
+        taxes_amount_cents: 0,
+        total_amount_cents: 4500,
+        prepaid_credit_amount_cents: 500,
+        prepaid_granted_credit_amount_cents:,
+        prepaid_purchased_credit_amount_cents:,
+        currency: "USD"
+      )
+    end
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: DateTime.parse("2025-09-01 00:00:00"),
+        to_datetime: DateTime.parse("2025-09-30 23:59:59"),
+        charges_from_datetime: DateTime.parse("2025-09-01 00:00:00"),
+        charges_to_datetime: DateTime.parse("2025-09-30 23:59:59")
+      )
+    end
+    let(:prepaid_granted_credit_amount_cents) { nil }
+    let(:prepaid_purchased_credit_amount_cents) { nil }
+
+    before do
+      invoice_subscription
+      subscription_fee
+      wallet_transaction
+    end
+
+    context "with only granted credits" do
+      let(:prepaid_granted_credit_amount_cents) { 500 }
+
+      it "renders correctly" do
+        expect(rendered_template).to match_html_snapshot
+      end
+    end
+
+    context "with only purchased credits" do
+      let(:prepaid_purchased_credit_amount_cents) { 500 }
+
+      it "renders correctly" do
+        expect(rendered_template).to match_html_snapshot
+      end
+    end
+
+    context "with both granted and purchased credits" do
+      let(:prepaid_granted_credit_amount_cents) { 300 }
+      let(:prepaid_purchased_credit_amount_cents) { 200 }
+
+      it "renders correctly" do
+        expect(rendered_template).to match_html_snapshot
+      end
+    end
+
+    context "without breakdown (legacy behavior)" do
+      let(:prepaid_granted_credit_amount_cents) { nil }
+      let(:prepaid_purchased_credit_amount_cents) { nil }
+
+      it "renders correctly" do
+        expect(rendered_template).to match_html_snapshot
+      end
+    end
+  end
+
   context "when invoice_type is subscription and plan is paid in arrears" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }
@@ -1086,6 +1182,116 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
+  context "when invoice_type is progressive_billing with prepaid credits" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Progressive Billing Plan"
+      )
+    end
+
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        invoice_display_name: "Usage Charge"
+      )
+    end
+
+    let(:usage_threshold) do
+      create(:usage_threshold, plan:, amount_cents: 10000)
+    end
+
+    let(:subscription) do
+      create(:subscription, customer:, plan:, status: "active")
+    end
+
+    let(:wallet) { create(:wallet, customer:, organization:, rate_amount: BigDecimal("1.0"), balance_currency: "USD") }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, credit_amount: BigDecimal("5.0"), amount: BigDecimal("5.0")) }
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-008",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-15"),
+        invoice_type: :progressive_billing,
+        total_amount_cents: 9500,
+        currency: "USD",
+        fees_amount_cents: 10000,
+        sub_total_excluding_taxes_amount_cents: 10000,
+        sub_total_including_taxes_amount_cents: 10000,
+        prepaid_credit_amount_cents: 500,
+        prepaid_granted_credit_amount_cents: 200,
+        prepaid_purchased_credit_amount_cents: 300
+      )
+    end
+
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-09-30 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-09-15 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-09-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-09-15 23:59:59"),
+        timestamp: Time.zone.parse("2025-09-15 12:00:00")
+      )
+    end
+
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        amount_cents: 10000,
+        amount_currency: "USD",
+        units: 100,
+        unit_amount_cents: 100,
+        precise_unit_amount: 1.00,
+        invoice_display_name: "Usage Charge Fee",
+        properties: {
+          "timestamp" => "2025-09-15 12:00:00",
+          "charges_from_datetime" => "2025-09-01 00:00:00",
+          "charges_to_datetime" => "2025-09-15 23:59:59"
+        }
+      )
+    end
+
+    let(:applied_usage_threshold) do
+      create(
+        :applied_usage_threshold,
+        invoice:,
+        usage_threshold:,
+        lifetime_usage_amount_cents: 10000
+      )
+    end
+
+    before do
+      invoice_subscription
+      charge_fee
+      wallet_transaction
+      applied_usage_threshold
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
+
   context "when charge has filters and minimum commitment (true_up fee)" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }
@@ -1391,6 +1597,141 @@ RSpec.describe "templates/invoices/v4.slim" do
       invoice_subscription_alpha
       subscription_fee_zebra
       subscription_fee_alpha
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
+
+  context "when invoice has multiple subscriptions with prepaid credits" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+
+    let(:plan_alpha) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Alpha Plan"
+      )
+    end
+
+    let(:plan_beta) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        invoice_display_name: "Beta Plan"
+      )
+    end
+
+    let(:subscription_alpha) do
+      create(:subscription, customer:, plan: plan_alpha, status: "active")
+    end
+
+    let(:subscription_beta) do
+      create(:subscription, customer:, plan: plan_beta, status: "active")
+    end
+
+    let(:wallet) { create(:wallet, customer:, organization:, rate_amount: BigDecimal("1.0"), balance_currency: "USD") }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, credit_amount: BigDecimal("10.0"), amount: BigDecimal("10.0")) }
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202509-006",
+        payment_due_date: Date.parse("2025-10-01"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 7000,
+        currency: "USD",
+        fees_amount_cents: 8000,
+        sub_total_excluding_taxes_amount_cents: 8000,
+        sub_total_including_taxes_amount_cents: 8000,
+        prepaid_credit_amount_cents: 1000,
+        prepaid_granted_credit_amount_cents: 400,
+        prepaid_purchased_credit_amount_cents: 600
+      )
+    end
+
+    let(:invoice_subscription_alpha) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_alpha,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:invoice_subscription_beta) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription: subscription_beta,
+        from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        fixed_charges_from_datetime: Time.zone.parse("2025-08-01 00:00:00"),
+        fixed_charges_to_datetime: Time.zone.parse("2025-08-31 23:59:59"),
+        timestamp: Time.zone.parse("2025-08-31 23:59:59")
+      )
+    end
+
+    let(:subscription_fee_alpha) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_alpha,
+        fee_type: :subscription,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 5000,
+        precise_unit_amount: 50.00,
+        invoice_display_name: "Alpha Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    let(:subscription_fee_beta) do
+      create(
+        :fee,
+        invoice:,
+        subscription: subscription_beta,
+        fee_type: :subscription,
+        amount_cents: 3000,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 3000,
+        precise_unit_amount: 30.00,
+        invoice_display_name: "Beta Plan Subscription",
+        properties: {
+          from_datetime: "2025-08-01 00:00:00",
+          to_datetime: "2025-08-31 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription_alpha
+      invoice_subscription_beta
+      subscription_fee_alpha
+      subscription_fee_beta
+      wallet_transaction
     end
 
     it "renders correctly" do

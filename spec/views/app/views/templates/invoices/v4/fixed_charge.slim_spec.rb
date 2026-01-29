@@ -396,4 +396,65 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "with prepaid credits" do
+    let(:fixed_charge) do
+      create(:fixed_charge, :pay_in_advance, plan:, add_on:)
+    end
+
+    let(:fixed_charge_fee) do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge:,
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 2,
+        unit_amount_cents: 2500,
+        precise_unit_amount: 25.00,
+        invoice_display_name: "Fixed Charge",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    let(:wallet) { create(:wallet, customer:) }
+    let(:wallet_transaction) do
+      create(:wallet_transaction, wallet:, invoice:, amount: 10, credit_amount: 10)
+    end
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        number: "LAGO-202509-FC-003",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :subscription,
+        total_amount_cents: 4000,
+        currency: "USD",
+        fees_amount_cents: 5000,
+        coupons_amount_cents: 0,
+        sub_total_excluding_taxes_amount_cents: 5000,
+        sub_total_including_taxes_amount_cents: 5000,
+        prepaid_credit_amount_cents: 1000,
+        prepaid_granted_credit_amount_cents: 400,
+        prepaid_purchased_credit_amount_cents: 600
+      )
+    end
+
+    before do
+      fixed_charge_fee
+      wallet_transaction
+    end
+
+    it "renders correctly" do
+      expect(rendered_template).to match_html_snapshot
+    end
+  end
 end
