@@ -13,35 +13,44 @@ module Credits
       return result if already_applied?
 
       result.credits = []
-      remaining_invoice_amount = invoice.total_amount_cents
 
-      ActiveRecord::Base.transaction do
-        credit_notes.each do |credit_note|
-          credit_amount = compute_credit_amount(credit_note, remaining_invoice_amount)
-          next unless credit_amount.positive?
+      # NOTE: Take an advisory lock on credit notes for this customer
+      # We're not using row-level locks as that might lead to deadlocks.
+      # This will also keep the lock for the shortest time possible, otherwise
+      # we'd have to wait for the transaction to either rollback / commit.
+      CreditNotes::LockService.new(customer:).call do
+        # reload credit notes now that we've acquired the lock
+        @credit_notes = nil
+        remaining_invoice_amount = invoice.total_amount_cents
 
-          # NOTE: create a new credit line on the invoice
-          credit = Credit.new(
-            organization_id: invoice.organization_id,
-            invoice:,
-            credit_note:,
-            amount_cents: credit_amount,
-            amount_currency: invoice.currency,
-            before_taxes: false
-          )
-          credit.save! unless context == :preview
+        ActiveRecord::Base.transaction do
+          credit_notes.each do |credit_note|
+            credit_amount = compute_credit_amount(credit_note, remaining_invoice_amount)
+            next unless credit_amount.positive?
 
-          apply_credit_to_fees(credit, remaining_invoice_amount) unless context == :preview
+            # NOTE: create a new credit line on the invoice
+            credit = Credit.new(
+              organization_id: invoice.organization_id,
+              invoice:,
+              credit_note:,
+              amount_cents: credit_amount,
+              amount_currency: invoice.currency,
+              before_taxes: false
+            )
+            credit.save! unless context == :preview
 
-          # NOTE: Consume remaining credit on the credit note
-          update_remaining_credit(credit_note, credit_amount) unless context == :preview
-          remaining_invoice_amount -= credit_amount
+            apply_credit_to_fees(credit, remaining_invoice_amount) unless context == :preview
 
-          result.credits << credit
-          invoice.credit_notes_amount_cents += credit.amount_cents
+            # NOTE: Consume remaining credit on the credit note
+            update_remaining_credit(credit_note, credit_amount) unless context == :preview
+            remaining_invoice_amount -= credit_amount
 
-          # NOTE: Invoice amount is fully covered by the credit notes
-          break if remaining_invoice_amount.zero?
+            result.credits << credit
+            invoice.credit_notes_amount_cents += credit.amount_cents
+
+            # NOTE: Invoice amount is fully covered by the credit notes
+            break if remaining_invoice_amount.zero?
+          end
         end
       end
 
