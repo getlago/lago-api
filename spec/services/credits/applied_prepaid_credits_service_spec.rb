@@ -608,6 +608,63 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when customer has multiple traceable wallets" do
+      let(:amount_cents) { 500 }
+      let(:fee_amount_cents) { 500 }
+      let(:wallets) { [traceable_wallet1, traceable_wallet2] }
+      let(:traceable_wallet1) do
+        create(:wallet, name: "traceable1", customer:, balance_cents: 300, credits_balance: 3.0, traceable: true, priority: 1)
+      end
+      let(:traceable_wallet2) do
+        create(:wallet, name: "traceable2", customer:, balance_cents: 400, credits_balance: 4.0, traceable: true, priority: 2)
+      end
+      let(:inbound_transaction1) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet1,
+          organization: traceable_wallet1.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 3,
+          credit_amount: 3,
+          remaining_amount_cents: 300)
+      end
+      let(:inbound_transaction2) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet2,
+          organization: traceable_wallet2.organization,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 4,
+          credit_amount: 4,
+          remaining_amount_cents: 400)
+      end
+
+      before do
+        inbound_transaction1
+        inbound_transaction2
+      end
+
+      it "creates consumption records for both wallets" do
+        expect { result }.to change(WalletTransactionConsumption, :count).by(2)
+      end
+
+      it "sums breakdown amounts from both wallets" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to eq(300)
+        expect(invoice.prepaid_purchased_credit_amount_cents).to eq(200)
+      end
+
+      it "decrements remaining_amount_cents on both inbound transactions" do
+        result
+
+        expect(inbound_transaction1.reload.remaining_amount_cents).to eq(0)
+        expect(inbound_transaction2.reload.remaining_amount_cents).to eq(200)
+      end
+    end
+
     context "when wallet optimistic lock fails" do
       def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
         attempts = 0

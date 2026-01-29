@@ -227,6 +227,126 @@ RSpec.describe WalletTransactions::TrackConsumptionService do
       end
     end
 
+    context "with full ordering: priority, then granted/purchased, then FIFO" do
+      # Order should be:
+      # 1. TX1: priority 1, granted (highest priority)
+      # 2. TX2: priority 1, purchased (same priority as TX1, but purchased after granted)
+      # 3. TX3: priority 2, granted, older (lower priority, but granted before purchased)
+      # 4. TX4: priority 2, granted, newer (same as TX3 but newer - FIFO)
+      # 5. TX5: priority 2, purchased (same priority as TX3/TX4, but purchased after granted)
+
+      let!(:tx1_prio1_granted) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 1,
+          created_at: 5.days.ago)
+      end
+
+      let!(:tx2_prio1_purchased) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 1,
+          created_at: 4.days.ago)
+      end
+
+      let!(:tx3_prio2_granted_older) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 2,
+          created_at: 3.days.ago)
+      end
+
+      let!(:tx4_prio2_granted_newer) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 2,
+          created_at: 2.days.ago)
+      end
+
+      let!(:tx5_prio2_purchased) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 2,
+          created_at: 1.day.ago)
+      end
+
+      let(:outbound_wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :outbound,
+          transaction_status: :invoiced,
+          status: :settled,
+          amount: 35,
+          credit_amount: 35)
+      end
+
+      it "consumes in order: priority, then granted before purchased, then FIFO" do
+        result
+
+        # TX1 (prio 1, granted): fully consumed
+        expect(tx1_prio1_granted.reload.remaining_amount_cents).to eq(0)
+        # TX2 (prio 1, purchased): fully consumed
+        expect(tx2_prio1_purchased.reload.remaining_amount_cents).to eq(0)
+        # TX3 (prio 2, granted, older): fully consumed
+        expect(tx3_prio2_granted_older.reload.remaining_amount_cents).to eq(0)
+        # TX4 (prio 2, granted, newer): partially consumed (5 remaining)
+        expect(tx4_prio2_granted_newer.reload.remaining_amount_cents).to eq(500)
+        # TX5 (prio 2, purchased): not consumed yet
+        expect(tx5_prio2_purchased.reload.remaining_amount_cents).to eq(1000)
+      end
+
+      it "creates consumption records for the correct inbound transactions" do
+        result
+
+        consumed_transactions = outbound_wallet_transaction.fundings.map(&:inbound_wallet_transaction)
+
+        expect(consumed_transactions).to contain_exactly(
+          tx1_prio1_granted,
+          tx2_prio1_purchased,
+          tx3_prio2_granted_older,
+          tx4_prio2_granted_newer
+        )
+        # TX5 should NOT be consumed
+        expect(consumed_transactions).not_to include(tx5_prio2_purchased)
+      end
+    end
+
     context "when outbound amount is zero" do
       let!(:inbound_transaction) do
         create(:wallet_transaction,
