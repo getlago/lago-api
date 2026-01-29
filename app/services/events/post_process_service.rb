@@ -51,8 +51,12 @@ module Events
         .order("terminated_at DESC NULLS FIRST, started_at DESC")
     end
 
-    def active_subscriptions
-      @active_subscriptions ||= subscriptions.select(&:active?)
+    def active_subscription
+      @active_subscription ||= begin
+        subs = subscriptions.select(&:active?)
+        raise "Multiple active subscriptions found" if subs.length > 1
+        subs.first
+      end
     end
 
     def billable_metric
@@ -60,24 +64,20 @@ module Events
     end
 
     def expire_cached_charges
-      return if active_subscriptions.blank?
+      return if active_subscription.nil?
       return unless billable_metric
 
       charges_and_filters.each do |charge, filter|
-        active_subscriptions.each do |subscription|
-          Subscriptions::ChargeCacheService.expire_cache(subscription:, charge:, charge_filter: filter)
-        end
+        Subscriptions::ChargeCacheService.expire_cache(subscription: active_subscription, charge:, charge_filter: filter)
       end
     end
 
     def create_enriched_events
       return unless organization.feature_flag_enabled?(:postgres_enriched_events)
-      return if active_subscriptions.blank?
+      return if active_subscription.nil?
       return unless billable_metric
 
-      active_subscriptions.each do |subscription|
-        Events::EnrichService.call!(event:, subscription:, billable_metric:, charges_and_filters:)
-      end
+      Events::EnrichService.call!(event:, subscription: active_subscription, billable_metric:, charges_and_filters:)
     end
 
     def track_subscription_activity
@@ -116,7 +116,7 @@ module Events
 
       charges = billable_metric.charges
         .joins(:plan)
-        .where(plans: {id: active_subscriptions.map(&:plan_id)})
+        .where(plans: {id: active_subscription&.plan_id})
         .includes(filters: {values: :billable_metric_filter})
 
       @charges_and_filters = charges

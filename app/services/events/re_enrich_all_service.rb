@@ -18,7 +18,7 @@ module Events
 
           # Batch insert enriched events
           enriched = enriched_events(events)
-          attributes = enriched.flatten.map { |ev| ev.attributes.without("id") }
+          attributes = enriched.map { |ev| ev.attributes.without("id") }
           EnrichedEvent.insert_all(attributes) # rubocop:disable Rails/SkipsModelValidations
         end
       end
@@ -67,7 +67,7 @@ module Events
     end
 
     def enriched_events(events)
-      events.map do |event|
+      events.flat_map do |event|
         billable_metric = billable_metrics[event.code]
         next [] unless billable_metric
 
