@@ -106,21 +106,23 @@ class CreditNotesQuery < BaseQuery
   end
 
   def with_types(scope)
-    conditions = []
+    predicates = []
 
     if valid_types.include?("credit")
-      conditions << scope.where("credit_notes.credit_amount_cents > 0")
+      predicates << "credit_notes.credit_amount_cents > 0"
     end
 
     if valid_types.include?("refund")
-      conditions << scope.where("credit_notes.refund_amount_cents > 0")
+      predicates << "credit_notes.refund_amount_cents > 0"
     end
 
     if valid_types.include?("offset")
-      conditions << scope.where("credit_notes.offset_amount_cents > 0")
+      predicates << "credit_notes.offset_amount_cents > 0"
     end
 
-    conditions.reduce(scope.none) { |acc, relation| acc.or(relation) }
+    return scope.none if predicates.empty?
+
+    scope.where(predicates.join(" OR "))
   end
 
   def with_invoice_number(scope)
@@ -175,11 +177,13 @@ class CreditNotesQuery < BaseQuery
   end
 
   def valid_types
-    @valid_types ||= Array(filters.types)
-      .flat_map { |value| value.to_s.split(",") }
-      .map(&:strip)
-      .reject(&:blank?)
-      .select { |type| CreditNote::TYPES.include?(type) }
-      .uniq
+    @valid_types ||= begin
+      types = Array(filters.types)
+        .flat_map { |value| value.to_s.split(",") }
+        .map(&:strip)
+        .reject(&:blank?)
+
+      types.select { |type| CreditNote::TYPES.include?(type) }.uniq
+    end
   end
 end

@@ -124,6 +124,93 @@ RSpec.shared_examples "a credit note index endpoint" do
     end
   end
 
+  context "with types filter" do
+    let(:params) { {types: types} }
+
+    let(:credit_only) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 0, offset_amount_cents: 0)
+    end
+
+    let(:refund_only) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    let(:offset_only) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 10)
+    end
+
+    let(:credit_and_refund) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    let(:credit_and_offset) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 0, offset_amount_cents: 10)
+    end
+
+    before do
+      credit_only
+      refund_only
+      offset_only
+      credit_and_refund
+      credit_and_offset
+    end
+
+    context "when type is credit" do
+      let(:types) { "credit" }
+
+      it "returns credit notes with positive credit amount" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to match_array([credit_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+
+    context "when type is refund" do
+      let(:types) { "refund" }
+
+      it "returns credit notes with positive refund amount" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to match_array([refund_only.id, credit_and_refund.id])
+      end
+    end
+
+    context "when type is offset" do
+      let(:types) { "offset" }
+
+      it "returns credit notes with positive offset amount" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to match_array([offset_only.id, credit_and_offset.id])
+      end
+    end
+
+    context "when multiple types are provided" do
+      let(:types) { %w[credit refund] }
+
+      it "returns credit notes matching any of the given types" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+
+    context "when types are provided as comma separated values" do
+      let(:types) { "credit,refund" }
+
+      it "returns credit notes matching any of the given types" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
+      end
+    end
+  end
+
   context "with invoice number filter" do
     let(:params) { {invoice_number: matching_credit_note.invoice.number} }
     let!(:matching_credit_note) { create(:credit_note, customer:) }
