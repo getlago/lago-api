@@ -19,8 +19,6 @@ FactoryBot.define do
     plan_id { subscription.plan_id }
     charge_id { charge.id }
 
-    properties { event.properties }
-
     enriched_at { Time.current }
   end
 end
