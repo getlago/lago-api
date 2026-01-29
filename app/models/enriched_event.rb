@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class EnrichedEvent < EventsRecord
+  self.ignored_columns += [:properties]
+
   belongs_to :event
 
   validates :code,
