@@ -382,4 +382,76 @@ RSpec.shared_examples "an invoice index endpoint" do
       end
     end
   end
+
+  context "with settlements param" do
+    let(:params) { {settlements: settlements} }
+
+    let!(:invoice_with_credit_note_settlement) { create(:invoice, customer:, organization:) }
+    let!(:invoice_with_payment_settlement) { create(:invoice, customer:, organization:) }
+
+    let(:credit_note) do
+      create(
+        :credit_note,
+        invoice: invoice_with_credit_note_settlement,
+        customer: invoice_with_credit_note_settlement.customer,
+        organization:
+      )
+    end
+
+    before do
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_with_credit_note_settlement.billing_entity,
+        target_invoice: invoice_with_credit_note_settlement,
+        settlement_type: :credit_note,
+        source_credit_note: credit_note
+      )
+
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_with_payment_settlement.billing_entity,
+        target_invoice: invoice_with_payment_settlement,
+        settlement_type: :payment,
+        source_payment: create(:payment)
+      )
+    end
+
+    context "when settlements is credit_note" do
+      let(:settlements) { "credit_note" }
+
+      it "returns invoices with credit note settlements" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].pluck(:lago_id)).to eq([invoice_with_credit_note_settlement.id])
+      end
+    end
+
+    context "when settlements is payment" do
+      let(:settlements) { "payment" }
+
+      it "returns invoices with payment settlements" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].pluck(:lago_id)).to eq([invoice_with_payment_settlement.id])
+      end
+    end
+
+    context "when settlements is a comma separated string" do
+      let(:settlements) { "credit_note,payment" }
+
+      it "returns invoices with any of the provided settlements" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].pluck(:lago_id)).to match_array([
+          invoice_with_credit_note_settlement.id,
+          invoice_with_payment_settlement.id
+        ])
+      end
+    end
+  end
 end

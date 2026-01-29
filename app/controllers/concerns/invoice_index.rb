@@ -29,6 +29,7 @@ module InvoiceIndex
         payment_dispute_lost: params[:payment_dispute_lost],
         payment_overdue: params[:payment_overdue],
         payment_status: params[:payment_status] || params[:payment_statuses],
+        settlements: normalized_settlements,
         self_billed: params[:self_billed],
         status: params[:status] || params[:statuses]
       }
@@ -47,5 +48,21 @@ module InvoiceIndex
     else
       render_error_response(result)
     end
+  end
+
+  private
+
+  def normalized_settlements
+    settlements = params[:settlements]
+    return if settlements.blank?
+
+    values = Array(settlements)
+      .flat_map { |value| value.to_s.split(",") }
+      .map(&:strip)
+      .reject(&:blank?)
+
+    return if values.blank?
+
+    values
   end
 end

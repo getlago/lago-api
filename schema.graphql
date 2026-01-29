@@ -6389,6 +6389,10 @@ enum InvoicePaymentStatusTypeEnum {
   succeeded
 }
 
+enum InvoiceSettlementTypeEnum {
+  credit_note
+}
+
 enum InvoiceStatusTypeEnum {
   closed
   draft
@@ -9672,6 +9676,7 @@ type Query {
     positiveDueAmount: Boolean
     searchTerm: String
     selfBilled: Boolean
+    settlements: [InvoiceSettlementTypeEnum!]
     status: [InvoiceStatusTypeEnum!]
     subscriptionId: ID
   ): InvoiceCollection!
