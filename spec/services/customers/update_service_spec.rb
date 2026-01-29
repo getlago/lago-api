@@ -408,7 +408,7 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "when removing payment provider" do
-      let!(:customer) do
+      let(:customer) do
         create(
           :customer,
           organization:,
@@ -417,8 +417,8 @@ RSpec.describe Customers::UpdateService do
           payment_provider_code:
         )
       end
-      let!(:stripe_customer) { create(:stripe_customer, customer:) }
-      let!(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+      let(:stripe_customer) { create(:stripe_customer, customer:) }
+      let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
 
       let(:update_args) do
         {
@@ -430,22 +430,21 @@ RSpec.describe Customers::UpdateService do
       end
 
       before do
+        payment_method
         create(:stripe_provider, organization:, code: payment_provider_code)
       end
 
       it "discards the provider customer and its payment methods" do
         result = customers_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          customer = result.customer
-          expect(customer.payment_provider).to be_nil
-          expect(customer.payment_provider_code).to be_nil
+        customer = result.customer
+        expect(customer.payment_provider).to be_nil
+        expect(customer.payment_provider_code).to be_nil
 
-          expect(stripe_customer.reload).to be_discarded
-          expect(payment_method.reload).to be_discarded
-        end
+        expect(stripe_customer.reload).to be_discarded
+        expect(payment_method.reload).to be_discarded
       end
     end
 

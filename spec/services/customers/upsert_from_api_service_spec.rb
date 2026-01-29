@@ -921,7 +921,7 @@ RSpec.describe Customers::UpsertFromApiService do
           )
         end
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
-        let!(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+        let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
 
         let(:create_args) do
           {
@@ -935,6 +935,7 @@ RSpec.describe Customers::UpsertFromApiService do
         end
 
         before do
+          payment_method
           create(:gocardless_provider, organization:, code: "gocardless_1")
         end
 
