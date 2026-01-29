@@ -9,6 +9,7 @@ class Event < EventsRecord
   include OrganizationTimezone
 
   belongs_to :organization
+  has_many :enriched_events
 
   validates :transaction_id, presence: true
   validates :code, presence: true
