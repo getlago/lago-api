@@ -24,6 +24,8 @@ module Credits
 
       ActiveRecord::Base.transaction do
         ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
+        remaining_invoice_amount = invoice.total_amount_cents
+
         wallets.each do |wallet|
           wallet.reload
           wallet_fee_transactions = []
@@ -43,16 +45,16 @@ module Credits
             remaining_wallet_balance = wallet.balance_cents - used_amount
             next if remaining_wallet_balance <= 0
 
-            transaction_amount = [remaining_amount, remaining_wallet_balance].min
+            transaction_amount = [remaining_amount, remaining_wallet_balance, remaining_invoice_amount].min
             next if transaction_amount <= 0
 
             ordered_remaining_amounts[fee_key] -= transaction_amount
+            remaining_invoice_amount -= transaction_amount
             wallet_fee_transactions << {
               fee_key: fee_key,
               amount_cents: transaction_amount
             }
           end
-
           total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
           next if total_amount_cents <= 0
 
@@ -96,7 +98,6 @@ module Credits
     end
 
     def calculate_amounts_for_fees_by_type_and_bm
-      invoice_cap = invoice.total_amount_cents
       remaining = Hash.new(0)
 
       invoice.fees.includes(:charge).find_each do |fee|
@@ -106,12 +107,9 @@ module Credits
           fee.taxes_precise_amount_cents -
           fee.precise_credit_notes_amount_cents
 
-        cap = [cap, invoice_cap].min
-
         next if cap <= 0
         key = [fee.fee_type, fee.charge&.billable_metric_id]
         remaining[key] += cap
-        invoice_cap -= cap
       end
 
       remaining.sort_by { |_, v| -v }.to_h
