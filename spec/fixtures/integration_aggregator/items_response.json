@@ -2,6 +2,7 @@
   "records": [
     {
       "id": "755",
+      "item_code": "test-lead-conduit",
       "name": "Test-LeadConduit",
       "account_code": "7691",
       "_nango_metadata": {
@@ -14,6 +15,7 @@
     },
     {
       "id": "745",
+      "item_code": "test-trusted-form",
       "name": "Test-TrustedForm : TF Pings",
       "account_code": "2428",
       "_nango_metadata": {
@@ -26,6 +28,7 @@
     },
     {
       "id": "753",
+      "item_code": "test-anura",
       "name": "Test-Anura",
       "account_code": "1411",
       "_nango_metadata": {
@@ -38,6 +41,7 @@
     },
     {
       "id": "484",
+      "item_code": "test-platform",
       "name": "Test-Platform Subscription Annual",
       "account_code": "9662",
       "_nango_metadata": {
@@ -50,6 +54,7 @@
     },
     {
       "id": "828",
+      "item_code": "test-lead-conduit-add-on",
       "name": "Test-LeadConduit : Add-Ons : CoreLogic Title Verification",
       "account_code": "2904",
       "_nango_metadata": {

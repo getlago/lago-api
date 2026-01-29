@@ -26,12 +26,12 @@ RSpec.describe Integrations::Aggregator::ItemsService do
     end
 
     before do
-      allow(LagoHttpClient::Client).to receive(:new)
-        .with(items_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        .and_return(lago_client)
-      allow(lago_client).to receive(:get)
-        .with(headers:, params:)
-        .and_return(aggregator_response)
+      stub_request(:get, "https://api.nango.dev/v1/netsuite/items?limit=450")
+        .to_return(
+          status: 200,
+          body: aggregator_response.to_json,
+          headers: {"Content-Type" => "application/json"}
+        )
 
       IntegrationItem.destroy_all
     end
@@ -39,11 +39,46 @@ RSpec.describe Integrations::Aggregator::ItemsService do
     it "successfully fetches items" do
       result = items_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(items_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:get)
-        expect(result.items.pluck("external_id")).to eq(%w[755 745 753 484 828])
-        expect(IntegrationItem.count).to eq(5)
+      expect(result.items.pluck("external_id")).to eq(["test-lead-conduit", "test-trusted-form", "test-anura", "test-platform", "test-lead-conduit-add-on"])
+      expect(IntegrationItem.count).to eq(5)
+    end
+
+    context "when cursor is present" do
+      let(:aggregator_response) do
+        super().merge("next_cursor" => "abc123")
+      end
+
+      before do
+        second_page_response = {
+          "records" => [
+            {
+              id: "799",
+              item_code: "test-lead-conduit-page-2",
+              name: "Test-LeadConduit: Page 2",
+              account_code: "7691",
+              _nango_metadata: {
+                first_seen_at: "2024-04-17T12:10:02.430428+00:00",
+                last_modified_at: "2024-04-17T12:10:02.430428+00:00",
+                last_action: "ADDED",
+                deleted_at: nil,
+                cursor: "MjAyNC0wNC0xN1QxMjoxMDowMi40MzA0MjgrMDA6MDB8fDAwNmZmYjJjLWQ1MjAtNWNiNy1hMjRhLTE5NzYzNzI1MDhlZQ=="
+              }
+            }
+          ]
+        }
+        stub_request(:get, "https://api.nango.dev/v1/netsuite/items?limit=450&cursor=abc123")
+          .to_return(
+            status: 200,
+            body: second_page_response.to_json,
+            headers: {"Content-Type" => "application/json"}
+          )
+      end
+
+      it "makes subsequent requests until cursor is nil" do
+        result = items_service.call
+
+        expect(result.items.pluck("external_id")).to eq(["test-lead-conduit", "test-trusted-form", "test-anura", "test-platform", "test-lead-conduit-add-on", "test-lead-conduit-page-2"])
+        expect(IntegrationItem.count).to eq(6)
       end
     end
   end
@@ -55,31 +90,6 @@ RSpec.describe Integrations::Aggregator::ItemsService do
 
     it "returns the path" do
       expect(subject).to eq(action_path)
-    end
-  end
-
-  describe "#params" do
-    subject(:params_call) { items_service.__send__(:params) }
-
-    context "when cursor is not present" do
-      let(:params) { {limit: 450} }
-
-      it "returns the params" do
-        expect(subject).to eq(params)
-      end
-    end
-
-    context "when cursor is present" do
-      let(:params) { {limit: 450, cursor:} }
-      let(:cursor) { "cursor" }
-
-      before do
-        items_service.instance_variable_set(:@cursor, cursor)
-      end
-
-      it "returns the params with cursor" do
-        expect(subject).to eq(params)
-      end
     end
   end
 end

@@ -11,6 +11,7 @@ module Integrations
 
           def item(fee)
             base_item = super
+            base_item["item_code"] = base_item.delete("external_id")
 
             if fee.precise_unit_amount.round(2) != fee.precise_unit_amount
               base_item["units"] = 1
@@ -19,6 +20,14 @@ module Integrations
             end
 
             base_item
+          end
+
+          def discounts
+            discounts = super
+
+            discounts.each do |discount|
+              discount["item_code"] = discount.delete("external_id")
+            end
           end
         end
       end
