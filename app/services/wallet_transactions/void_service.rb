@@ -21,7 +21,7 @@ module WalletTransactions
     def call
       return result if wallet_credit.credit_amount.zero?
 
-      ApplicationRecord.transaction do
+      ActiveRecord::Base.transaction do
         wallet_transaction = CreateService.call!(
           wallet:,
           wallet_credit:,
@@ -33,9 +33,7 @@ module WalletTransactions
         ).wallet_transaction
 
         if wallet.traceable?
-          TrackConsumptionService.call!(
-            outbound_wallet_transaction: wallet_transaction
-          )
+          TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
         end
 
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
