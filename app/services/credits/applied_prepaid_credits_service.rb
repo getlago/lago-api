@@ -60,9 +60,7 @@ module Credits
           amount_cents = wallet_transaction.amount_cents
 
           if wallet.traceable?
-            WalletTransactions::TrackConsumptionService.call!(
-              outbound_wallet_transaction: wallet_transaction
-            )
+            WalletTransactions::TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
           end
 
           with_optimistic_lock_retry(wallet) do
