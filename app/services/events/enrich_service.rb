@@ -48,10 +48,13 @@ module Events
       enriched_event.subscription_id = subscription.id
       enriched_event.plan_id = subscription.plan_id
 
-      enriched_event.properties = event.properties
       enriched_event.enriched_at = Time.current
       enriched_event.value = (event.properties || {})[billable_metric.field_name] || 0
       enriched_event.value = 1 if billable_metric.count_agg?
+
+      # NOTE: We might not be able to parse the value as a decimal, it will then fall back to 0
+      #       The behavior is aligned with the Clickhouse implementation but differs
+      #       a bit from the current PG one where we explicitly filter events with invalid values
       enriched_event.decimal_value = decimal_value(enriched_event.value)
       enriched_event
     end

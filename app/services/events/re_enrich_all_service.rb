@@ -12,6 +12,8 @@ module Events
     end
 
     def call
+      return result if organization.clickhouse_events_store?
+
       events.find_in_batches do |events|
         EnrichedEvent.transaction do
           drop_enriched_events(events)
@@ -31,6 +33,8 @@ module Events
     private
 
     attr_reader :subscription, :timestamp
+
+    delegate :organization, to: :subscription
 
     def boundaries
       return @boundaries if @boundaries
@@ -59,11 +63,7 @@ module Events
     end
 
     def drop_enriched_events(events)
-      EnrichedEvent
-        .where(organization_id: subscription.organization_id, subscription_id: subscription.id)
-        .where(timestamp: boundaries.charges_from_datetime...boundaries.charges_to_datetime)
-        .where(event_id: events.map(&:id))
-        .delete_all
+      EnrichedEvent.where(event_id: events.map(&:id)).delete_all
     end
 
     def enriched_events(events)

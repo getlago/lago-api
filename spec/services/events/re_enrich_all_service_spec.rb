@@ -45,6 +45,27 @@ RSpec.describe Events::ReEnrichAllService do
 
         expect { result = re_enrich_service.call }.to change(EnrichedEvent, :count).by(-2)
         expect(result).to be_success
+
+        # Make sure the enriched event matched the event
+        enriched_event = EnrichedEvent.find_by(event_id: event.id)
+        expect(enriched_event).to have_attributes(
+          charge_id: charge.id,
+          charge_filter_id: nil,
+          grouped_by: {},
+          value: "12",
+          decimal_value: 12.0
+        )
+      end
+    end
+
+    context "with clickhouse events store" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns success" do
+        result = nil
+
+        expect { result = re_enrich_service.call }.not_to change(EnrichedEvent, :count)
+        expect(result).to be_success
       end
     end
   end

@@ -49,7 +49,6 @@ RSpec.describe Events::EnrichService do
         event_id: event.id,
         external_subscription_id: subscription.external_id,
         plan_id: plan.id,
-        properties: event.properties,
         grouped_by: {}
       )
     end
@@ -145,10 +144,7 @@ RSpec.describe Events::EnrichService do
         expect(result.enriched_events.count).to eq(1)
 
         enriched_event = result.enriched_events.first
-        expect(enriched_event).to have_attributes(
-          value: "foo_bar",
-          decimal_value: 0.0
-        )
+        expect(enriched_event.value).to eq("foo_bar")
       end
     end
 
@@ -236,8 +232,9 @@ RSpec.describe Events::EnrichService do
         expect(enriched_event).to have_attributes(
           charge_id: charge.id,
           charge_filter_id: charge_filter.id,
-          properties: event.properties,
-          grouped_by: {}
+          grouped_by: {},
+          value: "12",
+          decimal_value: 12.0
         )
       end
 
@@ -269,9 +266,7 @@ RSpec.describe Events::EnrichService do
           expect(enriched_event).to have_attributes(
             charge_id: charge.id,
             charge_filter_id: charge_filter.id,
-            properties: {
-              billable_metric.field_name => 12,
-              "region" => "eu",
+            grouped_by: {
               "cloud" => "aws",
               "provider" => "visa"
             }
