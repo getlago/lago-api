@@ -6,540 +6,374 @@ RSpec.describe Subscriptions::OrganizationBillingService do
   subject(:billing_service) { described_class.new(organization:, billing_at:) }
 
   describe ".call" do
-    let(:organization) { create(:organization) }
-    let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:) }
+    let(:billing_entity_timezone) { "UTC" }
+    let(:billing_entity) { create(:billing_entity, timezone: billing_entity_timezone) }
+    let(:organization) { billing_entity.organization }
+
+    let(:interval) { :monthly }
     let(:bill_charges_monthly) { false }
+    let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:) }
+
+    let(:customer_timezone) { nil }
+    let(:customer) { create(:customer, organization:, billing_entity: billing_entity, timezone: customer_timezone) }
+
     let(:created_at) { DateTime.parse("20 Feb 2020") }
     let(:subscription_at) { DateTime.parse("20 Feb 2021") }
-    let(:customer) { create(:customer, organization:) }
-    let(:customer2) { create(:customer, organization:) }
-
+    let(:started_at) { DateTime.parse("10 Jun 2022") }
+    let(:current_date) { DateTime.parse("20 Jun 2022 12:00") }
+    let(:billing_at) { current_date }
+    let(:ending_at) { nil }
+    let(:billing_time) { :calendar }
     let(:subscription) do
       create(
         :subscription,
-        customer: customer2,
+        customer: customer,
         plan:,
         subscription_at:,
-        started_at: current_date - 10.days,
+        started_at:,
         billing_time:,
-        created_at:
+        created_at:,
+        ending_at:
       )
     end
 
-    let(:current_date) { DateTime.parse("20 Jun 2022") }
-    let(:billing_at) { current_date }
-
     before { subscription }
 
-    context "when billed weekly with calendar billing time" do
-      let(:interval) { :weekly }
-      let(:billing_time) { :calendar }
-
-      let(:subscription1) do
-        create(
-          :subscription,
-          customer:,
-          plan:,
-          subscription_at:,
-          started_at: current_date - 10.days,
-          created_at:
-        )
-      end
-
-      let(:subscription2) do
-        create(
-          :subscription,
-          customer:,
-          plan:,
-          subscription_at:,
-          started_at: current_date - 10.days,
-          created_at:
-        )
-      end
-
-      let(:customer3) { create(:customer, organization:) }
-
-      let(:subscription3) do
-        create(
-          :subscription,
-          customer: customer3,
-          plan:,
-          subscription_at:,
-          started_at: current_date - 10.days,
-          created_at:
-        )
-      end
-
-      before do
-        subscription1
-        subscription2
-        subscription3
-      end
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with(
-            contain_exactly(subscription1, subscription2),
-            current_date.to_i,
-            invoicing_reason: :subscription_periodic
-          )
-
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with(
-            contain_exactly(subscription1, subscription2),
-            current_date
-          )
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription3], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription3], current_date)
-      end
-
-      context "when billing_at is another day" do
-        let(:billing_at) { DateTime.parse("21 Jun 2022") }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
+    def expect_to_bill_together(subscriptions, date)
+      expect(BillSubscriptionJob).to have_been_enqueued
+        .with(subscriptions, date.to_i, invoicing_reason: :subscription_periodic)
+      expect(BillNonInvoiceableFeesJob).to have_been_enqueued
+        .with(subscriptions, date)
     end
 
-    context "when billed monthly with calendar billing time" do
-      let(:interval) { :monthly }
-      let(:billing_time) { :calendar }
-      let(:current_date) { DateTime.parse("01 Feb 2022") }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], current_date)
-      end
-
-      context "when billing_at is different" do
-        let(:billing_at) { DateTime.parse("02 Feb 2022") }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when ending_at is the same as billing day" do
-        let(:billing_date) { DateTime.parse("01 Feb 2022") }
-        let(:subscription) do
-          create(
-            :subscription,
-            plan:,
-            subscription_at:,
-            started_at: subscription_at,
-            billing_time:,
-            ending_at: billing_date
-          )
-        end
-
-        it "does not enqueue a job on billing day" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).not_to have_been_enqueued
-            .with([subscription], billing_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
-            .with([subscription], billing_date)
-        end
-      end
-
-      context "when subscription is created after billing_at" do
-        let(:created_at) { billing_at + 1.day }
-
-        it "does not enqueue a job on billing day" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).not_to have_been_enqueued
-            .with([subscription], billing_at.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
-            .with([subscription], billing_at)
-        end
-      end
-    end
-
-    context "when billed quarterly with calendar billing time" do
-      let(:interval) { :quarterly }
-      let(:billing_time) { :calendar }
-      let(:current_date) { DateTime.parse("01 Apr 2022") }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      it "does not enqueue a job on other day" do
-        current_date = DateTime.parse("01 May 2022")
-
-        billing_service.call
-
-        expect(BillSubscriptionJob).not_to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
-          .with([subscription], current_date)
-      end
-    end
-
-    context "when billed semiannual with calendar billing time" do
-      let(:interval) { :semiannual }
-      let(:billing_time) { :calendar }
-      let(:current_date) { DateTime.parse("01 Jul 2022") }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      it "does not enqueue a job on other day" do
-        current_date = DateTime.parse("01 Aug 2022")
-
-        billing_service.call
-
-        expect(BillSubscriptionJob).not_to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).not_to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when charges are billed monthly" do
-        let(:bill_charges_monthly) { true }
-        let(:current_date) { DateTime.parse("01 Aug 2022") }
-
-        it "enqueues a job on billing day" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-    end
-
-    context "when billed yearly with calendar billing time" do
-      let(:interval) { :yearly }
-      let(:billing_time) { :calendar }
-
-      let(:current_date) { DateTime.parse("01 Jan 2022") }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing at is not the billing day" do
-        let(:billing_at) { DateTime.parse("02 Jan 2022") }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when charges are billed monthly" do
-        let(:bill_charges_monthly) { true }
-        let(:billing_at) { DateTime.parse("01 Feb 2022") }
-
-        it "enqueues a job on billing day" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], billing_at.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], billing_at)
-        end
-      end
-    end
-
-    context "when billed weekly with anniversary billing time" do
-      let(:interval) { :weekly }
-      let(:billing_time) { :anniversary }
-
-      let(:current_date) do
-        DateTime.parse("20 Jun 2022").prev_occurring(subscription_at.strftime("%A").downcase.to_sym)
-      end
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing_at is a different day" do
-        let(:billing_at) { current_date + 1.day }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-    end
-
-    context "when billed monthly with anniversary billing time" do
-      let(:interval) { :monthly }
-      let(:billing_time) { :anniversary }
-      let(:current_date) { subscription_at.next_month }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing_at is a different day" do
-        let(:billing_at) { current_date + 1.day }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when subscription anniversary is on a 31st" do
-        let(:subscription_at) { DateTime.parse("31 Mar 2021") }
-        let(:current_date) { DateTime.parse("28 Feb 2022") }
-
-        it "enqueues a job if the month count less than 31 days" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-    end
-
-    context "when billed quarterly with anniversary billing time" do
-      let(:interval) { :quarterly }
-      let(:billing_time) { :anniversary }
-      let(:current_date) { subscription_at + 3.months }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing_at is a different day" do
-        let(:billing_at) { current_date + 1.day }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when subscription anniversary is in March" do
-        let(:subscription_at) { DateTime.parse("15 Mar 2021") }
-        let(:current_date) { DateTime.parse("15 Sep 2022") }
-
-        it "enqueues a job" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-
-      context "when subscription anniversary is on a 31st" do
-        let(:subscription_at) { DateTime.parse("31 Mar 2021") }
-        let(:current_date) { DateTime.parse("30 Jun 2022") }
-
-        it "enqueues a job if the month count less than 31 days" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-    end
-
-    context "when billed semiannually with anniversary billing time" do
-      let(:interval) { :semiannual }
-      let(:billing_time) { :anniversary }
-      let(:current_date) { subscription_at + 6.months }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing_at is a different day" do
-        let(:billing_at) { current_date + 1.day }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when subscription anniversary is in March" do
-        let(:subscription_at) { DateTime.parse("15 Mar 2021") }
-        let(:current_date) { DateTime.parse("15 Sep 2022") }
-
-        it "enqueues a job" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-
-      context "when subscription anniversary is on a 31st" do
-        let(:subscription_at) { DateTime.parse("31 Mar 2021") }
-        let(:current_date) { DateTime.parse("30 Sep 2022") }
-
-        it "enqueues a job if the month count less than 31 days" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-
-      context "when charges are billed monthly" do
-        let(:bill_charges_monthly) { true }
-        let(:current_date) { subscription_at.next_month }
-
-        context "when billing_at is the next month" do
-          let(:billing_at) { current_date.next_month }
-
-          it "enqueues a job on billing day" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], billing_at.to_i, invoicing_reason: :subscription_periodic)
-            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-              .with([subscription], billing_at)
+    [
+      {interval: :weekly, billing_time: :calendar, billed_on: ["20 Jun 2022", "27 Jun 2022", "04 Jul 2022"]},
+      {interval: :weekly, billing_time: :anniversary, billed_on: ["25 Jun 2022", "02 Jul 2022", "09 Jul 2022"]},
+      {interval: :monthly, billing_time: :calendar, billed_on: ["01 Jul 2022", "01 Aug 2022", "01 Sep 2022"]},
+      {interval: :monthly, billing_time: :anniversary, billed_on: ["20 Jun 2022", "20 Jul 2022", "20 Aug 2022"]},
+      # 31st day monthly subscription (month normalization)
+      {
+        interval: :monthly,
+        billing_time: :anniversary,
+        subscription_at: "31 March 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "30 Apr 2023", "31 Jan 2023"]
+      },
+      {
+        interval: :quarterly,
+        billing_time: :calendar,
+        billed_on: ["01 Jul 2022", "01 Oct 2022", "01 Jan 2023", "01 Apr 2030"],
+        not_billed_on: ["01 Feb 2022", "01 Mar 2022", "01 Dec 2023"]
+      },
+      # Quarterly cycle: Aug/Nov/Feb/May
+      {
+        interval: :quarterly,
+        billing_time: :anniversary,
+        billed_on: ["20 Aug 2022", "20 Nov 2022", "20 Feb 2023", "20 May 2030"],
+        not_billed_on: ["20 Sep 2022"]
+      },
+      # Quarterly cycle: Jan/Apr/Jul/Oct
+      {
+        interval: :quarterly,
+        billing_time: :anniversary,
+        subscription_at: "15 January 2021",
+        billed_on: ["15 Jul 2022", "15 Oct 2022", "15 Jan 2023", "15 Apr 2024"]
+      },
+      # Quarterly cycle: Mar/Jun/Sep/Dec
+      {
+        interval: :quarterly,
+        billing_time: :anniversary,
+        subscription_at: "15 March 2021",
+        billed_on: ["15 Jun 2022", "15 Sep 2022", "15 Dec 2022", "15 Mar 2023"]
+      },
+      # 31st day quarterly subscription (month normalization)
+      {
+        interval: :quarterly,
+        billing_time: :anniversary,
+        subscription_at: "31 May 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "30 Nov 2023", "31 Aug 2023"],
+        not_billend_on: ["31 Aug 2023"]
+      },
+      # 30th day quarterly subscription (month normalization)
+      {
+        interval: :quarterly,
+        billing_time: :anniversary,
+        subscription_at: "30 May 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "30 Nov 2023", "30 Aug 2023"],
+        not_billend_on: ["31 Aug 2023"]
+      },
+      # Quarterly with monthly charges is not implemented
+      # {
+      #   interval: :quarterly,
+      #   billing_time: :calendar,
+      #   bill_charges_monthly: true,
+      #   billed_on: ["01 Aug 2022",],
+      #   not_billed_on: ["02 Aug 2022",],
+      # },
+      # {
+      #   interval: :quarterly,
+      #   billing_time: :anniversary,
+      #   bill_charges_monthly: true,
+      #   billed_on: ["20 Jul 2022",],
+      #   not_billed_on: ["21 Jul 2022",],
+      # },
+      {
+        interval: :semiannual,
+        billing_time: :calendar,
+        billed_on: ["01 Jul 2022", "01 Jan 2023", "01 Jul 2030"],
+        not_billed_on: ["01 Oct 2022"]
+      },
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        billed_on: ["20 Aug 2022", "20 Feb 2023", "20 Aug 2030"],
+        not_billed_on: ["20 Nov 2022"]
+      },
+      # 31st day semiannual subscription (month normalization)
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        subscription_at: "31 Aug 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "31 Aug 2023"]
+      },
+      # 30th day semiannual subscription (month normalization)
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        subscription_at: "30 Aug 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "30 Aug 2023"],
+        not_billed_on: ["31 Aug 2023"]
+      },
+      {
+        interval: :semiannual,
+        billing_time: :calendar,
+        bill_charges_monthly: true,
+        billed_on: ["01 Aug 2022"],
+        not_billed_on: ["02 Aug 2022"]
+      },
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        bill_charges_monthly: true,
+        billed_on: ["20 Jul 2022"],
+        not_billed_on: ["21 Jul 2022"]
+      },
+      # 31st day semiannual subscription (month normalization)
+      {
+        interval: :semiannual,
+        billing_time: :anniversary,
+        bill_charges_monthly: true,
+        subscription_at: "31 Aug 2021",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "30 Jun 2022", "31 Jul 2022"]
+      },
+      {
+        interval: :yearly,
+        billing_time: :calendar,
+        billed_on: ["01 Jan 2023", "01 Jan 2024", "01 Jan 2030"],
+        not_billed_on: ["01 Feb 2023", "01 Dec 2022"]
+      },
+      {
+        interval: :yearly,
+        billing_time: :anniversary,
+        billed_on: ["20 Feb 2023", "20 Feb 2024", "20 Feb 2030"],
+        not_billed_on: ["20 Jan 2023", "20 Mar 2023"]
+      },
+      # Non-leap year Feb 28 subscription
+      {
+        interval: :yearly,
+        billing_time: :anniversary,
+        subscription_at: "28 Feb 2021",
+        billed_on: ["28 Feb 2023", "28 Feb 2024", "28 Feb 2030"],
+        not_billed_on: ["29 Feb 2024"]
+      },
+      # Leap year Feb 29 subscription
+      {
+        interval: :yearly,
+        billing_time: :anniversary,
+        subscription_at: "29 Feb 2020",
+        billed_on: ["28 Feb 2023", "29 Feb 2024", "28 Feb 2030"]
+      },
+      {
+        interval: :yearly,
+        billing_time: :calendar,
+        bill_charges_monthly: true,
+        billed_on: ["01 Aug 2022", "01 Sep 2022", "01 Oct 2022"],
+        not_billed_on: ["02 Aug 2022", "31 Aug 2022"]
+      },
+      {
+        interval: :yearly,
+        billing_time: :anniversary,
+        bill_charges_monthly: true,
+        billed_on: ["20 Jul 2022", "20 Aug 2022", "20 Sep 2022"],
+        not_billed_on: ["21 Jul 2022", "19 Jul 2022"]
+      }
+    ].each do |test_case|
+      subscription_at = DateTime.parse(test_case[:subscription_at] || "20 Feb 2021")
+      interval = test_case[:interval]
+      billing_time = test_case[:billing_time] || :calendar
+      not_billed_on = test_case.fetch(:not_billed_on, []).map { DateTime.parse(it) }
+      billed_on = test_case[:billed_on].map { DateTime.parse(it) }
+      focus = test_case.fetch(:focus, false)
+      bill_charges_monthly = test_case.fetch(:bill_charges_monthly, false)
+
+      context "when billed #{interval} with #{billing_time} billing time#{" with monthly charges" if bill_charges_monthly}", focus: do
+        let(:interval) { interval }
+        let(:billing_time) { billing_time }
+        let(:bill_charges_monthly) { bill_charges_monthly }
+
+        context "when subscribed on #{subscription_at.to_formatted_s(:long)}" do
+          let(:subscription_at) { subscription_at }
+
+          billed_on.each do |billed_on|
+            is_31st = subscription_at.day == 31
+            context "when on billing day#{" (31st)" if is_31st} (#{billed_on.to_formatted_s(:long)})" do
+              let(:billing_at) { billed_on }
+
+              it "enqueues a job" do
+                billing_service.call
+
+                expect_to_bill_together([subscription], billing_at)
+              end
+            end
+          end
+
+          not_billed_on.each do |not_billed_on|
+            context "when billing on #{not_billed_on.to_formatted_s(:long)}" do
+              let(:billing_at) { not_billed_on }
+
+              it "does not bill" do
+                expect { billing_service.call }.not_to have_enqueued_job
+              end
+            end
+          end
+
+          context "when multiple subscriptions are to be billed on the same day" do
+            let(:billing_at) { billed_on.first }
+
+            let(:monthly_subscription) do
+              at = billing_at - 1.month
+              create(
+                :subscription,
+                customer: customer,
+                plan: create(:plan, organization:, interval: :monthly),
+                subscription_at: at,
+                started_at: at,
+                billing_time: :anniversary,
+                created_at: at
+              )
+            end
+
+            let(:customer_with_weekly_billing) { create(:customer, organization:) }
+            let(:subscription_with_weekly_billing) do
+              at = billing_at - 1.week
+              create(
+                :subscription,
+                customer: customer_with_weekly_billing,
+                plan: create(:plan, organization:, interval: :weekly),
+                subscription_at: at,
+                started_at: at,
+                billing_time: :anniversary,
+                created_at: at
+              )
+            end
+
+            let(:not_billed_customer) { create(:customer, organization:) }
+            let(:not_billed_subscription) do
+              at = billing_at - 1.week - 1.day
+              create(
+                :subscription,
+                customer: not_billed_customer,
+                plan: create(:plan, organization:, interval: :weekly),
+                subscription_at: at,
+                started_at: at,
+                billing_time: :anniversary,
+                created_at: at
+              )
+            end
+
+            before do
+              monthly_subscription
+              subscription_with_weekly_billing
+              not_billed_subscription
+            end
+
+            it "enqueues jobs for all customers" do
+              billing_service.call
+
+              expect_to_bill_together(contain_exactly(subscription, monthly_subscription), billing_at)
+
+              expect_to_bill_together([subscription_with_weekly_billing], billing_at)
+
+              expect(BillSubscriptionJob).not_to have_been_enqueued.with([not_billed_subscription], anything, invoicing_reason: :subscription_periodic)
+            end
           end
         end
 
-        context "when subscription anniversary is on a 31st" do
-          let(:subscription_at) { DateTime.parse("31 Mar 2021") }
-          let(:current_date) { DateTime.parse("28 Feb 2022") }
+        context "when ending_at is the same as billing day" do
+          let(:billing_at) { billed_on.first }
+          let(:ending_at) { billing_at }
 
-          it "enqueues a job if the month count less than 31 days" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-              .with([subscription], current_date)
-          end
-        end
-      end
-    end
-
-    context "when billed yearly with anniversary billing time" do
-      let(:interval) { :yearly }
-      let(:billing_time) { :anniversary }
-
-      let(:current_date) { subscription_at.next_year }
-
-      it "enqueues a job on billing day" do
-        billing_service.call
-
-        expect(BillSubscriptionJob).to have_been_enqueued
-          .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-        expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-          .with([subscription], current_date)
-      end
-
-      context "when billing_at is a different day" do
-        let(:billing_at) { current_date + 1.day }
-
-        it "does not enqueue a job on other day" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
-
-      context "when subscription anniversary is on 29th of february" do
-        let(:subscription_at) { DateTime.parse("29 Feb 2020") }
-        let(:current_date) { DateTime.parse("28 Feb 2022") }
-
-        it "enqueues a job on 28th of february when year is not a leap year" do
-          billing_service.call
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-            .with([subscription], current_date)
-        end
-      end
-
-      context "when charges are billed monthly" do
-        let(:bill_charges_monthly) { true }
-        let(:current_date) { subscription_at.next_month }
-
-        context "when billing_at is the next month" do
-          let(:billing_at) { current_date.next_month }
-
-          it "enqueues a job on billing day" do
-            billing_service.call
-
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], billing_at.to_i, invoicing_reason: :subscription_periodic)
-            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-              .with([subscription], billing_at)
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
           end
         end
 
-        context "when subscription anniversary is on a 31st" do
-          let(:subscription_at) { DateTime.parse("31 Mar 2021") }
-          let(:current_date) { DateTime.parse("28 Feb 2022") }
+        context "when subscription started on billing day" do
+          let(:started_at) { billed_on.first }
 
-          it "enqueues a job if the month count less than 31 days" do
-            billing_service.call
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
 
-            expect(BillSubscriptionJob).to have_been_enqueued
-              .with([subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-            expect(BillNonInvoiceableFeesJob).to have_been_enqueued
-              .with([subscription], current_date)
+        context "when subscription starts after billing day" do
+          let(:started_at) { billed_on.first + 1.day }
+
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        context "when it is not yet billing day on customer timezone" do
+          let(:subscription_at) { DateTime.parse("20 Feb 2021 12:00") }
+          let(:billing_at) { billed_on.first }
+          let(:customer_timezone) { "America/Chicago" }
+
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        context "when it is after billing day on customer timezone" do
+          let(:billing_at) { billed_on.first + 18.hours }
+          let(:customer_timezone) { "Pacific/Auckland" }
+
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        context "when it is not yet billing day on billing entity timezone" do
+          let(:subscription_at) { DateTime.parse("20 Feb 2021 12:00") }
+          let(:billing_at) { billed_on.first }
+          let(:billing_entity_timezone) { "America/Chicago" }
+
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
+          end
+        end
+
+        context "when it is after billing day on billing entity timezone" do
+          let(:billing_at) { billed_on.first + 18.hours }
+          let(:billing_entity_timezone) { "Pacific/Auckland" }
+
+          it "does not bill" do
+            expect { billing_service.call }.not_to have_enqueued_job
           end
         end
       end
     end
 
     context "when downgraded" do
-      let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
-      let(:current_date) { DateTime.parse("20 Feb 2022") }
       let(:subscription) do
         create(
           :subscription,
@@ -583,46 +417,14 @@ RSpec.describe Subscriptions::OrganizationBillingService do
     end
 
     context "when on subscription creation day" do
-      let(:subscription) do
-        create(
-          :subscription,
-          customer:,
-          plan:,
-          subscription_at:,
-          started_at:,
-          billing_time:,
-          created_at: subscription_at
-        )
-      end
-
-      let(:interval) { :monthly }
-      let(:billing_time) { :anniversary }
-      let(:subscription_at) { DateTime.parse("2022-12-13T12:00:00Z") }
-      let(:started_at) { subscription_at }
-      let(:customer) { create(:customer, organization: plan.organization, timezone:) }
-      let(:timezone) { nil }
-
-      let(:billing_at) { subscription_at }
+      let(:created_at) { subscription_at }
 
       it "does not enqueue a job" do
         expect { billing_service.call }.not_to have_enqueued_job
       end
-
-      context "with customer timezone" do
-        let(:timezone) { "Pacific/Noumea" }
-        let(:billing_at) { subscription_at + 10.hours }
-
-        it "does not enqueue a job" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
-      end
     end
 
     context "when subscription was already automatically billed today" do
-      let(:interval) { :monthly }
-      let(:billing_time) { :anniversary }
-      let(:billing_at) { DateTime.parse("20 Jul 2021T12:00:00") }
-
       let(:invoice_subscription) do
         create(
           :invoice_subscription,
@@ -637,15 +439,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
 
       it "does not enqueue a job" do
         expect { billing_service.call }.not_to have_enqueued_job
-      end
-
-      context "with customer timezone" do
-        let(:timezone) { "Pacific/Noumea" }
-        let(:billing_at) { DateTime.parse("20 Jul 2021T22:00:00") }
-
-        it "does not enqueue a job" do
-          expect { billing_service.call }.not_to have_enqueued_job
-        end
       end
     end
   end
