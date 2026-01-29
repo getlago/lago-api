@@ -3228,7 +3228,7 @@ CREATE VIEW public.exports_invoice_settlements AS
     ins.organization_id,
     ins.billing_entity_id AS lago_billing_entity_id,
     ins.target_invoice_id AS lago_target_invoice_id,
-    ins.settlement_type,
+    (ins.settlement_type)::text AS settlement_type,
     ins.source_payment_id AS lago_source_payment_id,
     ins.source_credit_note_id AS lago_source_credit_note_id,
     ins.amount_cents,
@@ -11379,6 +11379,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260129105200'),
 ('20260127114700'),
 ('20260121112929'),
 ('20260121111431'),
