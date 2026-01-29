@@ -21,6 +21,7 @@ RSpec.describe Types::WalletTransactions::Object do
 
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:failed_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:remaining_amount_cents).of_type("BigInt")
     expect(subject).to have_field(:invoice).of_type("Invoice")
     expect(subject).to have_field(:metadata).of_type("[WalletTransactionMetadataObject!]")
     expect(subject).to have_field(:settled_at).of_type("ISO8601DateTime")

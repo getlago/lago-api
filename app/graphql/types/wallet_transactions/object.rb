@@ -23,6 +23,7 @@ module Types
       field :failed_at, GraphQL::Types::ISO8601DateTime, null: true
       field :invoice, Types::Invoices::Object, null: true
       field :metadata, [Types::WalletTransactions::MetadataObject], null: true
+      field :remaining_amount_cents, GraphQL::Types::BigInt, null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
