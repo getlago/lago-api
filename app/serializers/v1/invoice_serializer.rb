@@ -29,6 +29,8 @@ module V1
         total_paid_amount_cents: model.total_paid_amount_cents,
         total_offsetted_credit_note_amount_cents: model.offset_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
+        prepaid_granted_credit_amount_cents: model.prepaid_granted_credit_amount_cents,
+        prepaid_purchased_credit_amount_cents: model.prepaid_purchased_credit_amount_cents,
         file_url: model.file_url,
         xml_url: model.xml_url,
         version_number: model.version_number,
