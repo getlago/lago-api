@@ -28,12 +28,27 @@ RSpec.describe Customers::RetryViesCheckJob do
   end
 
   context "when customer has no tax identification number" do
-    let(:customer) { create(:customer, tax_identification_number: nil) }
+    let(:customer) { create(:customer, tax_identification_number: nil, country: "DE") }
 
-    it "returns early" do
+    it "calls EuAutoTaxesService and applies default country taxes" do
       described_class.perform_now(customer.id)
 
-      expect(Customers::EuAutoTaxesService).not_to have_received(:call)
+      expect(Customers::EuAutoTaxesService).to have_received(:call)
+      expect(Customers::ApplyTaxesService).to have_received(:call)
+        .with(customer: customer, tax_codes: ["lago_eu_de_standard"])
+    end
+
+    context "with pending invoices blocked by VIES" do
+      let(:pending_invoice) do
+        create(:invoice, :pending, customer:, organization: customer.organization, tax_status: "pending")
+      end
+
+      before { pending_invoice }
+
+      it "enqueues FinalizePendingViesInvoiceJob" do
+        expect { described_class.perform_now(customer.id) }
+          .to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob).with(pending_invoice)
+      end
     end
   end
 
@@ -80,12 +95,28 @@ RSpec.describe Customers::RetryViesCheckJob do
   end
 
   context "when valvat has an error" do
+    let(:pending_invoice) do
+      create(:invoice, :pending, customer:, organization: customer.organization, tax_status: "pending")
+    end
+
     before do
+      pending_invoice
       allow_any_instance_of(Valvat).to receive(:exists?).and_raise(Valvat::Timeout.new("Timeout", "dummy")) # rubocop:disable RSpec/AnyInstance
     end
 
-    it "applies the taxes and enqueues another job" do
+    it "enqueues another retry job" do
       expect { described_class.perform_now(customer.id) }.to have_enqueued_job(described_class)
+    end
+
+    it "does not apply taxes" do
+      described_class.perform_now(customer.id)
+
+      expect(Customers::ApplyTaxesService).not_to have_received(:call)
+    end
+
+    it "does not enqueue invoice finalization" do
+      expect { described_class.perform_now(customer.id) }
+        .not_to have_enqueued_job(Invoices::FinalizePendingViesInvoiceJob)
     end
   end
 end
