@@ -29,7 +29,8 @@ module WalletTransactions
         organization_id: wallet.organization_id,
         amount:,
         credit_amount:,
-        metadata: transaction_params[:metadata] || []
+        metadata: transaction_params[:metadata] || [],
+        remaining_amount_cents: initial_remaining_amount_cents
       )
 
       if transaction_params[:payment_method].present?
@@ -48,5 +49,12 @@ module WalletTransactions
     attr_reader :wallet, :wallet_credit, :transaction_params
 
     delegate :credit_amount, :amount, to: :wallet_credit
+
+    def initial_remaining_amount_cents
+      return nil unless wallet.traceable?
+      return nil unless transaction_params[:transaction_type]&.to_sym == :inbound
+
+      wallet_credit.amount_cents
+    end
   end
 end
