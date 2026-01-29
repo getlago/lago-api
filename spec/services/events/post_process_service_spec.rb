@@ -10,6 +10,7 @@ RSpec.describe Events::PostProcessService do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
   let(:started_at) { Time.current - 3.days }
   let(:external_subscription_id) { subscription.external_id }
@@ -28,7 +29,10 @@ RSpec.describe Events::PostProcessService do
     )
   end
 
-  before { create(:wallet, customer:) }
+  before do
+    charge
+    create(:wallet, customer:)
+  end
 
   describe "#call" do
     it "marks customer as awaiting wallet refresh" do
@@ -42,6 +46,20 @@ RSpec.describe Events::PostProcessService do
 
       expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
         .with(subscription:, organization:)
+    end
+
+    context "with events enrichment" do
+      it "does not create an enriched event" do
+        expect { process_service.call }.not_to change(EnrichedEvent, :count)
+      end
+
+      context "when the feature flag is enabled" do
+        let(:organization) { create(:organization, feature_flags: [:postgres_enriched_events]) }
+
+        it "creates enriched event" do
+          expect { process_service.call }.to change(EnrichedEvent, :count).by(1)
+        end
+      end
     end
 
     context "when event matches an pay_in_advance charge" do
