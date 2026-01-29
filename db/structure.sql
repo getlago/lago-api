@@ -2286,7 +2286,6 @@ CREATE TABLE public.enriched_events (
     plan_id uuid NOT NULL,
     charge_id uuid NOT NULL,
     charge_filter_id uuid,
-    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     value character varying,
     decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
@@ -2311,7 +2310,6 @@ CREATE TABLE public.enriched_events_default (
     plan_id uuid NOT NULL,
     charge_id uuid NOT NULL,
     charge_filter_id uuid,
-    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     value character varying,
     decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
@@ -11381,6 +11379,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260129145352'),
 ('20260129105200'),
 ('20260127114700'),
 ('20260121112929'),
