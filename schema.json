@@ -33529,6 +33529,23 @@
         },
         {
           "kind": "ENUM",
+          "name": "InvoiceSettlementTypeEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "credit_note",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
           "name": "InvoiceStatusTypeEnum",
           "description": null,
           "fields": null,
@@ -52288,6 +52305,26 @@
                     "kind": "SCALAR",
                     "name": "Boolean",
                     "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "settlements",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "InvoiceSettlementTypeEnum",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
