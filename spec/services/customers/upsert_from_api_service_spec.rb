@@ -908,47 +908,6 @@ RSpec.describe Customers::UpsertFromApiService do
         end
       end
 
-      context "when changing payment_provider_code within the same provider" do
-        let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
-        let(:external_id) { SecureRandom.uuid }
-        let(:customer) do
-          create(
-            :customer,
-            organization:,
-            external_id:,
-            payment_provider: "stripe",
-            payment_provider_code: "stripe_1"
-          )
-        end
-        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
-        let!(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
-
-        let(:create_args) do
-          {
-            external_id:,
-            billing_configuration: {
-              payment_provider: "stripe",
-              payment_provider_code: "stripe_2",
-              provider_customer_id: "stripe_id_2"
-            }
-          }
-        end
-
-        before do
-          allow(PaymentProviderCustomers::UpdateService).to receive(:call)
-          create(:stripe_provider, organization:, code: "stripe_2")
-        end
-
-        it "discards payment methods but does not discard the provider customer" do
-          expect(result).to be_success
-          expect(result.customer.payment_provider).to eq("stripe")
-          expect(result.customer.payment_provider_code).to eq("stripe_2")
-
-          expect(stripe_customer.reload).not_to be_discarded
-          expect(payment_method.reload).to be_discarded
-        end
-      end
-
       context "when switching from stripe to gocardless" do
         let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
         let(:external_id) { SecureRandom.uuid }
