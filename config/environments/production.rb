@@ -64,7 +64,8 @@ Rails.application.configure do
         Rails.logger.error(exception.backtrace.join("\n"))
 
         Sentry.capture_exception(exception)
-      }
+      },
+      compress_threshold: 512 # 512 bytes
     }
 
     if ENV["LAGO_REDIS_CACHE_PASSWORD"].present? && !ENV["LAGO_REDIS_CACHE_PASSWORD"].empty?
