@@ -154,18 +154,6 @@ RSpec.describe Fees::ChargeService do
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
           end
-
-          context "when organization as zero_amount_fees premium integration" do
-            before do
-              organization.update!(premium_integrations: ["zero_amount_fees"])
-            end
-
-            it "creates a fee" do
-              result = charge_subscription_service.call
-              expect(result).to be_success
-              expect(result.fees.count).to eq(1)
-            end
-          end
         end
 
         context "with events" do
@@ -498,18 +486,6 @@ RSpec.describe Fees::ChargeService do
             result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
-          end
-
-          context "when organization as zero_amount_fees premium integration" do
-            before do
-              organization.update!(premium_integrations: ["zero_amount_fees"])
-            end
-
-            it "creates a fee" do
-              result = charge_subscription_service.call
-              expect(result).to be_success
-              expect(result.fees.count).to eq(1)
-            end
           end
         end
 
@@ -2658,7 +2634,6 @@ RSpec.describe Fees::ChargeService do
     end
 
     context "with filtered_aggregations" do
-      let(:organization) { create(:organization, premium_integrations: ["zero_amount_fees"]) }
       let(:filtered_aggregations) { [] }
 
       let(:region_filter) do
@@ -2724,18 +2699,20 @@ RSpec.describe Fees::ChargeService do
 
           expect(eu_fee).to have_attributes(units: 1, amount_cents: 2_000)
           expect(us_fee).to have_attributes(units: 1, amount_cents: 3_000)
-          expect(asia_fee).to have_attributes(units: 0, amount_cents: 0)
-          expect(default_fee).to have_attributes(units: 0, amount_cents: 0)
+          # Zero-amount fees are filtered out by default
+          expect(asia_fee).to be_nil
+          expect(default_fee).to be_nil
         end
       end
 
       context "when filtered_aggregations is an empty array" do
         let(:filtered_aggregations) { [] }
 
-        it "bypasses aggregation for all filters" do
+        it "bypasses aggregation for all filters and returns no fees" do
           result = charge_subscription_service.call
           expect(result).to be_success
-          expect(result.fees).to all(have_attributes(units: 0, amount_cents: 0))
+          # All fees have zero amounts, so none are persisted
+          expect(result.fees).to be_empty
         end
       end
 
@@ -2750,7 +2727,8 @@ RSpec.describe Fees::ChargeService do
           eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
 
           expect(default_fee).to have_attributes(units: 1, amount_cents: 2_000)
-          expect(eu_fee).to have_attributes(units: 0, amount_cents: 0)
+          # Zero-amount fees are filtered out by default
+          expect(eu_fee).to be_nil
         end
       end
 
