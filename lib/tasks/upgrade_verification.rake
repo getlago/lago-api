@@ -48,7 +48,7 @@ namespace :upgrade do
       to_fill.each do |resource|
         model = resource[:model]
         pp "- Checking #{model.name}: 🔎"
-        count = model.where(customer_id: nil).count
+        count = model.where(code: nil).count
 
         if count > 0
           pp "  -> #{count} remaining 🧮"
