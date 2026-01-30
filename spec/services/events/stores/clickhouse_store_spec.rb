@@ -4,7 +4,7 @@ require "rails_helper"
 
 require_relative "shared_examples/an_event_store"
 
-RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true} do
+RSpec.describe Events::Stores::ClickhouseStore, clickhouse: true do
   def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
     Clickhouse::EventsEnriched.create!(
       transaction_id: transaction_id,
@@ -22,6 +22,13 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
   def format_timestamp(timestamp, precision: 3)
     Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%#{precision}L")
+  end
+
+  # Force ClickHouse to merge parts and ensure data consistency.
+  # ReplacingMergeTree tables may have timing inconsistencies where data parts
+  # aren't fully visible yet when queries run. OPTIMIZE FINAL forces synchronization.
+  def force_sync
+    Clickhouse::EventsEnriched.connection.execute("OPTIMIZE TABLE events_enriched FINAL")
   end
 
   context "without deduplication" do

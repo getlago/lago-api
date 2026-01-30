@@ -104,7 +104,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     create_european_event(country: "united kingdom", city: "cambridge", value: -5, timestamp: subscription_started_at + 10.days)
   end
 
-  before { events }
+  before do
+    events
+    force_sync if respond_to?(:force_sync)
+  end
 
   describe "#events" do
     it "returns the events" do
@@ -232,7 +235,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the number of unique events" do
         # We include:
@@ -412,7 +418,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the sum filtered and grouped" do
         result = event_store.grouped_sum_precise_total_amount_cents
@@ -630,7 +639,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the last events filtered and grouped" do
         result = event_store.grouped_last_event
@@ -718,7 +730,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the max events filtered and grouped" do
         result = event_store.grouped_max
@@ -816,7 +831,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the last values filtered and grouped" do
         result = event_store.grouped_last
@@ -973,7 +991,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      before do
+        create_events_for_filters
+        force_sync if respond_to?(:force_sync)
+      end
 
       it "returns the sum filtered and grouped" do
         result = event_store.grouped_sum
