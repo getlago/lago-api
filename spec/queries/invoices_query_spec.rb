@@ -902,8 +902,10 @@ RSpec.describe InvoicesQuery do
     context "when settlement type is invalid" do
       let(:settlements) { ["invalid_type"] }
 
-      it "returns all invoices" do
-        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
+      it "returns a validation error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:settlements]).to be_present
       end
     end
   end
