@@ -25,7 +25,7 @@ module Invoices
     unique :until_executed, on_conflict: :log
 
     def perform(subscription, timestamp)
-      Invoices::CreatePayInAdvanceFixedChargesService.call!(
+      Invoices::PayInAdvance::CreateFixedChargesService.call!(
         subscription:,
         timestamp:
       )

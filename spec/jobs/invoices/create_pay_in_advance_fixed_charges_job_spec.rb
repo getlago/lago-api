@@ -22,7 +22,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
     let(:result) { BaseService::Result.new }
 
     before do
-      allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call)
+      allow(Invoices::PayInAdvance::CreateFixedChargesService).to receive(:call)
         .with(subscription:, timestamp:)
         .and_return(result)
     end
@@ -30,7 +30,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
     it "calls the create pay in advance fixed charge service" do
       described_class.perform_now(subscription, timestamp)
 
-      expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
+      expect(Invoices::PayInAdvance::CreateFixedChargesService).to have_received(:call)
     end
 
     context "when result is a failure" do
@@ -43,7 +43,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
           described_class.perform_now(subscription, timestamp)
         end.to raise_error(BaseService::FailedResult)
 
-        expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
+        expect(Invoices::PayInAdvance::CreateFixedChargesService).to have_received(:call)
       end
     end
 
@@ -57,7 +57,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
 
       context "when a #{error_class} error is raised" do
         before do
-          allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call).and_raise(error)
+          allow(Invoices::PayInAdvance::CreateFixedChargesService).to receive(:call).and_raise(error)
         end
 
         it "raises a #{error_class.class.name} error and retries" do

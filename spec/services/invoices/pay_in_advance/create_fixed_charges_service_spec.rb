@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
+RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
   subject(:invoice_service) do
     described_class.new(subscription:, timestamp: timestamp.to_i)
   end
@@ -564,7 +564,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       let(:lock_released_after) { 0.1.seconds }
 
       before do
-        stub_const("Invoices::CreatePayInAdvanceFixedChargesService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+        stub_const("Invoices::PayInAdvance::CreateFixedChargesService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
       end
 
       around do |test|

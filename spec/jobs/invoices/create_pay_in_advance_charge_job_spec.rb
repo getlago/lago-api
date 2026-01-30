@@ -20,7 +20,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
     let(:result) { BaseService::Result.new }
 
     before do
-      allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call)
+      allow(Invoices::PayInAdvance::CreateChargeService).to receive(:call)
         .with(charge:, event:, timestamp:)
         .and_return(result)
     end
@@ -28,7 +28,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
     it "calls the create pay in advance charge service" do
       described_class.perform_now(charge:, event:, timestamp:)
 
-      expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:call)
+      expect(Invoices::PayInAdvance::CreateChargeService).to have_received(:call)
     end
 
     context "when result is a failure" do
@@ -41,7 +41,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
           described_class.perform_now(charge:, event:, timestamp:)
         end.to raise_error(BaseService::FailedResult)
 
-        expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:call)
+        expect(Invoices::PayInAdvance::CreateChargeService).to have_received(:call)
       end
 
       context "with a previously created invoice" do
@@ -52,7 +52,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
             described_class.perform_now(charge:, event:, timestamp:, invoice:)
           end.to raise_error(BaseService::FailedResult)
 
-          expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:call)
+          expect(Invoices::PayInAdvance::CreateChargeService).to have_received(:call)
         end
       end
 
@@ -66,7 +66,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
             described_class.perform_now(charge:, event:, timestamp:)
           end.to raise_error(BaseService::FailedResult)
 
-          expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:call)
+          expect(Invoices::PayInAdvance::CreateChargeService).to have_received(:call)
         end
       end
     end
@@ -81,7 +81,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
 
       context "when a #{error_class} error is raised" do
         before do
-          allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call).and_raise(error)
+          allow(Invoices::PayInAdvance::CreateChargeService).to receive(:call).and_raise(error)
         end
 
         it "raises a #{error_class.class.name} error and retries" do
