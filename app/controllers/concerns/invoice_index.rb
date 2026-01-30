@@ -49,5 +49,4 @@ module InvoiceIndex
       render_error_response(result)
     end
   end
-
 end
