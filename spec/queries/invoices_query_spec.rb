@@ -886,5 +886,25 @@ RSpec.describe InvoicesQuery do
         expect(returned_ids).to match_array([invoice_first.id, invoice_second.id])
       end
     end
+
+    context "when there are no matching settlements" do
+      let(:settlements) { ["payment"] }
+
+      before do
+        InvoiceSettlement.where(settlement_type: :payment).delete_all
+      end
+
+      it "returns no invoices" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when settlement type is invalid" do
+      let(:settlements) { ["invalid_type"] }
+
+      it "returns all invoices" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id])
+      end
+    end
   end
 end
