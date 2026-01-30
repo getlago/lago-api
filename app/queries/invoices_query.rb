@@ -199,7 +199,9 @@ class InvoicesQuery < BaseQuery
 
   def with_settlements(scope)
     scope.where(
-      id: InvoiceSettlement.where(settlement_type: valid_settlements).distinct.select(:target_invoice_id)
+      id: scope.joins(:invoice_settlements)
+        .where(invoice_settlements: {settlement_type: valid_settlements})
+        .select(:id)
     )
   end
 
