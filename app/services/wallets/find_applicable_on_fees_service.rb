@@ -39,10 +39,10 @@ module Wallets
     attr_reader :allocation_rules, :fee
 
     def find_wallet_by_code(code)
-      wallet_customer = fee.subscription&.customer || fee.invoice&.customer
-      return nil unless wallet_customer
+      wallet_customer_id = fee.subscription&.customer_id || fee.invoice&.customer_id
+      return nil unless wallet_customer_id
 
-      wallet_customer.wallets.active.find_by(code: code)
+      Wallet.active.where(organization_id: fee.organization_id, customer_id: wallet_customer_id).find_by(code:)
     end
 
     def result_with(wallets)
