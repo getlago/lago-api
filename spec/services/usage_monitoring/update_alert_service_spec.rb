@@ -93,5 +93,32 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
       end
     end
+
+    context "when a threshold value is nil" do
+      let(:params) { {thresholds: [{value: nil}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to include("value_is_mandatory")
+      end
+    end
+
+    context "when a threshold value is not a valid number" do
+      let(:params) { {thresholds: [{value: "abc"}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to include("value_is_invalid")
+      end
+    end
+
+    context "when threshold values are valid numeric strings" do
+      let(:params) { {thresholds: [{value: "100"}, {value: "200.5"}]} }
+
+      it "updates the alert" do
+        expect(result).to be_success
+        expect(alert.reload.thresholds.map(&:value)).to eq [100, 200.5]
+      end
+    end
   end
 end

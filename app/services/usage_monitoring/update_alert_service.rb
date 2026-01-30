@@ -24,6 +24,14 @@ module UsageMonitoring
         if threshold_values.size != threshold_values.uniq.size
           return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
         end
+
+        if !all_threshold_values_present?(params[:thresholds])
+          return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_mandatory")
+        end
+
+        if !all_threshold_values_numeric?(params[:thresholds])
+          return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
+        end
       end
 
       result.alert = alert
