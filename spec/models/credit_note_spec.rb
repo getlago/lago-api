@@ -30,6 +30,12 @@ RSpec.describe CreditNote do
     it { is_expected.to validate_numericality_of(:balance_amount_cents).is_greater_than_or_equal_to(0) }
   end
 
+  describe "constants" do
+    it "defines TYPES" do
+      expect(described_class::TYPES).to eq(%w[credit refund offset])
+    end
+  end
+
   describe "sequential_id" do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }

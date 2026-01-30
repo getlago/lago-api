@@ -3387,6 +3387,12 @@ enum CreditNoteRefundStatusEnum {
   succeeded
 }
 
+enum CreditNoteTypeEnum {
+  credit
+  offset
+  refund
+}
+
 enum CurrencyEnum {
   """
   United Arab Emirates Dirham
@@ -9325,6 +9331,7 @@ type Query {
     refundStatus: [CreditNoteRefundStatusEnum!]
     searchTerm: String
     selfBilled: Boolean
+    types: [CreditNoteTypeEnum!]
   ): CreditNoteCollection!
 
   """

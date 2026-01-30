@@ -154,6 +154,65 @@ RSpec.describe Resolvers::CreditNotesResolver do
     end
   end
 
+  context "with types" do
+    let(:arguments) { "types: [#{types.join(", ")}]" }
+
+    let(:credit_note) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 0, offset_amount_cents: 0)
+    end
+
+    let(:refund_note) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    let(:offset_note) do
+      create(:credit_note, customer:, credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 10)
+    end
+
+    let(:credit_and_refund_note) do
+      create(:credit_note, customer:, credit_amount_cents: 10, refund_amount_cents: 10, offset_amount_cents: 0)
+    end
+
+    before do
+      credit_note
+      refund_note
+      offset_note
+      credit_and_refund_note
+    end
+
+    context "when type is credit" do
+      let(:types) { ["credit"] }
+
+      it "returns credit notes with positive credit amount" do
+        expect(response_collection.pluck("id")).to match_array([credit_note.id, credit_and_refund_note.id])
+      end
+    end
+
+    context "when type is refund" do
+      let(:types) { ["refund"] }
+
+      it "returns credit notes with positive refund amount" do
+        expect(response_collection.pluck("id")).to match_array([refund_note.id, credit_and_refund_note.id])
+      end
+    end
+
+    context "when type is offset" do
+      let(:types) { ["offset"] }
+
+      it "returns credit notes with positive offset amount" do
+        expect(response_collection.pluck("id")).to match_array([offset_note.id])
+      end
+    end
+
+    context "when multiple types are provided" do
+      let(:types) { %w[credit refund] }
+
+      it "returns credit notes matching any of the given types" do
+        expect(response_collection.pluck("id")).to match_array([credit_note.id, refund_note.id, credit_and_refund_note.id])
+      end
+    end
+  end
+
   context "with invoice_number" do
     let(:arguments) { "invoiceNumber: #{credit_note.invoice.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }

@@ -27,12 +27,13 @@ module Resolvers
     argument :reason, [Types::CreditNotes::ReasonTypeEnum], required: false
     argument :refund_status, [Types::CreditNotes::RefundStatusTypeEnum], required: false
     argument :self_billed, Boolean, required: false
+    argument :types, [Types::CreditNotes::TypeEnum], required: false
 
     type Types::CreditNotes::Object.collection_type, null: false
 
     FILTER_KEYS = %i[
       amount_from amount_to billing_entity_ids credit_status currency customer_external_id
-      customer_id invoice_number issuing_date_from issuing_date_to reason refund_status self_billed
+      customer_id invoice_number issuing_date_from issuing_date_to reason refund_status self_billed types
     ].freeze
 
     def resolve(**args)

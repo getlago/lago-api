@@ -58,6 +58,8 @@ class CreditNote < ApplicationRecord
   # - failed: the refund process has failed
   REFUND_STATUS = %i[pending succeeded failed].freeze
 
+  TYPES = %w[credit refund offset].freeze
+
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
   STATUS = %i[draft finalized].freeze
 
