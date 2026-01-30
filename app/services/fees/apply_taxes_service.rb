@@ -2,9 +2,11 @@
 
 module Fees
   class ApplyTaxesService < BaseService
-    def initialize(fee:, tax_codes: nil)
+    def initialize(fee:, tax_codes: nil, customer: nil, plan: nil)
       @fee = fee
       @tax_codes = tax_codes
+      @customer = customer
+      @plan = plan
 
       super
     end
@@ -68,7 +70,8 @@ module Fees
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
       return fee.fixed_charge.taxes if fee.fixed_charge? && fee.fixed_charge.taxes.any?
       return fee.invoiceable.taxes if fee.commitment? && fee.invoiceable.taxes.any?
-      if (fee.charge? || fee.subscription? || fee.commitment? || fee.fixed_charge?) && fee.subscription.plan.taxes.any?
+      plan = @plan || fee.subscription&.plan
+      if (fee.charge? || fee.subscription? || fee.commitment? || fee.fixed_charge?) && plan.taxes.any?
         return fee.subscription.plan.taxes
       end
       return customer.taxes if customer.taxes.any?

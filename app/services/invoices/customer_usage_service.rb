@@ -151,9 +151,10 @@ module Invoices
 
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+      plan = subscription.plan
 
       invoice.fees.each do |fee|
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result = Fees::ApplyTaxesService.call(fee:, customer: customer, plan: plan)
         taxes_result.raise_if_error!
       end
 
