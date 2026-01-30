@@ -87,6 +87,8 @@ module Types
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
+    field :security_log, resolver: Resolvers::SecurityLogResolver
+    field :security_logs, resolver: Resolvers::SecurityLogsResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
