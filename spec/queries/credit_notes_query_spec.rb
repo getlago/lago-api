@@ -182,15 +182,6 @@ RSpec.describe CreditNotesQuery do
       end
     end
 
-    context "with comma separated values" do
-      let(:types) { "credit,refund" }
-
-      it "returns credit notes matching any of the given types" do
-        expect(result).to be_success
-        expect(returned_ids).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
-      end
-    end
-
     context "with invalid type" do
       let(:types) { "invalid-type" }
 

@@ -177,13 +177,7 @@ class CreditNotesQuery < BaseQuery
   end
 
   def valid_types
-    @valid_types ||= begin
-      types = Array(filters.types)
-        .flat_map { |value| value.to_s.split(",") }
-        .map(&:strip)
-        .reject(&:blank?)
-
-      types.select { |type| CreditNote::TYPES.include?(type) }.uniq
-    end
+    @valid_types ||= Array(filters.types)
+      .select { |type| CreditNote::TYPES.include?(type) }
   end
 end
