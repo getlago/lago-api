@@ -879,7 +879,7 @@ RSpec.describe InvoicesQuery do
       end
     end
 
-    context "when settlements is a comma separated string with multiple values" do
+    context "when settlements is an array with multiple values" do
       let(:settlements) { %w[credit_note payment] }
 
       it "returns invoices matching any provided settlement type" do
