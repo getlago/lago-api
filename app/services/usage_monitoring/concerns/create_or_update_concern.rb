@@ -16,6 +16,30 @@ module UsageMonitoring
       rescue ActiveRecord::RecordNotFound
         result.not_found_failure!(resource: "billable_metric")
       end
+
+      def all_threshold_values_present?(thresholds)
+        thresholds.none? { it[:value].nil? }
+      end
+
+      def all_threshold_values_numeric?(thresholds)
+        thresholds.all? { |t| valid_numeric_value?(t[:value]) }
+      end
+
+      def valid_numeric_value?(value)
+        case value
+        when Numeric
+          true
+        when String
+          return false if value.blank?
+
+          Float(value)
+          true
+        else
+          false
+        end
+      rescue ArgumentError
+        false
+      end
     end
   end
 end
