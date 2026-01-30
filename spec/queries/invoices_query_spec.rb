@@ -829,4 +829,84 @@ RSpec.describe InvoicesQuery do
       expect(returned_ids).to eq([invoice_with_subscription_1.id])
     end
   end
+
+  context "when filtering by settlements" do
+    let(:filters) { {settlements: settlements} }
+
+    let(:credit_note) { create(:credit_note, invoice: invoice_first, customer: invoice_first.customer, organization:) }
+
+    before do
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_first.billing_entity,
+        target_invoice: invoice_first,
+        settlement_type: :credit_note,
+        source_credit_note: credit_note
+      )
+
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_second.billing_entity,
+        target_invoice: invoice_second,
+        settlement_type: :payment,
+        source_payment: create(:payment)
+      )
+    end
+
+    context "when settlements is an array with credit_note" do
+      let(:settlements) { ["credit_note"] }
+
+      it "returns invoices with a credit note settlement" do
+        expect(returned_ids).to eq([invoice_first.id])
+      end
+    end
+
+    context "when settlements is an array with payment" do
+      let(:settlements) { ["payment"] }
+
+      it "returns invoices with a payment settlement" do
+        expect(returned_ids).to eq([invoice_second.id])
+      end
+    end
+
+    context "when settlements is a string with a single value" do
+      let(:settlements) { "credit_note" }
+
+      it "returns invoices with a credit note settlement" do
+        expect(returned_ids).to eq([invoice_first.id])
+      end
+    end
+
+    context "when settlements is an array with multiple values" do
+      let(:settlements) { %w[credit_note payment] }
+
+      it "returns invoices matching any provided settlement type" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id])
+      end
+    end
+
+    context "when there are no matching settlements" do
+      let(:settlements) { ["payment"] }
+
+      before do
+        InvoiceSettlement.where(settlement_type: :payment).delete_all
+      end
+
+      it "returns no invoices" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when settlement type is invalid" do
+      let(:settlements) { ["invalid_type"] }
+
+      it "returns a validation error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:settlements]).to be_present
+      end
+    end
+  end
 end
