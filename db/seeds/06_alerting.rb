@@ -10,7 +10,7 @@ UsageMonitoring::TriggeredAlert.where(alert: existing_alerts).delete_all
 UsageMonitoring::AlertThreshold.where(alert: existing_alerts).delete_all
 existing_alerts.delete_all
 
-UsageMonitoring::CreateAlertService.call!(organization:, subscription:, params: {
+UsageMonitoring::CreateAlertService.call!(organization:, alertable: subscription, params: {
   alert_type: "current_usage_amount",
   code: "default",
   name: "Default Alert",
@@ -22,7 +22,7 @@ UsageMonitoring::CreateAlertService.call!(organization:, subscription:, params: 
 })
 
 if License.premium?
-  alert = UsageMonitoring::CreateAlertService.call!(organization:, subscription:, params: {
+  alert = UsageMonitoring::CreateAlertService.call!(organization:, alertable: subscription, params: {
     alert_type: "lifetime_usage_amount",
     code: "total",
     thresholds: [
@@ -49,7 +49,7 @@ if License.premium?
   SendWebhookJob.perform_later("alert.triggered", triggered_alert)
 end
 
-bm_alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
+bm_alert = UsageMonitoring::CreateAlertService.call(organization:, alertable: subscription, params: {
   alert_type: "billable_metric_current_usage_amount",
   billable_metric: sum_bm,
   code: "ops",
