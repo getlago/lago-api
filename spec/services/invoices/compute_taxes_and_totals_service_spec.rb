@@ -75,9 +75,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
     context "when customer has VIES check in progress" do
       let(:billing_entity) { create(:billing_entity, organization:, eu_tax_management: true) }
       let(:customer) { create(:customer, organization:, billing_entity:) }
-      let(:pending_vies_check) { create(:pending_vies_check, customer:) }
-
-      before { pending_vies_check }
+      before { create(:pending_vies_check, customer:) }
 
       it "returns an unknown tax failure" do
         result = totals_service.call
@@ -109,9 +107,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
 
       context "when customer also has tax provider" do
         let(:integration) { create(:anrok_integration, organization:) }
-        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-
-        before { integration_customer }
+        before { create(:anrok_customer, integration:, customer:) }
 
         it "uses tax provider instead of blocking for VIES" do
           expect { totals_service.call }
