@@ -14,37 +14,43 @@ module Invoices
       end
 
       def call
-        handle_record_errors do
-          fee_result = generate_fees
-          fees = fee_result.fees
-          return result if fees.none?
+        fee_result = generate_fees
+        fees = fee_result.fees
+        return result if fees.none?
 
-          ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
-              create_generating_invoice
-              fees.each { |f| f.update!(invoice:) }
+        ActiveRecord::Base.transaction do
+          # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
+          ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
+            create_generating_invoice
+            fees.each { |f| f.update!(invoice:) }
 
-              finalize_invoice
+            apply_fees_and_coupons
 
-              if tax_error?(fee_result)
-                invoice.failed!
-                invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-                create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
-                Utils::ActivityLog.produce(invoice, "invoice.failed")
-                next
-              end
-
-              Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-              apply_credits_and_finalize
+            if tax_error?(fee_result)
+              invoice.failed!
+              invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+              create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+              Utils::ActivityLog.produce(invoice, "invoice.failed")
+              next
             end
+
+            Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+            apply_credits
+            finalize_invoice
           end
-          return fee_result if tax_error?(fee_result)
-
-          result.invoice = invoice
-          trigger_post_creation_jobs
-
-          result
         end
+        return fee_result if tax_error?(fee_result)
+
+        result.invoice = invoice
+        trigger_post_creation_jobs
+
+        result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, WithAdvisoryLock::FailedToAcquireLock
+        raise
+      rescue => e
+        result.fail_with_error!(e)
       end
 
       private

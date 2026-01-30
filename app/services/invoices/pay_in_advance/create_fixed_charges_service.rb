@@ -18,28 +18,38 @@ module Invoices
         return result unless subscription.active?
         return result if fixed_charge_events.empty?
 
-        handle_record_errors do
-          fees = calculate_all_fees
+        # Calculate fees for all fixed charge events
+        fees = calculate_all_fees
+        # Invoice without fees should be created if there are no fees to bill
+        # return result if fees.empty?
 
-          ActiveRecord::Base.transaction do
-            ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
-              create_generating_invoice
-              fees.each do |fee|
-                fee.invoice = invoice
-                fee.save!
-              end
-
-              finalize_invoice
-              Invoices::ComputeAmountsFromFees.call(invoice:)
-              apply_credits_and_finalize
+        ActiveRecord::Base.transaction do
+          # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
+          ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
+            create_generating_invoice
+            fees.each do |fee|
+              fee.invoice = invoice
+              fee.save!
             end
+
+            apply_fees_and_coupons
+
+            Invoices::ComputeAmountsFromFees.call(invoice:)
+            apply_credits
+            finalize_invoice
           end
-
-          result.invoice = invoice
-          trigger_post_creation_jobs
-
-          result
         end
+
+        result.invoice = invoice
+        trigger_post_creation_jobs
+
+        result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, WithAdvisoryLock::FailedToAcquireLock
+        raise
+      rescue => e
+        result.fail_with_error!(e)
       end
 
       private

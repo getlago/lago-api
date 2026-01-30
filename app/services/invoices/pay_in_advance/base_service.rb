@@ -35,6 +35,7 @@ module Invoices
       end
 
       def create_applied_prepaid_credit
+        # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
         prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, max_wallet_decrease_attempts: 1)
         refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
       end
@@ -43,17 +44,19 @@ module Invoices
         invoice.total_amount_cents -= credit_amount_cents
       end
 
-      def finalize_invoice
+      def apply_fees_and_coupons
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
       end
 
-      def apply_credits_and_finalize
+      def apply_credits
         create_credit_note_credit
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+      end
 
+      def finalize_invoice
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.save!
@@ -65,20 +68,10 @@ module Invoices
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
-        GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
+        Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
         Invoices::Payments::CreateService.call_async(invoice:)
-      end
-
-      def handle_record_errors
-        yield
-      rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record)
-      rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, WithAdvisoryLock::FailedToAcquireLock
-        raise
-      rescue => e
-        result.fail_with_error!(e)
       end
     end
   end
