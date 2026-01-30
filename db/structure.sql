@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d93
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
+ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_d4abfdb375;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d384ec1ebf;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
@@ -122,6 +123,7 @@ ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_87bc3bd4cb;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
+ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_85b9e72931;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_84a67e8b40;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_81eedc32c0;
@@ -205,6 +207,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXIS
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_3d568ff9de;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_3cfe1d68d7;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_3c7c3920c0;
+ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_3c786cd3e3;
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_3b7dad8e9c;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
@@ -327,6 +330,7 @@ DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_wallet_transaction_consumptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
@@ -714,6 +718,8 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_wallet_tx_consumptions_inbound_outbound;
+DROP INDEX IF EXISTS public.idx_wallet_transactions_available_inbound;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_subscription_recurring;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_plan_recurring;
 DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_subscription_recurring;
@@ -735,6 +741,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
+DROP INDEX IF EXISTS public.idx_on_outbound_wallet_transaction_id_cf6ff733c6;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e73219f079;
@@ -751,6 +758,7 @@ DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_aca4661c33;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_50c2a2e7c0;
+DROP INDEX IF EXISTS public.idx_on_inbound_wallet_transaction_id_e54d00758d;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_9946ccf514;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
@@ -771,12 +779,17 @@ DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
+DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
+DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
+DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
+DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS wallets_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS wallet_transactions_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS wallet_transaction_consumptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS wallet_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
@@ -892,6 +905,7 @@ DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
 DROP TABLE IF EXISTS public.wallets_invoice_custom_sections;
 DROP TABLE IF EXISTS public.wallet_transactions_invoice_custom_sections;
+DROP TABLE IF EXISTS public.wallet_transaction_consumptions;
 DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
@@ -992,6 +1006,8 @@ DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
 DROP TABLE IF EXISTS public.entitlement_entitlement_values;
+DROP TABLE IF EXISTS public.enriched_events_default;
+DROP TABLE IF EXISTS public.enriched_events;
 DROP TABLE IF EXISTS public.dunning_campaigns;
 DROP TABLE IF EXISTS public.dunning_campaign_thresholds;
 DROP TABLE IF EXISTS public.data_exports;
@@ -1035,6 +1051,7 @@ DROP TABLE IF EXISTS public.add_ons;
 DROP TABLE IF EXISTS public.active_storage_variant_records;
 DROP TABLE IF EXISTS public.active_storage_blobs;
 DROP TABLE IF EXISTS public.active_storage_attachments;
+DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
@@ -1059,6 +1076,22 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+DROP EXTENSION IF EXISTS pg_partman;
+DROP SCHEMA IF EXISTS partman;
+--
+-- Name: partman; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA partman;
+
+
+--
+-- Name: pg_partman; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_partman WITH SCHEMA partman;
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -1344,6 +1377,30 @@ CREATE FUNCTION public.set_payment_receipt_number() RETURNS trigger
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: template_public_enriched_events; Type: TABLE; Schema: partman; Owner: -
+--
+
+CREATE TABLE partman.template_public_enriched_events (
+    id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    transaction_id character varying NOT NULL,
+    external_subscription_id character varying NOT NULL,
+    code character varying NOT NULL,
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    subscription_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id uuid,
+    properties jsonb NOT NULL,
+    grouped_by jsonb NOT NULL,
+    value character varying,
+    decimal_value numeric(40,15) NOT NULL,
+    enriched_at timestamp(6) without time zone NOT NULL
+);
+
 
 --
 -- Name: active_storage_attachments; Type: TABLE; Schema: public; Owner: -
@@ -2210,6 +2267,55 @@ CREATE TABLE public.dunning_campaigns (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp without time zone,
     bcc_emails character varying[] DEFAULT '{}'::character varying[]
+);
+
+
+--
+-- Name: enriched_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.enriched_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    transaction_id character varying NOT NULL,
+    external_subscription_id character varying NOT NULL,
+    code character varying NOT NULL,
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    subscription_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id uuid,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
+    value character varying,
+    decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
+    enriched_at timestamp(6) without time zone NOT NULL
+)
+PARTITION BY RANGE ("timestamp");
+
+
+--
+-- Name: enriched_events_default; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.enriched_events_default (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    transaction_id character varying NOT NULL,
+    external_subscription_id character varying NOT NULL,
+    code character varying NOT NULL,
+    "timestamp" timestamp(6) without time zone NOT NULL,
+    subscription_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    charge_id uuid NOT NULL,
+    charge_filter_id uuid,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
+    value character varying,
+    decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
+    enriched_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -3122,7 +3228,7 @@ CREATE VIEW public.exports_invoice_settlements AS
     ins.organization_id,
     ins.billing_entity_id AS lago_billing_entity_id,
     ins.target_invoice_id AS lago_target_invoice_id,
-    ins.settlement_type,
+    (ins.settlement_type)::text AS settlement_type,
     ins.source_payment_id AS lago_source_payment_id,
     ins.source_credit_note_id AS lago_source_credit_note_id,
     ins.amount_cents,
@@ -3243,6 +3349,8 @@ CREATE TABLE public.invoices (
     voided_invoice_id uuid,
     xml_file character varying,
     expected_finalization_date date,
+    prepaid_granted_credit_amount_cents bigint,
+    prepaid_purchased_credit_amount_cents bigint,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -3694,7 +3802,9 @@ CREATE TABLE public.wallet_transactions (
     name character varying(255),
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    remaining_amount_cents bigint,
+    CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
 
@@ -3781,6 +3891,7 @@ CREATE TABLE public.wallets (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    traceable boolean DEFAULT false NOT NULL,
     code character varying
 );
 
@@ -4603,6 +4714,21 @@ CREATE TABLE public.wallet_targets (
 
 
 --
+-- Name: wallet_transaction_consumptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_transaction_consumptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    inbound_wallet_transaction_id uuid NOT NULL,
+    outbound_wallet_transaction_id uuid NOT NULL,
+    consumed_amount_cents bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: wallet_transactions_invoice_custom_sections; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4665,6 +4791,13 @@ CREATE TABLE public.webhooks (
     webhook_endpoint_id uuid,
     organization_id uuid NOT NULL
 );
+
+
+--
+-- Name: enriched_events_default; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.enriched_events ATTACH PARTITION public.enriched_events_default DEFAULT;
 
 
 --
@@ -5554,6 +5687,14 @@ ALTER TABLE ONLY public.wallet_targets
 
 
 --
+-- Name: wallet_transaction_consumptions wallet_transaction_consumptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transaction_consumptions
+    ADD CONSTRAINT wallet_transaction_consumptions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: wallet_transactions_invoice_custom_sections wallet_transactions_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5599,6 +5740,62 @@ ALTER TABLE ONLY public.webhook_endpoints
 
 ALTER TABLE ONLY public.webhooks
     ADD CONSTRAINT webhooks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_enriched_events_on_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_enriched_events_on_event_id ON ONLY public.enriched_events USING btree (event_id);
+
+
+--
+-- Name: enriched_events_default_event_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_event_id_idx ON public.enriched_events_default USING btree (event_id);
+
+
+--
+-- Name: idx_unique_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, external_subscription_id, transaction_id, "timestamp", charge_id);
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscript_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX enriched_events_default_organization_id_external_subscript_idx1 ON public.enriched_events_default USING btree (organization_id, external_subscription_id, transaction_id, "timestamp", charge_id);
+
+
+--
+-- Name: idx_lookup_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_lookup_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, external_subscription_id, code, "timestamp");
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscripti_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_organization_id_external_subscripti_idx ON public.enriched_events_default USING btree (organization_id, external_subscription_id, code, "timestamp");
+
+
+--
+-- Name: idx_billing_on_enriched_events; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_billing_on_enriched_events ON ONLY public.enriched_events USING btree (organization_id, subscription_id, charge_id, charge_filter_id, "timestamp");
+
+
+--
+-- Name: enriched_events_default_organization_id_subscription_id_cha_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX enriched_events_default_organization_id_subscription_id_cha_idx ON public.enriched_events_default USING btree (organization_id, subscription_id, charge_id, charge_filter_id, "timestamp");
 
 
 --
@@ -5742,6 +5939,13 @@ CREATE UNIQUE INDEX idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb
 
 
 --
+-- Name: idx_on_inbound_wallet_transaction_id_e54d00758d; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_inbound_wallet_transaction_id_e54d00758d ON public.wallet_transaction_consumptions USING btree (inbound_wallet_transaction_id);
+
+
+--
 -- Name: idx_on_invoice_custom_section_id_50c2a2e7c0; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5851,6 +6055,13 @@ CREATE INDEX idx_on_organization_id_external_subscription_id_df3a30d96d ON publi
 --
 
 CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON public.invoices USING btree (organization_id, organization_sequential_id DESC) INCLUDE (self_billed);
+
+
+--
+-- Name: idx_on_outbound_wallet_transaction_id_cf6ff733c6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_outbound_wallet_transaction_id_cf6ff733c6 ON public.wallet_transaction_consumptions USING btree (outbound_wallet_transaction_id);
 
 
 --
@@ -5998,6 +6209,24 @@ CREATE UNIQUE INDEX idx_usage_thresholds_plan_recurring ON public.usage_threshol
 --
 
 CREATE UNIQUE INDEX idx_usage_thresholds_subscription_recurring ON public.usage_thresholds USING btree (subscription_id, recurring) WHERE ((recurring IS TRUE) AND (deleted_at IS NULL) AND (subscription_id IS NOT NULL));
+
+
+--
+-- Name: idx_wallet_transactions_available_inbound; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_wallet_transactions_available_inbound ON public.wallet_transactions USING btree (wallet_id, priority, (
+CASE
+    WHEN (transaction_status = 1) THEN 0
+    ELSE 1
+END), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1));
+
+
+--
+-- Name: idx_wallet_tx_consumptions_inbound_outbound; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_wallet_tx_consumptions_inbound_outbound ON public.wallet_transaction_consumptions USING btree (inbound_wallet_transaction_id, outbound_wallet_transaction_id);
 
 
 --
@@ -8710,6 +8939,13 @@ CREATE INDEX index_wallet_targets_on_wallet_id ON public.wallet_targets USING bt
 
 
 --
+-- Name: index_wallet_transaction_consumptions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transaction_consumptions_on_organization_id ON public.wallet_transaction_consumptions USING btree (organization_id);
+
+
+--
 -- Name: index_wallet_transactions_on_credit_note_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8847,6 +9083,34 @@ CREATE UNIQUE INDEX index_wt_invoice_custom_sections_unique ON public.wallet_tra
 --
 
 CREATE UNIQUE INDEX unique_default_payment_method_per_customer ON public.payment_methods USING btree (customer_id) WHERE ((is_default = true) AND (deleted_at IS NULL));
+
+
+--
+-- Name: enriched_events_default_event_id_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.index_enriched_events_on_event_id ATTACH PARTITION public.enriched_events_default_event_id_idx;
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscript_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_unique_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_external_subscript_idx1;
+
+
+--
+-- Name: enriched_events_default_organization_id_external_subscripti_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_lookup_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_external_subscripti_idx;
+
+
+--
+-- Name: enriched_events_default_organization_id_subscription_id_cha_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_billing_on_enriched_events ATTACH PARTITION public.enriched_events_default_organization_id_subscription_id_cha_idx;
 
 
 --
@@ -9519,6 +9783,14 @@ ALTER TABLE ONLY public.invoice_settlements
 
 
 --
+-- Name: wallet_transaction_consumptions fk_rails_3c786cd3e3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transaction_consumptions
+    ADD CONSTRAINT fk_rails_3c786cd3e3 FOREIGN KEY (inbound_wallet_transaction_id) REFERENCES public.wallet_transactions(id);
+
+
+--
 -- Name: daily_usages fk_rails_3c7c3920c0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10183,6 +10455,14 @@ ALTER TABLE ONLY public.payments
 
 
 --
+-- Name: wallet_transaction_consumptions fk_rails_85b9e72931; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transaction_consumptions
+    ADD CONSTRAINT fk_rails_85b9e72931 FOREIGN KEY (outbound_wallet_transaction_id) REFERENCES public.wallet_transactions(id);
+
+
+--
 -- Name: payment_provider_customers fk_rails_86676be631; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10751,6 +11031,14 @@ ALTER TABLE ONLY public.payments
 
 
 --
+-- Name: wallet_transaction_consumptions fk_rails_d4abfdb375; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transaction_consumptions
+    ADD CONSTRAINT fk_rails_d4abfdb375 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11093,6 +11381,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260129105200'),
 ('20260127114700'),
 ('20260121112929'),
 ('20260121111431'),
@@ -11104,11 +11393,20 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260114153728'),
 ('20260113102028'),
 ('20260112140805'),
+('20260109132143'),
+('20260109110146'),
+('20260109092932'),
 ('20260106120832'),
 ('20260106120601'),
 ('20260105144123'),
 ('20251231162838'),
+('20251230154408'),
 ('20251226145247'),
+('20251224152737'),
+('20251224152736'),
+('20251224152734'),
+('20251224152733'),
+('20251224152732'),
 ('20251222163416'),
 ('20251222151519'),
 ('20251222151015'),

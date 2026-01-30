@@ -115,6 +115,28 @@ RSpec.describe Api::V1::WalletTransactionsController do
       end
     end
 
+    context "when priority is present" do
+      let(:params) do
+        {
+          wallet_id:,
+          paid_credits: "10",
+          granted_credits: "10",
+          priority: 1
+        }
+      end
+
+      it "creates the wallet transactions with correct priority" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet_transactions = json[:wallet_transactions]
+
+        expect(wallet_transactions.count).to eq(2)
+        expect(wallet_transactions).to all(include(priority: 1))
+      end
+    end
+
     context "when wallet does not exist" do
       let(:wallet_id) { "#{wallet.id}123" }
 
@@ -386,6 +408,237 @@ RSpec.describe Api::V1::WalletTransactionsController do
       it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe "GET /api/v1/wallet_transactions/:id/consumptions" do
+    subject { get_with_token(organization, "/api/v1/wallet_transactions/#{wallet_transaction.id}/consumptions", params) }
+
+    let(:params) { {} }
+    let(:wallet) { create(:wallet, customer:, traceable: true) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+
+    include_examples "requires API permission", "wallet_transaction", "read"
+
+    context "with consumptions" do
+      let(:consumption1) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: wallet_transaction,
+          outbound_wallet_transaction: create(:wallet_transaction, wallet:, transaction_type: "outbound"),
+          consumed_amount_cents: 500)
+      end
+      let(:consumption2) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: wallet_transaction,
+          outbound_wallet_transaction: create(:wallet_transaction, wallet:, transaction_type: "outbound"),
+          consumed_amount_cents: 300)
+      end
+
+      before do
+        consumption1
+        consumption2
+      end
+
+      it "returns paginated consumptions with nested outbound transaction" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_consumptions].count).to eq(2)
+        expect(json[:wallet_transaction_consumptions].first[:lago_id]).to eq(consumption2.id)
+        expect(json[:wallet_transaction_consumptions].first[:amount_cents]).to eq(300)
+        expect(json[:wallet_transaction_consumptions].first[:wallet_transaction]).to be_present
+        expect(json[:wallet_transaction_consumptions].first[:wallet_transaction][:lago_id]).to eq(consumption2.outbound_wallet_transaction_id)
+        expect(json[:meta]).to be_present
+      end
+    end
+
+    context "with pagination" do
+      let(:params) { {page: 1, per_page: 2} }
+
+      before do
+        3.times do
+          create(:wallet_transaction_consumption,
+            organization:,
+            inbound_wallet_transaction: wallet_transaction,
+            outbound_wallet_transaction: create(:wallet_transaction, wallet:, transaction_type: "outbound"))
+        end
+      end
+
+      it "returns paginated results" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_consumptions].count).to eq(2)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(3)
+      end
+    end
+
+    context "when wallet is not traceable" do
+      let(:wallet) { create(:wallet, customer:, traceable: false) }
+
+      it "returns unprocessable_content error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details][:wallet]).to include("not_traceable")
+      end
+    end
+
+    context "when transaction type is outbound" do
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
+
+      it "returns unprocessable_content error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details][:transaction_type]).to include("invalid_transaction_type")
+      end
+    end
+
+    context "when wallet_transaction does not exist" do
+      let(:wallet_transaction) { build(:wallet_transaction, id: SecureRandom.uuid) }
+
+      it "returns not_found error" do
+        subject
+
+        expect(response).to be_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "when wallet_transaction belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+      let(:other_wallet) { create(:wallet, customer: other_customer, traceable: true) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet: other_wallet, transaction_type: "inbound", remaining_amount_cents: 10000) }
+
+      it "returns not_found error" do
+        subject
+
+        expect(response).to be_not_found_error("wallet_transaction")
+      end
+    end
+  end
+
+  describe "GET /api/v1/wallet_transactions/:id/fundings" do
+    subject { get_with_token(organization, "/api/v1/wallet_transactions/#{wallet_transaction.id}/fundings", params) }
+
+    let(:params) { {} }
+    let(:wallet) { create(:wallet, customer:, traceable: true) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
+
+    include_examples "requires API permission", "wallet_transaction", "read"
+
+    context "with fundings" do
+      let(:inbound_transaction1) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+      let(:inbound_transaction2) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+      let(:funding1) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound_transaction1,
+          outbound_wallet_transaction: wallet_transaction,
+          consumed_amount_cents: 500)
+      end
+      let(:funding2) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound_transaction2,
+          outbound_wallet_transaction: wallet_transaction,
+          consumed_amount_cents: 300)
+      end
+
+      before do
+        funding1
+        funding2
+      end
+
+      it "returns paginated fundings with nested inbound transaction" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_fundings].count).to eq(2)
+        expect(json[:wallet_transaction_fundings].first[:lago_id]).to eq(funding2.id)
+        expect(json[:wallet_transaction_fundings].first[:amount_cents]).to eq(300)
+        expect(json[:wallet_transaction_fundings].first[:wallet_transaction]).to be_present
+        expect(json[:wallet_transaction_fundings].first[:wallet_transaction][:lago_id]).to eq(inbound_transaction2.id)
+        expect(json[:meta]).to be_present
+      end
+    end
+
+    context "with pagination" do
+      let(:params) { {page: 1, per_page: 2} }
+
+      before do
+        3.times do
+          inbound = create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000)
+          create(:wallet_transaction_consumption,
+            organization:,
+            inbound_wallet_transaction: inbound,
+            outbound_wallet_transaction: wallet_transaction)
+        end
+      end
+
+      it "returns paginated results" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_fundings].count).to eq(2)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(3)
+      end
+    end
+
+    context "when wallet is not traceable" do
+      let(:wallet) { create(:wallet, customer:, traceable: false) }
+
+      it "returns unprocessable_content error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details][:wallet]).to include("not_traceable")
+      end
+    end
+
+    context "when transaction type is inbound" do
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+
+      it "returns unprocessable_content error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details][:transaction_type]).to include("invalid_transaction_type")
+      end
+    end
+
+    context "when wallet_transaction does not exist" do
+      let(:wallet_transaction) { build(:wallet_transaction, id: SecureRandom.uuid) }
+
+      it "returns not_found error" do
+        subject
+
+        expect(response).to be_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "when wallet_transaction belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+      let(:other_wallet) { create(:wallet, customer: other_customer, traceable: true) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet: other_wallet, transaction_type: "outbound") }
+
+      it "returns not_found error" do
+        subject
+
+        expect(response).to be_not_found_error("wallet_transaction")
       end
     end
   end

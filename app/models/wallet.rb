@@ -148,6 +148,7 @@ end
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  status                              :integer          not null
 #  terminated_at                       :datetime
+#  traceable                           :boolean          default(FALSE), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
 #  customer_id                         :uuid             not null

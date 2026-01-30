@@ -48,6 +48,43 @@ RSpec.describe Credits::CreditNoteService do
     subscription_fees
   end
 
+  describe "concurrent invoice processing", transaction: false do
+    let(:amount_cents) { 3100 }
+    let(:credit_cents) { 1000 }
+    let(:customer1) { create(:customer) }
+
+    let(:invoice1) { create(:invoice, customer: customer1, total_amount_cents: amount_cents) }
+    let(:invoice2) { create(:invoice, customer: customer1, total_amount_cents: amount_cents) }
+    let(:invoice3) { create(:invoice, customer: customer1, total_amount_cents: amount_cents) }
+
+    let(:credit_note1) { create(:credit_note, customer: customer1, balance_amount_cents: credit_cents) }
+    let(:credit_note2) { create(:credit_note, customer: customer1, balance_amount_cents: credit_cents) }
+    let(:credit_note3) { create(:credit_note, customer: customer1, balance_amount_cents: credit_cents) }
+
+    before do
+      credit_note1
+      credit_note2
+      credit_note3
+    end
+
+    it "applies credit notes correctly under concurrent access" do
+      threads = [invoice1, invoice2, invoice3].map do |invoice|
+        Thread.new do
+          described_class.call(invoice:)
+        end
+      end
+
+      threads.each(&:join)
+
+      expect(credit_note1.reload.balance_amount_cents).to eq(0)
+      expect(credit_note2.reload.balance_amount_cents).to eq(0)
+      expect(credit_note3.reload.balance_amount_cents).to eq(0)
+      expect(
+        invoice1.credits.sum(:amount_cents) + invoice2.credits.sum(:amount_cents) + invoice3.credits.sum(:amount_cents)
+      ).to eq(credit_cents * 3)
+    end
+  end
+
   describe ".call" do
     it "creates a list of credits" do
       result = credit_service.call

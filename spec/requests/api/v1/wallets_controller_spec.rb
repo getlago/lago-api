@@ -197,6 +197,32 @@ RSpec.describe Api::V1::WalletsController do
       end
     end
 
+    context "when transaction_priority is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          transaction_priority: 5
+        }
+      end
+
+      before { subject }
+
+      it "schedules a WalletTransactions::CreateJob with the transaction priority" do
+        expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
+          organization_id: organization.id,
+          params: hash_including(
+            priority: 5
+          )
+        )
+      end
+    end
+
     context "with recurring transaction rules" do
       around { |test| lago_premium!(&test) }
 

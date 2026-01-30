@@ -77,6 +77,7 @@ module Api
           :paid_top_up_max_amount_cents,
           :ignore_paid_top_up_limits_on_creation,
           :transaction_name,
+          :transaction_priority,
           metadata: {},
           transaction_metadata: [
             :key,

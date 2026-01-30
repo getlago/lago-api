@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::FlagRefreshedJob do
-  describe "#perform" do
-    let(:subscription_id) { SecureRandom.uuid }
+  let(:subscription_id) { SecureRandom.uuid }
 
+  it_behaves_like "a configurable queues", "events", "SIDEKIQ_EVENTS" do
+    let(:arguments) { subscription_id }
+  end
+
+  describe "#perform" do
     it "calls the subscriptions flag refreshed job" do
       allow(Subscriptions::FlagRefreshedService).to receive(:call!)
 

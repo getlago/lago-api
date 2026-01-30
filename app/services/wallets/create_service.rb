@@ -111,6 +111,7 @@ module Wallets
           source: :manual,
           metadata: params[:transaction_metadata],
           name: params[:transaction_name],
+          priority: params[:transaction_priority],
           ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
         }
       )

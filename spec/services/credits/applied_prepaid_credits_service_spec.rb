@@ -417,6 +417,254 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
+    context "when wallet is limited to a fee processed last" do
+      let(:fee) { nil }
+      let(:amount_cents) { 680 }
+
+      let(:wallet_limited_billable_metric) { create(:billable_metric, organization: customer.organization) }
+      let(:wallet) do
+        create(:wallet, customer:, balance_cents: 6600, credits_balance: 66.0)
+      end
+      let(:wallet_target) { create(:wallet_target, wallet: wallet, billable_metric: wallet_limited_billable_metric) }
+      let(:wallets) { [wallet] }
+
+      before do
+        uuid = SecureRandom.uuid
+        10.times do |i|
+          billable_metric = (i == 9) ? wallet_limited_billable_metric : create(:billable_metric, organization: customer.organization)
+          charge = create(:standard_charge, organization: customer.organization, billable_metric: billable_metric)
+          create(
+            :charge_fee,
+            id: "#{uuid[..-2]}#{i}", # enforce database order to avoid flaky tests
+            invoice:,
+            subscription:,
+            charge: charge,
+            amount_cents: 60, precise_amount_cents: 60.4, taxes_precise_amount_cents: 8.456, taxes_amount_cents: 8
+          )
+        end
+        wallet_target
+      end
+
+      it "applies credits based on fee cap, not fee processing order" do
+        expect(result).to be_success
+        expect(result.prepaid_credit_amount_cents).to eq(68)
+        expect(invoice.prepaid_credit_amount_cents).to eq(68)
+      end
+    end
+
+    context "when wallet is traceable" do
+      let(:wallets) { [traceable_wallet] }
+      let(:traceable_wallet) do
+        create(:wallet, name: "traceable", customer:, balance_cents: 1000, credits_balance: 10.0, traceable: true)
+      end
+      let!(:inbound_transaction) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet,
+          organization: traceable_wallet.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000)
+      end
+
+      it "tracks consumption from inbound transactions" do
+        expect { result }.to change(WalletTransactionConsumption, :count).by(1)
+      end
+
+      it "creates consumption record linking inbound and outbound" do
+        result
+
+        consumption = WalletTransactionConsumption.last
+        expect(consumption.inbound_wallet_transaction).to eq(inbound_transaction)
+        expect(consumption.outbound_wallet_transaction).to eq(result.wallet_transactions.first)
+        expect(consumption.consumed_amount_cents).to eq(100)
+      end
+
+      it "decrements remaining_amount_cents on inbound transaction" do
+        result
+
+        expect(inbound_transaction.reload.remaining_amount_cents).to eq(900)
+      end
+
+      it "sets prepaid_granted_credit_amount_cents on invoice" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to eq(100)
+        expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+      end
+
+      context "when inbound transaction is purchased" do
+        let(:inbound_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 10,
+            credit_amount: 10,
+            remaining_amount_cents: 1000)
+        end
+
+        before { inbound_transaction }
+
+        it "sets prepaid_purchased_credit_amount_cents on invoice" do
+          result
+
+          expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+          expect(invoice.prepaid_purchased_credit_amount_cents).to eq(100)
+        end
+      end
+
+      context "when consuming from both granted and purchased transactions" do
+        let(:amount_cents) { 500 }
+        let(:fee_amount_cents) { 500 }
+
+        let!(:inbound_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :granted,
+            status: :settled,
+            amount: 3,
+            credit_amount: 3,
+            remaining_amount_cents: 300)
+        end
+
+        let(:purchased_transaction) do
+          create(:wallet_transaction,
+            wallet: traceable_wallet,
+            organization: traceable_wallet.organization,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 7,
+            credit_amount: 7,
+            remaining_amount_cents: 700)
+        end
+
+        before do
+          inbound_transaction
+          purchased_transaction
+        end
+
+        it "sets both breakdown amounts on invoice" do
+          result
+
+          expect(invoice.prepaid_granted_credit_amount_cents).to eq(300)
+          expect(invoice.prepaid_purchased_credit_amount_cents).to eq(200)
+        end
+      end
+    end
+
+    context "when wallet is not traceable" do
+      let(:wallets) { [non_traceable_wallet] }
+      let(:non_traceable_wallet) do
+        create(:wallet, name: "non-traceable", customer:, balance_cents: 1000, credits_balance: 10.0, traceable: false)
+      end
+
+      it "does not create consumption records" do
+        expect { result }.not_to change(WalletTransactionConsumption, :count)
+      end
+
+      it "does not set breakdown amounts on invoice" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+        expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+      end
+    end
+
+    context "when customer has both traceable and non-traceable wallets" do
+      let(:wallets) { [traceable_wallet, non_traceable_wallet] }
+      let(:traceable_wallet) do
+        create(:wallet, name: "traceable", customer:, balance_cents: 500, credits_balance: 5.0, traceable: true)
+      end
+      let(:non_traceable_wallet) do
+        create(:wallet, name: "non-traceable", customer:, balance_cents: 500, credits_balance: 5.0, traceable: false)
+      end
+      let(:inbound_transaction) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet,
+          organization: traceable_wallet.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 5,
+          credit_amount: 5,
+          remaining_amount_cents: 500)
+      end
+
+      before { inbound_transaction }
+
+      it "does not set breakdown amounts on invoice" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to be_nil
+        expect(invoice.prepaid_purchased_credit_amount_cents).to be_nil
+      end
+    end
+
+    context "when customer has multiple traceable wallets" do
+      let(:amount_cents) { 500 }
+      let(:fee_amount_cents) { 500 }
+      let(:wallets) { [traceable_wallet1, traceable_wallet2] }
+      let(:traceable_wallet1) do
+        create(:wallet, name: "traceable1", customer:, balance_cents: 300, credits_balance: 3.0, traceable: true, priority: 1)
+      end
+      let(:traceable_wallet2) do
+        create(:wallet, name: "traceable2", customer:, balance_cents: 400, credits_balance: 4.0, traceable: true, priority: 2)
+      end
+      let(:inbound_transaction1) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet1,
+          organization: traceable_wallet1.organization,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 3,
+          credit_amount: 3,
+          remaining_amount_cents: 300)
+      end
+      let(:inbound_transaction2) do
+        create(:wallet_transaction,
+          wallet: traceable_wallet2,
+          organization: traceable_wallet2.organization,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 4,
+          credit_amount: 4,
+          remaining_amount_cents: 400)
+      end
+
+      before do
+        inbound_transaction1
+        inbound_transaction2
+      end
+
+      it "creates consumption records for both wallets" do
+        expect { result }.to change(WalletTransactionConsumption, :count).by(2)
+      end
+
+      it "sums breakdown amounts from both wallets" do
+        result
+
+        expect(invoice.prepaid_granted_credit_amount_cents).to eq(300)
+        expect(invoice.prepaid_purchased_credit_amount_cents).to eq(200)
+      end
+
+      it "decrements remaining_amount_cents on both inbound transactions" do
+        result
+
+        expect(inbound_transaction1.reload.remaining_amount_cents).to eq(0)
+        expect(inbound_transaction2.reload.remaining_amount_cents).to eq(200)
+      end
+    end
+
     context "when wallet optimistic lock fails" do
       def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
         attempts = 0

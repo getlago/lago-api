@@ -39,6 +39,7 @@ es:
       standard_payment: Pago estándar
     fee_prorated: La tarifa se prorratea según los días de uso, el precio unitario mostrado es un promedio
     fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}
+    free_credits: Créditos gratuitos
     from_to_date: Desde %{from_date} hasta %{to_date}
     graduated:
       fee_per_unit_for_the_first: Tarifa por unidad para las %{to} primeras

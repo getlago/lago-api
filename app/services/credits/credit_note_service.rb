@@ -13,10 +13,35 @@ module Credits
       return result if already_applied?
 
       result.credits = []
+
+      if context == :preview
+        apply_credits
+      else
+        CreditNotes::LockService.new(customer:).call do
+          apply_credits
+        end
+      end
+
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    end
+
+    private
+
+    attr_accessor :invoice, :context
+
+    delegate :customer, to: :invoice
+
+    def apply_credits
       remaining_invoice_amount = invoice.total_amount_cents
 
       ActiveRecord::Base.transaction do
+        credit_notes.reload unless context == :preview
+
         credit_notes.each do |credit_note|
+          credit_note.reload unless context == :preview
+
           credit_amount = compute_credit_amount(credit_note, remaining_invoice_amount)
           next unless credit_amount.positive?
 
@@ -44,17 +69,7 @@ module Credits
           break if remaining_invoice_amount.zero?
         end
       end
-
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
     end
-
-    private
-
-    attr_accessor :invoice, :context
-
-    delegate :customer, to: :invoice
 
     def credit_notes
       @credit_notes ||= customer.credit_notes

@@ -2,6 +2,8 @@
 
 module WalletTransactions
   class VoidService < BaseService
+    Result = BaseResult[:wallet_transaction]
+
     def initialize(wallet:, wallet_credit:, **transaction_params)
       @wallet = wallet
       @wallet_credit = wallet_credit
@@ -29,6 +31,11 @@ module WalletTransactions
           transaction_status: :voided,
           **transaction_params
         ).wallet_transaction
+
+        if wallet.traceable?
+          TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
+        end
+
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
       end
