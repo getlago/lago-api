@@ -190,6 +190,19 @@ RSpec.describe CreditNotesQuery do
         expect(returned_ids).to match_array([credit_only.id, refund_only.id, offset_only.id, credit_and_refund.id, credit_and_offset.id])
       end
     end
+
+    context "when there are no matching credit notes" do
+      let(:types) { "refund" }
+
+      before do
+        CreditNote.where("refund_amount_cents > 0").delete_all
+      end
+
+      it "returns no credit notes" do
+        expect(result).to be_success
+        expect(returned_ids).to be_empty
+      end
+    end
   end
 
   context "when credit status filter applied" do
