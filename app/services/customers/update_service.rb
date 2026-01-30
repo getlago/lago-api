@@ -124,14 +124,8 @@ module Customers
       end
 
       ActiveRecord::Base.transaction do
-        if old_provider_customer &&
-            args.key?(:provider_customer) && args[:provider_customer].nil? &&
-            args.key?(:payment_provider) && args[:payment_provider].nil?
-          old_provider_customer.payment_methods.find_each do |payment_method|
-            PaymentMethods::DestroyService.call(payment_method:)
-          end
+        if old_provider_customer && args[:payment_provider].nil? && args[:payment_provider_code].present?
           old_provider_customer.discard!
-
           customer.payment_provider_code = nil
         end
 
