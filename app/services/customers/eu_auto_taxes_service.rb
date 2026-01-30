@@ -49,6 +49,9 @@ module Customers
     def check_vies
       return nil if customer.tax_identification_number.blank?
 
+      # Staging QA purpose, do not deploy to production
+      raise Valvat::Timeout.new("rated limit exceeded", nil) if customer.organization.multi_entities_enterprise_enabled?
+
       # Just errors extended from Valvat::Lookup are raised, while Maintenances are not.
       # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
       # Check the Unavailable sheet per UE country.
