@@ -6208,6 +6208,7 @@ enum IntegrationTypeEnum {
   revenue_analytics
   revenue_share
   salesforce
+  security_logs
   xero
 }
 
@@ -6518,6 +6519,26 @@ scalar JSON
 input LimitationInput {
   billableMetricIds: [ID!]
   planIds: [ID!]
+}
+
+"""
+Security Log event
+"""
+enum LogEventEnum {
+  """
+  User signed up
+  """
+  user_signed_up
+}
+
+"""
+Security Log type
+"""
+enum LogTypeEnum {
+  """
+  User events
+  """
+  user
 }
 
 type LoginUser {
@@ -8823,6 +8844,7 @@ enum PermissionEnum {
   roles_delete
   roles_update
   roles_view
+  security_logs_view
   subscriptions_create
   subscriptions_update
   subscriptions_view
@@ -8929,6 +8951,7 @@ type Permissions {
   rolesDelete: Boolean!
   rolesUpdate: Boolean!
   rolesView: Boolean!
+  securityLogsView: Boolean!
   subscriptionsCreate: Boolean!
   subscriptionsUpdate: Boolean!
   subscriptionsView: Boolean!
@@ -9069,6 +9092,7 @@ enum PremiumIntegrationTypeEnum {
   revenue_analytics
   revenue_share
   salesforce
+  security_logs
   xero
 }
 
@@ -9942,6 +9966,28 @@ type Query {
   roles: [Role!]!
 
   """
+  Query a single security log by ID
+  """
+  securityLog(logId: ID!): SecurityLog
+
+  """
+  Query security logs of an organization
+  """
+  securityLogs(
+    fromDatetime: ISO8601DateTime
+    limit: Int
+    logEvents: [LogEventEnum!]
+    logTypes: [LogTypeEnum!]
+    page: Int
+
+    """
+    Upper date boundary (required for consistent pagination)
+    """
+    toDatetime: ISO8601DateTime!
+    userIds: [ID!]
+  ): SecurityLogCollection
+
+  """
   Query a single subscription of an organization
   """
   subscription(
@@ -10569,6 +10615,35 @@ type SanitizedApiKeyCollection {
   A collection of paginated SanitizedApiKeyCollection
   """
   collection: [SanitizedApiKey!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+Security log entry
+"""
+type SecurityLog {
+  createdAt: ISO8601DateTime!
+  deviceInfo: JSON
+  logEvent: LogEventEnum!
+  logId: ID!
+  logType: LogTypeEnum!
+  loggedAt: ISO8601DateTime!
+  resources: JSON
+  userEmail: String
+}
+
+"""
+SecurityLogCollection type
+"""
+type SecurityLogCollection {
+  """
+  A collection of paginated SecurityLogCollection
+  """
+  collection: [SecurityLog!]!
 
   """
   Pagination Metadata for navigating the Pagination
