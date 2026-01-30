@@ -31,6 +31,14 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
       end
 
+      if !all_threshold_values_present?(params[:thresholds])
+        return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_mandatory")
+      end
+
+      if !all_threshold_values_numeric?(params[:thresholds])
+        return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
+      end
+
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
