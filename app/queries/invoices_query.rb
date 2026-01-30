@@ -213,10 +213,6 @@ class InvoicesQuery < BaseQuery
 
   def valid_settlements
     @valid_settlements ||= Array(filters.settlements)
-      .flat_map { |value| value.to_s.split(",") }
-      .map(&:strip)
-      .reject(&:blank?)
       .select { |settlement| InvoiceSettlement.settlement_types.key?(settlement) }
-      .uniq
   end
 end

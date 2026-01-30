@@ -439,19 +439,5 @@ RSpec.shared_examples "an invoice index endpoint" do
         expect(json[:invoices].pluck(:lago_id)).to eq([invoice_with_payment_settlement.id])
       end
     end
-
-    context "when settlements is a comma separated string" do
-      let(:settlements) { "credit_note,payment" }
-
-      it "returns invoices with any of the provided settlements" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:invoices].pluck(:lago_id)).to match_array([
-          invoice_with_credit_note_settlement.id,
-          invoice_with_payment_settlement.id
-        ])
-      end
-    end
   end
 end
