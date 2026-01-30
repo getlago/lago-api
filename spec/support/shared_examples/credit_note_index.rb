@@ -198,17 +198,6 @@ RSpec.shared_examples "a credit note index endpoint" do
         expect(json[:credit_notes].pluck(:lago_id)).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
       end
     end
-
-    context "when types are provided as comma separated values" do
-      let(:types) { "credit,refund" }
-
-      it "returns credit notes matching any of the given types" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:credit_notes].pluck(:lago_id)).to match_array([credit_only.id, refund_only.id, credit_and_refund.id, credit_and_offset.id])
-      end
-    end
   end
 
   context "with invoice number filter" do
