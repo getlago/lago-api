@@ -73,5 +73,66 @@ RSpec.describe Events::PostProcessService do
         expect { process_service.call }.to have_enqueued_job(Events::PayInAdvanceJob)
       end
     end
+
+    describe "#check_targeted_wallets" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet:) }
+      let(:accepts_target_wallet) { false }
+      let(:event_properties) { {"target_wallet_code" => target_wallet_code} }
+      let(:target_wallet_code) { "my_wallet" }
+
+      around { |test| lago_premium!(&test) }
+
+      before do
+        organization.update!(premium_integrations: ["events_targeting_wallets"])
+        charge
+      end
+
+      context "when events_targeting_wallets feature is not enabled" do
+        before do
+          organization.update!(premium_integrations: [])
+        end
+
+        it "does not send error webhook" do
+          expect { process_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context "when target_wallet_code is not present in event properties" do
+        let(:event_properties) { {} }
+
+        it "does not send error webhook" do
+          expect { process_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context "when charge does not accept wallet target" do
+        let(:accepts_target_wallet) { false }
+
+        it "does not send error webhook" do
+          expect { process_service.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context "when charge accepts wallet target" do
+        let(:accepts_target_wallet) { true }
+
+        context "when wallet with target code exists" do
+          before do
+            create(:wallet, customer:, code: target_wallet_code)
+          end
+
+          it "does not send error webhook" do
+            expect { process_service.call }.not_to have_enqueued_job(SendWebhookJob).with("event.error", anything, anything)
+          end
+        end
+
+        context "when wallet with target code does not exist" do
+          it "sends error webhook with target_wallet_code_not_found" do
+            expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
+              .with("event.error", event, {error: {target_wallet_code: ["target_wallet_code_not_found"]}})
+          end
+        end
+      end
+    end
   end
 end
