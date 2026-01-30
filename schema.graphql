@@ -6240,6 +6240,8 @@ type Invoice {
   paymentStatus: InvoicePaymentStatusTypeEnum!
   payments: [Payment!]
   prepaidCreditAmountCents: BigInt!
+  prepaidGrantedCreditAmountCents: BigInt
+  prepaidPurchasedCreditAmountCents: BigInt
   progressiveBillingCreditAmountCents: BigInt!
   readyForPaymentProcessing: Boolean!
   refundableAmountCents: BigInt!
@@ -9868,6 +9870,32 @@ type Query {
   ): WalletTransaction
 
   """
+  Query wallet transaction consumptions for an inbound transaction
+  """
+  walletTransactionConsumptions(
+    limit: Int
+    page: Int
+
+    """
+    Uniq ID of the inbound wallet transaction
+    """
+    walletTransactionId: ID!
+  ): WalletTransactionConsumptionCollection!
+
+  """
+  Query wallet transaction fundings for an outbound transaction
+  """
+  walletTransactionFundings(
+    limit: Int
+    page: Int
+
+    """
+    Uniq ID of the outbound wallet transaction
+    """
+    walletTransactionId: ID!
+  ): WalletTransactionConsumptionCollection!
+
+  """
   Query wallet transactions
   """
   walletTransactions(
@@ -12339,6 +12367,7 @@ type WalletTransaction {
   metadata: [WalletTransactionMetadataObject!]
   name: String
   priority: Int!
+  remainingAmountCents: BigInt
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   settledAt: ISO8601DateTime
   skipInvoiceCustomSections: Boolean
@@ -12359,6 +12388,29 @@ type WalletTransactionCollection {
   A collection of paginated WalletTransactionCollection
   """
   collection: [WalletTransaction!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type WalletTransactionConsumption {
+  amountCents: BigInt!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  inboundWalletTransaction: WalletTransaction!
+  outboundWalletTransaction: WalletTransaction!
+}
+
+"""
+WalletTransactionConsumptionCollection type
+"""
+type WalletTransactionConsumptionCollection {
+  """
+  A collection of paginated WalletTransactionConsumptionCollection
+  """
+  collection: [WalletTransactionConsumption!]!
 
   """
   Pagination Metadata for navigating the Pagination
