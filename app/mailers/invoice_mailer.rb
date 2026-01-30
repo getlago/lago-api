@@ -1,23 +1,33 @@
 # frozen_string_literal: true
 
-class InvoiceMailer < ApplicationMailer
+class InvoiceMailer < DocumentMailer
   before_action :ensure_pdf
 
-  def finalized
-    @invoice = params[:invoice]
-    @billing_entity = @invoice.billing_entity
-    @customer = @invoice.customer
+  def document
+    @document ||= params[:invoice]
+  end
+
+  private
+
+  def ensure_pdf
+    Invoices::GeneratePdfService.new(invoice: document).call
+  end
+
+  def create_mail
+    @invoice = document
+    @billing_entity = document.billing_entity
+    @customer = document.customer
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
     return if @billing_entity.email.blank?
     return if @customer.email.blank?
-    return if @invoice.fees_amount_cents.zero?
+    return if document.fees_amount_cents.zero?
 
     I18n.locale = @customer.preferred_document_locale
 
     if @pdfs_enabled
-      @invoice.file.open do |file|
-        attachments["invoice-#{@invoice.number}.pdf"] = file.read
+      document.file.open do |file|
+        attachments["invoice-#{document.number}.pdf"] = file.read
       end
     end
 
@@ -29,17 +39,9 @@ class InvoiceMailer < ApplicationMailer
         subject: I18n.t(
           "email.invoice.finalized.subject",
           billing_entity_name: @billing_entity.name,
-          invoice_number: @invoice.number
+          invoice_number: document.number
         )
       )
     end
-  end
-
-  private
-
-  def ensure_pdf
-    invoice = params[:invoice]
-
-    Invoices::GeneratePdfService.new(invoice:).call
   end
 end
