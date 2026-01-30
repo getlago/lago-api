@@ -1,21 +1,18 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require_relative "shared_examples/pay_in_advance_invoice"
 
 RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
   subject(:invoice_service) do
     described_class.new(subscription:, timestamp: timestamp.to_i)
   end
 
-  let(:timestamp) { Time.zone.now.beginning_of_month }
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { customer.billing_entity }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  include_context "with pay_in_advance_invoice_setup"
+
   let(:add_on) { create(:add_on, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, status: :active) }
   let(:fixed_charge) { create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"}) }
-  let(:email_settings) { ["invoice.finalized", "credit_note.created"] }
 
   let(:fixed_charge_event) do
     create(
@@ -28,12 +25,12 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
   end
 
   before do
-    create(:tax, :applied_to_billing_entity, organization:)
-    billing_entity.update!(email_settings:)
     fixed_charge_event
   end
 
   describe "#call" do
+    let(:service_call) { invoice_service.call }
+
     before do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
@@ -71,54 +68,16 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
       expect(result.invoice).to be_finalized
     end
 
-    it "creates InvoiceSubscription object" do
-      expect { invoice_service.call }.to change(InvoiceSubscription, :count).by(1)
-    end
+    it_behaves_like "pay_in_advance_invoice_post_creation"
+    it_behaves_like "pay_in_advance_premium_email_settings"
+    it_behaves_like "pay_in_advance_customer_timezone"
+    it_behaves_like "pay_in_advance_grace_period"
+    it_behaves_like "pay_in_advance_error_handling"
+    it_behaves_like "pay_in_advance_concurrent_lock", "Invoices::PayInAdvance::CreateFixedChargesService"
+    it_behaves_like "pay_in_advance_integration_sync"
 
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
-    it "creates a payment" do
-      allow(Invoices::Payments::CreateService).to receive(:call_async)
-
-      invoice_service.call
-
-      expect(Invoices::Payments::CreateService).to have_received(:call_async)
-    end
-
-    it "enqueues a SendWebhookJob for the invoice" do
-      expect do
-        invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
-    end
-
-    it "enqueues a SendWebhookJob for each fee" do
-      expect do
-        invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
-    end
-
-    it "produces an activity log" do
-      invoice = described_class.call(subscription:, timestamp: timestamp.to_i).invoice
-
-      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
-    end
-
-    it "enqueues GenerateDocumentsJob with email false" do
-      expect do
-        invoice_service.call
-      end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
+    it_behaves_like "applies invoice_custom_sections" do
+      let(:service_call) { invoice_service.call }
     end
 
     context "when subscription is not active" do
@@ -216,49 +175,6 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
       end
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
-      it "enqueues GenerateDocumentsJob with email true" do
-        expect do
-          invoice_service.call
-        end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))
-      end
-
-      context "when organization does not have right email settings" do
-        let(:email_settings) { [] }
-
-        it "enqueues GenerateDocumentsJob with email false" do
-          expect do
-            invoice_service.call
-          end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
-        end
-      end
-    end
-
-    context "with customer timezone" do
-      let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
-      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
-
-      it "assigns the issuing date in the customer timezone" do
-        result = invoice_service.call
-
-        expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
-        expect(result.invoice.payment_due_date.to_s).to eq("2022-11-24")
-      end
-    end
-
-    context "with grace period" do
-      let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
-      let(:timestamp) { DateTime.parse("2022-11-25 08:00:00") }
-
-      it "assigns the correct issuing date ignoring grace period for pay-in-advance" do
-        result = invoice_service.call
-
-        expect(result.invoice.issuing_date.to_s).to eq("2022-11-25")
-      end
-    end
-
     context "with credit note credits" do
       let(:credit_note) do
         create(
@@ -331,10 +247,6 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
       end
     end
 
-    it_behaves_like "applies invoice_custom_sections" do
-      let(:service_call) { invoice_service.call }
-    end
-
     context "when fee build service fails" do
       before do
         allow(Fees::BuildPayInAdvanceFixedChargeService)
@@ -349,71 +261,6 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
         expect(result.error).to be_a(BaseService::ServiceFailure)
         expect(result.error.code).to eq("code")
         expect(result.error.message).to eq("code: message")
-      end
-    end
-
-    context "when there is integration sync enabled" do
-      before do
-        allow_any_instance_of(Invoice).to receive(:should_sync_invoice?).and_return(true) # rubocop:disable RSpec/AnyInstance
-      end
-
-      it "enqueues the aggregator invoice creation job" do
-        expect do
-          invoice_service.call
-        end.to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
-      end
-    end
-
-    context "when there is hubspot integration sync enabled" do
-      before do
-        allow_any_instance_of(Invoice).to receive(:should_sync_hubspot_invoice?).and_return(true) # rubocop:disable RSpec/AnyInstance
-      end
-
-      it "enqueues the hubspot invoice creation job" do
-        expect do
-          invoice_service.call
-        end.to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::CreateJob)
-      end
-    end
-
-    context "when an error occurs" do
-      context "with a record validation failure" do
-        before do
-          allow(Fee).to receive(:new).and_return(
-            Fee.new.tap do |fee|
-              fee.errors.add(:base, "test error")
-              allow(fee).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(fee))
-            end
-          )
-        end
-
-        it "returns a validation failure result" do
-          result = invoice_service.call
-
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-        end
-      end
-
-      context "with a stale object error" do
-        before { create(:wallet, customer:, balance_cents: 100) }
-
-        it "propagates the error" do
-          allow(Credits::AppliedPrepaidCreditsService)
-            .to receive(:call!)
-            .and_raise(ActiveRecord::StaleObjectError)
-
-          expect { invoice_service.call }.to raise_error(ActiveRecord::StaleObjectError)
-        end
-      end
-
-      context "with a sequence error" do
-        it "propagates the error" do
-          allow_any_instance_of(Invoice) # rubocop:disable RSpec/AnyInstance
-            .to receive(:save!).and_raise(Sequenced::SequenceError)
-
-          expect { invoice_service.call }.to raise_error(Sequenced::SequenceError)
-        end
       end
     end
 
@@ -560,54 +407,21 @@ RSpec.describe Invoices::PayInAdvance::CreateFixedChargesService do
       end
     end
 
-    context "when there is a concurrent lock", transaction: false do
-      let(:lock_released_after) { 0.1.seconds }
-
+    context "with record validation failure" do
       before do
-        stub_const("Invoices::PayInAdvance::CreateFixedChargesService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
-      end
-
-      around do |test|
-        customer_id = customer.id
-        queue = Queue.new
-        thread = start_lock_thread(queue, customer_id)
-        test.run
-      ensure
-        stop_thread(thread, queue) if thread
-      end
-
-      def start_lock_thread(queue, customer_id)
-        Thread.start do
-          start_time = Time.zone.now
-          ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
-              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
-                sleep 0.01
-              end
-            end
+        allow(Fee).to receive(:new).and_return(
+          Fee.new.tap do |fee|
+            fee.errors.add(:base, "test error")
+            allow(fee).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(fee))
           end
-        end
+        )
       end
 
-      def stop_thread(thread, queue)
-        queue.push(true)
-        thread.join
-      end
+      it "returns a validation failure result" do
+        result = invoice_service.call
 
-      context "when it fails to acquire the lock" do
-        let(:lock_released_after) { 2.seconds }
-
-        it "raises a WithAdvisoryLock::FailedToAcquireLock error" do
-          expect { invoice_service.call }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
-
-          expect(customer.invoices.count).to eq(0)
-        end
-      end
-
-      context "when the lock is acquired" do
-        it "creates the invoice" do
-          expect { invoice_service.call }.to change(Invoice, :count).by(1)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
       end
     end
   end
