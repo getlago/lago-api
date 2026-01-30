@@ -141,7 +141,8 @@ module Events
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..to_datetime)
             .distinct
-            .pluck("charge_filter_id", "charge_id").map(&:reverse)
+            .pluck("charge_filter_id", "charge_id")
+            .map { |charge_filter_id, charge_id| [charge_id, charge_filter_id.presence] }
         end
       end
 
