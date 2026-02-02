@@ -92,8 +92,8 @@ module Events
     def check_targeted_wallets
       return unless subscriptions
       return unless Charge.where(organization_id: event.organization_id, plan_id: subscriptions.map(&:plan_id),
-                                 billable_metric:, accepts_target_wallet: true).exists?
-      return if customer.wallets.where(code: event.properties["target_wallet_code"]).exists?
+        billable_metric:, accepts_target_wallet: true).exists?
+      return if customer.wallets.active.where(code: event.properties["target_wallet_code"]).exists?
 
       SendWebhookJob.perform_later(
         "event.error",

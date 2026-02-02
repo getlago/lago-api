@@ -75,7 +75,7 @@ RSpec.describe Events::PostProcessService do
     end
 
     describe "#check_targeted_wallets" do
-      let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet:) }
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:) }
       let(:accepts_target_wallet) { false }
       let(:event_properties) { {"target_wallet_code" => target_wallet_code} }
       let(:target_wallet_code) { "my_wallet" }
@@ -84,7 +84,7 @@ RSpec.describe Events::PostProcessService do
 
       before do
         organization.update!(premium_integrations: ["events_targeting_wallets"])
-        charge
+        charge.update!(accepts_target_wallet:)
       end
 
       context "when events_targeting_wallets feature is not enabled" do
@@ -126,7 +126,11 @@ RSpec.describe Events::PostProcessService do
           end
         end
 
-        context "when wallet with target code does not exist" do
+        context "when active wallet with target code does not exist" do
+          let(:wallet) { create(:wallet, customer:, code: target_wallet_code, status: :terminated) }
+
+          before { wallet }
+
           it "sends error webhook with target_wallet_code_not_found" do
             expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
               .with("event.error", event, {error: {target_wallet_code: ["target_wallet_code_not_found"]}})
