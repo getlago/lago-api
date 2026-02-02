@@ -396,6 +396,7 @@ end
 #  index_customers_on_deleted_at                       (deleted_at)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_organization_id                  (organization_id)
+#  index_customers_on_sequential_id                    (sequential_id)
 #
 # Foreign Keys
 #
