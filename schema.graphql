@@ -6165,7 +6165,6 @@ enum IntegrationTypeEnum {
   revenue_share
   salesforce
   xero
-  zero_amount_fees
 }
 
 type Invite {
@@ -8937,7 +8936,6 @@ enum PremiumIntegrationTypeEnum {
   revenue_share
   salesforce
   xero
-  zero_amount_fees
 }
 
 """

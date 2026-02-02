@@ -215,7 +215,6 @@ module Fees
 
     def should_persist_fee?
       return true if context == :recurring
-      return true if organization.zero_amount_fees_enabled?
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
       return true if adjusted_fee.present?
 

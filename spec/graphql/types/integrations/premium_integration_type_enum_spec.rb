@@ -17,7 +17,6 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       revenue_share
       salesforce
       xero
-      zero_amount_fees
       remove_branding_watermark
       manual_payments
       from_email
