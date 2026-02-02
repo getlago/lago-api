@@ -30,6 +30,11 @@ module Charges
           charge.properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
         end
 
+        accepts_target_wallet = params.delete(:accepts_target_wallet)
+        if plan.organization.events_targeting_wallets_enabled?
+          charge.accepts_target_wallet = accepts_target_wallet
+        end
+
         charge.save!
 
         AppliedPricingUnits::UpdateService.call!(

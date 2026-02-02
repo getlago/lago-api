@@ -114,6 +114,19 @@ RSpec.describe Api::V1::PlansController do
           expect(charge[:regroup_paid_fees]).to be_nil
           expect(charge[:applied_pricing_unit]).to be_nil
         end
+
+        context "with accepts_target_wallet on charge" do
+          before do
+            create_params[:charges].first[:accepts_target_wallet] = true
+          end
+
+          it "ignores accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+          end
+        end
       end
 
       context "when license is premium" do
@@ -131,6 +144,34 @@ RSpec.describe Api::V1::PlansController do
             conversion_rate: "1.25",
             code: pricing_unit.code
           })
+        end
+
+        context "with accepts_target_wallet on charge" do
+          before do
+            create_params[:charges].first[:accepts_target_wallet] = true
+          end
+
+          context "when events_targeting_wallets is enabled" do
+            before do
+              organization.update!(premium_integrations: ["events_targeting_wallets"])
+            end
+
+            it "sets accepts_target_wallet on charge" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:charges].first[:accepts_target_wallet]).to be true
+            end
+          end
+
+          context "when events_targeting_wallets is not enabled" do
+            it "does not set accepts_target_wallet on charge" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+            end
+          end
         end
       end
 
@@ -492,6 +533,19 @@ RSpec.describe Api::V1::PlansController do
         expect(charge[:invoiceable]).to be true
         expect(charge[:regroup_paid_fees]).to be_nil
       end
+
+      context "with accepts_target_wallet on charge" do
+        before do
+          charges_params.first[:accepts_target_wallet] = true
+        end
+
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+        end
+      end
     end
 
     context "when license is premium" do
@@ -532,6 +586,34 @@ RSpec.describe Api::V1::PlansController do
         applicable_usage_threshold = json[:plan][:applicable_usage_thresholds].sole
         expect(applicable_usage_threshold[:amount_cents]).to eq(7_000)
         expect(applicable_usage_threshold[:threshold_display_name]).to eq("Updated threshold")
+      end
+
+      context "with accepts_target_wallet on charge" do
+        before do
+          charges_params.first[:accepts_target_wallet] = true
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet on charge" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be true
+          end
+        end
+
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet on charge" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+          end
+        end
       end
     end
 

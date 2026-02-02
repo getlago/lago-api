@@ -8,6 +8,7 @@ en:
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
+        feature_unavailable: feature_unavailable
         graduated_percentage_requires_premium_license: graduated_percentage_requires_premium_license
         greater_than: value_is_out_of_range
         greater_than_or_equal_to: value_is_out_of_range

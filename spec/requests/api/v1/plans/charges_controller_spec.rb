@@ -237,6 +237,53 @@ RSpec.describe Api::V1::Plans::ChargesController do
         expect(json[:charge][:applied_pricing_unit][:conversion_rate]).to eq("2.5")
       end
     end
+
+    context "with accepts_target_wallet" do
+      let(:create_params) do
+        {
+          billable_metric_id: billable_metric.id,
+          code: "wallet_target_charge",
+          charge_model: "standard",
+          properties: {amount: "100"},
+          accepts_target_wallet: true
+        }
+      end
+
+      context "when license is not premium" do
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:accepts_target_wallet]).to be false
+        end
+      end
+
+      context "when license is premium" do
+        around { |test| lago_premium!(&test) }
+
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be false
+          end
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be true
+          end
+        end
+      end
+    end
   end
 
   describe "PUT /api/v1/plans/:plan_code/charges/:code" do
@@ -289,6 +336,51 @@ RSpec.describe Api::V1::Plans::ChargesController do
 
         expect(response).to have_http_status(:success)
         expect(json[:charge][:invoice_display_name]).to eq("Updated Charge Name")
+      end
+    end
+
+    context "with accepts_target_wallet" do
+      let(:update_params) do
+        {
+          charge_model: "standard",
+          properties: {amount: "200"},
+          accepts_target_wallet: true
+        }
+      end
+
+      context "when license is not premium" do
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:accepts_target_wallet]).to be false
+        end
+      end
+
+      context "when license is premium" do
+        around { |test| lago_premium!(&test) }
+
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be false
+          end
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be true
+          end
+        end
       end
     end
   end
