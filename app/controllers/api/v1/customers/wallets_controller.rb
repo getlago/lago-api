@@ -11,19 +11,19 @@ module Api
         end
 
         def update
-          wallet = customer.wallets.find_by(code: params[:id])
+          wallet = customer.wallets.find_by(code: params[:code])
 
           wallet_update(wallet)
         end
 
         def terminate
-          wallet = customer.wallets.find_by(code: params[:id])
+          wallet = customer.wallets.find_by(code: params[:code])
 
           wallet_terminate(wallet)
         end
 
         def show
-          wallet = customer.wallets.find_by(code: params[:id])
+          wallet = customer.wallets.find_by(code: params[:code])
 
           wallet_show(wallet)
         end
