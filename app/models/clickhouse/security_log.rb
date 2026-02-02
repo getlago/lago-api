@@ -9,6 +9,8 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
+    default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
+
     LOG_TYPES = {
       user: "user"
     }.freeze
