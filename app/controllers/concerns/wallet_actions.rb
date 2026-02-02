@@ -30,7 +30,7 @@ module WalletActions
       render_error_response(result)
     end
   end
-  
+
   def wallet_terminate(wallet)
     result = ::Wallets::TerminateService.call(wallet:)
 
