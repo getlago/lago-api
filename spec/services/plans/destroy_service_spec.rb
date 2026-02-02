@@ -109,5 +109,16 @@ RSpec.describe Plans::DestroyService do
         expect(entitlement_value.reload).to be_discarded
       end
     end
+
+    context "when plan is already discarded" do
+      let(:plan) { create(:plan, :deleted, organization:) }
+
+      it "returns the deleted plan" do
+        result = destroy_service.call
+
+        expect(result).to be_success
+        expect(result.plan).to eq(plan)
+      end
+    end
   end
 end
