@@ -246,17 +246,16 @@ module Customers
       return if customer.payment_provider.nil?
 
       update_provider_customer = (billing || {})[:provider_customer_id].present?
-      update_provider_customer ||= customer.provider_customer&.provider_customer_id.present? || old_provider_customer.present?
+      update_provider_customer ||= customer.provider_customer&.provider_customer_id.present?
 
       return unless update_provider_customer
 
       create_or_update_provider_customer(customer, billing)
 
-      if old_provider_customer && old_payment_provider != billing[:payment_provider]
+      if old_provider_customer && old_payment_provider != customer.payment_provider
         old_provider_customer.payment_methods.find_each do |payment_method|
           PaymentMethods::DestroyService.call(payment_method:)
         end
-        old_provider_customer.discard!
       end
 
       if customer.provider_customer&.provider_customer_id
