@@ -411,7 +411,8 @@ RSpec.describe Customers::UpdateService do
           id: customer.id,
           organization_id: organization.id,
           payment_provider: nil,
-          provider_customer: nil
+          provider_customer: nil,
+          payment_provider_code: nil
         }
       end
 
@@ -420,17 +421,18 @@ RSpec.describe Customers::UpdateService do
         create(:stripe_provider, organization:, code: payment_provider_code)
       end
 
-      it "discards the provider customer and its payment methods" do
+      it "does not discard the provider customer and its payment methods" do
         result = customers_service.call
 
         expect(result).to be_success
 
         customer = result.customer
         expect(customer.payment_provider).to be_nil
+        expect(customer.provider_customer).to be_nil
         expect(customer.payment_provider_code).to be_nil
 
-        expect(stripe_customer.reload).to be_discarded
-        expect(payment_method.reload).to be_discarded
+        expect(stripe_customer.reload).not_to be_discarded
+        expect(payment_method.reload).not_to be_discarded
       end
     end
 

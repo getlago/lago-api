@@ -923,29 +923,65 @@ RSpec.describe Customers::UpsertFromApiService do
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
         let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
 
-        let(:create_args) do
-          {
-            external_id:,
-            billing_configuration: {
-              payment_provider: "gocardless",
-              payment_provider_code: "gocardless_1",
-              provider_customer_id: "gocardless_id"
-            }
-          }
-        end
-
         before do
           payment_method
           create(:gocardless_provider, organization:, code: "gocardless_1")
         end
 
-        it "discards the old provider customer and payment methods" do
-          expect(result).to be_success
-          expect(result.customer.payment_provider).to eq("gocardless")
-          expect(result.customer.gocardless_customer.provider_customer_id).to eq("gocardless_id")
+        context "when provider_customer_id is sent" do
+          let(:create_args) do
+            {
+              external_id:,
+              billing_configuration: {
+                payment_provider: "gocardless",
+                payment_provider_code: "gocardless_1",
+                provider_customer_id: "gocardless_id"
+              }
+            }
+          end
 
-          expect(stripe_customer.reload).to be_discarded
-          expect(payment_method.reload).to be_discarded
+          it "creates the gocardless provider customer" do
+            expect(result).to be_success
+
+            expect(result.customer.payment_provider).to eq("gocardless")
+            expect(result.customer.provider_customer.provider_customer_id).to eq("gocardless_id")
+          end
+
+          it "discards the old provider customer's payment methods" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
+            expect(payment_method.reload).to be_discarded
+          end
+        end
+
+        context "when provider_customer_id is not sent" do
+          let(:create_args) do
+            {
+              external_id:,
+              billing_configuration: {
+                sync_with_provider: true,
+                payment_provider: "gocardless",
+                payment_provider_code: "gocardless_1"
+              }
+            }
+          end
+
+          # NOTE: This describes a scenario with incorrect behavior that currently exists.
+          #       The new provider customer does not get created and the previous one is not discarded
+          it "does not create the gocardless provider customer" do
+            expect(result).to be_success
+
+            expect(result.customer.payment_provider).to eq("gocardless")
+            expect(result.customer.provider_customer).to be_nil
+          end
+
+          it "does not discard the old provider customer's payment methods" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
+            expect(payment_method.reload).not_to be_discarded
+          end
         end
       end
     end
