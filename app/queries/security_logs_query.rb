@@ -20,6 +20,7 @@ class SecurityLogsQuery < BaseQuery
     security_logs = paginate(security_logs)
     security_logs = security_logs.order(logged_at: :desc)
 
+    security_logs = within_retention_period(security_logs)
     security_logs = with_logged_at_range(security_logs) if filters.from_date || filters.to_date
     security_logs = with_api_key_ids(security_logs) if filters.api_key_ids.present?
     security_logs = with_user_ids(security_logs) if filters.user_ids.present?
@@ -35,6 +36,11 @@ class SecurityLogsQuery < BaseQuery
   end
 
   private
+
+  def within_retention_period(scope)
+    period = Organization::SECURITY_LOGS_RETENTION_DAYS.days
+    scope.where(logged_at: period.ago..)
+  end
 
   def with_logged_at_range(scope)
     scope = scope.where(logged_at: from_date..) if filters.from_date
