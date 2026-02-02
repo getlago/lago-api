@@ -9,6 +9,7 @@ module Resolvers
 
     description "Query security logs of an organization"
 
+    argument :api_key_ids, [ID], required: false
     argument :from_datetime, GraphQL::Types::ISO8601DateTime, required: false
     argument :limit, Integer, required: false
     argument :log_events, [Types::SecurityLogs::LogEventEnum], required: false
@@ -26,6 +27,7 @@ module Resolvers
         filters: {
           from_date: args[:from_datetime],
           to_date: args[:to_datetime],
+          api_key_ids: args[:api_key_ids],
           user_ids: args[:user_ids],
           log_types: args[:log_types],
           log_events: args[:log_events]

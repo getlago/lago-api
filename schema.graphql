@@ -9974,6 +9974,7 @@ type Query {
   Query security logs of an organization
   """
   securityLogs(
+    apiKeyIds: [ID!]
     fromDatetime: ISO8601DateTime
     limit: Int
     logEvents: [LogEventEnum!]
