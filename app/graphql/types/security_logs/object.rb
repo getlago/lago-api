@@ -15,7 +15,9 @@ module Types
       field :resources, GraphQL::Types::JSON
       field :user_email, String, null: true
 
-      # user_email resolver will be added in Step 3 with Clickhouse::SecurityLog model
+      def user_email
+        object.user&.email
+      end
     end
   end
 end

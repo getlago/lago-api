@@ -17,7 +17,8 @@ module Resolvers
       raise forbidden_error(code: "feature_unavailable") unless SecurityLogsQuery.available?
       raise forbidden_error(code: "feature_unavailable") unless current_organization.security_logs_enabled?
 
-      # Stub: always not found until the implementation is provided
+      current_organization.security_logs.find_by!(log_id:)
+    rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "security_log")
     end
   end

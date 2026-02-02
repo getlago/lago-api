@@ -2,19 +2,23 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::SecurityLogResolver do
+RSpec.describe Resolvers::SecurityLogResolver, clickhouse: true do
   let(:query) do
     <<~GQL
       query($logId: ID!) {
         securityLog(logId: $logId) {
           logId
+          logType
+          logEvent
+          userEmail
         }
       }
     GQL
   end
-  let(:variables) { {logId: "test-id"} }
+  let(:variables) { {logId: security_log.log_id} }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:security_log) { create(:clickhouse_security_log, membership:) }
 
   before { organization.update!(premium_integrations: ["security_logs"]) }
 
@@ -74,10 +78,49 @@ RSpec.describe Resolvers::SecurityLogResolver do
     end
   end
 
-  context "when all conditions are met but the log is absent" do
+  context "when all conditions are met and log exists" do
     around { |test| lago_premium!(&test) }
 
-    it "returns not_found error (stub)" do
+    it "returns the security log" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "security_logs:view",
+        query:,
+        variables:
+      )
+
+      data = result.dig("data", "securityLog")
+      expect(data["logId"]).to eq(security_log.log_id)
+      expect(data["logType"]).to eq(security_log.log_type)
+      expect(data["logEvent"]).to eq(security_log.log_event.tr(".", "_"))
+    end
+  end
+
+  context "when log does not exist" do
+    around { |test| lago_premium!(&test) }
+
+    let(:variables) { {logId: "non-existent-id"} }
+
+    it "returns not_found error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "security_logs:view",
+        query:,
+        variables:
+      )
+
+      expect_graphql_error(result:, message: "not_found")
+    end
+  end
+
+  context "when log is outside retention period" do
+    around { |test| lago_premium!(&test) }
+
+    let(:security_log) { create(:clickhouse_security_log, membership:, logged_at: 91.days.ago) }
+
+    it "returns not_found error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
