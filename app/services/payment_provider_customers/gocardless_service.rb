@@ -106,7 +106,10 @@ module PaymentProviderCustomers
       client.billing_requests.create(
         params: {
           mandate_request: {
-            scheme: "bacs"
+            scheme: "bacs",
+            metadata: {
+              provider_customer_id: gocardless_customer_id
+            }
           },
           links: {
             customer: gocardless_customer_id
