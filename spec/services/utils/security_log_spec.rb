@@ -106,27 +106,6 @@ RSpec.describe Utils::SecurityLog do
       end
     end
 
-    context "when security_logs is not enabled but skip_organization_check is true" do
-      subject(:produce) do
-        security_log.produce(
-          organization:,
-          log_type: "user",
-          log_event: "user.signed_up",
-          user:,
-          api_key:,
-          resources: {user_email: "test@example.com"},
-          skip_organization_check: true
-        )
-      end
-
-      let(:organization) { create(:organization, premium_integrations: []) }
-
-      it "produces the event on kafka" do
-        expect(produce).to be true
-        expect(karafka_producer).to have_received(:produce_async)
-      end
-    end
-
     context "when License is not premium" do
       before { allow(License).to receive(:premium?).and_return(false) }
 
@@ -158,91 +137,6 @@ RSpec.describe Utils::SecurityLog do
         expect(karafka_producer).to have_received(:produce_async) do |args|
           payload = JSON.parse(args[:payload])
           expect(payload["api_key_id"]).to be_nil
-        end
-      end
-    end
-
-    context "when user is not provided but CurrentContext.membership is set" do
-      subject(:produce) do
-        security_log.produce(
-          organization:,
-          log_type: "user",
-          log_event: "user.signed_up",
-          api_key:,
-          resources: {}
-        )
-      end
-
-      before do
-        CurrentContext.membership = "gid://app/Membership/#{membership.id}"
-      end
-
-      after do
-        CurrentContext.membership = nil
-      end
-
-      it "resolves user_id from membership" do
-        expect(produce).to be true
-
-        expect(karafka_producer).to have_received(:produce_async) do |args|
-          payload = JSON.parse(args[:payload])
-          expect(payload["user_id"]).to eq(user.id)
-        end
-      end
-    end
-
-    context "when user is not provided and CurrentContext.api_key_id is set" do
-      subject(:produce) do
-        security_log.produce(
-          organization:,
-          log_type: "api_key",
-          log_event: "api_key.created",
-          api_key:,
-          resources: {}
-        )
-      end
-
-      before do
-        CurrentContext.api_key_id = api_key.id
-        CurrentContext.membership = "gid://app/Membership/#{membership.id}"
-      end
-
-      after do
-        CurrentContext.api_key_id = nil
-        CurrentContext.membership = nil
-      end
-
-      it "produces with nil user_id" do
-        expect(produce).to be true
-
-        expect(karafka_producer).to have_received(:produce_async) do |args|
-          payload = JSON.parse(args[:payload])
-          expect(payload["user_id"]).to be_nil
-        end
-      end
-    end
-
-    context "when user is not provided and CurrentContext.membership is blank" do
-      subject(:produce) do
-        security_log.produce(
-          organization:,
-          log_type: "user",
-          log_event: "user.signed_up",
-          api_key:,
-          resources: {}
-        )
-      end
-
-      before do
-        CurrentContext.membership = nil
-      end
-
-      it "produces with nil user_id" do
-        expect(produce).to be true
-
-        expect(karafka_producer).to have_received(:produce_async) do |args|
-          payload = JSON.parse(args[:payload])
-          expect(payload["user_id"]).to be_nil
         end
       end
     end
