@@ -32,7 +32,7 @@ module Charges
 
         accepts_target_wallet = params.delete(:accepts_target_wallet)
         if plan.organization.events_targeting_wallets_enabled?
-          charge.accepts_target_wallet = accepts_target_wallet
+          charge.accepts_target_wallet = accepts_target_wallet unless accepts_target_wallet.nil?
         end
 
         charge.save!
