@@ -6526,7 +6526,7 @@ Security Log event
 """
 enum LogEventEnum {
   """
-  User signed up
+  user.signed_up
   """
   user_signed_up
 }
@@ -6536,7 +6536,7 @@ Security Log type
 """
 enum LogTypeEnum {
   """
-  User events
+  user
   """
   user
 }

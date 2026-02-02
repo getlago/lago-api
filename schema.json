@@ -34399,7 +34399,7 @@
           "enumValues": [
             {
               "name": "user_signed_up",
-              "description": "User signed up",
+              "description": "user.signed_up",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -34416,7 +34416,7 @@
           "enumValues": [
             {
               "name": "user",
-              "description": "User events",
+              "description": "user",
               "isDeprecated": false,
               "deprecationReason": null
             }
