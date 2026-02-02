@@ -27,11 +27,19 @@ module Plans
       invoices = Invoice.draft.joins(:plans).where(plans: {id: plan.id}).distinct
       invoices.find_each { |invoice| Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
 
-      plan.entitlement_values.discard_all!
-      plan.entitlements.discard_all!
+      # rubocop:disable Rails/SkipsModelValidations
+      plan.entitlement_values.update_all(deleted_at: Time.current)
+      plan.entitlements.update_all(deleted_at: Time.current)
+      # rubocop:enable Rails/SkipsModelValidations
 
       plan.pending_deletion = false
       plan.discard!
+
+      result.plan = plan
+      result
+    rescue Discard::RecordNotDiscarded
+      @plan = Plan.with_discarded.find_by(id: plan.id)
+      raise unless plan.discarded?
 
       result.plan = plan
       result
