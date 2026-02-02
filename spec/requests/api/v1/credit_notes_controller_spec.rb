@@ -66,6 +66,8 @@ RSpec.describe Api::V1::CreditNotesController do
         code: item.fee.item_code,
         name: item.fee.item_name
       )
+
+      expect(json[:credit_note][:customer][:lago_id]).to eq(customer.id)
     end
 
     context "when credit note does not exists" do
@@ -152,6 +154,7 @@ RSpec.describe Api::V1::CreditNotesController do
         expect(response).to have_http_status(:success)
         expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
         expect(json[:credit_note][:refund_status]).to eq("succeeded")
+        expect(json[:credit_note][:customer][:lago_id]).to eq(customer.id)
       end
     end
 
@@ -409,6 +412,7 @@ RSpec.describe Api::V1::CreditNotesController do
         applied_taxes: []
       )
 
+      expect(json[:credit_note][:customer][:lago_id]).to eq(customer.id)
       expect(json[:credit_note][:items][0][:lago_id]).to be_present
       expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
       expect(json[:credit_note][:items][0][:amount_currency]).to eq("EUR")
