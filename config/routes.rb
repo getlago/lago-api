@@ -58,7 +58,8 @@ Rails.application.routes.draw do
           resources :payments, only: %i[index]
           resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
-          resources :wallets, only: %i[index]
+          resources :wallets, only: %i[create update show index]
+          delete "/wallets/:id", to: "wallets#terminate"
           resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end
