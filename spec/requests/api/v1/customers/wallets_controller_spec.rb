@@ -19,6 +19,15 @@ RSpec.describe Api::V1::Customers::WalletsController do
         post_with_token(organization, "/api/v1/customers/#{external_id}/wallets", {wallet: create_params})
       end
 
+      context "when params[:external_customer_id] is empty" do
+        it "uses the route :customer_external_id to determine the customer" do
+          create_params.delete(:external_customer_id)
+
+          subject
+          expect(json[:wallet][:external_customer_id]).to eq(external_id)
+        end
+      end
+
       context "when params[:external_customer_id] differs from the route :customer_external_id" do
         it "uses the route :customer_external_id to determine the customer" do
           create_params[:external_customer_id] = "external-customer-id"

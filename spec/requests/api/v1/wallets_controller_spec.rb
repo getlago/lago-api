@@ -17,6 +17,16 @@ RSpec.describe Api::V1::WalletsController do
       subject do
         post_with_token(organization, "/api/v1/wallets", {wallet: create_params})
       end
+
+      context "when params[:external_customer_id] is empty" do
+        it "returns a validation error" do
+          create_params.delete(:external_customer_id)
+
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:customer]).to eq ["customer_not_found"]
+        end
+      end
     end
   end
 
