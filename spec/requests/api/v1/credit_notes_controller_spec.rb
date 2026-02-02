@@ -675,6 +675,7 @@ RSpec.describe Api::V1::CreditNotesController do
       expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
       expect(json[:credit_note][:credit_status]).to eq("voided")
       expect(json[:credit_note][:balance_amount_cents]).to eq(0)
+      expect(json[:credit_note][:customer][:lago_id]).to eq(customer.id)
     end
 
     context "when credit note does not exist" do
