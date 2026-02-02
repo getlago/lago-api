@@ -8,6 +8,10 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
 
   let(:premium_integrations) { ["progressive_billing"] }
 
+  it_behaves_like "a configurable queues", "billing_low_priority", "SIDEKIQ_BILLING" do
+    let(:arguments) { lifetime_usage }
+  end
+
   it "delegates to the Calculate service" do
     allow(LifetimeUsages::CalculateService).to receive(:call!)
     allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
