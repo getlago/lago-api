@@ -140,6 +140,22 @@ RSpec.describe Charges::UpdateService do
                 expect { subject }.to change { charge.reload.accepts_target_wallet }.from(true).to(false)
               end
             end
+
+            context "when accepts_target_wallet is nil in params" do
+              let(:params) do
+                {
+                  id: charge.id,
+                  charge_model: "standard",
+                  properties: {amount: "400"}
+                }
+              end
+
+              it "does not update accepts_target_wallet" do
+                charge.update!(accepts_target_wallet: true)
+
+                expect { subject }.not_to change { charge.reload.accepts_target_wallet }
+              end
+            end
           end
 
           context "when events_targeting_wallets is not enabled" do
