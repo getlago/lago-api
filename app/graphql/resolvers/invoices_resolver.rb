@@ -27,6 +27,7 @@ module Resolvers
     argument :positive_due_amount, Boolean, required: false
     argument :search_term, String, required: false
     argument :self_billed, Boolean, required: false
+    argument :settlements, [Types::Invoices::SettlementTypeEnum], required: false
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
     argument :subscription_id, ID, required: false
 
@@ -52,6 +53,7 @@ module Resolvers
       search_term: nil,
       self_billed: nil,
       status: nil,
+      settlements: nil,
       subscription_id: nil
     )
       result = InvoicesQuery.call(
@@ -75,6 +77,7 @@ module Resolvers
           positive_due_amount:,
           self_billed:,
           status:,
+          settlements:,
           subscription_id:
         }
       )
