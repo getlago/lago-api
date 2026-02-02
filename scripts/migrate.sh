@@ -7,6 +7,7 @@ then
 else
   bundle exec rake db:create
   bundle exec rails db:migrate
+  bundle exec rails roles:seed_predefined
 
   if [ -v LAGO_CREATE_ORG ] && [ "$LAGO_CREATE_ORG" == "true" ]
   then
