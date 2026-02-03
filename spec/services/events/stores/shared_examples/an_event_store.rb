@@ -864,17 +864,28 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
 
       before { create_events_for_filters }
 
+      def pretty_print_json(title, obj)
+        puts "#{title}: #{JSON.pretty_generate(obj)}"
+      end
+
       it "returns the max events filtered and grouped" do
         expect(new_event_store.max).to eq(3)
         expect(new_event_store.max).to eq(3)
+
+        result = new_event_store.grouped_max
+        expect(result).to match_array([
+          {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
+          {groups: {"country" => "france", "region" => "europe"}, value: 3}
+        ])
+
         expect(new_event_store.max).to eq(3)
 
         result = event_store.grouped_max
 
-        puts "All events: #{Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value) }.to_json}"
-        puts "Filtered events: #{event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value) }.to_json}"
+        pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
+        pretty_print_json "Filtered events", event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
         event_store.grouped_max_debugs.each_with_index do |debug, i|
-          puts "Grouped max debug step (#{i}): #{debug.to_json}"
+          pretty_print_json "Grouped max debug step (#{i})", debug.as_json
         end
         puts "Logs: #{$log.string}"
 
