@@ -421,6 +421,8 @@ RSpec.describe Customers::UpdateService do
         create(:stripe_provider, organization:, code: payment_provider_code)
       end
 
+      # NOTE: This describes a scenario with incorrect behavior that currently exists.
+      #       The previous provider customer and its payment method are not discarded
       it "does not discard the provider customer and its payment methods" do
         result = customers_service.call
 
