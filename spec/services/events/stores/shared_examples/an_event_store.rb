@@ -109,7 +109,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     create_european_event(country: "germany", city: "berlin", value: -4, timestamp: subscription_started_at + 9.days)
     create_european_event(country: "united kingdom", city: "cambridge", value: -5, timestamp: subscription_started_at + 10.days)
   end
-
+  before { create_events_for_filters }
   before { events }
 
   # describe "#events" do
@@ -862,14 +862,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
       let(:grouped_by) { %w[region country] }
 
-      before { create_events_for_filters }
+      # before { create_events_for_filters }
 
       def pretty_print_json(title, obj)
         puts "#{title}: #{JSON.pretty_generate(obj)}"
       end
 
       it "returns the max events filtered and grouped" do
-        sleep(5)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
 
         result = event_store.grouped_max
 
@@ -878,7 +880,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         # event_store.grouped_max_debugs.each_with_index do |debug, i|
         #   pretty_print_json "Grouped max debug step (#{i})", debug.as_json
         # end
-        # puts "Logs: #{$log.string}"
+        puts "Logs: #{$log.string}"
 
         # We include:
         # - europe, france, <nil>

@@ -374,7 +374,7 @@ module Events
             GROUP BY #{group_names}
           SQL
 
-          prepare_grouped_result(connection.select_all(sql).rows.dup).dup
+          prepare_grouped_result(connection.select_all(sql).rows)
         end
       end
 
