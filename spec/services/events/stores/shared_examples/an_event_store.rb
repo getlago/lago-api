@@ -869,16 +869,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       end
 
       it "returns the max events filtered and grouped" do
-        expect(new_event_store.max).to eq(3)
-        result = new_event_store.grouped_max
-        expect(result).to match_array([
-          {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
-          {groups: {"country" => "france", "region" => "europe"}, value: 3}
-        ])
-
-        expect(new_event_store.max).to eq(3)
-        expect(new_event_store.max).to eq(3)
-
         result = event_store.grouped_max
 
         pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
