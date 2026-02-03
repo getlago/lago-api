@@ -377,6 +377,79 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
+    context "when there is tax provider integration" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+      let(:body) do
+        p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+        File.read(p)
+      end
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: "1", external_account_code: "11", external_name: ""}
+        )
+      end
+
+      before do
+        integration_collection_mapping
+        integration_customer
+
+        allow(LagoHttpClient::Client).to receive(:new)
+          .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+          .and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+        allow_any_instance_of(Fee).to receive(:id).and_return("lago_fee_id") # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "creates an invoice with provider taxes" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.fees_amount_cents).to eq(10_000)
+        # Provider returns 990 tax_amount for 9900 amount (10%), which results in
+        # taxes_base_rate of 0.99 being applied to the actual fee amount of 10,000
+        expect(result.invoice.taxes_amount_cents).to eq(990)
+        expect(result.invoice.taxes_rate).to eq(10)
+        expect(result.invoice.total_amount_cents).to eq(10_990)
+        expect(result.invoice).to be_finalized
+        expect(result.invoice.reload.error_details.count).to eq(0)
+      end
+
+      context "when there is error received from the provider" do
+        let(:body) do
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+          File.read(p)
+        end
+
+        it "marks invoice as failed and creates error detail" do
+          result = invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+
+          expect(invoice.status).to eq("failed")
+          expect(invoice.error_details.count).to eq(1)
+          expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(invoice)
+        end
+
+        it "enqueues SendWebhookJob for each fee" do
+          invoice_service.call
+
+          expect(SendWebhookJob).to have_been_enqueued.with(
+            "fee.created",
+            hash_including("_aj_globalid" => a_string_matching(%r{gid://lago-api/Fee/}))
+          )
+        end
+      end
+    end
+
     context "when an error occurs" do
       context "with a record validation failure" do
         before do
