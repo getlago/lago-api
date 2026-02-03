@@ -2,18 +2,7 @@
 
 RSpec.shared_examples "an event store" do |with_event_duplication: true|
   subject(:event_store) do
-    described_class.new(
-      code:,
-      subscription:,
-      boundaries:,
-      filters: {
-        grouped_by:,
-        grouped_by_values:,
-        matching_filters:,
-        ignored_filters:
-      },
-      deduplicate: with_event_duplication
-    )
+    new_event_store
   end
 
   let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
@@ -85,6 +74,21 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     end
 
     events
+  end
+
+  def new_event_store
+    described_class.new(
+      code:,
+      subscription:,
+      boundaries:,
+      filters: {
+        grouped_by:,
+        grouped_by_values:,
+        matching_filters:,
+        ignored_filters:
+      },
+      deduplicate: with_event_duplication
+    )
   end
 
   def create_european_event(country:, city:, value:, timestamp:)
@@ -859,9 +863,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       before { create_events_for_filters }
 
       it "returns the max events filtered and grouped" do
-        expect(event_store.max).to eq(3)
-        expect(event_store.max).to eq(3)
-        expect(event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
 
         result = event_store.grouped_max
 
