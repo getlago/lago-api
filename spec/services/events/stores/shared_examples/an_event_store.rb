@@ -774,21 +774,25 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       expect(event_store.max).to eq(5)
     end
 
-    context "with grouped_by_values" do
-      let(:grouped_by_values) { {"region" => "europe"} }
-
-      it "returns the max value" do
-        expect(event_store.max).to eq(5)
-      end
-
-      # context "when grouped_by_values value is nil" do
-      #   let(:grouped_by_values) { {"region" => nil} }
-
-      #   it "returns the max value" do
-      #     expect(event_store.max).to eq(4)
-      #   end
-      # end
+    it "calls max 2" do
+      expect(event_store.max).to eq(5)
     end
+
+    # context "with grouped_by_values" do
+    #   let(:grouped_by_values) { {"region" => "europe"} }
+
+    #   it "returns the max value" do
+    #     expect(event_store.max).to eq(5)
+    #   end
+
+    #   context "when grouped_by_values value is nil" do
+    #     let(:grouped_by_values) { {"region" => nil} }
+
+    #     it "returns the max value" do
+    #       expect(event_store.max).to eq(4)
+    #     end
+    #   end
+    # end
 
     context "with filters" do
       let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
