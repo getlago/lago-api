@@ -27,6 +27,7 @@ module Types
       field :remaining_credit_amount, String, null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :voided_invoice, Types::Invoices::Object, null: true
 
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
@@ -42,6 +43,8 @@ module Types
         currency = wallet.currency_for_balance
         object.remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
       end
+
+      delegate :voided_invoice, to: :object
 
       def wallet_name
         object.wallet.name
