@@ -663,5 +663,78 @@ RSpec.describe WalletTransactions::VoidService do
         expect { subject }.not_to change(WalletTransactionConsumption, :count)
       end
     end
+
+    context "with inbound_wallet_transaction parameter" do
+      let(:wallet) do
+        create(
+          :wallet,
+          customer:,
+          balance_cents: 3000,
+          credits_balance: 30.0,
+          ongoing_balance_cents: 3000,
+          credits_ongoing_balance: 30.0,
+          traceable: true
+        )
+      end
+
+      let(:credit_amount) { BigDecimal("10.00") }
+
+      let!(:specific_inbound) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 20,
+          credit_amount: 20,
+          remaining_amount_cents: 2000,
+          priority: 50)
+      end
+
+      let!(:higher_priority_inbound) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 1000,
+          priority: 1)
+      end
+
+      let(:args) { {inbound_wallet_transaction: specific_inbound} }
+
+      it "consumes from the specific inbound transaction" do
+        expect { subject }.to change(WalletTransactionConsumption, :count).by(1)
+
+        consumption = WalletTransactionConsumption.last
+        expect(consumption.inbound_wallet_transaction).to eq(specific_inbound)
+        expect(consumption.consumed_amount_cents).to eq(1000)
+
+        expect(specific_inbound.reload.remaining_amount_cents).to eq(1000)
+        expect(higher_priority_inbound.reload.remaining_amount_cents).to eq(1000)
+      end
+
+      context "when void amount exceeds specific inbound remaining amount" do
+        let(:credit_amount) { BigDecimal("25.00") }
+
+        it "returns a validation failure" do
+          expect(subject).not_to be_success
+          expect(subject.error).to be_a(BaseService::ValidationFailure)
+          expect(subject.error.messages[:amount_cents]).to eq(["exceeds_remaining_transaction_amount"])
+        end
+
+        it "does not create a wallet transaction" do
+          expect { subject }.not_to change(WalletTransaction, :count)
+        end
+
+        it "does not affect wallet balance" do
+          expect { subject }.not_to change { wallet.reload.balance_cents }
+        end
+      end
+    end
   end
 end

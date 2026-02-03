@@ -642,49 +642,87 @@ RSpec.describe Fee do
   describe "#creditable_amount_cents" do
     subject { fee.creditable_amount_cents }
 
-    let(:fee) { create(:fee, fee_type:, amount_cents:, invoice:) }
-    let(:invoice) { create(:invoice, invoice_type: :credit) }
     let(:amount_cents) { 1000 }
 
     context "when fee_type is subscription" do
-      let(:fee_type) { "subscription" }
+      let(:fee) { create(:fee, fee_type: :subscription, amount_cents:) }
 
-      it "returns the correct creditable amount" do
+      it "returns the remaining amount" do
         expect(subject).to eq(1000)
       end
     end
 
     context "when fee_type is credit" do
-      let(:fee_type) { "credit" }
+      let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:invoice) { create(:invoice, invoice_type: :credit) }
+      let(:fee) { create(:fee, fee_type: :credit, amount_cents:, invoice:, invoiceable: wallet_transaction) }
 
-      it "returns the correct creditable amount when no associated wallet is found" do
-        expect(subject).to eq(0)
+      it "returns the minimum of remaining amount and wallet available amount" do
+        expect(subject).to eq(500)
       end
 
-      context "when associated walled exists" do
-        before { fee.update(invoiceable: wallet_transaction, fee_type: :credit) }
+      context "when wallet balance exceeds remaining amount" do
+        let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
 
-        context "when associated wallet have lower amount than remaining items sum" do
-          let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
+        it "returns the remaining amount" do
+          expect(subject).to eq(1000)
+        end
+      end
 
-          it "returns the wallet balance" do
-            expect(subject).to eq(500)
-          end
+      context "when credit note items reduce remaining amount" do
+        let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
+
+        before { create(:credit_note_item, fee:, amount_cents: 300) }
+
+        it "returns the reduced remaining amount" do
+          expect(subject).to eq(700)
+        end
+      end
+    end
+  end
+
+  describe "#creditable_from_wallet_amount_cents" do
+    subject { fee.creditable_from_wallet_amount_cents }
+
+    context "when fee is not credit" do
+      let(:fee) { create(:fee, fee_type: :subscription) }
+
+      it "returns 0" do
+        expect(subject).to eq(0)
+      end
+    end
+
+    context "when fee is credit" do
+      let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:invoice) { create(:invoice, invoice_type: :credit) }
+      let(:fee) { create(:fee, fee_type: :credit, amount_cents: 1000, invoice:, invoiceable: wallet_transaction) }
+
+      it "returns the wallet balance" do
+        expect(subject).to eq(500)
+      end
+
+      context "when wallet is terminated" do
+        let(:wallet) { create(:wallet, balance_cents: 500, status: :terminated, customer: invoice.customer) }
+
+        it "returns 0" do
+          expect(subject).to eq(0)
+        end
+      end
+
+      context "when wallet is traceable" do
+        let(:wallet) { create(:wallet, balance_cents: 2000, customer: invoice.customer, traceable: true) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
+
+        it "returns the remaining amount of the inbound transaction" do
+          expect(subject).to eq(500)
         end
 
-        context "when associated wallet have higher amount than remaining items sum" do
-          let(:wallet) { create(:wallet, balance_cents: 1500, customer: invoice.customer) }
+        context "when remaining_amount_cents is nil" do
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: nil) }
 
-          it "returns the wallet balance" do
-            expect(subject).to eq(1000)
-          end
-        end
-
-        context "when associated wallet is terminated" do
-          let(:wallet) { create(:wallet, balance_cents: 1500, status: :terminated, customer: invoice.customer) }
-
-          it "returns the wallet balance" do
+          it "returns 0" do
             expect(subject).to eq(0)
           end
         end

@@ -88,13 +88,7 @@ module CreditNotes
           )
         end
 
-        if wallet_credit
-          WalletTransactions::VoidService.call(
-            wallet: associated_wallet,
-            wallet_credit:,
-            credit_note_id: credit_note.id
-          )
-        end
+        void_prepaid_credit if void_prepaid_credit?
       end
       return result if context == :preview
 
@@ -153,7 +147,7 @@ module CreditNotes
       return true if automatic
 
       if invoice.credit?
-        return false if associated_wallet.nil?
+        return false if prepaid_credit_wallet.nil?
 
         if invoice.payment_pending? || invoice.payment_failed?
           return false if non_offset_amounts_present?
@@ -292,14 +286,23 @@ module CreditNotes
       credit_note.invoice.credit_notes.sum(&:taxes_rounding_adjustment)
     end
 
-    def associated_wallet
-      @associated_wallet ||= invoice.associated_active_wallet
+    def prepaid_credit_wallet
+      @prepaid_credit_wallet ||= invoice.associated_active_wallet
     end
 
-    def wallet_credit
-      return nil unless invoice.credit? && associated_wallet.present?
+    def void_prepaid_credit
+      wallet_credit = WalletCredit.from_amount_cents(wallet: prepaid_credit_wallet, amount_cents: credit_note.refund_amount_cents)
+      wallet_transaction = prepaid_credit_wallet.traceable? ? invoice.fees.first.invoiceable : nil
+      WalletTransactions::VoidService.call!(
+        wallet: prepaid_credit_wallet,
+        wallet_credit: wallet_credit,
+        inbound_wallet_transaction: wallet_transaction,
+        credit_note_id: credit_note.id
+      )
+    end
 
-      WalletCredit.from_amount_cents(wallet: associated_wallet, amount_cents: credit_note.refund_amount_cents)
+    def void_prepaid_credit?
+      invoice.credit? && prepaid_credit_wallet.present?
     end
   end
 end

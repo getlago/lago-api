@@ -483,21 +483,22 @@ RSpec.describe CreditNotes::CreateService do
           customer:,
           currency: "EUR",
           fees_amount_cents: 1000,
-          total_amount_cents: 1000,
-          total_paid_amount_cents: 1000,
+          total_amount_cents: 1200,
+          total_paid_amount_cents: 1200,
           payment_status: :succeeded
         )
       end
-      let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount:, credits_balance: 1 }
+      let(:wallet) { create(:wallet, customer:, balance_cents: 1200, rate_amount:, credits_balance: 1) }
       let(:rate_amount) { 10 }
-      let(:wallet_transaction) { create :wallet_transaction, wallet: }
-      let(:fee) { create :fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000 }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:fee1) { create(:credit_fee, invoice:, invoiceable: wallet_transaction, amount_cents: 1000, taxes_rate: 20) }
+      let(:fee2) { nil }
       let(:credit_amount_cents) { 0 }
-      let(:refund_amount_cents) { 1000 }
+      let(:refund_amount_cents) { 1200 }
       let(:items) do
         [
           {
-            fee_id: fee.id,
+            fee_id: fee1.id,
             amount_cents: 1000
           }
         ]
@@ -506,21 +507,20 @@ RSpec.describe CreditNotes::CreateService do
 
       before do
         wallet
-        fee
       end
 
-      it "Creates credit note and voids corresponding amount of credits from the wallet" do
+      it "creates credit note and voids corresponding amount of credits from the wallet" do
         result = create_service.call
 
         expect(result).to be_success
 
         credit_note = result.credit_note
-        expect(credit_note.refund_amount_cents).to eq(1000)
+        expect(credit_note.refund_amount_cents).to eq(1200)
         wallet_transaction = wallet.wallet_transactions.order(:created_at).last
         # we're refunding 10_00 cents -> 10 euros, the rate of the wallet, 1 credit = 10 euros, so amount credits
         # in the transaction is 1, while the "money" amount is 10
-        expect(wallet_transaction.credit_amount).to eq(1)
-        expect(wallet_transaction.amount).to eq(10)
+        expect(wallet_transaction.credit_amount).to eq(1.2)
+        expect(wallet_transaction.amount).to eq(12)
         expect(wallet_transaction.transaction_status).to eq("voided")
         expect(wallet_transaction.transaction_type).to eq("outbound")
         expect(wallet.reload.balance_cents).to eq(0)
@@ -535,10 +535,60 @@ RSpec.describe CreditNotes::CreateService do
           expect(result).to be_success
 
           credit_note = result.credit_note
-          expect(credit_note.refund_amount_cents).to eq(1000)
+          expect(credit_note.refund_amount_cents).to eq(1200)
           wallet_transaction = wallet.wallet_transactions.order(:created_at).last
-          expect(wallet_transaction.credit_amount).to eq(0.5)
-          expect(wallet_transaction.amount).to eq(10)
+          expect(wallet_transaction.credit_amount).to eq(0.6)
+          expect(wallet_transaction.amount).to eq(12)
+        end
+      end
+
+      context "when wallet is traceable" do
+        let(:wallet) do
+          create(:wallet,
+            customer:,
+            balance_cents: 1500,
+            rate_amount:,
+            credits_balance: 1.5,
+            traceable: true)
+        end
+        let(:wallet_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 12,
+            credit_amount: 1.2,
+            remaining_amount_cents: 1200)
+        end
+        let!(:other_inbound_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :inbound,
+            transaction_status: :granted,
+            status: :settled,
+            amount: 5,
+            credit_amount: 0.5,
+            remaining_amount_cents: 500,
+            priority: 1)
+        end
+
+        it "consumes from the specific inbound transaction linked to the invoice" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          outbound_transaction = wallet.wallet_transactions.outbound.order(:created_at).last
+          expect(outbound_transaction).to be_present
+
+          consumption = outbound_transaction.fundings.first
+          expect(consumption.inbound_wallet_transaction).to eq(wallet_transaction)
+          expect(consumption.consumed_amount_cents).to eq(1200)
+
+          expect(wallet_transaction.reload.remaining_amount_cents).to eq(0)
+          expect(other_inbound_transaction.reload.remaining_amount_cents).to eq(500)
         end
       end
 
@@ -833,28 +883,29 @@ RSpec.describe CreditNotes::CreateService do
     context "with credit invoices", :premium do
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
-      let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
-      let(:items) { [{fee_id: fee.id, amount_cents: 500}] }
+      let(:fee1) { create(:credit_fee, invoice:, invoiceable: wallet_transaction, amount_cents: 1000, taxes_rate: 20) }
+      let(:fee2) { nil }
+      let(:items) { [{fee_id: fee1.id, amount_cents: 1000}] }
       let(:automatic) { false }
 
-      before { wallet && fee }
+      before { wallet }
 
       context "when payment is pending" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1000, payment_status: :pending)
+            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :pending)
         end
 
         it "allows offset_amount_cents only" do
           service = described_class.new(
-            invoice:, items: [{fee_id: fee.id, amount_cents: 1000}],
+            invoice:, items: [{fee_id: fee1.id, amount_cents: 1000}],
             reason: "other",
-            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000
+            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1200
           )
           result = service.call
 
           expect(result).to be_success
-          expect(result.credit_note.offset_amount_cents).to eq(1000)
+          expect(result.credit_note.offset_amount_cents).to eq(1200)
           expect(result.credit_note.credit_amount_cents).to eq(0)
           expect(result.credit_note.refund_amount_cents).to eq(0)
         end
@@ -887,19 +938,19 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment failed" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1000, payment_status: :failed)
+            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :failed)
         end
 
         it "allows offset_amount_cents only" do
           service = described_class.new(
-            invoice:, items: [{fee_id: fee.id, amount_cents: 1000}],
+            invoice:, items: [{fee_id: fee1.id, amount_cents: 1000}],
             reason: "other",
-            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000
+            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1200
           )
           result = service.call
 
           expect(result).to be_success
-          expect(result.credit_note.offset_amount_cents).to eq(1000)
+          expect(result.credit_note.offset_amount_cents).to eq(1200)
           expect(result.credit_note.credit_amount_cents).to eq(0)
           expect(result.credit_note.refund_amount_cents).to eq(0)
         end
