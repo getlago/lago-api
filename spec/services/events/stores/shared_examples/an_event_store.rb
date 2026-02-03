@@ -869,14 +869,18 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       end
 
       it "returns the max events filtered and grouped" do
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+
         result = event_store.grouped_max
 
-        pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
-        pretty_print_json "Filtered events", event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
-        event_store.grouped_max_debugs.each_with_index do |debug, i|
-          pretty_print_json "Grouped max debug step (#{i})", debug.as_json
-        end
-        puts "Logs: #{$log.string}"
+        # pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
+        # pretty_print_json "Filtered events", event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
+        # event_store.grouped_max_debugs.each_with_index do |debug, i|
+        #   pretty_print_json "Grouped max debug step (#{i})", debug.as_json
+        # end
+        # puts "Logs: #{$log.string}"
 
         # We include:
         # - europe, france, <nil>
