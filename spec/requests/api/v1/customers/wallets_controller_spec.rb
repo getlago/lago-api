@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Customers::WalletsController do
 
   before { subscription }
 
-  describe "POST /api/v1/customers/:external_id/wallets" do
+  describe "POST /api/v1/customers/:customer_external_id/wallets" do
     it_behaves_like "a wallet create endpoint" do
       subject do
         post_with_token(organization, "/api/v1/customers/#{external_id}/wallets", {wallet: create_params})
@@ -39,7 +39,7 @@ RSpec.describe Api::V1::Customers::WalletsController do
     end
   end
 
-  describe "PUT /api/v1/customers/:external_id/wallets/:id" do
+  describe "PUT /api/v1/customers/:customer_external_id/wallets/:code" do
     it_behaves_like "a wallet update endpoint" do
       subject do
         put_with_token(
@@ -53,7 +53,7 @@ RSpec.describe Api::V1::Customers::WalletsController do
     end
   end
 
-  describe "GET /api/v1/wcustomers/:external_id/allets/:id" do
+  describe "GET /api/v1/wcustomers/:customer_external_id/allets/:code" do
     it_behaves_like "a wallet show endpoint" do
       subject { get_with_token(organization, "/api/v1/customers/#{external_id}/wallets/#{id}") }
 
@@ -61,7 +61,7 @@ RSpec.describe Api::V1::Customers::WalletsController do
     end
   end
 
-  describe "DELETE /api/v1/customers/:external_id/wallets/:id" do
+  describe "DELETE /api/v1/customers/:customer_external_id/wallets/:code" do
     it_behaves_like "a wallet terminate endpoint" do
       subject { delete_with_token(organization, "/api/v1/customers/#{external_id}/wallets/#{id}") }
 
@@ -69,7 +69,7 @@ RSpec.describe Api::V1::Customers::WalletsController do
     end
   end
 
-  describe "GET /api/v1/customers/:external_id/wallets" do
+  describe "GET /api/v1/customers/:customer_external_id/wallets" do
     it_behaves_like "a wallet index endpoint" do
       subject do
         get_with_token(organization, "/api/v1/customers/#{external_id}/wallets", params)
