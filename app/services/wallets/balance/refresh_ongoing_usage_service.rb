@@ -3,11 +3,7 @@
 module Wallets
   module Balance
     class RefreshOngoingUsageService < BaseService
-      def initialize(wallet:, usage_amount_cents:, skip_single_wallet_update: false,
-                     current_usage_fees:,
-                     draft_invoices_fees:,
-                     progressive_billing_fees:,
-                     pay_in_advance_fees:)
+      def initialize(wallet:, usage_amount_cents:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:, skip_single_wallet_update: false)
         @wallet = wallet
         @usage_amount_cents = usage_amount_cents
         @skip_single_wallet_update = skip_single_wallet_update
@@ -38,13 +34,13 @@ module Wallets
       private
 
       attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents, :skip_single_wallet_update,
-                  :current_usage_fees, :draft_invoices_fees, :progressive_billing_fees, :pay_in_advance_fees
+        :current_usage_fees, :draft_invoices_fees, :progressive_billing_fees, :pay_in_advance_fees
 
       delegate :customer, to: :wallet
 
       def calculate_total_billed_usage_amount_cents
-          billed_progressive_invoices_amount_cents +
-            billed_pay_in_advance_amount_cents
+        billed_progressive_invoices_amount_cents +
+          billed_pay_in_advance_amount_cents
       end
 
       def billed_progressive_invoices_amount_cents

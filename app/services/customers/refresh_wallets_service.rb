@@ -28,16 +28,20 @@ module Customers
 
       @allocation_rules = Wallets::BuildAllocationRulesService.call!(customer:).allocation_rules
 
-      usage_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }; nil
+      usage_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
+
       wallets_applicable_on_usage_fees = assign_wallet_per_fee(usage_fees) # { fee_key => wallet_id }
 
-      draft_invoice_fees = customer.invoices.draft.where.not(total_amount_cents: 0).includes(fees: :charge).flat_map(&:fees); nil
+      draft_invoice_fees = customer.invoices.draft.where.not(total_amount_cents: 0).includes(fees: :charge).flat_map(&:fees)
+
       wallets_applicable_on_draft_fees = assign_wallet_per_fee(draft_invoice_fees)
 
-      progressive_billing_fees = usage_amount_cents.flat_map { |usage| usage[:billed_progressive_invoice_subscriptions].flat_map { it.invoice.fees }}; nil
+      progressive_billing_fees = usage_amount_cents.flat_map { |usage| usage[:billed_progressive_invoice_subscriptions].flat_map { it.invoice.fees } }
+
       wallets_applicable_on_pb_fees = assign_wallet_per_fee(progressive_billing_fees)
 
-      pay_in_advance_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees.select { |f| f.charge.pay_in_advance? }}; nil
+      pay_in_advance_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees.select { |f| f.charge.pay_in_advance? } }
+
       wallets_applicable_on_adv_fees = assign_wallet_per_fee(pay_in_advance_fees)
 
       wallets_to_process = customer.wallets.active.includes(:recurring_transaction_rules)
@@ -54,7 +58,7 @@ module Customers
           )
         end
       end
-      wallets_to_process.update_all(last_ongoing_balance_sync_at: Time.current) if wallets_to_process.present?
+      wallets_to_process.presence&.update_all(last_ongoing_balance_sync_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       customer.update!(awaiting_wallet_refresh: false)
 
@@ -72,7 +76,7 @@ module Customers
 
     def assign_wallet_per_fee(fees)
       fee_wallet = {}
-      fee_targeting_wallets_enabled  = customer.organization.events_targeting_wallets_enabled?
+      fee_targeting_wallets_enabled = customer.organization.events_targeting_wallets_enabled?
 
       fees.each do |fee|
         key = fee.id || fee.object_id
@@ -84,8 +88,8 @@ module Customers
         end
 
         applicable_wallets = Wallets::FindApplicableOnFeesService
-                               .call!(allocation_rules: @allocation_rules, fee:)
-                               .top_priority_wallet
+          .call!(allocation_rules: @allocation_rules, fee:)
+          .top_priority_wallet
         fee_wallet[key] = applicable_wallets.presence
       end
 

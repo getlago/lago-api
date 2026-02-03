@@ -437,8 +437,8 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
       )
     end
 
-    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0) }
-    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0) }
+    let(:wallet1) { create(:wallet, customer:, code: "wallet_1", name: "Wallet 1", balance_cents: 20_000, credits_balance: 200.0, priority: 1) }
+    let(:wallet2) { create(:wallet, customer:, code: "wallet_2", name: "Wallet 2", balance_cents: 25_000, credits_balance: 250.0, priority: 2) }
 
     before do
       # Organization does NOT have events_targeting_wallets enabled
