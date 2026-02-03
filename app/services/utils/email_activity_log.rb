@@ -126,12 +126,7 @@ module Utils
     end
 
     def resource
-      case document
-      when PaymentReceipt
-        document.payment.payable
-      else
-        document
-      end
+      document
     end
 
     def external_customer_id
