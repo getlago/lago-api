@@ -7,3 +7,6 @@ zh-TW:
           attributes:
             base:
               exceeded_limit: 已達到 Webhook 端點的最大數量限制
+            event_types:
+              invalid_format: Must be an array
+              invalid_types: 'Contains invalid types: %{invalid_types}'

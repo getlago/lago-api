@@ -75,18 +75,30 @@ module Api
       private
 
       def create_params
-        params.require(:webhook_endpoint).permit(
-          :id,
-          :webhook_url,
-          :signature_algo
-        )
+        webhook_endpoint_params
       end
 
       def update_params
-        params.require(:webhook_endpoint).permit(
+        webhook_endpoint_params.except(:id)
+      end
+
+      def webhook_endpoint_params
+        raw_options = params.require(:webhook_endpoint)
+        permitted_options = raw_options.permit(
+          :id,
           :webhook_url,
-          :signature_algo
+          :signature_algo,
+          :name,
+          event_types: []
         )
+
+        # preserve event_types non-array value if it was explicitly provided
+        # invalid values will be handled in the model validation
+        if raw_options.has_key?(:event_types) && !permitted_options.has_key?(:event_types)
+          permitted_options[:event_types] = raw_options[:event_types]
+        end
+
+        permitted_options
       end
 
       def render_webhook_endpoint(webhook_endpoint)

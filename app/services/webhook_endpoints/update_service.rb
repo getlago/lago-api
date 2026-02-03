@@ -15,10 +15,13 @@ module WebhookEndpoints
 
       return result.not_found_failure!(resource: "webhook_endpoint") if webhook_endpoint.blank?
 
-      webhook_endpoint.update!(
-        webhook_url: params[:webhook_url],
-        signature_algo: params[:signature_algo]
-      )
+      update_params = {}
+      update_params[:webhook_url] = params[:webhook_url] if params.has_key?(:webhook_url)
+      update_params[:signature_algo] = params[:signature_algo].to_sym if params.has_key?(:signature_algo)
+      update_params[:name] = params[:name] if params.has_key?(:name)
+      update_params[:event_types] = params[:event_types] if params.has_key?(:event_types)
+
+      webhook_endpoint.update!(update_params)
 
       result.webhook_endpoint = webhook_endpoint
       result

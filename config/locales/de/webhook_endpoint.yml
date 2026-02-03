@@ -7,3 +7,6 @@ de:
           attributes:
             base:
               exceeded_limit: Maximum number of webhook endpoints was reached
+            event_types:
+              invalid_format: Must be an array
+              invalid_types: 'Contains invalid types: %{invalid_types}'
