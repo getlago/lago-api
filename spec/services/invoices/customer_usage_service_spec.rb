@@ -214,7 +214,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
+            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture: Service failure"])
           end
         end
       end

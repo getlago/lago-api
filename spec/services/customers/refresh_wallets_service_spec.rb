@@ -171,7 +171,7 @@ RSpec.describe Customers::RefreshWalletsService do
       it "fails with an error" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve"])
+        expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve: Customer address could not resolve"])
       end
     end
   end

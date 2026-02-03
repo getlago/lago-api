@@ -140,7 +140,7 @@ module Invoices
             details: {
               tax_error: error.code
             }.tap do |details|
-              details[:tax_error_message] = error.error_message if error.code == "validationError"
+              details[:tax_error_message] = error.error_message if error.error_message.present?
             end
           }
         )
