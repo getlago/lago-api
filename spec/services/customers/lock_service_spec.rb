@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Customers::LockService do
-  let(:lock_service) { described_class.new(customer:) }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:lock_service) { described_class.new(customer:, timeout_seconds:) }
+  let(:customer) { create(:customer) }
+  let(:timeout_seconds) { 5.seconds }
 
   describe "#call" do
     subject { lock_service.call }
@@ -22,15 +22,42 @@ RSpec.describe Customers::LockService do
       end
     end
 
-    context "when lock cannot be acquired" do
-      it "raises Customers::FailedToAcquireLock" do
-        lock_service.call do
-          second_lock_service = described_class.new(customer:, timeout_seconds: 0)
+    context "when lock cannot be acquired", transaction: false do
+      let(:lock_released_after) { 2.seconds }
+      let(:timeout_seconds) { 0.seconds }
 
-          expect do
-            second_lock_service.call { nil }
-          end.to raise_error(Customers::FailedToAcquireLock)
+      around do |test|
+        customer_id = customer.id
+        queue = Queue.new
+        thread = start_lock_thread(queue, customer_id)
+        sleep 0.5
+        test.run
+      ensure
+        stop_thread(thread, queue) if thread
+      end
+
+      def start_lock_thread(queue, customer_id)
+        Thread.start do
+          start_time = Time.zone.now
+          ApplicationRecord.transaction do
+            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
+              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
+                sleep 0.01
+              end
+            end
+          end
         end
+      end
+
+      def stop_thread(thread, queue)
+        queue.push(true)
+        thread.join
+      end
+
+      it "raises a Customers::FailedToAcquireLock error" do
+        expect do
+          lock_service.call { nil }
+        end.to raise_error(Customers::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}")
       end
     end
   end

@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module Customers
-  class FailedToAcquireLock < StandardError; end
-
   class LockService < BaseService
     ACQUIRE_LOCK_TIMEOUT = 5.seconds
 
@@ -15,15 +13,11 @@ module Customers
     end
 
     def call
-      lock_acquired = ActiveRecord::Base.with_advisory_lock(lock_key, timeout_seconds:, transaction:) do
+      Customer.with_advisory_lock!(lock_key, timeout_seconds:, transaction:) do
         yield
       end
-
-      unless lock_acquired
-        raise FailedToAcquireLock
-      end
-
-      lock_acquired
+    rescue WithAdvisoryLock::FailedToAcquireLock
+      raise FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}"
     end
 
     def locked?

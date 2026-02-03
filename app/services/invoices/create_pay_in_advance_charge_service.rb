@@ -19,7 +19,7 @@ module Invoices
 
       ApplicationRecord.transaction do
         # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-        Customers::LockService.call!(customer:) do
+        Customers::LockService.call(customer:) do
           create_generating_invoice
           fees.each { |f| f.update!(invoice:) }
 
@@ -62,7 +62,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, WithAdvisoryLock::FailedToAcquireLock
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
