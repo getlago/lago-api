@@ -175,7 +175,7 @@ module Invoices
 
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
-      return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]}) unless taxes_result.success?
+      return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
       result.fees_taxes = taxes_result.fees
 
