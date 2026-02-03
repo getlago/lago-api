@@ -175,8 +175,6 @@ module Utils
       case object.class.name
       when "Payment"
         object.payable
-      when "PaymentReceipt"
-        object.payment.payable
       when "AppliedCoupon"
         object.coupon
       when "WalletTransaction"
