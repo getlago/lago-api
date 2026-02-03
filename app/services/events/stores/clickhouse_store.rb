@@ -673,7 +673,7 @@ module Events
 
       def filters_scope(scope)
         matching_filters.each do |key, values|
-          scope = scope.where("events_enriched.properties[?] IN ?", key.to_s, values)
+          scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
         conditions = ignored_filters.map do |filters|
