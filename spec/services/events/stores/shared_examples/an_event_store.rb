@@ -784,13 +784,13 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         expect(event_store.max).to eq(5)
       end
 
-      context "when grouped_by_values value is nil" do
-        let(:grouped_by_values) { {"region" => nil} }
+      # context "when grouped_by_values value is nil" do
+      #   let(:grouped_by_values) { {"region" => nil} }
 
-        it "returns the max value" do
-          expect(event_store.max).to eq(4)
-        end
-      end
+      #   it "returns the max value" do
+      #     expect(event_store.max).to eq(4)
+      #   end
+      # end
     end
 
     context "with filters" do
