@@ -772,13 +772,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
 
     it "returns the max value" do
       expect(event_store.max).to eq(5)
-    end
-
-    it "calls max 2" do
       expect(event_store.max).to eq(5)
-    end
-
-    it "calls max 3" do
       expect(event_store.max).to eq(5)
     end
 
