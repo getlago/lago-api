@@ -861,7 +861,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       it "returns the max events filtered and grouped" do
         expect(event_store.max).to eq(3)
         expect(event_store.max).to eq(3)
-        expect(event_store.max).to eq(3)
+        # expect(event_store.max).to eq(3)
 
         result = event_store.grouped_max
 
