@@ -19,7 +19,9 @@ namespace :signup do
         id: organization.id, organization:, name: organization.name, code: organization.name.parameterize
       )
 
-      Membership.find_or_create_by!(user:, organization:, role: :admin)
+      admin_role = Role.find_or_create_by!(admin: true)
+      membership = Membership.find_or_create_by!(user:, organization:)
+      MembershipRole.find_or_create_by!(membership:, organization:, role: admin_role)
 
       if ENV["LAGO_ORG_API_KEY"].present?
         api_key = ApiKey.find_or_create_by!(organization:, value: ENV["LAGO_ORG_API_KEY"])
