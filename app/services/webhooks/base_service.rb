@@ -23,6 +23,8 @@ module Webhooks
       # TODO: Wrap in transaction so we create all webhook models or none
       #       Ensure the http jobs are dispatched after the transaction is committed
       current_organization.webhook_endpoints.each do |webhook_endpoint|
+        next unless subscribed?(webhook_endpoint)
+
         webhook = create_webhook(webhook_endpoint, payload)
         SendHttpWebhookJob.perform_later(webhook)
       rescue ActiveRecord::InvalidForeignKey
@@ -35,6 +37,11 @@ module Webhooks
     private
 
     attr_reader :object, :options
+
+    def subscribed?(webhook_endpoint)
+      return true if webhook_endpoint.event_types.nil?
+      webhook_endpoint.event_types.include?(webhook_type)
+    end
 
     def object_serializer
       # Empty
