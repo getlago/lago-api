@@ -251,15 +251,15 @@ module Customers
       return unless update_provider_customer
 
       create_or_update_provider_customer(customer, billing)
+      
+      if customer.provider_customer&.provider_customer_id
+        PaymentProviderCustomers::UpdateService.call(customer)
+      end
 
       if old_provider_customer && old_payment_provider != customer.payment_provider
         old_provider_customer.payment_methods.find_each do |payment_method|
           PaymentMethods::DestroyService.call(payment_method:)
         end
-      end
-
-      if customer.provider_customer&.provider_customer_id
-        PaymentProviderCustomers::UpdateService.call(customer)
       end
     end
 
