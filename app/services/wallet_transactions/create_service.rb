@@ -24,7 +24,8 @@ module WalletTransactions
           :source,
           :status,
           :transaction_type,
-          :transaction_status
+          :transaction_status,
+          :voided_invoice_id
         ),
         organization_id: wallet.organization_id,
         amount:,
