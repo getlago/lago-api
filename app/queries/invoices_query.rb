@@ -199,9 +199,10 @@ class InvoicesQuery < BaseQuery
 
   def with_settlements(scope)
     scope.where(
-      id: scope.joins(:invoice_settlements)
-        .where(invoice_settlements: {settlement_type: valid_settlements})
-        .select(:id)
+      "EXISTS (
+          SELECT 1 FROM invoice_settlements
+          WHERE invoice_settlements.target_invoice_id = invoices.id
+          AND invoice_settlements.settlement_type IN (?))", valid_settlements
     )
   end
 
