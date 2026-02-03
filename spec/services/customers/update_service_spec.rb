@@ -421,9 +421,7 @@ RSpec.describe Customers::UpdateService do
         create(:stripe_provider, organization:, code: payment_provider_code)
       end
 
-      # NOTE: This describes a scenario with incorrect behavior that currently exists.
-      #       The previous provider customer and its payment method are not discarded
-      it "does not discard the provider customer and its payment methods" do
+      it "sets the customer parameters to nil" do
         result = customers_service.call
 
         expect(result).to be_success
@@ -432,9 +430,22 @@ RSpec.describe Customers::UpdateService do
         expect(customer.payment_provider).to be_nil
         expect(customer.provider_customer).to be_nil
         expect(customer.payment_provider_code).to be_nil
+      end
 
+      # NOTE: This describes a scenario with incorrect behavior that currently exists.
+      #       The previous provider customer is not discarded
+      it "does not discard the provider customer" do
+        result = customers_service.call
+
+        expect(result).to be_success
         expect(stripe_customer.reload).not_to be_discarded
-        expect(payment_method.reload).not_to be_discarded
+      end
+
+      it "discards the payment methods" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(payment_method.reload).to be_discarded
       end
     end
 
