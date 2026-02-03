@@ -103,11 +103,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
   end
 
   def create_events_for_filters
-    create_european_event(country: "united kingdom", city: "manchester", value: -1, timestamp: subscription_started_at + 6.days)
-    create_european_event(country: "france", city: "cambridge", value: -2, timestamp: subscription_started_at + 7.days)
-    create_european_event(country: "france", city: "caen", value: -3, timestamp: subscription_started_at + 8.days)
-    create_european_event(country: "germany", city: "berlin", value: -4, timestamp: subscription_started_at + 9.days)
-    create_european_event(country: "united kingdom", city: "cambridge", value: -5, timestamp: subscription_started_at + 10.days)
+    create_european_event(country: "united kingdom", city: "manchester", value: -1, timestamp: subscription_started_at + 6.hours)
+    create_european_event(country: "france", city: "cambridge", value: -2, timestamp: subscription_started_at + 7.hours)
+    create_european_event(country: "france", city: "caen", value: -3, timestamp: subscription_started_at + 8.hours)
+    create_european_event(country: "germany", city: "berlin", value: -4, timestamp: subscription_started_at + 9.hours)
+    create_european_event(country: "united kingdom", city: "cambridge", value: -5, timestamp: subscription_started_at + 10.hours)
   end
   before { create_events_for_filters }
   before { events }
