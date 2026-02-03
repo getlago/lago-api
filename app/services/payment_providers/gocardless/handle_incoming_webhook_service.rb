@@ -28,7 +28,7 @@ module PaymentProviders
 
         result.events.each do |event|
           PaymentProviders::Gocardless::HandleEventJob.perform_later(
-            organization: payment_provider_result.payment_provider.organization,
+            payment_provider: payment_provider_result.payment_provider,
             event_json: event.to_json
           )
         end
