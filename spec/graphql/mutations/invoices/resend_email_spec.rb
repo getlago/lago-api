@@ -42,7 +42,7 @@ RSpec.describe Mutations::Invoices::ResendEmail do
       )
 
       expect(result["data"]["resendInvoiceEmail"]["id"]).to eq(invoice.id)
-    end.to have_enqueued_mail(InvoiceMailer, :finalized)
+    end.to have_enqueued_mail(InvoiceMailer, :created)
   end
 
   context "with custom recipients" do
@@ -64,7 +64,7 @@ RSpec.describe Mutations::Invoices::ResendEmail do
         )
 
         expect(result["data"]["resendInvoiceEmail"]["id"]).to eq(invoice.id)
-      end.to have_enqueued_mail(InvoiceMailer, :finalized)
+      end.to have_enqueued_mail(InvoiceMailer, :created)
     end
   end
 

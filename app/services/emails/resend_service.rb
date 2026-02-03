@@ -30,7 +30,7 @@ module Emails
     def send_email
       mailer_class
         .with(mailer_params)
-        .public_send(:create_mail)
+        .created
         .deliver_later(to: recipients_to, cc: recipients_cc, bcc: recipients_bcc)
     end
 
