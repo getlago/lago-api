@@ -17,6 +17,7 @@ module Types
         Types::Wallets::Object,
         Types::Coupons::Object,
         Types::PaymentRequests::Object,
+        Types::PaymentReceipts::Object,
         Types::Entitlement::FeatureObject
 
       def self.resolve_type(object, _context)
@@ -41,6 +42,8 @@ module Types
           Types::Coupons::Object
         when "PaymentRequest"
           Types::PaymentRequests::Object
+        when "PaymentReceipt"
+          Types::PaymentReceipts::Object
         when "Entitlement::Feature"
           Types::Entitlement::FeatureObject
         else

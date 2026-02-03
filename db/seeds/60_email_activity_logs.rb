@@ -160,7 +160,7 @@ if payment_receipt && !email_log_exists?(organization:, activity_source: "system
   FactoryBot.create(
     :clickhouse_activity_log,
     organization:,
-    resource: payment_receipt.payment.payable,
+    resource: payment_receipt,
     external_customer_id: payment_receipt.customer.external_id,
     user_id: nil,
     api_key_id: nil,

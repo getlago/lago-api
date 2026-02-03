@@ -366,6 +366,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PaymentReceipt",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "PaymentRequest",
               "ofType": null
             },

@@ -144,6 +144,19 @@ RSpec.describe Utils::ActivityLog do
         end
       end
 
+      context "when the object is a payment receipt" do
+        let(:payment_receipt) { create(:payment_receipt, organization:) }
+
+        it "uses payment receipt as resource" do
+          activity_log.produce(payment_receipt, "payment_receipt.created", activity_id: "activity-id") { BaseService::Result.new }
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "PaymentReceipt", "resource_id" => payment_receipt.id)
+          end
+        end
+      end
+
       context "when the object is deleted" do
         it "does not set activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)
