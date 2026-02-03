@@ -4,9 +4,10 @@ module WalletTransactions
   class VoidService < BaseService
     Result = BaseResult[:wallet_transaction]
 
-    def initialize(wallet:, wallet_credit:, **transaction_params)
+    def initialize(wallet:, wallet_credit:, inbound_wallet_transaction: nil, **transaction_params)
       @wallet = wallet
       @wallet_credit = wallet_credit
+      @inbound_wallet_transaction = inbound_wallet_transaction
       @transaction_params = transaction_params.slice(
         :source,
         :metadata,
@@ -33,7 +34,10 @@ module WalletTransactions
         ).wallet_transaction
 
         if wallet.traceable?
-          TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
+          TrackConsumptionService.call!(
+            outbound_wallet_transaction: wallet_transaction,
+            inbound_wallet_transaction_id: inbound_wallet_transaction&.id
+          )
         end
 
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
@@ -45,6 +49,6 @@ module WalletTransactions
 
     private
 
-    attr_reader :wallet, :wallet_credit, :transaction_params
+    attr_reader :wallet, :wallet_credit, :inbound_wallet_transaction, :transaction_params
   end
 end

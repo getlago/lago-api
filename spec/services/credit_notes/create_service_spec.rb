@@ -554,6 +554,56 @@ RSpec.describe CreditNotes::CreateService do
         end
       end
 
+      context "when wallet is traceable" do
+        let(:wallet) do
+          create(:wallet,
+            customer:,
+            balance_cents: 1500,
+            rate_amount:,
+            credits_balance: 1.5,
+            traceable: true)
+        end
+        let(:wallet_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 10,
+            credit_amount: 1,
+            remaining_amount_cents: 1000)
+        end
+        let!(:other_inbound_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :inbound,
+            transaction_status: :granted,
+            status: :settled,
+            amount: 5,
+            credit_amount: 0.5,
+            remaining_amount_cents: 500,
+            priority: 1)
+        end
+
+        it "consumes from the specific inbound transaction linked to the invoice" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          outbound_transaction = wallet.wallet_transactions.outbound.order(:created_at).last
+          expect(outbound_transaction).to be_present
+
+          consumption = outbound_transaction.fundings.first
+          expect(consumption.inbound_wallet_transaction).to eq(wallet_transaction)
+          expect(consumption.consumed_amount_cents).to eq(1000)
+
+          expect(wallet_transaction.reload.remaining_amount_cents).to eq(0)
+          expect(other_inbound_transaction.reload.remaining_amount_cents).to eq(500)
+        end
+      end
+
       context "when wallet is terminated" do
         let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount:, status: :terminated }
 

@@ -102,6 +102,16 @@ module CreditNotes
         return false
       end
 
+      # For credit invoices, validate against available amount
+      # (remaining transaction amount for traceable wallets, wallet balance otherwise)
+      if invoice.credit?
+        available = invoice.credit_invoice_available_amount_cents
+        if credit_note.refund_amount_cents > available
+          add_error(field: :refund_amount_cents, error_code: "exceeds_available_amount")
+          return false
+        end
+      end
+
       refundable_paid_cents = invoice.total_paid_amount_cents - refunded_invoice_amount_cents
       return true if credit_note.refund_amount_cents <= refundable_paid_cents
 
