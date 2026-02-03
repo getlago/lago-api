@@ -5,7 +5,9 @@ module Types
     class UpdateInput < BaseInputObject
       graphql_name "WebhookEndpointUpdateInput"
 
+      argument :event_types, [String], required: false
       argument :id, ID, required: true
+      argument :name, String, required: false
       argument :signature_algo, Types::WebhookEndpoints::SignatureAlgoEnum, required: false
       argument :webhook_url, String, required: true
     end

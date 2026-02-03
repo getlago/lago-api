@@ -13025,7 +13025,9 @@ type WebhookCollection {
 
 type WebhookEndpoint {
   createdAt: ISO8601DateTime!
+  eventTypes: [String!]
   id: ID!
+  name: String
   organization: Organization
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   updatedAt: ISO8601DateTime!
@@ -13055,6 +13057,8 @@ input WebhookEndpointCreateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [String!]
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
 }
@@ -13072,7 +13076,9 @@ input WebhookEndpointUpdateInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  eventTypes: [String!]
   id: ID!
+  name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
 }

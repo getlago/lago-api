@@ -8,7 +8,7 @@ RSpec.describe Resolvers::WebhookEndpointsResolver do
     <<~GQL
       query {
         webhookEndpoints(limit: 5) {
-          collection { id webhookUrl }
+          collection { id webhookUrl signatureAlgo name eventTypes }
           metadata { currentPage, totalCount }
         }
       }
@@ -34,7 +34,10 @@ RSpec.describe Resolvers::WebhookEndpointsResolver do
 
     expect(webhook_endpoints_response["collection"].first).to include(
       "id" => organization.webhook_endpoints.first.id,
-      "webhookUrl" => organization.webhook_endpoints.first.webhook_url
+      "webhookUrl" => organization.webhook_endpoints.first.webhook_url,
+      "signatureAlgo" => organization.webhook_endpoints.first.signature_algo,
+      "name" => organization.webhook_endpoints.first.name,
+      "eventTypes" => organization.webhook_endpoints.first.event_types
     )
 
     expect(webhook_endpoints_response["metadata"]).to include(
