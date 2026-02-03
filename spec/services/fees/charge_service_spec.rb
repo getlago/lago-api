@@ -648,6 +648,82 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
+      context "with accepts_target_wallet enabled" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            accepts_target_wallet: true,
+            properties: {
+              amount: "20"
+            }
+          )
+        end
+
+        let(:billable_metric) do
+          create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+        end
+
+        let(:event_wallet_1) do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {target_wallet_code: "wallet_1", value: 10}
+          )
+        end
+
+        let(:event_wallet_2) do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {target_wallet_code: "wallet_2", value: 5}
+          )
+        end
+
+        before do
+          organization.update!(premium_integrations: ["events_targeting_wallets"])
+          event_wallet_1
+          event_wallet_2
+        end
+
+        it "creates a fee for each target_wallet_code" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+
+          fee1 = result.fees.find { |f| f.grouped_by["target_wallet_code"] == "wallet_1" }
+          expect(fee1).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 20_000,
+            precise_amount_cents: 20_000.0,
+            amount_currency: "EUR",
+            units: 10,
+            grouped_by: {"target_wallet_code" => "wallet_1"}
+          )
+
+          fee2 = result.fees.find { |f| f.grouped_by["target_wallet_code"] == "wallet_2" }
+          expect(fee2).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 10_000,
+            precise_amount_cents: 10_000.0,
+            amount_currency: "EUR",
+            units: 5,
+            grouped_by: {"target_wallet_code" => "wallet_2"}
+          )
+        end
+      end
+
       context "with graduated charge model" do
         let(:charge) do
           create(
