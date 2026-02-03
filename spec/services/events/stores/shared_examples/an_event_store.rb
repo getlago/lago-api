@@ -5,6 +5,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     new_event_store
   end
 
+  let(:with_event_duplication) { with_event_duplication }
+
   let(:billable_metric) { create(:billable_metric, field_name: "value", code: "bm:code") }
   let(:organization) { billable_metric.organization }
 
@@ -864,8 +866,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
 
       it "returns the max events filtered and grouped" do
         expect(new_event_store.max).to eq(3)
-        # expect(new_event_store.max).to eq(3)
-        # expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
+        expect(new_event_store.max).to eq(3)
 
         result = event_store.grouped_max
 
