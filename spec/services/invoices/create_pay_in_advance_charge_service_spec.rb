@@ -323,30 +323,9 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
 
       around do |test|
-        customer_id = customer.id
-        queue = Queue.new
-        thread = start_lock_thread(queue, customer_id)
-        test.run
-      ensure
-        stop_thread(thread, queue) if thread
-      end
-
-      def start_lock_thread(queue, customer_id)
-        Thread.start do
-          start_time = Time.zone.now
-          ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
-              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
-                sleep 0.01
-              end
-            end
-          end
+        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
+          test.run
         end
-      end
-
-      def stop_thread(thread, queue)
-        queue.push(true)
-        thread.join
       end
 
       context "when it fails to acquire the lock" do
