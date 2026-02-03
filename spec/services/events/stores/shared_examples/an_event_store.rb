@@ -869,6 +869,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       end
 
       it "returns the max events filtered and grouped" do
+        result = new_event_store.grouped_max
+        expect(result).to match_array([
+          {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
+          {groups: {"country" => "france", "region" => "europe"}, value: 3}
+        ])
+
         expect(new_event_store.max).to eq(3)
         expect(new_event_store.max).to eq(3)
         expect(new_event_store.max).to eq(3)
