@@ -11,7 +11,7 @@ module PaymentProviders
         end
       end
 
-      def perform(payment_provider: nil, events_json: nil, event_json: nil)
+      def perform(organization: nil, payment_provider: nil, events_json: nil, event_json: nil)
         # NOTE: temporary keeps both events_json and event_json to avoid errors during the deployment
         if events_json.present?
           JSON.parse(events_json)["events"].each do |event|

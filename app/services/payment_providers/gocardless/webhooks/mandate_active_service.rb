@@ -37,7 +37,10 @@ module PaymentProviders
         end
 
         def find_gocardless_customer(provider_customer_id)
-          payment_provider.organization.customers.find_by(provider_customer_id:)
+          PaymentProviderCustomers::GocardlessCustomer.find_by(
+            organization: payment_provider.organization,
+            provider_customer_id:
+          )
         end
 
         def create_payment_method(gocardless_customer, mandate)
@@ -49,7 +52,7 @@ module PaymentProviders
             payment_provider_customer: gocardless_customer,
             provider_method_id: mandate.id,
             params: {
-              provider_payment_methods: gocardless_customer.provider_payment_methods,
+              provider_payment_methods: gocardless_customer.provider_payment_methods
             },
             set_as_default: true
           ).payment_method

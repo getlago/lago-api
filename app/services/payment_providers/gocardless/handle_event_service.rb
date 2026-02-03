@@ -40,10 +40,10 @@ module PaymentProviders
           end
         when "mandates"
           if MANDATE_ACTIONS.include?(event.action)
-            PaymentProviders::Gocardless::Webhooks::MandateActiveService.call!(
+            PaymentProviders::Gocardless::Webhooks::MandateActiveService.call(
               payment_provider:,
               mandate_id: event.links.mandate
-            )
+            ).raise_if_error!
           end
         end
 
