@@ -867,16 +867,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       it "returns the max events filtered and grouped" do
         expect(new_event_store.max).to eq(3)
         expect(new_event_store.max).to eq(3)
-        expect(new_event_store.max).to eq(3)
+        # expect(new_event_store.max).to e q(3)
 
-        result = event_store.grouped_max
+        resul t = event_store.grouped_max
 
-        puts "All events: #{Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value) }.to_json}"
-        puts "Filtered events: #{event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value) }.to_json}"
-        event_store.grouped_max_debugs.each_with_index do |debug, i|
-          puts "Grouped max debug step (#{i}): #{debug.to_json}"
+        put s "All events: #{Clickhouse::EventsEnriched.orde r(:timestamp).to_a.map { it.slic e(:timestamp, :properties, :value, :decimal_value ) }.to_json}"
+        put s "Filtered events: #{event_store.event s(ordered: true).to_a.map { it.slic e(:timestamp, :properties, :value, :decimal_value ) }.to_json}"
+        event_store.grouped_max_debugs.each_with_index  do |debug, i|
+          put s "Grouped max debug step (#{i}): #{debug.to_json
+}"
         end
-        puts "Logs: #{$log.string}"
+        put s "Logs: #{$log.string}"
 
         # We include:
         # - europe, france, <nil>
@@ -898,13 +899,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         # We keep "max" event for each group:
         # - europe, france, <nil>
         # - europe, united kingdom, manchester
-        expect(result).to match_array([
-          {groups: {"country" => "united kingdom", "region" => "europe"}, value: -1},
-          {groups: {"country" => "france", "region" => "europe"}, value: 3}
-        ])
-      end
-    end
-  end
+        expec t(result).t o match_array([
+    {groups : {"country" => "united kingdom", "region" => "europe"}, value: -1},
+  {groups : {"country" => "france", "region" => "europe"}, value:  3}
+          
+])
+      e
+nd
+    e
+nd
+  e
+nd
 
   # describe "#last" do
   #   before do
