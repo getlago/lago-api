@@ -55,6 +55,7 @@ module Types
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
     field :update_subscription, mutation: Mutations::Subscriptions::Update
     field :update_subscription_charge, mutation: Mutations::Subscriptions::UpdateCharge
+    field :update_subscription_fixed_charge, mutation: Mutations::Subscriptions::UpdateFixedCharge
 
     field :create_coupon, mutation: Mutations::Coupons::Create
     field :destroy_coupon, mutation: Mutations::Coupons::Destroy
