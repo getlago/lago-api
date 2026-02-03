@@ -55,6 +55,7 @@ jobs:
       LAGO_KAFKA_ACTIVITY_LOGS_TOPIC: activity_logs
       LAGO_KAFKA_API_LOGS_TOPIC: api_logs
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
+      LAGO_KAFKA_SECURITY_LOGS_TOPIC: security_logs
       KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
       KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
       KNAPSACK_PRO_CI_NODE_INDEX: ${{ matrix.ci_node_index }}
