@@ -19,7 +19,7 @@ module Invoices
 
     # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
     # When it fails, it raises a WithAdvisoryLock::FailedToAcquireLock error.
-    # It the lock succeeds but another job/request updates the wallet concurrenly, it will raise a ActiveRecord::StaleObjectError error.
+    # If the lock succeeds but another job/request updates the wallet concurrenly, it will raise a ActiveRecord::StaleObjectError error.
     retry_on WithAdvisoryLock::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: 25, wait: ->(_) { CreatePayInAdvanceChargeJob.retry_delay }
 
     # DEPRECATED: These errors should not be raised anymore but we keep them and monitor to be sure.
@@ -28,7 +28,7 @@ module Invoices
     unique :until_executed, on_conflict: :log
 
     def perform(charge:, event:, timestamp:, invoice: nil)
-      result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:)
+      result = Invoices::PayInAdvance::CreateChargeService.call(charge:, event:, timestamp:)
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
       #       This invoice should be in failed status and can be retried.
