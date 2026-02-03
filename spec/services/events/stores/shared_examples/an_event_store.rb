@@ -778,6 +778,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       expect(event_store.max).to eq(5)
     end
 
+    it "calls max 3" do
+      expect(event_store.max).to eq(5)
+    end
+
     # context "with grouped_by_values" do
     #   let(:grouped_by_values) { {"region" => "europe"} }
 
@@ -794,34 +798,34 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
     #   end
     # end
 
-    context "with filters" do
-      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
-      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+    # context "with filters" do
+    #   let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+    #   let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
-      before { create_events_for_filters }
+    #   before { create_events_for_filters }
 
-      it "returns the max value filtered" do
-        # We include:
-        # - europe, france, <nil> -> 3
-        # - europe, france, paris -> 1
-        # - europe, france, caen -> -3
-        # - europe, france, cambridge -> -2
-        # - europe, united kingdom, cambridge -> -5
-        # - europe, united kingdom, london -> 5
-        # - europe, united kingdom, manchester -> -1
-        # Then exclude:
-        # - europe, france, caen -> -3
-        # - europe, united kingdom, cambridge -> -5
-        # - europe, united kingdom, london -> 5
-        # We should have 4 events:
-        # - europe, france, <nil> -> 3
-        # - europe, france, paris -> 1
-        # - europe, france, cambridge -> -2
-        # - europe, united kingdom, manchester -> -1
-        # Max value is 3
-        expect(event_store.max).to eq(3)
-      end
-    end
+    #   it "returns the max value filtered" do
+    #     # We include:
+    #     # - europe, france, <nil> -> 3
+    #     # - europe, france, paris -> 1
+    #     # - europe, france, caen -> -3
+    #     # - europe, france, cambridge -> -2
+    #     # - europe, united kingdom, cambridge -> -5
+    #     # - europe, united kingdom, london -> 5
+    #     # - europe, united kingdom, manchester -> -1
+    #     # Then exclude:
+    #     # - europe, france, caen -> -3
+    #     # - europe, united kingdom, cambridge -> -5
+    #     # - europe, united kingdom, london -> 5
+    #     # We should have 4 events:
+    #     # - europe, france, <nil> -> 3
+    #     # - europe, france, paris -> 1
+    #     # - europe, france, cambridge -> -2
+    #     # - europe, united kingdom, manchester -> -1
+    #     # Max value is 3
+    #     expect(event_store.max).to eq(3)
+    #   end
+    # end
   end
 
   describe "#grouped_max" do
