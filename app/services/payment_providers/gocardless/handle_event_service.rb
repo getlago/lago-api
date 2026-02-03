@@ -5,6 +5,7 @@ module PaymentProviders
     class HandleEventService < BaseService
       PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
       REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
+      MANDATES_ACTIONS = %w[created cancelled active].freeze
 
       PAYMENT_SERVICE_CLASS_MAP = {
         "Invoice" => Invoices::Payments::GocardlessService,
@@ -35,6 +36,10 @@ module PaymentProviders
                 status: event.action,
                 metadata: event.metadata
               ).raise_if_error!
+          end
+        when "mandates"
+          if MANDATES_ACTIONS.include?(event.action)
+            Rails.logger.info(event)
           end
         end
 
