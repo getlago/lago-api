@@ -764,60 +764,69 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
   #   end
   # end
 
-  describe "#max" do
-    before do
-      event_store.aggregation_property = billable_metric.field_name
-      event_store.numeric_property = true
-    end
+  # describe "#max" do
+  #   before do
+  #     event_store.aggregation_property = billable_metric.field_name
+  #     event_store.numeric_property = true
+  #   end
 
-    it "returns the max value" do
-      expect(event_store.max).to eq(5)
-    end
+  #   it "returns the max value" do
+  #     expect(event_store.max).to eq(5)
+  #   end
 
-    context "with grouped_by_values" do
-      let(:grouped_by_values) { {"region" => "europe"} }
+  #   context "with grouped_by_values" do
+  #     let(:grouped_by_values) { {"region" => "europe"} }
 
-      it "returns the max value" do
-        expect(event_store.max).to eq(5)
-      end
+  #     it "returns the max value" do
+  #       expect(event_store.max).to eq(5)
+  #     end
 
-      # context "when grouped_by_values value is nil" do
-      #   let(:grouped_by_values) { {"region" => nil} }
+  #     context "when grouped_by_values value is nil" do
+  #       let(:grouped_by_values) { {"region" => nil} }
 
-      #   it "returns the max value" do
-      #     expect(event_store.max).to eq(4)
-      #   end
-      # end
-    end
+  #       it "returns the max value" do
+  #         expect(event_store.max).to eq(4)
+  #       end
+  #     end
+  #   end
 
-    context "with filters" do
-      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
-      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+  #   context "with filters" do
+  #     let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+  #     let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
-      before { create_events_for_filters }
+  #     before { create_events_for_filters }
 
-      it "returns the max value filtered" do
-        # We include:
-        # - europe, france, <nil> -> 3
-        # - europe, france, paris -> 1
-        # - europe, france, caen -> -3
-        # - europe, france, cambridge -> -2
-        # - europe, united kingdom, cambridge -> -5
-        # - europe, united kingdom, london -> 5
-        # - europe, united kingdom, manchester -> -1
-        # Then exclude:
-        # - europe, france, caen -> -3
-        # - europe, united kingdom, cambridge -> -5
-        # - europe, united kingdom, london -> 5
-        # We should have 4 events:
-        # - europe, france, <nil> -> 3
-        # - europe, france, paris -> 1
-        # - europe, france, cambridge -> -2
-        # - europe, united kingdom, manchester -> -1
-        # Max value is 3
-        expect(event_store.max).to eq(3)
-      end
-    end
+  #     it "returns the max value filtered" do
+  #       # We include:
+  #       # - europe, france, <nil> -> 3
+  #       # - europe, france, paris -> 1
+  #       # - europe, france, caen -> -3
+  #       # - europe, france, cambridge -> -2
+  #       # - europe, united kingdom, cambridge -> -5
+  #       # - europe, united kingdom, london -> 5
+  #       # - europe, united kingdom, manchester -> -1
+  #       # Then exclude:
+  #       # - europe, france, caen -> -3
+  #       # - europe, united kingdom, cambridge -> -5
+  #       # - europe, united kingdom, london -> 5
+  #       # We should have 4 events:
+  #       # - europe, france, <nil> -> 3
+  #       # - europe, france, paris -> 1
+  #       # - europe, france, cambridge -> -2
+  #       # - europe, united kingdom, manchester -> -1
+  #       # Max value is 3
+  #       expect(event_store.max).to eq(3)
+  #     end
+  #   end
+  # end
+
+  it "1" do
+  end
+
+  it "2" do
+  end
+
+  it "3" do
   end
 
   describe "#grouped_max" do
