@@ -40,13 +40,9 @@ module Events
     end
 
     def charges_and_filters
-      return charges_and_filters_from_event_codes unless should_check_clickhouse_events?
+      return charges_and_filters_from_event_codes unless organization.pre_filter_events?
 
-      charges_and_filters_from_clickhouse_events
-    end
-
-    def should_check_clickhouse_events?
-      organization.clickhouse_events_store? && organization.pre_filter_events?
+      charges_and_filters_from_pre_enriched_events
     end
 
     # Return the list of all charges and filters that matches the event codes received in the period
@@ -63,11 +59,11 @@ module Events
         .then { add_default_filter(it) }
     end
 
-    # Return the list of charges and filters that matches the event enriched in clickhouse for the period
+    # Return the list of charges and filters that matches the event pre enriched in clickhouse or Postgres for the period
     # It also includes the recurring charges and filters
     # The result will be a hash where the key is the charge id and the value is an array of filter ids
     # filter ids also include "nil" as a default filter when applicable
-    def charges_and_filters_from_clickhouse_events
+    def charges_and_filters_from_pre_enriched_events
       values = event_store.distinct_charges_and_filters
 
       charge_filter_ids = values.map(&:last).reject(&:blank?)
