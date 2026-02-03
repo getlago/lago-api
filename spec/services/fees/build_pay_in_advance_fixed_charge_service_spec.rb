@@ -141,19 +141,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
       expect(result.fee.units).to eq(0)
       expect(result.fee.amount_cents).to eq(0)
     end
-
-    context "when organization as zero_amount_fees premium integration" do
-      before do
-        organization.update!(premium_integrations: ["zero_amount_fees"])
-      end
-
-      it "creates a zero-amount fee (no refund)" do
-        expect(result).to be_success
-        expect(result.fee).to be_present
-        expect(result.fee.units).to eq(0)
-        expect(result.fee.amount_cents).to eq(0)
-      end
-    end
   end
 
   context "when units stay the same (delta is zero)" do
@@ -196,19 +183,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
       expect(result.fee).to be_present
       expect(result.fee.units).to eq(0)
       expect(result.fee.amount_cents).to eq(0)
-    end
-
-    context "when organization as zero_amount_fees premium integration" do
-      before do
-        organization.update!(premium_integrations: ["zero_amount_fees"])
-      end
-
-      it "creates a zero-amount fee (no refund)" do
-        expect(result).to be_success
-        expect(result.fee).to be_present
-        expect(result.fee.units).to eq(0)
-        expect(result.fee.amount_cents).to eq(0)
-      end
     end
   end
 
@@ -505,19 +479,6 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
         expect(result.fee).to be_present
         expect(result.fee.units).to eq(0)
         expect(result.fee.amount_cents).to eq(0)
-      end
-
-      context "when organization has zero_amount_fees premium integration" do
-        before do
-          organization.update!(premium_integrations: ["zero_amount_fees"])
-        end
-
-        it "creates a zero-amount fee" do
-          expect(result).to be_success
-          expect(result.fee).to be_present
-          expect(result.fee.units).to eq(0)
-          expect(result.fee.amount_cents).to eq(0)
-        end
       end
     end
 

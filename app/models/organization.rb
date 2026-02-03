@@ -125,7 +125,6 @@ class Organization < ApplicationRecord
     salesforce
     api_permissions
     revenue_share
-    zero_amount_fees
     remove_branding_watermark
     manual_payments
     from_email
