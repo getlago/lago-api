@@ -291,6 +291,25 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         end
       end
 
+      context "when it is a script error" do
+        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_script_response.json")
+          File.read(path)
+        end
+
+        it "returns an error" do
+          result = service_call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.fees).to be(nil)
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq("action_script_failure")
+          end
+        end
+      end
+
       context "when it is another server error" do
         let(:response_status) { Faker::Number.between(from: 500, to: 599) }
 
