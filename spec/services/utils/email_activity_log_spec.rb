@@ -154,13 +154,13 @@ RSpec.describe Utils::EmailActivityLog do
         expect(activity_object["document"]["number"]).to eq(payment_receipt.number)
       end
 
-      it "uses payable as resource" do
+      it "uses payment_receipt as resource" do
         described_class.produce(document: payment_receipt, message:)
 
         payload = JSON.parse(produced_args.first[:payload])
 
-        expect(payload["resource_type"]).to eq("Invoice")
-        expect(payload["resource_id"]).to eq(invoice.id)
+        expect(payload["resource_type"]).to eq("PaymentReceipt")
+        expect(payload["resource_id"]).to eq(payment_receipt.id)
       end
     end
   end

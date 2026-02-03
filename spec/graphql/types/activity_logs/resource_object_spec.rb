@@ -21,7 +21,8 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::Wallets::Object,
       Types::Coupons::Object,
       Types::PaymentRequests::Object,
-      Types::Entitlement::FeatureObject
+      Types::Entitlement::FeatureObject,
+      Types::PaymentReceipts::Object
     )
   end
 
