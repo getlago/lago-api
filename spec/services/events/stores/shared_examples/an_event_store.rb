@@ -875,11 +875,11 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
 
         result = event_store.grouped_max
 
-        # pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
-        # pretty_print_json "Filtered events", event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
-        # event_store.grouped_max_debugs.each_with_index do |debug, i|
-        #   pretty_print_json "Grouped max debug step (#{i})", debug.as_json
-        # end
+        pretty_print_json "All events", Clickhouse::EventsEnriched.order(:timestamp).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
+        pretty_print_json "Filtered events", event_store.events(ordered: true).to_a.map { it.slice(:timestamp, :properties, :value, :decimal_value).as_json }
+        event_store.grouped_max_debugs.each_with_index do |debug, i|
+          pretty_print_json "Grouped max debug step (#{i})", debug.as_json
+        end
         puts "Logs: #{$log.string}"
 
         # We include:
