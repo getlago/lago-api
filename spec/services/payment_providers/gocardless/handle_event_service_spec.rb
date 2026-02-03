@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::HandleEventService do
-  subject(:event_service) { described_class.new(event_json:) }
+  subject(:event_service) { described_class.new(payment_provider:, event_json:) }
 
   let(:event_json) do
     path = Rails.root.join("spec/fixtures/gocardless/events.json")
@@ -12,6 +12,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
 
   let(:payment_service) { instance_double(Invoices::Payments::GocardlessService) }
   let(:service_result) { BaseService::Result.new }
+  let(:payment_provider) { create(:gocardless_provider) }
 
   describe "#call" do
     context "when succeeded payment event" do
@@ -80,6 +81,23 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
 
         expect(CreditNotes::Refunds::GocardlessService).to have_received(:new)
         expect(refund_service).to have_received(:update_status)
+      end
+    end
+
+    context "with mandate activation event" do
+      let(:event_json) do
+        path = Rails.root.join("spec/fixtures/gocardless/events_mandate_activation.json")
+        JSON.parse(File.read(path))["events"].first.to_json
+      end
+
+      it "routes the event to MandateActiveService" do
+        allow(PaymentProviders::Gocardless::Webhooks::MandateActiveService).to receive(:call)
+          .and_return(service_result)
+
+        event_service.call
+
+        expect(PaymentProviders::Gocardless::Webhooks::MandateActiveService).to have_received(:call)
+          .with(payment_provider:, mandate_id: "index_ID_123")
       end
     end
   end
