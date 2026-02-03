@@ -4,9 +4,6 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :fees_taxes, :invoice_id]
 
-    ACQUIRE_LOCK_TIMEOUT = 5.seconds
-    private_constant :ACQUIRE_LOCK_TIMEOUT
-
     def initialize(charge:, event:, timestamp:)
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
@@ -22,7 +19,7 @@ module Invoices
 
       ApplicationRecord.transaction do
         # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-        ApplicationRecord.with_advisory_lock!(customer_lock_key, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true) do
+        Customers::LockService.call!(customer:) do
           create_generating_invoice
           fees.each { |f| f.update!(invoice:) }
 
@@ -77,10 +74,6 @@ module Invoices
 
     delegate :subscription, to: :event
     delegate :customer, to: :subscription
-
-    def customer_lock_key
-      "customer-#{customer.id}"
-    end
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
