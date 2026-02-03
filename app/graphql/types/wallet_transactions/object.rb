@@ -26,12 +26,17 @@ module Types
       field :remaining_amount_cents, GraphQL::Types::BigInt, null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :voided_invoice, Types::Invoices::Object, null: true
 
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
 
       def invoice
         object.invoice&.visible? ? object.invoice : nil
+      end
+
+      def voided_invoice
+        object.voided_invoice&.visible? ? object.voided_invoice : nil
       end
 
       def wallet_name

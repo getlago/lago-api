@@ -39,5 +39,17 @@ RSpec.describe WalletTransactions::RecreditService do
         expect(service.call).to be_success
       end
     end
+
+    context "when wallet transaction has an invoice" do
+      let(:invoice) { create(:invoice, organization: wallet.organization) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: :outbound) }
+
+      it "creates an inbound transaction linked to the voided invoice" do
+        expect { service.call }.to change(WalletTransaction.inbound, :count).by(1)
+
+        new_transaction = WalletTransaction.inbound.last
+        expect(new_transaction.voided_invoice_id).to eq(invoice.id)
+      end
+    end
   end
 end

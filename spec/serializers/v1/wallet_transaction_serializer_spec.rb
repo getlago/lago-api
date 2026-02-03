@@ -19,6 +19,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "lago_wallet_id" => wallet_transaction.wallet_id,
         "lago_invoice_id" => nil,
         "lago_credit_note_id" => nil,
+        "lago_voided_invoice_id" => nil,
         "status" => wallet_transaction.status,
         "source" => wallet_transaction.source,
         "transaction_status" => wallet_transaction.transaction_status,

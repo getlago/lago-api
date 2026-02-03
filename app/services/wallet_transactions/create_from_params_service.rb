@@ -46,7 +46,8 @@ module WalletTransactions
           transaction = handle_granted_credits(
             wallet:,
             credits_amount: BigDecimal(params[:granted_credits]).floor(5),
-            reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits])
+            reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
+            voided_invoice_id: params[:voided_invoice_id]
           )
           wallet_transactions << transaction
         end
@@ -129,7 +130,7 @@ module WalletTransactions
       wallet_transaction
     end
 
-    def handle_granted_credits(wallet:, credits_amount:, reset_consumed_credits: false)
+    def handle_granted_credits(wallet:, credits_amount:, reset_consumed_credits: false, voided_invoice_id: nil)
       return if credits_amount.zero?
 
       wallet_credit = WalletCredit.new(wallet:, credit_amount: credits_amount, invoiceable: false)
@@ -144,7 +145,8 @@ module WalletTransactions
           transaction_status: :granted,
           metadata:,
           priority:,
-          name:
+          name:,
+          voided_invoice_id:
         ).wallet_transaction
 
         Wallets::Balance::IncreaseService.new(
