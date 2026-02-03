@@ -770,22 +770,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       event_store.numeric_property = true
     end
 
-    it "does nothing" do
+    it "returns the max value" do
+      expect(event_store.max).to eq(5)
     end
-
-    # it "returns the max value" do
-    #   expect(event_store.max).to eq(5)
-    # end
 
     context "with grouped_by_values" do
       let(:grouped_by_values) { {"region" => "europe"} }
 
-      it "does nothing" do
+      it "returns the max value" do
+        expect(event_store.max).to eq(5)
       end
-
-      # it "returns the max value" do
-      #   expect(event_store.max).to eq(5)
-      # end
 
       # context "when grouped_by_values value is nil" do
       #   let(:grouped_by_values) { {"region" => nil} }
