@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class OverrideChargeService < BaseService
+  class UpdateOrOverrideChargeService < BaseService
     Result = BaseResult[:charge]
 
     def initialize(subscription:, charge:, params:)
@@ -14,6 +14,8 @@ module Subscriptions
 
     def call
       return result.forbidden_failure! unless License.premium?
+      return result.not_found_failure!(resource: "subscription") unless subscription
+      return result.not_found_failure!(resource: "charge") unless charge
 
       ActiveRecord::Base.transaction do
         target_plan = ensure_plan_override

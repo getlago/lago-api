@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::OverrideChargeService do
+RSpec.describe Subscriptions::UpdateOrOverrideChargeService do
   subject(:service) { described_class.new(subscription:, charge:, params:) }
 
   let(:organization) { create(:organization) }

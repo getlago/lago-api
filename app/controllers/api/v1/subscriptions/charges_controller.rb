@@ -35,7 +35,7 @@ module Api
         end
 
         def update
-          result = ::Subscriptions::OverrideChargeService.call(
+          result = ::Subscriptions::UpdateOrOverrideChargeService.call(
             subscription:,
             charge:,
             params: input_params.to_h.deep_symbolize_keys
