@@ -319,41 +319,20 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       let(:lock_released_after) { 0.1.seconds }
 
       before do
-        stub_const("Invoices::CreatePayInAdvanceChargeService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
       end
 
       around do |test|
-        customer_id = customer.id
-        queue = Queue.new
-        thread = start_lock_thread(queue, customer_id)
-        test.run
-      ensure
-        stop_thread(thread, queue) if thread
-      end
-
-      def start_lock_thread(queue, customer_id)
-        Thread.start do
-          start_time = Time.zone.now
-          ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
-              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
-                sleep 0.01
-              end
-            end
-          end
+        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
+          test.run
         end
-      end
-
-      def stop_thread(thread, queue)
-        queue.push(true)
-        thread.join
       end
 
       context "when it fails to acquire the lock" do
         let(:lock_released_after) { 2.seconds }
 
-        it "raises a WithAdvisoryLock::FailedToAcquireLock error" do
-          expect { invoice_service.call }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+        it "raises a Customers::FailedToAcquireLock error" do
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
 
           expect(customer.invoices.count).to eq(0)
         end
