@@ -42,6 +42,9 @@ module Invoices
             Utils::ActivityLog.produce(invoice, "invoice.failed")
             next
           end
+        else
+          @vies_check_result = Invoices::EnsureCompletedViesCheckService.call(invoice:)
+          next if @vies_check_result.failure?
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
@@ -56,6 +59,10 @@ module Invoices
 
       if @taxes_result && !@taxes_result.success?
         return result.validation_failure!(errors: {tax_error: [@taxes_result.error.code]})
+      end
+
+      if @vies_check_result && @vies_check_result.failure?
+        return @vies_check_result
       end
 
       result.invoice = invoice
