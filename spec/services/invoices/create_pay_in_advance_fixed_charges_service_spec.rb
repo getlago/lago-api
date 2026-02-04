@@ -377,6 +377,51 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
+    context "when EU tax management is enabled" do
+      before { billing_entity.update!(eu_tax_management: true) }
+
+      context "when VIES check is in progress" do
+        before { create(:pending_vies_check, customer:) }
+
+        it "sets invoice to pending status and returns VIES check failure" do
+          result = invoice_service.call
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::UnknownTaxFailure)
+          expect(result.error.code).to eq("vies_check_pending")
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(invoice.status).to eq("pending")
+          expect(invoice.tax_status).to eq("pending")
+        end
+
+        it "does not enqueue invoice webhooks or payments" do
+          allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+          expect { invoice_service.call }
+            .not_to have_enqueued_job(SendWebhookJob).with("invoice.created", anything)
+
+          expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+        end
+
+        it "does not produce invoice.created activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).not_to have_produced("invoice.created").with(invoice)
+        end
+      end
+
+      context "when VIES check is not in progress" do
+        it "finalizes the invoice normally" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+        end
+      end
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
