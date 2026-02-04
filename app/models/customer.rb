@@ -389,14 +389,15 @@ end
 #
 # Indexes
 #
-#  index_customers_on_account_type                     (account_type)
-#  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
-#  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
-#  index_customers_on_billing_entity_id                (billing_entity_id)
-#  index_customers_on_deleted_at                       (deleted_at)
-#  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
-#  index_customers_on_organization_id                  (organization_id)
-#  index_customers_on_sequential_id                    (sequential_id)
+#  index_customers_on_account_type                       (account_type)
+#  index_customers_on_applied_dunning_campaign_id        (applied_dunning_campaign_id)
+#  index_customers_on_awaiting_wallet_refresh            (awaiting_wallet_refresh)
+#  index_customers_on_billing_entity_id                  (billing_entity_id)
+#  index_customers_on_deleted_at                         (deleted_at)
+#  index_customers_on_external_id_and_organization_id    (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_customers_on_organization_id                    (organization_id)
+#  index_customers_on_organization_id_and_sequential_id  (organization_id,sequential_id)
+#  index_customers_on_sequential_id                      (sequential_id)
 #
 # Foreign Keys
 #
