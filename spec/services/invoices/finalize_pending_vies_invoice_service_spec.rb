@@ -272,5 +272,133 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
         end
       end
     end
+
+    context "when invoice is pay-in-advance fixed charges" do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, :pay_in_advance, plan:, add_on:, units: 10, properties: {amount: "10"}) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          :pending,
+          customer:,
+          billing_entity:,
+          organization:,
+          currency: "EUR",
+          tax_status: "pending",
+          issuing_date: Time.zone.at(timestamp).to_date
+        )
+      end
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          :boundaries,
+          invoice:,
+          subscription:,
+          invoicing_reason: :in_advance_charge
+        )
+      end
+
+      # Override outer let blocks to prevent creating subscription/charge fees
+      let(:fee_subscription) { nil }
+      let(:fee_charge) { nil }
+
+      let(:fee_fixed_charge) do
+        create(
+          :fee,
+          invoice:,
+          subscription:,
+          fixed_charge:,
+          invoiceable: fixed_charge,
+          fee_type: :fixed_charge,
+          pay_in_advance: true,
+          amount_cents: 10_000,
+          units: 10
+        )
+      end
+
+      before do
+        invoice_subscription
+        fee_fixed_charge
+        allow(SegmentTrackJob).to receive(:perform_later)
+      end
+
+      it "changes status from pending to finalized" do
+        expect { finalize_service.call }
+          .to change { invoice.reload.status }.from("pending").to("finalized")
+      end
+
+      it "sets tax_status to succeeded" do
+        expect { finalize_service.call }
+          .to change { invoice.reload.tax_status }.from("pending").to("succeeded")
+      end
+
+      it "computes invoice amounts correctly" do
+        finalize_service.call
+
+        invoice.reload
+        expect(invoice.fees_amount_cents).to eq(10_000)
+        expect(invoice.total_amount_cents).to be_positive
+      end
+
+      it "enqueues SendWebhookJob" do
+        expect { finalize_service.call }
+          .to have_enqueued_job(SendWebhookJob).with("invoice.created", invoice)
+      end
+
+      it "calls Invoices::Payments::CreateService" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+        finalize_service.call
+
+        expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:)
+      end
+
+      it "updates issuing_date to current date (not keeping anchor for non-recurring)" do
+        freeze_time do
+          finalize_service.call
+
+          expect(invoice.reload.issuing_date).to eq(Time.current.to_date)
+        end
+      end
+
+      context "with credit note credits available" do
+        let(:credit_note) do
+          create(
+            :credit_note,
+            customer:,
+            balance_amount_cents: 500,
+            credit_amount_cents: 500,
+            status: :finalized,
+            credit_status: :available
+          )
+        end
+
+        before { credit_note }
+
+        it "applies credit note credits to the invoice" do
+          finalize_service.call
+
+          invoice.reload
+          expect(invoice.credits.credit_note_kind.first.credit_note).to eq(credit_note)
+          expect(invoice.credit_notes_amount_cents).to eq(500)
+        end
+      end
+
+      context "with active wallet" do
+        let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
+
+        before { wallet }
+
+        it "applies prepaid credits to the invoice" do
+          finalize_service.call
+
+          invoice.reload
+          expect(invoice.wallet_transactions.first.wallet).to eq(wallet)
+          expect(invoice.prepaid_credit_amount_cents).to eq(1000)
+        end
+      end
+    end
   end
 end
