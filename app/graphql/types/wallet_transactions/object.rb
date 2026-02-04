@@ -36,7 +36,7 @@ module Types
       end
 
       def voided_invoice
-        object.voided_invoice&.visible? ? object.voided_invoice : nil
+        object.voided_invoice
       end
 
       def wallet_name

@@ -164,7 +164,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
     end
 
     context "with voided_invoice_id parameter" do
-      let(:voided_invoice) { create(:invoice, organization:) }
+      let(:voided_invoice) { create(:invoice, :voided, organization:) }
       let(:params) do
         {
           wallet_id: wallet.id,

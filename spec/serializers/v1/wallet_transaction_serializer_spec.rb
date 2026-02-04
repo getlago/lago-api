@@ -53,6 +53,19 @@ RSpec.describe ::V1::WalletTransactionSerializer do
     end
   end
 
+  context "when transaction has a voided_invoice" do
+    let(:voided_invoice) { create(:invoice) }
+    let(:wallet_transaction) { create(:wallet_transaction, voided_invoice:) }
+
+    it "serializes the voided_invoice_id" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]).to include(
+        "lago_voided_invoice_id" => voided_invoice.id
+      )
+    end
+  end
+
   context "when includes wallet is set" do
     let(:includes) { %i[wallet] }
     let(:wallet) { wallet_transaction.wallet }
