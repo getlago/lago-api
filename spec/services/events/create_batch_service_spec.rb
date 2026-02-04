@@ -295,15 +295,12 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
-    context "when kafka is configured" do
-      let(:karafka_producer) { instance_double(WaterDrop::Producer) }
+    context "when kafka is configured", :capture_kafka_messages do
       let(:events_params) { build_params(count: 2) }
 
       before do
         ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
         ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
-        allow(Karafka).to receive(:producer).and_return(karafka_producer)
-        allow(karafka_producer).to receive(:produce_many_async)
       end
 
       after do
@@ -355,15 +352,12 @@ RSpec.describe Events::CreateBatchService do
         expect { create_batch_service.call }.not_to have_enqueued_job(Events::PostProcessJob)
       end
 
-      context "when kafka is configured" do
-        let(:karafka_producer) { instance_double(WaterDrop::Producer) }
+      context "when kafka is configured", :capture_kafka_messages do
         let(:events_params) { build_params(count: 2) }
 
         before do
           ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
           ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
-          allow(Karafka).to receive(:producer).and_return(karafka_producer)
-          allow(karafka_producer).to receive(:produce_many_async)
         end
 
         after do
