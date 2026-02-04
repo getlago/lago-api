@@ -178,4 +178,128 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
       end
     end
   end
+
+  describe "#preauthorise" do
+    subject(:preauthorise) { described_class.new.preauthorise(organization, event) }
+
+    let(:payment_method_id) { "pm_adyen_123456" }
+    let(:shopper_reference) { customer.external_id }
+
+    let(:event) do
+      {
+        "success" => "true",
+        "additionalData" => {
+          "shopperReference" => shopper_reference,
+          "recurring.recurringDetailReference" => payment_method_id
+        }
+      }
+    end
+
+    before { adyen_customer }
+
+    context "when event is successful" do
+      it "updates adyen_customer with payment_method_id and provider_customer_id" do
+        preauthorise
+
+        expect(adyen_customer.reload.payment_method_id).to eq(payment_method_id)
+        expect(adyen_customer.provider_customer_id).to eq(shopper_reference)
+      end
+
+      it "delivers a success webhook" do
+        expect { preauthorise }.to enqueue_job(SendWebhookJob)
+          .with("customer.payment_provider_created", customer)
+          .on_queue(webhook_queue)
+      end
+
+      it "does not create a PaymentMethod record" do
+        expect { preauthorise }.not_to change(PaymentMethod, :count)
+      end
+
+      context "with multiple_payment_methods feature flag enabled" do
+        before { organization.enable_feature_flag!(:multiple_payment_methods) }
+
+        it "creates a new PaymentMethod record" do
+          expect { preauthorise }.to change(PaymentMethod, :count).by(1)
+
+          payment_method = PaymentMethod.last
+          expect(payment_method.customer).to eq(customer)
+          expect(payment_method.payment_provider_customer).to eq(adyen_customer)
+          expect(payment_method.provider_method_id).to eq(payment_method_id)
+          expect(payment_method.provider_method_type).to eq("card")
+          expect(payment_method.is_default).to be(true)
+        end
+
+        it "still updates adyen_customer payment_method_id for backward compatibility" do
+          preauthorise
+
+          expect(adyen_customer.reload.payment_method_id).to eq(payment_method_id)
+        end
+
+        context "when PaymentMethod already exists" do
+          let!(:existing_payment_method) do
+            create(
+              :payment_method,
+              customer:,
+              payment_provider_customer: adyen_customer,
+              provider_method_id: payment_method_id,
+              is_default: false
+            )
+          end
+
+          it "does not create a new PaymentMethod" do
+            expect { preauthorise }.not_to change(PaymentMethod, :count)
+          end
+
+          it "sets the existing PaymentMethod as default" do
+            preauthorise
+
+            expect(existing_payment_method.reload.is_default).to be(true)
+          end
+        end
+      end
+    end
+
+    context "when event is not successful" do
+      let(:event) do
+        {
+          "success" => "false",
+          "reason" => "Refused",
+          "eventCode" => "AUTHORISATION",
+          "additionalData" => {
+            "shopperReference" => shopper_reference,
+            "recurring.recurringDetailReference" => payment_method_id
+          }
+        }
+      end
+
+      it "does not update adyen_customer" do
+        preauthorise
+
+        expect(adyen_customer.reload.payment_method_id).to be_nil
+      end
+
+      it "delivers an error webhook" do
+        expect { preauthorise }.to enqueue_job(SendWebhookJob)
+          .with(
+            "customer.payment_provider_error",
+            customer,
+            provider_error: {
+              message: "Refused",
+              error_code: "AUTHORISATION"
+            }
+          )
+          .on_queue(webhook_queue)
+      end
+    end
+
+    context "when adyen_customer is not found" do
+      let(:shopper_reference) { "unknown_customer" }
+
+      it "returns a successful result without updating" do
+        result = preauthorise
+
+        expect(result).to be_success
+      end
+    end
+  end
 end
