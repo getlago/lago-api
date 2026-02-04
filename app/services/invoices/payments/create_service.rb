@@ -5,9 +5,10 @@ module Invoices
     class CreateService < BaseService
       include Customers::PaymentProviderFinder
 
-      def initialize(invoice:, payment_provider: nil)
+      def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
         @provider = payment_provider&.to_sym
+        @payment_method_params = payment_method_params
 
         super
       end
@@ -42,6 +43,11 @@ module Invoices
           payable: invoice,
           payable_payment_status: "pending"
         )
+
+        if multiple_payment_methods_enabled?
+          payment.payment_method_id = determine_payment_method&.id
+          payment.save!
+        end
 
         result.payment = payment
 
@@ -81,7 +87,7 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider)
+        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
 
         result.payment_provider = provider
         result
@@ -89,7 +95,7 @@ module Invoices
 
       private
 
-      attr_reader :invoice, :payment
+      attr_reader :invoice, :payment, :payment_method_params
 
       delegate :customer, to: :invoice
 
@@ -97,12 +103,20 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
+      def multiple_payment_methods_enabled?
+        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+      end
+
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        current_payment_provider_customer&.provider_customer_id
+        if multiple_payment_methods_enabled?
+          current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
+        else
+          current_payment_provider_customer&.provider_customer_id
+        end
       end
 
       def current_payment_provider
@@ -164,6 +178,77 @@ module Invoices
           amount_currency: invoice.currency,
           payable_payment_status: "processing"
         )
+      end
+
+      # NOTE: Returns PaymentMethod object or nil
+      #       nil means: skip automatic payment (manual type or no payment method configured)
+      #       payment_method_params takes precedence (used for retry with override)
+      def determine_payment_method
+        @determine_payment_method ||= if payment_method_params.present?
+          determine_override_payment_method
+        else
+          determine_invoice_payment_method
+        end
+      end
+
+      def determine_override_payment_method
+        return nil if payment_method_params[:payment_method_type] == "manual"
+
+        if payment_method_params[:payment_method_id].present?
+          customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
+        else
+          customer.default_payment_method
+        end
+      end
+
+      def determine_invoice_payment_method
+        case invoice.invoice_type
+        when "subscription", "advance_charges", "progressive_billing"
+          determine_subscription_payment_method
+        when "credit"
+          determine_credit_payment_method
+        else
+          customer.default_payment_method
+        end
+      end
+
+      def determine_subscription_payment_method
+        subscription = invoice.invoice_subscriptions.first&.subscription
+        return nil unless subscription
+
+        return nil if subscription.payment_method_type == "manual"
+
+        if subscription.payment_method_id.present?
+          return customer.payment_methods.find_by(id: subscription.payment_method_id)
+        end
+
+        customer.default_payment_method
+      end
+
+      def determine_credit_payment_method
+        wallet_transaction = invoice.wallet_transactions.first
+        return nil unless wallet_transaction
+
+        return nil if wallet_transaction.payment_method_type == "manual"
+
+        if wallet_transaction.payment_method_id.present?
+          return customer.payment_methods.find_by(id: wallet_transaction.payment_method_id)
+        end
+
+        if wallet_transaction.source.to_s.in?(%w[interval threshold])
+          rule = wallet_transaction.wallet.recurring_transaction_rules.active.first
+          return nil if rule&.payment_method_type == "manual"
+          return customer.payment_methods.find_by(id: rule.payment_method_id) if rule&.payment_method_id.present?
+        end
+
+        wallet = wallet_transaction.wallet
+        return nil if wallet.payment_method_type == "manual"
+
+        if wallet.payment_method_id.present?
+          return customer.payment_methods.find_by(id: wallet.payment_method_id)
+        end
+
+        customer.default_payment_method
       end
     end
   end
