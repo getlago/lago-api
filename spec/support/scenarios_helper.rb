@@ -95,6 +95,46 @@ module ScenariosHelper
     end
   end
 
+  ### Plan Charges
+
+  def create_plan_charge(plan, params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/plans/#{plan.code}/charges", {charge: params})
+    end
+  end
+
+  def update_plan_charge(plan, charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}", {charge: params})
+    end
+  end
+
+  def delete_plan_charge(plan, charge_code, **kwargs)
+    api_call(**kwargs) do
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}")
+    end
+  end
+
+  ### Plan Charge Filters
+
+  def create_plan_charge_filter(plan, charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters", {filter: params})
+    end
+  end
+
+  def update_plan_charge_filter(plan, charge_code, filter_id, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}", {filter: params})
+    end
+  end
+
+  def delete_plan_charge_filter(plan, charge_code, filter_id, **kwargs)
+    api_call(**kwargs) do
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge_code}/filters/#{filter_id}")
+    end
+  end
+
   ### Subscriptions
 
   def create_subscription(params, authorization = nil, as: :json, **kwargs)
@@ -115,6 +155,34 @@ module ScenariosHelper
   def terminate_subscription(subscription, params: {}, **kwargs)
     api_call(**kwargs) do
       delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}?#{params.to_query}")
+    end
+  end
+
+  ### Subscription Charges
+
+  def update_subscription_charge(subscription, charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/charges/#{charge_code}", {charge: params})
+    end
+  end
+
+  ### Subscription Charge Filters
+
+  def create_subscription_charge_filter(subscription, charge_code, params, **kwargs)
+    api_call(**kwargs) do
+      post_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/charges/#{charge_code}/filters", {filter: params})
+    end
+  end
+
+  def update_subscription_charge_filter(subscription, charge_code, filter_id, params, **kwargs)
+    api_call(**kwargs) do
+      put_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/charges/#{charge_code}/filters/#{filter_id}", {filter: params})
+    end
+  end
+
+  def delete_subscription_charge_filter(subscription, charge_code, filter_id, **kwargs)
+    api_call(**kwargs) do
+      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}/charges/#{charge_code}/filters/#{filter_id}")
     end
   end
 
