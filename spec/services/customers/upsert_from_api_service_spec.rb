@@ -908,6 +908,50 @@ RSpec.describe Customers::UpsertFromApiService do
         end
       end
 
+      context "when removing the payment provider" do
+        let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
+        let(:create_args) do
+          {
+            external_id:,
+            billing_configuration: {
+              payment_provider: nil
+            }
+          }
+        end
+        let(:external_id) { SecureRandom.uuid }
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            external_id:,
+            payment_provider: "stripe",
+            payment_provider_code: "stripe_1"
+          )
+        end
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
+        let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+
+        before { payment_method }
+
+        it "removes the payment provider from customer" do
+          expect(result).to be_success
+
+          expect(result.customer.payment_provider).to be_nil
+        end
+
+        it "does not discard the provider customer" do
+          expect(result).to be_success
+
+          expect(stripe_customer.reload).not_to be_discarded
+        end
+
+        it "discards the old provider customer's payment methods" do
+          expect(result).to be_success
+
+          expect(payment_method.reload).to be_discarded
+        end
+      end
+
       context "when switching from stripe to gocardless" do
         let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
         let(:external_id) { SecureRandom.uuid }
@@ -981,6 +1025,152 @@ RSpec.describe Customers::UpsertFromApiService do
 
             expect(stripe_customer.reload).not_to be_discarded
             expect(payment_method.reload).not_to be_discarded
+          end
+        end
+      end
+
+      context "when changing the connected stripe account" do
+        let(:old_stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
+        let(:new_stripe_provider) { create(:stripe_provider, organization:, code: "stripe_2") }
+        let(:external_id) { SecureRandom.uuid }
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            external_id:,
+            payment_provider: "stripe",
+            payment_provider_code: "stripe_1"
+          )
+        end
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: old_stripe_provider) }
+        let(:old_payment_method) do
+          create(
+            :payment_method,
+            is_default: false, customer:,
+            payment_provider_customer: stripe_customer,
+            payment_provider: old_stripe_provider
+          )
+        end
+        let(:new_payment_method) do
+          create(
+            :payment_method,
+            customer:,
+            payment_provider_customer: stripe_customer,
+            payment_provider: new_stripe_provider
+          )
+        end
+
+        before do
+          old_payment_method
+          new_payment_method
+          new_stripe_provider
+        end
+
+        context "when provider_customer_id is sent" do
+          let(:create_args) do
+            {
+              external_id:,
+              billing_configuration: {
+                payment_provider: "stripe",
+                payment_provider_code: "stripe_2",
+                provider_customer_id: "stripe_2_id"
+              }
+            }
+          end
+
+          before do
+            allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
+          end
+
+          it "updates the stripe provider code" do
+            expect(result).to be_success
+
+            expect(result.customer.payment_provider).to eq("stripe")
+            expect(result.customer.payment_provider_code).to eq("stripe_2")
+          end
+
+          it "does not discard the provider customer" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
+          end
+
+          it "discards the old payment methods tied to the old payment provider" do
+            expect(result).to be_success
+
+            expect(old_payment_method.reload).to be_discarded
+          end
+
+          it "does not discard the newly created payment methods tied to the new payment provider" do
+            expect(result).to be_success
+
+            expect(new_payment_method.reload).not_to be_discarded
+          end
+        end
+
+        # NOTE: This a scenario with incorrect behavior that currently exists.
+        #       The old customer ID doesn't exist on the new Stripe account, causing an error
+        #       when trying to update the customer on Stripe.
+        context "when provider_customer_id is not sent" do
+          let(:create_args) do
+            {
+              external_id:,
+              billing_configuration: {
+                sync_with_provider: true,
+                payment_provider: "stripe",
+                payment_provider_code: "stripe_2"
+              }
+            }
+          end
+
+          before do
+            allow(Stripe::Customer).to receive(:update).and_raise(
+              Stripe::InvalidRequestError.new(
+                "No such customer: '#{stripe_customer.provider_customer_id}'",
+                "id",
+                http_status: 404,
+                code: "resource_missing"
+              )
+            )
+          end
+
+          it "fails with a stripe_error" do
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:base]).to include("stripe_error")
+          end
+        end
+
+        # NOTE: This a scenario with incorrect behavior that currently exists.
+        #       The old customer ID doesn't exist on the new Stripe account, causing an error
+        #       when trying to update the customer on Stripe.
+        context "when provider_customer_id is set to nil" do
+          let(:create_args) do
+            {
+              external_id:,
+              billing_configuration: {
+                provider_customer_id: nil,
+                payment_provider: "stripe",
+                payment_provider_code: "stripe_2"
+              }
+            }
+          end
+
+          before do
+            allow(Stripe::Customer).to receive(:update).and_raise(
+              Stripe::InvalidRequestError.new(
+                "No such customer: '#{stripe_customer.provider_customer_id}'",
+                "id",
+                http_status: 404,
+                code: "resource_missing"
+              )
+            )
+          end
+
+          it "fails with a stripe_error" do
+            expect(result).to be_failure
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:base]).to include("stripe_error")
           end
         end
       end
