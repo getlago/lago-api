@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::Payments::CreateService do
-  subject(:create_service) { described_class.new(invoice:, payment_provider: provider) }
+  subject(:create_service) { described_class.new(invoice:, payment_provider: provider, payment_method_params:) }
 
   let(:organization) { create(:organization) }
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100) }
@@ -12,6 +12,8 @@ RSpec.describe Invoices::Payments::CreateService do
   let(:payment_provider_code) { "stripe_1" }
   let(:payment_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
   let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+  let(:default_payment_method) { create(:payment_method, customer:, is_default: true) }
+  let(:payment_method_params) { {} }
 
   describe "#call" do
     let(:result) do
@@ -25,6 +27,7 @@ RSpec.describe Invoices::Payments::CreateService do
 
     before do
       provider_customer
+      default_payment_method
 
       allow(provider_class)
         .to receive(:new)
@@ -94,6 +97,219 @@ RSpec.describe Invoices::Payments::CreateService do
 
         expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
+      end
+    end
+
+    context "with subscription invoice" do
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:subscription_payment_method) { create(:payment_method, customer:, is_default: false) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) do
+        create(:subscription, customer:, plan:, organization:, payment_method: subscription_payment_method)
+      end
+      let(:invoice) do
+        create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :subscription)
+      end
+
+      before do
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      context "when payment method is attached to subscription" do
+        it "creates payment with subscription payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(subscription_payment_method.id)
+        end
+      end
+
+      context "when manual payment method is attached to subscription" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:, payment_method_type: "manual")
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when payment method is NOT attached to subscription" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:, payment_method: nil)
+        end
+
+        it "creates payment with customer default payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(default_payment_method.id)
+        end
+      end
+
+      context "when payment method is not attached to subscription and there is no default payment method" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:, payment_method: nil)
+        end
+        let(:default_payment_method) { nil }
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+    end
+
+    context "with credit invoice" do
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:wallet) { create(:wallet, customer:, organization:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
+      let(:invoice) do
+        create(:invoice, :credit, customer:, organization:, total_amount_cents: 100)
+      end
+
+      before do
+        wallet_transaction
+      end
+
+      context "when payment method is attached to wallet transaction" do
+        let(:wt_payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, invoice:, source: :manual, payment_method: wt_payment_method)
+        end
+
+        it "creates payment with wallet transaction payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(wt_payment_method.id)
+        end
+      end
+
+      context "when manual payment method is attached to wallet transaction" do
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, invoice:, source: :manual, payment_method_type: "manual")
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when payment method is attached to recurring rule" do
+        let(:rule_payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:recurring_rule) do
+          create(:recurring_transaction_rule, wallet:, payment_method: rule_payment_method)
+        end
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, invoice:, source: :interval)
+        end
+
+        before { recurring_rule }
+
+        it "creates payment with recurring rule payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(rule_payment_method.id)
+        end
+      end
+
+      context "when manual payment method is attached to recurring rule" do
+        let(:recurring_rule) do
+          create(:recurring_transaction_rule, wallet:, payment_method_type: "manual")
+        end
+        let(:wallet_transaction) do
+          create(:wallet_transaction, wallet:, invoice:, source: :interval)
+        end
+
+        before { recurring_rule }
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when payment method is attached to wallet" do
+        let(:wallet_payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:wallet) { create(:wallet, customer:, organization:, payment_method: wallet_payment_method) }
+
+        it "creates payment with wallet payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(wallet_payment_method.id)
+        end
+      end
+
+      context "when manual payment method is attached to wallet" do
+        let(:wallet) { create(:wallet, customer:, organization:, payment_method_type: "manual") }
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when payment method is NOT attached to any wallet related object" do
+        it "creates payment with customer default payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(default_payment_method.id)
+        end
+      end
+    end
+
+    context "with one-off invoice" do
+      let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+      let(:invoice) do
+        create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :one_off)
+      end
+
+      context "when manual payment method is passed in params" do
+        let(:payment_method_params) { {payment_method_type: "manual"} }
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when valid payment method is passed in params" do
+        let(:one_off_payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:payment_method_params) { {payment_method_id: one_off_payment_method.id} }
+
+        it "creates payment with passed payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(one_off_payment_method.id)
+        end
+      end
+
+      context "when payment method is NOT passed in params" do
+        it "creates payment with customer default payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(default_payment_method.id)
+        end
       end
     end
 
@@ -403,7 +619,7 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(result).to be_success
         expect(result.payment_provider).to eq(provider.to_sym)
       }.to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-        .with(invoice:, payment_provider: :stripe)
+        .with(invoice:, payment_provider: :stripe, payment_method_params: {})
     end
 
     context "with gocardless payment provider" do
@@ -412,7 +628,7 @@ RSpec.describe Invoices::Payments::CreateService do
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-          .with(invoice:, payment_provider: :gocardless)
+          .with(invoice:, payment_provider: :gocardless, payment_method_params: {})
       end
     end
 
@@ -422,7 +638,7 @@ RSpec.describe Invoices::Payments::CreateService do
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
           .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
-          .with(invoice:, payment_provider: :adyen)
+          .with(invoice:, payment_provider: :adyen, payment_method_params: {})
       end
     end
 
