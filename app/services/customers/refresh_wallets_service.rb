@@ -36,7 +36,7 @@ module Customers
         )
       end
 
-      customer.update!(awaiting_wallet_refresh: false)
+      customer.update!(awaiting_wallet_refresh: false) if customer.awaiting_wallet_refresh?
 
       result.usage_amount_cents = usage_amount_cents
       result.allocation_rules = allocation_rules
