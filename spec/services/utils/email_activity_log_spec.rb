@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Utils::EmailActivityLog do
+RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
   let(:invoice) { create(:invoice) }
   let(:organization) { invoice.organization }
   let(:customer) { invoice.customer }
-  let(:karafka_producer) { instance_double(WaterDrop::Producer) }
-  let(:produced_args) { [] }
 
   let(:message) do
     instance_double(
@@ -26,23 +24,21 @@ RSpec.describe Utils::EmailActivityLog do
 
     travel_to(Time.zone.parse("2024-01-15 12:00:00"))
     allow(SecureRandom).to receive(:uuid).and_return("test-activity-id")
-    allow(Karafka).to receive(:producer).and_return(karafka_producer)
-    allow(karafka_producer).to receive(:produce_async) { |args| produced_args << args }
   end
 
   describe ".produce" do
     it "sends to kafka with correct topic and key" do
       described_class.produce(document: invoice, message:)
 
-      expect(produced_args.size).to eq(1)
-      expect(produced_args.first[:topic]).to eq("activity_logs")
-      expect(produced_args.first[:key]).to eq("#{organization.id}--test-activity-id")
+      expect(kafka_messages.size).to eq(1)
+      expect(kafka_messages.first[:topic]).to eq("activity_logs")
+      expect(kafka_messages.first[:key]).to eq("#{organization.id}--test-activity-id")
     end
 
     it "sets status to sent by default" do
       described_class.produce(document: invoice, message:)
 
-      payload = JSON.parse(produced_args.first[:payload])
+      payload = JSON.parse(kafka_messages.first[:payload])
       activity_object = JSON.parse(payload["activity_object"])
 
       expect(payload["activity_source"]).to eq("system")
@@ -53,7 +49,7 @@ RSpec.describe Utils::EmailActivityLog do
     it "sets status to resent when resend is true" do
       described_class.produce(document: invoice, message:, resend: true)
 
-      payload = JSON.parse(produced_args.first[:payload])
+      payload = JSON.parse(kafka_messages.first[:payload])
       activity_object = JSON.parse(payload["activity_object"])
 
       expect(activity_object["status"]).to eq("resent")
@@ -62,7 +58,7 @@ RSpec.describe Utils::EmailActivityLog do
     it "sets status to failed when error provided" do
       described_class.produce(document: invoice, message:, error: StandardError.new("SMTP failed"))
 
-      payload = JSON.parse(produced_args.first[:payload])
+      payload = JSON.parse(kafka_messages.first[:payload])
       activity_object = JSON.parse(payload["activity_object"])
 
       expect(activity_object["status"]).to eq("failed")
@@ -72,7 +68,7 @@ RSpec.describe Utils::EmailActivityLog do
     it "sets activity_source to api when api_key_id provided" do
       described_class.produce(document: invoice, message:, api_key_id: "key-123")
 
-      payload = JSON.parse(produced_args.first[:payload])
+      payload = JSON.parse(kafka_messages.first[:payload])
       expect(payload["activity_source"]).to eq("api")
       expect(payload["api_key_id"]).to eq("key-123")
     end
@@ -80,7 +76,7 @@ RSpec.describe Utils::EmailActivityLog do
     it "sets activity_source to front when user_id provided" do
       described_class.produce(document: invoice, message:, user_id: "user-456")
 
-      payload = JSON.parse(produced_args.first[:payload])
+      payload = JSON.parse(kafka_messages.first[:payload])
       expect(payload["activity_source"]).to eq("front")
       expect(payload["user_id"]).to eq("user-456")
     end
@@ -90,19 +86,19 @@ RSpec.describe Utils::EmailActivityLog do
 
       described_class.produce(document: invoice, message:)
 
-      expect(produced_args).to be_empty
+      expect(kafka_messages).to be_empty
     end
 
     it "does not send to kafka when document is nil" do
       described_class.produce(document: nil, message:)
 
-      expect(produced_args).to be_empty
+      expect(kafka_messages).to be_empty
     end
 
     it "does not send to kafka when message is nil" do
       described_class.produce(document: invoice, message: nil)
 
-      expect(produced_args).to be_empty
+      expect(kafka_messages).to be_empty
     end
 
     it "logs error and returns nil when kafka raises" do
@@ -121,7 +117,7 @@ RSpec.describe Utils::EmailActivityLog do
       it "includes credit_note number in document reference" do
         described_class.produce(document: credit_note, message:)
 
-        payload = JSON.parse(produced_args.first[:payload])
+        payload = JSON.parse(kafka_messages.first[:payload])
         activity_object = JSON.parse(payload["activity_object"])
 
         expect(activity_object["document"]["type"]).to eq("CreditNote")
@@ -147,7 +143,7 @@ RSpec.describe Utils::EmailActivityLog do
       it "includes payment_receipt number in document reference" do
         described_class.produce(document: payment_receipt, message:)
 
-        payload = JSON.parse(produced_args.first[:payload])
+        payload = JSON.parse(kafka_messages.first[:payload])
         activity_object = JSON.parse(payload["activity_object"])
 
         expect(activity_object["document"]["type"]).to eq("PaymentReceipt")
@@ -157,7 +153,7 @@ RSpec.describe Utils::EmailActivityLog do
       it "uses payment_receipt as resource" do
         described_class.produce(document: payment_receipt, message:)
 
-        payload = JSON.parse(produced_args.first[:payload])
+        payload = JSON.parse(kafka_messages.first[:payload])
 
         expect(payload["resource_type"]).to eq("PaymentReceipt")
         expect(payload["resource_id"]).to eq(payment_receipt.id)

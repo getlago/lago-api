@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Utils::ActivityLog do
+RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
   subject(:activity_log) { described_class }
 
   let(:membership) { create(:membership) }
@@ -8,7 +8,6 @@ RSpec.describe Utils::ActivityLog do
 
   let(:organization) { create(:organization) }
   let(:coupon) { create(:coupon, organization:) }
-  let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
   let(:serialized_coupon) do
     {
@@ -43,9 +42,6 @@ RSpec.describe Utils::ActivityLog do
     allow(CurrentContext).to receive(:api_key_id).and_return(api_key.id)
     allow(CurrentContext).to receive(:source).and_return("api")
     travel_to(Time.zone.parse("2023-03-22 12:00:00"))
-
-    allow(Karafka).to receive(:producer).and_return(karafka_producer)
-    allow(karafka_producer).to receive(:produce_async)
   end
 
   around do |example|

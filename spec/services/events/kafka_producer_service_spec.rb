@@ -1,18 +1,12 @@
 # frozen_string_literal: true
 
-RSpec.describe Events::KafkaProducerService do
+RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
   subject(:producer_service) { described_class.new(events:, organization:) }
 
   let(:events) { create_list(:event, 2, organization:) }
   let(:organization) { create(:organization) }
 
-  let(:karafka_producer) { instance_double(WaterDrop::Producer) }
-
   describe "#call" do
-    before do
-      allow(Karafka).to receive(:producer).and_return(karafka_producer)
-      allow(karafka_producer).to receive(:produce_many_async)
-    end
 
     context "with Kafka config" do
       before do
