@@ -71,12 +71,7 @@ module PaymentProviderCustomers
         adyen_customer.update!(payment_method_id:, provider_customer_id: shopper_reference)
 
         if organization.feature_flag_enabled?(:multiple_payment_methods)
-          PaymentMethods::FindOrCreateFromProviderService.call(
-            customer:,
-            payment_provider_customer: adyen_customer,
-            provider_method_id: payment_method_id,
-            set_as_default: true
-          )
+          handle_payment_methods(payment_method_id)
         end
 
         SendWebhookJob.perform_later("customer.payment_provider_created", customer)
@@ -156,6 +151,17 @@ module PaymentProviderCustomers
       return result if Customer.find_by(external_id: shopper_reference).nil?
 
       result.not_found_failure!(resource: "adyen_customer")
+    end
+
+    def handle_payment_methods(payment_method_id)
+      PaymentMethods::FindOrCreateFromProviderService.call(
+        customer:,
+        payment_provider_customer: adyen_customer,
+        provider_method_id: payment_method_id,
+        set_as_default: true
+      )
+    # race condition for multiple calls while creating the PM
+    rescue ActiveRecord::RecordNotUnique
     end
   end
 end
