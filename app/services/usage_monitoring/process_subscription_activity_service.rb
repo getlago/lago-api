@@ -35,13 +35,13 @@ module UsageMonitoring
       ).includes(:thresholds)
 
       alerts.using_current_usage.find_each do |alert|
-        ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+        ProcessAlertService.call(alert:, alertable: subscription, current_metrics: current_usage)
       rescue => e
         exception_to_raise ||= e
       end
 
       alerts.using_lifetime_usage.find_each do |alert|
-        ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
+        ProcessAlertService.call(alert:, alertable: subscription, current_metrics: lifetime_usage)
       rescue => e
         exception_to_raise ||= e
       end
