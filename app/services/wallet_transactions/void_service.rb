@@ -21,6 +21,7 @@ module WalletTransactions
 
     def call
       return result if wallet_credit.credit_amount.zero?
+      return result unless valid?
 
       ActiveRecord::Base.transaction do
         wallet_transaction = CreateService.call!(
@@ -50,5 +51,20 @@ module WalletTransactions
     private
 
     attr_reader :wallet, :wallet_credit, :inbound_wallet_transaction, :transaction_params
+
+    def valid?
+      return true unless wallet.traceable?
+      return true unless inbound_wallet_transaction
+
+      if wallet_credit.amount_cents > inbound_wallet_transaction.remaining_amount_cents
+        result.single_validation_failure!(
+          field: :amount_cents,
+          error_code: "exceeds_remaining_transaction_amount"
+        )
+        return false
+      end
+
+      true
+    end
   end
 end

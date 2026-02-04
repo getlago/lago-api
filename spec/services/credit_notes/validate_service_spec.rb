@@ -500,5 +500,62 @@ RSpec.describe CreditNotes::ValidateService do
         end
       end
     end
+
+    context "when invoice is type credit with non-traceable wallet" do
+      let(:organization) { create(:organization) }
+      let(:cust) { create(:customer, organization:) }
+      let(:wallet) { create(:wallet, customer: cust, balance_cents: 500, traceable: false) }
+      let(:inbound_wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10)
+      end
+
+      let(:invoice) do
+        create(:invoice,
+          :credit,
+          organization:,
+          customer: cust,
+          total_amount_cents: 1000,
+          total_paid_amount_cents: 1000,
+          payment_status: :succeeded)
+      end
+
+      let!(:credit_fee) do
+        create(:fee,
+          invoice:,
+          fee_type: :credit,
+          invoiceable: inbound_wallet_transaction,
+          amount_cents: 1000)
+      end
+
+      let(:credit_amount_cents) { 0 }
+      let(:refund_amount_cents) { 700 }
+      let(:amount_cents) { 700 }
+      let(:precise_taxes_amount_cents) { 0 }
+
+      let(:fee) { credit_fee }
+
+      it "fails validation when refund exceeds wallet balance" do
+        expect(validator).not_to be_valid
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_amount_cents]).to eq(["exceeds_available_amount"])
+      end
+
+      context "when refund amount is within wallet balance" do
+        let(:refund_amount_cents) { 500 }
+        let(:amount_cents) { 500 }
+
+        it "passes the validation" do
+          expect(validator).to be_valid
+        end
+      end
+    end
   end
 end
