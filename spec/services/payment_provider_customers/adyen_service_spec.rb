@@ -255,6 +255,16 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
 
             expect(existing_payment_method.reload.is_default).to be(true)
           end
+
+          context "when payment method lookup raises RecordNotUnique" do
+            before do
+              allow(PaymentMethods::FindOrCreateFromProviderService).to receive(:call).and_raise(ActiveRecord::RecordNotUnique)
+            end
+
+            it "does not raise error" do
+              expect { preauthorise }.not_to raise_error(ActiveRecord::RecordNotUnique)
+            end
+          end
         end
       end
     end
