@@ -49,6 +49,20 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
           expect(result.payment_method.is_default).to be_truthy
         end
       end
+
+      context "when payment_method_id is nil" do
+        let(:payment_method_id) { nil }
+
+        it "does not create a PaymentMethod" do
+          expect { update_service.call }.not_to change(PaymentMethod, :count)
+        end
+      end
+    end
+
+    context "without multiple_payment_methods feature flag" do
+      it "does not create a PaymentMethod" do
+        expect { update_service.call }.not_to change(PaymentMethod, :count)
+      end
     end
 
     context "with pending invoices" do

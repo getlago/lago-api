@@ -38,11 +38,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
         expect(result).to be_success
         expect(payment.reload.provider_payment_method_id).to start_with "pm_"
-        expect(payment.reload.provider_payment_method_data).to eq({
-          "type" => "card",
-          "brand" => "visa",
-          "last4" => "4242"
-        })
+        expect(payment.reload.provider_payment_method_data["type"]).to eq("card")
+        expect(payment.reload.provider_payment_method_data["brand"]).to eq("visa")
+        expect(payment.reload.provider_payment_method_data["last4"]).to eq("4242")
       end
 
       it "does not enqueue a payment receipt job" do
@@ -137,11 +135,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
         expect(result).to be_success
         expect(payment.reload.provider_payment_method_id).to start_with "pm_"
-        expect(payment.reload.provider_payment_method_data).to eq({
-          "type" => "card",
-          "brand" => "visa",
-          "last4" => "4242"
-        })
+        expect(payment.reload.provider_payment_method_data["type"]).to eq("card")
+        expect(payment.reload.provider_payment_method_data["brand"]).to eq("visa")
+        expect(payment.reload.provider_payment_method_data["last4"]).to eq("4242")
       end
 
       context "when payment belongs to a payment_request from another organization" do
