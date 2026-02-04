@@ -428,10 +428,10 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
           File.read(p)
         end
 
-        it "marks invoice as failed and creates error detail" do
+        it "returns a tax error, marks invoice as failed and creates error detail" do
           result = invoice_service.call
 
-          expect(result).to be_failure
+          expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
 

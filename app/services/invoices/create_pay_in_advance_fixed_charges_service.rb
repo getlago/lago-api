@@ -34,11 +34,11 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         if customer_provider_taxation?
-          taxes_result = fetch_provider_taxes
-          unless taxes_result.success?
+          @taxes_result = apply_provider_taxes
+          unless @taxes_result.success?
             invoice.failed!
             invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-            create_error_detail(taxes_result.error)
+            create_error_detail(@taxes_result.error.code)
             Utils::ActivityLog.produce(invoice, "invoice.failed")
             next
           end
@@ -54,7 +54,9 @@ module Invoices
         invoice.save!
       end
 
-      return result if invoice.failed?
+      if @taxes_result && !@taxes_result.success?
+        return result.validation_failure!(errors: {tax_error: [@taxes_result.error.code]})
+      end
 
       result.invoice = invoice
 
@@ -169,7 +171,7 @@ module Invoices
       @customer_provider_taxation ||= customer.tax_customer.present?
     end
 
-    def fetch_provider_taxes
+    def apply_provider_taxes
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
       return taxes_result unless taxes_result.success?
 
@@ -184,14 +186,14 @@ module Invoices
       taxes_result
     end
 
-    def create_error_detail(error)
+    def create_error_detail(code)
       ErrorDetails::CreateService.call!(
         owner: invoice,
         organization: invoice.organization,
         params: {
           error_code: :tax_error,
           details: {
-            tax_error: error.code
+            tax_error: code
           }
         }
       )
