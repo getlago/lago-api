@@ -89,6 +89,30 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
         expect(json[:filters].first[:lago_id]).to eq(charge_filter.id)
       end
     end
+
+    context "when both parent charge and overridden charge have filters" do
+      let(:parent_filter) { create(:charge_filter, charge:, organization:, invoice_display_name: "Parent Filter") }
+      let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+      let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
+      let(:overridden_charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
+      let(:overridden_filter) { create(:charge_filter, charge: overridden_charge, organization:, invoice_display_name: "Override Filter") }
+
+      before do
+        create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: ["us"], organization:)
+        overridden_charge
+        create(:charge_filter_value, charge_filter: overridden_filter, billable_metric_filter:, values: ["eu"], organization:)
+      end
+
+      it "returns only filters from the overridden charge, not parent" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filters].length).to eq(1)
+        expect(json[:filters].first[:lago_id]).to eq(overridden_filter.id)
+        expect(json[:filters].first[:invoice_display_name]).to eq("Override Filter")
+        expect(json[:filters].map { |f| f[:lago_id] }).not_to include(parent_filter.id)
+      end
+    end
   end
 
   describe "GET /api/v1/subscriptions/:external_id/charges/:code/filters/:id" do
@@ -138,6 +162,26 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
         subject
 
         expect(response).to be_not_found_error("charge_filter")
+      end
+    end
+
+    context "when subscription has plan override with charge override" do
+      let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+      let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
+      let(:overridden_charge) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
+      let(:charge_filter) { create(:charge_filter, charge: overridden_charge, organization:, invoice_display_name: "Override Filter") }
+
+      before do
+        overridden_charge
+      end
+
+      it "returns the filter from the overridden charge" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filter][:lago_id]).to eq(charge_filter.id)
+        expect(json[:filter][:invoice_display_name]).to eq("Override Filter")
+        expect(json[:filter][:charge_code]).to eq(overridden_charge.code)
       end
     end
   end
@@ -233,6 +277,34 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
           expect(response).to have_http_status(:success)
           new_filter = ChargeFilter.find(json[:filter][:lago_id])
           expect(new_filter.charge_id).to eq(overridden_charge.id)
+        end
+      end
+
+      context "when parent charge has existing filters" do
+        let(:parent_filter) { create(:charge_filter, charge:, organization:, invoice_display_name: "Parent Filter") }
+
+        before do
+          create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: ["eu"], organization:)
+        end
+
+        it "creates a new filter without affecting parent filters" do
+          expect { subject }
+            .to change(Plan, :count).by(1)
+            .and change(Charge, :count).by(1)
+            .and change(ChargeFilter, :count).by(2) # 1 copied from parent + 1 new
+
+          expect(response).to have_http_status(:success)
+
+          # Parent filter should be unchanged
+          expect(parent_filter.reload.invoice_display_name).to eq("Parent Filter")
+        end
+
+        it "creates charge override with parent_id pointing to original charge" do
+          subject
+
+          subscription.reload
+          overridden_charge = subscription.plan.charges.find_by(code: charge.code)
+          expect(overridden_charge.parent_id).to eq(charge.id)
         end
       end
     end
@@ -341,6 +413,44 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
           expect(json[:filter][:properties]).to include(amount: "100")
         end
       end
+
+      context "when updating filter on parent charge (no override yet)" do
+        # charge_filter is on parent charge, subscription uses parent plan (no override)
+        # When update is called, it creates plan override, charge override (with copied filters), then updates
+
+        it "does not modify the parent filter" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          # Parent filter should remain unchanged
+          charge_filter.reload
+          expect(charge_filter.invoice_display_name).to eq("Original Name")
+          expect(charge_filter.properties["amount"]).to eq("10")
+        end
+
+        it "creates override chain and updates the copied filter" do
+          expect { subject }
+            .to change(Plan, :count).by(1)
+            .and change(Charge, :count).by(1)
+            .and change(ChargeFilter, :count).by(1) # copied filter
+
+          expect(response).to have_http_status(:success)
+
+          # The returned filter should be the copied one with updated properties
+          expect(json[:filter][:lago_id]).not_to eq(charge_filter.id)
+          expect(json[:filter][:invoice_display_name]).to eq("Updated Name")
+          expect(json[:filter][:properties]).to include(amount: "100")
+        end
+
+        it "creates charge override with parent_id pointing to original charge" do
+          subject
+
+          subscription.reload
+          overridden_charge = subscription.plan.charges.find_by(code: charge.code)
+          expect(overridden_charge.parent_id).to eq(charge.id)
+        end
+      end
     end
 
     context "without premium license" do
@@ -442,6 +552,47 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
           subject
 
           expect(charge_filter_value.reload.deleted_at).to be_present
+        end
+      end
+
+      context "when deleting filter on parent charge (no override yet)" do
+        # charge_filter is on parent charge, subscription uses parent plan (no override)
+        # When delete is called, it creates plan override, charge override (with copied filters), then deletes
+
+        it "does not delete the parent filter" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          # Parent filter should remain unchanged (not discarded)
+          charge_filter.reload
+          expect(charge_filter.deleted_at).to be_nil
+          expect(charge_filter_value.reload.deleted_at).to be_nil
+        end
+
+        it "creates override chain and deletes the copied filter" do
+          # A new filter is created (copied) then soft deleted, so count changes by 1 (default scope excludes deleted)
+          expect { subject }
+            .to change(Plan, :count).by(1)
+            .and change(Charge, :count).by(1)
+            .and change(ChargeFilter, :count).by(0) # created and deleted, so net change is 0 in default scope
+
+          expect(response).to have_http_status(:success)
+
+          # The returned filter should be the copied one that was deleted, not the parent
+          deleted_filter_id = json[:filter][:lago_id]
+          expect(deleted_filter_id).not_to eq(charge_filter.id)
+
+          deleted_filter = ChargeFilter.unscoped.find(deleted_filter_id)
+          expect(deleted_filter.deleted_at).to be_present
+        end
+
+        it "creates charge override with parent_id pointing to original charge" do
+          subject
+
+          subscription.reload
+          overridden_charge = subscription.plan.charges.find_by(code: charge.code)
+          expect(overridden_charge.parent_id).to eq(charge.id)
         end
       end
     end
