@@ -30,14 +30,8 @@ RSpec.describe Utils::ApiLog do
     travel_to(Time.zone.parse("2023-03-22 12:00:00"))
   end
 
-  describe ".produce" do
+  describe ".produce", :capture_kafka_messages do
     let(:organization) { create(:organization) }
-    let(:karafka_producer) { instance_double(WaterDrop::Producer) }
-
-    before do
-      allow(Karafka).to receive(:producer).and_return(karafka_producer)
-      allow(karafka_producer).to receive(:produce_async)
-    end
 
     context "when kafka is configured" do
       before do
