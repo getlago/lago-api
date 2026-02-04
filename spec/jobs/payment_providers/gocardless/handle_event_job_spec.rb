@@ -8,6 +8,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
   let(:gocardless_service) { instance_double(PaymentProviders::GocardlessService) }
   let(:result) { BaseService::Result.new }
   let(:organization) { create(:organization) }
+  let(:payment_provider) { create(:gocardless_provider, organization:) }
 
   let(:event_json) do
     path = Rails.root.join("spec/fixtures/gocardless/events.json")
@@ -18,10 +19,10 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
 
   it "delegate to the event service" do
     allow(PaymentProviders::Gocardless::HandleEventService).to receive(:call)
-      .with(event_json:)
+      .with(payment_provider:, event_json:)
       .and_return(service_result)
 
-    handle_event_job.perform_now(organization:, event_json:)
+    handle_event_job.perform_now(organization:, payment_provider:, event_json:)
 
     expect(PaymentProviders::Gocardless::HandleEventService).to have_received(:call)
   end

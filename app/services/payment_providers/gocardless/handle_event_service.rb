@@ -5,13 +5,15 @@ module PaymentProviders
     class HandleEventService < BaseService
       PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
       REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
+      MANDATE_ACTIONS = %w[active].freeze
 
       PAYMENT_SERVICE_CLASS_MAP = {
         "Invoice" => Invoices::Payments::GocardlessService,
         "PaymentRequest" => PaymentRequests::Payments::GocardlessService
       }.freeze
 
-      def initialize(event_json:)
+      def initialize(payment_provider:, event_json:)
+        @payment_provider = payment_provider
         @event_json = event_json
 
         super
@@ -36,6 +38,13 @@ module PaymentProviders
                 metadata: event.metadata
               ).raise_if_error!
           end
+        when "mandates"
+          if MANDATE_ACTIONS.include?(event.action)
+            PaymentProviders::Gocardless::Webhooks::MandateActiveService.call(
+              payment_provider:,
+              mandate_id: event.links.mandate
+            ).raise_if_error!
+          end
         end
 
         result
@@ -46,7 +55,7 @@ module PaymentProviders
 
       private
 
-      attr_reader :organization, :event_json
+      attr_reader :payment_provider, :event_json
 
       def event
         @event ||= GoCardlessPro::Resources::Event.new(JSON.parse(event_json))
