@@ -26,7 +26,6 @@ end
 #  decimal_value            :decimal(40, 15)  default(0.0), not null
 #  enriched_at              :datetime         not null
 #  grouped_by               :jsonb            not null
-#  properties               :jsonb            not null
 #  timestamp                :datetime         not null
 #  value                    :string
 #  charge_filter_id         :uuid
