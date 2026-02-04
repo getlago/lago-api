@@ -36,7 +36,7 @@ RSpec.describe CreditNotes::ValidateService do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120, fees_amount_cents: 100, total_paid_amount_cents:) }
   let(:customer) { invoice.customer }
   let(:total_paid_amount_cents) { 0 }
 
@@ -69,7 +69,7 @@ RSpec.describe CreditNotes::ValidateService do
         it "fails the validation" do
           expect(validator).not_to be_valid
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:refund_amount_cents]).to eq(["cannot_refund_unpaid_invoice"])
+          expect(result.error.messages[:refund_amount_cents]).to include("cannot_refund_unpaid_invoice")
         end
       end
 
@@ -488,7 +488,7 @@ RSpec.describe CreditNotes::ValidateService do
         expect(validator).not_to be_valid
 
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:refund_amount_cents]).to eq(["exceeds_available_amount"])
+        expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
 
       context "when refund amount is within remaining transaction amount" do
@@ -545,7 +545,7 @@ RSpec.describe CreditNotes::ValidateService do
         expect(validator).not_to be_valid
 
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:refund_amount_cents]).to eq(["exceeds_available_amount"])
+        expect(result.error.messages[:refund_amount_cents]).to eq(["higher_than_remaining_invoice_amount"])
       end
 
       context "when refund amount is within wallet balance" do

@@ -102,18 +102,7 @@ module CreditNotes
         return false
       end
 
-      # For credit invoices, validate against available amount
-      # (remaining transaction amount for traceable wallets, wallet balance otherwise)
-      if invoice.credit?
-        available = credit_invoice_available_amount_cents
-        if credit_note.refund_amount_cents > available
-          add_error(field: :refund_amount_cents, error_code: "exceeds_available_amount")
-          return false
-        end
-      end
-
-      refundable_paid_cents = invoice.total_paid_amount_cents - refunded_invoice_amount_cents
-      return true if credit_note.refund_amount_cents <= refundable_paid_cents
+      return true if credit_note.refund_amount_cents <= invoice.refundable_amount_cents
 
       add_error(field: :refund_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end
@@ -178,22 +167,6 @@ module CreditNotes
       return true if total_amount_cents > 0
 
       add_error(field: :base, error_code: "total_amount_must_be_positive")
-    end
-
-    def credit_invoice_available_amount_cents
-      return 0 unless invoice.credit?
-
-      inbound_transaction = invoice.fees.credit.first&.invoiceable
-      return 0 unless inbound_transaction
-
-      wallet = inbound_transaction.wallet
-      return 0 unless wallet&.active?
-
-      if wallet.traceable?
-        inbound_transaction.remaining_amount_cents || 0
-      else
-        wallet.balance_cents
-      end
     end
   end
 end
