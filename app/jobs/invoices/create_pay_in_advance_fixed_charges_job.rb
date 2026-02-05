@@ -10,6 +10,8 @@ module Invoices
       end
     end
 
+    retry_on Customers::FailedToAcquireLock, attempts: 25, wait: ->(_) { rand(0...16) }
+
     def perform(subscription, timestamp)
       result = Invoices::CreatePayInAdvanceFixedChargesService.call(
         subscription:,
