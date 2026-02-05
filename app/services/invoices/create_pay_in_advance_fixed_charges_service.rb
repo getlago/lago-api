@@ -63,7 +63,7 @@ module Invoices
         return result.validation_failure!(errors: {tax_error: [@taxes_result.error.code]})
       end
 
-      if @vies_check_result && @vies_check_result.failure?
+      if @vies_check_result&.failure?
         return result
       end
 
