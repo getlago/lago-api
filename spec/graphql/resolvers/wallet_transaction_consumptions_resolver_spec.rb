@@ -5,13 +5,12 @@ require "rails_helper"
 RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
   let(:query) do
     <<~GQL
-      query($walletTransactionId: ID!) {
-        walletTransactionConsumptions(walletTransactionId: $walletTransactionId, limit: 5) {
+      query($walletTransactionId: ID!, $page: Int, $limit: Int) {
+        walletTransactionConsumptions(walletTransactionId: $walletTransactionId, page: $page, limit: $limit) {
           collection {
             id
             amountCents
-            inboundWalletTransaction { id }
-            outboundWalletTransaction { id }
+            walletTransaction { id }
           }
           metadata { currentPage, totalCount }
         }
@@ -49,7 +48,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {walletTransactionId: inbound_transaction.id}
+      variables: {walletTransactionId: inbound_transaction.id, limit: 5}
     )
 
     consumptions_response = result["data"]["walletTransactionConsumptions"]
@@ -57,10 +56,52 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
     expect(consumptions_response["collection"].count).to eq(1)
     expect(consumptions_response["collection"].first["id"]).to eq(consumption.id)
     expect(consumptions_response["collection"].first["amountCents"]).to eq("500")
-    expect(consumptions_response["collection"].first["inboundWalletTransaction"]["id"]).to eq(inbound_transaction.id)
-    expect(consumptions_response["collection"].first["outboundWalletTransaction"]["id"]).to eq(outbound_transaction.id)
+    expect(consumptions_response["collection"].first["walletTransaction"]["id"]).to eq(outbound_transaction.id)
     expect(consumptions_response["metadata"]["currentPage"]).to eq(1)
     expect(consumptions_response["metadata"]["totalCount"]).to eq(1)
+  end
+
+  context "with pagination" do
+    before do
+      outbounds = create_list(:wallet_transaction, 3, wallet:, organization:, transaction_type: :outbound)
+      outbounds.each do |outbound|
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound_transaction,
+          outbound_wallet_transaction: outbound,
+          consumed_amount_cents: 100)
+      end
+    end
+
+    it "returns paginated results" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {walletTransactionId: inbound_transaction.id, page: 1, limit: 2}
+      )
+
+      consumptions_response = result["data"]["walletTransactionConsumptions"]
+
+      expect(consumptions_response["collection"].count).to eq(2)
+      expect(consumptions_response["metadata"]["currentPage"]).to eq(1)
+      expect(consumptions_response["metadata"]["totalCount"]).to eq(4)
+    end
+
+    it "returns second page of results" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {walletTransactionId: inbound_transaction.id, page: 2, limit: 2}
+      )
+
+      consumptions_response = result["data"]["walletTransactionConsumptions"]
+
+      expect(consumptions_response["collection"].count).to eq(2)
+      expect(consumptions_response["metadata"]["currentPage"]).to eq(2)
+      expect(consumptions_response["metadata"]["totalCount"]).to eq(4)
+    end
   end
 
   context "when transaction is outbound" do

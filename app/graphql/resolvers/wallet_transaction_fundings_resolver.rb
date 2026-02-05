@@ -11,7 +11,7 @@ module Resolvers
     argument :page, Integer, required: false
     argument :wallet_transaction_id, ID, required: true, description: "Uniq ID of the outbound wallet transaction"
 
-    type Types::WalletTransactionConsumptions::Object.collection_type, null: false
+    type Types::WalletTransactionFundings::Object.collection_type, null: false
 
     def resolve(wallet_transaction_id:, page: nil, limit: nil)
       result = WalletTransactionConsumptionsQuery.call(

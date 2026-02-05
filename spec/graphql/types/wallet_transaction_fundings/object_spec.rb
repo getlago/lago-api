@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Types::WalletTransactionConsumptions::Object do
+RSpec.describe Types::WalletTransactionFundings::Object do
   subject { described_class }
 
   it "has the expected fields with correct types" do
@@ -13,7 +13,7 @@ RSpec.describe Types::WalletTransactionConsumptions::Object do
   end
 
   describe "#amount_cents" do
-    subject { run_graphql_field("WalletTransactionConsumption.amountCents", consumption) }
+    subject { run_graphql_field("WalletTransactionFunding.amountCents", consumption) }
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
