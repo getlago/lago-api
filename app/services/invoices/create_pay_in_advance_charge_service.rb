@@ -123,8 +123,7 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
-      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, max_wallet_decrease_attempts: 1)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:,)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
