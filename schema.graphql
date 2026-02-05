@@ -9923,7 +9923,7 @@ type Query {
     Uniq ID of the outbound wallet transaction
     """
     walletTransactionId: ID!
-  ): WalletTransactionConsumptionCollection!
+  ): WalletTransactionFundingCollection!
 
   """
   Query wallet transactions
@@ -12468,8 +12468,7 @@ type WalletTransactionConsumption {
   amountCents: BigInt!
   createdAt: ISO8601DateTime!
   id: ID!
-  inboundWalletTransaction: WalletTransaction!
-  outboundWalletTransaction: WalletTransaction!
+  walletTransaction: WalletTransaction!
 }
 
 """
@@ -12480,6 +12479,28 @@ type WalletTransactionConsumptionCollection {
   A collection of paginated WalletTransactionConsumptionCollection
   """
   collection: [WalletTransactionConsumption!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type WalletTransactionFunding {
+  amountCents: BigInt!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  walletTransaction: WalletTransaction!
+}
+
+"""
+WalletTransactionFundingCollection type
+"""
+type WalletTransactionFundingCollection {
+  """
+  A collection of paginated WalletTransactionFundingCollection
+  """
+  collection: [WalletTransactionFunding!]!
 
   """
   Pagination Metadata for navigating the Pagination
