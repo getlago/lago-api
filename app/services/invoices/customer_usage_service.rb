@@ -154,7 +154,7 @@ module Invoices
       plan = subscription.plan
 
       invoice.fees.each do |fee|
-        taxes_result = Fees::ApplyTaxesService.call(fee:, customer: customer, plan: plan)
+        taxes_result = Fees::ApplyTaxesService.call(fee:, customer:, plan:)
         taxes_result.raise_if_error!
       end
 

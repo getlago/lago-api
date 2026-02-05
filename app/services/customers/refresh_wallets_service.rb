@@ -58,7 +58,7 @@ module Customers
           )
         end
       end
-      wallets_to_process.presence&.update_all(last_ongoing_balance_sync_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      wallets_to_process.update_all(last_ongoing_balance_sync_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       customer.update!(awaiting_wallet_refresh: false)
 

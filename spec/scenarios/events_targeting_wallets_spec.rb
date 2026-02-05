@@ -70,7 +70,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         })
 
         # Refresh wallets to update ongoing balance
-        Customers::RefreshWalletsService.call(customer:)
+        recalculate_wallet_balances
 
         # Verify ongoing balance reflects targeted usage
         # wallet_1: 15 units * $10 = $150 ongoing usage
@@ -177,7 +177,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
           })
 
           # Refresh wallets to check ongoing balance
-          Customers::RefreshWalletsService.call(customer:)
+          recalculate_wallet_balances
 
           # wallet_1: $50 (eu) + $75 (us) = $125 ongoing usage
           expect(wallet1.reload.ongoing_usage_balance_cents).to eq(12_500)
@@ -376,7 +376,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         })
 
         # Refresh wallets to check ongoing balance
-        Customers::RefreshWalletsService.call(customer:)
+        recalculate_wallet_balances
 
         # wallet_1 should have ongoing usage for targeted events
         expect(wallet1.reload.ongoing_usage_balance_cents).to eq(10_000)
@@ -486,7 +486,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
         })
 
         # Refresh wallets
-        Customers::RefreshWalletsService.call(customer:)
+        recalculate_wallet_balances
 
         # Without wallet targeting, all usage should be attributed to oldest wallet (wallet1)
         # Total: 35 units * $10 = $350

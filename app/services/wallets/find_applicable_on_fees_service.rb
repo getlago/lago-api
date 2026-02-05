@@ -44,7 +44,7 @@ module Wallets
       wallet_customer_id = @customer_id || fee.subscription&.customer_id || fee.invoice&.customer_id
       return nil unless wallet_customer_id
 
-      Wallet.active.where(organization_id: fee.organization_id, customer_id: wallet_customer_id).find_by(code:)
+      Wallet.active.find_by(organization_id: fee.organization_id, customer_id: wallet_customer_id, code:)
     end
 
     def result_with(wallets)
