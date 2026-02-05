@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/lago/redis_config"
 
 Rails.application.configure do
   config.enable_reloading = false
@@ -46,14 +47,11 @@ Rails.application.configure do
 
   Dotenv.load
 
-  if ENV["LAGO_REDIS_CACHE_URL"].present?
-    redis_store_config = {
-      url: ENV["LAGO_REDIS_CACHE_URL"],
-      ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
-    }
-    config.cache_store = :redis_cache_store, redis_store_config
+  if Lago::RedisConfig.configured?(:cache)
+    config.cache_store = :redis_cache_store, Lago::RedisConfig.build(:cache)
+  else
+    config.cache_store = :null_store
   end
-  config.cache_store = :null_store
 
   # Set default API URL for test environment
   ENV["LAGO_API_URL"] ||= "http://localhost:3000"

@@ -2,6 +2,7 @@
 
 require "active_support/core_ext/integer/time"
 require "opentelemetry/sdk"
+require_relative "../../lib/lago/redis_config"
 
 Rails.application.configure do
   # Used for GraphiQL
@@ -49,19 +50,17 @@ Rails.application.configure do
   if ENV["LAGO_MEMCACHE_SERVERS"].present?
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
 
-  elsif ENV["LAGO_REDIS_CACHE_URL"].present?
-    config.cache_store =
-      :redis_cache_store,
-      {
-        url: ENV["LAGO_REDIS_CACHE_URL"],
-        pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5)},
-        error_handler: lambda { |method:, returning:, exception:|
-          Rails.logger.error(exception.message)
-          Rails.logger.error(exception.backtrace.join("\n"))
+  elsif Lago::RedisConfig.configured?(:cache)
+    cache_store_config = Lago::RedisConfig.build(:cache)
+    cache_store_config[:pool] ||= {size: 5}
+    cache_store_config[:error_handler] = lambda { |method:, returning:, exception:|
+      Rails.logger.error(exception.message)
+      Rails.logger.error(exception.backtrace.join("\n"))
 
-          Sentry.capture_exception(exception)
-        }
-      }
+      Sentry.capture_exception(exception)
+    }
+
+    config.cache_store = :redis_cache_store, cache_store_config
   end
 
   if ENV["LAGO_SMTP_ADDRESS"].present? && !ENV["LAGO_SMTP_ADDRESS"].empty?
