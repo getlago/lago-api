@@ -2,12 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::SecurityLogsResolver do
+RSpec.describe Resolvers::SecurityLogsResolver, clickhouse: true do
   let(:query) do
     <<~GQL
       query($toDatetime: ISO8601DateTime!) {
         securityLogs(toDatetime: $toDatetime) {
-          collection { logId }
+          collection {
+            logId
+            logType
+            logEvent
+            userEmail
+          }
           metadata { currentPage, totalCount }
         }
       }
@@ -78,7 +83,7 @@ RSpec.describe Resolvers::SecurityLogsResolver do
   context "when all conditions are met but no events exist" do
     around { |test| lago_premium!(&test) }
 
-    it "returns the collection" do
+    it "returns empty collection" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -90,6 +95,29 @@ RSpec.describe Resolvers::SecurityLogsResolver do
       security_logs = result.dig("data", "securityLogs")
       expect(security_logs["collection"]).to eq([])
       expect(security_logs["metadata"]["totalCount"]).to eq(0)
+    end
+  end
+
+  context "when security logs exist" do
+    around { |test| lago_premium!(&test) }
+
+    let(:security_log) { create(:clickhouse_security_log, membership:, logged_at: 1.hour.ago) }
+
+    before { security_log }
+
+    it "returns the collection" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "security_logs:view",
+        query:,
+        variables:
+      )
+
+      security_logs = result.dig("data", "securityLogs")
+      expect(security_logs["collection"].size).to eq(1)
+      expect(security_logs["collection"].first["logId"]).to eq(security_log.log_id)
+      expect(security_logs["metadata"]["totalCount"]).to eq(1)
     end
   end
 end
