@@ -11,10 +11,9 @@ Rails.application.configure do
     "Cache-Control" => "public, max-age=#{1.hour.to_i}"
   }
 
-  if ENV["CI"].present?
-    config.logger = Logger.new(nil)
-    config.log_level = :fatal
-  end
+  $log = StringIO.new
+  config.logger = Logger.new($log)
+  config.log_level = :debug
 
   config.consider_all_requests_local = true
   config.action_controller.perform_caching = false
