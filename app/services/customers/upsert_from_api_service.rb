@@ -294,9 +294,8 @@ module Customers
     end
 
     def discard_payment_methods_tied_to_old_payment_provider(payment_methods, old_payment_provider_id)
-      payment_methods.where(payment_provider_id: old_payment_provider_id).find_each do |payment_method|
-        PaymentMethods::DestroyService.call(payment_method:)
-      end
+      old_payment_methods = payment_methods.where(payment_provider_id: old_payment_provider_id)
+      discard_all_payment_methods(old_payment_methods)
     end
 
     def should_create_billing_configuration?(billing, customer)
