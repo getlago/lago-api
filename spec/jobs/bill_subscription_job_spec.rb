@@ -163,4 +163,25 @@ RSpec.describe BillSubscriptionJob do
       expect(job1.lock_key_arguments).not_to eq(job2.lock_key_arguments)
     end
   end
+
+  [
+    [Customers::FailedToAcquireLock.new("customer-1"), 25],
+    [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
+  ].each do |error, attempts|
+    error_class = error.class
+
+    context "when a #{error_class} error is raised" do
+      before do
+        allow(Invoices::SubscriptionService).to receive(:call).and_raise(error)
+      end
+
+      it "raises a #{error_class.class.name} error and retries" do
+        assert_performed_jobs(attempts, only: [described_class]) do
+          expect do
+            described_class.perform_later(subscriptions, timestamp, invoicing_reason:)
+          end.to raise_error(error_class)
+        end
+      end
+    end
+  end
 end
