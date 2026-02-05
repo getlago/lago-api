@@ -57,15 +57,15 @@ module Invoices
         invoice.save!
       end
 
+      result.invoice = invoice
+
       if @taxes_result && !@taxes_result.success?
         return result.validation_failure!(errors: {tax_error: [@taxes_result.error.code]})
       end
 
       if @vies_check_result && @vies_check_result.failure?
-        return @vies_check_result
+        return result
       end
-
-      result.invoice = invoice
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)

@@ -11,10 +11,26 @@ module Invoices
     end
 
     def perform(subscription, timestamp)
-      Invoices::CreatePayInAdvanceFixedChargesService.call!(
+      result = Invoices::CreatePayInAdvanceFixedChargesService.call(
         subscription:,
         timestamp:
       )
+
+      return if result.success?
+
+      # NOTE: We don't want a dead job for failed invoice due to the tax reason.
+      #       This invoice should be in failed status and can be retried.
+      return if tax_error?(result)
+
+      result.raise_if_error!
+    end
+
+    private
+
+    def tax_error?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error&.messages&.dig(:tax_error).present?
     end
   end
 end

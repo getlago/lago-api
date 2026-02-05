@@ -383,16 +383,12 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       context "when VIES check is in progress" do
         before { create(:pending_vies_check, customer:) }
 
-        it "sets invoice to pending status and returns VIES check failure" do
+        it "sets invoice to pending status" do
           result = invoice_service.call
 
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::UnknownTaxFailure)
-          expect(result.error.code).to eq("vies_check_pending")
-
-          invoice = customer.invoices.order(created_at: :desc).first
-          expect(invoice.status).to eq("pending")
-          expect(invoice.tax_status).to eq("pending")
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.tax_status).to eq("pending")
         end
 
         it "does not enqueue invoice webhooks or payments" do
