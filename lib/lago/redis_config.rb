@@ -17,7 +17,8 @@ module Lago
         sentinels: "LAGO_REDIS_CACHE_SENTINELS",
         master_name: "LAGO_REDIS_CACHE_MASTER_NAME",
         sentinel_username: "LAGO_REDIS_CACHE_SENTINEL_USERNAME",
-        sentinel_password: "LAGO_REDIS_CACHE_SENTINEL_PASSWORD"
+        sentinel_password: "LAGO_REDIS_CACHE_SENTINEL_PASSWORD",
+        db: "LAGO_REDIS_CACHE_DB"
       },
       store: {
         url: "LAGO_REDIS_STORE_URL",

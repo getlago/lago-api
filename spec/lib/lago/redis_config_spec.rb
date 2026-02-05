@@ -9,7 +9,7 @@ RSpec.describe Lago::RedisConfig do
       "REDIS_URL", "REDIS_PASSWORD", "REDIS_SENTINELS", "REDIS_MASTER_NAME",
       "REDIS_SENTINEL_USERNAME", "REDIS_SENTINEL_PASSWORD",
       "LAGO_REDIS_CACHE_URL", "LAGO_REDIS_CACHE_PASSWORD", "LAGO_REDIS_CACHE_SENTINELS", "LAGO_REDIS_CACHE_MASTER_NAME",
-      "LAGO_REDIS_CACHE_SENTINEL_USERNAME", "LAGO_REDIS_CACHE_SENTINEL_PASSWORD",
+      "LAGO_REDIS_CACHE_SENTINEL_USERNAME", "LAGO_REDIS_CACHE_SENTINEL_PASSWORD", "LAGO_REDIS_CACHE_DB",
       "LAGO_REDIS_STORE_URL", "LAGO_REDIS_STORE_PASSWORD", "LAGO_REDIS_STORE_SENTINELS", "LAGO_REDIS_STORE_MASTER_NAME",
       "LAGO_REDIS_STORE_SENTINEL_USERNAME", "LAGO_REDIS_STORE_SENTINEL_PASSWORD",
       "LAGO_REDIS_STORE_DB", "LAGO_REDIS_STORE_SSL", "LAGO_REDIS_STORE_DISABLE_SSL_VERIFY"
@@ -189,6 +189,19 @@ RSpec.describe Lago::RedisConfig do
             timeout: 5,
             ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}
           )
+        end
+      end
+
+      context "when database is specified" do
+        before do
+          ENV["LAGO_REDIS_CACHE_URL"] = "redis://cache.example.com:6379"
+          ENV["LAGO_REDIS_CACHE_DB"] = "3"
+        end
+
+        it "includes database in configuration" do
+          config = described_class.build(:cache)
+
+          expect(config[:db]).to eq(3)
         end
       end
 
