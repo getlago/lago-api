@@ -8,6 +8,7 @@ module Integrations
       BASE_URL = "https://api.nango.dev/"
       REQUEST_LIMIT_ERROR_CODE = "SSS_REQUEST_LIMIT_EXCEEDED"
       BAD_GATEWAY_ERROR = "502 Bad Gateway"
+      INTERNAL_CLIENT_ERROR_CODE = "TRPCClientError"
 
       def initialize(integration:, options: {})
         @integration = integration
@@ -177,6 +178,10 @@ module Integrations
       def bad_gateway_error?(http_error)
         http_error.error_code.to_s == "502" ||
           http_error.error_body.include?(BAD_GATEWAY_ERROR)
+      end
+
+      def internal_client_error?(http_error)
+        http_error.error_body.include?(INTERNAL_CLIENT_ERROR_CODE)
       end
 
       def parse_response(response)
