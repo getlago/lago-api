@@ -7,8 +7,11 @@ RSpec.describe Lago::RedisConfig do
     # Clear all Redis-related env vars before each test
     original_env = ENV.to_h.slice(
       "REDIS_URL", "REDIS_PASSWORD", "REDIS_SENTINELS", "REDIS_MASTER_NAME",
+      "REDIS_SENTINEL_USERNAME", "REDIS_SENTINEL_PASSWORD",
       "LAGO_REDIS_CACHE_URL", "LAGO_REDIS_CACHE_PASSWORD", "LAGO_REDIS_CACHE_SENTINELS", "LAGO_REDIS_CACHE_MASTER_NAME",
+      "LAGO_REDIS_CACHE_SENTINEL_USERNAME", "LAGO_REDIS_CACHE_SENTINEL_PASSWORD",
       "LAGO_REDIS_STORE_URL", "LAGO_REDIS_STORE_PASSWORD", "LAGO_REDIS_STORE_SENTINELS", "LAGO_REDIS_STORE_MASTER_NAME",
+      "LAGO_REDIS_STORE_SENTINEL_USERNAME", "LAGO_REDIS_STORE_SENTINEL_PASSWORD",
       "LAGO_REDIS_STORE_DB", "LAGO_REDIS_STORE_SSL", "LAGO_REDIS_STORE_DISABLE_SSL_VERIFY"
     )
 
@@ -79,6 +82,7 @@ RSpec.describe Lago::RedisConfig do
           config = described_class.build(:main)
 
           expect(config).to include(
+            url: nil,
             name: "myredis",
             role: :master,
             timeout: 5,
@@ -89,7 +93,6 @@ RSpec.describe Lago::RedisConfig do
             {host: "sentinel2", port: 26379},
             {host: "sentinel3", port: 26379}
           ])
-          expect(config).not_to have_key(:url)
         end
       end
 
@@ -130,6 +133,38 @@ RSpec.describe Lago::RedisConfig do
           config = described_class.build(:main)
 
           expect(config).to include(password: "secret123")
+        end
+      end
+
+      context "when sentinel mode with sentinel authentication" do
+        before do
+          ENV["REDIS_SENTINELS"] = "sentinel1:26379"
+          ENV["REDIS_SENTINEL_USERNAME"] = "sentinel_user"
+          ENV["REDIS_SENTINEL_PASSWORD"] = "sentinel_pass"
+        end
+
+        it "includes sentinel credentials in configuration" do
+          config = described_class.build(:main)
+
+          expect(config).to include(
+            sentinel_username: "sentinel_user",
+            sentinel_password: "sentinel_pass"
+          )
+        end
+      end
+
+      context "when sentinel mode with empty sentinel credentials" do
+        before do
+          ENV["REDIS_SENTINELS"] = "sentinel1:26379"
+          ENV["REDIS_SENTINEL_USERNAME"] = ""
+          ENV["REDIS_SENTINEL_PASSWORD"] = ""
+        end
+
+        it "does not include sentinel credentials" do
+          config = described_class.build(:main)
+
+          expect(config).not_to have_key(:sentinel_username)
+          expect(config).not_to have_key(:sentinel_password)
         end
       end
 

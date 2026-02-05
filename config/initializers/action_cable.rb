@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/redis_config"
+
 # Configure ActionCable to use Redis with optional Sentinel support
 # This overrides the cable.yml configuration when Redis is configured
 

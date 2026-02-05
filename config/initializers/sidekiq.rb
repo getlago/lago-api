@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/redis_config"
+
 begin
   require "sidekiq-pro"
 rescue LoadError
@@ -14,14 +16,7 @@ require "sidekiq/middleware/current_attributes"
 
 LIVENESS_PORT = 8080
 
-redis_config = {
-  url: ENV["REDIS_URL"],
-  pool_timeout: 5,
-  timeout: 5,
-  ssl_params: {
-    verify_mode: OpenSSL::SSL::VERIFY_NONE
-  }
-}
+redis_config = Lago::RedisConfig.build(:main)
 
 if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
   redis_config = redis_config.merge({password: ENV["REDIS_PASSWORD"]})

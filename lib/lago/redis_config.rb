@@ -4,25 +4,31 @@ module Lago
   module RedisConfig
     INSTANCES = {
       main: {
-        url_env: "REDIS_URL",
-        password_env: "REDIS_PASSWORD",
-        sentinels_env: "REDIS_SENTINELS",
-        master_name_env: "REDIS_MASTER_NAME"
+        url: "REDIS_URL",
+        password: "REDIS_PASSWORD",
+        sentinels: "REDIS_SENTINELS",
+        master_name: "REDIS_MASTER_NAME",
+        sentinel_username: "REDIS_SENTINEL_USERNAME",
+        sentinel_password: "REDIS_SENTINEL_PASSWORD"
       },
       cache: {
-        url_env: "LAGO_REDIS_CACHE_URL",
-        password_env: "LAGO_REDIS_CACHE_PASSWORD",
-        sentinels_env: "LAGO_REDIS_CACHE_SENTINELS",
-        master_name_env: "LAGO_REDIS_CACHE_MASTER_NAME"
+        url: "LAGO_REDIS_CACHE_URL",
+        password: "LAGO_REDIS_CACHE_PASSWORD",
+        sentinels: "LAGO_REDIS_CACHE_SENTINELS",
+        master_name: "LAGO_REDIS_CACHE_MASTER_NAME",
+        sentinel_username: "LAGO_REDIS_CACHE_SENTINEL_USERNAME",
+        sentinel_password: "LAGO_REDIS_CACHE_SENTINEL_PASSWORD"
       },
       store: {
-        url_env: "LAGO_REDIS_STORE_URL",
-        password_env: "LAGO_REDIS_STORE_PASSWORD",
-        sentinels_env: "LAGO_REDIS_STORE_SENTINELS",
-        master_name_env: "LAGO_REDIS_STORE_MASTER_NAME",
-        db_env: "LAGO_REDIS_STORE_DB",
-        ssl_env: "LAGO_REDIS_STORE_SSL",
-        disable_ssl_verify_env: "LAGO_REDIS_STORE_DISABLE_SSL_VERIFY"
+        url: "LAGO_REDIS_STORE_URL",
+        password: "LAGO_REDIS_STORE_PASSWORD",
+        sentinels: "LAGO_REDIS_STORE_SENTINELS",
+        master_name: "LAGO_REDIS_STORE_MASTER_NAME",
+        sentinel_username: "LAGO_REDIS_STORE_SENTINEL_USERNAME",
+        sentinel_password: "LAGO_REDIS_STORE_SENTINEL_PASSWORD",
+        db: "LAGO_REDIS_STORE_DB",
+        ssl: "LAGO_REDIS_STORE_SSL",
+        disable_ssl_verify: "LAGO_REDIS_STORE_DISABLE_SSL_VERIFY"
       }
     }.freeze
 
@@ -39,22 +45,22 @@ module Lago
 
       def url(instance = :main)
         config = INSTANCES.fetch(instance)
-        ENV[config[:url_env]]
+        ENV[config[:url]]
       end
 
       def configured?(instance = :main)
         config = INSTANCES.fetch(instance)
-        ENV[config[:url_env]].present? || ENV[config[:sentinels_env]].present?
+        ENV[config[:url]].present? || ENV[config[:sentinels]].present?
       end
 
       private
 
       def sentinel_mode?(config)
-        ENV[config[:sentinels_env]].present?
+        ENV[config[:sentinels]].present?
       end
 
       def build_standalone_config(config)
-        url = ENV[config[:url_env]]
+        url = ENV[config[:url]]
         return {} if url.blank?
 
         result = {url: normalize_url(url, config)}
@@ -63,17 +69,32 @@ module Lago
       end
 
       def build_sentinel_config(config)
-        sentinels = parse_sentinels(ENV[config[:sentinels_env]])
-        master_name = ENV[config[:master_name_env]] || "mymaster"
+        sentinels = parse_sentinels(ENV[config[:sentinels]])
+        master_name = ENV[config[:master_name]] || "mymaster"
 
         result = {
+          url: nil,
           name: master_name,
           sentinels: sentinels,
           role: :master
         }
 
+        add_sentinel_auth(result, config)
         add_common_options(result, config)
         result
+      end
+
+      def add_sentinel_auth(result, config)
+        sentinel_username = ENV[config[:sentinel_username]]
+        sentinel_password = ENV[config[:sentinel_password]]
+
+        if sentinel_username.present? && !sentinel_username.empty?
+          result[:sentinel_username] = sentinel_username
+        end
+
+        if sentinel_password.present? && !sentinel_password.empty?
+          result[:sentinel_password] = sentinel_password
+        end
       end
 
       def add_common_options(result, config)
@@ -84,7 +105,7 @@ module Lago
       end
 
       def add_password(result, config)
-        password = ENV[config[:password_env]]
+        password = ENV[config[:password]]
         if password.present? && !password.empty?
           result[:password] = password
         end
@@ -92,13 +113,13 @@ module Lago
 
       def add_ssl_options(result, config)
         # For store instance, SSL is explicitly configured
-        if config[:ssl_env]
-          url = ENV[config[:url_env]]
-          if ENV[config[:ssl_env]].present? || url&.start_with?("rediss:")
+        if config[:ssl]
+          url = ENV[config[:url]]
+          if ENV[config[:ssl]].present? || url&.start_with?("rediss:")
             result[:ssl] = true
           end
 
-          if ENV[config[:disable_ssl_verify_env]].present?
+          if ENV[config[:disable_ssl_verify]].present?
             result[:ssl_params] = {verify_mode: OpenSSL::SSL::VERIFY_NONE}
           end
         else
@@ -108,8 +129,8 @@ module Lago
       end
 
       def add_db(result, config)
-        if config[:db_env]
-          db = ENV[config[:db_env]]
+        if config[:db]
+          db = ENV[config[:db]]
           result[:db] = db.to_i if db.present?
         end
       end
