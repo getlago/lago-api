@@ -4,15 +4,17 @@ module Wallets
   class FindApplicableOnFeesService < BaseService
     Result = BaseResult[:top_priority_wallet]
 
-    def initialize(allocation_rules:, fee:)
+    def initialize(allocation_rules:, fee:, customer_id: nil, fee_targeting_wallets_enabled: nil)
       @allocation_rules = allocation_rules
       @fee = fee
+      @customer_id = customer_id
+      @fee_targeting_wallets_enabled = fee_targeting_wallets_enabled
       super
     end
 
     def call
       # Priority 1: Check for target_wallet_code in fee.grouped_by
-      if fee.organization.events_targeting_wallets_enabled? && fee.charge&.accepts_target_wallet
+      if fee_targeting_wallets_enabled && fee.charge&.accepts_target_wallet
         target_wallet_code = fee.grouped_by&.dig("target_wallet_code")
         if target_wallet_code.present?
           targeted_wallet = find_wallet_by_code(target_wallet_code)
@@ -36,10 +38,10 @@ module Wallets
 
     private
 
-    attr_reader :allocation_rules, :fee
+    attr_reader :allocation_rules, :fee, :fee_targeting_wallets_enabled
 
     def find_wallet_by_code(code)
-      wallet_customer_id = fee.subscription&.customer_id || fee.invoice&.customer_id
+      wallet_customer_id = @customer_id || fee.subscription&.customer_id || fee.invoice&.customer_id
       return nil unless wallet_customer_id
 
       Wallet.active.where(organization_id: fee.organization_id, customer_id: wallet_customer_id).find_by(code:)

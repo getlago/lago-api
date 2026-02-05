@@ -63,7 +63,7 @@ module Customers
       customer.update!(awaiting_wallet_refresh: false)
 
       result.usage_amount_cents = usage_amount_cents
-      result.allocation_rules = @allocation_rules
+      result.allocation_rules = allocation_rules
       result.wallets = customer.wallets.active.reload
       result
     rescue BaseService::FailedResult => e
@@ -72,7 +72,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :include_generating_invoices
+    attr_reader :customer, :include_generating_invoices, :allocation_rules
 
     def assign_wallet_per_fee(fees)
       fee_wallet = {}
@@ -88,7 +88,7 @@ module Customers
         end
 
         applicable_wallets = Wallets::FindApplicableOnFeesService
-          .call!(allocation_rules: @allocation_rules, fee:)
+          .call!(allocation_rules: allocation_rules, fee:, customer_id: customer.id, fee_targeting_wallets_enabled:)
           .top_priority_wallet
         fee_wallet[key] = applicable_wallets.presence
       end
