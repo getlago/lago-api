@@ -102,8 +102,7 @@ module CreditNotes
         return false
       end
 
-      refundable_paid_cents = invoice.total_paid_amount_cents - refunded_invoice_amount_cents
-      return true if credit_note.refund_amount_cents <= refundable_paid_cents
+      return true if credit_note.refund_amount_cents <= invoice.refundable_amount_cents
 
       add_error(field: :refund_amount_cents, error_code: "higher_than_remaining_invoice_amount")
     end

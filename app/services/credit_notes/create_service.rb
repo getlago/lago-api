@@ -92,6 +92,7 @@ module CreditNotes
           WalletTransactions::VoidService.call(
             wallet: associated_wallet,
             wallet_credit:,
+            inbound_wallet_transaction: invoice.fees.credit.first&.invoiceable,
             credit_note_id: credit_note.id
           )
         end

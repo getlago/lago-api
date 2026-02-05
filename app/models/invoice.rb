@@ -369,8 +369,15 @@ class Invoice < ApplicationRecord
     # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note
     # as refund only if the wallet balance is greater or equal than the remaining paid amount
     if credit?
-      wallet_balance = associated_active_wallet&.balance_cents || 0
-      return [wallet_balance, remaining_paid_cents].min
+      wallet = associated_active_wallet
+      return 0 unless wallet
+
+      available = if wallet.traceable?
+        fees.credit.first&.invoiceable&.remaining_amount_cents || 0
+      else
+        wallet.balance_cents
+      end
+      return [available, remaining_paid_cents].min
     end
 
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
