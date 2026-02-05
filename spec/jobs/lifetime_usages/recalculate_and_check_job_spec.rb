@@ -43,7 +43,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
   end
 
   [
-    [Customers::FailedToAcquireLock.new("customer-1"), 25],
+    [Customers::FailedToAcquireLock.new("customer-1"), 25]
   ].each do |error, attempts|
     error_class = error.class
 
