@@ -12,6 +12,7 @@ module Invoices
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
+    retry_on Customers::FailedToAcquireLock, attempts: 25, wait: ->(_) { rand(0...16) }
     retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
     def perform(invoice)
