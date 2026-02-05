@@ -5,13 +5,12 @@ require "rails_helper"
 RSpec.describe Resolvers::WalletTransactionFundingsResolver do
   let(:query) do
     <<~GQL
-      query($walletTransactionId: ID!) {
-        walletTransactionFundings(walletTransactionId: $walletTransactionId, limit: 5) {
+      query($walletTransactionId: ID!, $page: Int, $limit: Int) {
+        walletTransactionFundings(walletTransactionId: $walletTransactionId, page: $page, limit: $limit) {
           collection {
             id
             amountCents
-            inboundWalletTransaction { id }
-            outboundWalletTransaction { id }
+            walletTransaction { id }
           }
           metadata { currentPage, totalCount }
         }
@@ -49,7 +48,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {walletTransactionId: outbound_transaction.id}
+      variables: {walletTransactionId: outbound_transaction.id, limit: 5}
     )
 
     fundings_response = result["data"]["walletTransactionFundings"]
@@ -57,10 +56,53 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
     expect(fundings_response["collection"].count).to eq(1)
     expect(fundings_response["collection"].first["id"]).to eq(consumption.id)
     expect(fundings_response["collection"].first["amountCents"]).to eq("500")
-    expect(fundings_response["collection"].first["inboundWalletTransaction"]["id"]).to eq(inbound_transaction.id)
-    expect(fundings_response["collection"].first["outboundWalletTransaction"]["id"]).to eq(outbound_transaction.id)
+    expect(fundings_response["collection"].first["walletTransaction"]["id"]).to eq(inbound_transaction.id)
     expect(fundings_response["metadata"]["currentPage"]).to eq(1)
     expect(fundings_response["metadata"]["totalCount"]).to eq(1)
+  end
+
+  context "with pagination" do
+    let(:inbounds) { create_list(:wallet_transaction, 3, wallet:, organization:, transaction_type: :inbound, remaining_amount_cents: 10000) }
+
+    before do
+      inbounds.each do |inbound|
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound,
+          outbound_wallet_transaction: outbound_transaction,
+          consumed_amount_cents: 100)
+      end
+    end
+
+    it "returns paginated results" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {walletTransactionId: outbound_transaction.id, page: 1, limit: 2}
+      )
+
+      fundings_response = result["data"]["walletTransactionFundings"]
+
+      expect(fundings_response["collection"].count).to eq(2)
+      expect(fundings_response["metadata"]["currentPage"]).to eq(1)
+      expect(fundings_response["metadata"]["totalCount"]).to eq(4)
+    end
+
+    it "returns second page of results" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {walletTransactionId: outbound_transaction.id, page: 2, limit: 2}
+      )
+
+      fundings_response = result["data"]["walletTransactionFundings"]
+
+      expect(fundings_response["collection"].count).to eq(2)
+      expect(fundings_response["metadata"]["currentPage"]).to eq(2)
+      expect(fundings_response["metadata"]["totalCount"]).to eq(4)
+    end
   end
 
   context "when transaction is inbound" do
