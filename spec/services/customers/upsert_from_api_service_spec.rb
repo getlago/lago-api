@@ -1046,7 +1046,8 @@ RSpec.describe Customers::UpsertFromApiService do
         let(:old_payment_method) do
           create(
             :payment_method,
-            is_default: false, customer:,
+            is_default: false,
+            customer:,
             payment_provider_customer: stripe_customer,
             payment_provider: old_stripe_provider
           )
