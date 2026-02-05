@@ -27,7 +27,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
     [LagoHttpClient::HttpError.new(401, "body", "uri"), 6],
     [OpenSSL::SSL::SSLError.new("OpenSSL::SSL::SSLError"), 6],
     [Net::ReadTimeout.new("Net::ReadTimeout"), 6],
-    [Net::OpenTimeout.new("Net::OpenTimeout"), 6],
+    [Net::OpenTimeout.new("Net::OpenTimeout"), 6]
   ].each do |error, attempts|
     error_class = error.class
 
