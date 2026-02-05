@@ -407,6 +407,62 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "when removing payment provider" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          billing_entity:,
+          payment_provider: "stripe",
+          payment_provider_code:
+        )
+      end
+      let(:stripe_customer) { create(:stripe_customer, customer:) }
+      let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          organization_id: organization.id,
+          payment_provider: nil,
+          provider_customer: nil,
+          payment_provider_code: nil
+        }
+      end
+
+      before do
+        payment_method
+        create(:stripe_provider, organization:, code: payment_provider_code)
+      end
+
+      it "sets the customer parameters to nil" do
+        result = customers_service.call
+
+        expect(result).to be_success
+
+        customer = result.customer
+        expect(customer.payment_provider).to be_nil
+        expect(customer.provider_customer).to be_nil
+        expect(customer.payment_provider_code).to be_nil
+      end
+
+      # NOTE: This describes a scenario with incorrect behavior that currently exists.
+      #       The previous provider customer is not discarded
+      it "does not discard the provider customer" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(stripe_customer.reload).not_to be_discarded
+      end
+
+      it "discards the payment methods" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(payment_method.reload).to be_discarded
+      end
+    end
+
     context "when partialy updating" do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
 

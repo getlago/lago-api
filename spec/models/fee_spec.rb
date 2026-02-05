@@ -129,6 +129,14 @@ RSpec.describe Fee do
         end
       end
 
+      context "when it is a commitment fee" do
+        let(:fee) { build(:minimum_commitment_fee, invoice_display_name:) }
+
+        it "returns related subscription name" do
+          expect(fee_invoice_name).to eq(fee.subscription.plan.invoice_name)
+        end
+      end
+
       context "when it is a charge fee" do
         let(:fee) { build(:fee, charge:, fee_type: "charge", invoice_display_name:) }
         let(:charge) { create(:standard_charge, invoice_display_name: charge_invoice_display_name) }

@@ -129,6 +129,12 @@ module Customers
           customer.payment_provider_code = nil
         end
 
+        if old_provider_customer && args.key?(:payment_provider) && args[:payment_provider].nil?
+          old_provider_customer.payment_methods.find_each do |payment_method|
+            PaymentMethods::DestroyService.call(payment_method:)
+          end
+        end
+
         if customer.applied_dunning_campaign_id_changed? || customer.exclude_from_dunning_campaign_changed?
           customer.reset_dunning_campaign!
         end
