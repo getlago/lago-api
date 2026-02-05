@@ -2,6 +2,7 @@
 
 require "active_support/core_ext/integer/time"
 require "opentelemetry/sdk"
+require_relative "../../lib/lago/redis_config"
 
 Rails.application.configure do
   config.middleware.use(ActionDispatch::Cookies)

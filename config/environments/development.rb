@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/lago/redis_config"
 
 Rails.application.configure do
   config.after_initialize do
