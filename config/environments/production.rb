@@ -53,15 +53,14 @@ Rails.application.configure do
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
 
   elsif Lago::RedisConfig.configured?(:cache)
-    cache_store_config = Lago::RedisConfig.build(:cache).merge(
-      pool: {size: ENV.fetch("LAGO_REDIS_CACHE_POOL_SIZE", 5).to_i},
-      error_handler: lambda { |method:, returning:, exception:|
-        Rails.logger.error(exception.message)
-        Rails.logger.error(exception.backtrace.join("\n"))
+    cache_store_config = Lago::RedisConfig.build(:cache)
+    cache_store_config[:pool] ||= {size: 5}
+    cache_store_config[:error_handler] = lambda { |method:, returning:, exception:|
+      Rails.logger.error(exception.message)
+      Rails.logger.error(exception.backtrace.join("\n"))
 
-        Sentry.capture_exception(exception)
-      }
-    )
+      Sentry.capture_exception(exception)
+    }
 
     config.cache_store = :redis_cache_store, cache_store_config
   end

@@ -18,7 +18,8 @@ module Lago
         master_name: "LAGO_REDIS_CACHE_MASTER_NAME",
         sentinel_username: "LAGO_REDIS_CACHE_SENTINEL_USERNAME",
         sentinel_password: "LAGO_REDIS_CACHE_SENTINEL_PASSWORD",
-        db: "LAGO_REDIS_CACHE_DB"
+        db: "LAGO_REDIS_CACHE_DB",
+        pool_size: "LAGO_REDIS_CACHE_POOL_SIZE"
       },
       store: {
         url: "LAGO_REDIS_STORE_URL",
@@ -102,6 +103,7 @@ module Lago
         add_password(result, config)
         add_ssl_options(result, config)
         add_db(result, config)
+        add_pool(result, config)
         add_timeouts(result)
       end
 
@@ -133,6 +135,13 @@ module Lago
         if config[:db]
           db = ENV[config[:db]]
           result[:db] = db.to_i if db.present?
+        end
+      end
+
+      def add_pool(result, config)
+        if config[:pool_size]
+          pool_size = ENV[config[:pool_size]]
+          result[:pool] = {size: pool_size.to_i} if pool_size.present?
         end
       end
 
