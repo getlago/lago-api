@@ -1043,27 +1043,17 @@ RSpec.describe Customers::UpsertFromApiService do
           )
         end
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: old_stripe_provider) }
-        let(:old_payment_method) do
+        let(:payment_method) do
           create(
             :payment_method,
-            is_default: false,
             customer:,
             payment_provider_customer: stripe_customer,
             payment_provider: old_stripe_provider
           )
         end
-        let(:new_payment_method) do
-          create(
-            :payment_method,
-            customer:,
-            payment_provider_customer: stripe_customer,
-            payment_provider: new_stripe_provider
-          )
-        end
 
         before do
-          old_payment_method
-          new_payment_method
+          payment_method
           new_stripe_provider
         end
 
@@ -1096,16 +1086,10 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(stripe_customer.reload).not_to be_discarded
           end
 
-          it "discards the old payment methods tied to the old payment provider" do
+          it "discards the old payment methods" do
             expect(result).to be_success
 
-            expect(old_payment_method.reload).to be_discarded
-          end
-
-          it "does not discard the newly created payment methods tied to the new payment provider" do
-            expect(result).to be_success
-
-            expect(new_payment_method.reload).not_to be_discarded
+            expect(payment_method.reload).to be_discarded
           end
         end
 

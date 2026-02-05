@@ -232,7 +232,12 @@ module Customers
 
       old_provider_customer = customer.provider_customer
       old_payment_provider = customer.payment_provider
-      old_payment_provider_id = payment_provider(customer)&.id
+      payment_provider_result = PaymentProviders::FindService.new(
+        organization_id: customer.organization_id,
+        code: customer.payment_provider_code,
+        payment_provider_type: old_payment_provider
+      ).call
+      old_payment_provider_id = payment_provider_result.payment_provider&.id
 
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
@@ -269,10 +274,7 @@ module Customers
         elsif old_payment_provider_id.present? &&
             new_payment_provider_id.present? &&
             old_payment_provider_id != new_payment_provider_id
-          discard_payment_methods_tied_to_old_payment_provider(
-            old_provider_customer.payment_methods,
-            old_payment_provider_id
-          )
+          discard_payment_methods(old_provider_customer.payment_methods)
         end
       end
     end
@@ -291,11 +293,6 @@ module Customers
       payment_methods.find_each do |payment_method|
         PaymentMethods::DestroyService.call(payment_method:)
       end
-    end
-
-    def discard_payment_methods_tied_to_old_payment_provider(payment_methods, old_payment_provider_id)
-      old_payment_methods = payment_methods.where(payment_provider_id: old_payment_provider_id)
-      discard_payment_methods(old_payment_methods)
     end
 
     def should_create_billing_configuration?(billing, customer)
