@@ -40,4 +40,33 @@ RSpec.describe Types::WalletTransactionConsumptions::Object do
       expect(subject).to eq(5000)
     end
   end
+
+  describe "#wallet_transaction" do
+    subject { run_graphql_field("WalletTransactionConsumption.walletTransaction", consumption) }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:wallet) { create(:wallet, customer:, traceable: true) }
+    let(:inbound_transaction) do
+      create(:wallet_transaction,
+        wallet:,
+        organization:,
+        transaction_type: :inbound,
+        remaining_amount_cents: 10000)
+    end
+    let(:outbound_transaction) do
+      create(:wallet_transaction, wallet:, organization:, transaction_type: :outbound)
+    end
+    let(:consumption) do
+      create(:wallet_transaction_consumption,
+        organization:,
+        inbound_wallet_transaction: inbound_transaction,
+        outbound_wallet_transaction: outbound_transaction,
+        consumed_amount_cents: 5000)
+    end
+
+    it "returns the outbound_wallet_transaction" do
+      expect(subject.id).to eq(outbound_transaction.id)
+    end
+  end
 end

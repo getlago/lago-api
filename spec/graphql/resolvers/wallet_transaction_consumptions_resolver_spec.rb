@@ -10,6 +10,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
           collection {
             id
             amountCents
+            createdAt
             walletTransaction { id }
           }
           metadata { currentPage, totalCount }
