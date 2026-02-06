@@ -910,14 +910,6 @@ RSpec.describe Customers::UpsertFromApiService do
 
       context "when removing the payment provider" do
         let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
-        let(:create_args) do
-          {
-            external_id:,
-            billing_configuration: {
-              payment_provider: nil
-            }
-          }
-        end
         let(:external_id) { SecureRandom.uuid }
         let(:customer) do
           create(
@@ -930,6 +922,14 @@ RSpec.describe Customers::UpsertFromApiService do
         end
         let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
         let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+        let(:create_args) do
+          {
+            external_id:,
+            billing_configuration: {
+              payment_provider: nil
+            }
+          }
+        end
 
         before { payment_method }
 
@@ -988,13 +988,19 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("gocardless")
+            expect(result.customer.payment_provider_code).to eq("gocardless_1")
             expect(result.customer.provider_customer.provider_customer_id).to eq("gocardless_id")
+          end
+
+          it "does not discard the provider customer" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
           end
 
           it "discards the old provider customer's payment methods" do
             expect(result).to be_success
 
-            expect(stripe_customer.reload).not_to be_discarded
             expect(payment_method.reload).to be_discarded
           end
         end
@@ -1017,13 +1023,19 @@ RSpec.describe Customers::UpsertFromApiService do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("gocardless")
+            expect(result.customer.payment_provider_code).to eq("gocardless_1")
             expect(result.customer.provider_customer).to be_nil
+          end
+
+          it "does not discard the provider customer" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
           end
 
           it "does not discard the old provider customer's payment methods" do
             expect(result).to be_success
 
-            expect(stripe_customer.reload).not_to be_discarded
             expect(payment_method.reload).not_to be_discarded
           end
         end
@@ -1069,15 +1081,18 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
+          # NOTE: This assumes that the provider_customer_id exists on stripe
+          #       and the update is performed succesfully
           before do
             allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
           end
 
-          it "updates the stripe provider code" do
+          it "updates the stripe provider_code and provider_customer_id" do
             expect(result).to be_success
 
             expect(result.customer.payment_provider).to eq("stripe")
             expect(result.customer.payment_provider_code).to eq("stripe_2")
+            expect(result.customer.provider_customer.provider_customer_id).to eq("stripe_2_id")
           end
 
           it "does not discard the provider customer" do
@@ -1093,7 +1108,7 @@ RSpec.describe Customers::UpsertFromApiService do
           end
         end
 
-        # NOTE: This a scenario with incorrect behavior that currently exists.
+        # NOTE: This is a scenario with incorrect behavior that currently exists.
         #       The old customer ID doesn't exist on the new Stripe account, causing an error
         #       when trying to update the customer on Stripe.
         context "when provider_customer_id is not sent" do
@@ -1126,9 +1141,6 @@ RSpec.describe Customers::UpsertFromApiService do
           end
         end
 
-        # NOTE: This a scenario with incorrect behavior that currently exists.
-        #       The old customer ID doesn't exist on the new Stripe account, causing an error
-        #       when trying to update the customer on Stripe.
         context "when provider_customer_id is set to nil" do
           let(:create_args) do
             {
@@ -1141,21 +1153,36 @@ RSpec.describe Customers::UpsertFromApiService do
             }
           end
 
+          # NOTE: This bypasses an issue with the check:
+          #
+          #       if customer.provider_customer&.provider_customer_id
+          #         PaymentProviderCustomers::UpdateService.call(customer)
+          #       end
+          #
+          #       Since customer is not reloaded, it still checks the previous provider_customer state,
+          #       which has a provider_customer_id
           before do
-            allow(Stripe::Customer).to receive(:update).and_raise(
-              Stripe::InvalidRequestError.new(
-                "No such customer: '#{stripe_customer.provider_customer_id}'",
-                "id",
-                http_status: 404,
-                code: "resource_missing"
-              )
-            )
+            allow(Stripe::Customer).to receive(:update).and_return(BaseService::Result.new)
           end
 
-          it "fails with a stripe_error" do
-            expect(result).to be_failure
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:base]).to include("stripe_error")
+          it "updates the stripe provider code" do
+            expect(result).to be_success
+
+            expect(result.customer.payment_provider).to eq("stripe")
+            expect(result.customer.payment_provider_code).to eq("stripe_2")
+            expect(result.customer.provider_customer.provider_customer_id).to be_nil
+          end
+
+          it "does not discard the provider customer" do
+            expect(result).to be_success
+
+            expect(stripe_customer.reload).not_to be_discarded
+          end
+
+          it "discards the old payment methods" do
+            expect(result).to be_success
+
+            expect(payment_method.reload).to be_discarded
           end
         end
       end

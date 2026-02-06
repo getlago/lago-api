@@ -408,6 +408,7 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "when removing payment provider" do
+      let(:stripe_provider) { create(:stripe_provider, organization:, code: payment_provider_code) }
       let(:customer) do
         create(
           :customer,
@@ -417,8 +418,10 @@ RSpec.describe Customers::UpdateService do
           payment_provider_code:
         )
       end
-      let(:stripe_customer) { create(:stripe_customer, customer:) }
-      let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: stripe_customer) }
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
+      let(:payment_method) do
+        create(:payment_method, customer:, payment_provider: stripe_provider, payment_provider_customer: stripe_customer)
+      end
 
       let(:update_args) do
         {
@@ -430,10 +433,7 @@ RSpec.describe Customers::UpdateService do
         }
       end
 
-      before do
-        payment_method
-        create(:stripe_provider, organization:, code: payment_provider_code)
-      end
+      before { payment_method }
 
       it "sets the customer parameters to nil" do
         result = customers_service.call
