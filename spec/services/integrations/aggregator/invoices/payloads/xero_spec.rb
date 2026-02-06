@@ -28,6 +28,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
                 "units" => 0.2e1
               },
               {
+                "account_code" => mapping_codes.dig(:fixed_charge, :external_account_code),
+                "description" => "Fixed Charge Fee",
+                "external_id" => mapping_codes.dig(:fixed_charge, :external_id),
+                "precise_unit_amount" => 25.0,
+                "taxes_amount_cents" => 2,
+                "units" => 0.6e1
+              },
+              {
                 "account_code" => mapping_codes.dig(:billable_metric, :external_account_code),
                 "description" => "Standard Charge Fee",
                 "external_id" => mapping_codes.dig(:billable_metric, :external_id),
@@ -56,7 +64,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
                 "description" => "Coupons",
                 "external_id" => mapping_codes.dig(:coupon, :external_id),
                 "precise_unit_amount" => -2.0,
-                "taxes_amount_cents" => -292,
+                "taxes_amount_cents" => -290,
                 "units" => 1
               },
               {
