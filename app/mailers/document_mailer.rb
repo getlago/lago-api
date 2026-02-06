@@ -6,7 +6,7 @@ class DocumentMailer < ApplicationMailer
   end
 
   def log(**context)
-    super(document:, **context) if created.present? && document.present?
+    super(document:, message: created, **context) if created.present? && document.present?
   end
 
   def created

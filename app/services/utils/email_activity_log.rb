@@ -47,42 +47,43 @@ module Utils
     end
 
     def enqueue_task
+      payload = {
+        activity_source:,
+        api_key_id:,
+        user_id:,
+        activity_type: ACTIVITY_TYPE,
+        activity_id:,
+        logged_at: current_time,
+        created_at: current_time,
+        resource_id: resource.id,
+        resource_type: resource.class.name,
+        organization_id:,
+        activity_object:,
+        activity_object_changes: {},
+        external_customer_id:,
+        external_subscription_id: nil
+      }
       Karafka.producer.produce_async(
         topic: TOPIC,
         key: "#{organization_id}--#{activity_id}",
-        payload: {
-          activity_source:,
-          api_key_id:,
-          user_id:,
-          activity_type: ACTIVITY_TYPE,
-          activity_id:,
-          logged_at: current_time,
-          created_at: current_time,
-          resource_id: resource.id,
-          resource_type: resource.class.name,
-          organization_id:,
-          activity_object: activity_object.to_json,
-          activity_object_changes: "{}",
-          external_customer_id:,
-          external_subscription_id: nil
-        }.to_json
+        payload: payload.to_json
       )
     end
 
     def activity_source
-      return :api if api_key_id
-      return :front if user_id
+      return "api" if api_key_id
+      return "front" if user_id
 
-      :system
+      "system"
     end
 
     def activity_object
       result = {
         status:,
-        email: email_metadata,
-        document: document_reference
+        email: email_metadata.to_json,
+        document: document_reference.to_json
       }
-      result[:error] = error_info if error
+      result[:error] = error_info.to_json if error
       result
     end
 
