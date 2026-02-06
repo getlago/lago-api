@@ -92,11 +92,28 @@ RSpec.describe DunningCampaigns::BulkProcessService, aggregate_failures: true do
           it "does not queue a job for the customer" do
             result
             expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+            expect(customer.reload.dunning_campaign_ended_at).to be_present
+            expect(SendWebhookJob).to have_been_enqueued.with(
+              "dunning_campaign.finished",
+              customer,
+              {dunning_campaign_code: dunning_campaign.code}
+            )
           end
 
-          context "with overdue balance greater than zero" do
-            it "sends valid webhook" do
-              expect { result }.to have_enqueued_job(SendWebhookJob).with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+          context "when campaign has ended" do
+            before do
+              customer.update dunning_campaign_ended_at: Time.current
+            end
+
+            it "does not queue any job for the customer" do
+              result
+              expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+              expect(customer.reload.dunning_campaign_ended_at).to be_present
+              expect(SendWebhookJob).not_to have_been_enqueued.with(
+                "dunning_campaign.finished",
+                customer,
+                {dunning_campaign_code: dunning_campaign.code}
+              )
             end
           end
         end
