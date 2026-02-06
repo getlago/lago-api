@@ -22,6 +22,7 @@ module Types
       field :pay_in_advance, Boolean, null: false
       field :trial_period, Float
 
+      field :applicable_usage_thresholds, [Types::UsageThresholds::Object]
       field :usage_thresholds, [Types::UsageThresholds::Object]
 
       field :entitlements, [Types::Entitlement::PlanEntitlementObject]
@@ -55,6 +56,10 @@ module Types
 
       def entitlements
         object.entitlements.order(:created_at)
+      end
+
+      def applicable_usage_thresholds
+        object.applicable_usage_thresholds.order(amount_cents: :asc)
       end
 
       def usage_thresholds
