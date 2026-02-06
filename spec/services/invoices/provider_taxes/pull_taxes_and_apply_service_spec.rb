@@ -511,7 +511,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
             .to eq("action_script_failure")
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
-            .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
+            .to eq("some other kind of error")
+        end
+
+        context "with internal client error" do
+          let(:body) do
+            p = Rails.root.join("spec/fixtures/integration_aggregator/error_script_internal_client_error_response.json")
+            File.read(p)
+          end
+
+          it "puts invoice in failed status" do
+            expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::InternalClientError)
+          end
         end
       end
     end

@@ -26,4 +26,32 @@ RSpec.describe Integrations::Aggregator::BaseService do
       end
     end
   end
+
+  describe "#internal_client_error?" do
+    let(:http_error) { instance_double(LagoHttpClient::HttpError, error_body:) }
+
+    context "when error body includes TRPCClientError" do
+      let(:error_body) do
+        <<~TEXT
+          Error starting integration 'anrok-create-ephemeral-transaction':
+            {
+              "name": "TRPCClientError",
+              "message": "fetch failed"
+            }
+        TEXT
+      end
+
+      it "returns true" do
+        expect(sync_service.send(:internal_client_error?, http_error)).to be true
+      end
+    end
+
+    context "when error body does not include TRPCClientError" do
+      let(:error_body) { "Some other error message" }
+
+      it "returns false" do
+        expect(sync_service.send(:internal_client_error?, http_error)).to be false
+      end
+    end
+  end
 end

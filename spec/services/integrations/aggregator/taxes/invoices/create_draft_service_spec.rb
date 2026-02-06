@@ -283,6 +283,18 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         end
       end
 
+      context "when it is an internal client error" do
+        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_script_internal_client_error_response.json")
+          File.read(path)
+        end
+
+        it "returns an error" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::InternalClientError)
+        end
+      end
+
       context "when it is a script error" do
         let(:response_status) { Faker::Number.between(from: 500, to: 599) }
         let(:body) do
