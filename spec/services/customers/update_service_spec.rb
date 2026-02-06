@@ -419,9 +419,7 @@ RSpec.describe Customers::UpdateService do
         }
       end
 
-      before do
-        payment_method
-      end
+      before { payment_method }
 
       it "sets the customer parameters to nil" do
         result = customers_service.call
