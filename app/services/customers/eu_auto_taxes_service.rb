@@ -4,6 +4,9 @@ module Customers
   class EuAutoTaxesService < BaseService
     Result = BaseResult[:tax_code]
 
+    RETRY_DELAYS = [5.minutes, 5.minutes, 10.minutes, 20.minutes, 40.minutes].freeze
+    MAX_RETRY_DELAY = 1.hour
+
     def initialize(customer:, new_record:, tax_attributes_changed:)
       @customer = customer
       @billing_country_code = customer.billing_entity.country
@@ -128,14 +131,7 @@ module Customers
 
     def retry_delay
       attempts = customer.reload.pending_vies_check&.attempts_count.to_i
-
-      case attempts
-      when 0..1 then 5.minutes
-      when 2 then 10.minutes
-      when 3 then 20.minutes
-      when 4 then 40.minutes
-      else 1.hour
-      end
+      RETRY_DELAYS[attempts] || MAX_RETRY_DELAY
     end
 
     def error_type_for(exception)
