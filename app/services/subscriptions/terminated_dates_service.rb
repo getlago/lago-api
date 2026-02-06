@@ -21,11 +21,15 @@ module Subscriptions
       duplicate = subscription.dup.tap { |s| s.status = :active }
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp - 1.day, current_usage: true)
 
-      return date_service if timestamp < new_dates_service.charges_to_datetime
-      return date_service if (timestamp - new_dates_service.charges_to_datetime) >= 1.day
+      if new_dates_service.charges_to_datetime
+        return date_service if timestamp < new_dates_service.charges_to_datetime
+        return date_service if (timestamp - new_dates_service.charges_to_datetime) >= 1.day
+      end
 
-      return date_service if timestamp < new_dates_service.fixed_charges_to_datetime
-      return date_service if (timestamp - new_dates_service.fixed_charges_to_datetime) >= 1.day
+      if new_dates_service.fixed_charges_to_datetime
+        return date_service if timestamp < new_dates_service.fixed_charges_to_datetime
+        return date_service if (timestamp - new_dates_service.fixed_charges_to_datetime) >= 1.day
+      end
 
       # We should calculate boundaries as if subscription was not terminated
       new_dates_service = Subscriptions::DatesService.new_instance(duplicate, timestamp, current_usage: false)
