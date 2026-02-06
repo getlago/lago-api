@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::CreateBatchAlertsService do
+RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, subscription:, alerts_params:) }
 
@@ -33,6 +33,24 @@ RSpec.describe UsageMonitoring::CreateBatchAlertsService do
       expect(result).to be_success
       expect(result.alerts.map(&:code)).to match_array %w[alert1 alert2]
       expect(result.alerts.map(&:name)).to match_array ["First Alert", "Second Alert"]
+    end
+
+    context "when organization is nil" do
+      subject(:result) { described_class.call(organization: nil, subscription:, alerts_params:) }
+
+      it "returns a not found failure" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("organization_not_found")
+      end
+    end
+
+    context "when subscription is nil" do
+      let(:subscription) { nil }
+
+      it "returns a not found failure" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("subscription_not_found")
+      end
     end
 
     context "when alerts_params is empty" do

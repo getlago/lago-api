@@ -436,8 +436,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
     end
   end
 
-  describe "DELETE /api/v1/subscriptions/:external_id/alerts/destroy_all" do
-    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/destroy_all") }
+  describe "DELETE /api/v1/subscriptions/:external_id/alerts" do
+    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts") }
 
     it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
@@ -446,18 +446,15 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       subject
 
       expect(response).to have_http_status(:ok)
-      expect(json[:alerts].count).to eq 1
-      expect(alert.reload.deleted_at).to be_within(5.seconds).of(Time.current)
     end
 
     context "when there are no alerts" do
       let(:alert) { nil }
 
-      it "returns an empty collection" do
+      it "returns ok" do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(json[:alerts]).to be_empty
       end
     end
   end

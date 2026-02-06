@@ -7,30 +7,10 @@ module Api
         before_action :find_alert, only: %i[show update destroy]
 
         def batch_create
-          result = UsageMonitoring::CreateBatchAlertsService.call(
+          result = UsageMonitoring::Alerts::CreateBatchService.call(
             organization: current_organization,
             subscription:,
             alerts_params: batch_create_params[:alerts]
-          )
-
-          if result.success?
-            render(
-              json: ::CollectionSerializer.new(
-                result.alerts.map { |alert| alert.reload },
-                ::V1::UsageMonitoring::AlertSerializer,
-                collection_name: "alerts",
-                includes: %i[thresholds]
-              )
-            )
-          else
-            render_error_response(result)
-          end
-        end
-
-        def destroy_all
-          result = UsageMonitoring::DestroyAllAlertsService.call(
-            organization: current_organization,
-            subscription:
           )
 
           if result.success?
@@ -42,6 +22,19 @@ module Api
                 includes: %i[thresholds]
               )
             )
+          else
+            render_error_response(result)
+          end
+        end
+
+        def destroy_all
+          result = UsageMonitoring::Alerts::DestroyAllService.call(
+            organization: current_organization,
+            subscription:
+          )
+
+          if result.success?
+            head(:ok)
           else
             render_error_response(result)
           end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::DestroyAllAlertsService do
+RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, subscription:) }
 
@@ -27,7 +27,6 @@ RSpec.describe UsageMonitoring::DestroyAllAlertsService do
 
     it "discards all alerts for the subscription" do
       expect(result).to be_success
-      expect(result.alerts.count).to eq 2
 
       expect(alert1.reload).to be_discarded
       expect(alert2.reload).to be_discarded
@@ -38,13 +37,32 @@ RSpec.describe UsageMonitoring::DestroyAllAlertsService do
       expect { result }.to change(UsageMonitoring::AlertThreshold, :count).by(-3)
     end
 
+    context "when organization is nil" do
+      subject(:result) { described_class.call(organization: nil, subscription:) }
+
+      it "returns a not found failure" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("organization_not_found")
+      end
+    end
+
+    context "when subscription is nil" do
+      let(:subscription) { nil }
+      let(:alert1) { nil }
+      let(:alert2) { nil }
+
+      it "returns a not found failure" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("subscription_not_found")
+      end
+    end
+
     context "when there are no alerts for the subscription" do
       let(:alert1) { nil }
       let(:alert2) { nil }
 
       it "returns success with empty alerts" do
         expect(result).to be_success
-        expect(result.alerts).to be_empty
       end
     end
   end
