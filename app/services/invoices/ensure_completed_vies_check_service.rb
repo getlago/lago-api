@@ -13,9 +13,6 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
-      # VIES does not apply if EU tax management is disabled
-      return result unless customer.billing_entity.eu_tax_management?
-
       # VIES is irrelevant for provider tax customers
       return result if customer_provider_taxation?
 
