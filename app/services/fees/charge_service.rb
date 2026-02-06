@@ -106,6 +106,9 @@ module Fees
         end.compact
       end
 
+      # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
+      fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
+
       result.fees.concat(fees.compact)
     end
 

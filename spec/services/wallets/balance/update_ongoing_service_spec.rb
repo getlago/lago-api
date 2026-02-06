@@ -92,5 +92,20 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:)
       end
     end
+
+    context "when skip_single_wallet_update is true" do
+      subject(:result) { described_class.call(wallet:, update_params:, skip_single_wallet_update: true) }
+
+      let(:depleted_ongoing_balance) { false }
+
+      it "updates wallet balance but does not update last_ongoing_balance_sync_at" do
+        expect { subject }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(550)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(450)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
+          .and not_change(wallet, :last_ongoing_balance_sync_at)
+      end
+    end
   end
 end

@@ -174,5 +174,90 @@ RSpec.describe Customers::RefreshWalletsService do
         expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve: Customer address could not resolve"])
       end
     end
+
+    context "when there are wallet billable metric limitations" do
+      subject(:result) { described_class.call(customer: targeted_customer, include_generating_invoices: false) }
+
+      let(:targeted_customer) { create(:customer, organization: targeted_org, awaiting_wallet_refresh: true) }
+      let(:targeted_org) { create(:organization) }
+      let(:billable_metric1) { create(:billable_metric, organization: targeted_org, aggregation_type: "count_agg") }
+      let(:billable_metric2) { create(:billable_metric, organization: targeted_org, aggregation_type: "count_agg") }
+
+      let(:targeted_subscription) { create(:subscription, organization: targeted_org, customer: targeted_customer, started_at: Time.zone.now - 1.year) }
+
+      let(:charge1) do
+        create(:standard_charge, plan: targeted_subscription.plan, billable_metric: billable_metric1, properties: {amount: "3"})
+      end
+
+      let(:charge2) do
+        create(:standard_charge, plan: targeted_subscription.plan, billable_metric: billable_metric2, properties: {amount: "5"})
+      end
+
+      let(:targeted_wallet) do
+        create(
+          :wallet,
+          customer: targeted_customer,
+          balance_cents: 1000,
+          ongoing_balance_cents: 1000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 10.0,
+          credits_ongoing_balance: 10.0,
+          credits_ongoing_usage_balance: 0,
+          priority: 1
+        )
+      end
+
+      let(:unrestricted_wallet) do
+        create(
+          :wallet,
+          customer: targeted_customer,
+          balance_cents: 2000,
+          ongoing_balance_cents: 2000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 20.0,
+          credits_ongoing_balance: 20.0,
+          credits_ongoing_usage_balance: 0,
+          priority: 2
+        )
+      end
+
+      let(:wallet_target) { create(:wallet_target, wallet: targeted_wallet, billable_metric: billable_metric1, organization: targeted_org) }
+
+      before do
+        charge1
+        charge2
+        targeted_wallet
+        unrestricted_wallet
+        wallet_target
+
+        # 2 events for billable_metric1 -> 2 * $3 = $6 = 600 cents
+        create_list(:event, 2, organization: targeted_org, subscription: targeted_subscription, customer: targeted_customer, code: billable_metric1.code)
+
+        # 1 event for billable_metric2 -> 1 * $5 = $5 = 500 cents
+        create(:event, organization: targeted_org, subscription: targeted_subscription, customer: targeted_customer, code: billable_metric2.code)
+      end
+
+      it "only counts targeted billable metric fees for the targeted wallet" do
+        expect(result).to be_success
+
+        # targeted_wallet has wallet_target for billable_metric1 only
+        # So it should only count fees for billable_metric1: 600 cents
+        expect(targeted_wallet.reload.ongoing_usage_balance_cents).to eq(600)
+        expect(targeted_wallet.credits_ongoing_usage_balance).to eq(6.0)
+        expect(targeted_wallet.ongoing_balance_cents).to eq(400)
+        expect(targeted_wallet.credits_ongoing_balance).to eq(4.0)
+      end
+
+      it "counts remaining fees for the unrestricted wallet" do
+        expect(result).to be_success
+
+        # unrestricted_wallet should count fees for billable_metric2: 500 cents
+        # (billable_metric1 fees are already allocated to targeted_wallet)
+        expect(unrestricted_wallet.reload.ongoing_usage_balance_cents).to eq(500)
+        expect(unrestricted_wallet.credits_ongoing_usage_balance).to eq(5.0)
+        expect(unrestricted_wallet.ongoing_balance_cents).to eq(1500)
+        expect(unrestricted_wallet.credits_ongoing_balance).to eq(15.0)
+      end
+    end
   end
 end

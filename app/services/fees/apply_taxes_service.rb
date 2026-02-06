@@ -2,9 +2,11 @@
 
 module Fees
   class ApplyTaxesService < BaseService
-    def initialize(fee:, tax_codes: nil)
+    def initialize(fee:, tax_codes: nil, customer: nil, plan: nil)
       @fee = fee
       @tax_codes = tax_codes
+      @customer = customer || fee.invoice&.customer || fee.subscription.customer
+      @plan = plan || fee.subscription&.plan
 
       super
     end
@@ -55,11 +57,7 @@ module Fees
 
     private
 
-    attr_reader :fee, :tax_codes
-
-    def customer
-      @customer ||= fee.invoice&.customer || fee.subscription.customer
-    end
+    attr_reader :fee, :tax_codes, :customer, :plan
 
     def applicable_taxes
       # organization.taxes - are all taxes created on the organization
@@ -68,8 +66,8 @@ module Fees
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
       return fee.fixed_charge.taxes if fee.fixed_charge? && fee.fixed_charge.taxes.any?
       return fee.invoiceable.taxes if fee.commitment? && fee.invoiceable.taxes.any?
-      if (fee.charge? || fee.subscription? || fee.commitment? || fee.fixed_charge?) && fee.subscription.plan.taxes.any?
-        return fee.subscription.plan.taxes
+      if (fee.charge? || fee.subscription? || fee.commitment? || fee.fixed_charge?) && plan.taxes.any?
+        return plan.taxes
       end
       return customer.taxes if customer.taxes.any?
 
