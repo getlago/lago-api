@@ -400,6 +400,18 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
           expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
         end
 
+        it "enqueues SendWebhookJob for each fee" do
+          expect { invoice_service.call }
+            .to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
+        end
+
+        it "produces invoice.pending activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).to have_produced("invoice.pending").with(invoice)
+        end
+
         it "does not produce invoice.created activity log" do
           invoice_service.call
 

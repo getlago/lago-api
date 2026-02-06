@@ -48,7 +48,11 @@ module Invoices
           end
         else
           vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
-          next if vies_check_failed
+          if vies_check_failed
+            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+            Utils::ActivityLog.produce(invoice, "invoice.pending")
+            next
+          end
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
