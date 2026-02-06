@@ -62,6 +62,7 @@ class SendEmailJob < ActionMailer::MailDeliveryJob
   attr_reader :mailer, :log_options
 
   def log(error: nil)
+    Rails.logger.info("[EmailActivityLog] SendEmailJob#log called, mailer=#{mailer.class}, log_options=#{log_options}")
     mailer&.log(error:, **log_options)
   end
 end

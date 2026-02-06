@@ -36,3 +36,28 @@ table cellpadding="0" cellspacing="0" style="width: 100%; padding: 24px 0; borde
             td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; color: #19212e;"
               a style="text-decoration: none" href=@invoice.file_url
                 = I18n.t('email.invoice.finalized.download')
+
+/! DEBUG: Email Activity Log Environment
+table cellpadding="0" cellspacing="0" style="width: 100%; padding: 24px 0; border-top: 1px solid #d9dee7; background: #fff3cd;"
+  tr
+    td style="font-size: 12px; font-family: monospace; color: #856404; padding: 8px;"
+      p style="margin: 4px 0; font-weight: bold;"
+        | ENV Variables:
+      p style="margin: 4px 0;"
+        | LAGO_CLICKHOUSE_ENABLED: #{ENV['LAGO_CLICKHOUSE_ENABLED'].inspect}
+      p style="margin: 4px 0;"
+        | LAGO_KAFKA_BOOTSTRAP_SERVERS: #{ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].present? ? 'present' : 'nil/empty'}
+      p style="margin: 4px 0;"
+        | LAGO_KAFKA_ACTIVITY_LOGS_TOPIC: #{ENV['LAGO_KAFKA_ACTIVITY_LOGS_TOPIC'].inspect}
+      p style="margin: 4px 0;"
+        | Utils::EmailActivityLog::AVAILABLE: #{Utils::EmailActivityLog::AVAILABLE}
+      p style="margin: 4px 0;"
+        | Utils::EmailActivityLog::TOPIC: #{Utils::EmailActivityLog::TOPIC.inspect}
+      p style="margin: 8px 0 4px 0; font-weight: bold;"
+        | Logging Flow Checks:
+      p style="margin: 4px 0;"
+        | loggable?: #{@debug_loggable.inspect}
+      p style="margin: 4px 0;"
+        | document.present?: #{@debug_document_present.inspect}
+      p style="margin: 4px 0;"
+        | organization_id: #{@debug_organization_id.inspect}

@@ -26,9 +26,12 @@ module Utils
     end
 
     def produce
+      Rails.logger.info("[EmailActivityLog] produce called, AVAILABLE=#{AVAILABLE}, message.present?=#{message.present?}, organization_id.present?=#{organization_id.present?}")
       enqueue_task if AVAILABLE && message.present? && organization_id.present?
+      Rails.logger.info("[EmailActivityLog] enqueue_task completed")
     rescue => e
-      Rails.logger.error("Failed to produce email activity log: #{e.message}")
+      Rails.logger.error("[EmailActivityLog] Failed: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace.first(5).join("\n"))
       nil
     end
 
@@ -63,6 +66,7 @@ module Utils
         external_customer_id:,
         external_subscription_id: nil
       }
+      Rails.logger.info("[EmailActivityLog] payload: #{payload.to_json}")
       Karafka.producer.produce_async(
         topic: TOPIC,
         key: "#{organization_id}--#{activity_id}",

@@ -6,6 +6,7 @@ class DocumentMailer < ApplicationMailer
   end
 
   def log(**context)
+    Rails.logger.info("[EmailActivityLog] DocumentMailer#log called, created.present?=#{created.present?}, document.present?=#{document.present?}")
     super(document:, message: created, **context) if created.present? && document.present?
   end
 

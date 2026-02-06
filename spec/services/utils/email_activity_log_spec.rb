@@ -108,7 +108,7 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       result = described_class.produce(document: invoice, message:)
 
       expect(result).to be_nil
-      expect(Rails.logger).to have_received(:error).with("Failed to produce email activity log: Kafka down")
+      expect(Rails.logger).to have_received(:error).with("[EmailActivityLog] Failed: StandardError - Kafka down")
     end
 
     context "with credit_note document" do

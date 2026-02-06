@@ -19,6 +19,11 @@ class InvoiceMailer < DocumentMailer
     @customer = document.customer
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
+    # DEBUG: logging checks
+    @debug_loggable = loggable?
+    @debug_document_present = document.present?
+    @debug_organization_id = document&.organization_id
+
     return if @billing_entity.email.blank?
     return if @customer.email.blank?
     return if document.fees_amount_cents.zero?

@@ -21,6 +21,7 @@ class ApplicationMailer < ActionMailer::Base
   end
 
   def log(**options)
+    Rails.logger.info("[EmailActivityLog] ApplicationMailer#log called, loggable?=#{loggable?}, options.keys=#{options.keys}")
     Utils::EmailActivityLog.produce(**options) if loggable?
   end
 end
