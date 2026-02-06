@@ -2,6 +2,8 @@
 
 module Subscriptions
   class UpdateOrOverrideChargeService < BaseService
+    include Concerns::ChargeOverrideConcern
+
     Result = BaseResult[:charge]
 
     def initialize(subscription:, charge:, params:)
@@ -19,7 +21,7 @@ module Subscriptions
 
       ActiveRecord::Base.transaction do
         target_plan = ensure_plan_override
-        target_charge = find_or_create_charge_override(target_plan)
+        target_charge = find_or_update_charge_override(target_plan)
 
         result.charge = target_charge
       end
@@ -35,23 +37,7 @@ module Subscriptions
 
     attr_reader :subscription, :charge, :params
 
-    def ensure_plan_override
-      current_plan = subscription.plan
-
-      if current_plan.parent_id
-        current_plan
-      else
-        override_result = Plans::OverrideService.call!(
-          plan: current_plan,
-          params: {},
-          subscription:
-        )
-        subscription.update!(plan: override_result.plan)
-        override_result.plan
-      end
-    end
-
-    def find_or_create_charge_override(target_plan)
+    def find_or_update_charge_override(target_plan)
       parent_charge = find_parent_charge
       existing_override = target_plan.charges.find_by(parent_id: parent_charge.id)
 
@@ -59,14 +45,6 @@ module Subscriptions
         update_charge_override(existing_override)
       else
         create_charge_override(parent_charge, target_plan)
-      end
-    end
-
-    def find_parent_charge
-      if charge.parent_id
-        charge.parent
-      else
-        charge
       end
     end
 

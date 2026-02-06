@@ -2,6 +2,8 @@
 
 module Subscriptions
   class UpdateOrOverrideFixedChargeService < BaseService
+    include Concerns::PlanOverrideConcern
+
     Result = BaseResult[:fixed_charge]
 
     def initialize(subscription:, fixed_charge:, params:)
@@ -34,22 +36,6 @@ module Subscriptions
     private
 
     attr_reader :subscription, :fixed_charge, :params
-
-    def ensure_plan_override
-      current_plan = subscription.plan
-
-      if current_plan.parent_id
-        current_plan
-      else
-        override_result = Plans::OverrideService.call!(
-          plan: current_plan,
-          params: {},
-          subscription:
-        )
-        subscription.update!(plan: override_result.plan)
-        override_result.plan
-      end
-    end
 
     def find_or_create_fixed_charge_override(target_plan)
       parent_fixed_charge = find_parent_fixed_charge
