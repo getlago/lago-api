@@ -119,7 +119,7 @@ module Customers
         tax_identification_number: customer.tax_identification_number,
         attempts_count: pending_check.attempts_count + 1,
         last_attempt_at: Time.current,
-        last_error_type: error_type_for(exception),
+        last_error_type: PendingViesCheck.error_type_for(exception),
         last_error_message: exception.message
       )
       pending_check.save!
@@ -132,18 +132,6 @@ module Customers
     def retry_delay
       attempts = customer.reload.pending_vies_check&.attempts_count.to_i
       RETRY_DELAYS[attempts] || MAX_RETRY_DELAY
-    end
-
-    def error_type_for(exception)
-      case exception
-      when Valvat::RateLimitError then "rate_limit"
-      when Valvat::Timeout then "timeout"
-      when Valvat::BlockedError then "blocked"
-      when Valvat::InvalidRequester then "invalid_requester"
-      when Valvat::ServiceUnavailable then "service_unavailable"
-      when Valvat::MemberStateUnavailable then "member_state_unavailable"
-      else "unknown"
-      end
     end
   end
 end
