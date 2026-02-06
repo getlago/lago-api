@@ -9,6 +9,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       query($activityLogId: ID!) {
         activityLog(activityId: $activityLogId) {
           activityId
+          activityObjectChanges
         }
       }
     GQL
@@ -55,7 +56,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
   context "with premium feature" do
     around { |test| lago_premium!(&test) }
 
-    it "returns a single activity log" do
+    it "returns a single activity log with parsed object changes" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -67,6 +68,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       activity_log_response = result["data"]["activityLog"]
 
       expect(activity_log_response["activityId"]).to eq(clickhouse_activity_log.activity_id)
+      expect(activity_log_response["activityObjectChanges"]).to eq("foo" => {"old" => "bar", "new" => "baz"})
     end
 
     context "when activity log is not found" do

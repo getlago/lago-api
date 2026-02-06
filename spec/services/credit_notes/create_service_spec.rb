@@ -169,6 +169,28 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
+    context "when called from UI with CurrentContext.membership" do
+      let(:membership) { create(:membership, organization:) }
+
+      before { CurrentContext.membership = "gid://lago/Membership/#{membership.id}" }
+
+      it "passes user_id to mailer" do
+        expect { subject }.to have_enqueued_job_after_commit(SendEmailJob).with do |*args, **kwargs|
+          expect(kwargs[:params]).to include(user_id: membership.user_id, api_key_id: nil)
+        end
+      end
+    end
+
+    context "when called from API with CurrentContext.api_key_id" do
+      before { CurrentContext.api_key_id = "api-key-123" }
+
+      it "passes api_key_id to mailer without user_id" do
+        expect { subject }.to have_enqueued_job_after_commit(SendEmailJob).with do |*args, **kwargs|
+          expect(kwargs[:params]).to include(user_id: nil, api_key_id: "api-key-123")
+        end
+      end
+    end
+
     it "produces an activity log" do
       result = create_service.call
 

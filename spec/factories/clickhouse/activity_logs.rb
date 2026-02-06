@@ -19,6 +19,6 @@ FactoryBot.define do
     activity_source { "api" }
     logged_at { Time.current }
     activity_object { {"foo" => "bar", "baz" => "qux"} }
-    activity_object_changes { {"foo" => "bar"} }
+    activity_object_changes { {"foo" => '{"old": "bar", "new": "baz"}'} }
   end
 end

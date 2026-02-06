@@ -29,7 +29,8 @@ RSpec.describe PaymentReceipts::GenerateDocumentsJob do
       let(:notify) { true }
 
       it "enqueues PaymentReceipts::NotifyJob" do
-        expect { subject }.to have_enqueued_job(PaymentReceipts::NotifyJob).with(payment_receipt:)
+        expect { subject }.to have_enqueued_job(PaymentReceipts::NotifyJob)
+          .with(payment_receipt:)
       end
     end
 
@@ -39,6 +40,16 @@ RSpec.describe PaymentReceipts::GenerateDocumentsJob do
       it "does nothing" do
         expect { subject }.not_to have_enqueued_job(PaymentReceipts::NotifyJob)
       end
+    end
+  end
+
+  context "with user_id and api_key_id" do
+    let(:notify) { true }
+
+    it "passes user_id and api_key_id to NotifyJob" do
+      expect { described_class.perform_now(payment_receipt:, notify:, user_id: "user-123", api_key_id: "key-456") }
+        .to have_enqueued_job(PaymentReceipts::NotifyJob)
+        .with(payment_receipt:, user_id: "user-123", api_key_id: "key-456")
     end
   end
 end
