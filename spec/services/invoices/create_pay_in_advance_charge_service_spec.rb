@@ -293,8 +293,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         expect(result.invoice.prepaid_credit_amount_cents).to eq(12)
 
         expect(Credits::AppliedPrepaidCreditsService).to have_received(:call).with(
-          invoice: result.invoice,
-          max_wallet_decrease_attempts: 1
+          invoice: result.invoice
         )
       end
     end
