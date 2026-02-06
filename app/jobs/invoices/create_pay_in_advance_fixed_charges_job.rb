@@ -30,7 +30,7 @@ module Invoices
     def tax_error?(result)
       return false unless result.error.is_a?(BaseService::ValidationFailure)
 
-      result.error&.messages&.dig(:tax_error).present?
+      result.error.messages&.dig(:tax_error).present?
     end
   end
 end
