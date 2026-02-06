@@ -316,4 +316,149 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       end
     end
   end
+
+  describe "POST /api/v1/subscriptions/:external_id/alerts/batch_create" do
+    subject { post_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/batch_create", params) }
+
+    let(:alert) { nil }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:params) do
+      {
+        alerts: [
+          {
+            code: "alert1",
+            name: "First Alert",
+            alert_type: "current_usage_amount",
+            thresholds: [{code: :notice, value: 1000}]
+          },
+          {
+            code: "alert2",
+            alert_type: "billable_metric_current_usage_amount",
+            billable_metric_code: billable_metric.code,
+            thresholds: [{value: 2000}]
+          }
+        ]
+      }
+    end
+
+    it_behaves_like "requires API permission", "alert", "write"
+    it_behaves_like "returns error if subscription not found"
+
+    it "creates multiple alerts" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:alerts].count).to eq 2
+      expect(json[:alerts].map { |a| a[:code] }).to eq %w[alert1 alert2]
+    end
+
+    context "when one alert is invalid" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "current_usage_amount",
+              thresholds: [{value: 1000}]
+            },
+            {
+              code: "alert2",
+              alert_type: "current_usage_amount",
+              thresholds: [{value: 2000}]
+            }
+          ]
+        }
+      end
+
+      it "returns validation errors and creates no alerts" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:code]).to eq "validation_errors"
+      end
+    end
+
+    context "when alerts is empty" do
+      let(:params) { {alerts: []} }
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:alerts]).to include("no_alerts")
+      end
+    end
+
+    context "when there are several alerts invalid" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "duplicated",
+              alert_type: "current_usage_amount",
+              thresholds: [{value: 1000}]
+            },
+            {
+              code: "alert2",
+              alert_type: "invalid_type",
+              thresholds: [{value: 2000}]
+            },
+            {
+              code: "billable_metric_not_found",
+              alert_type: "billable_metric_current_usage_amount",
+              billable_metric_code: "this_one_will_not_be_found",
+              thresholds: [{value: 10}]
+            },
+            {
+              code: "duplicated",
+              alert_type: "billable_metric_current_usage_amount",
+              billable_metric_code: billable_metric.code,
+              thresholds: [{value: 11}]
+            }
+          ]
+        }
+      end
+
+      it "returns all the errors" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:code]).to eq "validation_errors"
+        errors = json[:error_details]
+        alert_params = params[:alerts]
+        expect(errors[:"1"][:params]).to eq(alert_params[1])
+        expect(errors[:"1"][:errors]).to eq(alert_type: ["invalid_type"])
+
+        expect(errors[:"2"][:params]).to eq(alert_params[2])
+        expect(errors[:"2"][:errors]).to eq("billable_metric_not_found")
+
+        expect(errors[:"3"][:params]).to eq(alert_params[3])
+        # type is already taken
+        expect(errors[:"3"][:errors]).to eq({code: ["value_already_exist"]})
+      end
+    end
+  end
+
+  describe "DELETE /api/v1/subscriptions/:external_id/alerts/destroy_all" do
+    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/destroy_all") }
+
+    it_behaves_like "requires API permission", "alert", "write"
+    it_behaves_like "returns error if subscription not found"
+
+    it "soft deletes all alerts for the subscription" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:alerts].count).to eq 1
+      expect(alert.reload.deleted_at).to be_within(5.seconds).of(Time.current)
+    end
+
+    context "when there are no alerts" do
+      let(:alert) { nil }
+
+      it "returns an empty collection" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alerts]).to be_empty
+      end
+    end
+  end
 end

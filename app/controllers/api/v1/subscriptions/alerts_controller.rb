@@ -6,6 +6,47 @@ module Api
       class AlertsController < BaseController
         before_action :find_alert, only: %i[show update destroy]
 
+        def batch_create
+          result = UsageMonitoring::CreateBatchAlertsService.call(
+            organization: current_organization,
+            subscription:,
+            alerts_params: batch_create_params[:alerts]
+          )
+
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.alerts.map { |alert| alert.reload },
+                ::V1::UsageMonitoring::AlertSerializer,
+                collection_name: "alerts",
+                includes: %i[thresholds]
+              )
+            )
+          else
+            render_error_response(result)
+          end
+        end
+
+        def destroy_all
+          result = UsageMonitoring::DestroyAllAlertsService.call(
+            organization: current_organization,
+            subscription:
+          )
+
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.alerts,
+                ::V1::UsageMonitoring::AlertSerializer,
+                collection_name: "alerts",
+                includes: %i[thresholds]
+              )
+            )
+          else
+            render_error_response(result)
+          end
+        end
+
         def index
           result = UsageMonitoring::AlertsQuery.call(
             organization: current_organization,
@@ -103,6 +144,10 @@ module Api
 
         def update_params
           params.require(:alert).permit(:code, :name, :billable_metric_code, thresholds: %i[code value recurring])
+        end
+
+        def batch_create_params
+          params.permit(alerts: [:alert_type, :code, :name, :billable_metric_code, {thresholds: %i[code value recurring]}])
         end
 
         def resource_name
