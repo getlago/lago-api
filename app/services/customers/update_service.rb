@@ -173,6 +173,12 @@ module Customers
 
       result.customer = customer
 
+      if old_provider_customer && args.key?(:payment_provider) && args[:payment_provider].nil?
+        old_provider_customer.payment_methods.find_each do |payment_method|
+          PaymentMethods::DestroyService.call(payment_method:)
+        end
+      end
+
       IntegrationCustomers::CreateOrUpdateBatchService.call(
         integration_customers: args[:integration_customers],
         customer: result.customer,

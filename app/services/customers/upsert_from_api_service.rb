@@ -230,6 +230,15 @@ module Customers
         return
       end
 
+      old_provider_customer = customer.provider_customer
+      old_payment_provider = customer.payment_provider
+      payment_provider_result = PaymentProviders::FindService.new(
+        organization_id: customer.organization_id,
+        code: customer.payment_provider_code,
+        payment_provider_type: old_payment_provider
+      ).call
+      old_payment_provider_id = payment_provider_result.payment_provider&.id
+
       if billing.key?(:payment_provider)
         customer.payment_provider = nil
         if Customer::PAYMENT_PROVIDERS.include?(billing[:payment_provider])
@@ -239,6 +248,10 @@ module Customers
       end
 
       customer.save!
+
+      if old_provider_customer && billing.key?(:payment_provider) && billing[:payment_provider].nil?
+        discard_payment_methods(old_provider_customer.payment_methods)
+      end
 
       return if customer.payment_provider.nil?
 
@@ -252,6 +265,18 @@ module Customers
       if customer.provider_customer&.provider_customer_id
         PaymentProviderCustomers::UpdateService.call(customer)
       end
+
+      if old_provider_customer
+        new_payment_provider_id = payment_provider(customer)&.id
+
+        if old_payment_provider != customer.payment_provider
+          discard_payment_methods(old_provider_customer.payment_methods)
+        elsif old_payment_provider_id.present? &&
+            new_payment_provider_id.present? &&
+            old_payment_provider_id != new_payment_provider_id
+          discard_payment_methods(old_provider_customer.payment_methods)
+        end
+      end
     end
 
     def create_or_update_provider_customer(customer, billing_configuration = {})
@@ -262,6 +287,12 @@ module Customers
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
+    end
+
+    def discard_payment_methods(payment_methods)
+      payment_methods.find_each do |payment_method|
+        PaymentMethods::DestroyService.call(payment_method:)
+      end
     end
 
     def should_create_billing_configuration?(billing, customer)
