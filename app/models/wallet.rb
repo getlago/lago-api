@@ -43,6 +43,8 @@ class Wallet < ApplicationRecord
   validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
+  validates :balance_cents, numericality: {greater_than_or_equal_to: 0}, if: :traceable?
+  validates :credits_balance, numericality: {greater_than_or_equal_to: 0}, if: :traceable?
   validate :paid_top_up_max_greater_than_or_equal_min
   validate :unique_code_per_customer, if: :code_changed?
 
