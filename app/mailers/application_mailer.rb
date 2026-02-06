@@ -21,6 +21,6 @@ class ApplicationMailer < ActionMailer::Base
   end
 
   def log(**options)
-    Utils::EmailActivityLog.produce(message:, **options) if loggable?
+    Utils::EmailActivityLog.produce(**options) if loggable?
   end
 end

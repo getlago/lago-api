@@ -39,7 +39,7 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       described_class.produce(document: invoice, message:)
 
       payload = JSON.parse(kafka_messages.first[:payload])
-      activity_object = JSON.parse(payload["activity_object"])
+      activity_object = payload["activity_object"]
 
       expect(payload["activity_source"]).to eq("system")
       expect(payload["activity_type"]).to eq("email.sent")
@@ -50,7 +50,7 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       described_class.produce(document: invoice, message:, resend: true)
 
       payload = JSON.parse(kafka_messages.first[:payload])
-      activity_object = JSON.parse(payload["activity_object"])
+      activity_object = payload["activity_object"]
 
       expect(activity_object["status"]).to eq("resent")
     end
@@ -59,10 +59,10 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       described_class.produce(document: invoice, message:, error: StandardError.new("SMTP failed"))
 
       payload = JSON.parse(kafka_messages.first[:payload])
-      activity_object = JSON.parse(payload["activity_object"])
+      activity_object = payload["activity_object"]
 
       expect(activity_object["status"]).to eq("failed")
-      expect(activity_object["error"]).to eq("class" => "StandardError", "message" => "SMTP failed")
+      expect(JSON.parse(activity_object["error"])).to eq("class" => "StandardError", "message" => "SMTP failed")
     end
 
     it "sets activity_source to api when api_key_id provided" do
@@ -118,10 +118,11 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
         described_class.produce(document: credit_note, message:)
 
         payload = JSON.parse(kafka_messages.first[:payload])
-        activity_object = JSON.parse(payload["activity_object"])
+        activity_object = payload["activity_object"]
+        document = JSON.parse(activity_object["document"])
 
-        expect(activity_object["document"]["type"]).to eq("CreditNote")
-        expect(activity_object["document"]["number"]).to eq(credit_note.number)
+        expect(document["type"]).to eq("CreditNote")
+        expect(document["number"]).to eq(credit_note.number)
       end
     end
 
@@ -144,10 +145,11 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
         described_class.produce(document: payment_receipt, message:)
 
         payload = JSON.parse(kafka_messages.first[:payload])
-        activity_object = JSON.parse(payload["activity_object"])
+        activity_object = payload["activity_object"]
+        document = JSON.parse(activity_object["document"])
 
-        expect(activity_object["document"]["type"]).to eq("PaymentReceipt")
-        expect(activity_object["document"]["number"]).to eq(payment_receipt.number)
+        expect(document["type"]).to eq("PaymentReceipt")
+        expect(document["number"]).to eq(payment_receipt.number)
       end
 
       it "uses payment_receipt as resource" do
