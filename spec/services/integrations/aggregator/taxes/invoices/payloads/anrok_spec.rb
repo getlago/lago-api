@@ -30,6 +30,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Anrok do
                 "item_code" => mapping_codes.dig(:add_on, :external_id)
               },
               {
+                "item_key" => fixed_charge_fee.item_key,
+                "item_id" => fixed_charge_fee.id,
+                "amount_cents" => 150,
+                "item_code" => mapping_codes.dig(:fixed_charge, :external_id)
+              },
+              {
                 "item_key" => billable_metric_fee.item_key,
                 "item_id" => billable_metric_fee.id,
                 "amount_cents" => 300,

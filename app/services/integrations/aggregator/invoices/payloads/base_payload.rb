@@ -70,6 +70,8 @@ module Integrations
               billable_metric_item(fee)
             elsif fee.add_on?
               add_on_item(fee)
+            elsif fee.fixed_charge?
+              fixed_charge_item(fee)
             elsif fee.credit?
               credit_item
             elsif fee.commitment?

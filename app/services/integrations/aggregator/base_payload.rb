@@ -26,6 +26,10 @@ module Integrations
         lookup_mapping("AddOn", fee.add_on_id)
       end
 
+      def fixed_charge_item(fee)
+        lookup_mapping("AddOn", fee.fixed_charge_add_on.id)
+      end
+
       def account_item
         lookup_collection_mapping(:account)
       end

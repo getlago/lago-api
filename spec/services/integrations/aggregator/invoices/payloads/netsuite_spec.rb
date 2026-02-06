@@ -653,6 +653,34 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         end
       end
     end
+
+    context "when invoice has a fixed_charge fee" do
+      let(:plan) { create(:plan, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on:) }
+      let(:fixed_charge_fee) do
+        create(
+          :fixed_charge_fee,
+          invoice:,
+          fixed_charge:,
+          amount_cents: 5000,
+          units: 1,
+          precise_unit_amount: 50.0,
+          created_at: current_time + 1.second
+        )
+      end
+
+      before { fixed_charge_fee }
+
+      it "includes the fixed_charge fee using the add_on mapping" do
+        line_items = subject["lines"].first["lineItems"]
+        fixed_charge_line = line_items.find { |item| item["taxdetailsreference"] == fixed_charge_fee.id }
+
+        expect(fixed_charge_line).to be_present
+        expect(fixed_charge_line["item"]).to eq("m1")
+        expect(fixed_charge_line["account"]).to eq("m11")
+        expect(fixed_charge_line["amount"]).to eq(50.0)
+      end
+    end
   end
 
   describe "#tax_item_complete?" do
