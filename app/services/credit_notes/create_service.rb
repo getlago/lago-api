@@ -137,6 +137,13 @@ module CreditNotes
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
 
+    def user_id
+      return if CurrentContext.api_key_id.present?
+      return if CurrentContext.membership.blank?
+
+      Membership.find_by(organization_id: invoice.organization_id, id: CurrentContext.membership.split("/").last)&.user_id
+    end
+
     def invalid_reason?
       CreditNote.reasons.keys.exclude?(reason.to_s)
     end
@@ -233,7 +240,7 @@ module CreditNotes
       # NOTE: We already check the premium state for the credit note creation
       return unless credit_note.billing_entity.email_settings.include?("credit_note.created")
 
-      CreditNoteMailer.with(credit_note:)
+      CreditNoteMailer.with(credit_note:, user_id:, api_key_id: CurrentContext.api_key_id)
         .created.deliver_later(wait: 3.seconds)
     end
 

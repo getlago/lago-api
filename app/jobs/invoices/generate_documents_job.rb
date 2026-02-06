@@ -12,14 +12,14 @@ module Invoices
 
     retry_on LagoHttpClient::HttpError, Errno::ECONNREFUSED, EOFError, wait: :polynomially_longer, attempts: 6
 
-    def perform(invoice:, notify: false)
+    def perform(invoice:, notify: false, **context)
       result = Invoices::GenerateXmlService.call(invoice:)
       result.raise_if_error!
 
       result = Invoices::GeneratePdfService.call(invoice:)
       result.raise_if_error!
 
-      Invoices::NotifyJob.perform_later(invoice:) if notify
+      Invoices::NotifyJob.perform_later(invoice:, **context) if notify
     end
   end
 end

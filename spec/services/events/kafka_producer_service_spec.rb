@@ -7,7 +7,6 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
   let(:organization) { create(:organization) }
 
   describe "#call" do
-
     context "with Kafka config" do
       before do
         ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"

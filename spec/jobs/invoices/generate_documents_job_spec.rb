@@ -41,4 +41,13 @@ RSpec.describe Invoices::GenerateDocumentsJob do
       end
     end
   end
+
+  context "with user_id and api_key_id" do
+    let(:notify) { true }
+
+    it "passes user_id and api_key_id to NotifyJob" do
+      expect { described_class.perform_now(invoice:, notify:, user_id: "user-123", api_key_id: "key-456") }
+        .to have_enqueued_job(Invoices::NotifyJob).with(invoice:, user_id: "user-123", api_key_id: "key-456")
+    end
+  end
 end
