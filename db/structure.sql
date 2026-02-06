@@ -8288,6 +8288,7 @@ CREATE INDEX index_payment_methods_on_payment_provider_id ON public.payment_meth
 
 CREATE UNIQUE INDEX index_payment_methods_on_provider_customer_and_provider_method ON public.payment_methods USING btree (payment_provider_customer_id, provider_method_id) WHERE (deleted_at IS NULL);
 
+
 --
 -- Name: index_payment_methods_on_provider_method_type; Type: INDEX; Schema: public; Owner: -
 --
