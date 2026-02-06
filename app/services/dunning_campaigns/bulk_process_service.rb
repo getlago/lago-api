@@ -31,6 +31,7 @@ module DunningCampaigns
 
       def call
         return result unless threshold
+        return result if customer.dunning_campaign_ended?
         return send_campaign_finished_webhook if max_attempts_reached?
         return result unless days_between_attempts_satisfied?
 
@@ -69,6 +70,8 @@ module DunningCampaigns
       end
 
       def send_campaign_finished_webhook
+        customer.update! dunning_campaign_ended_at: Time.current
+
         SendWebhookJob.perform_later(
           "dunning_campaign.finished",
           customer,
