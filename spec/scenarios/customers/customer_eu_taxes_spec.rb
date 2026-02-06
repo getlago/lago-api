@@ -136,6 +136,60 @@ describe "Add customer-specific taxes" do
     end
   end
 
+  context "when VIES fails and invoice is blocked until retry succeeds" do
+    let(:vat_number) { "FR12345678901" }
+    let(:retry_job) { class_double(Customers::RetryViesCheckJob) }
+
+    it "blocks invoice finalization until VIES validation succeeds" do
+      enable_eu_tax_management!
+
+      # Create customer
+      create_or_update_customer(french_attributes.merge(external_id: "user_fr_123"))
+      customer = Customer.find_by(external_id: "user_fr_123")
+      expect(customer.taxes.sole.code).to eq "lago_eu_fr_standard"
+
+      # Update with VAT number - VIES fails
+      # Stub RetryViesCheckJob to prevent it from running during customer update
+      allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+        .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
+      allow(Customers::RetryViesCheckJob).to receive(:set).and_return(retry_job)
+      allow(retry_job).to receive(:perform_later)
+
+      create_or_update_customer({external_id: "user_fr_123", tax_identification_number: vat_number})
+
+      # PendingViesCheck should be created
+      expect(customer.reload.pending_vies_check).to be_present
+      expect(customer.vies_check_in_progress?).to be true
+
+      # Create subscription with pay_in_advance plan - invoice should be blocked
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: "sub_#{customer.external_id}",
+        plan_code: plan.code
+      })
+
+      invoice = customer.invoices.sole
+      expect(invoice.status).to eq "pending"
+      expect(invoice.tax_status).to eq "pending"
+
+      # VIES succeeds on retry
+      mock_vies_check!(vat_number)
+      Customers::RetryViesCheckJob.perform_now(customer.id)
+
+      # PendingViesCheck should be deleted
+      expect(customer.reload.pending_vies_check).to be_nil
+      expect(customer.vies_check_in_progress?).to be false
+
+      # FinalizePendingViesInvoiceJob should be enqueued and processed
+      perform_enqueued_jobs
+
+      # Invoice should be finalized
+      invoice.reload
+      expect(invoice.status).to eq "finalized"
+      expect(invoice.tax_status).to eq "succeeded"
+    end
+  end
+
   context "when customer are created before the feature was enabled" do
     it "does not create taxes until the customer is updated" do
       create_or_update_customer(american_attributes.merge(external_id: "user_usa_123"))

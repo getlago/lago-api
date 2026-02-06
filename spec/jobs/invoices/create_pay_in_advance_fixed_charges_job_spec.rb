@@ -7,15 +7,42 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
 
   let(:subscription) { create(:subscription) }
   let(:timestamp) { Time.current.to_i }
+  let(:result) { BaseService::Result.new }
 
   before do
-    allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call!)
-      .with(subscription:, timestamp:)
+    allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call)
+      .with(subscription:, timestamp:).and_return(result)
   end
 
   it "calls the create pay in advance fixed charges service" do
     perform_now
 
-    expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call!)
+    expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
+  end
+
+  context "when result is a failure" do
+    let(:result) do
+      BaseService::Result.new.single_validation_failure!(error_code: "error")
+    end
+
+    it "raises an error" do
+      expect do
+        perform_now
+      end.to raise_error(BaseService::FailedResult)
+
+      expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
+    end
+  end
+
+  context "when result is a tax error" do
+    let(:result) do
+      BaseService::Result.new.validation_failure!(errors: {tax_error: ["taxDateTooFarInFuture"]})
+    end
+
+    it "does not raise an error" do
+      expect { perform_now }.not_to raise_error
+
+      expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
+    end
   end
 end

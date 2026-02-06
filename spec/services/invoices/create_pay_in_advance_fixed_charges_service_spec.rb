@@ -377,6 +377,59 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
+    context "when EU tax management is enabled" do
+      before { billing_entity.update!(eu_tax_management: true) }
+
+      context "when VIES check is in progress" do
+        before { create(:pending_vies_check, customer:) }
+
+        it "sets invoice to pending status" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.tax_status).to eq("pending")
+        end
+
+        it "does not enqueue invoice webhooks or payments" do
+          allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+          expect { invoice_service.call }
+            .not_to have_enqueued_job(SendWebhookJob).with("invoice.created", anything)
+
+          expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+        end
+
+        it "enqueues SendWebhookJob for each fee" do
+          expect { invoice_service.call }
+            .to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
+        end
+
+        it "produces invoice.pending activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).to have_produced("invoice.pending").with(invoice)
+        end
+
+        it "does not produce invoice.created activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).not_to have_produced("invoice.created").with(invoice)
+        end
+      end
+
+      context "when VIES check is not in progress" do
+        it "finalizes the invoice normally" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+        end
+      end
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }

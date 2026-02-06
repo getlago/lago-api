@@ -19,11 +19,8 @@ module Invoices
         return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
       end
 
-      # For local tax customers, block if VIES validation is pending
-      if invoice.customer.vies_check_in_progress?
-        set_pending_tax_status!
-        return result.unknown_tax_failure!(code: "vies_check_pending", message: "VIES validation pending")
-      end
+      vies_result = Invoices::EnsureCompletedViesCheckService.call(invoice:, finalizing:)
+      return vies_result if vies_result.failure?
 
       # Apply local taxes
       Invoices::ComputeAmountsFromFees.call(invoice:)
