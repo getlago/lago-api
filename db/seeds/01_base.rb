@@ -54,7 +54,11 @@ organizations_data.each do |org_data|
     premium_integrations: Organization::PREMIUM_INTEGRATIONS,
     invoice_footer: "Hooli is a fictional company."
   })
-  BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
+  billing_entity = BillingEntity.find_or_create_by!(organization:, name: "Hooli", code: "hooli")
+  billing_entity.update!(
+    email: "gavin@hooli.com",
+    email_settings: BillingEntity::EMAIL_SETTINGS
+  )
   membership = Membership.find_or_create_by!(user:, organization:)
 
   # Ensure the membership has an admin role in the new roles system
