@@ -137,7 +137,10 @@ class Organization < ApplicationRecord
     projected_usage
     custom_roles
     events_targeting_wallets
+    security_logs
   ].freeze
+
+  SECURITY_LOGS_RETENTION_DAYS = 90
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
