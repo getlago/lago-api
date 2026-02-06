@@ -3247,8 +3247,10 @@ input CreateSubscriptionInput {
   paymentMethod: PaymentMethodReferenceInput
   planId: ID!
   planOverrides: PlanOverridesInput
+  progressiveBillingDisabled: Boolean
   subscriptionAt: ISO8601DateTime
   subscriptionId: ID
+  usageThresholds: [UsageThresholdInput!]
 }
 
 input CreateTransactionMetadataInput {
@@ -8975,6 +8977,7 @@ type Plan {
   activityLogs: [ActivityLog!]
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
+  applicableUsageThresholds: [UsageThreshold!]
   billChargesMonthly: Boolean
   billFixedChargesMonthly: Boolean
   charges: [Charge!]
@@ -9073,7 +9076,6 @@ input PlanOverridesInput {
   name: String
   taxCodes: [String!]
   trialPeriod: Float
-  usageThresholds: [UsageThresholdOverridesInput!]
 }
 
 enum PremiumIntegrationTypeEnum {
@@ -10715,6 +10717,7 @@ type Subscription {
   paymentMethodType: PaymentMethodTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
+  progressiveBillingDisabled: Boolean
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   skipInvoiceCustomSections: Boolean
   startedAt: ISO8601DateTime
@@ -10722,6 +10725,7 @@ type Subscription {
   subscriptionAt: ISO8601DateTime
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
+  usageThresholds: [UsageThreshold!]!
 }
 
 """
@@ -12533,7 +12537,9 @@ input UpdateSubscriptionInput {
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planOverrides: PlanOverridesInput
+  progressiveBillingDisabled: Boolean
   subscriptionAt: ISO8601DateTime
+  usageThresholds: [UsageThresholdInput!]
 }
 
 """
@@ -12555,23 +12561,13 @@ input UpdateXeroIntegrationInput {
 
 type UsageThreshold {
   amountCents: BigInt!
-  createdAt: ISO8601DateTime!
   id: ID!
   recurring: Boolean!
   thresholdDisplayName: String
-  updatedAt: ISO8601DateTime!
 }
 
 input UsageThresholdInput {
-  amountCents: BigInt
-  id: ID
-  recurring: Boolean
-  thresholdDisplayName: String
-}
-
-input UsageThresholdOverridesInput {
   amountCents: BigInt!
-  id: ID
   recurring: Boolean
   thresholdDisplayName: String
 }
