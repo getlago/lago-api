@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe ::V1::SubscriptionSerializer do
-  subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes: %i[customer plan entitlements]) }
+  subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes:) }
 
   let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do
     create(:subscription, created_at: started_at, started_at:, ending_at:)
   end
+
+  let(:includes) { %i[customer plan entitlements] }
 
   context "when plan has one minimium commitment" do
     let(:commitment) { create(:commitment, plan: subscription.plan) }
@@ -59,6 +61,19 @@ RSpec.describe ::V1::SubscriptionSerializer do
             "commitment_type" => "minimum_commitment"
           )
         end
+      end
+    end
+
+    context "when overriding default plan relations" do
+      let(:includes) { [plan: [:minimum_commitment]] }
+
+      it "serializes the object with the right relations" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]["lago_id"]).to eq(subscription.id)
+        expect(result["subscription"]["plan"]).to be_present
+        expect(result["subscription"]["plan"]["minimum_commitment"]).to be_present
+        expect(result["subscription"]["plan"]["charges"]).to be_nil
       end
     end
   end

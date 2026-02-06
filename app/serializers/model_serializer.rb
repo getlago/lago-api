@@ -3,6 +3,10 @@
 class ModelSerializer
   attr_reader :model, :options
 
+  # The possible values for the options are:
+  # - includes: Specify the relation to include in the payload
+  #   Expected format: [:customer, {plan: [:charges]}]
+  #   Hash values will be passed to the relation serializer
   def initialize(model, options = {})
     @model = model
     @options = options
@@ -22,9 +26,33 @@ class ModelSerializer
     options.fetch(:root_name, :data)
   end
 
+  # Check if a relation should be included in the payload
   def include?(value)
-    return false if options[:includes].blank?
+    includes = options[:includes]
+    return false if includes.blank?
 
-    options[:includes].include?(value)
+    includes.any? do |include|
+      next value == include if include.is_a?(Symbol)
+      next include.key?(value) if include.is_a?(Hash)
+
+      false
+    end
+  end
+
+  # Retrieve the relations to be included by a subserializer
+  # When the relation valus is symbol, it returns the default values
+  # When the relation is a hash key, it will return the matching value
+  def included_relations(value, default: [])
+    includes = options[:includes]
+    return default if includes.blank?
+
+    include = includes.find do |include|
+      next value == include if include.is_a?(Symbol)
+      next include.key?(value) if include.is_a?(Hash)
+    end
+
+    return default if include.is_a?(Symbol)
+
+    include[value]
   end
 end
