@@ -81,7 +81,7 @@ module Customers
       fees.each do |fee|
         key = fee.id || fee.object_id
 
-        if fee_targeting_wallets_enabled && fee.charge.accepts_target_wallet && fee.grouped_by&.dig("target_wallet_code").present?
+        if fee_targeting_wallets_enabled && fee.charge&.accepts_target_wallet && fee&.grouped_by&.dig("target_wallet_code").present?
           targeted_wallet = customer.wallets.active.where(code: fee.grouped_by["target_wallet_code"]).ids.first
           fee_wallet[key] = targeted_wallet
           next if targeted_wallet
