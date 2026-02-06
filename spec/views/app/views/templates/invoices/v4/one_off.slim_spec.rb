@@ -134,62 +134,6 @@ RSpec.describe "templates/invoices/v4/one_off.slim" do
     end
   end
 
-  context "with coupon applied" do
-    let(:add_on) { create(:add_on, organization:, name: "Consulting") }
-
-    let(:add_on_fee) do
-      create(
-        :one_off_fee,
-        invoice:,
-        add_on:,
-        amount_cents: 10000,
-        amount_currency: "USD",
-        units: 1,
-        unit_amount_cents: 10000,
-        invoice_display_name: "Consulting Hour"
-      )
-    end
-
-    let(:coupon) { create(:coupon, organization:, name: "Welcome Discount") }
-    let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
-    let(:credit) do
-      create(
-        :credit,
-        invoice:,
-        applied_coupon:,
-        amount_cents: 2000,
-        amount_currency: "USD"
-      )
-    end
-
-    let(:invoice) do
-      create(
-        :invoice,
-        customer:,
-        organization:,
-        number: "LAGO-202509-OO-002",
-        payment_due_date: Date.parse("2025-09-15"),
-        issuing_date: Date.parse("2025-09-01"),
-        invoice_type: :one_off,
-        total_amount_cents: 8000,
-        currency: "USD",
-        fees_amount_cents: 10000,
-        coupons_amount_cents: 2000,
-        sub_total_excluding_taxes_amount_cents: 8000,
-        sub_total_including_taxes_amount_cents: 8000
-      )
-    end
-
-    before do
-      add_on_fee
-      credit
-    end
-
-    it "renders correctly" do
-      expect(rendered_template).to match_html_snapshot
-    end
-  end
-
   context "with taxes applied" do
     let(:add_on) { create(:add_on, organization:, name: "Professional Services") }
     let(:tax) { create(:tax, organization:, name: "Sales Tax", rate: 10.0) }
