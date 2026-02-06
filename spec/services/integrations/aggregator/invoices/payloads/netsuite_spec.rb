@@ -681,6 +681,109 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         expect(fixed_charge_line["amount"]).to eq(50.0)
       end
     end
+
+    context "when credit note covers full invoice amount including taxes" do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          organization:,
+          fees_amount_cents: 735_800,
+          taxes_amount_cents: 154_518,
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          progressive_billing_credit_amount_cents: 0,
+          credit_notes_amount_cents: 890_318,
+          total_amount_cents: 0,
+          issuing_date: DateTime.new(2026, 2, 3)
+        )
+      end
+
+      let(:fee_sub) { nil }
+      let(:minimum_commitment_fee) { nil }
+      let(:charge_fee2) { nil }
+
+      let(:charge_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          charge:,
+          amount_cents: 735_800,
+          taxes_amount_cents: 154_518,
+          units: 3_679,
+          precise_unit_amount: 2.0,
+          created_at: current_time
+        )
+      end
+
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          organization:,
+          taxes_amount_cents: 154_518,
+          precise_taxes_amount_cents: 154_518,
+          total_amount_cents: 890_318,
+          credit_amount_cents: 890_318,
+          balance_amount_cents: 0
+        )
+      end
+
+      let(:credit_note_item) do
+        create(
+          :credit_note_item,
+          credit_note:,
+          fee: charge_fee,
+          organization:,
+          amount_cents: 735_800,
+          precise_amount_cents: 735_800
+        )
+      end
+
+      let(:credit_note_credit) do
+        create(
+          :credit_note_credit,
+          invoice:,
+          credit_note:,
+          organization:,
+          amount_cents: 890_318
+        )
+      end
+
+      before do
+        integration_customer
+        charge
+        integration_collection_mapping1
+        integration_collection_mapping3
+        integration_collection_mapping5
+        integration_collection_mapping5.update!(
+          tax_nexus: "some_nexus",
+          tax_type: "some_type",
+          tax_code: "some_code"
+        )
+        integration_mapping_bm
+        charge_fee
+        credit_note_item
+        credit_note_credit
+      end
+
+      it "ensures line items total is not negative for NetSuite" do
+        line_items = subject.dig("lines", 0, "lineItems")
+        total = line_items.sum do |item|
+          item.fetch("amount") { item["rate"] * item.fetch("quantity", 1) }
+        end
+
+        expect(total).to be_zero
+      end
+
+      it "includes credit note tax in the tax details section" do
+        tax_items = subject.dig("taxdetails", 0, "lineItems")
+        cn_tax = tax_items.find { |t| t["taxdetailsreference"] == "credit_note_item" }
+
+        expect(cn_tax["taxamount"]).to eq(-1545.18)
+      end
+    end
   end
 
   describe "#tax_item_complete?" do

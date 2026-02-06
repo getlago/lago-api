@@ -191,7 +191,7 @@ module Integrations
                 "item" => credit_note_item.external_id,
                 "account" => credit_note_item.external_account_code,
                 "quantity" => 1,
-                "rate" => -amount(invoice.credit_notes_amount_cents, resource: invoice),
+                "rate" => -amount(invoice.credit_notes_amount_cents - credit_notes_taxes_amount_cents, resource: invoice),
                 "taxdetailsreference" => "credit_note_item",
                 "description" => invoice.credits.credit_note_kind.map(&:item_name).join(","),
                 "item_source" => "credit_note_credits"
@@ -242,7 +242,7 @@ module Integrations
             if credit_note_item && invoice.credit_notes_amount_cents > 0
               output << {
                 "taxbasis" => 1,
-                "taxamount" => 0,
+                "taxamount" => -amount(credit_notes_taxes_amount_cents, resource: invoice),
                 "taxrate" => invoice.taxes_rate,
                 "taxtype" => tax_item.tax_type,
                 "taxcode" => tax_item.tax_code,
@@ -251,6 +251,18 @@ module Integrations
             end
 
             output
+          end
+
+          def credit_notes_taxes_amount_cents
+            @credit_notes_taxes_amount_cents ||= invoice.credits.credit_note_kind.includes(:credit_note).sum do |credit|
+              cn = credit.credit_note
+              subtotal = cn.sub_total_including_taxes_amount_cents
+              if subtotal.zero?
+                0
+              else
+                credit.amount_cents * cn.taxes_amount_cents / subtotal
+              end
+            end
           end
 
           def limited_rate(precise_unit_amount)
