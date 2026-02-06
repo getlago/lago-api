@@ -7,6 +7,7 @@ class AddUniqueIndexToPaymentMethods < ActiveRecord::Migration[8.0]
     add_index :payment_methods,
       [:payment_provider_customer_id, :provider_method_id],
       unique: true,
+      where: "deleted_at IS NULL",
       name: "index_payment_methods_on_provider_customer_and_provider_method",
       algorithm: :concurrently
   end
