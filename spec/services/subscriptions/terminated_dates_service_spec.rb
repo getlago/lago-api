@@ -393,6 +393,20 @@ RSpec.describe Subscriptions::TerminatedDatesService do
           end
         end
       end
+
+      context "when pay in advance subscription is yearly with monthly charges in advance and dates_service does not have fixed_charge_boundaries" do
+        let(:plan) { create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, pay_in_advance: true) }
+        let(:subscription) { create(:subscription, :terminated, plan:, subscription_at:, billing_time: :anniversary, started_at:) }
+        let(:subscription_at) { DateTime.parse("02 Feb 2021") }
+        let(:started_at) { subscription_at }
+        # in the middle of the yearly billing period fixed_charges won't be charged, so the
+        # date service won't return fixed_charge boundaries
+        let(:billing_date) { DateTime.parse("2022-06-02 00:01:46.011") }
+
+        it "returns the new date service because subscription is yearly, but the charges were monthly" do
+          expect(service_call).not_to eq(date_service)
+        end
+      end
     end
 
     context "when subscription has next subscription" do
