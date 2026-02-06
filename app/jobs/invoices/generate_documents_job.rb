@@ -15,11 +15,11 @@ module Invoices
       Net::ReadTimeout,
       EOFError, wait: :polynomially_longer, attempts: 6
 
-    def perform(invoice:, notify: false)
+    def perform(invoice:, notify: false, **context)
       Invoices::GenerateXmlService.call!(invoice:)
       Invoices::GeneratePdfService.call!(invoice:)
 
-      Invoices::NotifyJob.perform_later(invoice:) if notify
+      Invoices::NotifyJob.perform_later(invoice:, **context) if notify
     end
   end
 end

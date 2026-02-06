@@ -10,8 +10,8 @@ module Invoices
       end
     end
 
-    def perform(invoice:)
-      InvoiceMailer.with(invoice:).created.deliver_later
+    def perform(invoice:, **context)
+      InvoiceMailer.with(invoice:, **context).created.deliver_later
     end
   end
 end

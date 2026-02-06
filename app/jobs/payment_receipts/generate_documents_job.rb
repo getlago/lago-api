@@ -12,11 +12,11 @@ module PaymentReceipts
 
     retry_on LagoHttpClient::HttpError, Errno::ECONNREFUSED, EOFError, wait: :polynomially_longer, attempts: 6
 
-    def perform(payment_receipt:, notify: false)
+    def perform(payment_receipt:, notify: false, **context)
       PaymentReceipts::GenerateXmlService.call(payment_receipt:).raise_if_error!
       PaymentReceipts::GeneratePdfService.call(payment_receipt:).raise_if_error!
 
-      PaymentReceipts::NotifyJob.perform_later(payment_receipt:) if notify
+      PaymentReceipts::NotifyJob.perform_later(payment_receipt:, **context) if notify
     end
   end
 end

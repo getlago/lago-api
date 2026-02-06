@@ -10,8 +10,8 @@ module PaymentReceipts
       end
     end
 
-    def perform(payment_receipt:, email:)
-      PaymentReceipts::GenerateDocumentsJob.perform_later(payment_receipt:, notify: email)
+    def perform(payment_receipt:, email:, **context)
+      PaymentReceipts::GenerateDocumentsJob.perform_later(payment_receipt:, notify: email, **context)
     end
   end
 end

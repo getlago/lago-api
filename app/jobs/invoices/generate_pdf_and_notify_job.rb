@@ -10,8 +10,8 @@ module Invoices
       end
     end
 
-    def perform(invoice:, email:)
-      Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: email)
+    def perform(invoice:, email:, **context)
+      Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: email, **context)
     end
   end
 end

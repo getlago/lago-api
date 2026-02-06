@@ -35,7 +35,6 @@ describe "Invoice Email Activity Logging", :capture_kafka_messages do
 
   context "when invoice is finalized" do
     it "logs email activity to Kafka" do
-
       expect(email_messages.size).to eq(1)
 
       payload = JSON.parse(email_messages.first[:payload])

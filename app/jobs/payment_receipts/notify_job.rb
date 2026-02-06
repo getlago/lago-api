@@ -10,8 +10,8 @@ module PaymentReceipts
       end
     end
 
-    def perform(payment_receipt:)
-      PaymentReceiptMailer.with(payment_receipt:).created.deliver_later
+    def perform(payment_receipt:, **context)
+      PaymentReceiptMailer.with(payment_receipt:, **context).created.deliver_later
     end
   end
 end
