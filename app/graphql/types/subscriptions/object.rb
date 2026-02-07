@@ -45,8 +45,11 @@ module Types
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
 
+      field :usage_thresholds, [Types::UsageThresholds::Object], null: false
+
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
+      field :progressive_billing_disabled, Boolean
 
       def next_plan
         object.next_subscription&.plan
