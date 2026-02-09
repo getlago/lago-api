@@ -5,7 +5,8 @@ module PaymentProviders
     class HandleEventService < BaseService
       PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
       REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
-      MANDATE_ACTIONS = %w[active].freeze
+      MANDATE_ACTIVE_ACTIONS = %w[active].freeze
+      MANDATE_CANCELLED_ACTIONS = %w[cancelled].freeze
 
       PAYMENT_SERVICE_CLASS_MAP = {
         "Invoice" => Invoices::Payments::GocardlessService,
@@ -39,8 +40,13 @@ module PaymentProviders
               ).raise_if_error!
           end
         when "mandates"
-          if MANDATE_ACTIONS.include?(event.action)
+          if MANDATE_ACTIVE_ACTIONS.include?(event.action)
             PaymentProviders::Gocardless::Webhooks::MandateActiveService.call(
+              payment_provider:,
+              mandate_id: event.links.mandate
+            ).raise_if_error!
+          elsif MANDATE_CANCELLED_ACTIONS.include?(event.action) && api_originated_event?(event)
+            PaymentProviders::Gocardless::Webhooks::MandateCancelledService.call(
               payment_provider:,
               mandate_id: event.links.mandate
             ).raise_if_error!
@@ -67,6 +73,12 @@ module PaymentProviders
         PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
           raise NameError, "Invalid lago_payable_type: #{payable_type}"
         end
+      end
+
+      def api_originated_event?(event)
+        return false unless event.details
+
+        event.details["origin"] == "api"
       end
     end
   end
