@@ -149,6 +149,14 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
         expect(invoice.total_amount_cents).to be_positive
       end
 
+      it "applies invoice custom sections" do
+        allow(Invoices::ApplyInvoiceCustomSectionsService).to receive(:call)
+
+        finalize_service.call
+
+        expect(Invoices::ApplyInvoiceCustomSectionsService).to have_received(:call).with(invoice:)
+      end
+
       it "sets payment_status to pending when total is positive" do
         finalize_service.call
 
