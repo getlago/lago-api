@@ -21,7 +21,7 @@ module Mutations
         params = args.except(:subscription_id, :charge_code).to_h.deep_symbolize_keys
         params[:properties] = params[:properties].to_h if params[:properties]
 
-        result = ::Subscriptions::CreateChargeFilterService.call(
+        result = ::Subscriptions::ChargeFilters::CreateService.call(
           subscription:,
           charge:,
           params:

@@ -2,6 +2,7 @@
 
 module Subscriptions
   class UpdateOrOverrideChargeService < BaseService
+    include Concerns::PlanOverrideConcern
     include Concerns::ChargeOverrideConcern
 
     Result = BaseResult[:charge]
@@ -63,7 +64,7 @@ module Subscriptions
       existing_charge.save!
 
       if params.key?(:filters)
-        filters_result = ChargeFilters::CreateOrUpdateBatchService.call(
+        filters_result = ::ChargeFilters::CreateOrUpdateBatchService.call(
           charge: existing_charge,
           filters_params: params[:filters]
         )

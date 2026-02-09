@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::CreateChargeFilterService do
+RSpec.describe Subscriptions::ChargeFilters::CreateService do
   subject(:service) { described_class.new(subscription:, charge:, params:) }
 
   let(:organization) { create(:organization) }

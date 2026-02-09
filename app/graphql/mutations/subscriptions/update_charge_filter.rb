@@ -22,7 +22,7 @@ module Mutations
         params = args.except(:subscription_id, :charge_code, :values).to_h.deep_symbolize_keys
         params[:properties] = params[:properties].to_h if params[:properties]
 
-        result = ::Subscriptions::UpdateOrOverrideChargeFilterService.call(
+        result = ::Subscriptions::ChargeFilters::UpdateOrOverrideService.call(
           subscription:,
           charge:,
           charge_filter:,

@@ -19,7 +19,7 @@ module Mutations
         charge = subscription&.plan&.charges&.find_by(code: args[:charge_code])
         charge_filter = find_charge_filter(charge, args[:values])
 
-        result = ::Subscriptions::DestroyChargeFilterService.call(
+        result = ::Subscriptions::ChargeFilters::DestroyService.call(
           subscription:,
           charge:,
           charge_filter:

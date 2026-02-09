@@ -4,7 +4,6 @@ module Subscriptions
   module Concerns
     module ChargeOverrideConcern
       extend ActiveSupport::Concern
-      include PlanOverrideConcern
 
       private
 

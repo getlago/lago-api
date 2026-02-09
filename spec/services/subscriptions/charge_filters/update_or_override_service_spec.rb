@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::DestroyChargeFilterService do
-  subject(:service) { described_class.new(subscription:, charge:, charge_filter:) }
+RSpec.describe Subscriptions::ChargeFilters::UpdateOrOverrideService do
+  subject(:service) { described_class.new(subscription:, charge:, charge_filter:, params:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -16,6 +16,12 @@ RSpec.describe Subscriptions::DestroyChargeFilterService do
     create(:charge_filter, charge:, organization:, properties: {amount: "50"}).tap do |filter|
       create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values: [billable_metric_filter.values.first], organization:)
     end
+  end
+  let(:params) do
+    {
+      invoice_display_name: "Overridden Filter",
+      properties: {amount: "150"}
+    }
   end
 
   describe "#call" do
@@ -47,11 +53,23 @@ RSpec.describe Subscriptions::DestroyChargeFilterService do
         expect { service.call }.to change(Charge, :count).by(1)
       end
 
-      it "creates and then destroys the charge filter on the override" do
+      it "creates a charge filter override" do
+        expect { service.call }.to change(ChargeFilter, :count).by(1)
+      end
+
+      it "returns the charge filter with overridden properties" do
         result = service.call
 
         expect(result).to be_success
-        expect(result.charge_filter).to be_discarded
+        expect(result.charge_filter).to be_a(ChargeFilter)
+        expect(result.charge_filter.invoice_display_name).to eq("Overridden Filter")
+        expect(result.charge_filter.properties).to eq({"amount" => "150"})
+      end
+
+      it "preserves the filter values" do
+        result = service.call
+
+        expect(result.charge_filter.to_h).to eq(charge_filter.to_h)
       end
 
       context "when subscription already has a plan override" do
@@ -63,7 +81,23 @@ RSpec.describe Subscriptions::DestroyChargeFilterService do
         end
       end
 
-      context "when charge override already exists with the filter" do
+      context "when charge override already exists" do
+        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
+        let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+        let!(:existing_charge_override) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
+
+        it "does not create a new charge" do
+          expect { service.call }.not_to change(Charge, :count)
+        end
+
+        it "creates filter on the existing charge override" do
+          result = service.call
+
+          expect(result.charge_filter.charge_id).to eq(existing_charge_override.id)
+        end
+      end
+
+      context "when charge filter override already exists" do
         let(:overridden_plan) { create(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
         let!(:existing_charge_override) { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
@@ -73,34 +107,26 @@ RSpec.describe Subscriptions::DestroyChargeFilterService do
           end
         end
 
-        it "does not create a new charge" do
-          expect { service.call }.not_to change(Charge, :count)
+        it "does not create a new charge filter" do
+          expect { service.call }.not_to change(ChargeFilter, :count)
         end
 
-        it "does not create a new filter" do
-          expect { service.call }.not_to change(ChargeFilter.unscoped, :count)
-        end
-
-        it "soft deletes the existing filter override" do
+        it "updates the existing filter override" do
           result = service.call
 
           expect(result.charge_filter.id).to eq(existing_filter_override.id)
-          expect(result.charge_filter).to be_discarded
+          expect(result.charge_filter.invoice_display_name).to eq("Overridden Filter")
+          expect(result.charge_filter.properties).to eq({"amount" => "150"})
         end
       end
 
-      context "when filter does not exist on the charge override" do
-        let(:overridden_plan) { create(:plan, organization:, parent: plan) }
-        let(:subscription) { create(:subscription, customer:, plan: overridden_plan) }
+      context "when only updating invoice_display_name" do
+        let(:params) { {invoice_display_name: "Display Name Only"} }
 
-        before { create(:standard_charge, plan: overridden_plan, organization:, billable_metric:, parent: charge, code: charge.code) }
-
-        it "returns not found failure" do
+        it "updates only the invoice_display_name" do
           result = service.call
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("charge_filter")
+          expect(result.charge_filter.invoice_display_name).to eq("Display Name Only")
         end
       end
 
