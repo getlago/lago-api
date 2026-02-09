@@ -39,6 +39,13 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
                 "item_code" => mapping_codes.dig(:add_on, :external_id)
               },
               {
+                "item_key" => fixed_charge_fee.item_key,
+                "item_id" => fixed_charge_fee.id,
+                "amount" => negative_amount ? "-1.5" : "1.5",
+                "unit" => 6.0,
+                "item_code" => mapping_codes.dig(:fixed_charge, :external_id)
+              },
+              {
                 "item_key" => billable_metric_fee.item_key,
                 "item_id" => billable_metric_fee.id,
                 "amount" => negative_amount ? "-3.0" : "3.0",

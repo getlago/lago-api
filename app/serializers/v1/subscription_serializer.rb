@@ -10,6 +10,8 @@ module V1
         external_customer_id: model.customer.external_id,
         name: model.name,
         plan_code: model.plan.code,
+        plan_amount_cents: model.plan.amount_cents,
+        plan_amount_currency: model.plan.amount_currency,
         status: model.status,
         billing_time: model.billing_time,
         subscription_at: model.subscription_at&.iso8601,

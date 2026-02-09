@@ -39,6 +39,12 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara d
               "item_code" => mapping_codes.dig(:add_on, :external_id)
             },
             {
+              "item_id" => fixed_charge_add_on.id,
+              "amount" => "-1.4",
+              "unit" => 6.0,
+              "item_code" => mapping_codes.dig(:fixed_charge, :external_id)
+            },
+            {
               "item_id" => billable_metric.id,
               "amount" => "-1.8",
               "unit" => 3.0,

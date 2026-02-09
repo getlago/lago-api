@@ -25,6 +25,7 @@ RSpec.describe Api::V1::SubscriptionsController do
     let(:subscription_at) { Time.current.iso8601 }
     let(:ending_at) { (Time.current + 1.year).iso8601 }
     let(:plan_code) { plan.code }
+    let(:plan_amount_cents_override) { 100 }
 
     let(:params) do
       {
@@ -43,7 +44,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           payment_method_type: "provider"
         },
         plan_overrides: {
-          amount_cents: 100,
+          amount_cents: plan_amount_cents_override,
           name: "overridden name",
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
@@ -81,6 +82,8 @@ RSpec.describe Api::V1::SubscriptionsController do
           external_customer_id: customer.external_id,
           lago_customer_id: customer.id,
           plan_code: plan.code,
+          plan_amount_cents: plan_amount_cents_override,
+          plan_amount_currency: plan.amount_currency,
           status: "active",
           name: "subscription name",
           started_at: String,
@@ -106,7 +109,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           }
         )
         expect(json[:subscription][:plan]).to include(
-          amount_cents: 100,
+          amount_cents: plan_amount_cents_override,
           name: "overridden name",
           description: "desc"
         )
@@ -275,6 +278,8 @@ RSpec.describe Api::V1::SubscriptionsController do
         expect(json[:subscription][:external_customer_id]).to eq(customer.external_id)
         expect(json[:subscription][:lago_customer_id]).to eq(customer.id)
         expect(json[:subscription][:plan_code]).to eq(plan.code)
+        expect(json[:subscription][:plan_amount_cents]).to eq(plan.amount_cents)
+        expect(json[:subscription][:plan_amount_currency]).to eq(plan.amount_currency)
         expect(json[:subscription][:status]).to eq("active")
         expect(json[:subscription][:name]).to eq("subscription name")
         expect(json[:subscription][:started_at]).to be_present

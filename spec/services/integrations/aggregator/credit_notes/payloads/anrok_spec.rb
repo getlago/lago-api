@@ -23,6 +23,14 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Anrok do
                "units" => 1
              },
              {
+               "account_code" => mapping_codes.dig(:fixed_charge, :external_account_code),
+               "description" => "Fixed Charge Fee",
+               "external_id" => mapping_codes.dig(:fixed_charge, :external_id),
+               "precise_unit_amount" => 1.4,
+               "taxes_amount_cents" => 0.0,
+               "units" => 1
+             },
+             {
                "account_code" => mapping_codes.dig(:billable_metric, :external_account_code),
                "description" => "Standard Charge Fee",
                "external_id" => mapping_codes.dig(:billable_metric, :external_id),
