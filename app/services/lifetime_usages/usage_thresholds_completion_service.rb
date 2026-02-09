@@ -4,7 +4,7 @@ module LifetimeUsages
   class UsageThresholdsCompletionService < BaseService
     def initialize(lifetime_usage:)
       @lifetime_usage = lifetime_usage
-      @usage_thresholds = lifetime_usage.subscription.plan.usage_thresholds
+      @usage_thresholds = lifetime_usage.subscription.applicable_usage_thresholds
 
       super
     end
