@@ -23,4 +23,3 @@ RSpec.describe Webhooks::Payments::SucceededService do
     "payment_method" => Hash
   }
 end
-
