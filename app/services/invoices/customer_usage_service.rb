@@ -119,9 +119,9 @@ module Invoices
       fees = []
       filters = event_filters(subscription, boundaries).charges
       adjusted_fee_exists = AdjustedFee
-                              .where(invoice:, subscription:,fee_type: :charge)
-                              .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
-                              .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
+        .where(invoice:, subscription:,fee_type: :charge)
+        .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
+        .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
 
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || [], adjusted_fee_exists) }
       return fees if usage_filters.has_charge_filter?

@@ -23,7 +23,9 @@ module Fees
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE
       with_zero_units_filters: true,
-      skip_adjusted_fees: false
+      skip_adjusted_fees: false,
+      plan: nil,
+      customer: nil,
     )
       @invoice = invoice
       @charge = charge
@@ -43,6 +45,9 @@ module Fees
       @filtered_aggregations = filtered_aggregations
       @usage_filters = usage_filters
       @skip_adjusted_fees = skip_adjusted_fees
+
+      @plan = plan
+      @customer = customer
 
       super(nil)
     end
@@ -318,7 +323,7 @@ module Fees
       end
 
       if apply_taxes
-        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee, plan: @plan, customer: @customer)
         taxes_result.raise_if_error!
       end
 
