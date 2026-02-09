@@ -106,6 +106,27 @@ RSpec.describe Utils::SecurityLog do
       end
     end
 
+    context "when security_logs is not enabled but skip_organization_check is true" do
+      subject(:produce) do
+        security_log.produce(
+          organization:,
+          log_type: "user",
+          log_event: "user.signed_up",
+          user:,
+          api_key:,
+          resources: {user_email: "test@example.com"},
+          skip_organization_check: true
+        )
+      end
+
+      let(:organization) { create(:organization, premium_integrations: []) }
+
+      it "produces the event on kafka" do
+        expect(produce).to be true
+        expect(karafka_producer).to have_received(:produce_async)
+      end
+    end
+
     context "when License is not premium" do
       before { allow(License).to receive(:premium?).and_return(false) }
 
