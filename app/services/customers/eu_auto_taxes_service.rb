@@ -131,7 +131,7 @@ module Customers
     end
 
     def retry_delay(pending_vies_check)
-      RETRY_DELAYS[pending_vies_check.attempts_count.to_i] || MAX_RETRY_DELAY
+      RETRY_DELAYS[pending_vies_check.attempts_count.to_i - 1] || MAX_RETRY_DELAY
     end
   end
 end

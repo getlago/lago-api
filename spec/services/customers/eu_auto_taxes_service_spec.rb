@@ -73,7 +73,7 @@ RSpec.describe Customers::EuAutoTaxesService do
       it "uses exponential backoff for retry delay" do
         eu_tax_service.call
 
-        expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(19.minutes.from_now..21.minutes.from_now).with(customer.id)
+        expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(9.minutes.from_now..11.minutes.from_now).with(customer.id)
       end
     end
 
