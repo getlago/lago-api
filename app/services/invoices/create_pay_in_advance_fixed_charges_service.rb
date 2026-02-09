@@ -41,7 +41,7 @@ module Invoices
           unless taxes_result.success?
             tax_error = taxes_result.error.code
             invoice.failed!
-            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+            deliver_fee_webhooks
             create_error_detail(tax_error)
             Utils::ActivityLog.produce(invoice, "invoice.failed")
             next
@@ -49,7 +49,7 @@ module Invoices
         else
           vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
           if vies_check_failed
-            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+            deliver_fee_webhooks
             Utils::ActivityLog.produce(invoice, "invoice.pending")
             next
           end
@@ -142,8 +142,12 @@ module Invoices
     end
 
     def deliver_webhooks
-      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+      deliver_fee_webhooks
       SendWebhookJob.perform_later("invoice.created", invoice)
+    end
+
+    def deliver_fee_webhooks
+      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
     def should_deliver_email?
