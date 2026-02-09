@@ -22,6 +22,9 @@ module Invoices
       # Invoice without fees should be created if there are no fees to bill
       # return result if fees.empty?
 
+      tax_error = false
+      vies_check_failed = false
+
       ActiveRecord::Base.transaction do
         create_generating_invoice
         fees.each do |fee|
@@ -34,12 +37,20 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
         if customer_provider_taxation?
-          @taxes_result = apply_provider_taxes
-          unless @taxes_result.success?
+          taxes_result = apply_provider_taxes
+          unless taxes_result.success?
+            tax_error = taxes_result.error.code
             invoice.failed!
-            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-            create_error_detail(@taxes_result.error.code)
+            deliver_fee_webhooks
+            create_error_detail(tax_error)
             Utils::ActivityLog.produce(invoice, "invoice.failed")
+            next
+          end
+        else
+          vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
+          if vies_check_failed
+            deliver_fee_webhooks
+            Utils::ActivityLog.produce(invoice, "invoice.pending")
             next
           end
         end
@@ -54,11 +65,11 @@ module Invoices
         invoice.save!
       end
 
-      if @taxes_result && !@taxes_result.success?
-        return result.validation_failure!(errors: {tax_error: [@taxes_result.error.code]})
-      end
-
       result.invoice = invoice
+
+      return result.validation_failure!(errors: {tax_error: [tax_error]}) if tax_error
+
+      return result if vies_check_failed
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
@@ -131,8 +142,12 @@ module Invoices
     end
 
     def deliver_webhooks
-      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+      deliver_fee_webhooks
       SendWebhookJob.perform_later("invoice.created", invoice)
+    end
+
+    def deliver_fee_webhooks
+      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
     def should_deliver_email?

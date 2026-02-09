@@ -21,6 +21,7 @@ module Invoices
         invoice.payment_due_date = payment_due_date
 
         Invoices::ComputeAmountsFromFees.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
