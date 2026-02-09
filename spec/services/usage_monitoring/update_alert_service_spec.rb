@@ -94,6 +94,17 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when thresholds have same value but different recurring flags" do
+      let(:params) { {thresholds: [{value: 100}, {value: 100, recurring: true}]} }
+
+      it "updates the alert" do
+        expect(result).to be_success
+        expect(alert.reload.thresholds.pluck(:value, :recurring)).to contain_exactly(
+          [100, false], [100, true]
+        )
+      end
+    end
+
     context "when a threshold value is nil" do
       let(:params) { {thresholds: [{value: nil}]} }
 

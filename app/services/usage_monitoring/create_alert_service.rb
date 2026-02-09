@@ -26,8 +26,8 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
       end
 
-      threshold_values = params[:thresholds].map { |t| t[:value] }.compact
-      if threshold_values.size != threshold_values.uniq.size
+      threshold_keys = params[:thresholds].map { |t| [t[:value], t[:recurring] || false] }
+      if threshold_keys.size != threshold_keys.uniq.size
         return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
       end
 
