@@ -94,6 +94,14 @@ RSpec.describe ModelSerializer do
           expect(serializer.included_relations(:name)).to eq([:first, :last])
         end
       end
+
+      context "when include is not found" do
+        let(:options) { {includes: [:id]} }
+
+        it "returns an empty array" do
+          expect(serializer.included_relations(:name)).to eq([])
+        end
+      end
     end
   end
 end

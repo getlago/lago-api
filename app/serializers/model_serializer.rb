@@ -6,7 +6,11 @@ class ModelSerializer
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
   #   Expected format: [:customer, {plan: [:charges]}]
-  #   Hash values will be passed to the relation serializer
+  #
+  #   Hash values can be passed to the relation serializer
+  #   when used with `included_relations`.
+  #   Example:
+  #     included_relations(:plan, default: [:charges])`
   def initialize(model, options = {})
     @model = model
     @options = options
@@ -51,7 +55,7 @@ class ModelSerializer
       next include.key?(value) if include.is_a?(Hash)
     end
 
-    return default if include.is_a?(Symbol)
+    return default if include.is_a?(Symbol) || include.nil?
 
     include[value]
   end
