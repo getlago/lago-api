@@ -12,7 +12,8 @@ module Fees
       filtered_aggregations: nil,
       apply_taxes: false,
       calculate_projected_usage: false,
-      with_zero_units_filters: true
+      with_zero_units_filters: true,
+      skip_adjusted_fees: false
     )
       @invoice = invoice
       @charge = charge
@@ -30,6 +31,7 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
+      @skip_adjusted_fees = skip_adjusted_fees
 
       super(nil)
     end
@@ -106,8 +108,14 @@ module Fees
         end.compact
       end
 
-      # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
-      fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
+      # Preserve preloaded associations on all fees (including cached ones) to avoid N+1 queries
+      fees.each do |fee|
+        fee.association(:billable_metric).target = billable_metric
+        fee.association(:charge).target = charge
+        if charge_filter && fee.charge_filter_id
+          fee.association(:charge_filter).target = charge_filter
+        end
+      end
 
       result.fees.concat(fees.compact)
     end
@@ -218,6 +226,7 @@ module Fees
     end
 
     def adjusted_fee(charge_filter:, grouped_by:)
+      return if @skip_adjusted_fees
       @adjusted_fee ||= {}
 
       key = [
