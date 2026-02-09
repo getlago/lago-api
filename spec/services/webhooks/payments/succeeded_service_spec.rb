@@ -8,9 +8,11 @@ RSpec.describe Webhooks::Payments::SucceededService do
   let(:payment) do
     create(
       :payment,
-      payable_payment_status: :succeeded
+      payable_payment_status: :succeeded,
+      payment_method: payment_method
     )
   end
+  let(:payment_method) { create(:payment_method) }
 
   it_behaves_like "creates webhook", "payment.succeeded", "payment", {
     "lago_id" => String,
