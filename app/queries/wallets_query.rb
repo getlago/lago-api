@@ -25,16 +25,16 @@ class WalletsQuery < BaseQuery
   end
 
   def with_external_customer_id(scope)
-    scope.joins(:customer).where(customers: {external_id: filters.external_customer_id})
+    scope.where(customer_id: customer.select(:id))
   end
 
   def validate_filters
     if filters.to_h.key? :external_customer_id
-      result.not_found_failure!(resource: "customer") unless customer_exists?
+      result.not_found_failure!(resource: "customer") unless customer.exists?
     end
   end
 
-  def customer_exists?
-    organization.customers.exists?(external_id: filters.external_customer_id)
+  def customer
+    organization.customers.where(external_id: filters.external_customer_id)
   end
 end

@@ -320,6 +320,7 @@ DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organizat
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
+DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
@@ -602,6 +603,7 @@ DROP INDEX IF EXISTS public.index_customers_on_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
+DROP INDEX IF EXISTS public.index_customers_on_external_id;
 DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customers_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_customers_on_awaiting_wallet_refresh;
@@ -7063,6 +7065,13 @@ CREATE INDEX index_customers_on_deleted_at ON public.customers USING btree (dele
 
 
 --
+-- Name: index_customers_on_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_on_external_id ON public.customers USING btree (organization_id, external_id);
+
+
+--
 -- Name: index_customers_on_external_id_and_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9034,6 +9043,13 @@ CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (custome
 --
 
 CREATE INDEX index_wallets_on_organization_id ON public.wallets USING btree (organization_id);
+
+
+--
+-- Name: index_wallets_on_organization_id_and_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_organization_id_and_customer_id ON public.wallets USING btree (organization_id, customer_id);
 
 
 --
@@ -11402,6 +11418,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260209103920'),
+('20260209103526'),
 ('20260204153734'),
 ('20260202155431'),
 ('20260202134958'),
