@@ -50,6 +50,9 @@ module Organizations
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
+      if billing.key?(:security_logs_retention_days)
+        organization.security_logs_retention_days = billing[:security_logs_retention_days]
+      end
 
       ActiveRecord::Base.transaction do
         handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)

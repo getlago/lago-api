@@ -21,6 +21,9 @@ class Organization < ApplicationRecord
     enterprise: Float::INFINITY
   }.freeze
 
+  SECURITY_LOGS_RETENTION_DAYS_DEFAULT = 90
+  SECURITY_LOGS_RETENTION_DAYS_RANGE = (1..90)
+
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
@@ -160,6 +163,13 @@ class Organization < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
+  validates :security_logs_retention_days,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: SECURITY_LOGS_RETENTION_DAYS_RANGE.min,
+      less_than_or_equal_to: SECURITY_LOGS_RETENTION_DAYS_RANGE.max
+    },
+    allow_nil: true
 
   validate :validate_premium_integrations
   validate :validate_email_settings
@@ -258,6 +268,10 @@ class Organization < ApplicationRecord
     max_wallets if events_targeting_wallets_enabled?
   end
 
+  def effective_security_logs_retention_days
+    security_logs_retention_days || SECURITY_LOGS_RETENTION_DAYS_DEFAULT
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -329,6 +343,7 @@ end
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null
 #  premium_integrations             :string           default([]), not null, is an Array
+#  security_logs_retention_days     :integer
 #  state                            :string
 #  tax_identification_number        :string
 #  timezone                         :string           default("UTC"), not null

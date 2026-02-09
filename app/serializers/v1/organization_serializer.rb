@@ -40,7 +40,8 @@ module V1
       {
         invoice_footer: model.invoice_footer,
         invoice_grace_period: model.invoice_grace_period,
-        document_locale: model.document_locale
+        document_locale: model.document_locale,
+        security_logs_retention_days: model.security_logs_retention_days
       }
     end
 

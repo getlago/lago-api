@@ -340,5 +340,41 @@ RSpec.describe Organizations::UpdateService do
           .with(params: {organization:, user:, additions:, deletions:}, args: [])
       end
     end
+
+    context "when security_logs_retention_days is provided in billing_configuration" do
+      let(:params) { {billing_configuration: {security_logs_retention_days: 30}} }
+
+      it "updates the security_logs_retention_days" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.security_logs_retention_days).to eq(30)
+      end
+
+      context "with invalid value" do
+        let(:params) { {billing_configuration: {security_logs_retention_days: 100}} }
+
+        it "returns a validation error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:security_logs_retention_days]).to include("value_is_out_of_range")
+        end
+      end
+
+      context "with nil value" do
+        let(:params) { {billing_configuration: {security_logs_retention_days: nil}} }
+
+        before { organization.update!(security_logs_retention_days: 30) }
+
+        it "sets the value to nil" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.organization.security_logs_retention_days).to be_nil
+        end
+      end
+    end
   end
 end

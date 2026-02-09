@@ -87,6 +87,42 @@ RSpec.describe Api::V1::OrganizationsController do
         end
       end
     end
+
+    context "when updating security_logs_retention_days" do
+      let(:update_params) do
+        {
+          billing_configuration: {
+            security_logs_retention_days: 30
+          }
+        }
+      end
+
+      it "updates the security_logs_retention_days" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        billing = json[:organization][:billing_configuration]
+        expect(billing[:security_logs_retention_days]).to eq(30)
+      end
+
+      context "with invalid value" do
+        let(:update_params) do
+          {
+            billing_configuration: {
+              security_logs_retention_days: 100
+            }
+          }
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:security_logs_retention_days]).to include("value_is_out_of_range")
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/organizations/grpc_token" do

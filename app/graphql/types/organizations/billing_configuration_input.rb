@@ -8,6 +8,7 @@ module Types
       argument :document_locale, String, required: false
       argument :invoice_footer, String, required: false
       argument :invoice_grace_period, Integer, required: false
+      argument :security_logs_retention_days, Integer, required: false
     end
   end
 end

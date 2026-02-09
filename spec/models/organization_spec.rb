@@ -213,6 +213,38 @@ RSpec.describe Organization do
         it { is_expected.to be_valid }
       end
     end
+
+    describe "security_logs_retention_days validation" do
+      it "is valid with nil" do
+        organization.security_logs_retention_days = nil
+        expect(organization).to be_valid
+      end
+
+      it "is valid with value in range 1-90" do
+        [1, 30, 90].each do |value|
+          organization.security_logs_retention_days = value
+          expect(organization).to be_valid
+        end
+      end
+
+      it "is invalid with value less than 1" do
+        organization.security_logs_retention_days = 0
+        expect(organization).not_to be_valid
+        expect(organization.errors.messages[:security_logs_retention_days]).to include("value_is_out_of_range")
+      end
+
+      it "is invalid with value greater than 90" do
+        organization.security_logs_retention_days = 91
+        expect(organization).not_to be_valid
+        expect(organization.errors.messages[:security_logs_retention_days]).to include("value_is_out_of_range")
+      end
+
+      it "is invalid with non-integer value" do
+        organization.security_logs_retention_days = 30.5
+        expect(organization).not_to be_valid
+        expect(organization.errors.messages[:security_logs_retention_days]).to include("must be an integer")
+      end
+    end
   end
 
   describe "#save" do
@@ -356,6 +388,22 @@ RSpec.describe Organization do
       expect(build(:organization, premium_integrations: ["lifetime_usage", "progressive_billing"])).to be_using_lifetime_usage
       expect(build(:organization, premium_integrations: [])).not_to be_using_lifetime_usage
       expect(build(:organization, premium_integrations: ["okta"])).not_to be_using_lifetime_usage
+    end
+  end
+
+  describe "#effective_security_logs_retention_days" do
+    subject { organization.effective_security_logs_retention_days }
+
+    context "when security_logs_retention_days is nil" do
+      before { organization.security_logs_retention_days = nil }
+
+      it { is_expected.to eq(Organization::SECURITY_LOGS_RETENTION_DAYS_DEFAULT) }
+    end
+
+    context "when security_logs_retention_days is set" do
+      before { organization.security_logs_retention_days = 30 }
+
+      it { is_expected.to eq(30) }
     end
   end
 

@@ -9,6 +9,7 @@ module Types
       field :id, ID, null: false
       field :invoice_footer, String
       field :invoice_grace_period, Integer, null: false
+      field :security_logs_retention_days, Integer
     end
   end
 end

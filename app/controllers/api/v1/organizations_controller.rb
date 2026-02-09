@@ -70,7 +70,8 @@ module Api
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
-            :document_locale
+            :document_locale,
+            :security_logs_retention_days
           ]
         )
       end
