@@ -128,6 +128,33 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
         discarded_signin_removal
       end
 
+      context "when privilege_params match plan values in a different order" do
+        let(:privilege_params) { {seats_signin.code => "okta", seats_reset.code => false, seats_max.code => 2} }
+
+        context "when subscription has no overrides" do
+          let(:partial) { false }
+
+          it "removes subscription overrides and restores plan defaults" do
+            expect(result).to be_success
+            expect(subscription.entitlements.count).to eq 0
+          end
+        end
+
+        context "when subscription already has overrides" do
+          let(:partial) { false }
+          let(:sub_entitlement) { create(:entitlement, feature: seats, subscription:, plan: nil) }
+          let(:sub_max_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege: seats_max, value: 50) }
+
+          before { sub_max_value }
+
+          it "discards subscription entitlement and restores plan defaults" do
+            expect(result).to be_success
+            expect(sub_entitlement.reload).to be_discarded
+            expect(sub_max_value.reload).to be_discarded
+          end
+        end
+      end
+
       context "when subscription has no entitlements" do
         context "when partial" do
           let(:partial) { true }
