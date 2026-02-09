@@ -20,6 +20,29 @@ RSpec.describe Events::Stores::PostgresStore do
       )
     end
 
+    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
+      event = create(
+        :event,
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp:,
+        properties:
+      )
+
+      create(
+        :enriched_event,
+        subscription:,
+        event:,
+        charge:,
+        charge_filter_id: charge_filter&.id,
+        value:,
+        decimal_value: value&.to_i&.to_d
+      )
+    end
+
     def format_timestamp(timestamp, precision: nil)
       Time.zone.parse(timestamp)
     end
@@ -241,47 +264,6 @@ RSpec.describe Events::Stores::PostgresStore do
         expect(group.count).to eq(1)
         expect(group.first["prorated_value"].round(3)).to eq(0.387) # 12/31
         expect(group.first["operation_type"]).to eq("add")
-      end
-    end
-
-    describe "#distinct_charges_and_filters" do
-      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-      let(:charge_filter) { create(:charge_filter, charge:) }
-
-      let(:event) do
-        create(
-          :event,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          external_customer_id: customer.external_id,
-          code:,
-          timestamp: boundaries[:from_datetime] + 12.days,
-          properties: {billable_metric.field_name => 12}
-        )
-      end
-
-      before do
-        create(
-          :enriched_event,
-          subscription:,
-          event:,
-          charge:,
-          charge_filter_id: charge_filter&.id,
-          value: 12,
-          decimal_value: 12.0
-        )
-      end
-
-      it "returns distinct charges and filters" do
-        expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
-      end
-
-      context "when charge_filter is nil" do
-        let(:charge_filter) { nil }
-
-        it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
-        end
       end
     end
   end
