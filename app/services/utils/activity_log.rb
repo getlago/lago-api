@@ -5,6 +5,8 @@ module Utils
     IGNORED_FIELDS = %i[updated_at].freeze
     IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature].freeze
     MAX_SERIALIZED_FEES = 25
+    MAX_SERIALIZED_CHARGES = 50
+
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       credit_note: %i[items applied_taxes error_details],
@@ -102,6 +104,11 @@ module Utils
           external_subscription_id: external_subscription_id
         }.to_json
       )
+    rescue WaterDrop::Errors::MessageInvalidError => e
+      raise if ENV["SENTRY_DSN"].blank?
+
+      # Avoid raising error up to the end-user
+      Sentry.capture_exception(e)
     end
 
     def activity_source
@@ -125,12 +132,27 @@ module Utils
     end
 
     def serializer_includes(root_name)
-      return SERIALIZED_INCLUDED_OBJECTS[root_name] || [] if root_name != :invoice
-
-      if object.fees.count > MAX_SERIALIZED_FEES
-        SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
+      case root_name
+      when :invoice
+        if object.fees.count > MAX_SERIALIZED_FEES
+          SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
+        else
+          SERIALIZED_INCLUDED_OBJECTS[:invoice]
+        end
+      when :plan
+        if object.charges.count > MAX_SERIALIZED_CHARGES
+          SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]
+        else
+          SERIALIZED_INCLUDED_OBJECTS[:plan]
+        end
+      when :subscription
+        if object.plan.charges.count > MAX_SERIALIZED_CHARGES
+          [{plan: SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}]
+        else
+          SERIALIZED_INCLUDED_OBJECTS[:subscription]
+        end
       else
-        SERIALIZED_INCLUDED_OBJECTS[:invoice]
+        SERIALIZED_INCLUDED_OBJECTS[root_name] || []
       end
     end
 

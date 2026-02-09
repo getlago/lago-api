@@ -58,7 +58,10 @@ module V1
     def plan
       ::V1::PlanSerializer.new(
         model.plan,
-        includes: %i[charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment]
+        includes: included_relations(
+          :plan,
+          default: %i[charges usage_thresholds applicable_usage_thresholds taxes minimum_commitment]
+        )
       ).serialize
     end
 
