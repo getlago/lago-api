@@ -38,8 +38,7 @@ module Wallets
 
     private
 
-    attr_reader :allocation_rules, :fee, :customer_id, :fee_targeting_wallets_enabled,
-
+    attr_reader :allocation_rules, :fee, :customer_id, :fee_targeting_wallets_enabled
     def find_wallet_by_code(code)
       return nil unless customer_id
 
