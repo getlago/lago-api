@@ -46,9 +46,11 @@ module Utils
       user: nil,
       api_key: nil,
       resources: nil,
-      device_info: nil
+      device_info: nil,
+      skip_organization_check: false
     )
       @organization = organization
+      @skip_organization_check = skip_organization_check
       @log_type = log_type
       @log_event = log_event
       @user_id = resolve_user_id(user)
@@ -62,7 +64,7 @@ module Utils
 
     def produce
       return false unless self.class.available?
-      return false unless @organization.security_logs_enabled?
+      return false unless @skip_organization_check || @organization.security_logs_enabled?
 
       Karafka.producer.produce_async(
         topic: self.class.topic,
