@@ -4,9 +4,10 @@ require "rails_helper"
 
 RSpec.describe Wallets::FindApplicableOnFeesService do
   describe ".call" do
-    subject(:result) { described_class.call(allocation_rules:, fee:, fee_targeting_wallets_enabled:) }
+    subject(:result) { described_class.call(allocation_rules:, fee:, customer_id:, fee_targeting_wallets_enabled:) }
 
     let(:fee_targeting_wallets_enabled) { nil }
+    let(:customer_id) { nil }
 
     context "when there are applicable wallets for billable metrics, fee types and unrestricted" do
       let(:allocation_rules) do
@@ -151,6 +152,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
       let(:wallet) { create(:wallet, customer:, code: "target_wallet") }
       let(:charge) { create(:standard_charge, organization:, accepts_target_wallet:) }
       let(:accepts_target_wallet) { nil }
+      let(:customer_id) { customer.id }
       let(:fee) do
         create(:charge_fee, invoice:, subscription:, charge:,
           grouped_by: {"target_wallet_code" => "target_wallet"})
