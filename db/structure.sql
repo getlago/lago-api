@@ -3894,7 +3894,9 @@ CREATE TABLE public.wallets (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     traceable boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying,
+    CONSTRAINT check_balance_cents_non_negative_when_traceable CHECK (((traceable = false) OR (balance_cents >= 0))),
+    CONSTRAINT check_credits_balance_non_negative_when_traceable CHECK (((traceable = false) OR (credits_balance >= (0)::numeric)))
 );
 
 
@@ -11402,6 +11404,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260204172149'),
+('20260204171946'),
 ('20260204153734'),
 ('20260202155431'),
 ('20260202134958'),

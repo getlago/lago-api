@@ -90,6 +90,132 @@ RSpec.describe Wallet do
       expect(subject).to be_valid
       expect(subject.errors).to be_empty
     end
+
+    describe "of balance cents" do
+      let(:wallet) { build(:wallet, balance_cents:, traceable:) }
+      let(:error) { wallet.errors.where(:balance_cents, :greater_than_or_equal_to) }
+
+      before { wallet.valid? }
+
+      context "when wallet is traceable" do
+        let(:traceable) { true }
+
+        context "when balance_cents is negative" do
+          let(:balance_cents) { rand(1..1000) * -1 }
+
+          it "adds an error" do
+            expect(error).to be_present
+          end
+        end
+
+        context "when balance_cents is zero" do
+          let(:balance_cents) { 0 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when balance_cents is positive" do
+          let(:balance_cents) { rand(1..1000) }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+
+      context "when wallet is not traceable" do
+        let(:traceable) { false }
+
+        context "when balance_cents is negative" do
+          let(:balance_cents) { rand(1..1000) * -1 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when balance_cents is zero" do
+          let(:balance_cents) { 0 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when balance_cents is positive" do
+          let(:balance_cents) { rand(1..1000) }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+    end
+
+    describe "of credits balance" do
+      let(:wallet) { build(:wallet, credits_balance:, traceable:) }
+      let(:error) { wallet.errors.where(:credits_balance, :greater_than_or_equal_to) }
+
+      before { wallet.valid? }
+
+      context "when wallet is traceable" do
+        let(:traceable) { true }
+
+        context "when credits_balance is negative" do
+          let(:credits_balance) { rand(1..1000) * -1 }
+
+          it "adds an error" do
+            expect(error).to be_present
+          end
+        end
+
+        context "when credits_balance is zero" do
+          let(:credits_balance) { 0 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when credits_balance is positive" do
+          let(:credits_balance) { rand(1..1000) }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+
+      context "when wallet is not traceable" do
+        let(:traceable) { false }
+
+        context "when credits_balance is negative" do
+          let(:credits_balance) { rand(1..1000) * -1 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when credits_balance is zero" do
+          let(:credits_balance) { 0 }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when credits_balance is positive" do
+          let(:credits_balance) { rand(1..1000) }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+    end
   end
 
   describe "currency=" do
