@@ -4,7 +4,7 @@ module Wallets
   class FindApplicableOnFeesService < BaseService
     Result = BaseResult[:top_priority_wallet]
 
-    def initialize(allocation_rules:, fee:, customer_id: nil, fee_targeting_wallets_enabled: nil)
+    def initialize(allocation_rules:, fee:, customer_id:, fee_targeting_wallets_enabled: nil)
       @allocation_rules = allocation_rules
       @fee = fee
       @customer_id = customer_id
@@ -38,13 +38,12 @@ module Wallets
 
     private
 
-    attr_reader :allocation_rules, :fee, :fee_targeting_wallets_enabled
+    attr_reader :allocation_rules, :fee, :customer_id, :fee_targeting_wallets_enabled,
 
     def find_wallet_by_code(code)
-      wallet_customer_id = @customer_id || fee.subscription&.customer_id || fee.invoice&.customer_id
-      return nil unless wallet_customer_id
+      return nil unless customer_id
 
-      Wallet.active.find_by(organization_id: fee.organization_id, customer_id: wallet_customer_id, code:)
+      Wallet.active.find_by(organization_id: fee.organization_id, customer_id:, code:)
     end
 
     def result_with(wallets)

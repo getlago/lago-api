@@ -44,26 +44,21 @@ module Wallets
       end
 
       def billed_progressive_invoices_amount_cents
-        fees = progressive_billing_fees
-
-        fees.sum do |fee|
+        progressive_billing_fees.sum do |fee|
           fee.taxes_amount_cents + fee.sub_total_excluding_taxes_amount_cents
         end
       end
 
       def draft_invoices_total_amount_cents
-        fees = draft_invoices_fees
-
-        fees.sum do |fee|
+        draft_invoices_fees.sum do |fee|
           fee.amount_cents + fee.taxes_amount_cents - fee.precise_coupons_amount_cents
         end
       end
 
       def billed_pay_in_advance_amount_cents
-        paid_in_advance_fees = pay_in_advance_fees
         # Invoice that is returned from CustomerUsageService includes the taxes in total_usage
         # so if the fees ae already paid, we should exclude fees AND their taxes
-        paid_in_advance_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
+        pay_in_advance_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
       end
 
       def calculate_total_usage_with_limitation
