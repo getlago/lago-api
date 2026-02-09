@@ -705,7 +705,7 @@ RSpec.describe SendWebhookJob do
       before do
         allow(Webhooks::Payments::SucceededService)
           .to receive(:new)
-          .with(object: payment, options: webhook_options)
+          .with(object: payment, options: {})
           .and_return(webhook_service)
         allow(webhook_service).to receive(:call)
       end
