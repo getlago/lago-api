@@ -41,6 +41,17 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(result.invoice.payment_status).to eq("succeeded")
       expect(result.invoice.payment_attempts).to eq(1)
     end
+
+    it "enqueues a SendWebhookJob for payment.succeeded" do
+      expect do
+        moneyhash_service.update_payment_status(
+          organization_id: organization.id,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+          status: "SUCCESSFUL",
+          metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+        )
+      end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
+    end
   end
 
   describe "#generate_payment_url" do

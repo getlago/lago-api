@@ -147,7 +147,6 @@ RSpec.describe Invoices::Payments::StripeService do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 
@@ -166,6 +165,16 @@ RSpec.describe Invoices::Payments::StripeService do
         ready_for_payment_processing: false,
         total_paid_amount_cents: invoice.total_amount_cents
       )
+    end
+
+    it "enqueues a SendWebhookJob for payment.succeeded" do
+      expect do
+        stripe_service.update_payment_status(
+          organization_id: organization.id,
+          status: "succeeded",
+          stripe_payment:
+        )
+      end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
     context "when status is failed" do

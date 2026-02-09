@@ -25,6 +25,8 @@ module Invoices
         payment.payable_payment_status = payable_payment_status
         payment.save!
 
+        deliver_webhook if payable_payment_status.to_sym == :succeeded
+
         update_invoice_payment_status(payment_status: payable_payment_status)
 
         result
@@ -57,6 +59,10 @@ module Invoices
           webhook_notification: deliver_webhook
         )
         update_invoice_result.raise_if_error!
+      end
+
+      def deliver_webhook
+        SendWebhookJob.perform_later("payment.succeeded", result.payment)
       end
     end
   end
