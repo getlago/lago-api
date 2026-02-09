@@ -260,7 +260,7 @@ module Integrations
               if subtotal.zero?
                 0
               else
-                credit.amount_cents * cn.taxes_amount_cents / subtotal
+                (credit.amount_cents * cn.taxes_amount_cents).fdiv(subtotal).round
               end
             end
           end
