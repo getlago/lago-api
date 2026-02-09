@@ -698,6 +698,26 @@ RSpec.describe SendWebhookJob do
       end
     end
 
+    context "when webhook_type is payment.succeeded" do
+      let(:webhook_service) { instance_double(Webhooks::Payments::SucceededService) }
+      let(:payment) { create(:payment) }
+
+      before do
+        allow(Webhooks::Payments::SucceededService)
+          .to receive(:new)
+          .with(object: payment, options: webhook_options)
+          .and_return(webhook_service)
+        allow(webhook_service).to receive(:call)
+      end
+
+      it "calls the webhook payment.succeeded" do
+        send_webhook_job.perform_now("payment.succeeded", payment)
+
+        expect(Webhooks::Payments::SucceededService).to have_received(:new)
+        expect(webhook_service).to have_received(:call)
+      end
+    end
+
     context "when webhook_type is dunning_campaign.finished" do
       let(:webhook_service) { instance_double(Webhooks::DunningCampaigns::FinishedService) }
       let(:customer) { create(:customer) }

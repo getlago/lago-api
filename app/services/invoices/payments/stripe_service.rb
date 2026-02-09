@@ -39,6 +39,8 @@ module Invoices
         payment.error_code = stripe_payment.error_code if stripe_payment.error_code
         payment.save!
 
+        deliver_webhook if payable_payment_status.to_sym == :succeeded
+
         if status.to_s == "failed" && result.invoice.payments.excluding(result.payment).where(status: :requires_action).any?
           # We don't update the invoice status because it's likely the webhook of a failed payment
           # but there is already a retry in progress with 3DSecure authentication
@@ -178,6 +180,10 @@ module Invoices
 
       def increment_payment_attempts
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
+      end
+
+      def deliver_webhook
+        SendWebhookJob.perform_later("payment.succeeded", result.payment)
       end
 
       def deliver_error_webhook(stripe_error)
