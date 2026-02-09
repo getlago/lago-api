@@ -8423,12 +8423,14 @@ type OrganizationBillingConfiguration {
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
+  securityLogsRetentionDays: Int
 }
 
 input OrganizationBillingConfigurationInput {
   documentLocale: String
   invoiceFooter: String
   invoiceGracePeriod: Int
+  securityLogsRetentionDays: Int
 }
 
 type OverdueBalance {

@@ -189,4 +189,57 @@ RSpec.describe Mutations::Organizations::Update do
       end
     end
   end
+
+  context "when updating security_logs_retention_days" do
+    let(:mutation) do
+      <<~GQL
+        mutation($input: UpdateOrganizationInput!) {
+          updateOrganization(input: $input) {
+            billingConfiguration {
+              securityLogsRetentionDays
+            }
+          }
+        }
+      GQL
+    end
+
+    it "updates the security_logs_retention_days" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: Permission.permissions_hash(:admin),
+        query: mutation,
+        variables: {
+          input: {
+            billingConfiguration: {
+              securityLogsRetentionDays: 30
+            }
+          }
+        }
+      )
+
+      result_data = result["data"]["updateOrganization"]
+      expect(result_data["billingConfiguration"]["securityLogsRetentionDays"]).to eq(30)
+    end
+
+    context "with invalid value" do
+      it "returns a validation error" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: Permission.permissions_hash(:admin),
+          query: mutation,
+          variables: {
+            input: {
+              billingConfiguration: {
+                securityLogsRetentionDays: 100
+              }
+            }
+          }
+        )
+
+        expect(result["errors"]).to be_present
+      end
+    end
+  end
 end
