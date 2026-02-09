@@ -135,7 +135,7 @@ module Entitlement
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)
-      return false if privilege_params.keys != plan_entitlement.values.map(&:privilege).map(&:code)
+      return false if privilege_params.keys.sort != plan_entitlement.values.map(&:privilege).map(&:code).sort
 
       plan_entitlement.values.all? do |v|
         value_is_the_same?(v.privilege.value_type, v.value, privilege_params[v.privilege.code])
