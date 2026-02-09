@@ -6,27 +6,6 @@ module Api
       class AlertsController < BaseController
         before_action :find_alert, only: %i[show update destroy]
 
-        def batch_create
-          result = UsageMonitoring::Alerts::CreateBatchService.call(
-            organization: current_organization,
-            subscription:,
-            alerts_params: batch_create_params[:alerts]
-          )
-
-          if result.success?
-            render(
-              json: ::CollectionSerializer.new(
-                result.alerts,
-                ::V1::UsageMonitoring::AlertSerializer,
-                collection_name: "alerts",
-                includes: %i[thresholds]
-              )
-            )
-          else
-            render_error_response(result)
-          end
-        end
-
         def destroy_all
           result = UsageMonitoring::Alerts::DestroyAllService.call(
             organization: current_organization,
@@ -72,16 +51,10 @@ module Api
         end
 
         def create
-          result = UsageMonitoring::CreateAlertService.call(
-            organization: current_organization,
-            subscription:,
-            params: create_params.to_h
-          )
-
-          if result.success?
-            render_alert(result.alert)
+          if params[:alerts].present?
+            create_batch
           else
-            render_error_response(result)
+            create_single
           end
         end
 
@@ -109,6 +82,41 @@ module Api
         end
 
         private
+
+        def create_single
+          result = UsageMonitoring::CreateAlertService.call(
+            organization: current_organization,
+            subscription:,
+            params: create_params.to_h
+          )
+
+          if result.success?
+            render_alert(result.alert)
+          else
+            render_error_response(result)
+          end
+        end
+
+        def create_batch
+          result = UsageMonitoring::Alerts::CreateBatchService.call(
+            organization: current_organization,
+            subscription:,
+            alerts_params: batch_create_params[:alerts]
+          )
+
+          if result.success?
+            render(
+              json: ::CollectionSerializer.new(
+                result.alerts,
+                ::V1::UsageMonitoring::AlertSerializer,
+                collection_name: "alerts",
+                includes: %i[thresholds]
+              )
+            )
+          else
+            render_error_response(result)
+          end
+        end
 
         attr_reader :subscription, :alert
 

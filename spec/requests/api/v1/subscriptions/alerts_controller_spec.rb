@@ -317,8 +317,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
     end
   end
 
-  describe "POST /api/v1/subscriptions/:external_id/alerts/batch_create" do
-    subject { post_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/batch_create", params) }
+  describe "POST /api/v1/subscriptions/:external_id/alerts (batch)" do
+    subject { post_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts", params) }
 
     let(:alert) { nil }
     let(:billable_metric) { create(:billable_metric, organization:) }
@@ -382,8 +382,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
 
       it "returns a validation error" do
         subject
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:alerts]).to include("no_alerts")
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error]).to include("value is empty or invalid: alert")
       end
     end
 
