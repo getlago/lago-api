@@ -19,7 +19,7 @@ module Invoices
 
     # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
     # When it fails, it raises a Customers::FailedToAcquireLock error.
-    # It the lock succeeds but another job/request updates the wallet concurrently, it will raise a ActiveRecord::StaleObjectError error.
+    # If the lock succeeds but another job/request updates the wallet concurrently, it will raise a ActiveRecord::StaleObjectError error.
     retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: 25, wait: ->(_) { CreatePayInAdvanceChargeJob.retry_delay }
 
     # DEPRECATED: These errors should not be raised anymore but we keep them and monitor to be sure.

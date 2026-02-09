@@ -26,43 +26,46 @@ module Invoices
       vies_check_failed = false
 
       ActiveRecord::Base.transaction do
-        create_generating_invoice
-        fees.each do |fee|
-          fee.invoice = invoice
-          fee.save!
-        end
-
-        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
-
-        if customer_provider_taxation?
-          taxes_result = apply_provider_taxes
-          unless taxes_result.success?
-            tax_error = taxes_result.error.code
-            invoice.failed!
-            deliver_fee_webhooks
-            create_error_detail(tax_error)
-            Utils::ActivityLog.produce(invoice, "invoice.failed")
-            next
+        # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
+        Customers::LockService.call(customer:) do
+          create_generating_invoice
+          fees.each do |fee|
+            fee.invoice = invoice
+            fee.save!
           end
-        else
-          vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
-          if vies_check_failed
-            deliver_fee_webhooks
-            Utils::ActivityLog.produce(invoice, "invoice.pending")
-            next
+
+          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+          Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
+
+          if customer_provider_taxation?
+            taxes_result = apply_provider_taxes
+            unless taxes_result.success?
+              tax_error = taxes_result.error.code
+              invoice.failed!
+              deliver_fee_webhooks
+              create_error_detail(tax_error)
+              Utils::ActivityLog.produce(invoice, "invoice.failed")
+              next
+            end
+          else
+            vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
+            if vies_check_failed
+              deliver_fee_webhooks
+              Utils::ActivityLog.produce(invoice, "invoice.pending")
+              next
+            end
           end
+
+          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+          create_credit_note_credit
+          create_applied_prepaid_credit if should_create_applied_prepaid_credit?
+          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+          Invoices::TransitionToFinalStatusService.call(invoice:)
+          invoice.save!
         end
-
-        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-        create_credit_note_credit
-        create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        Invoices::TransitionToFinalStatusService.call(invoice:)
-        invoice.save!
       end
 
       result.invoice = invoice
@@ -84,7 +87,7 @@ module Invoices
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError
+    rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, Customers::FailedToAcquireLock
       raise
     rescue => e
       result.fail_with_error!(e)
@@ -173,7 +176,8 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:)
+      # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, max_wallet_decrease_attempts: 1)
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
