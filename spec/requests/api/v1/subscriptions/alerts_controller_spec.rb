@@ -424,14 +424,14 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
         errors = json[:error_details]
         alert_params = params[:alerts]
         expect(errors[:"1"][:params]).to eq(alert_params[1])
-        expect(errors[:"1"][:errors]).to eq(alert_type: ["invalid_type"])
+        expect(errors[:"1"][:errors]).to include("invalid_type")
 
         expect(errors[:"2"][:params]).to eq(alert_params[2])
-        expect(errors[:"2"][:errors]).to eq("billable_metric_not_found")
+        expect(errors[:"2"][:errors]).to include("billable_metric_not_found")
 
         expect(errors[:"3"][:params]).to eq(alert_params[3])
         # type is already taken
-        expect(errors[:"3"][:errors]).to eq({code: ["value_already_exist"]})
+        expect(errors[:"3"][:errors]).to include("value_already_exist")
       end
     end
   end

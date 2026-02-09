@@ -37,11 +37,7 @@ module UsageMonitoring
               else
                 error_details = {}
                 error_details[:params] = alert_params
-                error_details[:errors] = if create_result.error.respond_to?(:messages)
-                  create_result.error.messages
-                else
-                  create_result.error&.message
-                end
+                error_details[:errors] = create_result.error&.message
                 result.errors[index] = error_details
                 raise ActiveRecord::Rollback
               end

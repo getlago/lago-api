@@ -93,7 +93,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result.alerts).to be_empty
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors][:alert_type]).to include("invalid_type")
+        expect(result.error.messages[1][:errors]).to include("invalid_type")
       end
     end
 
@@ -120,7 +120,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors][:code]).to include("value_already_exist")
+        expect(result.error.messages[1][:errors]).to include("value_already_exist")
       end
     end
 
@@ -147,7 +147,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors][:base]).to include("alert_already_exists")
+        expect(result.error.messages[1][:errors]).to include("alert_already_exists")
       end
     end
 
@@ -190,13 +190,13 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages.size).to eq(4)
         expect(result.error.messages[0][:params]).to eq(alerts_params[0])
-        expect(result.error.messages[0][:errors][:alert_type]).to include("invalid_type")
+        expect(result.error.messages[0][:errors]).to include("invalid_type")
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors][:thresholds]).to include("value_is_mandatory")
+        expect(result.error.messages[1][:errors]).to include("value_is_mandatory")
         expect(result.error.messages[3][:params]).to eq(alerts_params[3])
-        expect(result.error.messages[3][:errors][:base]).to include("alert_already_exists")
+        expect(result.error.messages[3][:errors]).to include("alert_already_exists")
         expect(result.error.messages[4][:params]).to eq(alerts_params[4])
-        expect(result.error.messages[4][:errors][:code]).to include("value_already_exist")
+        expect(result.error.messages[4][:errors]).to include("value_already_exist")
       end
     end
 
