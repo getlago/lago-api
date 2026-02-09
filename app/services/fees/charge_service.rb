@@ -22,6 +22,8 @@ module Fees
       calculate_projected_usage: false,
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE
+      with_zero_units_filters: true,
+      skip_adjusted_fees: false
     )
       @invoice = invoice
       @charge = charge
@@ -40,6 +42,7 @@ module Fees
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
       @usage_filters = usage_filters
+      @skip_adjusted_fees = skip_adjusted_fees
 
       super(nil)
     end
@@ -139,6 +142,12 @@ module Fees
       fees.each do |fee|
         fee.association(:billable_metric).target = billable_metric
         fee.association(:charge_filter).target = charge_filter if charge_filter&.id
+        # TODO: check it!
+        fee.association(:charge).target = charge
+        if charge_filter && fee.charge_filter_id
+          fee.association(:charge_filter).target = charge_filter
+        end
+      end
       end
 
       result.fees.concat(fees.compact)
@@ -326,6 +335,7 @@ module Fees
     end
 
     def adjusted_fee(charge_filter:, grouped_by:)
+      return if @skip_adjusted_fees
       @adjusted_fee ||= {}
 
       key = [
