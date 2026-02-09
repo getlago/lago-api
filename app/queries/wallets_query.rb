@@ -35,6 +35,6 @@ class WalletsQuery < BaseQuery
   end
 
   def customer
-    organization.customers.where(external_id: filters.external_customer_id, deleted_at: nil)
+    organization.customers.where(external_id: filters.external_customer_id)
   end
 end
