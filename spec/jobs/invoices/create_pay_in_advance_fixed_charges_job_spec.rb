@@ -18,21 +18,12 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
   end
 
   describe "#perform" do
-    let(:timestamp) { Time.zone.now.beginning_of_month }
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:plan) { create(:plan, organization:) }
-    let(:subscription) { create(:subscription, customer:, plan:, status: :active) }
-
-    let(:invoice) { nil }
-    let(:result) { BaseService::Result.new }
-
     before do
       allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call)
         .with(subscription:, timestamp:).and_return(result)
     end
 
-    it "calls the create pay in advance fixed charge service" do
+    it "calls the create pay in advance fixed charges service" do
       perform_now
 
       expect(Invoices::CreatePayInAdvanceFixedChargesService).to have_received(:call)
