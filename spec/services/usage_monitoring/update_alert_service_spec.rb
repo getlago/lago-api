@@ -94,6 +94,36 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when thresholds have duplicate values with falsy recurring variants" do
+      [
+        [{value: 1, recurring: false}, {value: 1, recurring: "0"}],
+        [{value: 1, recurring: false}, {value: 1, recurring: 0}],
+        [{value: 1, recurring: "false"}, {value: 1, recurring: false}],
+        [{value: 1, recurring: "0"}, {value: 1, recurring: 0}],
+        [{value: 1}, {value: 1, recurring: false}]
+      ].each do |thresholds_pair|
+        context "with recurring values #{thresholds_pair.map { |t| t[:recurring].inspect }.join(" and ")}" do
+          let(:params) { {thresholds: thresholds_pair} }
+
+          it "returns a validation failure result" do
+            expect(result).to be_failure
+            expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
+          end
+        end
+      end
+    end
+
+    context "when thresholds have same value but different recurring flags" do
+      let(:params) { {thresholds: [{value: 100}, {value: 100, recurring: true}]} }
+
+      it "updates the alert" do
+        expect(result).to be_success
+        expect(alert.reload.thresholds.pluck(:value, :recurring)).to contain_exactly(
+          [100, false], [100, true]
+        )
+      end
+    end
+
     context "when a threshold value is nil" do
       let(:params) { {thresholds: [{value: nil}]} }
 

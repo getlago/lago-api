@@ -17,6 +17,11 @@ module UsageMonitoring
         result.not_found_failure!(resource: "billable_metric")
       end
 
+      def duplicate_threshold_values?(thresholds)
+        threshold_keys = thresholds.map { |t| [t[:value], ActiveModel::Type::Boolean.new.cast(t[:recurring]) || false] }
+        threshold_keys.size != threshold_keys.uniq.size
+      end
+
       def all_threshold_values_present?(thresholds)
         thresholds.none? { it[:value].nil? }
       end

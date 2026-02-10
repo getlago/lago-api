@@ -20,8 +20,7 @@ module UsageMonitoring
       end
 
       if params[:thresholds].present?
-        threshold_values = params[:thresholds].map { |t| t[:value] }.compact
-        if threshold_values.size != threshold_values.uniq.size
+        if duplicate_threshold_values?(params[:thresholds])
           return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
         end
 
