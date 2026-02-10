@@ -20,8 +20,7 @@ module UsageMonitoring
       end
 
       if params[:thresholds].present?
-        threshold_keys = params[:thresholds].map { |t| [t[:value], ActiveModel::Type::Boolean.new.cast(t[:recurring]) || false] }
-        if threshold_keys.size != threshold_keys.uniq.size
+        if duplicate_threshold_values?(params[:thresholds])
           return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
         end
 
