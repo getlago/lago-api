@@ -3,54 +3,28 @@
 module Api
   module V1
     class WalletsController < Api::BaseController
-      include WalletIndex
+      include WalletActions
 
       def create
-        result = ::Wallets::CreateService.call(
-          params: input_params
-            .merge(organization_id: current_organization.id)
-            .merge(customer:).to_h.deep_symbolize_keys
-        )
-
-        if result.success?
-          render_wallet(result.wallet)
-        else
-          render_error_response(result)
-        end
+        wallet_create(customer)
       end
 
       def update
-        result = ::Wallets::UpdateService.call(
-          wallet: current_organization.wallets.find_by(id: params[:id]),
-          params: update_params.merge(id: params[:id]).to_h.deep_symbolize_keys
-        )
+        wallet = current_organization.wallets.find_by(id: params[:id])
 
-        if result.success?
-          render_wallet(result.wallet)
-        else
-          render_error_response(result)
-        end
+        wallet_update(wallet)
       end
 
       def terminate
         wallet = current_organization.wallets.find_by(id: params[:id])
-        result = ::Wallets::TerminateService.call(wallet:)
 
-        if result.success?
-          render_wallet(result.wallet)
-        else
-          render_error_response(result)
-        end
+        wallet_terminate(wallet)
       end
 
       def show
-        wallet = current_organization.wallets.find_by(
-          id: params[:id]
-        )
+        wallet = current_organization.wallets.find_by(id: params[:id])
 
-        return not_found_error(resource: "wallet") unless wallet
-
-        render_wallet(wallet)
+        wallet_show(wallet)
       end
 
       def index
@@ -62,136 +36,12 @@ module Api
 
       private
 
-      def input_params
-        params.require(:wallet).permit(
-          :rate_amount,
-          :name,
-          :code,
-          :priority,
-          :currency,
-          :paid_credits,
-          :granted_credits,
-          :expiration_at,
-          :invoice_requires_successful_payment,
-          :paid_top_up_min_amount_cents,
-          :paid_top_up_max_amount_cents,
-          :ignore_paid_top_up_limits_on_creation,
-          :transaction_name,
-          :transaction_priority,
-          metadata: {},
-          transaction_metadata: [
-            :key,
-            :value
-          ],
-          recurring_transaction_rules: [
-            :granted_credits,
-            :interval,
-            :method,
-            :paid_credits,
-            :started_at,
-            :expiration_at,
-            :target_ongoing_balance,
-            :threshold_credits,
-            :trigger,
-            :invoice_requires_successful_payment,
-            :ignore_paid_top_up_limits,
-            :transaction_name,
-            invoice_custom_section: [
-              :skip_invoice_custom_sections,
-              {invoice_custom_section_codes: []}
-            ],
-            transaction_metadata: [
-              :key,
-              :value
-            ],
-            payment_method: [
-              :payment_method_type,
-              :payment_method_id
-            ]
-          ],
-          applies_to: [
-            fee_types: [],
-            billable_metric_codes: []
-          ],
-          invoice_custom_section: [
-            :skip_invoice_custom_sections,
-            {invoice_custom_section_codes: []}
-          ],
-          payment_method: [
-            :payment_method_type,
-            :payment_method_id
-          ]
-        )
-      end
-
       def customer_params
         params.require(:wallet).permit(:external_customer_id)
       end
 
-      def update_params
-        params.require(:wallet).permit(
-          :name,
-          :code,
-          :priority,
-          :expiration_at,
-          :invoice_requires_successful_payment,
-          :paid_top_up_min_amount_cents,
-          :paid_top_up_max_amount_cents,
-          metadata: {},
-          recurring_transaction_rules: [
-            :lago_id,
-            :interval,
-            :method,
-            :started_at,
-            :expiration_at,
-            :target_ongoing_balance,
-            :threshold_credits,
-            :trigger,
-            :paid_credits,
-            :granted_credits,
-            :invoice_requires_successful_payment,
-            :ignore_paid_top_up_limits,
-            :transaction_name,
-            invoice_custom_section: [
-              :skip_invoice_custom_sections,
-              {invoice_custom_section_codes: []}
-            ],
-            transaction_metadata: [
-              :key,
-              :value
-            ],
-            payment_method: [
-              :payment_method_type,
-              :payment_method_id
-            ]
-          ],
-          applies_to: [
-            fee_types: [],
-            billable_metric_codes: []
-          ],
-          invoice_custom_section: [
-            :skip_invoice_custom_sections,
-            {invoice_custom_section_codes: []}
-          ],
-          payment_method: [
-            :payment_method_type,
-            :payment_method_id
-          ]
-        )
-      end
-
       def customer
         Customer.find_by(external_id: customer_params[:external_customer_id], organization_id: current_organization.id)
-      end
-
-      def render_wallet(wallet)
-        render(
-          json: ::V1::WalletSerializer.new(
-            wallet,
-            root_name: "wallet",
-            includes: %i[recurring_transaction_rules limitations]
-          )
-        )
       end
 
       def resource_name
