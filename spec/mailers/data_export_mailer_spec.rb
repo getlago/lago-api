@@ -36,7 +36,7 @@ RSpec.describe DataExportMailer do
     describe "body" do
       subject { mail.body.to_s }
 
-      it "includes expiration notice and link to file", :aggregate_failures do
+      it "includes expiration notice and link to file" do
         expect(subject).to match("will be available for 7 days")
         expect(subject).to match(data_export.file_url)
       end

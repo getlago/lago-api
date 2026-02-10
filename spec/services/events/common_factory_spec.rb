@@ -15,7 +15,7 @@ RSpec.describe Events::CommonFactory do
     context "when source is a hash" do
       let(:source) { build(:common_event).as_json }
 
-      it "returns a new instance of Events::Common", :aggregate_failures do
+      it "returns a new instance of Events::Common" do
         new_instance = described_class.new_instance(source:)
 
         expect(new_instance.id).to be_nil
@@ -32,7 +32,7 @@ RSpec.describe Events::CommonFactory do
     context "when source is an instance of Event" do
       let(:source) { create(:event) }
 
-      it "returns a new instance of Events::Common", :aggregate_failures do
+      it "returns a new instance of Events::Common" do
         new_instance = described_class.new_instance(source:)
 
         expect(new_instance.id).to eq(source.id)
@@ -48,7 +48,7 @@ RSpec.describe Events::CommonFactory do
     context "when source is an instance of Clickhouse::EventsRaw", clickhouse: true do
       let(:source) { create(:clickhouse_events_raw) }
 
-      it "returns a new instance of Events::Common", :aggregate_failures do
+      it "returns a new instance of Events::Common" do
         new_instance = described_class.new_instance(source:)
 
         expect(new_instance.id).to be_nil

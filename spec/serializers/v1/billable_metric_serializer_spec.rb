@@ -10,7 +10,7 @@ RSpec.describe ::V1::BillableMetricSerializer do
 
   let(:includes) { %i[] }
 
-  it "serializes the object", aggregate_failures: true do
+  it "serializes the object" do
     expect(result["billable_metric"]["lago_id"]).to eq(billable_metric.id)
     expect(result["billable_metric"]["name"]).to eq(billable_metric.name)
     expect(result["billable_metric"]["code"]).to eq(billable_metric.code)

@@ -21,11 +21,9 @@ RSpec.describe ::V1::Integrations::ProviderErrorSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["data"]["lago_integration_id"]).to eq(integration.id)
-      expect(result["data"]["provider"]).to eq(options[:provider])
-      expect(result["data"]["provider_code"]).to eq(integration.code)
-      expect(result["data"]["provider_error"]).to eq(options[:provider_error])
-    end
+    expect(result["data"]["lago_integration_id"]).to eq(integration.id)
+    expect(result["data"]["provider"]).to eq(options[:provider])
+    expect(result["data"]["provider_code"]).to eq(integration.code)
+    expect(result["data"]["provider_error"]).to eq(options[:provider_error])
   end
 end

@@ -44,10 +44,8 @@ RSpec.describe CreditNote do
     it "assigns a sequential_id is present" do
       credit_note.save
 
-      aggregate_failures do
-        expect(credit_note).to be_valid
-        expect(credit_note.sequential_id).to eq(1)
-      end
+      expect(credit_note).to be_valid
+      expect(credit_note.sequential_id).to eq(1)
     end
 
     context "when sequential_id is present" do
@@ -56,10 +54,8 @@ RSpec.describe CreditNote do
       it "does not replace the sequential_id" do
         credit_note.save
 
-        aggregate_failures do
-          expect(credit_note).to be_valid
-          expect(credit_note.sequential_id).to eq(3)
-        end
+        expect(credit_note).to be_valid
+        expect(credit_note.sequential_id).to eq(3)
       end
     end
 
@@ -71,10 +67,8 @@ RSpec.describe CreditNote do
       it "takes the next available id" do
         credit_note.save!
 
-        aggregate_failures do
-          expect(credit_note).to be_valid
-          expect(credit_note.sequential_id).to eq(6)
-        end
+        expect(credit_note).to be_valid
+        expect(credit_note.sequential_id).to eq(6)
       end
     end
 
@@ -86,10 +80,8 @@ RSpec.describe CreditNote do
       it "scopes the sequence to the invoice" do
         credit_note.save
 
-        aggregate_failures do
-          expect(credit_note).to be_valid
-          expect(credit_note.sequential_id).to eq(1)
-        end
+        expect(credit_note).to be_valid
+        expect(credit_note.sequential_id).to eq(1)
       end
     end
   end

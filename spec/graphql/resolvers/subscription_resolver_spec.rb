@@ -71,7 +71,7 @@ RSpec.describe Resolvers::SubscriptionResolver do
     end
   end
 
-  it "returns a single subscription", :aggregate_failures do
+  it "returns a single subscription" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

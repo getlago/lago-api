@@ -34,7 +34,7 @@ RSpec.describe Resolvers::PaymentRequestsResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "payments:view"
 
-  it "returns a list of payment_requests", :aggregate_failures do
+  it "returns a list of payment_requests" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -57,7 +57,7 @@ RSpec.describe Resolvers::PaymentRequestsResolver do
 
       before { payment_request.payment_succeeded! }
 
-      it "returns a list of payment_requests", :aggregate_failures do
+      it "returns a list of payment_requests" do
         allow(PaymentRequestsQuery).to receive(:call).and_call_original
 
         result = execute_graphql(

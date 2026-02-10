@@ -47,11 +47,9 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
     response = result["data"]["googleAcceptInvite"]
 
-    aggregate_failures do
-      expect(response["token"]).to eq("token")
-      expect(response["user"]["id"]).to be_present
-      expect(response["user"]["email"]).to be_present
-    end
+    expect(response["token"]).to eq("token")
+    expect(response["user"]["id"]).to be_present
+    expect(response["user"]["email"]).to be_present
   end
 
   context "when invite email and google email are different" do
@@ -75,10 +73,8 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["base"]).to include("invite_email_mistmatch")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["base"]).to include("invite_email_mistmatch")
     end
   end
 
@@ -103,10 +99,8 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(404)
-        expect(response["details"]["invite"]).to include("not_found")
-      end
+      expect(response["status"]).to eq(404)
+      expect(response["details"]["invite"]).to include("not_found")
     end
   end
 end

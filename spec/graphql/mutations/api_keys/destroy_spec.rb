@@ -39,10 +39,8 @@ RSpec.describe Mutations::ApiKeys::Destroy do
       api_key_response = result["data"]["destroyApiKey"]
       api_key.reload
 
-      aggregate_failures do
-        expect(api_key_response["id"]).to eq(api_key.id)
-        expect(api_key_response["expiresAt"]).to eq(api_key.expires_at.iso8601)
-      end
+      expect(api_key_response["id"]).to eq(api_key.id)
+      expect(api_key_response["expiresAt"]).to eq(api_key.expires_at.iso8601)
     end
   end
 

@@ -51,9 +51,7 @@ RSpec.describe Mutations::Integrations::Hubspot::SyncInvoice do
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "syncs an invoice" do
-    aggregate_failures do
-      expect(::Integrations::Aggregator::Invoices::Hubspot::CreateService).to have_received(:new).with(invoice:)
-      expect(service).to have_received(:call_async)
-    end
+    expect(::Integrations::Aggregator::Invoices::Hubspot::CreateService).to have_received(:new).with(invoice:)
+    expect(service).to have_received(:call_async)
   end
 end

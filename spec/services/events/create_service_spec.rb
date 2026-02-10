@@ -39,19 +39,17 @@ RSpec.describe Events::CreateService do
     it "creates an event" do
       result = nil
 
-      aggregate_failures do
-        expect { result = create_service.call }.to change(Event, :count).by(1)
+      expect { result = create_service.call }.to change(Event, :count).by(1)
 
-        expect(result).to be_success
-        expect(result.event).to have_attributes(
-          external_subscription_id:,
-          transaction_id:,
-          code:,
-          timestamp: Time.zone.at(timestamp),
-          properties: {"foo" => "bar"},
-          precise_total_amount_cents: nil
-        )
-      end
+      expect(result).to be_success
+      expect(result.event).to have_attributes(
+        external_subscription_id:,
+        transaction_id:,
+        code:,
+        timestamp: Time.zone.at(timestamp),
+        properties: {"foo" => "bar"},
+        precise_total_amount_cents: nil
+      )
     end
 
     it "enqueues a post processing job" do
@@ -73,14 +71,12 @@ RSpec.describe Events::CreateService do
       it "returns an error" do
         result = 0
 
-        aggregate_failures do
-          expect { result = create_service.call }.not_to change(Event, :count)
+        expect { result = create_service.call }.not_to change(Event, :count)
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:transaction_id)
-          expect(result.error.messages[:transaction_id]).to include("value_already_exist")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:transaction_id)
+        expect(result.error.messages[:transaction_id]).to include("value_already_exist")
       end
     end
 

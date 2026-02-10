@@ -19,11 +19,9 @@ RSpec.describe FeesQuery do
     it "returns a list of fees" do
       result = fees_query.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.fees.count).to eq(1)
-        expect(result.fees).to eq([fee])
-      end
+      expect(result).to be_success
+      expect(result.fees.count).to eq(1)
+      expect(result.fees).to eq([fee])
     end
 
     context "with multiple fees" do
@@ -37,11 +35,9 @@ RSpec.describe FeesQuery do
       it "returns a consistent list when 2 fees have the same created_at" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(2)
-          expect(result.fees).to eq([fee2, fee])
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(2)
+        expect(result.fees).to eq([fee2, fee])
       end
     end
 
@@ -51,11 +47,9 @@ RSpec.describe FeesQuery do
       it "applies the pagination" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(0)
-          expect(result.fees.current_page).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(0)
+        expect(result.fees.current_page).to eq(2)
       end
     end
 
@@ -65,10 +59,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
     end
 
@@ -78,10 +70,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee is for an add_on" do
@@ -95,10 +85,8 @@ RSpec.describe FeesQuery do
         it "applies the filter" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(1)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
         end
       end
     end
@@ -109,10 +97,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
     end
 
@@ -128,10 +114,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
     end
 
@@ -141,10 +125,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee_type is invalid" do
@@ -153,11 +135,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:fee_type]).to include("value_is_invalid")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:fee_type]).to include("value_is_invalid")
         end
       end
     end
@@ -168,10 +148,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when payment_status is invalid" do
@@ -180,11 +158,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:payment_status]).to include("value_is_invalid")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_status]).to include("value_is_invalid")
         end
       end
     end
@@ -199,10 +175,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
     end
 
@@ -217,10 +191,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee is not covered by range" do
@@ -234,10 +206,8 @@ RSpec.describe FeesQuery do
         it "applies the filter" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(0)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(0)
         end
       end
 
@@ -247,11 +217,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:created_at_from]).to include("invalid_date")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:created_at_from]).to include("invalid_date")
         end
       end
     end
@@ -269,10 +237,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee is not covered by range" do
@@ -286,10 +252,8 @@ RSpec.describe FeesQuery do
         it "applies the filter" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(0)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(0)
         end
       end
 
@@ -299,11 +263,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:succeeded_at_from]).to include("invalid_date")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:succeeded_at_from]).to include("invalid_date")
         end
       end
     end
@@ -321,10 +283,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee is not covered by range" do
@@ -338,10 +298,8 @@ RSpec.describe FeesQuery do
         it "applies the filter" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(0)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(0)
         end
       end
 
@@ -351,11 +309,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:failed_at_from]).to include("invalid_date")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:failed_at_from]).to include("invalid_date")
         end
       end
     end
@@ -373,10 +329,8 @@ RSpec.describe FeesQuery do
       it "applies the filter" do
         result = fees_query.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
       end
 
       context "when fee is not covered by range" do
@@ -390,10 +344,8 @@ RSpec.describe FeesQuery do
         it "applies the filter" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(0)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(0)
         end
       end
 
@@ -403,11 +355,9 @@ RSpec.describe FeesQuery do
         it "returns a failed result" do
           result = fees_query.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:refunded_at_from]).to include("invalid_date")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:refunded_at_from]).to include("invalid_date")
         end
       end
     end

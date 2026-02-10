@@ -77,10 +77,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       it "returns an error" do
         result = service_call_async
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("payment_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("payment_not_found")
       end
     end
   end
@@ -102,10 +100,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
         expect(lago_client).not_to have_received(:post_with_response)
         result = service_call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.external_id).to be_nil
-        end
+        expect(result).to be_success
+        expect(result.external_id).to be_nil
       end
     end
 
@@ -126,10 +122,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
         it "returns external id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.external_id).to eq("999")
-          end
+          expect(result).to be_success
+          expect(result.external_id).to eq("999")
         end
 
         it "creates integration resource object" do
@@ -155,10 +149,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
           it "returns external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to eq("e68f6095-f8d2-4d7a-ac05-7bb919d0330e")
-            end
+            expect(result).to be_success
+            expect(result.external_id).to eq("e68f6095-f8d2-4d7a-ac05-7bb919d0330e")
           end
 
           it "creates integration resource object" do
@@ -183,10 +175,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
           it "does not return external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to be(nil)
-            end
+            expect(result).to be_success
+            expect(result.external_id).to be(nil)
           end
 
           it "does not create integration resource object" do

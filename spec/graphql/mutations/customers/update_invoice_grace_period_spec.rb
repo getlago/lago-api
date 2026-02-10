@@ -41,9 +41,7 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
 
     result_data = result["data"]["updateCustomerInvoiceGracePeriod"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["invoiceGracePeriod"]).to eq(12)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["invoiceGracePeriod"]).to eq(12)
   end
 end

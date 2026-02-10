@@ -53,9 +53,7 @@ RSpec.describe Mutations::Integrations::Xero::Update do
 
     result_data = result["data"]["updateXeroIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
   end
 end

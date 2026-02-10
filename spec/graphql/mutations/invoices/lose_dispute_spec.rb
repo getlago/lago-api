@@ -38,10 +38,8 @@ RSpec.describe Mutations::Invoices::LoseDispute do
 
       result_data = result["data"]["loseInvoiceDispute"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["paymentDisputeLostAt"]).to be_present
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["paymentDisputeLostAt"]).to be_present
     end
   end
 end

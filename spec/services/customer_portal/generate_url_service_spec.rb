@@ -14,10 +14,8 @@ RSpec.describe CustomerPortal::GenerateUrlService do
       message = result.url.split("/customer-portal/")[1]
       public_authenticator = ActiveSupport::MessageVerifier.new(ENV["SECRET_KEY_BASE"])
 
-      aggregate_failures do
-        expect(result.url).to include("/customer-portal/")
-        expect(public_authenticator.verify(message)).to eq(customer.id)
-      end
+      expect(result.url).to include("/customer-portal/")
+      expect(public_authenticator.verify(message)).to eq(customer.id)
     end
 
     context "when customer does not exist" do

@@ -84,11 +84,9 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         it "returns contact id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
-            expect(result.email).to eq("roger@rogers.com")
-          end
+          expect(result).to be_success
+          expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
+          expect(result.email).to eq("roger@rogers.com")
         end
 
         it "delivers a success webhook" do
@@ -130,10 +128,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
           it "returns contact id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
-            end
+            expect(result).to be_success
+            expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
           end
 
           it "delivers a success webhook" do
@@ -156,10 +152,8 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
           it "does not return contact id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.contact).to be(nil)
-            end
+            expect(result).to be_success
+            expect(result.contact).to be(nil)
           end
 
           it "does not create integration resource object" do
@@ -209,11 +203,9 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do
@@ -246,11 +238,9 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do
@@ -283,11 +273,9 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do

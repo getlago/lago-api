@@ -18,7 +18,32 @@ RSpec.describe Api::V1::FeesController do
     it "returns a fee" do
       subject
 
-      aggregate_failures do
+      expect(response).to have_http_status(:success)
+
+      expect(json[:fee]).to include(
+        lago_id: fee.id,
+        amount_cents: fee.amount_cents,
+        amount_currency: fee.amount_currency,
+        taxes_amount_cents: fee.taxes_amount_cents,
+        units: fee.units.to_s,
+        events_count: fee.events_count,
+        applied_taxes: [],
+        self_billed: false
+      )
+      expect(json[:fee][:item]).to include(
+        type: fee.fee_type,
+        code: fee.item_code,
+        name: fee.item_name
+      )
+    end
+
+    context "when fee is an add-on fee" do
+      let(:invoice) { create(:invoice, organization:) }
+      let(:fee) { create(:add_on_fee, invoice:) }
+
+      it "returns a fee" do
+        subject
+
         expect(response).to have_http_status(:success)
 
         expect(json[:fee]).to include(
@@ -29,42 +54,13 @@ RSpec.describe Api::V1::FeesController do
           units: fee.units.to_s,
           events_count: fee.events_count,
           applied_taxes: [],
-          self_billed: false
+          self_billed: invoice.self_billed
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,
           code: fee.item_code,
           name: fee.item_name
         )
-      end
-    end
-
-    context "when fee is an add-on fee" do
-      let(:invoice) { create(:invoice, organization:) }
-      let(:fee) { create(:add_on_fee, invoice:) }
-
-      it "returns a fee" do
-        subject
-
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-
-          expect(json[:fee]).to include(
-            lago_id: fee.id,
-            amount_cents: fee.amount_cents,
-            amount_currency: fee.amount_currency,
-            taxes_amount_cents: fee.taxes_amount_cents,
-            units: fee.units.to_s,
-            events_count: fee.events_count,
-            applied_taxes: [],
-            self_billed: invoice.self_billed
-          )
-          expect(json[:fee][:item]).to include(
-            type: fee.fee_type,
-            code: fee.item_code,
-            name: fee.item_name
-          )
-        end
       end
     end
 
@@ -104,30 +100,28 @@ RSpec.describe Api::V1::FeesController do
     it "updates the fee" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:fee]).to include(
-          lago_id: fee.reload.id,
-          amount_cents: fee.amount_cents,
-          amount_currency: fee.amount_currency,
-          taxes_amount_cents: fee.taxes_amount_cents,
-          units: fee.units.to_s,
-          events_count: fee.events_count,
-          payment_status: fee.payment_status,
-          created_at: fee.created_at&.iso8601,
-          succeeded_at: fee.succeeded_at&.iso8601,
-          failed_at: fee.failed_at&.iso8601,
-          refunded_at: fee.refunded_at&.iso8601,
-          amount_details: fee.amount_details,
-          applied_taxes: []
-        )
-        expect(json[:fee][:item]).to include(
-          type: fee.fee_type,
-          code: fee.item_code,
-          name: fee.item_name
-        )
-      end
+      expect(json[:fee]).to include(
+        lago_id: fee.reload.id,
+        amount_cents: fee.amount_cents,
+        amount_currency: fee.amount_currency,
+        taxes_amount_cents: fee.taxes_amount_cents,
+        units: fee.units.to_s,
+        events_count: fee.events_count,
+        payment_status: fee.payment_status,
+        created_at: fee.created_at&.iso8601,
+        succeeded_at: fee.succeeded_at&.iso8601,
+        failed_at: fee.failed_at&.iso8601,
+        refunded_at: fee.refunded_at&.iso8601,
+        amount_details: fee.amount_details,
+        applied_taxes: []
+      )
+      expect(json[:fee][:item]).to include(
+        type: fee.fee_type,
+        code: fee.item_code,
+        name: fee.item_name
+      )
     end
 
     context "when fee does not exist" do
@@ -198,12 +192,10 @@ RSpec.describe Api::V1::FeesController do
       it "returns a list of fees" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(json[:fees].count).to eq(1)
-          expect(json[:fees].first[:lago_id]).to eq(fee.id)
-        end
+        expect(json[:fees].count).to eq(1)
+        expect(json[:fees].first[:lago_id]).to eq(fee.id)
       end
     end
 
@@ -213,10 +205,8 @@ RSpec.describe Api::V1::FeesController do
       it "returns an error response" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
-        end
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({fee_type: %w[value_is_invalid]})
       end
     end
   end

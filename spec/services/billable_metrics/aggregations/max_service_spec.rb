@@ -166,11 +166,9 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
     it "ignores the event" do
       result = max_service.aggregate
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.aggregation).to eq(0)
-        expect(result.count).to eq(0)
-      end
+      expect(result).to be_success
+      expect(result.aggregation).to eq(0)
+      expect(result.count).to eq(0)
     end
   end
 

@@ -34,13 +34,11 @@ RSpec.describe Resolvers::CurrentUserResolver do
       query:
     )
 
-    aggregate_failures do
-      expect(result["data"]["currentUser"]["email"]).to eq(user.email)
-      expect(result["data"]["currentUser"]["id"]).to eq(user.id)
-      expect(result["data"]["currentUser"]["premium"]).to be_falsey
-      expect(result["data"]["currentUser"]["memberships"][0]["roles"]).to eq ["Admin"]
-      expect(result["data"]["currentUser"]["memberships"][0]["organization"]["name"]).not_to be_empty
-    end
+    expect(result["data"]["currentUser"]["email"]).to eq(user.email)
+    expect(result["data"]["currentUser"]["id"]).to eq(user.id)
+    expect(result["data"]["currentUser"]["premium"]).to be_falsey
+    expect(result["data"]["currentUser"]["memberships"][0]["roles"]).to eq ["Admin"]
+    expect(result["data"]["currentUser"]["memberships"][0]["organization"]["name"]).not_to be_empty
   end
 
   it "returns null for deprecated role field when using custom role" do

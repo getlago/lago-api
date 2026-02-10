@@ -104,16 +104,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
 
     context "with persisted metric on full period" do
       it "returns the detail the persisted metrics" do
-        aggregate_failures do
-          expect(result.count).to eq(1)
+        expect(result.count).to eq(1)
 
-          item = result.first
-          expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-          expect(item.action).to eq("add")
-          expect(item.amount).to eq(1)
-          expect(item.duration).to eq(31)
-          expect(item.total_duration).to eq(31)
-        end
+        item = result.first
+        expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+        expect(item.action).to eq("add")
+        expect(item.amount).to eq(1)
+        expect(item.duration).to eq(31)
+        expect(item.total_duration).to eq(31)
       end
 
       context "when subscription was terminated in the period" do
@@ -132,16 +130,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         let(:to_datetime) { Time.zone.parse("2022-07-24 23:59:59") }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(from_datetime.to_date.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(16)
-            expect(item.total_duration).to eq(16)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(from_datetime.to_date.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(16)
+          expect(item.total_duration).to eq(16)
         end
       end
 
@@ -170,16 +166,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         end
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(16)
-            expect(item.total_duration).to eq(16)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(16)
+          expect(item.total_duration).to eq(16)
         end
 
         context "with calendar subscription and pay in advance" do
@@ -199,16 +193,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
           before { subscription.plan.update!(pay_in_advance: true) }
 
           it "returns the detail the persisted metrics" do
-            aggregate_failures do
-              expect(result.count).to eq(1)
+            expect(result.count).to eq(1)
 
-              item = result.first
-              expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-              expect(item.action).to eq("add")
-              expect(item.amount).to eq(1)
-              expect(item.duration).to eq(16)
-              expect(item.total_duration).to eq(16)
-            end
+            item = result.first
+            expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+            expect(item.action).to eq("add")
+            expect(item.amount).to eq(1)
+            expect(item.duration).to eq(16)
+            expect(item.total_duration).to eq(16)
           end
         end
       end
@@ -218,16 +210,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         let(:from_datetime) { started_at }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(8)
-            expect(item.total_duration).to eq(8)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(8)
+          expect(item.total_duration).to eq(8)
         end
       end
     end
@@ -236,32 +226,28 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
       let(:added_at) { from_datetime + 15.days }
 
       it "returns the detail the persisted metrics" do
-        aggregate_failures do
-          expect(result.count).to eq(1)
+        expect(result.count).to eq(1)
 
-          item = result.first
-          expect(item.date.to_s).to eq(added_at.to_date.to_s)
-          expect(item.action).to eq("add")
-          expect(item.amount).to eq(1)
-          expect(item.duration).to eq(16)
-          expect(item.total_duration).to eq(31)
-        end
+        item = result.first
+        expect(item.date.to_s).to eq(added_at.to_date.to_s)
+        expect(item.action).to eq("add")
+        expect(item.amount).to eq(1)
+        expect(item.duration).to eq(16)
+        expect(item.total_duration).to eq(31)
       end
 
       context "when added on the first day of the period" do
         let(:added_at) { from_datetime }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(31)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(31)
+          expect(item.total_duration).to eq(31)
         end
       end
     end
@@ -270,32 +256,28 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
       let(:removed_at) { to_datetime - 15.days }
 
       it "returns the detail the persisted metrics" do
-        aggregate_failures do
-          expect(result.count).to eq(1)
+        expect(result.count).to eq(1)
 
-          item = result.first
-          expect(item.date.to_s).to eq(removed_at.to_date.to_s)
-          expect(item.action).to eq("remove")
-          expect(item.amount).to eq(1)
-          expect(item.duration).to eq(16)
-          expect(item.total_duration).to eq(31)
-        end
+        item = result.first
+        expect(item.date.to_s).to eq(removed_at.to_date.to_s)
+        expect(item.action).to eq("remove")
+        expect(item.amount).to eq(1)
+        expect(item.duration).to eq(16)
+        expect(item.total_duration).to eq(31)
       end
 
       context "when removed on the last day of the period" do
         let(:removed_at) { to_datetime }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(to_datetime.to_date.to_s)
-            expect(item.action).to eq("remove")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(31)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(to_datetime.to_date.to_s)
+          expect(item.action).to eq("remove")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(31)
+          expect(item.total_duration).to eq(31)
         end
       end
     end
@@ -305,16 +287,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
       let(:removed_at) { to_datetime - 1.day }
 
       it "returns the detail the persisted metrics" do
-        aggregate_failures do
-          expect(result.count).to eq(1)
+        expect(result.count).to eq(1)
 
-          item = result.first
-          expect(item.date.to_s).to eq(added_at.to_date.to_s)
-          expect(item.action).to eq("add_and_removed")
-          expect(item.amount).to eq(1)
-          expect(item.duration).to eq(29)
-          expect(item.total_duration).to eq(31)
-        end
+        item = result.first
+        expect(item.date.to_s).to eq(added_at.to_date.to_s)
+        expect(item.action).to eq("add_and_removed")
+        expect(item.amount).to eq(1)
+        expect(item.duration).to eq(29)
+        expect(item.total_duration).to eq(31)
       end
 
       context "when added and removed the same day" do
@@ -322,16 +302,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         let(:removed_at) { added_at.end_of_day }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(added_at.to_date.to_s)
-            expect(item.action).to eq("add_and_removed")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(1)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(added_at.to_date.to_s)
+          expect(item.action).to eq("add_and_removed")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(1)
+          expect(item.total_duration).to eq(31)
         end
       end
 
@@ -352,16 +330,14 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, transaction: fals
         before { new_event }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(added_at.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(1)
-            expect(item.duration).to eq(3)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(added_at.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(1)
+          expect(item.duration).to eq(3)
+          expect(item.total_duration).to eq(31)
         end
       end
     end

@@ -215,13 +215,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         it "uses previous events as latest value" do
           result = aggregator.aggregate
 
-          aggregate_failures do
-            expect(result.aggregation.round(5).to_s).to eq("10.0")
-            expect(result.count).to eq(0)
-            expect(result.variation).to eq(0)
-            expect(result.total_aggregated_units).to eq(10)
-            expect(result.recurring_updated_at).to eq(from_datetime)
-          end
+          expect(result.aggregation.round(5).to_s).to eq("10.0")
+          expect(result.count).to eq(0)
+          expect(result.variation).to eq(0)
+          expect(result.total_aggregated_units).to eq(10)
+          expect(result.recurring_updated_at).to eq(from_datetime)
         end
       end
     end
@@ -242,13 +240,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       it "aggregates the events" do
         result = aggregator.aggregate
 
-        aggregate_failures do
-          expect(result.aggregation.round(5).to_s).to eq("1000.02218")
-          expect(result.count).to eq(7)
-          expect(result.variation).to eq(0)
-          expect(result.total_aggregated_units).to eq(1000)
-          expect(result.recurring_updated_at).to eq("2023-08-01 05:30:00")
-        end
+        expect(result.aggregation.round(5).to_s).to eq("1000.02218")
+        expect(result.count).to eq(7)
+        expect(result.variation).to eq(0)
+        expect(result.total_aggregated_units).to eq(1000)
+        expect(result.recurring_updated_at).to eq("2023-08-01 05:30:00")
       end
     end
   end
@@ -469,17 +465,15 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           it "uses previous events as latest value" do
             result = aggregator.aggregate
 
-            aggregate_failures do
-              expect(result.aggregations.count).to eq(2)
+            expect(result.aggregations.count).to eq(2)
 
-              result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
-                expect(aggregation.aggregation.to_s).to eq("10.0")
-                expect(aggregation.count).to eq(0)
-                expect(aggregation.variation).to eq(0)
-                expect(aggregation.total_aggregated_units).to eq(10)
-                expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
-                expect(aggregation.recurring_updated_at).to eq(from_datetime)
-              end
+            result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
+              expect(aggregation.aggregation.to_s).to eq("10.0")
+              expect(aggregation.count).to eq(0)
+              expect(aggregation.variation).to eq(0)
+              expect(aggregation.total_aggregated_units).to eq(10)
+              expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
+              expect(aggregation.recurring_updated_at).to eq(from_datetime)
             end
           end
         end
@@ -509,17 +503,15 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         it "aggregates the events" do
           result = aggregator.aggregate
 
-          aggregate_failures do
-            expect(result.aggregations.count).to eq(2)
+          expect(result.aggregations.count).to eq(2)
 
-            result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
-              expect(aggregation.aggregation.round(5).to_s).to eq("1000.02218")
-              expect(aggregation.count).to eq(7)
-              expect(aggregation.variation).to eq(0)
-              expect(aggregation.total_aggregated_units).to eq(1000)
-              expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
-              expect(aggregation.recurring_updated_at).to eq("2023-08-01 05:30:00")
-            end
+          result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
+            expect(aggregation.aggregation.round(5).to_s).to eq("1000.02218")
+            expect(aggregation.count).to eq(7)
+            expect(aggregation.variation).to eq(0)
+            expect(aggregation.total_aggregated_units).to eq(1000)
+            expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
+            expect(aggregation.recurring_updated_at).to eq("2023-08-01 05:30:00")
           end
         end
       end
@@ -543,13 +535,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       it "aggregates the events" do
         result = aggregator.aggregate
 
-        aggregate_failures do
-          expect(result.aggregations.count).to eq(2)
+        expect(result.aggregations.count).to eq(2)
 
-          result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, _index|
-            expect(aggregation.aggregation.round(5).to_s).to eq("1000.0")
-            expect(aggregation.count).to eq(1)
-          end
+        result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, _index|
+          expect(aggregation.aggregation.round(5).to_s).to eq("1000.0")
+          expect(aggregation.count).to eq(1)
         end
       end
     end

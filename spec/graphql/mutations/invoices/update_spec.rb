@@ -44,11 +44,9 @@ RSpec.describe Mutations::Invoices::Update do
 
     result_data = result["data"]["updateInvoice"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["paymentStatus"]).to eq("succeeded")
-      expect(result_data["metadata"][0]["key"]).to eq("test-key")
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["paymentStatus"]).to eq("succeeded")
+    expect(result_data["metadata"][0]["key"]).to eq("test-key")
   end
 
   context "when invoice does not exists" do

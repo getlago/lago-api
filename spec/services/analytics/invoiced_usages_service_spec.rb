@@ -20,10 +20,8 @@ RSpec.describe Analytics::InvoicedUsagesService do
 
     context "when licence is not premium" do
       it "returns an error" do
-        aggregate_failures do
-          expect(service_call).not_to be_success
-          expect(service_call.error.code).to eq("feature_unavailable")
-        end
+        expect(service_call).not_to be_success
+        expect(service_call.error.code).to eq("feature_unavailable")
       end
     end
   end

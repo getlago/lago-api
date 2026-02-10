@@ -21,7 +21,7 @@ RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create do
 
   it_behaves_like "requires a customer portal user"
 
-  it "creates a wallet transaction", :aggregate_failures do
+  it "creates a wallet transaction" do
     result = execute_graphql(
       customer_portal_user: wallet.customer,
       query: mutation,

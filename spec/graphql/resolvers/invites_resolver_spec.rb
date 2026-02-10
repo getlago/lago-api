@@ -27,13 +27,11 @@ RSpec.describe Resolvers::InvitesResolver do
 
     invites_response = result["data"]["invites"]
 
-    aggregate_failures do
-      expect(invites_response["collection"].count).to eq(organization.invites.count)
-      expect(invites_response["collection"].first["id"]).to eq(invite.id)
+    expect(invites_response["collection"].count).to eq(organization.invites.count)
+    expect(invites_response["collection"].first["id"]).to eq(invite.id)
 
-      expect(invites_response["metadata"]["currentPage"]).to eq(1)
-      expect(invites_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(invites_response["metadata"]["currentPage"]).to eq(1)
+    expect(invites_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "without current organization" do

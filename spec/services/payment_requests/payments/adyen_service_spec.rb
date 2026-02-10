@@ -145,7 +145,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
       payment
     end
 
-    it "updates the payment, payment_request and invoices payment_status", :aggregate_failures do
+    it "updates the payment, payment_request and invoices payment_status" do
       expect(result).to be_success
       expect(result.payment.status).to eq(status)
 
@@ -209,7 +209,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
     context "when status is failed" do
       let(:status) { "Refused" }
 
-      it "updates the payment, payment_request and invoices status", :aggregate_failures do
+      it "updates the payment, payment_request and invoices status" do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
         expect(result.payment.payable_payment_status).to eq("failed")
@@ -270,7 +270,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
           .and not_change { payment.reload.status }
       end
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payable_payment_status)
@@ -291,7 +291,7 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
         adyen_customer
       end
 
-      it "creates a payment and updates payment request and invoices payment status", :aggregate_failures do
+      it "creates a payment and updates payment request and invoices payment status" do
         result = adyen_service.update_payment_status(
           provider_payment_id:,
           status:,

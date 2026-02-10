@@ -179,7 +179,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
           )
         end
 
-        it "returns the payment_method in the result", aggregate_failures: true do
+        it "returns the payment_method in the result" do
           result = moneyhash_service.update_payment_method(
             organization_id: organization.id,
             customer_id: customer.id,
@@ -284,7 +284,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
           }.not_to change(PaymentMethod, :count)
         end
 
-        it "still updates the legacy payment_method_id", aggregate_failures: true do
+        it "still updates the legacy payment_method_id" do
           result = moneyhash_service.update_payment_method(
             organization_id: organization.id,
             customer_id: customer.id,

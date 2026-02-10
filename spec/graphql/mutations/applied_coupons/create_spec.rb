@@ -50,12 +50,10 @@ RSpec.describe Mutations::AppliedCoupons::Create do
 
     result_data = result["data"]["createAppliedCoupon"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["coupon"]["id"]).to eq(coupon.id)
-      expect(result_data["amountCents"]).to eq("123")
-      expect(result_data["amountCurrency"]).to eq("EUR")
-      expect(result_data["createdAt"]).to be_present
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["coupon"]["id"]).to eq(coupon.id)
+    expect(result_data["amountCents"]).to eq("123")
+    expect(result_data["amountCurrency"]).to eq("EUR")
+    expect(result_data["createdAt"]).to be_present
   end
 end

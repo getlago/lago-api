@@ -27,7 +27,7 @@ RSpec.describe Subscriptions::PlanUpgradeService do
   let(:params) { {name: subscription_name} }
   let(:subscription_name) { "new invoice display name" }
 
-  describe "#call", :aggregate_failures do
+  describe "#call" do
     before do
       subscription.mark_as_active!
     end

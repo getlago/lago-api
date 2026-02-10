@@ -55,11 +55,9 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
       mrrs_response = result["data"]["mrrs"]
       month = DateTime.parse mrrs_response["collection"].first["month"]
 
-      aggregate_failures do
-        expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(mrrs_response["collection"].first["amountCents"]).to eq(nil)
-        expect(mrrs_response["collection"].first["currency"]).to eq(nil)
-      end
+      expect(month).to eq(DateTime.current.beginning_of_month)
+      expect(mrrs_response["collection"].first["amountCents"]).to eq(nil)
+      expect(mrrs_response["collection"].first["currency"]).to eq(nil)
     end
   end
 end

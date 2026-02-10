@@ -63,12 +63,10 @@ RSpec.describe Credits::AppliedCouponsService do
     it "updates the invoice accordingly" do
       result = credit_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice.coupons_amount_cents).to eq(28)
-        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(72)
-        expect(result.invoice.credits.count).to eq(2)
-      end
+      expect(result).to be_success
+      expect(result.invoice.coupons_amount_cents).to eq(28)
+      expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(72)
+      expect(result.invoice.credits.count).to eq(2)
     end
 
     context "when first coupon covers the invoice" do
@@ -87,12 +85,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "updates the invoice accordingly and spends only the first coupon" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(5)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
-          expect(result.invoice.credits.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(5)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
+        expect(result.invoice.credits.count).to eq(1)
       end
     end
 
@@ -112,12 +108,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "updates the invoice accordingly" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
-          expect(result.invoice.credits.count).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(30)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
+        expect(result.invoice.credits.count).to eq(2)
       end
     end
 
@@ -135,12 +129,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "updates the invoice accordingly" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(32)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(68)
-          expect(result.invoice.credits.count).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(32)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(68)
+        expect(result.invoice.credits.count).to eq(2)
       end
     end
 
@@ -197,12 +189,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "ignores coupons" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(0)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
-          expect(result.invoice.credits.count).to be_zero
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(0)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
+        expect(result.invoice.credits.count).to be_zero
       end
     end
 
@@ -239,12 +229,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "ignores only one coupon and applies the other one" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(20)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(80)
-          expect(result.invoice.credits.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(20)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(80)
+        expect(result.invoice.credits.count).to eq(1)
       end
     end
 
@@ -281,12 +269,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "applies two coupons" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
-          expect(result.invoice.credits.count).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(30)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
+        expect(result.invoice.credits.count).to eq(2)
       end
     end
 
@@ -363,12 +349,10 @@ RSpec.describe Credits::AppliedCouponsService do
       it "applies two coupons" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(80)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(20)
-          expect(result.invoice.credits.count).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(80)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(20)
+        expect(result.invoice.credits.count).to eq(2)
       end
     end
   end

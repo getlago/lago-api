@@ -18,17 +18,15 @@ RSpec.describe Webhooks::BaseService do
 
       webhook = Webhook.order(created_at: :desc).first
 
-      aggregate_failures do
-        expect(webhook.status).to eq("pending")
-        expect(webhook.retries).to be_zero
-        expect(webhook.webhook_type).to eq("dummy.test")
-        expect(webhook.endpoint).to eq(webhook.webhook_endpoint.webhook_url)
-        expect(webhook.object_id).to eq(invoice.id)
-        expect(webhook.object_type).to eq("Invoice")
-        expect(webhook.http_status).to be_nil
-        expect(webhook.response).to be_nil
-        expect(webhook.payload.keys).to eq %w[webhook_type object_type organization_id dummy]
-      end
+      expect(webhook.status).to eq("pending")
+      expect(webhook.retries).to be_zero
+      expect(webhook.webhook_type).to eq("dummy.test")
+      expect(webhook.endpoint).to eq(webhook.webhook_endpoint.webhook_url)
+      expect(webhook.object_id).to eq(invoice.id)
+      expect(webhook.object_type).to eq("Invoice")
+      expect(webhook.http_status).to be_nil
+      expect(webhook.response).to be_nil
+      expect(webhook.payload.keys).to eq %w[webhook_type object_type organization_id dummy]
     end
 
     context "when organization has one webhook endpoint" do

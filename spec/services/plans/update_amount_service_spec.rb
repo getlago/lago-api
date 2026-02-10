@@ -26,10 +26,8 @@ RSpec.describe Plans::UpdateAmountService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("plan_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("plan_not_found")
       end
     end
 
@@ -39,14 +37,12 @@ RSpec.describe Plans::UpdateAmountService do
       it "does not update the plan" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.plan.reload.amount_cents).to eq(111)
-        end
+        expect(result).to be_success
+        expect(result.plan.reload.amount_cents).to eq(111)
       end
     end
 
-    context "when there are pending subscriptions which are not relevant after the amount cents increase", :aggregate_failures do
+    context "when there are pending subscriptions which are not relevant after the amount cents increase" do
       let(:original_plan) { create(:plan, organization:, amount_cents: expected_amount_cents) }
       let(:subscription) { create(:subscription, plan: original_plan) }
       let(:pending_subscription) do

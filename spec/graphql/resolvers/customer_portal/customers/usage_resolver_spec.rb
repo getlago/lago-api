@@ -138,32 +138,30 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
 
       usage_response = result["data"]["customerPortalCustomerUsage"]
 
-      aggregate_failures do
-        expect(usage_response["fromDatetime"]).to eq(now.beginning_of_month.iso8601)
-        expect(usage_response["toDatetime"]).to eq(now.end_of_month.iso8601)
-        expect(usage_response["currency"]).to eq("EUR")
-        expect(usage_response["issuingDate"]).to eq(now.to_date.end_of_month.iso8601)
-        expect(usage_response["amountCents"]).to eq("405")
-        expect(usage_response["totalAmountCents"]).to eq("405")
-        expect(usage_response["taxesAmountCents"]).to eq("0")
-        charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == metric.code }
-        expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["amountCents"]).to eq("5")
-        charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == sum_metric.code }
-        expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["amountCents"]).to eq("400")
-        grouped_usage = charge_usage["groupedUsage"].first
-        expect(grouped_usage["amountCents"]).to eq("400")
-        expect(grouped_usage["units"]).to eq(4.0)
-        expect(grouped_usage["eventsCount"]).to eq(4)
-        expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
-      end
+      expect(usage_response["fromDatetime"]).to eq(now.beginning_of_month.iso8601)
+      expect(usage_response["toDatetime"]).to eq(now.end_of_month.iso8601)
+      expect(usage_response["currency"]).to eq("EUR")
+      expect(usage_response["issuingDate"]).to eq(now.to_date.end_of_month.iso8601)
+      expect(usage_response["amountCents"]).to eq("405")
+      expect(usage_response["totalAmountCents"]).to eq("405")
+      expect(usage_response["taxesAmountCents"]).to eq("0")
+      charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == metric.code }
+      expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
+      expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
+      expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
+      expect(charge_usage["units"]).to eq(4.0)
+      expect(charge_usage["amountCents"]).to eq("5")
+      charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == sum_metric.code }
+      expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
+      expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
+      expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
+      expect(charge_usage["units"]).to eq(4.0)
+      expect(charge_usage["amountCents"]).to eq("400")
+      grouped_usage = charge_usage["groupedUsage"].first
+      expect(grouped_usage["amountCents"]).to eq("400")
+      expect(grouped_usage["units"]).to eq(4.0)
+      expect(grouped_usage["eventsCount"]).to eq(4)
+      expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
     end
   end
 
@@ -241,40 +239,38 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
         end
         filters_usage = charge_usage["filters"]
 
-        aggregate_failures do
-          expect(charge_usage["units"]).to eq(8)
-          expect(charge_usage["amountCents"]).to eq("5000")
-          expect(filters_usage).to contain_exactly(
-            {
-              "id" => nil,
-              "units" => 4,
-              "amountCents" => "0",
-              "invoiceDisplayName" => nil,
-              "values" => {},
-              "eventsCount" => 4
+        expect(charge_usage["units"]).to eq(8)
+        expect(charge_usage["amountCents"]).to eq("5000")
+        expect(filters_usage).to contain_exactly(
+          {
+            "id" => nil,
+            "units" => 4,
+            "amountCents" => "0",
+            "invoiceDisplayName" => nil,
+            "values" => {},
+            "eventsCount" => 4
+          },
+          {
+            "id" => aws_filter.id,
+            "units" => 3,
+            "amountCents" => "3000",
+            "invoiceDisplayName" => nil,
+            "values" => {
+              "cloud" => ["aws"]
             },
-            {
-              "id" => aws_filter.id,
-              "units" => 3,
-              "amountCents" => "3000",
-              "invoiceDisplayName" => nil,
-              "values" => {
-                "cloud" => ["aws"]
-              },
-              "eventsCount" => 3
+            "eventsCount" => 3
+          },
+          {
+            "id" => google_filter.id,
+            "units" => 1,
+            "amountCents" => "2000",
+            "invoiceDisplayName" => nil,
+            "values" => {
+              "cloud" => ["google"]
             },
-            {
-              "id" => google_filter.id,
-              "units" => 1,
-              "amountCents" => "2000",
-              "invoiceDisplayName" => nil,
-              "values" => {
-                "cloud" => ["google"]
-              },
-              "eventsCount" => 1
-            }
-          )
-        end
+            "eventsCount" => 1
+          }
+        )
       end
     end
   end

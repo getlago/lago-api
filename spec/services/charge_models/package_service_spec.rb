@@ -30,7 +30,7 @@ RSpec.describe ChargeModels::PackageService do
     )
   end
 
-  it "applies the package size to the value", :aggregate_failures do
+  it "applies the package size to the value" do
     expect(apply_package_service.amount).to eq(1300)
     expect(apply_package_service.unit_amount.round(2)).to eq(10.74)
     expect(apply_package_service.amount_details).to eq(

@@ -47,10 +47,8 @@ RSpec.describe Mutations::Integrations::Salesforce::Create do
 
     result_data = result["data"]["createSalesforceIntegration"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["name"]).to eq(name)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["name"]).to eq(name)
   end
 end

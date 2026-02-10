@@ -33,10 +33,8 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = described_class.new(invoice: nil).call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.message).to eq("invoice_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.message).to eq("invoice_not_found")
       end
     end
 
@@ -46,11 +44,9 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = generate_payment_url_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["no_linked_payment_provider"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["no_linked_payment_provider"])
       end
     end
 
@@ -61,11 +57,9 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = generate_payment_url_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["missing_payment_provider"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["missing_payment_provider"])
       end
     end
 
@@ -77,11 +71,9 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = generate_payment_url_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["missing_payment_provider_customer"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["missing_payment_provider_customer"])
       end
     end
 
@@ -91,11 +83,9 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = generate_payment_url_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["invalid_payment_provider"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["invalid_payment_provider"])
       end
     end
 
@@ -105,11 +95,9 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       it "returns an error" do
         result = generate_payment_url_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:base]).to eq(["invalid_invoice_status_or_payment_status"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["invalid_invoice_status_or_payment_status"])
       end
     end
 

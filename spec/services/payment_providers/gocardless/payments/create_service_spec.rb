@@ -137,16 +137,14 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
       it "delivers an error webhook" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("gocardless_error")
-          expect(result.error.error_message).to eq("no_mandate_error: No mandate available for payment")
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("gocardless_error")
+        expect(result.error.error_message).to eq("no_mandate_error: No mandate available for payment")
 
-          expect(result.error_message).to eq("No mandate available for payment")
-          expect(result.error_code).to eq("no_mandate_error")
-          expect(result.payment.payable_payment_status).to eq("failed")
-        end
+        expect(result.error_message).to eq("No mandate available for payment")
+        expect(result.error_code).to eq("no_mandate_error")
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
   end

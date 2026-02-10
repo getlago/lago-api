@@ -56,11 +56,9 @@ RSpec.describe Resolvers::Analytics::InvoiceCollectionsResolver do
       invoice_collections_response = result["data"]["invoiceCollections"]
       month = DateTime.parse invoice_collections_response["collection"].first["month"]
 
-      aggregate_failures do
-        expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(invoice_collections_response["collection"].first["amountCents"]).to eq("0")
-        expect(invoice_collections_response["collection"].first["invoicesCount"]).to eq("0")
-      end
+      expect(month).to eq(DateTime.current.beginning_of_month)
+      expect(invoice_collections_response["collection"].first["amountCents"]).to eq("0")
+      expect(invoice_collections_response["collection"].first["invoicesCount"]).to eq("0")
     end
   end
 end

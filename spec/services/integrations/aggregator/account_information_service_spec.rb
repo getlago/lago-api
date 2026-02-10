@@ -35,11 +35,9 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
       result = service.call
       account_information = result.account_information
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:get)
-        expect(account_information.id).to eq("1234567890")
-      end
+      expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(lago_client).to have_received(:get)
+      expect(account_information.id).to eq("1234567890")
     end
 
     it_behaves_like "throttles!", :hubspot

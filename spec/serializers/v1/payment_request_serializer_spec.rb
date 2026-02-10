@@ -17,19 +17,17 @@ RSpec.describe ::V1::PaymentRequestSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["payment_request"]).to include(
-        "lago_id" => payment_request.id,
-        "email" => payment_request.email,
-        "amount_cents" => payment_request.amount_cents,
-        "amount_currency" => payment_request.amount_currency,
-        "payment_status" => payment_request.payment_status,
-        "created_at" => payment_request.created_at.iso8601,
-        "customer" => hash_including("lago_id" => payment_request.customer.id),
-        "invoices" => [
-          hash_including("lago_id" => invoice.id)
-        ]
-      )
-    end
+    expect(result["payment_request"]).to include(
+      "lago_id" => payment_request.id,
+      "email" => payment_request.email,
+      "amount_cents" => payment_request.amount_cents,
+      "amount_currency" => payment_request.amount_currency,
+      "payment_status" => payment_request.payment_status,
+      "created_at" => payment_request.created_at.iso8601,
+      "customer" => hash_including("lago_id" => payment_request.customer.id),
+      "invoices" => [
+        hash_including("lago_id" => invoice.id)
+      ]
+    )
   end
 end

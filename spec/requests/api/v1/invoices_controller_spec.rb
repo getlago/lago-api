@@ -167,15 +167,13 @@ RSpec.describe Api::V1::InvoicesController do
         subject
 
         metadata = json[:invoice][:metadata]
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
 
-          expect(metadata).to be_present
-          expect(metadata.first[:key]).to eq("Hello")
-          expect(metadata.first[:value]).to eq("Hi")
-        end
+        expect(metadata).to be_present
+        expect(metadata.first[:key]).to eq("Hello")
+        expect(metadata.first[:value]).to eq("Hi")
       end
     end
   end
@@ -194,23 +192,21 @@ RSpec.describe Api::V1::InvoicesController do
 
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:invoice]).to include(
-          lago_id: invoice.id,
-          payment_status: invoice.payment_status,
-          status: invoice.status,
-          prepaid_credit_amount_cents: 0,
-          prepaid_granted_credit_amount_cents: nil,
-          prepaid_purchased_credit_amount_cents: nil,
-          customer: Hash,
-          subscriptions: [],
-          credits: [],
-          applied_taxes: [],
-          applied_invoice_custom_sections: []
-        )
-        expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice]).to include(
+        lago_id: invoice.id,
+        payment_status: invoice.payment_status,
+        status: invoice.status,
+        prepaid_credit_amount_cents: 0,
+        prepaid_granted_credit_amount_cents: nil,
+        prepaid_purchased_credit_amount_cents: nil,
+        customer: Hash,
+        subscriptions: [],
+        credits: [],
+        applied_taxes: [],
+        applied_invoice_custom_sections: []
+      )
+      expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
     end
 
     context "when customer has an integration customer" do
@@ -271,26 +267,24 @@ RSpec.describe Api::V1::InvoicesController do
       it "returns the invoice with the deleted resources" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:invoice]).to include(
-            lago_id: invoice.id,
-            payment_status: invoice.payment_status,
-            status: invoice.status,
-            customer: Hash,
-            subscriptions: [],
-            credits: [],
-            applied_taxes: []
-          )
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(
+          lago_id: invoice.id,
+          payment_status: invoice.payment_status,
+          status: invoice.status,
+          customer: Hash,
+          subscriptions: [],
+          credits: [],
+          applied_taxes: []
+        )
 
-          json_fee = json[:invoice][:fees].first
-          expect(json_fee[:lago_charge_filter_id]).to eq(charge_filter.id)
-          expect(json_fee[:item]).to include(
-            type: "charge",
-            code: billable_metric.code,
-            name: billable_metric.name
-          )
-        end
+        json_fee = json[:invoice][:fees].first
+        expect(json_fee[:lago_charge_filter_id]).to eq(charge_filter.id)
+        expect(json_fee[:item]).to include(
+          type: "charge",
+          code: billable_metric.code,
+          name: billable_metric.name
+        )
       end
     end
   end
@@ -328,12 +322,10 @@ RSpec.describe Api::V1::InvoicesController do
             it "returns the invoices of the customer" do
               subject
 
-              aggregate_failures do
-                expect(response).to have_http_status(:success)
-                expect(json[:invoices].count).to eq(1)
-                expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
-                expect(json[:invoices].first[:customer][:lago_id]).to eq(customer.id)
-              end
+              expect(response).to have_http_status(:success)
+              expect(json[:invoices].count).to eq(1)
+              expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
+              expect(json[:invoices].first[:customer][:lago_id]).to eq(customer.id)
             end
           end
         end
@@ -719,10 +711,8 @@ RSpec.describe Api::V1::InvoicesController do
     it "calls retry service" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(retry_service).to have_received(:call)
-      end
+      expect(response).to have_http_status(:success)
+      expect(retry_service).to have_received(:call)
     end
 
     context "when invoice does not exist" do
@@ -765,10 +755,8 @@ RSpec.describe Api::V1::InvoicesController do
     it "calls retry service" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(retry_service).to have_received(:call)
-      end
+      expect(response).to have_http_status(:success)
+      expect(retry_service).to have_received(:call)
     end
 
     context "when invoice does not exist" do
@@ -853,10 +841,8 @@ RSpec.describe Api::V1::InvoicesController do
       it "returns the generated payment url" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:invoice_payment_details][:payment_url]).to eq("https://example.com")
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice_payment_details][:payment_url]).to eq("https://example.com")
       end
     end
 

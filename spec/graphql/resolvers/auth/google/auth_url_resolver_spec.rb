@@ -43,10 +43,8 @@ RSpec.describe Resolvers::Auth::Google::AuthUrlResolver do
 
       response = result["errors"].first
 
-      aggregate_failures do
-        expect(response["extensions"]["code"]).to eq("google_auth_missing_setup")
-        expect(response["extensions"]["status"]).to eq(500)
-      end
+      expect(response["extensions"]["code"]).to eq("google_auth_missing_setup")
+      expect(response["extensions"]["status"]).to eq(500)
     end
   end
 end

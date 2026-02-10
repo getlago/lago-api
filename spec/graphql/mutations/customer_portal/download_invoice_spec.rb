@@ -34,9 +34,7 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice do
 
       result_data = result["data"]["downloadCustomerPortalInvoice"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to eq(invoice.id)
-      end
+      expect(result_data["id"]).to eq(invoice.id)
     end
   end
 

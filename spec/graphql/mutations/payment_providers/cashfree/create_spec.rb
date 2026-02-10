@@ -51,13 +51,11 @@ RSpec.describe Mutations::PaymentProviders::Cashfree::Create do
 
     result_data = result["data"]["addCashfreePaymentProvider"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["clientId"]).to eq(client_id)
-      expect(result_data["clientSecret"]).to eq(client_secret)
-      expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["clientId"]).to eq(client_id)
+    expect(result_data["clientSecret"]).to eq(client_secret)
+    expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
   end
 end

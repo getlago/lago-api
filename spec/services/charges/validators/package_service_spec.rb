@@ -27,12 +27,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:amount)
-          expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:amount)
+        expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
       end
     end
 
@@ -46,12 +44,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:amount)
-          expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:amount)
+        expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
       end
     end
 
@@ -65,12 +61,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:amount)
-          expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:amount)
+        expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
       end
     end
 
@@ -83,12 +77,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:package_size)
-          expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:package_size)
+        expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
       end
     end
 
@@ -102,12 +94,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:package_size)
-          expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:package_size)
+        expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
       end
     end
 
@@ -121,12 +111,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:package_size)
-          expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:package_size)
+        expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
       end
     end
 
@@ -140,12 +128,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:package_size)
-          expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:package_size)
+        expect(validation_service.result.error.messages[:package_size]).to include("invalid_package_size")
       end
     end
 
@@ -158,12 +144,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:free_units)
-          expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:free_units)
+        expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
       end
     end
 
@@ -177,12 +161,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:free_units)
-          expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:free_units)
+        expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
       end
     end
 
@@ -196,12 +178,10 @@ RSpec.describe Charges::Validators::PackageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:free_units)
-          expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:free_units)
+        expect(validation_service.result.error.messages[:free_units]).to include("invalid_free_units")
       end
     end
 

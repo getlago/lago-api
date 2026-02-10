@@ -97,13 +97,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
 
       payment_providers_response = result["data"]["paymentProviders"]
 
-      aggregate_failures do
-        expect(payment_providers_response["collection"].count).to eq(1)
-        expect(payment_providers_response["collection"].first["id"]).to eq(stripe_provider.id)
+      expect(payment_providers_response["collection"].count).to eq(1)
+      expect(payment_providers_response["collection"].first["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
-        expect(payment_providers_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+      expect(payment_providers_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -163,17 +161,15 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
         record["__typename"] == "StripeProvider"
       end
 
-      aggregate_failures do
-        expect(payment_providers_response["collection"].count).to eq(4)
+      expect(payment_providers_response["collection"].count).to eq(4)
 
-        expect(adyen_provider_result["id"]).to eq(adyen_provider.id)
-        expect(cashfree_provider_result["id"]).to eq(cashfree_provider.id)
-        expect(gocardless_provider_result["id"]).to eq(gocardless_provider.id)
-        expect(stripe_provider_result["id"]).to eq(stripe_provider.id)
+      expect(adyen_provider_result["id"]).to eq(adyen_provider.id)
+      expect(cashfree_provider_result["id"]).to eq(cashfree_provider.id)
+      expect(gocardless_provider_result["id"]).to eq(gocardless_provider.id)
+      expect(stripe_provider_result["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
-        expect(payment_providers_response["metadata"]["totalCount"]).to eq(4)
-      end
+      expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+      expect(payment_providers_response["metadata"]["totalCount"]).to eq(4)
     end
   end
 

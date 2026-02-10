@@ -53,10 +53,8 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, cache: :memory do
 
     response = result["data"]["oktaAcceptInvite"]
 
-    aggregate_failures do
-      expect(response["user"]["email"]).to eq("foo@bar.com")
-      expect(response["token"]).to be_present
-    end
+    expect(response["user"]["email"]).to eq("foo@bar.com")
+    expect(response["token"]).to be_present
   end
 
   context "when email domain is not configured with an integration" do
@@ -76,10 +74,8 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, cache: :memory do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["base"]).to include("domain_not_configured")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["base"]).to include("domain_not_configured")
     end
   end
 end

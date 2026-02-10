@@ -52,9 +52,7 @@ RSpec.describe Mutations::Integrations::Okta::Update do
 
     result_data = result["data"]["updateOktaIntegration"]
 
-    aggregate_failures do
-      expect(result_data["domain"]).to eq("foo.bar")
-      expect(result_data["organizationName"]).to eq("Footest")
-    end
+    expect(result_data["domain"]).to eq("foo.bar")
+    expect(result_data["organizationName"]).to eq("Footest")
   end
 end

@@ -80,7 +80,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
 
   it_behaves_like "requires a customer portal user"
 
-  it "updates a customer", :aggregate_failures do
+  it "updates a customer" do
     result_data = result["data"]["updateCustomerPortalCustomer"]
 
     expect(result_data["customerType"]).to eq(input[:customerType])

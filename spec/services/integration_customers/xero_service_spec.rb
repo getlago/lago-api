@@ -26,14 +26,12 @@ RSpec.describe IntegrationCustomers::XeroService do
     it "returns integration customer" do
       result = service_call
 
-      aggregate_failures do
-        expect(Integrations::Aggregator::Contacts::CreateService).to have_received(:call)
-        expect(result).to be_success
-        expect(result.integration_customer.external_customer_id).to eq(contact_id)
-        expect(result.integration_customer.integration_id).to eq(integration.id)
-        expect(result.integration_customer.customer_id).to eq(customer.id)
-        expect(result.integration_customer.type).to eq("IntegrationCustomers::XeroCustomer")
-      end
+      expect(Integrations::Aggregator::Contacts::CreateService).to have_received(:call)
+      expect(result).to be_success
+      expect(result.integration_customer.external_customer_id).to eq(contact_id)
+      expect(result.integration_customer.integration_id).to eq(integration.id)
+      expect(result.integration_customer.customer_id).to eq(customer.id)
+      expect(result.integration_customer.type).to eq("IntegrationCustomers::XeroCustomer")
     end
 
     it "creates integration customer" do

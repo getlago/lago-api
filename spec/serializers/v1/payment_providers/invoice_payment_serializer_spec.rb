@@ -13,12 +13,10 @@ RSpec.describe ::V1::PaymentProviders::InvoicePaymentSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["data"]["lago_customer_id"]).to eq(invoice.customer.id)
-      expect(result["data"]["external_customer_id"]).to eq(invoice.customer.external_id)
-      expect(result["data"]["payment_provider"]).to eq(invoice.customer.payment_provider)
-      expect(result["data"]["lago_invoice_id"]).to eq(invoice.id)
-      expect(result["data"]["payment_url"]).to eq("https://example.com")
-    end
+    expect(result["data"]["lago_customer_id"]).to eq(invoice.customer.id)
+    expect(result["data"]["external_customer_id"]).to eq(invoice.customer.external_id)
+    expect(result["data"]["payment_provider"]).to eq(invoice.customer.payment_provider)
+    expect(result["data"]["lago_invoice_id"]).to eq(invoice.id)
+    expect(result["data"]["payment_url"]).to eq("https://example.com")
   end
 end

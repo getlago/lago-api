@@ -12,7 +12,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
     include_examples "requires API permission", "invoice", "read"
 
-    it "returns organization's payments", :aggregate_failures do
+    it "returns organization's payments" do
       invoice = create(:invoice, organization:)
       invoice2 = create(:invoice, organization:)
       payment_request = create(:payment_request, organization:)
@@ -36,7 +36,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
       )
     end
 
-    context "with a not found invoice", :aggregate_failures do
+    context "with a not found invoice" do
       let(:params) { {invoice_id: SecureRandom.uuid} }
 
       before do
@@ -67,7 +67,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
         create(:payment_receipt, payment: second_payment)
       end
 
-      it "returns invoices's payment receipts", :aggregate_failures do
+      it "returns invoices's payment receipts" do
         subject
         expect(response).to have_http_status(:success)
         expect(json[:payment_receipts].map { |r| r[:lago_id] }).to contain_exactly(first_payment_receipt.id)

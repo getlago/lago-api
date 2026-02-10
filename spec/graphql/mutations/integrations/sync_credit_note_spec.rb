@@ -51,9 +51,7 @@ RSpec.describe Mutations::Integrations::SyncCreditNote do
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "syncs a credit note" do
-    aggregate_failures do
-      expect(::Integrations::Aggregator::CreditNotes::CreateService).to have_received(:new).with(credit_note:)
-      expect(service).to have_received(:call_async)
-    end
+    expect(::Integrations::Aggregator::CreditNotes::CreateService).to have_received(:new).with(credit_note:)
+    expect(service).to have_received(:call_async)
   end
 end

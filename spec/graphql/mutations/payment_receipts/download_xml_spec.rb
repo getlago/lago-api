@@ -42,9 +42,7 @@ RSpec.describe Mutations::PaymentReceipts::DownloadXml do
 
     result_data = result["data"]["downloadXmlPaymentReceipt"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["xmlUrl"]).to be_present
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["xmlUrl"]).to be_present
   end
 end

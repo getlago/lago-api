@@ -64,20 +64,16 @@ RSpec.describe DataExports::ExportResourcesService do
     it "returns the data export result" do
       expect(result).to be_success
 
-      aggregate_failures do
-        expect(result.data_export).to be_processing
-        expect(result.data_export.file).not_to be_present
-      end
+      expect(result.data_export).to be_processing
+      expect(result.data_export.file).not_to be_present
     end
 
     context "when the data export is expired" do
       let(:data_export) { create(:data_export, expires_at: 1.hour.ago) }
 
       it "returns a service failure result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("data_export_expired")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("data_export_expired")
       end
     end
 
@@ -85,10 +81,8 @@ RSpec.describe DataExports::ExportResourcesService do
       let(:data_export) { create(:data_export, :processing) }
 
       it "returns a service failure result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("data_export_processed")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("data_export_processed")
       end
     end
 
@@ -100,11 +94,9 @@ RSpec.describe DataExports::ExportResourcesService do
       end
 
       it "returns a service failure result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("error_message")
-          expect(data_export).to be_failed
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("error_message")
+        expect(data_export).to be_failed
       end
     end
 
@@ -112,13 +104,11 @@ RSpec.describe DataExports::ExportResourcesService do
       let(:data_export) { create :data_export, resource_type: "unknown" }
 
       it "returns a service failure result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq(
-            "'unknown' resource not supported"
-          )
-          expect(data_export).to be_failed
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq(
+          "'unknown' resource not supported"
+        )
+        expect(data_export).to be_failed
       end
     end
   end

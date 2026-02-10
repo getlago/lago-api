@@ -32,7 +32,7 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
         allow(response).to receive(:body).and_return(success_response.to_json)
       end
 
-      it "returns success with payment details", aggregate_failures: true do
+      it "returns success with payment details" do
         result = described_class.call(payment:, reference:, metadata:)
 
         expect(result).to be_success
@@ -50,7 +50,7 @@ RSpec.describe PaymentProviders::Moneyhash::Payments::CreateService do
           .and_raise(LagoHttpClient::HttpError.new(400, failure_response, ""))
       end
 
-      it "returns failure with error details", aggregate_failures: true do
+      it "returns failure with error details" do
         result = described_class.call(payment:, reference:, metadata:)
 
         expect(result).to be_failure

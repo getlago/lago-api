@@ -38,29 +38,27 @@ RSpec.describe Invoices::CreateOneOffService do
     it "creates an invoice" do
       result = described_class.call(**args)
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-        expect(result.invoice.invoice_type).to eq("one_off")
-        expect(result.invoice.payment_status).to eq("pending")
-        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
-        expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123", add_on_second.description)
+      expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+      expect(result.invoice.invoice_type).to eq("one_off")
+      expect(result.invoice.payment_status).to eq("pending")
+      expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
+      expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123", add_on_second.description)
 
-        expect(result.invoice.currency).to eq("EUR")
-        expect(result.invoice.fees_amount_cents).to eq(2800)
+      expect(result.invoice.currency).to eq("EUR")
+      expect(result.invoice.fees_amount_cents).to eq(2800)
 
-        expect(result.invoice.taxes_amount_cents).to eq(560)
-        expect(result.invoice.taxes_rate).to eq(20)
-        expect(result.invoice.applied_taxes.count).to eq(1)
+      expect(result.invoice.taxes_amount_cents).to eq(560)
+      expect(result.invoice.taxes_rate).to eq(20)
+      expect(result.invoice.applied_taxes.count).to eq(1)
 
-        expect(result.invoice.total_amount_cents).to eq(3360)
-        expect(result.invoice.voided_invoice_id).to be_nil
+      expect(result.invoice.total_amount_cents).to eq(3360)
+      expect(result.invoice.voided_invoice_id).to be_nil
 
-        expect(result.invoice).to be_finalized
-        expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
-        expect(result.invoice.applied_invoice_custom_sections.count).to eq(0)
-      end
+      expect(result.invoice).to be_finalized
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      expect(result.invoice.applied_invoice_custom_sections.count).to eq(0)
     end
 
     context "when voided invoice id is passed" do
@@ -231,28 +229,26 @@ RSpec.describe Invoices::CreateOneOffService do
       it "creates an invoice" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-          expect(result.invoice.invoice_type).to eq("one_off")
-          expect(result.invoice.payment_status).to eq("pending")
-          expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
-          expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123", add_on_second.description)
+        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+        expect(result.invoice.invoice_type).to eq("one_off")
+        expect(result.invoice.payment_status).to eq("pending")
+        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(2)
+        expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123", add_on_second.description)
 
-          expect(result.invoice.currency).to eq("EUR")
-          expect(result.invoice.fees_amount_cents).to eq(2800) # 2400 + 400
+        expect(result.invoice.currency).to eq("EUR")
+        expect(result.invoice.fees_amount_cents).to eq(2800) # 2400 + 400
 
-          expect(result.invoice.taxes_amount_cents).to eq(300) # (2400 * 0.1) + (400 * 0.15)
-          expect(result.invoice.taxes_rate).to eq(10.71429)
-          expect(result.invoice.applied_taxes.count).to eq(2)
+        expect(result.invoice.taxes_amount_cents).to eq(300) # (2400 * 0.1) + (400 * 0.15)
+        expect(result.invoice.taxes_rate).to eq(10.71429)
+        expect(result.invoice.applied_taxes.count).to eq(2)
 
-          expect(result.invoice.total_amount_cents).to eq(3100)
+        expect(result.invoice.total_amount_cents).to eq(3100)
 
-          expect(result.invoice).to be_finalized
+        expect(result.invoice).to be_finalized
 
-          expect(result.invoice.reload.error_details.count).to eq(0)
-        end
+        expect(result.invoice.reload.error_details.count).to eq(0)
       end
 
       it "saves applies taxes on fees and on invoice" do
@@ -273,13 +269,11 @@ RSpec.describe Invoices::CreateOneOffService do
         it "returns tax error" do
           result = described_class.call(**args)
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice.status).to eq("failed")
-            expect(result.invoice.error_details.count).to eq(1)
-            expect(result.invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-            expect(Utils::ActivityLog).to have_produced("invoice.failed").with(result.invoice)
-          end
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("failed")
+          expect(result.invoice.error_details.count).to eq(1)
+          expect(result.invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(result.invoice)
         end
       end
     end
@@ -299,23 +293,21 @@ RSpec.describe Invoices::CreateOneOffService do
       it "creates a payment_succeeded invoice" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-          expect(result.invoice.invoice_type).to eq("one_off")
-          expect(result.invoice.payment_status).to eq("succeeded")
-          expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(1)
-          expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123")
+        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+        expect(result.invoice.invoice_type).to eq("one_off")
+        expect(result.invoice.payment_status).to eq("succeeded")
+        expect(result.invoice.fees.where(fee_type: :add_on).count).to eq(1)
+        expect(result.invoice.fees.pluck(:description)).to contain_exactly("desc-123")
 
-          expect(result.invoice.currency).to eq("EUR")
-          expect(result.invoice.fees_amount_cents).to eq(0)
-          expect(result.invoice.taxes_amount_cents).to eq(0)
-          expect(result.invoice.taxes_rate).to eq(20)
-          expect(result.invoice.total_amount_cents).to eq(0)
+        expect(result.invoice.currency).to eq("EUR")
+        expect(result.invoice.fees_amount_cents).to eq(0)
+        expect(result.invoice.taxes_amount_cents).to eq(0)
+        expect(result.invoice.taxes_rate).to eq(20)
+        expect(result.invoice.total_amount_cents).to eq(0)
 
-          expect(result.invoice).to be_finalized
-        end
+        expect(result.invoice).to be_finalized
       end
     end
 
@@ -357,12 +349,10 @@ RSpec.describe Invoices::CreateOneOffService do
       it "fails" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:currency)
+        expect(result.error.messages[:currency]).to include("currencies_does_not_match")
       end
     end
 
@@ -374,12 +364,10 @@ RSpec.describe Invoices::CreateOneOffService do
       it "fails" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:currency)
-          expect(result.error.messages[:currency]).to include("value_is_mandatory")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:currency)
+        expect(result.error.messages[:currency]).to include("value_is_mandatory")
       end
     end
 
@@ -389,11 +377,9 @@ RSpec.describe Invoices::CreateOneOffService do
       it "returns a not found error" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("customer_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("customer_not_found")
       end
     end
 
@@ -403,11 +389,9 @@ RSpec.describe Invoices::CreateOneOffService do
       it "returns a not found error" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("fees_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("fees_not_found")
       end
     end
 
@@ -436,11 +420,9 @@ RSpec.describe Invoices::CreateOneOffService do
         it "fails" do
           result = described_class.call(**args)
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
 
@@ -455,11 +437,9 @@ RSpec.describe Invoices::CreateOneOffService do
         it "fails" do
           result = described_class.call(**args)
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
     end
@@ -482,11 +462,9 @@ RSpec.describe Invoices::CreateOneOffService do
       it "returns a not found error" do
         result = described_class.call(**args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("add_on_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("add_on_not_found")
       end
     end
   end

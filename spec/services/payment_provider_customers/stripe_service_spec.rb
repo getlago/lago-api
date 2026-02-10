@@ -142,11 +142,9 @@ RSpec.describe PaymentProviderCustomers::StripeService do
       it "returns an unauthorized error" do
         result = stripe_service.create
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::UnauthorizedFailure)
-          expect(result.error.message).to eq("Stripe authentication failed. API key invalid.")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+        expect(result.error.message).to eq("Stripe authentication failed. API key invalid.")
       end
 
       it "delivers an error webhook" do
@@ -221,12 +219,10 @@ RSpec.describe PaymentProviderCustomers::StripeService do
           it "returns an error result" do
             result = stripe_service.update
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq("stripe_error")
-              expect(result.error.message).to eq("stripe_error: Invalid request")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq("stripe_error")
+            expect(result.error.message).to eq("stripe_error: Invalid request")
           end
 
           it "delivers an error webhook" do
@@ -248,12 +244,10 @@ RSpec.describe PaymentProviderCustomers::StripeService do
           it "returns an error result" do
             result = stripe_service.update
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq("stripe_error")
-              expect(result.error.message).to eq("stripe_error: Permission error")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq("stripe_error")
+            expect(result.error.message).to eq("stripe_error: Permission error")
           end
 
           it "delivers an error webhook" do
@@ -275,11 +269,9 @@ RSpec.describe PaymentProviderCustomers::StripeService do
           it "returns an error result" do
             result = stripe_service.update
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::UnauthorizedFailure)
-              expect(result.error.message).to eq("Stripe authentication failed. Invalid username.")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+            expect(result.error.message).to eq("Stripe authentication failed. Invalid username.")
           end
 
           it "delivers an error webhook" do
@@ -425,10 +417,8 @@ RSpec.describe PaymentProviderCustomers::StripeService do
         payment_method_id:
       )
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.stripe_customer.payment_method_id).to be_nil
-      end
+      expect(result).to be_success
+      expect(result.stripe_customer.payment_method_id).to be_nil
     end
 
     context "when customer payment method is not the deleted one" do
@@ -439,10 +429,8 @@ RSpec.describe PaymentProviderCustomers::StripeService do
           payment_method_id: "other_payment_method_id"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
-        end
+        expect(result).to be_success
+        expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
       end
     end
 
@@ -454,10 +442,8 @@ RSpec.describe PaymentProviderCustomers::StripeService do
           payment_method_id: "pm_123456"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.stripe_customer).to be_nil
-        end
+        expect(result).to be_success
+        expect(result.stripe_customer).to be_nil
       end
 
       context "when customer in metadata is not found" do
@@ -471,10 +457,8 @@ RSpec.describe PaymentProviderCustomers::StripeService do
             }
           )
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.stripe_customer).to be_nil
-          end
+          expect(result).to be_success
+          expect(result.stripe_customer).to be_nil
         end
       end
 
@@ -489,11 +473,9 @@ RSpec.describe PaymentProviderCustomers::StripeService do
             }
           )
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("stripe_customer_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("stripe_customer_not_found")
         end
       end
     end
@@ -506,10 +488,8 @@ RSpec.describe PaymentProviderCustomers::StripeService do
 
       stripe_service.generate_checkout_url
 
-      aggregate_failures do
-        expect(SendWebhookJob).to have_been_enqueued
-          .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
-      end
+      expect(SendWebhookJob).to have_been_enqueued
+        .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
     end
 
     context "without any customer" do
@@ -556,11 +536,9 @@ RSpec.describe PaymentProviderCustomers::StripeService do
       it "returns an error result" do
         result = described_class.new(stripe_customer).generate_checkout_url
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::UnauthorizedFailure)
-          expect(result.error.message).to eq("Stripe authentication failed. Expired API Key provided")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+        expect(result.error.message).to eq("Stripe authentication failed. Expired API Key provided")
       end
 
       it "delivers an error webhook" do

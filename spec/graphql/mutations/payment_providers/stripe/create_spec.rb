@@ -51,13 +51,11 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
 
     result_data = result["data"]["addStripePaymentProvider"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["secretKey"]).to eq("••••••••…890")
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
-      expect(result_data["supports3ds"]).to eq(true)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["secretKey"]).to eq("••••••••…890")
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
+    expect(result_data["supports3ds"]).to eq(true)
   end
 end

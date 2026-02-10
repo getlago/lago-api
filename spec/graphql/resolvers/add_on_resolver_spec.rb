@@ -48,12 +48,10 @@ RSpec.describe Resolvers::AddOnResolver do
 
     add_on_response = result["data"]["addOn"]
 
-    aggregate_failures do
-      expect(add_on_response["id"]).to eq(add_on.id)
-      expect(add_on_response["name"]).to eq(add_on.name)
-      expect(add_on_response["customersCount"]).to eq(2)
-      expect(add_on_response["appliedAddOnsCount"]).to eq(4)
-    end
+    expect(add_on_response["id"]).to eq(add_on.id)
+    expect(add_on_response["name"]).to eq(add_on.name)
+    expect(add_on_response["customersCount"]).to eq(2)
+    expect(add_on_response["appliedAddOnsCount"]).to eq(4)
   end
 
   context "when add-on is not found" do

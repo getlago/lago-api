@@ -102,10 +102,8 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
       it "returns an error" do
         result = described_class.new(credit_note: nil).call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("credit_note_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("credit_note_not_found")
       end
     end
 
@@ -113,12 +111,10 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
       it "returns successful result" do
         result = report_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.credit_note.id).to eq(credit_note.id)
-          expect(result.credit_note.integration_resources.last.external_id).not_to be_nil
-          expect(result.credit_note.integration_resources.last.integration_id).to eq(integration.id)
-        end
+        expect(result).to be_success
+        expect(result.credit_note.id).to eq(credit_note.id)
+        expect(result.credit_note.integration_resources.last.external_id).not_to be_nil
+        expect(result.credit_note.integration_resources.last.integration_id).to eq(integration.id)
       end
 
       it "discards previous tax errors" do
@@ -136,12 +132,10 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
       it "returns validation error" do
         result = report_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-          expect(credit_note.reload.integration_resources.where(integration_id: integration.id).count).to eq(0)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(credit_note.reload.integration_resources.where(integration_id: integration.id).count).to eq(0)
       end
 
       it "resolves old tax error and creates new one" do
@@ -149,11 +143,9 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
 
         report_service.call
 
-        aggregate_failures do
-          expect(credit_note.error_details.tax_error.order(created_at: :asc).last.id).not_to eql(old_error_id)
-          expect(credit_note.error_details.tax_error.count).to be(1)
-          expect(credit_note.error_details.tax_error.order(created_at: :asc).last).not_to be_discarded
-        end
+        expect(credit_note.error_details.tax_error.order(created_at: :asc).last.id).not_to eql(old_error_id)
+        expect(credit_note.error_details.tax_error.count).to be(1)
+        expect(credit_note.error_details.tax_error.order(created_at: :asc).last).not_to be_discarded
       end
     end
   end

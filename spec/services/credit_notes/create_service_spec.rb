@@ -216,16 +216,14 @@ RSpec.describe CreditNotes::CreateService do
       it "returns a failed result" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:amount_cents)
-          expect(result.error.messages[:amount_cents]).to eq(
-            %w[
-              higher_than_remaining_fee_amount
-            ]
-          )
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:amount_cents)
+        expect(result.error.messages[:amount_cents]).to eq(
+          %w[
+            higher_than_remaining_fee_amount
+          ]
+        )
       end
     end
 
@@ -307,12 +305,10 @@ RSpec.describe CreditNotes::CreateService do
       it "returns a failure" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("invoice_not_found")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("invoice_not_found")
       end
     end
 
@@ -324,12 +320,10 @@ RSpec.describe CreditNotes::CreateService do
       it "returns a failure" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("feature_unavailable")
-        end
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
       end
 
       context "with a valid license" do
@@ -358,10 +352,8 @@ RSpec.describe CreditNotes::CreateService do
           it "creates a draft credit note" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.credit_note).to be_draft
-            end
+            expect(result).to be_success
+            expect(result.credit_note).to be_draft
           end
 
           it "does not deliver a webhook" do

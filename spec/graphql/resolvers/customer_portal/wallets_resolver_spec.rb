@@ -33,7 +33,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
 
   it_behaves_like "requires a customer portal user"
 
-  it "returns a list of active wallets", :aggregate_failures do
+  it "returns a list of active wallets" do
     result = execute_graphql(
       customer_portal_user: customer,
       query:

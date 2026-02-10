@@ -289,7 +289,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
     context "with no payment provider" do
       let(:payment_provider) { nil }
 
-      it "does not creates a stripe payment", :aggregate_failures do
+      it "does not creates a stripe payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -323,7 +323,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         )
       end
 
-      it "does not creates a stripe payment", :aggregate_failures do
+      it "does not creates a stripe payment" do
         result = create_service.call
 
         expect(result).to be_success
@@ -337,7 +337,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
     context "when customer does not have a provider customer id" do
       before { provider_customer.update!(provider_customer_id: nil) }
 
-      it "does not creates a stripe payment", :aggregate_failures do
+      it "does not creates a stripe payment" do
         result = create_service.call
 
         expect(result).to be_success

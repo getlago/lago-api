@@ -31,26 +31,24 @@ RSpec.describe Invoices::PaidCreditService do
     it "creates an invoice" do
       result = invoice_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice).to have_attributes(
-          issuing_date: Time.zone.at(timestamp).to_date,
-          invoice_type: "credit",
-          payment_status: "pending",
-          currency: "EUR",
-          fees_amount_cents: 1500,
-          sub_total_excluding_taxes_amount_cents: 1500,
-          taxes_amount_cents: 0,
-          taxes_rate: 0,
-          sub_total_including_taxes_amount_cents: 1500,
-          total_amount_cents: 1500
-        )
+      expect(result.invoice).to have_attributes(
+        issuing_date: Time.zone.at(timestamp).to_date,
+        invoice_type: "credit",
+        payment_status: "pending",
+        currency: "EUR",
+        fees_amount_cents: 1500,
+        sub_total_excluding_taxes_amount_cents: 1500,
+        taxes_amount_cents: 0,
+        taxes_rate: 0,
+        sub_total_including_taxes_amount_cents: 1500,
+        total_amount_cents: 1500
+      )
 
-        expect(result.invoice.applied_taxes.count).to eq(0)
+      expect(result.invoice.applied_taxes.count).to eq(0)
 
-        expect(result.invoice).to be_finalized
-      end
+      expect(result.invoice).to be_finalized
     end
 
     it "assigns invoice to the wallet transaction" do

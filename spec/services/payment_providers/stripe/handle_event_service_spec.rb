@@ -114,12 +114,10 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     it "returns an empty result" do
       result = event_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(Invoices::Payments::StripeService).not_to have_received(:new)
-        expect(payment_service).not_to have_received(:update_payment_status)
-      end
+      expect(Invoices::Payments::StripeService).not_to have_received(:new)
+      expect(payment_service).not_to have_received(:update_payment_status)
     end
   end
 end

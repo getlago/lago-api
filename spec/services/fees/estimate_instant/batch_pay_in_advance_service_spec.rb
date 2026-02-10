@@ -150,11 +150,9 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         it "fails with a validation error" do
           result = subject.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:code]).to eq(["does_not_match_an_instant_charge"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:code]).to eq(["does_not_match_an_instant_charge"])
         end
       end
 
@@ -166,10 +164,8 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         it "returns a fee per charges" do
           result = subject.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(2)
-          end
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
         end
       end
 
@@ -179,11 +175,9 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         it "fails with a not found error" do
           result = subject.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.error_code).to eq("subscription_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("subscription_not_found")
         end
       end
 
@@ -274,11 +268,9 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
       it "fails with a not found error" do
         result = subject.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq("subscription_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("subscription_not_found")
       end
     end
   end

@@ -33,12 +33,10 @@ RSpec.describe Resolvers::CustomerPortal::OrganizationResolver do
 
     data = result["data"]["customerPortalOrganization"]
 
-    aggregate_failures do
-      expect(data["id"]).to eq(organization.id)
-      expect(data["name"]).to eq(organization.name)
-      expect(data["billingConfiguration"]["id"]).to eq("#{organization.id}-c0nf")
-      expect(data["billingConfiguration"]["documentLocale"]).to eq("en")
-      expect(data["premiumIntegrations"]).to eq([])
-    end
+    expect(data["id"]).to eq(organization.id)
+    expect(data["name"]).to eq(organization.name)
+    expect(data["billingConfiguration"]["id"]).to eq("#{organization.id}-c0nf")
+    expect(data["billingConfiguration"]["documentLocale"]).to eq("en")
+    expect(data["premiumIntegrations"]).to eq([])
   end
 end

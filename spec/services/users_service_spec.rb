@@ -51,12 +51,10 @@ RSpec.describe UsersService do
       it "fails" do
         result = user_service.register(user.email, "password", "organization_name")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:email)
-          expect(result.error.messages[:email]).to include("user_already_exists")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:email)
+        expect(result.error.messages[:email]).to include("user_already_exists")
       end
     end
 
@@ -72,10 +70,8 @@ RSpec.describe UsersService do
       it "returns a not allowed error" do
         result = user_service.register("email", "password", "organization_name")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.message).to eq("signup_disabled")
-        end
+        expect(result).not_to be_success
+        expect(result.error.message).to eq("signup_disabled")
       end
     end
   end

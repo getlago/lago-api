@@ -769,10 +769,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             it "returns an error" do
               result = preview_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
             end
           end
 
@@ -1416,10 +1414,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             it "returns an error" do
               result = preview_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
             end
           end
         end

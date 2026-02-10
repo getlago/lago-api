@@ -40,8 +40,6 @@ RSpec.describe Mutations::Webhooks::Retry do
 
     result_data = result["data"]["retryWebhook"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to eq(webhook.id)
-    end
+    expect(result_data["id"]).to eq(webhook.id)
   end
 end

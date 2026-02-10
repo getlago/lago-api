@@ -36,23 +36,21 @@ RSpec.describe Wallets::CreateService do
     let(:service_result) { create_service.call }
 
     it "creates a wallet" do
-      aggregate_failures do
-        expect { service_result }.to change(Wallet, :count).by(1)
+      expect { service_result }.to change(Wallet, :count).by(1)
 
-        expect(service_result).to be_success
+      expect(service_result).to be_success
 
-        wallet = service_result.wallet
-        expect(wallet.customer_id).to eq(customer.id)
-        expect(wallet.name).to eq("New Wallet")
-        expect(wallet.priority).to eq(5)
-        expect(wallet.currency).to eq("EUR")
-        expect(wallet.rate_amount).to eq(5.0)
-        expect(wallet.expiration_at.iso8601).to eq(expiration_at)
-        expect(wallet.recurring_transaction_rules.count).to eq(0)
-        expect(wallet.invoice_requires_successful_payment).to eq(false)
-        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
-        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
-      end
+      wallet = service_result.wallet
+      expect(wallet.customer_id).to eq(customer.id)
+      expect(wallet.name).to eq("New Wallet")
+      expect(wallet.priority).to eq(5)
+      expect(wallet.currency).to eq("EUR")
+      expect(wallet.rate_amount).to eq(5.0)
+      expect(wallet.expiration_at.iso8601).to eq(expiration_at)
+      expect(wallet.recurring_transaction_rules.count).to eq(0)
+      expect(wallet.invoice_requires_successful_payment).to eq(false)
+      expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+      expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
     end
 
     it "sends `wallet.created` webhook" do
@@ -368,14 +366,12 @@ RSpec.describe Wallets::CreateService do
       end
 
       it "creates a wallet with recurring transaction rules" do
-        aggregate_failures do
-          expect { service_result }.to change(Wallet, :count).by(1)
+        expect { service_result }.to change(Wallet, :count).by(1)
 
-          expect(service_result).to be_success
-          wallet = service_result.wallet
-          expect(wallet.name).to eq("New Wallet")
-          expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
-        end
+        expect(service_result).to be_success
+        wallet = service_result.wallet
+        expect(wallet.name).to eq("New Wallet")
+        expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
       end
 
       context "when recurring transaction rule has transaction_name" do

@@ -33,10 +33,8 @@ RSpec.describe Integrations::Okta::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("integration_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("integration_not_found")
       end
     end
 
@@ -48,10 +46,8 @@ RSpec.describe Integrations::Okta::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("enabled_authentication_methods_required")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("enabled_authentication_methods_required")
       end
     end
 

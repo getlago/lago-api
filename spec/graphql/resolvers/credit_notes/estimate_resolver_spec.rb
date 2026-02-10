@@ -71,16 +71,14 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver do
 
     estimate_response = result["data"]["creditNoteEstimate"]
 
-    aggregate_failures do
-      expect(estimate_response["currency"]).to eq("EUR")
-      expect(estimate_response["taxesAmountCents"]).to eq("0")
-      expect(estimate_response["subTotalExcludingTaxesAmountCents"]).to eq("50")
-      expect(estimate_response["maxCreditableAmountCents"]).to eq("50")
-      expect(estimate_response["maxRefundableAmountCents"]).to eq("0")
-      expect(estimate_response["couponsAdjustmentAmountCents"]).to eq("50")
-      expect(estimate_response["items"].first["amountCents"]).to eq("50")
-      expect(estimate_response["appliedTaxes"]).to be_blank
-    end
+    expect(estimate_response["currency"]).to eq("EUR")
+    expect(estimate_response["taxesAmountCents"]).to eq("0")
+    expect(estimate_response["subTotalExcludingTaxesAmountCents"]).to eq("50")
+    expect(estimate_response["maxCreditableAmountCents"]).to eq("50")
+    expect(estimate_response["maxRefundableAmountCents"]).to eq("0")
+    expect(estimate_response["couponsAdjustmentAmountCents"]).to eq("50")
+    expect(estimate_response["items"].first["amountCents"]).to eq("50")
+    expect(estimate_response["appliedTaxes"]).to be_blank
   end
 
   context "with invalid invoice" do

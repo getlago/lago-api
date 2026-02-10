@@ -42,11 +42,9 @@ RSpec.describe Mutations::ApiKeys::Update do
       it "returns updated api key" do
         api_key_response = result["data"]["updateApiKey"]
 
-        aggregate_failures do
-          expect(api_key_response["id"]).to eq(api_key.id)
-          expect(api_key_response["name"]).to eq(name)
-          expect(api_key_response["permissions"]).to eq(permissions)
-        end
+        expect(api_key_response["id"]).to eq(api_key.id)
+        expect(api_key_response["name"]).to eq(name)
+        expect(api_key_response["permissions"]).to eq(permissions)
       end
     end
 
@@ -56,11 +54,9 @@ RSpec.describe Mutations::ApiKeys::Update do
       it "returns updated api key" do
         api_key_response = result["data"]["updateApiKey"]
 
-        aggregate_failures do
-          expect(api_key_response["id"]).to eq(api_key.id)
-          expect(api_key_response["name"]).to eq(name)
-          expect(api_key_response["permissions"]).to eq(api_key.permissions)
-        end
+        expect(api_key_response["id"]).to eq(api_key.id)
+        expect(api_key_response["name"]).to eq(name)
+        expect(api_key_response["permissions"]).to eq(api_key.permissions)
       end
     end
   end

@@ -39,7 +39,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   end
 
   describe "#call" do
-    it "creates a progressive billing invoice", aggregate_failures: true do
+    it "creates a progressive billing invoice" do
       result = create_service.call
 
       expect(result).to be_success
@@ -85,7 +85,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       end
 
       context "when taxes are unknown" do
-        it "keeps the tax status as pending", aggregate_failures: true do
+        it "keeps the tax status as pending" do
           result = create_service.call
 
           expect(result).to be_success
@@ -106,7 +106,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
         ]
       end
 
-      it "creates a progressive billing invoice", aggregate_failures: true do
+      it "creates a progressive billing invoice" do
         result = create_service.call
 
         expect(result).to be_success
@@ -160,7 +160,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
         )
       end
 
-      it "creates a progressive billing invoice", aggregate_failures: true do
+      it "creates a progressive billing invoice" do
         result = create_service.call
 
         expect(result).to be_success

@@ -17,11 +17,9 @@ RSpec.describe ::V1::Analytics::InvoicedUsageSerializer do
   let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the gross revenue" do
-    aggregate_failures do
-      expect(result["invoiced_usage"]["month"]).to eq(Time.current.beginning_of_month.iso8601)
-      expect(result["invoiced_usage"]["code"]).to eq("count_bm")
-      expect(result["invoiced_usage"]["currency"]).to eq("EUR")
-      expect(result["invoiced_usage"]["amount_cents"]).to eq(100)
-    end
+    expect(result["invoiced_usage"]["month"]).to eq(Time.current.beginning_of_month.iso8601)
+    expect(result["invoiced_usage"]["code"]).to eq("count_bm")
+    expect(result["invoiced_usage"]["currency"]).to eq("EUR")
+    expect(result["invoiced_usage"]["amount_cents"]).to eq(100)
   end
 end

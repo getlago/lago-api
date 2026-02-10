@@ -12,11 +12,9 @@ RSpec.describe Memberships::CreateService do
     it "creates a membership" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.membership.user_id).to eq(user.id)
-        expect(result.membership.organization_id).to eq(organization.id)
-      end
+      expect(result).to be_success
+      expect(result.membership.user_id).to eq(user.id)
+      expect(result.membership.organization_id).to eq(organization.id)
     end
 
     context "when user does not exists" do
@@ -25,10 +23,8 @@ RSpec.describe Memberships::CreateService do
       it "returns a result with error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("user_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("user_not_found")
       end
     end
 
@@ -38,10 +34,8 @@ RSpec.describe Memberships::CreateService do
       it "returns a result with error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("organization_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("organization_not_found")
       end
     end
 
@@ -53,10 +47,8 @@ RSpec.describe Memberships::CreateService do
       it "returns a result with error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages[:user_id]).to include("value_already_exist")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages[:user_id]).to include("value_already_exist")
       end
     end
   end

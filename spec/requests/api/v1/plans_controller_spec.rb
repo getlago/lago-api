@@ -75,10 +75,8 @@ RSpec.describe Api::V1::PlansController do
       it "returns an error" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({interval: %w[value_is_invalid]})
-        end
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({interval: %w[value_is_invalid]})
       end
     end
 

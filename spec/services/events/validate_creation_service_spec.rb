@@ -89,11 +89,9 @@ RSpec.describe Events::ValidateCreationService do
       it "returns a subscription_not_found error" do
         result = validate_event
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("subscription_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("subscription_not_found")
       end
     end
 
@@ -121,11 +119,9 @@ RSpec.describe Events::ValidateCreationService do
       it "returns a not found error" do
         result = validate_event
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("subscription_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("subscription_not_found")
       end
     end
 
@@ -183,11 +179,9 @@ RSpec.describe Events::ValidateCreationService do
       it "returns an event_not_found error" do
         result = validate_event
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("billable_metric_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("billable_metric_not_found")
       end
     end
 
@@ -207,12 +201,10 @@ RSpec.describe Events::ValidateCreationService do
       it "returns an value_is_not_valid_number error" do
         result = validate_event
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:properties)
-          expect(result.error.messages[:properties]).to include("value_is_not_valid_number")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:properties)
+        expect(result.error.messages[:properties]).to include("value_is_not_valid_number")
       end
 
       context "when field_name cannot be found" do

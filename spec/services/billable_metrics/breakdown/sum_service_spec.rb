@@ -96,23 +96,21 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
 
     context "with persisted metric on full period" do
       it "returns the detail the persisted metrics" do
-        aggregate_failures do
-          expect(result.count).to eq(2)
+        expect(result.count).to eq(2)
 
-          item = result.first
-          expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
-          expect(item.action).to eq("add")
-          expect(item.amount).to eq(5)
-          expect(item.duration).to eq(31)
-          expect(item.total_duration).to eq(31)
+        item = result.first
+        expect(item.date.to_s).to eq(from_datetime.to_date.to_s)
+        expect(item.action).to eq("add")
+        expect(item.amount).to eq(5)
+        expect(item.duration).to eq(31)
+        expect(item.total_duration).to eq(31)
 
-          item = result.last
-          expect(item.date.to_s).to eq((from_datetime + 25.days).to_date.to_s)
-          expect(item.action).to eq("add")
-          expect(item.amount).to eq(12)
-          expect(item.duration).to eq(6)
-          expect(item.total_duration).to eq(31)
-        end
+        item = result.last
+        expect(item.date.to_s).to eq((from_datetime + 25.days).to_date.to_s)
+        expect(item.action).to eq("add")
+        expect(item.amount).to eq(12)
+        expect(item.duration).to eq(6)
+        expect(item.total_duration).to eq(31)
       end
 
       context "when subscription was terminated in the period" do
@@ -130,16 +128,14 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
         let(:to_datetime) { Time.zone.parse("2023-05-30 23:59:59") }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq(from_datetime.to_date.to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(5)
-            expect(item.duration).to eq(30)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq(from_datetime.to_date.to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(5)
+          expect(item.duration).to eq(30)
+          expect(item.total_duration).to eq(31)
         end
       end
 
@@ -149,16 +145,14 @@ RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
         let(:from_datetime) { started_at }
 
         it "returns the detail the persisted metrics" do
-          aggregate_failures do
-            expect(result.count).to eq(1)
+          expect(result.count).to eq(1)
 
-            item = result.first
-            expect(item.date.to_s).to eq((from_datetime + 25.days).to_date.to_s)
-            expect(item.action).to eq("add")
-            expect(item.amount).to eq(12)
-            expect(item.duration).to eq(4)
-            expect(item.total_duration).to eq(31)
-          end
+          item = result.first
+          expect(item.date.to_s).to eq((from_datetime + 25.days).to_date.to_s)
+          expect(item.action).to eq("add")
+          expect(item.amount).to eq(12)
+          expect(item.duration).to eq(4)
+          expect(item.total_duration).to eq(31)
         end
       end
     end

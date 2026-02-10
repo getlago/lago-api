@@ -39,9 +39,7 @@ RSpec.describe Mutations::Invoices::Download do
 
       result_data = result["data"]["downloadInvoice"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-      end
+      expect(result_data["id"]).to be_present
     end
   end
 end

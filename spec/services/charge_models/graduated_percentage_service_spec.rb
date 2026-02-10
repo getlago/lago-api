@@ -53,7 +53,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 0 }
     let(:aggregation_count) { 0 }
 
-    it "does not apply the flat amount", :aggregate_failures do
+    it "does not apply the flat amount" do
       expect(apply_graduated_percentage_service.amount).to eq(0)
       expect(apply_graduated_percentage_service.unit_amount).to eq(0)
       expect(apply_graduated_percentage_service.amount_details).to eq(
@@ -78,7 +78,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 1 }
     let(:aggregation_count) { 1 }
 
-    it "applies a unit amount for 1 and the flat rate for 1", :aggregate_failures do
+    it "applies a unit amount for 1 and the flat rate for 1" do
       # NOTE: 200 + 1 * 0.01
       expect(apply_graduated_percentage_service.amount).to eq(200.01)
       expect(apply_graduated_percentage_service.unit_amount).to eq(200.01)
@@ -104,7 +104,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 10 }
     let(:aggregation_count) { 1 }
 
-    it "applies all unit amount up to the top bound", :aggregate_failures do
+    it "applies all unit amount up to the top bound" do
       # NOTE: 200 + 10 * 0.01
       expect(apply_graduated_percentage_service.amount).to eq(200.1)
       expect(apply_graduated_percentage_service.unit_amount).to eq(20.01)
@@ -130,7 +130,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 11 }
     let(:aggregation_count) { 1 }
 
-    it "applies next ranges flat amount", :aggregate_failures do
+    it "applies next ranges flat amount" do
       # NOTE: 200 + 300 + 10 * 0.01 + 1 * 0.02
       expect(apply_graduated_percentage_service.amount).to eq(500.12)
       expect(apply_graduated_percentage_service.unit_amount.round(2)).to eq(45.47)
@@ -165,7 +165,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 12 }
     let(:aggregation_count) { 1 }
 
-    it "applies next ranges flat amount and range units amount", :aggregate_failures do
+    it "applies next ranges flat amount and range units amount" do
       # NOTE: 200 + 300 + 10 * 0.01 + 2 * 0.02
       expect(apply_graduated_percentage_service.amount).to eq(500.14)
       expect(apply_graduated_percentage_service.unit_amount.round(2)).to eq(41.68)
@@ -200,7 +200,7 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
     let(:aggregation) { 21 }
     let(:aggregation_count) { 1 }
 
-    it "applies last unit amount for more unit in last step", :aggregate_failures do
+    it "applies last unit amount for more unit in last step" do
       # NOTE: 200 + 300 + 400 + 10 * 0.01 + 10 * 0.02 + 1 * 0.03
       expect(apply_graduated_percentage_service.amount).to eq(900.33)
       expect(apply_graduated_percentage_service.unit_amount.round(2)).to eq(42.87)

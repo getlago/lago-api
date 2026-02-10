@@ -52,10 +52,8 @@ RSpec.describe Mutations::Integrations::Anrok::Update do
 
     result_data = result["data"]["updateAnrokIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["apiKey"]).to eq("••••••••…789")
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["apiKey"]).to eq("••••••••…789")
   end
 end

@@ -62,22 +62,20 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
 
     events_response = result["data"]["events"]
 
-    aggregate_failures do
-      expect(events_response["collection"].count).to eq(Event.where(organization_id: organization.id).count)
-      expect(events_response["collection"].first["id"]).to eq(event.id)
-      expect(events_response["collection"].first["code"]).to eq(event.code)
-      expect(events_response["collection"].first["externalSubscriptionId"]).to eq(subscription.external_id)
-      expect(events_response["collection"].first["transactionId"]).to eq(event.transaction_id)
-      expect(events_response["collection"].first["timestamp"]).to eq(event.timestamp.iso8601)
-      expect(events_response["collection"].first["receivedAt"]).to eq(event.created_at.iso8601)
-      expect(events_response["collection"].first["customerTimezone"]).to eq("TZ_UTC")
-      expect(events_response["collection"].first["ipAddress"]).to eq(event.metadata["ip_address"])
-      expect(events_response["collection"].first["apiClient"]).to eq(event.metadata["user_agent"])
-      expect(events_response["collection"].first["payload"]).to be_present
-      expect(events_response["collection"].first["billableMetricName"]).to eq(billable_metric.name)
-      expect(events_response["collection"].first["matchBillableMetric"]).to be_truthy
-      expect(events_response["collection"].first["matchCustomField"]).to be_truthy
-    end
+    expect(events_response["collection"].count).to eq(Event.where(organization_id: organization.id).count)
+    expect(events_response["collection"].first["id"]).to eq(event.id)
+    expect(events_response["collection"].first["code"]).to eq(event.code)
+    expect(events_response["collection"].first["externalSubscriptionId"]).to eq(subscription.external_id)
+    expect(events_response["collection"].first["transactionId"]).to eq(event.transaction_id)
+    expect(events_response["collection"].first["timestamp"]).to eq(event.timestamp.iso8601)
+    expect(events_response["collection"].first["receivedAt"]).to eq(event.created_at.iso8601)
+    expect(events_response["collection"].first["customerTimezone"]).to eq("TZ_UTC")
+    expect(events_response["collection"].first["ipAddress"]).to eq(event.metadata["ip_address"])
+    expect(events_response["collection"].first["apiClient"]).to eq(event.metadata["user_agent"])
+    expect(events_response["collection"].first["payload"]).to be_present
+    expect(events_response["collection"].first["billableMetricName"]).to eq(billable_metric.name)
+    expect(events_response["collection"].first["matchBillableMetric"]).to be_truthy
+    expect(events_response["collection"].first["matchCustomField"]).to be_truthy
   end
 
   context "with a deleted billable metric" do
@@ -93,10 +91,8 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
 
       events_response = result["data"]["events"]
 
-      aggregate_failures do
-        expect(events_response["collection"].count).to eq(Event.where(organization_id: organization.id).count)
-        expect(events_response["collection"].first["id"]).to eq(event.id)
-      end
+      expect(events_response["collection"].count).to eq(Event.where(organization_id: organization.id).count)
+      expect(events_response["collection"].first["id"]).to eq(event.id)
     end
   end
 

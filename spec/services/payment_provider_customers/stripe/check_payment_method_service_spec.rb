@@ -36,13 +36,11 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
 
       result = check_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.payment_method.id).to eq(payment_method_id)
+      expect(result).to be_success
+      expect(result.payment_method.id).to eq(payment_method_id)
 
-        expect(Stripe::Customer).to have_received(:new)
-        expect(stripe_api_customer).to have_received(:retrieve_payment_method)
-      end
+      expect(Stripe::Customer).to have_received(:new)
+      expect(stripe_api_customer).to have_received(:retrieve_payment_method)
     end
 
     context "when payment method is not found on stripe" do
@@ -55,12 +53,10 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
       it "returns a failed result" do
         result = check_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(Stripe::Customer).to have_received(:new)
-          expect(stripe_api_customer).to have_received(:retrieve_payment_method)
-        end
+        expect(Stripe::Customer).to have_received(:new)
+        expect(stripe_api_customer).to have_received(:retrieve_payment_method)
       end
     end
 
@@ -74,13 +70,11 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
 
         result = check_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.payment_method.id).to eq(payment_method_id)
+        expect(result).to be_success
+        expect(result.payment_method.id).to eq(payment_method_id)
 
-          expect(Stripe::Customer).to have_received(:new)
-          expect(stripe_api_customer).to have_received(:retrieve_payment_method)
-        end
+        expect(Stripe::Customer).to have_received(:new)
+        expect(stripe_api_customer).to have_received(:retrieve_payment_method)
       end
     end
   end

@@ -56,11 +56,9 @@ RSpec.describe Mutations::Memberships::Revoke do
       }
     )
 
-    aggregate_failures do
-      expect(result["errors"].first["message"]).to eq("Method Not Allowed")
-      expect(result["errors"].first["extensions"]["code"]).to eq("cannot_revoke_own_membership")
-      expect(result["errors"].first["extensions"]["status"]).to eq(405)
-    end
+    expect(result["errors"].first["message"]).to eq("Method Not Allowed")
+    expect(result["errors"].first["extensions"]["code"]).to eq("cannot_revoke_own_membership")
+    expect(result["errors"].first["extensions"]["status"]).to eq(405)
   end
 
   it "cannot revoke membership if it's the last admin of the organization" do
@@ -81,10 +79,8 @@ RSpec.describe Mutations::Memberships::Revoke do
       }
     )
 
-    aggregate_failures do
-      expect(result["errors"].first["message"]).to eq("Method Not Allowed")
-      expect(result["errors"].first["extensions"]["code"]).to eq("last_admin")
-      expect(result["errors"].first["extensions"]["status"]).to eq(405)
-    end
+    expect(result["errors"].first["message"]).to eq("Method Not Allowed")
+    expect(result["errors"].first["extensions"]["code"]).to eq("last_admin")
+    expect(result["errors"].first["extensions"]["status"]).to eq(405)
   end
 end

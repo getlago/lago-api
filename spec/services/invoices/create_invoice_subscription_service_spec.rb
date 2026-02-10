@@ -41,25 +41,23 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
     it "creates invoice subscriptions" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice_subscriptions.count).to eq(1)
+      expect(result).to be_success
+      expect(result.invoice_subscriptions.count).to eq(1)
 
-        invoice_subscription = result.invoice_subscriptions.first
-        expect(invoice_subscription).to have_attributes(
-          invoice:,
-          subscription:,
-          timestamp: match_datetime(timestamp),
-          from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
-          to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
-          charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
-          charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
-          fixed_charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
-          fixed_charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
-          recurring: true,
-          invoicing_reason: invoicing_reason.to_s
-        )
-      end
+      invoice_subscription = result.invoice_subscriptions.first
+      expect(invoice_subscription).to have_attributes(
+        invoice:,
+        subscription:,
+        timestamp: match_datetime(timestamp),
+        from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
+        to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
+        charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
+        charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
+        fixed_charges_from_datetime: match_datetime(Time.zone.parse("2022-02-06 00:00:00")),
+        fixed_charges_to_datetime: match_datetime(Time.zone.parse("2022-03-05 23:59:59")),
+        recurring: true,
+        invoicing_reason: invoicing_reason.to_s
+      )
     end
 
     context "when the plan is pay in advance" do
@@ -74,25 +72,23 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       it "creates invoice subscriptions with termination boundaries" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice_subscriptions.count).to eq(1)
+        expect(result).to be_success
+        expect(result.invoice_subscriptions.count).to eq(1)
 
-          invoice_subscription = result.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            invoice:,
-            subscription:,
-            timestamp: match_datetime(timestamp),
-            from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
-            to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
-            charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
-            charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
-            fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
-            fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
-            recurring: false,
-            invoicing_reason: invoicing_reason.to_s
-          )
-        end
+        invoice_subscription = result.invoice_subscriptions.first
+        expect(invoice_subscription).to have_attributes(
+          invoice:,
+          subscription:,
+          timestamp: match_datetime(timestamp),
+          from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
+          to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
+          charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
+          charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
+          fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-01T00:00:00")),
+          fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-09-30T23:59:59")),
+          recurring: false,
+          invoicing_reason: invoicing_reason.to_s
+        )
       end
 
       context "when an existing invoice with the same boundaries" do
@@ -126,24 +122,22 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         it "creates an invoice subscriptions" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice_subscriptions.count).to eq(1)
+          expect(result).to be_success
+          expect(result.invoice_subscriptions.count).to eq(1)
 
-            invoice_subscription = result.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              invoice:,
-              subscription:,
-              from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
-              recurring: false,
-              invoicing_reason: invoicing_reason.to_s
-            )
-          end
+          invoice_subscription = result.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            invoice:,
+            subscription:,
+            from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            fixed_charges_to_datetime: match_datetime(Time.zone.parse("2023-10-01T00:00:00")),
+            recurring: false,
+            invoicing_reason: invoicing_reason.to_s
+          )
         end
       end
     end
@@ -164,10 +158,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       it "creates subscription and charges fees for both" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice_subscriptions.count).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice_subscriptions.count).to eq(2)
       end
 
       context "when subscriptions are duplicated" do
@@ -176,10 +168,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         it "ensures charges are not duplicated" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice_subscriptions.count).to eq(1)
-          end
+          expect(result).to be_success
+          expect(result.invoice_subscriptions.count).to eq(1)
         end
       end
     end
@@ -191,10 +181,8 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       it "does not create an invoice subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice_subscriptions).to be_empty
-        end
+        expect(result).to be_success
+        expect(result.invoice_subscriptions).to be_empty
       end
     end
 
@@ -228,12 +216,10 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       it "returns a service failure" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("duplicated_invoices")
-          expect(result.error.error_message).to be_present
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("duplicated_invoices")
+        expect(result.error.error_message).to be_present
       end
 
       context "when plan interval is yearly and charges are not paid on monthly basis" do
@@ -244,12 +230,10 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         it "returns a service failure" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("duplicated_invoices")
-            expect(result.error.error_message).to be_present
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("duplicated_invoices")
+          expect(result.error.error_message).to be_present
         end
       end
 
@@ -261,12 +245,10 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
         it "returns a service failure" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("duplicated_invoices")
-            expect(result.error.error_message).to be_present
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("duplicated_invoices")
+          expect(result.error.error_message).to be_present
         end
       end
     end
@@ -280,25 +262,23 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       it "creates an invoice subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice_subscriptions.count).to eq(1)
+        expect(result).to be_success
+        expect(result.invoice_subscriptions.count).to eq(1)
 
-          invoice_subscription = result.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            invoice:,
-            subscription:,
-            timestamp: match_datetime(timestamp),
-            from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
-            to_datetime: match_datetime(timestamp),
-            charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
-            charges_to_datetime: match_datetime(timestamp),
-            fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
-            fixed_charges_to_datetime: match_datetime(timestamp),
-            recurring: false,
-            invoicing_reason: "subscription_terminating"
-          )
-        end
+        invoice_subscription = result.invoice_subscriptions.first
+        expect(invoice_subscription).to have_attributes(
+          invoice:,
+          subscription:,
+          timestamp: match_datetime(timestamp),
+          from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
+          to_datetime: match_datetime(timestamp),
+          charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
+          charges_to_datetime: match_datetime(timestamp),
+          fixed_charges_from_datetime: match_datetime(Time.zone.parse("2023-09-06T00:00:00")),
+          fixed_charges_to_datetime: match_datetime(timestamp),
+          recurring: false,
+          invoicing_reason: "subscription_terminating"
+        )
       end
     end
 
@@ -306,7 +286,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       let(:invoicing_reason) { :progressive_billing }
       let(:timestamp) { Time.zone.parse("2023-10-01T00:00:00") }
 
-      it "creates an invoice subscription", aggregate_failure: true do
+      it "creates an invoice subscription" do
         result = create_service.call
 
         expect(result).to be_success

@@ -13,11 +13,9 @@ RSpec.describe CreditNotes::RecreditService do
     it "returns a failure" do
       result = service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq("credit_note_not_found")
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.message).to eq("credit_note_not_found")
     end
   end
 
@@ -31,11 +29,9 @@ RSpec.describe CreditNotes::RecreditService do
     it "returns a failure" do
       result = service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("credit_note_voided")
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(result.error.code).to eq("credit_note_voided")
     end
   end
 
@@ -49,13 +45,11 @@ RSpec.describe CreditNotes::RecreditService do
     end
 
     it "recredits the credit note" do
-      aggregate_failures do
-        expect { service.call }
-          .to change { credit_note.reload.balance_amount_cents }
-          .from(amount_cents).to(amount_cents_recredited)
+      expect { service.call }
+        .to change { credit_note.reload.balance_amount_cents }
+        .from(amount_cents).to(amount_cents_recredited)
 
-        expect(service.call).to be_success
-      end
+      expect(service.call).to be_success
     end
 
     it "updates credit note credit status to available" do

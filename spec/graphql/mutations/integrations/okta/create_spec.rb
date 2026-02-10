@@ -47,10 +47,8 @@ RSpec.describe Mutations::Integrations::Okta::Create do
 
     result_data = result["data"]["createOktaIntegration"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["code"]).to eq("okta")
-      expect(result_data["name"]).to eq("Okta Integration")
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq("okta")
+    expect(result_data["name"]).to eq("Okta Integration")
   end
 end

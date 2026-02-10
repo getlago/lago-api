@@ -10,7 +10,7 @@ RSpec.shared_examples "a result object" do
   describe ".fail_with_error!" do
     let(:error) { StandardError.new("custom_error") }
 
-    it "assign the error the result", :aggregate_failures do
+    it "assign the error the result" do
       failure = result.fail_with_error!(error)
 
       expect(failure).to eq(result)

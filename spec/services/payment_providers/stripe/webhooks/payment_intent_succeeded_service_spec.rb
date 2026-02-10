@@ -153,7 +153,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           create(:payment, payable: payment_request_other_organization, provider_payment_id: event.data.object.id)
         end
 
-        it "returns an empty result", :aggregate_failures do
+        it "returns an empty result" do
           result = event_service.call
           expect(result).to be_success
           expect(result.payment).to be_nil

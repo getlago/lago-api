@@ -15,10 +15,8 @@ RSpec.describe Auth::GoogleService do
       request = Rack::Request.new(Rack::MockRequest.env_for("http://example.com"))
       result = service.authorize_url(request)
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.url).to include("https://accounts.google.com/o/oauth2/auth")
-      end
+      expect(result).to be_success
+      expect(result.url).to include("https://accounts.google.com/o/oauth2/auth")
     end
 
     context "when google auth is not set up" do
@@ -31,10 +29,8 @@ RSpec.describe Auth::GoogleService do
         request = Rack::Request.new(Rack::MockRequest.env_for("http://example.com"))
         result = service.authorize_url(request)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("google_auth_missing_setup")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
   end
@@ -62,14 +58,12 @@ RSpec.describe Auth::GoogleService do
       it "logins the user" do
         result = service.login("code")
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.user).to be_a(User)
-          expect(result.token).to be_present
+        expect(result).to be_success
+        expect(result.user).to be_a(User)
+        expect(result.token).to be_present
 
-          decoded = Auth::TokenService.decode(token: result.token)
-          expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-        end
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       end
     end
 
@@ -77,10 +71,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = service.login("code")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("user_does_not_exist")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_does_not_exist")
       end
     end
 
@@ -95,10 +87,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = service.login("code")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages).to match(google_oauth: ["login_method_not_authorized"])
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(google_oauth: ["login_method_not_authorized"])
       end
     end
 
@@ -110,10 +100,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = service.login("code")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("user_does_not_exist")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_does_not_exist")
       end
     end
 
@@ -126,10 +114,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a service failure" do
         result = service.login("code")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("google_auth_missing_setup")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
   end
@@ -152,14 +138,12 @@ RSpec.describe Auth::GoogleService do
     it "register the user" do
       result = service.register_user("code", "Foobar")
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.user).to be_a(User)
-        expect(result.token).to be_present
+      expect(result).to be_success
+      expect(result.user).to be_a(User)
+      expect(result.token).to be_present
 
-        decoded = Auth::TokenService.decode(token: result.token)
-        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-      end
+      decoded = Auth::TokenService.decode(token: result.token)
+      expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
     end
 
     context "when user already exists" do
@@ -168,10 +152,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = service.register_user("code", "FooBar")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("user_already_exists")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_already_exists")
       end
     end
 
@@ -184,10 +166,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a service failure" do
         result = service.register_user("code", "FooBar")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("google_auth_missing_setup")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
   end
@@ -211,25 +191,21 @@ RSpec.describe Auth::GoogleService do
     it "accepts the invite" do
       result = service.accept_invite("code", invite.token)
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.user).to be_a(User)
-        expect(result.user.email).to eq(invite.email)
-        expect(result.token).to be_present
+      expect(result).to be_success
+      expect(result.user).to be_a(User)
+      expect(result.user.email).to eq(invite.email)
+      expect(result.token).to be_present
 
-        decoded = Auth::TokenService.decode(token: result.token)
-        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-      end
+      decoded = Auth::TokenService.decode(token: result.token)
+      expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
     end
 
     context "when invite does not exists" do
       it "returns a not found failure" do
         result = service.accept_invite("code", "not_a_valid_token")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("invite_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("invite_not_found")
       end
     end
 
@@ -241,10 +217,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = service.accept_invite("code", invite.token)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("invite_email_mistmatch")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages[:base]).to include("invite_email_mistmatch")
       end
     end
 
@@ -257,10 +231,8 @@ RSpec.describe Auth::GoogleService do
       it "returns a service failure" do
         result = service.accept_invite("code", "FooBar")
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("google_auth_missing_setup")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
   end

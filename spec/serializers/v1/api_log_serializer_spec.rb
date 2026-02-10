@@ -10,18 +10,16 @@ RSpec.describe ::V1::ApiLogSerializer, clickhouse: true do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["api_log"]["request_id"]).to eq(api_log.request_id)
-      expect(result["api_log"]["client"]).to eq(api_log.client)
-      expect(result["api_log"]["http_method"]).to eq(api_log.http_method)
-      expect(result["api_log"]["http_status"]).to eq(api_log.http_status)
-      expect(result["api_log"]["request_origin"]).to eq(api_log.request_origin)
-      expect(result["api_log"]["request_path"]).to eq(api_log.request_path)
-      expect(result["api_log"]["request_body"]).to eq(api_log.request_body)
-      expect(result["api_log"]["request_response"]).to eq(api_log.request_response)
-      expect(result["api_log"]["api_version"]).to eq(api_log.api_version)
-      expect(result["api_log"]["logged_at"]).to eq(api_log.logged_at.iso8601)
-      expect(result["api_log"]["created_at"]).to eq(api_log.created_at.iso8601)
-    end
+    expect(result["api_log"]["request_id"]).to eq(api_log.request_id)
+    expect(result["api_log"]["client"]).to eq(api_log.client)
+    expect(result["api_log"]["http_method"]).to eq(api_log.http_method)
+    expect(result["api_log"]["http_status"]).to eq(api_log.http_status)
+    expect(result["api_log"]["request_origin"]).to eq(api_log.request_origin)
+    expect(result["api_log"]["request_path"]).to eq(api_log.request_path)
+    expect(result["api_log"]["request_body"]).to eq(api_log.request_body)
+    expect(result["api_log"]["request_response"]).to eq(api_log.request_response)
+    expect(result["api_log"]["api_version"]).to eq(api_log.api_version)
+    expect(result["api_log"]["logged_at"]).to eq(api_log.logged_at.iso8601)
+    expect(result["api_log"]["created_at"]).to eq(api_log.created_at.iso8601)
   end
 end

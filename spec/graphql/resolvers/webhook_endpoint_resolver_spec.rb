@@ -43,8 +43,6 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
 
     webhook_endpoint_response = result["data"]["webhookEndpoint"]
 
-    aggregate_failures do
-      expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
-    end
+    expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
   end
 end

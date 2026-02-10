@@ -56,9 +56,7 @@ RSpec.describe Mutations::Integrations::Avalara::Update do
 
     result_data = result["data"]["updateAvalaraIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
   end
 end

@@ -40,10 +40,8 @@ RSpec.describe Coupons::DestroyService do
         applied_coupon = create(:applied_coupon, coupon:)
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(applied_coupon.reload).to be_terminated
-        end
+        expect(result).to be_success
+        expect(applied_coupon.reload).to be_terminated
       end
     end
 
@@ -53,10 +51,8 @@ RSpec.describe Coupons::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("coupon_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("coupon_not_found")
       end
     end
   end
