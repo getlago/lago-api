@@ -12513,6 +12513,7 @@ type WalletTransaction {
   name: String
   priority: Int!
   remainingAmountCents: BigInt
+  remainingCreditAmount: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   settledAt: ISO8601DateTime
   skipInvoiceCustomSections: Boolean
@@ -12543,6 +12544,7 @@ type WalletTransactionCollection {
 type WalletTransactionConsumption {
   amountCents: BigInt!
   createdAt: ISO8601DateTime!
+  creditAmount: String!
   id: ID!
   walletTransaction: WalletTransaction!
 }
@@ -12565,6 +12567,7 @@ type WalletTransactionConsumptionCollection {
 type WalletTransactionFunding {
   amountCents: BigInt!
   createdAt: ISO8601DateTime!
+  creditAmount: String!
   id: ID!
   walletTransaction: WalletTransaction!
 }

@@ -24,6 +24,7 @@ module Types
       field :invoice, Types::Invoices::Object, null: true
       field :metadata, [Types::WalletTransactions::MetadataObject], null: true
       field :remaining_amount_cents, GraphQL::Types::BigInt, null: true
+      field :remaining_credit_amount, String, null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -32,6 +33,12 @@ module Types
 
       def invoice
         object.invoice&.visible? ? object.invoice : nil
+      end
+
+      def remaining_credit_amount
+        return nil if object.remaining_amount_cents.nil?
+
+        (object.remaining_amount_cents / object.wallet.rate_amount).to_s
       end
 
       def wallet_name

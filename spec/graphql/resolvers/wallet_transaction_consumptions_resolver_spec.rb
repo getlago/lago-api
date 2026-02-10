@@ -10,6 +10,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
           collection {
             id
             amountCents
+            creditAmount
             createdAt
             walletTransaction { id }
           }

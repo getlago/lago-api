@@ -7,8 +7,14 @@ module Types
 
       field :amount_cents, GraphQL::Types::BigInt, null: false, method: :consumed_amount_cents
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :credit_amount, String, null: false
       field :id, ID, null: false
       field :wallet_transaction, Types::WalletTransactions::Object, null: false, method: :outbound_wallet_transaction
+
+      def credit_amount
+        wallet = object.inbound_wallet_transaction.wallet
+        (object.consumed_amount_cents / wallet.rate_amount).to_s
+      end
     end
   end
 end
