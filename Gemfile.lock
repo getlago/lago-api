@@ -1009,9 +1009,9 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
-    with_advisory_lock (7.5.0)
-      activerecord (>= 7.2)
-      zeitwerk (>= 2.7)
+    with_advisory_lock (5.3.0)
+      activerecord (>= 6.1)
+      zeitwerk (>= 2.6)
     yabeda (0.14.0)
       anyway_config (>= 1.0, < 3)
       concurrent-ruby
