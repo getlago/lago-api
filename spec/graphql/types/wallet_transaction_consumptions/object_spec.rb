@@ -67,7 +67,7 @@ RSpec.describe Types::WalletTransactionConsumptions::Object do
     end
 
     it "returns the credit amount by dividing consumed amount by wallet rate" do
-      expect(subject).to eq("2000.0")
+      expect(subject).to eq("20.0")
     end
   end
 

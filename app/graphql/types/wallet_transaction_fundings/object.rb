@@ -13,7 +13,8 @@ module Types
 
       def credit_amount
         wallet = object.inbound_wallet_transaction.wallet
-        (object.consumed_amount_cents / wallet.rate_amount).to_s
+        currency = wallet.currency_for_balance
+        object.consumed_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
       end
     end
   end

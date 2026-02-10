@@ -38,7 +38,9 @@ module Types
       def remaining_credit_amount
         return nil if object.remaining_amount_cents.nil?
 
-        (object.remaining_amount_cents / object.wallet.rate_amount).to_s
+        wallet = object.wallet
+        currency = wallet.currency_for_balance
+        object.remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
       end
 
       def wallet_name

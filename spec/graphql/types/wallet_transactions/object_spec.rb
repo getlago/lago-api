@@ -54,7 +54,7 @@ RSpec.describe Types::WalletTransactions::Object do
       end
 
       it "returns the remaining credit amount as string" do
-        expect(subject).to eq("2000.0")
+        expect(subject).to eq("20.0")
       end
     end
   end
