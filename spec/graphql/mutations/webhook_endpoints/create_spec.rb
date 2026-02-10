@@ -13,7 +13,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       webhookUrl: webhook_url,
       signatureAlgo: "hmac",
       name: "Test Webhook",
-      eventTypes: ["customer.created"]
+      eventTypes: ["customer_created"]
     }
   end
   let(:mutation) do
@@ -51,7 +51,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
         "webhookUrl" => webhook_url,
         "signatureAlgo" => "hmac",
         "name" => "Test Webhook",
-        "eventTypes" => ["customer.created"]
+        "eventTypes" => ["customer_created"]
       )
     end
 

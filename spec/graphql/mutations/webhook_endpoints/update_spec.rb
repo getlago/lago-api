@@ -16,7 +16,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
       webhookUrl: webhook_url,
       signatureAlgo: "hmac",
       name: "Updated Webhook",
-      eventTypes: ["customer.updated"]
+      eventTypes: ["customer_updated"]
     }
   end
 
@@ -57,7 +57,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
         "webhookUrl" => webhook_url,
         "signatureAlgo" => "hmac",
         "name" => "Updated Webhook",
-        "eventTypes" => ["customer.updated"]
+        "eventTypes" => ["customer_updated"]
       )
     end
 
