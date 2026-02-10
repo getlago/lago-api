@@ -10,6 +10,9 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
         webhookEndpoint(id: $webhookEndpointId) {
           id
           webhookUrl
+          signatureAlgo
+          name
+          eventTypes
           createdAt
           updatedAt
           organization { id name }
@@ -19,7 +22,7 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
   end
 
   let(:membership) { create(:membership) }
-  let(:webhook_endpoint) { build(:webhook_endpoint, organization:) }
+  let(:webhook_endpoint) { build(:webhook_endpoint, organization:, event_types: ["customer.created"]) }
   let(:organization) { membership.organization }
 
   before do
@@ -44,5 +47,13 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
     webhook_endpoint_response = result["data"]["webhookEndpoint"]
 
     expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
+    expect(webhook_endpoint_response["webhookUrl"]).to eq(webhook_endpoint.webhook_url)
+    expect(webhook_endpoint_response["signatureAlgo"]).to eq(webhook_endpoint.signature_algo)
+    expect(webhook_endpoint_response["name"]).to eq(webhook_endpoint.name)
+    expect(webhook_endpoint_response["eventTypes"]).to match_array(["customer_created"])
+    expect(webhook_endpoint_response["createdAt"]).to eq(webhook_endpoint.created_at.iso8601)
+    expect(webhook_endpoint_response["updatedAt"]).to eq(webhook_endpoint.updated_at.iso8601)
+    expect(webhook_endpoint_response["organization"]["id"]).to eq(organization.id)
+    expect(webhook_endpoint_response["organization"]["name"]).to eq(organization.name)
   end
 end

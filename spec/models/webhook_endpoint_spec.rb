@@ -157,4 +157,12 @@ RSpec.describe WebhookEndpoint do
       end
     end
   end
+
+  describe "constants" do
+    describe "WEBHOOK_EVENT_TYPES" do
+      it "matches SendWebhookJob::WEBHOOK_SERVICES" do
+        expect(WebhookEndpoint::WEBHOOK_EVENT_TYPES).to match_array(SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s))
+      end
+    end
+  end
 end

@@ -8,6 +8,15 @@ class WebhookEndpoint < ApplicationRecord
     :hmac
   ].freeze
 
+  WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
+    Rails.root.join("config/webhook_event_types.yml"),
+    symbolize_names: true
+  ).freeze
+
+  WEBHOOK_EVENT_TYPES = WEBHOOK_EVENT_TYPE_CONFIG.map do |_, config|
+    config[:name].to_s
+  end.freeze
+
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
 
@@ -39,7 +48,7 @@ class WebhookEndpoint < ApplicationRecord
       errors.add(:event_types, :invalid_format)
     end
 
-    invalid_types = event_types - SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s)
+    invalid_types = event_types - WEBHOOK_EVENT_TYPES
     if invalid_types.present?
       errors.add(:event_types, :invalid_types, invalid_types:)
     end

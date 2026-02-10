@@ -5,7 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name "WebhookEndpoint"
 
-      field :event_types, [String], null: true
+      field :event_types, [Types::WebhookEndpoints::EventTypeEnum], null: true
       field :id, ID, null: false
       field :name, String, null: true
       field :organization, Types::Organizations::OrganizationType

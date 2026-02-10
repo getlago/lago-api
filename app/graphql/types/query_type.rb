@@ -51,6 +51,7 @@ module Types
     field :dunning_campaign, resolver: Resolvers::DunningCampaignResolver
     field :dunning_campaigns, resolver: Resolvers::DunningCampaignsResolver
     field :event, resolver: Resolvers::EventResolver
+    field :event_types, resolver: Resolvers::EventTypesResolver
     field :events, resolver: Resolvers::EventsResolver
     field :feature, resolver: Resolvers::Entitlement::FeatureResolver
     field :features, resolver: Resolvers::Entitlement::FeaturesResolver
