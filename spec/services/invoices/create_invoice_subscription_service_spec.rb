@@ -286,7 +286,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
       let(:invoicing_reason) { :progressive_billing }
       let(:timestamp) { Time.zone.parse("2023-10-01T00:00:00") }
 
-      it "creates an invoice subscription", aggregate_failure: true do
+      it "creates an invoice subscription" do
         result = create_service.call
 
         expect(result).to be_success

@@ -68,7 +68,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
 
       before { invoice }
 
-      it "enqueues jobs to reprocess the pending payment", aggregate_failure: true do
+      it "enqueues jobs to reprocess the pending payment" do
         result = update_service.call
 
         expect(result).to be_success
@@ -79,7 +79,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
       context "when invoices are not finalized" do
         let(:status) { "draft" }
 
-        it "does not enqueue jobs to reprocess pending payment", aggregate_failure: true do
+        it "does not enqueue jobs to reprocess pending payment" do
           result = update_service.call
 
           expect(result).to be_success
@@ -90,7 +90,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
       context "when invoices are not ready for payment processing" do
         let(:ready_for_payment_processing) { "false" }
 
-        it "does not enqueue jobs to reprocess pending payment", aggregate_failure: true do
+        it "does not enqueue jobs to reprocess pending payment" do
           result = update_service.call
 
           expect(result).to be_success

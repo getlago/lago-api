@@ -266,7 +266,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
         cashfree_customer
       end
 
-      it "creates a payment and updates invoice payment status", aggregate_failure: true do
+      it "creates a payment and updates invoice payment status" do
         expect(result).to be_success
         expect(result.payment.status).to eq("PAID")
         expect(result.payment.payable_payment_status).to eq("succeeded")
