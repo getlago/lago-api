@@ -43,15 +43,13 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_amount")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_amount")
 
-          expect(Charges::Validators::StandardService).to have_received(:new).with(charge:)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::StandardService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -79,16 +77,14 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_amount")
-          expect(charge.errors.messages[:properties]).to include("missing_graduated_ranges")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_amount")
+        expect(charge.errors.messages[:properties]).to include("missing_graduated_ranges")
 
-          expect(Charges::Validators::GraduatedService).to have_received(:new)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::GraduatedService).to have_received(:new)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
     end
 
@@ -118,17 +114,15 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_amount")
-          expect(charge.errors.messages[:properties]).to include("invalid_free_units")
-          expect(charge.errors.messages[:properties]).to include("invalid_package_size")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_amount")
+        expect(charge.errors.messages[:properties]).to include("invalid_free_units")
+        expect(charge.errors.messages[:properties]).to include("invalid_package_size")
 
-          expect(Charges::Validators::PackageService).to have_received(:new).with(charge:)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::PackageService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
 
       context "when charge model is not package" do
@@ -176,18 +170,16 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_rate")
-          expect(charge.errors.messages[:properties]).to include("invalid_fixed_amount")
-          expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_events")
-          expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_total_aggregation")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_rate")
+        expect(charge.errors.messages[:properties]).to include("invalid_fixed_amount")
+        expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_events")
+        expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_total_aggregation")
 
-          expect(Charges::Validators::PercentageService).to have_received(:new).with(charge:)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::PercentageService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
 
       context "when charge model is not percentage" do
@@ -234,16 +226,14 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_amount")
-          expect(charge.errors.messages[:properties]).to include("invalid_volume_ranges")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_amount")
+        expect(charge.errors.messages[:properties]).to include("invalid_volume_ranges")
 
-          expect(Charges::Validators::VolumeService).to have_received(:new).with(charge:)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::VolumeService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
 
       context "when charge model is not volume" do
@@ -293,16 +283,14 @@ RSpec.describe ChargeFilter do
         allow(validation_service).to receive(:result)
           .and_return(service_response)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages.keys).to include(:properties)
-          expect(charge.errors.messages[:properties]).to include("invalid_rate")
-          expect(charge.errors.messages[:properties]).to include("invalid_graduated_percentage_ranges")
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages.keys).to include(:properties)
+        expect(charge.errors.messages[:properties]).to include("invalid_rate")
+        expect(charge.errors.messages[:properties]).to include("invalid_graduated_percentage_ranges")
 
-          expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
-          expect(validation_service).to have_received(:valid?)
-          expect(validation_service).to have_received(:result)
-        end
+        expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
+        expect(validation_service).to have_received(:valid?)
+        expect(validation_service).to have_received(:result)
       end
 
       context "when charge model is not graduated percentage" do

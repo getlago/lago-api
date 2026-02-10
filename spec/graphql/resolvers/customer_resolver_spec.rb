@@ -208,10 +208,8 @@ RSpec.describe Resolvers::CustomerResolver do
 
       subscription_ids = result["data"]["customer"]["subscriptions"].map { |el| el["id"] }
 
-      aggregate_failures do
-        expect(subscription_ids.count).to eq(2)
-        expect(subscription_ids).not_to include(third_subscription.id)
-      end
+      expect(subscription_ids.count).to eq(2)
+      expect(subscription_ids).not_to include(third_subscription.id)
     end
   end
 

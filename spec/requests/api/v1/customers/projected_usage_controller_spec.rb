@@ -103,28 +103,26 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController do
       travel_to(Time.parse("2025-07-03T10:00:00Z")) do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(json[:customer_projected_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
-          expect(json[:customer_projected_usage][:to_datetime]).to eq(Time.zone.today.end_of_month.end_of_day.iso8601)
-          expect(json[:customer_projected_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
-          expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
-          expect(json[:customer_projected_usage][:currency]).to eq("EUR")
-          expect(json[:customer_projected_usage][:total_amount_cents]).to eq(6)
-          expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
+        expect(json[:customer_projected_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
+        expect(json[:customer_projected_usage][:to_datetime]).to eq(Time.zone.today.end_of_month.end_of_day.iso8601)
+        expect(json[:customer_projected_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
+        expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
+        expect(json[:customer_projected_usage][:currency]).to eq("EUR")
+        expect(json[:customer_projected_usage][:total_amount_cents]).to eq(6)
+        expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
 
-          charge_usage = json[:customer_projected_usage][:charges_usage].first
-          expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
-          expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
-          expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
-          expect(charge_usage[:charge][:charge_model]).to eq("graduated")
-          expect(charge_usage[:units]).to eq("4.0")
-          expect(charge_usage[:amount_cents]).to eq(5)
-          expect(charge_usage[:amount_currency]).to eq("EUR")
-          expect(charge_usage[:projected_units]).to be_present
-          expect(charge_usage[:projected_amount_cents]).to be_present
-        end
+        charge_usage = json[:customer_projected_usage][:charges_usage].first
+        expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
+        expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
+        expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
+        expect(charge_usage[:charge][:charge_model]).to eq("graduated")
+        expect(charge_usage[:units]).to eq("4.0")
+        expect(charge_usage[:amount_cents]).to eq(5)
+        expect(charge_usage[:amount_currency]).to eq("EUR")
+        expect(charge_usage[:projected_units]).to be_present
+        expect(charge_usage[:projected_amount_cents]).to be_present
       end
     end
 
@@ -135,13 +133,11 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController do
         travel_to(Time.parse("2025-07-03T10:00:00Z")) do
           subject
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
-            expect(json[:customer_projected_usage][:taxes_amount_cents]).to eq(0)
-            expect(json[:customer_projected_usage][:total_amount_cents]).to eq(5)
-            expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
-          end
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
+          expect(json[:customer_projected_usage][:taxes_amount_cents]).to eq(0)
+          expect(json[:customer_projected_usage][:total_amount_cents]).to eq(5)
+          expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
         end
       end
     end
@@ -235,24 +231,22 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController do
           aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
           gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
 
-          aggregate_failures do
-            expect(charge_usage[:units]).to eq("4.0")
-            expect(charge_usage[:amount_cents]).to eq(5000)
-            expect(charge_usage[:projected_units]).to be_present
-            expect(charge_usage[:projected_amount_cents]).to be_present
+          expect(charge_usage[:units]).to eq("4.0")
+          expect(charge_usage[:amount_cents]).to eq(5000)
+          expect(charge_usage[:projected_units]).to be_present
+          expect(charge_usage[:projected_amount_cents]).to be_present
 
-            # Assertions for the AWS filter
-            expect(aws_filter_data[:units]).to eq("3.0")
-            expect(aws_filter_data[:amount_cents]).to eq(3000)
-            expect(aws_filter_data[:projected_units]).to eq("31.0")
-            expect(aws_filter_data[:projected_amount_cents]).to eq(31000)
+          # Assertions for the AWS filter
+          expect(aws_filter_data[:units]).to eq("3.0")
+          expect(aws_filter_data[:amount_cents]).to eq(3000)
+          expect(aws_filter_data[:projected_units]).to eq("31.0")
+          expect(aws_filter_data[:projected_amount_cents]).to eq(31000)
 
-            # Assertions for the GCP filter
-            expect(gcp_filter_data[:units]).to eq("1.0")
-            expect(gcp_filter_data[:amount_cents]).to eq(2000)
-            expect(gcp_filter_data[:projected_units]).to eq("10.33")
-            expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
-          end
+          # Assertions for the GCP filter
+          expect(gcp_filter_data[:units]).to eq("1.0")
+          expect(gcp_filter_data[:amount_cents]).to eq(2000)
+          expect(gcp_filter_data[:projected_units]).to eq("10.33")
+          expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
         end
       end
     end

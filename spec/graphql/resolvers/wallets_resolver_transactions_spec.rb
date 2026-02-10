@@ -38,13 +38,11 @@ RSpec.describe Resolvers::WalletsResolver do
 
     wallet_transactions_response = result["data"]["walletTransactions"]
 
-    aggregate_failures do
-      expect(wallet_transactions_response["collection"].count).to eq(wallet.wallet_transactions.count)
-      expect(wallet_transactions_response["collection"].first["id"]).to eq(wallet_transaction.id)
+    expect(wallet_transactions_response["collection"].count).to eq(wallet.wallet_transactions.count)
+    expect(wallet_transactions_response["collection"].first["id"]).to eq(wallet_transaction.id)
 
-      expect(wallet_transactions_response["metadata"]["currentPage"]).to eq(1)
-      expect(wallet_transactions_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(wallet_transactions_response["metadata"]["currentPage"]).to eq(1)
+    expect(wallet_transactions_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "without current organization" do

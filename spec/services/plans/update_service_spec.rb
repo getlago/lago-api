@@ -282,21 +282,17 @@ RSpec.describe Plans::UpdateService do
             end
 
             it "updates the existing thresholds" do
-              aggregate_failures do
-                expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
-                expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
-                expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
-                expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
-              end
+              expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+              expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+              expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
+              expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
             end
 
             it "creates new thresholds and deletes thresholds that are not in the args" do
-              aggregate_failures do
-                expect(plan.usage_thresholds.count).to eq(4)
-                expect(plan.usage_thresholds.order(threshold_display_name: :asc).last.amount_cents).to eq(123)
-                expect(usage_thresholds.count).to eq(4)
-                expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
-              end
+              expect(plan.usage_thresholds.count).to eq(4)
+              expect(plan.usage_thresholds.order(threshold_display_name: :asc).last.amount_cents).to eq(123)
+              expect(usage_thresholds.count).to eq(4)
+              expect(usage_thresholds.fourth).to have_attributes(amount_cents: 4_000)
             end
           end
 
@@ -312,12 +308,10 @@ RSpec.describe Plans::UpdateService do
 
           context "when thresholds args are not passed" do
             it "does not update the thresholds" do
-              aggregate_failures do
-                expect(usage_thresholds.count).to eq(4)
-                expect(usage_thresholds.fourth).to have_attributes(
-                  threshold_display_name: "Threshold 5"
-                )
-              end
+              expect(usage_thresholds.count).to eq(4)
+              expect(usage_thresholds.fourth).to have_attributes(
+                threshold_display_name: "Threshold 5"
+              )
             end
           end
         end
@@ -357,18 +351,16 @@ RSpec.describe Plans::UpdateService do
             end
 
             it "creates new thresholds" do
-              aggregate_failures do
-                expect(usage_thresholds.count).to eq(3)
-                expect(usage_thresholds.first).to have_attributes(
-                  amount_cents: 1_000
-                )
-                expect(usage_thresholds.second).to have_attributes(
-                  amount_cents: 10_000
-                )
-                expect(usage_thresholds.third).to have_attributes(
-                  amount_cents: 100
-                )
-              end
+              expect(usage_thresholds.count).to eq(3)
+              expect(usage_thresholds.first).to have_attributes(
+                amount_cents: 1_000
+              )
+              expect(usage_thresholds.second).to have_attributes(
+                amount_cents: 10_000
+              )
+              expect(usage_thresholds.third).to have_attributes(
+                amount_cents: 100
+              )
             end
           end
         end
@@ -394,10 +386,8 @@ RSpec.describe Plans::UpdateService do
         result = plans_service.call
 
         updated_plan = result.plan
-        aggregate_failures do
-          expect(updated_plan.name).to eq("Updated plan name")
-          expect(plan.charges.count).to eq(1)
-        end
+        expect(updated_plan.name).to eq("Updated plan name")
+        expect(plan.charges.count).to eq(1)
       end
     end
 
@@ -421,10 +411,8 @@ RSpec.describe Plans::UpdateService do
         result = plans_service.call
 
         updated_plan = result.plan
-        aggregate_failures do
-          expect(updated_plan.name).to eq("Updated plan name")
-          expect(updated_plan.amount_cents).to eq(5)
-        end
+        expect(updated_plan.name).to eq("Updated plan name")
+        expect(updated_plan.amount_cents).to eq(5)
       end
 
       context "when there are pending subscriptions which are not relevant after the amount cents decrease" do
@@ -439,11 +427,9 @@ RSpec.describe Plans::UpdateService do
           result = plans_service.call
 
           updated_plan = result.plan
-          aggregate_failures do
-            expect(updated_plan.name).to eq("Updated plan name")
-            expect(updated_plan.amount_cents).to eq(5)
-            expect(Subscription.find_by(id: pending_subscription.id).status).to eq("canceled")
-          end
+          expect(updated_plan.name).to eq("Updated plan name")
+          expect(updated_plan.amount_cents).to eq(5)
+          expect(Subscription.find_by(id: pending_subscription.id).status).to eq("canceled")
         end
       end
 
@@ -479,7 +465,7 @@ RSpec.describe Plans::UpdateService do
           expect(Subscriptions::PlanUpgradeService).to have_received(:call)
         end
 
-        it "updates the plan", :aggregate_failures do
+        it "updates the plan" do
           result = plans_service.call
 
           expect(result.plan.name).to eq("Updated plan name")
@@ -505,7 +491,7 @@ RSpec.describe Plans::UpdateService do
             )
           end
 
-          it "returns an error", :aggregate_failures do
+          it "returns an error" do
             result = plans_service.call
 
             expect(result).not_to be_success
@@ -523,10 +509,8 @@ RSpec.describe Plans::UpdateService do
       it "returns an error" do
         result = plans_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("plan_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("plan_not_found")
       end
     end
 
@@ -536,11 +520,9 @@ RSpec.describe Plans::UpdateService do
       it "returns an error" do
         result = plans_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
 
       context "with new charge" do
@@ -604,11 +586,9 @@ RSpec.describe Plans::UpdateService do
         it "returns an error" do
           result = plans_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:charge_model]).to eq(["graduated_percentage_requires_premium_license"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:charge_model]).to eq(["graduated_percentage_requires_premium_license"])
         end
 
         context "when premium" do
@@ -635,10 +615,8 @@ RSpec.describe Plans::UpdateService do
       it "returns an error" do
         result = plans_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("billable_metrics_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("billable_metrics_not_found")
       end
     end
 
@@ -653,10 +631,8 @@ RSpec.describe Plans::UpdateService do
             result = plans_service.call
             commitment = result.plan.minimum_commitment
 
-            aggregate_failures do
-              expect(commitment.amount_cents).to eq(minimum_commitment_args[:amount_cents])
-              expect(commitment.invoice_display_name).to eq(minimum_commitment_args[:invoice_display_name])
-            end
+            expect(commitment.amount_cents).to eq(minimum_commitment_args[:amount_cents])
+            expect(commitment.invoice_display_name).to eq(minimum_commitment_args[:invoice_display_name])
           end
         end
 
@@ -752,10 +728,8 @@ RSpec.describe Plans::UpdateService do
           it "does not update minimum commitment args that are not present" do
             result = plans_service.call
 
-            aggregate_failures do
-              expect(result.plan.minimum_commitment.invoice_display_name).to eq(minimum_commitment_invoice_display_name)
-              expect(result.plan.minimum_commitment.amount_cents).to eq(minimum_commitment.amount_cents)
-            end
+            expect(result.plan.minimum_commitment.invoice_display_name).to eq(minimum_commitment_invoice_display_name)
+            expect(result.plan.minimum_commitment.amount_cents).to eq(minimum_commitment.amount_cents)
           end
         end
 
@@ -1043,7 +1017,7 @@ RSpec.describe Plans::UpdateService do
         existing_charge && subscription
       end
 
-      it "updates existing charge", :aggregate_failures do
+      it "updates existing charge" do
         expect { plans_service.call }.not_to change(Charge, :count)
         expect(plan.charges.first.taxes.pluck(:code)).to eq([tax2.code])
       end

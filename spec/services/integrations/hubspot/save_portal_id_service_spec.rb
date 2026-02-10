@@ -38,10 +38,8 @@ RSpec.describe Integrations::Hubspot::SavePortalIdService do
       it "returns an error message" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
       end
     end
   end

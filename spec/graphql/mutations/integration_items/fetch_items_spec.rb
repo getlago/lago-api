@@ -52,9 +52,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
 
     invoice_ids = result_data["collection"].map { |value| value["externalId"] }
 
-    aggregate_failures do
-      expect(invoice_ids).to eq(%w[755 745 753 484 828])
-      expect(integration.integration_items.where(item_type: :standard).count).to eq(5)
-    end
+    expect(invoice_ids).to eq(%w[755 745 753 484 828])
+    expect(integration.integration_items.where(item_type: :standard).count).to eq(5)
   end
 end

@@ -396,10 +396,8 @@ RSpec.describe Customer do
       let(:legal_name) { nil }
 
       it "returns name with firstname and lastname" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME Inc - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME Inc - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
       end
     end
 
@@ -407,19 +405,15 @@ RSpec.describe Customer do
       let(:name) { nil }
 
       it "returns legal_name with firstname and lastname" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("Thomas Anderson")
       end
     end
 
     context "when all fields are present" do
       it "returns display name" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
       end
     end
   end
@@ -937,11 +931,9 @@ RSpec.describe Customer do
       customer.save
       organization_id_substring = organization.id.last(4).upcase
 
-      aggregate_failures do
-        expect(customer).to be_valid
-        expect(customer.sequential_id).to eq(1)
-        expect(customer.slug).to eq("LAG-#{organization_id_substring}-001")
-      end
+      expect(customer).to be_valid
+      expect(customer.sequential_id).to eq(1)
+      expect(customer.slug).to eq("LAG-#{organization_id_substring}-001")
     end
 
     context "with custom document_number_prefix" do
@@ -955,11 +947,9 @@ RSpec.describe Customer do
       it "assigns a sequential id and a slug to a new customer" do
         customer.save
 
-        aggregate_failures do
-          expect(customer).to be_valid
-          expect(customer.sequential_id).to eq(6)
-          expect(customer.slug).to eq("ORG-55-006")
-        end
+        expect(customer).to be_valid
+        expect(customer.sequential_id).to eq(6)
+        expect(customer.slug).to eq("ORG-55-006")
       end
     end
   end

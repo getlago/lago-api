@@ -123,21 +123,17 @@ RSpec.describe PaymentProviderCustomers::GocardlessService do
     it "receives billing request flow response" do
       gocardless_service.generate_checkout_url
 
-      aggregate_failures do
-        expect(gocardless_billing_request_service).to have_received(:create)
-        expect(gocardless_billing_request_flow_service).to have_received(:create)
-      end
+      expect(gocardless_billing_request_service).to have_received(:create)
+      expect(gocardless_billing_request_flow_service).to have_received(:create)
     end
 
     it "delivers a webhook with checkout url" do
       gocardless_service.generate_checkout_url
 
-      aggregate_failures do
-        expect(gocardless_billing_request_service).to have_received(:create)
-        expect(gocardless_billing_request_flow_service).to have_received(:create)
-        expect(SendWebhookJob).to have_been_enqueued
-          .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
-      end
+      expect(gocardless_billing_request_service).to have_received(:create)
+      expect(gocardless_billing_request_flow_service).to have_received(:create)
+      expect(SendWebhookJob).to have_been_enqueued
+        .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
     end
   end
 

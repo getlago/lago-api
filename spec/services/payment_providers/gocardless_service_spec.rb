@@ -66,10 +66,8 @@ RSpec.describe PaymentProviders::GocardlessService do
           access_token: "secret"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.gocardless_provider.customers.first.payment_provider_code).to eq(new_code)
-        end
+        expect(result).to be_success
+        expect(result.gocardless_provider.customers.first.payment_provider_code).to eq(new_code)
       end
     end
 
@@ -91,13 +89,11 @@ RSpec.describe PaymentProviders::GocardlessService do
 
         expect(result).to be_success
 
-        aggregate_failures do
-          expect(result.gocardless_provider.id).to eq(gocardless_provider.id)
-          expect(result.gocardless_provider.access_token).to eq("access_token_554")
-          expect(result.gocardless_provider.code).to eq(code)
-          expect(result.gocardless_provider.name).to eq(name)
-          expect(result.gocardless_provider.success_redirect_url).to eq(success_redirect_url)
-        end
+        expect(result.gocardless_provider.id).to eq(gocardless_provider.id)
+        expect(result.gocardless_provider.access_token).to eq("access_token_554")
+        expect(result.gocardless_provider.code).to eq(code)
+        expect(result.gocardless_provider.name).to eq(name)
+        expect(result.gocardless_provider.success_redirect_url).to eq(success_redirect_url)
       end
     end
 
@@ -110,11 +106,9 @@ RSpec.describe PaymentProviders::GocardlessService do
           access_code:
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:access_token]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:access_token]).to eq(["value_is_mandatory"])
       end
     end
   end

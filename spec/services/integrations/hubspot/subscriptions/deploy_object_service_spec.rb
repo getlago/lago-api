@@ -37,14 +37,12 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
     it "successfully deploys subscription custom object and updates the subscriptions_properties_version" do
       deploy_object_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(http_client).to have_received(:post_with_response) do |payload, headers|
-          expect(payload[:name]).to eq("LagoSubscriptions")
-          expect(headers["Authorization"]).to include("Bearer")
-        end
-        expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)
+      expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(http_client).to have_received(:post_with_response) do |payload, headers|
+        expect(payload[:name]).to eq("LagoSubscriptions")
+        expect(headers["Authorization"]).to include("Bearer")
       end
+      expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)
     end
 
     context "when subscriptions_properties_version is already up-to-date" do
@@ -56,11 +54,9 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
       it "does not make an API call and keeps the version unchanged" do
         deploy_object_service.call
 
-        aggregate_failures do
-          expect(LagoHttpClient::Client).not_to have_received(:new)
-          expect(http_client).not_to have_received(:post_with_response)
-          expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)
-        end
+        expect(LagoHttpClient::Client).not_to have_received(:new)
+        expect(http_client).not_to have_received(:post_with_response)
+        expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)
       end
     end
 

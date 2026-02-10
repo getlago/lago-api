@@ -43,12 +43,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:billable_metric)
-          expect(validation_service.result.error.messages[:billable_metric]).to include("invalid_value")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:billable_metric)
+        expect(validation_service.result.error.messages[:billable_metric]).to include("invalid_value")
       end
     end
 
@@ -56,26 +54,22 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
       let(:ranges) { [] }
 
       it "ensures the presences of ranges" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
-          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
-            .to include("missing_graduated_percentage_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
+        expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+          .to include("missing_graduated_percentage_ranges")
       end
 
       context "when ranges does not starts at 0" do
         let(:ranges) { [{from_value: -1, to_value: 100}] }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
-            expect(validation_service.result.error.messages[:graduated_percentage_ranges])
-              .to include("invalid_graduated_percentage_ranges")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
+          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+            .to include("invalid_graduated_percentage_ranges")
         end
       end
 
@@ -83,13 +77,11 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:ranges) { [{from_value: 0, to_value: 100}] }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
-            expect(validation_service.result.error.messages[:graduated_percentage_ranges])
-              .to include("invalid_graduated_percentage_ranges")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
+          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+            .to include("invalid_graduated_percentage_ranges")
         end
       end
 
@@ -102,13 +94,11 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         end
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
-            expect(validation_service.result.error.messages[:graduated_percentage_ranges])
-              .to include("invalid_graduated_percentage_ranges")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
+          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+            .to include("invalid_graduated_percentage_ranges")
         end
       end
 
@@ -121,13 +111,11 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         end
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
-            expect(validation_service.result.error.messages[:graduated_percentage_ranges])
-              .to include("invalid_graduated_percentage_ranges")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:graduated_percentage_ranges)
+          expect(validation_service.result.error.messages[:graduated_percentage_ranges])
+            .to include("invalid_graduated_percentage_ranges")
         end
       end
     end
@@ -139,12 +127,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:rate) { nil }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:rate)
-            expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:rate)
+          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
         end
       end
 
@@ -152,12 +138,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:rate) { "foo" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:rate)
-            expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:rate)
+          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
         end
       end
 
@@ -165,12 +149,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:rate) { "-2" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:rate)
-            expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:rate)
+          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
         end
       end
     end
@@ -182,12 +164,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:flat_amount) { nil }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-            expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
 
@@ -195,12 +175,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:flat_amount) { "foo" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-            expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
 
@@ -208,12 +186,10 @@ RSpec.describe Charges::Validators::GraduatedPercentageService do
         let(:flat_amount) { "-4" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-            expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
     end

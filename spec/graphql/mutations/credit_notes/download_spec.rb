@@ -40,9 +40,7 @@ RSpec.describe Mutations::CreditNotes::Download do
 
     result_data = result["data"]["downloadCreditNote"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to eq(credit_note.id)
-      expect(result_data["fileUrl"]).to be_present
-    end
+    expect(result_data["id"]).to eq(credit_note.id)
+    expect(result_data["fileUrl"]).to be_present
   end
 end

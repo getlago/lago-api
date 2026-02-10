@@ -31,14 +31,12 @@ RSpec.describe IntegrationCollectionMappings::UpdateService do
         integration_collection_mapping =
           IntegrationCollectionMappings::NetsuiteCollectionMapping.order(:updated_at).last
 
-        aggregate_failures do
-          expect(integration_collection_mapping.external_id).to eq("456")
-          expect(integration_collection_mapping.external_name).to eq("Name1")
-          expect(integration_collection_mapping.external_account_code).to eq("code-2")
-          expect(integration_collection_mapping.tax_nexus).to eq(update_args[:tax_nexus])
-          expect(integration_collection_mapping.tax_code).to eq(update_args[:tax_code])
-          expect(integration_collection_mapping.tax_type).to eq(update_args[:tax_type])
-        end
+        expect(integration_collection_mapping.external_id).to eq("456")
+        expect(integration_collection_mapping.external_name).to eq("Name1")
+        expect(integration_collection_mapping.external_account_code).to eq("code-2")
+        expect(integration_collection_mapping.tax_nexus).to eq(update_args[:tax_nexus])
+        expect(integration_collection_mapping.tax_code).to eq(update_args[:tax_code])
+        expect(integration_collection_mapping.tax_type).to eq(update_args[:tax_type])
       end
 
       it "returns an integration collection mapping in result object" do

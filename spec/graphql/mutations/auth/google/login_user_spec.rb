@@ -46,11 +46,9 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
 
     response = result["data"]["googleLoginUser"]
 
-    aggregate_failures do
-      expect(response["token"]).to eq("token")
-      expect(response["user"]["id"]).to eq(user.id)
-      expect(response["user"]["email"]).to eq(user.email)
-    end
+    expect(response["token"]).to eq("token")
+    expect(response["user"]["id"]).to eq(user.id)
+    expect(response["user"]["email"]).to eq(user.email)
   end
 
   context "when user does not exist" do
@@ -73,10 +71,8 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
 
       response = result["errors"].first
 
-      aggregate_failures do
-        expect(response["extensions"]["status"]).to eq(422)
-        expect(response["message"]).to eq("Unprocessable Entity")
-      end
+      expect(response["extensions"]["status"]).to eq(422)
+      expect(response["message"]).to eq("Unprocessable Entity")
     end
   end
 end

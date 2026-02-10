@@ -36,10 +36,8 @@ RSpec.describe BillableMetric do
       billable_metric.aggregation_type = :count_agg
       billable_metric.valid?
 
-      aggregate_failures do
-        expect(billable_metric).to be_count_agg
-        expect(billable_metric.errors[:aggregation_type]).to be_blank
-      end
+      expect(billable_metric).to be_count_agg
+      expect(billable_metric.errors[:aggregation_type]).to be_blank
     end
 
     context "when aggregation type is invalid" do
@@ -47,10 +45,8 @@ RSpec.describe BillableMetric do
         billable_metric.aggregation_type = :invalid_agg
         billable_metric.valid?
 
-        aggregate_failures do
-          expect(billable_metric.aggregation_type).to be_nil
-          expect(billable_metric.errors[:aggregation_type]).to include("value_is_invalid")
-        end
+        expect(billable_metric.aggregation_type).to be_nil
+        expect(billable_metric.errors[:aggregation_type]).to include("value_is_invalid")
       end
     end
   end
@@ -67,10 +63,8 @@ RSpec.describe BillableMetric do
       let(:recurring) { true }
 
       it "returns an error for max_agg" do
-        aggregate_failures do
-          expect(billable_metric).not_to be_valid
-          expect(billable_metric.errors.messages[:recurring]).to include("not_compatible_with_aggregation_type")
-        end
+        expect(billable_metric).not_to be_valid
+        expect(billable_metric.errors.messages[:recurring]).to include("not_compatible_with_aggregation_type")
       end
     end
 
@@ -79,10 +73,8 @@ RSpec.describe BillableMetric do
       let(:recurring) { true }
 
       it "returns an error" do
-        aggregate_failures do
-          expect(billable_metric).not_to be_valid
-          expect(billable_metric.errors.messages[:recurring]).to include("not_compatible_with_aggregation_type")
-        end
+        expect(billable_metric).not_to be_valid
+        expect(billable_metric.errors.messages[:recurring]).to include("not_compatible_with_aggregation_type")
       end
     end
   end
@@ -107,10 +99,8 @@ RSpec.describe BillableMetric do
       let(:expression) { "1+" }
 
       it "returns an error for expression" do
-        aggregate_failures do
-          expect(billable_metric).not_to be_valid
-          expect(billable_metric.errors.messages[:expression]).to include("invalid_expression")
-        end
+        expect(billable_metric).not_to be_valid
+        expect(billable_metric.errors.messages[:expression]).to include("invalid_expression")
       end
     end
   end

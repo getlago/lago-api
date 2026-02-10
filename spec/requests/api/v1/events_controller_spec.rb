@@ -581,23 +581,21 @@ RSpec.describe Api::V1::EventsController do
     it "returns a success" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:fees].count).to eq(1)
+      expect(json[:fees].count).to eq(1)
 
-        fee = json[:fees].first
-        expect(fee[:lago_id]).to be_nil
-        expect(fee[:lago_group_id]).to be_nil
-        expect(fee[:item][:type]).to eq("charge")
-        expect(fee[:item][:code]).to eq(metric.code)
-        expect(fee[:item][:name]).to eq(metric.name)
-        expect(fee[:pay_in_advance]).to eq(true)
-        expect(fee[:amount_cents]).to be_an(Integer)
-        expect(fee[:amount_currency]).to eq("EUR")
-        expect(fee[:units]).to eq("1.0")
-        expect(fee[:events_count]).to eq(1)
-      end
+      fee = json[:fees].first
+      expect(fee[:lago_id]).to be_nil
+      expect(fee[:lago_group_id]).to be_nil
+      expect(fee[:item][:type]).to eq("charge")
+      expect(fee[:item][:code]).to eq(metric.code)
+      expect(fee[:item][:name]).to eq(metric.name)
+      expect(fee[:pay_in_advance]).to eq(true)
+      expect(fee[:amount_cents]).to be_an(Integer)
+      expect(fee[:amount_currency]).to eq("EUR")
+      expect(fee[:units]).to eq("1.0")
+      expect(fee[:events_count]).to eq(1)
     end
 
     context "with missing customer id" do

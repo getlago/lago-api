@@ -32,10 +32,8 @@ RSpec.describe Mutations::LoginUser do
 
     result_data = result["data"]["loginUser"]
 
-    aggregate_failures do
-      expect(result_data["token"]).to be_present
-      expect(result_data["user"]["id"]).to eq(user.id)
-    end
+    expect(result_data["token"]).to be_present
+    expect(result_data["user"]["id"]).to eq(user.id)
   end
 
   context "with bad credentials" do
@@ -50,11 +48,9 @@ RSpec.describe Mutations::LoginUser do
         }
       )
 
-      aggregate_failures do
-        expect_unprocessable_entity(result)
-        expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
-        expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
-      end
+      expect_unprocessable_entity(result)
+      expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
+      expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
     end
   end
 
@@ -72,11 +68,9 @@ RSpec.describe Mutations::LoginUser do
         }
       )
 
-      aggregate_failures do
-        expect_unprocessable_entity(result)
-        expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
-        expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
-      end
+      expect_unprocessable_entity(result)
+      expect(result["errors"].first.dig("extensions", "details").keys).to include("base")
+      expect(result["errors"].first.dig("extensions", "details", "base")).to include("incorrect_login_or_password")
     end
   end
 end

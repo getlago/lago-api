@@ -24,7 +24,7 @@ RSpec.describe UsageThresholds::OverrideService do
 
     before { threshold }
 
-    it "creates a threshold based on the given threshold", :aggregate_failures do
+    it "creates a threshold based on the given threshold" do
       expect { override_service.call }.to change(UsageThreshold, :count).by(1)
 
       threshold = UsageThreshold.order(:created_at).last

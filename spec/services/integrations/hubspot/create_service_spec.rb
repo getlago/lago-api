@@ -33,10 +33,8 @@ RSpec.describe Integrations::Hubspot::CreateService do
       it "returns an error" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
       end
     end
 
@@ -47,10 +45,8 @@ RSpec.describe Integrations::Hubspot::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         end
       end
 
@@ -96,11 +92,9 @@ RSpec.describe Integrations::Hubspot::CreateService do
           it "returns an error" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
           end
         end
       end

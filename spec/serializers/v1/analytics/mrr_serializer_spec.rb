@@ -16,10 +16,8 @@ RSpec.describe ::V1::Analytics::MrrSerializer do
   let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the gross revenue" do
-    aggregate_failures do
-      expect(result["mrr"]["month"]).to eq(Time.current.beginning_of_month.iso8601)
-      expect(result["mrr"]["amount_cents"]).to eq(100)
-      expect(result["mrr"]["currency"]).to eq("EUR")
-    end
+    expect(result["mrr"]["month"]).to eq(Time.current.beginning_of_month.iso8601)
+    expect(result["mrr"]["amount_cents"]).to eq(100)
+    expect(result["mrr"]["currency"]).to eq("EUR")
   end
 end

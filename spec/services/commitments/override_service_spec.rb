@@ -31,7 +31,7 @@ RSpec.describe Commitments::OverrideService do
     context "when lago premium" do
       around { |test| lago_premium!(&test) }
 
-      it "creates a commitment based on the given commitment", :aggregate_failures do
+      it "creates a commitment based on the given commitment" do
         expect { override_service.call }.to change(Commitment, :count).by(1)
 
         commitment = Commitment.order(:created_at).last

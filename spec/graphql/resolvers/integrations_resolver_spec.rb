@@ -63,13 +63,11 @@ RSpec.describe Resolvers::IntegrationsResolver do
 
       integrations_response = result["data"]["integrations"]
 
-      aggregate_failures do
-        expect(integrations_response["collection"].count).to eq(1)
-        expect(integrations_response["collection"].first["id"]).to eq(netsuite_integration.id)
+      expect(integrations_response["collection"].count).to eq(1)
+      expect(integrations_response["collection"].first["id"]).to eq(netsuite_integration.id)
 
-        expect(integrations_response["metadata"]["currentPage"]).to eq(1)
-        expect(integrations_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(integrations_response["metadata"]["currentPage"]).to eq(1)
+      expect(integrations_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

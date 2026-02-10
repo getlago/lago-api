@@ -46,11 +46,9 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
 
     response = result["data"]["googleRegisterUser"]
 
-    aggregate_failures do
-      expect(response["token"]).to eq("token")
-      expect(response["user"]["id"]).to be_present
-      expect(response["user"]["email"]).to be_present
-    end
+    expect(response["token"]).to eq("token")
+    expect(response["user"]["id"]).to be_present
+    expect(response["user"]["email"]).to be_present
   end
 
   context "when user already exists" do
@@ -76,10 +74,8 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["base"]).to include("user_already_exists")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["base"]).to include("user_already_exists")
     end
   end
 end

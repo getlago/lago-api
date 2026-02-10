@@ -27,10 +27,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       expect(response).to have_http_status(:success)
 
-      aggregate_failures do
-        expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
-        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
-      end
+      expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
+      expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
     end
   end
 
@@ -46,10 +44,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
     it "returns all webhook endpoints from organization" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:ok)
-        expect(json[:meta][:total_count]).to eq(3)
-      end
+      expect(response).to have_http_status(:ok)
+      expect(json[:meta][:total_count]).to eq(3)
     end
   end
 
@@ -67,10 +63,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       it "returns the customer" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:ok)
-          expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
-        end
+        expect(response).to have_http_status(:ok)
+        expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
       end
     end
 
@@ -102,12 +96,10 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       it "returns deleted webhook_endpoint" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
-          expect(json[:webhook_endpoint][:webhook_url]).to eq(webhook_endpoint.webhook_url)
-        end
+        expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+        expect(json[:webhook_endpoint][:webhook_url]).to eq(webhook_endpoint.webhook_url)
       end
     end
 
@@ -149,12 +141,10 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       it "updates a webhook endpoint" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:success)
 
-          expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
-          expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
-        end
+        expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
       end
     end
 

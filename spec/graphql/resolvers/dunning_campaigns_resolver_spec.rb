@@ -25,7 +25,7 @@ RSpec.describe Resolvers::DunningCampaignsResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "dunning_campaigns:view"
 
-  it "returns a list of dunning campaigns", :aggregate_failures do
+  it "returns a list of dunning campaigns" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

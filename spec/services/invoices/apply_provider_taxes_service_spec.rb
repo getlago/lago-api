@@ -100,42 +100,40 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
           it "creates applied taxes" do
             result = apply_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              applied_taxes = result.applied_taxes
-              expect(applied_taxes.count).to eq(2)
+            applied_taxes = result.applied_taxes
+            expect(applied_taxes.count).to eq(2)
 
-              expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
-                invoice:,
-                tax_description: "type1",
-                tax_code: "tax_1",
-                tax_name: "tax 1",
-                tax_rate: 10,
-                amount_currency: invoice.currency,
-                amount_cents: 300,
-                fees_amount_cents: 3000,
-                taxable_base_amount_cents: 3000
-              )
+            expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
+              invoice:,
+              tax_description: "type1",
+              tax_code: "tax_1",
+              tax_name: "tax 1",
+              tax_rate: 10,
+              amount_currency: invoice.currency,
+              amount_cents: 300,
+              fees_amount_cents: 3000,
+              taxable_base_amount_cents: 3000
+            )
 
-              expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
-                invoice:,
-                tax_description: "type2",
-                tax_code: "tax_2",
-                tax_name: "tax 2",
-                tax_rate: 12,
-                amount_currency: invoice.currency,
-                amount_cents: 240,
-                fees_amount_cents: 2000,
-                taxable_base_amount_cents: 2000
-              )
+            expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
+              invoice:,
+              tax_description: "type2",
+              tax_code: "tax_2",
+              tax_name: "tax 2",
+              tax_rate: 12,
+              amount_currency: invoice.currency,
+              amount_cents: 240,
+              fees_amount_cents: 2000,
+              taxable_base_amount_cents: 2000
+            )
 
-              expect(invoice).to have_attributes(
-                taxes_amount_cents: 540,
-                taxes_rate: 18,
-                fees_amount_cents: 3000
-              )
-            end
+            expect(invoice).to have_attributes(
+              taxes_amount_cents: 540,
+              taxes_rate: 18,
+              fees_amount_cents: 3000
+            )
           end
 
           context "when there is tax deduction" do
@@ -182,42 +180,40 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
             it "creates applied taxes" do
               result = apply_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
+              expect(result).to be_success
 
-                applied_taxes = result.applied_taxes
-                expect(applied_taxes.count).to eq(2)
+              applied_taxes = result.applied_taxes
+              expect(applied_taxes.count).to eq(2)
 
-                expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
-                  invoice:,
-                  tax_description: "type1",
-                  tax_code: "tax_1",
-                  tax_name: "tax 1",
-                  tax_rate: 10,
-                  amount_currency: invoice.currency,
-                  amount_cents: 240,
-                  fees_amount_cents: 3000,
-                  taxable_base_amount_cents: 2400
-                )
+              expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
+                invoice:,
+                tax_description: "type1",
+                tax_code: "tax_1",
+                tax_name: "tax 1",
+                tax_rate: 10,
+                amount_currency: invoice.currency,
+                amount_cents: 240,
+                fees_amount_cents: 3000,
+                taxable_base_amount_cents: 2400
+              )
 
-                expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
-                  invoice:,
-                  tax_description: "type2",
-                  tax_code: "tax_2",
-                  tax_name: "tax 2",
-                  tax_rate: 12,
-                  amount_currency: invoice.currency,
-                  amount_cents: 192,
-                  fees_amount_cents: 2000,
-                  taxable_base_amount_cents: 1600
-                )
+              expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
+                invoice:,
+                tax_description: "type2",
+                tax_code: "tax_2",
+                tax_name: "tax 2",
+                tax_rate: 12,
+                amount_currency: invoice.currency,
+                amount_cents: 192,
+                fees_amount_cents: 2000,
+                taxable_base_amount_cents: 1600
+              )
 
-                expect(invoice).to have_attributes(
-                  taxes_amount_cents: 432,
-                  taxes_rate: 18,
-                  fees_amount_cents: 3000
-                )
-              end
+              expect(invoice).to have_attributes(
+                taxes_amount_cents: 432,
+                taxes_rate: 18,
+                fees_amount_cents: 3000
+              )
             end
           end
         end
@@ -268,17 +264,15 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
               it "creates applied taxes with #{applied_rule[:expected_name]} params" do
                 result = apply_service.call
 
-                aggregate_failures do
-                  expect(result).to be_success
+                expect(result).to be_success
 
-                  applied_taxes = result.applied_taxes
-                  expect(applied_taxes.count).to eq(1)
-                  applied_taxes.each do |applied_tax|
-                    expect(applied_tax.tax_description).to eq(applied_rule[:received_type])
-                    expect(applied_tax.tax_code).to eq(applied_rule[:tax_code])
-                    expect(applied_tax.tax_name).to eq(applied_rule[:expected_name])
-                    expect(applied_tax.tax_rate).to eq(0.0)
-                  end
+                applied_taxes = result.applied_taxes
+                expect(applied_taxes.count).to eq(1)
+                applied_taxes.each do |applied_tax|
+                  expect(applied_tax.tax_description).to eq(applied_rule[:received_type])
+                  expect(applied_tax.tax_code).to eq(applied_rule[:tax_code])
+                  expect(applied_tax.tax_name).to eq(applied_rule[:expected_name])
+                  expect(applied_tax.tax_rate).to eq(0.0)
                 end
               end
             end
@@ -315,22 +309,20 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
           it "does creates zero-tax" do
             result = apply_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              applied_taxes = result.applied_taxes
-              expect(applied_taxes.count).to eq(1)
-              expect(applied_taxes.find { |item| item.tax_code == "tax" }).to have_attributes(
-                invoice:,
-                tax_description: "tax",
-                tax_code: "tax",
-                tax_name: "Tax",
-                tax_rate: 0,
-                amount_currency: invoice.currency,
-                amount_cents: 0,
-                fees_amount_cents: 3000
-              )
-            end
+            applied_taxes = result.applied_taxes
+            expect(applied_taxes.count).to eq(1)
+            expect(applied_taxes.find { |item| item.tax_code == "tax" }).to have_attributes(
+              invoice:,
+              tax_description: "tax",
+              tax_code: "tax",
+              tax_name: "Tax",
+              tax_rate: 0,
+              amount_currency: invoice.currency,
+              amount_cents: 0,
+              fees_amount_cents: 3000
+            )
           end
         end
       end
@@ -394,41 +386,39 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
         it "creates applied taxes" do
           result = apply_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            applied_taxes = result.applied_taxes
-            expect(applied_taxes.count).to eq(2)
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(2)
 
-            expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
-              invoice:,
-              tax_description: "type1",
-              tax_code: "tax_1",
-              tax_name: "tax 1",
-              tax_rate: 10,
-              amount_currency: invoice.currency,
-              amount_cents: 300,
-              fees_amount_cents: 3000
-            )
+          expect(applied_taxes.find { |item| item.tax_code == "tax_1" }).to have_attributes(
+            invoice:,
+            tax_description: "type1",
+            tax_code: "tax_1",
+            tax_name: "tax 1",
+            tax_rate: 10,
+            amount_currency: invoice.currency,
+            amount_cents: 300,
+            fees_amount_cents: 3000
+          )
 
-            expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
-              invoice:,
-              tax_description: "type2",
-              tax_code: "tax_2",
-              tax_name: "tax 2",
-              tax_rate: 12,
-              amount_currency: invoice.currency,
-              amount_cents: 240,
-              fees_amount_cents: 2000
-            )
+          expect(applied_taxes.find { |item| item.tax_code == "tax_2" }).to have_attributes(
+            invoice:,
+            tax_description: "type2",
+            tax_code: "tax_2",
+            tax_name: "tax 2",
+            tax_rate: 12,
+            amount_currency: invoice.currency,
+            amount_cents: 240,
+            fees_amount_cents: 2000
+          )
 
-            expect(invoice).to have_attributes(
-              taxes_amount_cents: 540,
-              taxes_rate: 18,
-              fees_amount_cents: 3000
-            )
-            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
-          end
+          expect(invoice).to have_attributes(
+            taxes_amount_cents: 540,
+            taxes_rate: 18,
+            fees_amount_cents: 3000
+          )
+          expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call)
         end
       end
     end

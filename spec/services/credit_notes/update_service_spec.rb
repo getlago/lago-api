@@ -15,11 +15,9 @@ RSpec.describe CreditNotes::UpdateService do
   it "updates the credit note status" do
     result = credit_note_service.call
 
-    aggregate_failures do
-      expect(result).to be_success
-      expect(result.credit_note.refund_status).to eq("succeeded")
-      expect(result.credit_note.refunded_at).to be_present
-    end
+    expect(result).to be_success
+    expect(result.credit_note.refund_status).to eq("succeeded")
+    expect(result.credit_note.refunded_at).to be_present
   end
 
   it "call SegmentTrackJob" do
@@ -46,12 +44,10 @@ RSpec.describe CreditNotes::UpdateService do
     it "returns an error" do
       result = credit_note_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:refund_status)
-        expect(result.error.messages[:refund_status]).to include("value_is_invalid")
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages.keys).to include(:refund_status)
+      expect(result.error.messages[:refund_status]).to include("value_is_invalid")
     end
   end
 
@@ -61,11 +57,9 @@ RSpec.describe CreditNotes::UpdateService do
     it "returns a failure" do
       result = credit_note_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq("credit_note_not_found")
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.message).to eq("credit_note_not_found")
     end
   end
 

@@ -144,11 +144,9 @@ RSpec.describe DunningCampaigns::CreateService do
           it "returns an error" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:thresholds]).to eq(["can't be blank"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:thresholds]).to eq(["can't be blank"])
           end
         end
       end

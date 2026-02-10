@@ -39,8 +39,6 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice do
   it_behaves_like "requires permission", "organization:integrations:update"
 
   it "sends resync invoice webhook" do
-    aggregate_failures do
-      expect(SendWebhookJob).to have_received(:perform_later).with("invoice.resynced", invoice)
-    end
+    expect(SendWebhookJob).to have_received(:perform_later).with("invoice.resynced", invoice)
   end
 end

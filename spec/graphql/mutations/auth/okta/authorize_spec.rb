@@ -28,9 +28,7 @@ RSpec.describe Mutations::Auth::Okta::Authorize do
 
     response = result["data"]["oktaAuthorize"]
 
-    aggregate_failures do
-      expect(response["url"]).to include(okta_integration.organization_name.downcase)
-    end
+    expect(response["url"]).to include(okta_integration.organization_name.downcase)
   end
 
   context "when email domain is not configured with an integration" do
@@ -46,10 +44,8 @@ RSpec.describe Mutations::Auth::Okta::Authorize do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["base"]).to include("domain_not_configured")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["base"]).to include("domain_not_configured")
     end
   end
 
@@ -69,9 +65,7 @@ RSpec.describe Mutations::Auth::Okta::Authorize do
 
       response = result["data"]["oktaAuthorize"]
 
-      aggregate_failures do
-        expect(response["url"]).to include(okta_integration.organization_name.downcase)
-      end
+      expect(response["url"]).to include(okta_integration.organization_name.downcase)
     end
   end
 end

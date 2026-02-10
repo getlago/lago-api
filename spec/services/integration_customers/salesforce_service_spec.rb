@@ -14,12 +14,10 @@ RSpec.describe IntegrationCustomers::SalesforceService do
     it "returns integration customer" do
       result = service_call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.integration_customer.integration_id).to eq(integration.id)
-        expect(result.integration_customer.customer_id).to eq(customer.id)
-        expect(result.integration_customer.type).to eq("IntegrationCustomers::SalesforceCustomer")
-      end
+      expect(result).to be_success
+      expect(result.integration_customer.integration_id).to eq(integration.id)
+      expect(result.integration_customer.customer_id).to eq(customer.id)
+      expect(result.integration_customer.type).to eq("IntegrationCustomers::SalesforceCustomer")
     end
 
     it "creates integration customer" do

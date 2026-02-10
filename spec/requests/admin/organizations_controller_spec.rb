@@ -21,15 +21,13 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
       expect(response).to have_http_status(:success)
 
-      aggregate_failures do
-        expect(json[:organization][:name]).to eq("FooBar")
-        expect(json[:organization][:premium_integrations]).to include("okta")
+      expect(json[:organization][:name]).to eq("FooBar")
+      expect(json[:organization][:premium_integrations]).to include("okta")
 
-        organization.reload
+      organization.reload
 
-        expect(organization.name).to eq("FooBar")
-        expect(organization.premium_integrations).to include("okta")
-      end
+      expect(organization.name).to eq("FooBar")
+      expect(organization.premium_integrations).to include("okta")
     end
   end
 

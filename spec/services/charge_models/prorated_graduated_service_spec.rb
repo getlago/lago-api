@@ -68,7 +68,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     allow(aggregator).to receive(:per_event_aggregation).and_return(per_event_aggregation)
   end
 
-  it "returns expected amount", :aggregate_failures do
+  it "returns expected amount" do
     expect(apply_graduated_service.amount.round(2)).to eq(197.33)
     expect(apply_graduated_service.unit_amount.round(2)).to eq(14.10) # 197.33 / 14
     expect(apply_graduated_service.amount_details).to eq({})
@@ -89,7 +89,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = 11
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.round(2)).to eq(184.33)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(16.76) # 184.33 / 11
       expect(apply_graduated_service.amount_details).to eq({})
@@ -111,7 +111,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = 0
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.round(2)).to eq(165.81)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq({})
@@ -133,7 +133,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = 3
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.round(2)).to eq(125)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(41.67)
       expect(apply_graduated_service.amount_details).to eq({})
@@ -154,7 +154,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
         aggregation_result.current_usage_units = 3
       end
 
-      it "returns expected amount", :aggregate_failures do
+      it "returns expected amount" do
         expect(apply_graduated_service.amount.round(2)).to eq(180.5)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(60.17)
         expect(apply_graduated_service.amount_details).to eq({})
@@ -176,7 +176,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
         aggregation_result.current_usage_units = 13
       end
 
-      it "returns expected amount", :aggregate_failures do
+      it "returns expected amount" do
         expect(apply_graduated_service.amount.round(2)).to eq(190)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(14.62)
         expect(apply_graduated_service.amount_details).to eq({})
@@ -199,7 +199,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = -95
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.round(2)).to eq(0)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq({})
@@ -220,7 +220,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
         aggregation_result.current_usage_units = -96
       end
 
-      it "returns expected amount", :aggregate_failures do
+      it "returns expected amount" do
         expect(apply_graduated_service.amount.round(2)).to eq(0)
         expect(apply_graduated_service.unit_amount).to eq(0)
         expect(apply_graduated_service.amount_details).to eq({})
@@ -243,7 +243,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = 1
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.round(2)).to eq(107)
       expect(apply_graduated_service.unit_amount).to eq(107)
       expect(apply_graduated_service.amount_details).to eq({})
@@ -322,7 +322,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
       aggregation_result.current_usage_units = 75
     end
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount.ceil(2)).to eq(191.34)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(2.55)
       expect(apply_graduated_service.amount_details).to eq({})
@@ -347,7 +347,7 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
         expect(apply_graduated_service.amount.round(2)).to eq(370)
       end
 
-      it "returns expected amount", :aggregate_failures do
+      it "returns expected amount" do
         expect(apply_graduated_service.amount.ceil(2)).to eq(370)
         expect(apply_graduated_service.unit_amount.round(2)).to eq(4.93)
         expect(apply_graduated_service.amount_details).to eq({})

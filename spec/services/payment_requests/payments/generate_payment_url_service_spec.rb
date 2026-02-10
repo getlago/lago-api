@@ -30,7 +30,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     context "when payment provider is blank" do
       let(:provider) { nil }
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         result = generate_payment_url_service.call
 
         expect(result).not_to be_success
@@ -42,7 +42,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     context "when payment provider is gocardless" do
       let(:provider) { "gocardless" }
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         result = generate_payment_url_service.call
 
         expect(result).not_to be_success
@@ -54,7 +54,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     context "when payment request's payment status is invalid" do
       before { payment_request.payment_succeeded! }
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         result = generate_payment_url_service.call
 
         expect(result).not_to be_success
@@ -71,11 +71,9 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     it "returns an error" do
       result = generate_payment_url_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:base]).to eq(["missing_payment_provider"])
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:base]).to eq(["missing_payment_provider"])
     end
   end
 
@@ -87,11 +85,9 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     it "returns an error" do
       result = generate_payment_url_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:base]).to eq(["missing_payment_provider_customer"])
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:base]).to eq(["missing_payment_provider_customer"])
     end
   end
 

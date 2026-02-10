@@ -20,12 +20,10 @@ RSpec.describe PaymentProviders::FindService do
         let(:code) { nil }
 
         it "returns an error" do
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("payment_provider_not_found")
-            expect(result.error.error_message).to eq("Payment provider not found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("payment_provider_not_found")
+          expect(result.error.error_message).to eq("Payment provider not found")
         end
       end
 
@@ -34,12 +32,10 @@ RSpec.describe PaymentProviders::FindService do
           let(:code) { "not_a_code" }
 
           it "returns an error" do
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq("payment_provider_not_found")
-              expect(result.error.error_message).to eq("Payment provider not found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq("payment_provider_not_found")
+            expect(result.error.error_message).to eq("Payment provider not found")
           end
         end
 
@@ -47,12 +43,10 @@ RSpec.describe PaymentProviders::FindService do
           let(:code) { payment_provider.code }
 
           it "returns an error" do
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq("payment_provider_not_found")
-              expect(result.error.error_message).to eq("Payment provider not found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ServiceFailure)
+            expect(result.error.code).to eq("payment_provider_not_found")
+            expect(result.error.error_message).to eq("Payment provider not found")
           end
         end
       end
@@ -67,10 +61,8 @@ RSpec.describe PaymentProviders::FindService do
         context "when id is blank" do
           context "when organization has only one provider" do
             it "returns a successful result" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
 
@@ -78,12 +70,10 @@ RSpec.describe PaymentProviders::FindService do
             before { create(:adyen_provider, organization:) }
 
             it "returns an error" do
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::ServiceFailure)
-                expect(result.error.code).to eq("payment_provider_code_missing")
-                expect(result.error.error_message).to eq("Payment provider code is missing")
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ServiceFailure)
+              expect(result.error.code).to eq("payment_provider_code_missing")
+              expect(result.error.error_message).to eq("Payment provider code is missing")
             end
           end
         end
@@ -93,10 +83,8 @@ RSpec.describe PaymentProviders::FindService do
 
           context "when organization has only one provider" do
             it "returns a successful result" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
 
@@ -104,10 +92,8 @@ RSpec.describe PaymentProviders::FindService do
             before { create(:adyen_provider, organization:) }
 
             it "returns a successful result" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
         end
@@ -119,12 +105,10 @@ RSpec.describe PaymentProviders::FindService do
             let(:code) { "not_a_code" }
 
             it "returns an error" do
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::ServiceFailure)
-                expect(result.error.code).to eq("payment_provider_not_found")
-                expect(result.error.error_message).to eq("Payment provider not found")
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ServiceFailure)
+              expect(result.error.code).to eq("payment_provider_not_found")
+              expect(result.error.error_message).to eq("Payment provider not found")
             end
           end
 
@@ -132,10 +116,8 @@ RSpec.describe PaymentProviders::FindService do
             let(:code) { payment_provider.code }
 
             it "returns a successful result" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
         end
@@ -147,10 +129,8 @@ RSpec.describe PaymentProviders::FindService do
             let(:code) { "not_a_code" }
 
             it "returns a successful result" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
 
@@ -159,10 +139,8 @@ RSpec.describe PaymentProviders::FindService do
             let(:another_payment_provider) { create(:adyen_provider, organization:) }
 
             it "returns a successful result containing payment provider by id" do
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.payment_provider).to eq(payment_provider)
-              end
+              expect(result).to be_success
+              expect(result.payment_provider).to eq(payment_provider)
             end
           end
         end

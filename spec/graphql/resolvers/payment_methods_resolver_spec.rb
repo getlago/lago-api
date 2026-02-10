@@ -38,7 +38,7 @@ RSpec.describe Resolvers::PaymentMethodsResolver do
       GQL
     end
 
-    it "returns a list of payment methods", :aggregate_failures do
+    it "returns a list of payment methods" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,

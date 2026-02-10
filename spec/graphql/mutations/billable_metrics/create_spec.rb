@@ -52,15 +52,13 @@ RSpec.describe Mutations::BillableMetrics::Create do
 
     result_data = result["data"]["createBillableMetric"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("New Metric")
-      expect(result_data["code"]).to eq("new_metric")
-      expect(result_data["organization"]["id"]).to eq(membership.organization_id)
-      expect(result_data["aggregationType"]).to eq("count_agg")
-      expect(result_data["recurring"]).to eq(false)
-      expect(result_data["weightedInterval"]).to be_nil
-      expect(result_data["filters"].count).to eq(1)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("New Metric")
+    expect(result_data["code"]).to eq("new_metric")
+    expect(result_data["organization"]["id"]).to eq(membership.organization_id)
+    expect(result_data["aggregationType"]).to eq("count_agg")
+    expect(result_data["recurring"]).to eq(false)
+    expect(result_data["weightedInterval"]).to be_nil
+    expect(result_data["filters"].count).to eq(1)
   end
 end

@@ -58,10 +58,8 @@ RSpec.describe Mutations::Integrations::Netsuite::Update do
 
     result_data = result["data"]["updateNetsuiteIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["scriptEndpointUrl"]).to eq(script_endpoint_url)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["scriptEndpointUrl"]).to eq(script_endpoint_url)
   end
 end

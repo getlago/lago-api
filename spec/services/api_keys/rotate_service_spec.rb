@@ -48,11 +48,9 @@ RSpec.describe ApiKeys::RotateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-              expect(service_result.error.code).to eq("cannot_rotate_with_provided_date")
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+            expect(service_result.error.code).to eq("cannot_rotate_with_provided_date")
           end
         end
       end
@@ -115,11 +113,9 @@ RSpec.describe ApiKeys::RotateService do
       end
 
       it "returns an error" do
-        aggregate_failures do
-          expect(service_result).not_to be_success
-          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(service_result.error.error_code).to eq("api_key_not_found")
-        end
+        expect(service_result).not_to be_success
+        expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+        expect(service_result.error.error_code).to eq("api_key_not_found")
       end
     end
   end

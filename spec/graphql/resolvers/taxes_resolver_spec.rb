@@ -29,17 +29,15 @@ RSpec.describe Resolvers::TaxesResolver do
 
     taxes_response = result["data"]["taxes"]
 
-    aggregate_failures do
-      expect(taxes_response["collection"].first).to include(
-        "id" => tax.id,
-        "name" => tax.name
-      )
+    expect(taxes_response["collection"].first).to include(
+      "id" => tax.id,
+      "name" => tax.name
+    )
 
-      expect(taxes_response["metadata"]).to include(
-        "currentPage" => 1,
-        "totalCount" => 1
-      )
-    end
+    expect(taxes_response["metadata"]).to include(
+      "currentPage" => 1,
+      "totalCount" => 1
+    )
   end
 
   context "without current organization" do

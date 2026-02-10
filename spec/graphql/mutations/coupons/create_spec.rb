@@ -62,20 +62,18 @@ RSpec.describe Mutations::Coupons::Create do
 
     result_data = result["data"]["createCoupon"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("Super Coupon")
-      expect(result_data["code"]).to eq("free-beer")
-      expect(result_data["description"]).to eq("This is a description")
-      expect(result_data["amountCents"]).to eq("5000")
-      expect(result_data["amountCurrency"]).to eq("EUR")
-      expect(result_data["expiration"]).to eq("time_limit")
-      expect(result_data["expirationAt"]).to eq expiration_at.iso8601
-      expect(result_data["status"]).to eq("active")
-      expect(result_data["reusable"]).to eq(false)
-      expect(result_data["limitedPlans"]).to eq(true)
-      expect(result_data["plans"].first["id"]).to eq(plan.id)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("Super Coupon")
+    expect(result_data["code"]).to eq("free-beer")
+    expect(result_data["description"]).to eq("This is a description")
+    expect(result_data["amountCents"]).to eq("5000")
+    expect(result_data["amountCurrency"]).to eq("EUR")
+    expect(result_data["expiration"]).to eq("time_limit")
+    expect(result_data["expirationAt"]).to eq expiration_at.iso8601
+    expect(result_data["status"]).to eq("active")
+    expect(result_data["reusable"]).to eq(false)
+    expect(result_data["limitedPlans"]).to eq(true)
+    expect(result_data["plans"].first["id"]).to eq(plan.id)
   end
 
   context "with billable metric limitations" do
@@ -127,19 +125,17 @@ RSpec.describe Mutations::Coupons::Create do
 
       result_data = result["data"]["createCoupon"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["name"]).to eq("Super Coupon")
-        expect(result_data["code"]).to eq("free-beer")
-        expect(result_data["amountCents"]).to eq("5000")
-        expect(result_data["amountCurrency"]).to eq("EUR")
-        expect(result_data["expiration"]).to eq("time_limit")
-        expect(result_data["expirationAt"]).to eq expiration_at.iso8601
-        expect(result_data["status"]).to eq("active")
-        expect(result_data["reusable"]).to eq(false)
-        expect(result_data["limitedBillableMetrics"]).to eq(true)
-        expect(result_data["billableMetrics"].first["id"]).to eq(billable_metric.id)
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["name"]).to eq("Super Coupon")
+      expect(result_data["code"]).to eq("free-beer")
+      expect(result_data["amountCents"]).to eq("5000")
+      expect(result_data["amountCurrency"]).to eq("EUR")
+      expect(result_data["expiration"]).to eq("time_limit")
+      expect(result_data["expirationAt"]).to eq expiration_at.iso8601
+      expect(result_data["status"]).to eq("active")
+      expect(result_data["reusable"]).to eq(false)
+      expect(result_data["limitedBillableMetrics"]).to eq(true)
+      expect(result_data["billableMetrics"].first["id"]).to eq(billable_metric.id)
     end
   end
 
@@ -166,16 +162,14 @@ RSpec.describe Mutations::Coupons::Create do
 
       result_data = result["data"]["createCoupon"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["name"]).to eq("Super Coupon")
-        expect(result_data["code"]).to eq("free-beer")
-        expect(result_data["amountCents"]).to eq("5000")
-        expect(result_data["amountCurrency"]).to eq("EUR")
-        expect(result_data["expiration"]).to eq("time_limit")
-        expect(result_data["expirationAt"]).to eq(expiration_at.iso8601)
-        expect(result_data["status"]).to eq("active")
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["name"]).to eq("Super Coupon")
+      expect(result_data["code"]).to eq("free-beer")
+      expect(result_data["amountCents"]).to eq("5000")
+      expect(result_data["amountCurrency"]).to eq("EUR")
+      expect(result_data["expiration"]).to eq("time_limit")
+      expect(result_data["expirationAt"]).to eq(expiration_at.iso8601)
+      expect(result_data["status"]).to eq("active")
     end
   end
 end

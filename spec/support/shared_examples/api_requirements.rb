@@ -41,10 +41,8 @@ RSpec.shared_examples "requires API permission" do |resource, mode|
         let(:modes) { ApiKey::MODES.excluding(mode) }
 
         it "returns 403 Forbidden" do
-          aggregate_failures do
-            expect(response).to have_http_status(:forbidden)
-            expect(json).to match hash_including(code: "#{mode}_action_not_allowed_for_#{resource}")
-          end
+          expect(response).to have_http_status(:forbidden)
+          expect(json).to match hash_including(code: "#{mode}_action_not_allowed_for_#{resource}")
         end
       end
     end

@@ -35,19 +35,17 @@ RSpec.describe ::V1::Customers::PastUsageSerializer do
   it "serializes the past usage" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["usage_period"]).to include(
-        "from_datetime" => "2023-08-17T00:00:00Z",
-        "to_datetime" => "2023-09-16T23:59:59Z",
-        "issuing_date" => invoice.issuing_date.iso8601,
-        "currency" => invoice.currency,
-        "amount_cents" => invoice.fees_amount_cents,
-        "total_amount_cents" => invoice.fees_amount_cents + invoice.fees.sum(:taxes_amount_cents),
-        "taxes_amount_cents" => invoice.fees.sum(:taxes_amount_cents),
-        "lago_invoice_id" => invoice.id
-      )
+    expect(result["usage_period"]).to include(
+      "from_datetime" => "2023-08-17T00:00:00Z",
+      "to_datetime" => "2023-09-16T23:59:59Z",
+      "issuing_date" => invoice.issuing_date.iso8601,
+      "currency" => invoice.currency,
+      "amount_cents" => invoice.fees_amount_cents,
+      "total_amount_cents" => invoice.fees_amount_cents + invoice.fees.sum(:taxes_amount_cents),
+      "taxes_amount_cents" => invoice.fees.sum(:taxes_amount_cents),
+      "lago_invoice_id" => invoice.id
+    )
 
-      expect(result["usage_period"]["charges_usage"].count).to eq(2)
-    end
+    expect(result["usage_period"]["charges_usage"].count).to eq(2)
   end
 end

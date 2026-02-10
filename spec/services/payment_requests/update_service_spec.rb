@@ -16,7 +16,7 @@ RSpec.describe PaymentRequests::UpdateService do
   let(:update_args) { {payment_status: "succeeded"} }
 
   describe "#call" do
-    it "updates the invoice", :aggregate_failures do
+    it "updates the invoice" do
       expect(result).to be_success
       expect(result.payable).to eq(payment_request)
       expect(result.payable).to be_payment_succeeded

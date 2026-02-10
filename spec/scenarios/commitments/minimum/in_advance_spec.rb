@@ -104,7 +104,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -122,7 +122,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
                 perform_all_enqueued_jobs
               end
 
-              it "creates an invoice with minimum commitment fee", :aggregate_failures do
+              it "creates an invoice with minimum commitment fee" do
                 expect(invoices.first.fees.commitment.count).to eq(0)
                 expect(invoices.second.fees.commitment.count).to eq(1)
                 expect(invoices.third.fees.commitment.count).to eq(1)
@@ -194,7 +194,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -265,7 +265,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -332,7 +332,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -403,7 +403,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -470,7 +470,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
           context "when minimum commitment amount is not reached" do
             let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-            it "creates an invoice with minimum commitment fee", :aggregate_failures do
+            it "creates an invoice with minimum commitment fee" do
               expect(invoice.fees.commitment.count).to eq(1)
               expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
             end
@@ -542,7 +542,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
             context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it "creates an invoice with minimum commitment fee", :aggregate_failures do
+              it "creates an invoice with minimum commitment fee" do
                 expect(invoice.fees.commitment.count).to eq(1)
                 expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -607,7 +607,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
             context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it "creates an invoice with minimum commitment fee", :aggregate_failures do
+              it "creates an invoice with minimum commitment fee" do
                 expect(invoice.fees.commitment.count).to eq(1)
                 expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -676,7 +676,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
             context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it "creates an invoice with minimum commitment fee", :aggregate_failures do
+              it "creates an invoice with minimum commitment fee" do
                 expect(invoice.fees.commitment.count).to eq(1)
                 expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
               end
@@ -741,7 +741,7 @@ describe "Billing Minimum Commitments In Advance Scenario" do
             context "when minimum commitment amount is not reached" do
               let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
-              it "creates an invoice with minimum commitment fee", :aggregate_failures do
+              it "creates an invoice with minimum commitment fee" do
                 expect(invoice.fees.commitment.count).to eq(1)
                 expect(invoice.fees.commitment.first.amount_cents).to eq(commitment_fee_amount_cents)
               end

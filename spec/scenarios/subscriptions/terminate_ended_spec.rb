@@ -49,12 +49,10 @@ describe "Subscriptions Termination Scenario" do
 
         invoice = subscription.invoices.first
 
-        aggregate_failures do
-          expect(subscription.reload).to be_terminated
-          expect(subscription.reload.invoices.count).to eq(1)
-          expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
-        end
+        expect(subscription.reload).to be_terminated
+        expect(subscription.reload.invoices.count).to eq(1)
+        expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
+        expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
       end
     end
   end
@@ -91,12 +89,10 @@ describe "Subscriptions Termination Scenario" do
 
         invoice = subscription.invoices.first
 
-        aggregate_failures do
-          expect(subscription.reload).to be_terminated
-          expect(subscription.reload.invoices.count).to eq(1)
-          expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
-        end
+        expect(subscription.reload).to be_terminated
+        expect(subscription.reload.invoices.count).to eq(1)
+        expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
+        expect(invoice.issuing_date.iso8601).to eq("2023-09-06")
       end
     end
   end
@@ -130,12 +126,10 @@ describe "Subscriptions Termination Scenario" do
 
         invoice = subscription.invoices.first
 
-        aggregate_failures do
-          expect(subscription.reload).to be_terminated
-          expect(subscription.reload.invoices.count).to eq(1)
-          expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
-          expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
-        end
+        expect(subscription.reload).to be_terminated
+        expect(subscription.reload.invoices.count).to eq(1)
+        expect(invoice.total_amount_cents).to eq(67) # 1000 / 30
+        expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
       end
     end
   end
@@ -169,12 +163,10 @@ describe "Subscriptions Termination Scenario" do
 
         invoice = subscription.invoices.first
 
-        aggregate_failures do
-          expect(subscription.reload).to be_terminated
-          expect(subscription.reload.invoices.count).to eq(1)
-          expect(invoice.total_amount_cents).to eq(1000)
-          expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
-        end
+        expect(subscription.reload).to be_terminated
+        expect(subscription.reload.invoices.count).to eq(1)
+        expect(invoice.total_amount_cents).to eq(1000)
+        expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
       end
     end
 
@@ -215,13 +207,11 @@ describe "Subscriptions Termination Scenario" do
 
           invoice = subscription.invoices.order(created_at: :desc).first
 
-          aggregate_failures do
-            expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(2)
-            expect(customer.credit_notes.count).to eq(0)
-            expect(invoice.total_amount_cents).to eq(0)
-            expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
-          end
+          expect(subscription.reload).to be_terminated
+          expect(subscription.reload.invoices.count).to eq(2)
+          expect(customer.credit_notes.count).to eq(0)
+          expect(invoice.total_amount_cents).to eq(0)
+          expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
         end
       end
     end
@@ -256,12 +246,10 @@ describe "Subscriptions Termination Scenario" do
 
           invoice = subscription.invoices.order(created_at: :desc).first
 
-          aggregate_failures do
-            expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(33)
-            expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
-          end
+          expect(subscription.reload).to be_terminated
+          expect(subscription.reload.invoices.count).to eq(1)
+          expect(invoice.total_amount_cents).to eq(33)
+          expect(invoice.issuing_date.iso8601).to eq("2023-09-05")
         end
       end
     end
@@ -295,12 +283,10 @@ describe "Subscriptions Termination Scenario" do
 
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq("2023-10-04")
-          end
+          expect(subscription.reload).to be_terminated
+          expect(subscription.reload.invoices.count).to eq(1)
+          expect(invoice.total_amount_cents).to eq(1000)
+          expect(invoice.issuing_date.iso8601).to eq("2023-10-04")
         end
       end
     end
@@ -334,12 +320,10 @@ describe "Subscriptions Termination Scenario" do
 
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
-          end
+          expect(subscription.reload).to be_terminated
+          expect(subscription.reload.invoices.count).to eq(1)
+          expect(invoice.total_amount_cents).to eq(1000)
+          expect(invoice.issuing_date.iso8601).to eq("2023-10-05")
         end
       end
     end
@@ -375,12 +359,10 @@ describe "Subscriptions Termination Scenario" do
 
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(subscription.reload).to be_terminated
-            expect(subscription.reload.invoices.count).to eq(1)
-            expect(invoice.total_amount_cents).to eq(1000)
-            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
-          end
+          expect(subscription.reload).to be_terminated
+          expect(subscription.reload.invoices.count).to eq(1)
+          expect(invoice.total_amount_cents).to eq(1000)
+          expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
         end
       end
 
@@ -425,13 +407,11 @@ describe "Subscriptions Termination Scenario" do
 
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(3)
-              expect(customer.credit_notes.count).to eq(0)
-              expect(invoice.total_amount_cents).to eq(0)
-              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(3)
+            expect(customer.credit_notes.count).to eq(0)
+            expect(invoice.total_amount_cents).to eq(0)
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
         end
       end
@@ -462,10 +442,8 @@ describe "Subscriptions Termination Scenario" do
           travel_to(ending_at + 5.minutes) do
             perform_billing
 
-            aggregate_failures do
-              expect(subscription.reload).to be_active
-              expect(subscription.reload.invoices.count).to eq(0)
-            end
+            expect(subscription.reload).to be_active
+            expect(subscription.reload.invoices.count).to eq(0)
           end
 
           travel_to(ending_at + 15.minutes) do
@@ -475,12 +453,10 @@ describe "Subscriptions Termination Scenario" do
 
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(1000)
-              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
         end
       end
@@ -513,12 +489,10 @@ describe "Subscriptions Termination Scenario" do
 
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_active
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(1000)
-              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
-            end
+            expect(subscription.reload).to be_active
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(1000)
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
 
           travel_to(ending_at + 15.minutes) do
@@ -528,12 +502,10 @@ describe "Subscriptions Termination Scenario" do
 
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(2)
-              expect(invoice.total_amount_cents).to eq(32)
-              expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(2)
+            expect(invoice.total_amount_cents).to eq(32)
+            expect(invoice.issuing_date.iso8601).to eq("2023-10-01")
           end
         end
       end

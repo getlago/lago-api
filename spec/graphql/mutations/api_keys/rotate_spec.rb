@@ -45,13 +45,11 @@ RSpec.describe Mutations::ApiKeys::Rotate do
       api_key_response = result["data"]["rotateApiKey"]
       new_api_key = membership.organization.api_keys.order(:created_at).last
 
-      aggregate_failures do
-        expect(api_key_response["id"]).to eq(new_api_key.id)
-        expect(api_key_response["value"]).to eq(new_api_key.value)
-        expect(api_key_response["name"]).to eq(name)
-        expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
-        expect(api_key_response["expiresAt"]).to be_nil
-      end
+      expect(api_key_response["id"]).to eq(new_api_key.id)
+      expect(api_key_response["value"]).to eq(new_api_key.value)
+      expect(api_key_response["name"]).to eq(name)
+      expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
+      expect(api_key_response["expiresAt"]).to be_nil
     end
   end
 

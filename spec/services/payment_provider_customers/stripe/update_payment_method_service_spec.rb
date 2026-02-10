@@ -12,7 +12,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
   let(:payment_method_id) { "pm_123456" }
 
   describe "#call" do
-    it "updates the customer payment method", aggregate_failures: true do
+    it "updates the customer payment method" do
       result = update_service.call
 
       expect(result).to be_success

@@ -42,7 +42,7 @@ RSpec.describe Resolvers::PaymentsResolver do
       GQL
     end
 
-    it "returns a list of payments", :aggregate_failures do
+    it "returns a list of payments" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -86,7 +86,7 @@ RSpec.describe Resolvers::PaymentsResolver do
       GQL
     end
 
-    it "returns a list of payments", :aggregate_failures do
+    it "returns a list of payments" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,

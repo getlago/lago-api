@@ -82,10 +82,8 @@ RSpec.describe Coupon do
     it "terminates the coupon" do
       coupon.mark_as_terminated!
 
-      aggregate_failures do
-        expect(coupon).to be_terminated
-        expect(coupon.terminated_at).to be_present
-      end
+      expect(coupon).to be_terminated
+      expect(coupon.terminated_at).to be_present
     end
   end
 end

@@ -19,11 +19,9 @@ RSpec.describe AppliedCoupons::RecreditService do
       it "returns a not_found failure" do
         result = recredit_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("applied_coupon")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("applied_coupon")
       end
     end
 

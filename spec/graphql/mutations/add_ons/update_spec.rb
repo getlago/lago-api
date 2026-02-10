@@ -52,14 +52,12 @@ RSpec.describe Mutations::AddOns::Update do
 
     result_data = result["data"]["updateAddOn"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq("New name")
-      expect(result_data["invoiceDisplayName"]).to eq("New invoice name")
-      expect(result_data["code"]).to eq("new_code")
-      expect(result_data["description"]).to eq("desc")
-      expect(result_data["amountCents"]).to eq("123")
-      expect(result_data["amountCurrency"]).to eq("USD")
-      expect(result_data["taxes"].map { |t| t["code"] }).to contain_exactly(tax2.code)
-    end
+    expect(result_data["name"]).to eq("New name")
+    expect(result_data["invoiceDisplayName"]).to eq("New invoice name")
+    expect(result_data["code"]).to eq("new_code")
+    expect(result_data["description"]).to eq("desc")
+    expect(result_data["amountCents"]).to eq("123")
+    expect(result_data["amountCurrency"]).to eq("USD")
+    expect(result_data["taxes"].map { |t| t["code"] }).to contain_exactly(tax2.code)
   end
 end

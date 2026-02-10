@@ -76,10 +76,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         it "returns contact id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.contact_id).to eq("1")
-          end
+          expect(result).to be_success
+          expect(result.contact_id).to eq("1")
         end
 
         it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
@@ -121,10 +119,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         it "returns contact id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
-          end
+          expect(result).to be_success
+          expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
         end
 
         it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
@@ -182,12 +178,10 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq("action_script_runtime_error")
-            expect(result.error.message)
-              .to eq("action_script_runtime_error: submitFields: Missing a required argument: type")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("action_script_runtime_error")
+          expect(result.error.message)
+            .to eq("action_script_runtime_error: submitFields: Missing a required argument: type")
         end
 
         it "delivers an error webhook" do
@@ -220,11 +214,9 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do
@@ -257,11 +249,9 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do

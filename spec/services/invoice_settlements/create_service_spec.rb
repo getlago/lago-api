@@ -45,17 +45,15 @@ RSpec.describe InvoiceSettlements::CreateService do
         expect(result).to be_success
         settlement = result.invoice_settlement
 
-        aggregate_failures do
-          expect(settlement.organization_id).to eq(organization.id)
-          expect(settlement.billing_entity_id).to eq(invoice.billing_entity_id)
-          expect(settlement.target_invoice).to eq(invoice)
-          expect(settlement.source_credit_note).to eq(credit_note)
-          expect(settlement.source_payment).to be_nil
-          expect(settlement.settlement_type).to eq("credit_note")
-          expect(settlement.amount_cents).to eq(500)
-          expect(settlement.amount_currency).to eq("EUR")
-          expect(invoice.reload.payment_status).not_to eq("succeeded")
-        end
+        expect(settlement.organization_id).to eq(organization.id)
+        expect(settlement.billing_entity_id).to eq(invoice.billing_entity_id)
+        expect(settlement.target_invoice).to eq(invoice)
+        expect(settlement.source_credit_note).to eq(credit_note)
+        expect(settlement.source_payment).to be_nil
+        expect(settlement.settlement_type).to eq("credit_note")
+        expect(settlement.amount_cents).to eq(500)
+        expect(settlement.amount_currency).to eq("EUR")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
       end
 
       it "marks invoice as paid when fully settled by single offset" do
@@ -125,15 +123,13 @@ RSpec.describe InvoiceSettlements::CreateService do
         expect(result).to be_success
         settlement = result.invoice_settlement
 
-        aggregate_failures do
-          expect(settlement.organization_id).to eq(organization.id)
-          expect(settlement.target_invoice).to eq(invoice)
-          expect(settlement.source_payment).to eq(payment)
-          expect(settlement.source_credit_note).to be_nil
-          expect(settlement.settlement_type).to eq("payment")
-          expect(settlement.amount_cents).to eq(500)
-          expect(settlement.amount_currency).to eq("EUR")
-        end
+        expect(settlement.organization_id).to eq(organization.id)
+        expect(settlement.target_invoice).to eq(invoice)
+        expect(settlement.source_payment).to eq(payment)
+        expect(settlement.source_credit_note).to be_nil
+        expect(settlement.settlement_type).to eq("payment")
+        expect(settlement.amount_cents).to eq(500)
+        expect(settlement.amount_currency).to eq("EUR")
       end
     end
 

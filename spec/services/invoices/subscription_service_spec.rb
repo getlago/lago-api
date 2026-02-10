@@ -74,33 +74,31 @@ RSpec.describe Invoices::SubscriptionService do
     it "creates an invoice" do
       result = invoice_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice.invoice_subscriptions.first.to_datetime)
-          .to match_datetime((timestamp - 1.day).end_of_day)
-        expect(result.invoice.invoice_subscriptions.first.from_datetime)
-          .to match_datetime((timestamp - 1.month).beginning_of_day)
+      expect(result.invoice.invoice_subscriptions.first.to_datetime)
+        .to match_datetime((timestamp - 1.day).end_of_day)
+      expect(result.invoice.invoice_subscriptions.first.from_datetime)
+        .to match_datetime((timestamp - 1.month).beginning_of_day)
 
-        expect(result.invoice.subscriptions.first).to eq(subscription)
-        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-        expect(result.invoice.invoice_type).to eq("subscription")
-        expect(result.invoice.payment_status).to eq("pending")
-        expect(result.invoice.fees.subscription.count).to eq(1)
-        expect(result.invoice.fees.charge.count).to eq(0)
+      expect(result.invoice.subscriptions.first).to eq(subscription)
+      expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+      expect(result.invoice.invoice_type).to eq("subscription")
+      expect(result.invoice.payment_status).to eq("pending")
+      expect(result.invoice.fees.subscription.count).to eq(1)
+      expect(result.invoice.fees.charge.count).to eq(0)
 
-        expect(result.invoice.currency).to eq("EUR")
-        expect(result.invoice.fees_amount_cents).to eq(100)
+      expect(result.invoice.currency).to eq("EUR")
+      expect(result.invoice.fees_amount_cents).to eq(100)
 
-        expect(result.invoice.taxes_amount_cents).to eq(20)
-        expect(result.invoice.taxes_rate).to eq(20)
-        expect(result.invoice.applied_taxes.count).to eq(1)
+      expect(result.invoice.taxes_amount_cents).to eq(20)
+      expect(result.invoice.taxes_rate).to eq(20)
+      expect(result.invoice.applied_taxes.count).to eq(1)
 
-        expect(result.invoice.total_amount_cents).to eq(120)
-        expect(result.invoice.version_number).to eq(4)
-        expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
-        expect(result.invoice).to be_finalized
-      end
+      expect(result.invoice.total_amount_cents).to eq(120)
+      expect(result.invoice.version_number).to eq(4)
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      expect(result.invoice).to be_finalized
     end
 
     it_behaves_like "syncs invoice" do
@@ -148,26 +146,24 @@ RSpec.describe Invoices::SubscriptionService do
       it "creates an invoice with pending status and without applied taxes" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.invoice.subscriptions.first).to eq(subscription)
-          expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-          expect(result.invoice.invoice_type).to eq("subscription")
-          expect(result.invoice.payment_status).to eq("pending")
-          expect(result.invoice.fees.subscription.count).to eq(1)
-          expect(result.invoice.fees.charge.count).to eq(0)
+        expect(result.invoice.subscriptions.first).to eq(subscription)
+        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+        expect(result.invoice.invoice_type).to eq("subscription")
+        expect(result.invoice.payment_status).to eq("pending")
+        expect(result.invoice.fees.subscription.count).to eq(1)
+        expect(result.invoice.fees.charge.count).to eq(0)
 
-          expect(result.invoice.currency).to eq("EUR")
-          expect(result.invoice.fees_amount_cents).to eq(100)
+        expect(result.invoice.currency).to eq("EUR")
+        expect(result.invoice.fees_amount_cents).to eq(100)
 
-          expect(result.invoice.taxes_amount_cents).to eq(0)
-          expect(result.invoice.taxes_rate).to eq(0)
-          expect(result.invoice.applied_taxes.count).to eq(0)
+        expect(result.invoice.taxes_amount_cents).to eq(0)
+        expect(result.invoice.taxes_rate).to eq(0)
+        expect(result.invoice.applied_taxes.count).to eq(0)
 
-          expect(result.invoice.version_number).to eq(4)
-          expect(result.invoice).to be_pending
-        end
+        expect(result.invoice.version_number).to eq(4)
+        expect(result.invoice).to be_pending
       end
     end
 

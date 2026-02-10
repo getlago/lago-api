@@ -21,7 +21,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     end
 
     context "without any ending trial subscriptions" do
-      it "does not set trial_ended_at", :aggregate_failures do
+      it "does not set trial_ended_at" do
         sub1 = create(:subscription, plan:, started_at: 2.days.ago)
 
         expect { service.call }.not_to change { sub1.reload.trial_ended_at }.from(nil)
@@ -53,7 +53,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2024-03-11 13:03:00 UTC") }
 
-      it "sets trial_ended_at to the expected subscription (timezone is irrelevant)", :aggregate_failures do
+      it "sets trial_ended_at to the expected subscription (timezone is irrelevant)" do
         started_at = DateTime.parse("2024-03-01 12:00:00 UTC")
         customer = create(:customer, timezone: "America/Los_Angeles")
         sub = create(:subscription, plan:, customer:, started_at:)

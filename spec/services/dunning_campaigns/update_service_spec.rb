@@ -15,7 +15,7 @@ RSpec.describe DunningCampaigns::UpdateService do
 
   let(:params) { {applied_to_organization: false} }
 
-  describe "#call", :aggregate_failures do
+  describe "#call" do
     subject(:result) { update_service.call }
 
     before do

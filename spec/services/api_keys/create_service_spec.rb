@@ -44,11 +44,9 @@ RSpec.describe ApiKeys::CreateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-              expect(service_result.error.code).to eq("premium_integration_missing")
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+            expect(service_result.error.code).to eq("premium_integration_missing")
           end
         end
       end
@@ -107,10 +105,8 @@ RSpec.describe ApiKeys::CreateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
         end
 
@@ -126,10 +122,8 @@ RSpec.describe ApiKeys::CreateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
         end
       end
@@ -151,10 +145,8 @@ RSpec.describe ApiKeys::CreateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
         end
 
@@ -170,10 +162,8 @@ RSpec.describe ApiKeys::CreateService do
           end
 
           it "returns an error" do
-            aggregate_failures do
-              expect(service_result).not_to be_success
-              expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-            end
+            expect(service_result).not_to be_success
+            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           end
         end
       end

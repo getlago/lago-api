@@ -71,10 +71,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
       end
     end
 
@@ -84,10 +82,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("domain_not_configured")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("domain_not_configured")
       end
     end
 
@@ -97,10 +93,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
       end
     end
 

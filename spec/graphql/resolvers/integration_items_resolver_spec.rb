@@ -44,13 +44,11 @@ RSpec.describe Resolvers::IntegrationItemsResolver do
 
     integration_items_response = result["data"]["integrationItems"]
 
-    aggregate_failures do
-      expect(integration_items_response["collection"].count).to eq(1)
-      expect(integration_items_response["collection"].first["id"]).to eq(integration_item2.id)
+    expect(integration_items_response["collection"].count).to eq(1)
+    expect(integration_items_response["collection"].first["id"]).to eq(integration_item2.id)
 
-      expect(integration_items_response["metadata"]["currentPage"]).to eq(1)
-      expect(integration_items_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(integration_items_response["metadata"]["currentPage"]).to eq(1)
+    expect(integration_items_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "without integration id" do

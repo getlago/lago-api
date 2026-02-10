@@ -38,10 +38,8 @@ RSpec.describe Mutations::Invoices::Refresh do
 
       result_data = result["data"]["refreshInvoice"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["updatedAt"]).to eq(Time.current.iso8601)
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["updatedAt"]).to eq(Time.current.iso8601)
     end
   end
 end

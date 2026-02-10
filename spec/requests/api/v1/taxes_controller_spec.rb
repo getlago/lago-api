@@ -23,16 +23,14 @@ RSpec.describe Api::V1::TaxesController do
     it "creates a tax" do
       expect { subject }.to change(Tax, :count).by(1)
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:tax][:lago_id]).to be_present
-        expect(json[:tax][:code]).to eq(create_params[:code])
-        expect(json[:tax][:name]).to eq(create_params[:name])
-        expect(json[:tax][:rate]).to eq(create_params[:rate])
-        expect(json[:tax][:description]).to eq(create_params[:description])
-        expect(json[:tax][:created_at]).to be_present
-        expect(json[:tax][:applied_to_organization]).to eq(create_params[:applied_to_organization])
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:tax][:lago_id]).to be_present
+      expect(json[:tax][:code]).to eq(create_params[:code])
+      expect(json[:tax][:name]).to eq(create_params[:name])
+      expect(json[:tax][:rate]).to eq(create_params[:rate])
+      expect(json[:tax][:description]).to eq(create_params[:description])
+      expect(json[:tax][:created_at]).to be_present
+      expect(json[:tax][:applied_to_organization]).to eq(create_params[:applied_to_organization])
     end
   end
 
@@ -61,14 +59,12 @@ RSpec.describe Api::V1::TaxesController do
     it "updates a tax" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:tax][:lago_id]).to eq(tax.id)
-        expect(json[:tax][:code]).to eq(update_params[:code])
-        expect(json[:tax][:name]).to eq(update_params[:name])
-        expect(json[:tax][:rate]).to eq(update_params[:rate])
-        expect(json[:tax][:applied_to_organization]).to eq(update_params[:applied_to_organization])
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:tax][:lago_id]).to eq(tax.id)
+      expect(json[:tax][:code]).to eq(update_params[:code])
+      expect(json[:tax][:name]).to eq(update_params[:name])
+      expect(json[:tax][:rate]).to eq(update_params[:rate])
+      expect(json[:tax][:applied_to_organization]).to eq(update_params[:applied_to_organization])
     end
 
     context "when tax does not exist" do
@@ -102,11 +98,9 @@ RSpec.describe Api::V1::TaxesController do
     it "returns a tax" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:tax][:lago_id]).to eq(tax.id)
-        expect(json[:tax][:code]).to eq(tax.code)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:tax][:lago_id]).to eq(tax.id)
+      expect(json[:tax][:code]).to eq(tax.code)
     end
 
     context "when tax does not exist" do
@@ -134,11 +128,9 @@ RSpec.describe Api::V1::TaxesController do
     it "returns deleted tax" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:tax][:lago_id]).to eq(tax.id)
-        expect(json[:tax][:code]).to eq(tax.code)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:tax][:lago_id]).to eq(tax.id)
+      expect(json[:tax][:code]).to eq(tax.code)
     end
 
     context "when tax does not exist" do
@@ -161,12 +153,10 @@ RSpec.describe Api::V1::TaxesController do
     it "returns taxes" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:taxes].count).to eq(1)
-        expect(json[:taxes].first[:lago_id]).to eq(tax.id)
-        expect(json[:taxes].first[:code]).to eq(tax.code)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:taxes].count).to eq(1)
+      expect(json[:taxes].first[:lago_id]).to eq(tax.id)
+      expect(json[:taxes].first[:code]).to eq(tax.code)
     end
 
     context "with pagination" do
@@ -175,15 +165,13 @@ RSpec.describe Api::V1::TaxesController do
       it "returns taxes with correct meta data" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:taxes].count).to eq(1)
-          expect(json[:meta][:current_page]).to eq(1)
-          expect(json[:meta][:next_page]).to eq(2)
-          expect(json[:meta][:prev_page]).to eq(nil)
-          expect(json[:meta][:total_pages]).to eq(2)
-          expect(json[:meta][:total_count]).to eq(2)
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:taxes].count).to eq(1)
+        expect(json[:meta][:current_page]).to eq(1)
+        expect(json[:meta][:next_page]).to eq(2)
+        expect(json[:meta][:prev_page]).to eq(nil)
+        expect(json[:meta][:total_pages]).to eq(2)
+        expect(json[:meta][:total_count]).to eq(2)
       end
     end
   end

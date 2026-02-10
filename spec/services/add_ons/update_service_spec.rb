@@ -35,14 +35,12 @@ RSpec.describe AddOns::UpdateService do
       result = add_ons_service.call
       expect(result).to be_success
 
-      aggregate_failures do
-        expect(result.add_on.name).to eq("new name")
-        expect(result.add_on.invoice_display_name).to eq("new invoice name")
-        expect(result.add_on.description).to eq("desc")
-        expect(result.add_on.amount_cents).to eq(100)
-        expect(result.add_on.amount_currency).to eq("EUR")
-        expect(result.add_on.taxes.map { |t| t[:code] }).to contain_exactly(tax2.code)
-      end
+      expect(result.add_on.name).to eq("new name")
+      expect(result.add_on.invoice_display_name).to eq("new invoice name")
+      expect(result.add_on.description).to eq("desc")
+      expect(result.add_on.amount_cents).to eq(100)
+      expect(result.add_on.amount_currency).to eq("EUR")
+      expect(result.add_on.taxes.map { |t| t[:code] }).to contain_exactly(tax2.code)
     end
 
     context "when tax is not found" do
@@ -51,10 +49,8 @@ RSpec.describe AddOns::UpdateService do
       it "returns an error" do
         result = add_ons_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("tax_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("tax_not_found")
       end
     end
 
@@ -72,11 +68,9 @@ RSpec.describe AddOns::UpdateService do
       it "returns an error" do
         result = add_ons_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -94,11 +88,9 @@ RSpec.describe AddOns::UpdateService do
         create(:applied_add_on, add_on:)
         result = add_ons_service.call
 
-        aggregate_failures do
-          expect(result.add_on.name).to eq("new name")
-          expect(result.add_on.description).to eq("new desc")
-          expect(result.add_on.code).to eq("new code")
-        end
+        expect(result.add_on.name).to eq("new name")
+        expect(result.add_on.description).to eq("new desc")
+        expect(result.add_on.code).to eq("new code")
       end
     end
   end

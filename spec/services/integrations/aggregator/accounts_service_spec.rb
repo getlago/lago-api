@@ -38,14 +38,12 @@ RSpec.describe Integrations::Aggregator::AccountsService do
       result = accounts_service.call
       account = result.accounts.first
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(accounts_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:get)
-        expect(result.accounts.count).to eq(3)
-        expect(account.external_id).to eq("12ec4c59-ad56-4a4f-93eb-fb0a7740f4e2")
-        expect(account.external_account_code).to eq("1111")
-        expect(account.external_name).to eq("Accounts Payable")
-      end
+      expect(LagoHttpClient::Client).to have_received(:new).with(accounts_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(lago_client).to have_received(:get)
+      expect(result.accounts.count).to eq(3)
+      expect(account.external_id).to eq("12ec4c59-ad56-4a4f-93eb-fb0a7740f4e2")
+      expect(account.external_account_code).to eq("1111")
+      expect(account.external_name).to eq("Accounts Payable")
     end
   end
 

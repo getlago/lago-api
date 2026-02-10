@@ -32,16 +32,14 @@ RSpec.describe Coupons::UpdateService do
     it "updates the coupon" do
       result = update_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.coupon.name).to eq("new name")
-        expect(result.coupon.amount_cents).to eq(100)
-        expect(result.coupon.amount_currency).to eq("EUR")
-        expect(result.coupon.expiration).to eq("time_limit")
-        expect(result.coupon.reusable).to eq(false)
-        expect(result.coupon.expiration_at.to_s).to eq(expiration_at.to_s)
-      end
+      expect(result.coupon.name).to eq("new name")
+      expect(result.coupon.amount_cents).to eq(100)
+      expect(result.coupon.amount_currency).to eq("EUR")
+      expect(result.coupon.expiration).to eq("time_limit")
+      expect(result.coupon.reusable).to eq(false)
+      expect(result.coupon.expiration_at.to_s).to eq(expiration_at.to_s)
     end
 
     it "produces an activity log" do
@@ -56,11 +54,9 @@ RSpec.describe Coupons::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -147,11 +143,9 @@ RSpec.describe Coupons::UpdateService do
         it "returns an error" do
           result = update_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("only_one_limitation_type_per_coupon_allowed")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("only_one_limitation_type_per_coupon_allowed")
         end
       end
 
@@ -165,11 +159,9 @@ RSpec.describe Coupons::UpdateService do
         it "returns an error" do
           result = update_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("billable_metrics_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("billable_metrics_not_found")
         end
       end
     end
@@ -196,11 +188,9 @@ RSpec.describe Coupons::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq("coupon_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("coupon_not_found")
       end
     end
   end

@@ -181,10 +181,8 @@ describe "Billing Minimum Commitments In Arrears Scenario" do
 
       it "creates an invoice with minimum commitment fee" do
         travel_to(subscription_time + 1.year + 1.month) do
-          aggregate_failures do
-            expect(invoice.fees.commitment.count).to eq(1)
-            expect(invoice.fees.commitment.sum(:amount_cents)).to eq(981_100)
-          end
+          expect(invoice.fees.commitment.count).to eq(1)
+          expect(invoice.fees.commitment.sum(:amount_cents)).to eq(981_100)
         end
       end
     end

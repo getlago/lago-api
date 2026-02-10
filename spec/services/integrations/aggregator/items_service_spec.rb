@@ -39,12 +39,10 @@ RSpec.describe Integrations::Aggregator::ItemsService do
     it "successfully fetches items" do
       result = items_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(items_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:get)
-        expect(result.items.pluck("external_id")).to eq(%w[755 745 753 484 828])
-        expect(IntegrationItem.count).to eq(5)
-      end
+      expect(LagoHttpClient::Client).to have_received(:new).with(items_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(lago_client).to have_received(:get)
+      expect(result.items.pluck("external_id")).to eq(%w[755 745 753 484 828])
+      expect(IntegrationItem.count).to eq(5)
     end
   end
 

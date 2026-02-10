@@ -152,11 +152,9 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
       it "returns a not found error" do
         result = adyen_service.generate_checkout_url
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("adyen_payment_provider_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("adyen_payment_provider_not_found")
       end
     end
 

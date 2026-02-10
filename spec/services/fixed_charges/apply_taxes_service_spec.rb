@@ -34,10 +34,8 @@ RSpec.describe FixedCharges::ApplyTaxesService do
       it "returns an error" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("fixed_charge_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("fixed_charge_not_found")
       end
     end
 
@@ -47,10 +45,8 @@ RSpec.describe FixedCharges::ApplyTaxesService do
       it "returns an error" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("tax_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("tax_not_found")
       end
     end
 

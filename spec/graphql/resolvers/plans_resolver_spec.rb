@@ -43,14 +43,12 @@ RSpec.describe Resolvers::PlansResolver do
 
     plans_response = result["data"]["plans"]
 
-    aggregate_failures do
-      expect(plans_response["collection"].count).to eq(organization.plans.count)
-      expect(plans_response["collection"].first["id"]).to eq(plan.id)
-      expect(plans_response["collection"].first["customersCount"]).to eq(1)
+    expect(plans_response["collection"].count).to eq(organization.plans.count)
+    expect(plans_response["collection"].first["id"]).to eq(plan.id)
+    expect(plans_response["collection"].first["customersCount"]).to eq(1)
 
-      expect(plans_response["metadata"]["currentPage"]).to eq(1)
-      expect(plans_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(plans_response["metadata"]["currentPage"]).to eq(1)
+    expect(plans_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "when filtering by with_deleted" do

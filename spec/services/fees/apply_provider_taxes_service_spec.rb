@@ -35,15 +35,13 @@ RSpec.describe Fees::ApplyProviderTaxesService do
       it "creates applied_taxes based on the provider taxes" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          applied_taxes = result.applied_taxes
-          expect(applied_taxes.count).to eq(2)
+        applied_taxes = result.applied_taxes
+        expect(applied_taxes.count).to eq(2)
 
-          expect(applied_taxes.map(&:tax_code)).to contain_exactly("tax_2", "tax_3")
-          expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_precise_amount_cents: 170.0, taxes_rate: 17)
-        end
+        expect(applied_taxes.map(&:tax_code)).to contain_exactly("tax_2", "tax_3")
+        expect(fee).to have_attributes(taxes_amount_cents: 170, taxes_precise_amount_cents: 170.0, taxes_rate: 17)
       end
 
       context "when there is tax deduction" do
@@ -60,20 +58,18 @@ RSpec.describe Fees::ApplyProviderTaxesService do
         it "creates applied_taxes based on the provider taxes" do
           result = apply_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            applied_taxes = result.applied_taxes
-            expect(applied_taxes.count).to eq(2)
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(2)
 
-            expect(applied_taxes.map(&:tax_code)).to contain_exactly("tax_2", "tax_3")
-            expect(fee).to have_attributes(
-              taxes_amount_cents: 136,
-              taxes_precise_amount_cents: 136.0,
-              taxes_rate: 17,
-              taxes_base_rate: 0.8
-            )
-          end
+          expect(applied_taxes.map(&:tax_code)).to contain_exactly("tax_2", "tax_3")
+          expect(fee).to have_attributes(
+            taxes_amount_cents: 136,
+            taxes_precise_amount_cents: 136.0,
+            taxes_rate: 17,
+            taxes_base_rate: 0.8
+          )
         end
       end
 
@@ -88,17 +84,15 @@ RSpec.describe Fees::ApplyProviderTaxesService do
         it "does not create applied_taxes" do
           result = apply_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            applied_taxes = result.applied_taxes
-            expect(applied_taxes.count).to eq(1)
-            expect(fee).to have_attributes(
-              taxes_amount_cents: 0,
-              taxes_precise_amount_cents: 0.0,
-              taxes_rate: 0
-            )
-          end
+          applied_taxes = result.applied_taxes
+          expect(applied_taxes.count).to eq(1)
+          expect(fee).to have_attributes(
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0.0,
+            taxes_rate: 0
+          )
         end
       end
     end
@@ -136,20 +130,18 @@ RSpec.describe Fees::ApplyProviderTaxesService do
           it "creates applied_taxes based on the provider rules" do
             result = apply_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              applied_taxes = result.applied_taxes
-              expect(applied_taxes.count).to eq(1)
+            applied_taxes = result.applied_taxes
+            expect(applied_taxes.count).to eq(1)
 
-              applied_tax = applied_taxes.first
-              expect(applied_tax).to have_attributes(
-                tax_code: applied_rule[:tax_code],
-                tax_name: applied_rule[:expected_name],
-                tax_description: applied_rule[:received_type]
-              )
-              expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
-            end
+            applied_tax = applied_taxes.first
+            expect(applied_tax).to have_attributes(
+              tax_code: applied_rule[:tax_code],
+              tax_name: applied_rule[:expected_name],
+              tax_description: applied_rule[:received_type]
+            )
+            expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
           end
         end
       end

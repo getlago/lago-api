@@ -46,10 +46,8 @@ RSpec.describe PaymentProviders::AdyenService do
           api_key: "secret"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.adyen_provider.customers.first.payment_provider_code).to eq(new_code)
-        end
+        expect(result).to be_success
+        expect(result.adyen_provider.customers.first.payment_provider_code).to eq(new_code)
       end
     end
 
@@ -71,13 +69,11 @@ RSpec.describe PaymentProviders::AdyenService do
 
         expect(result).to be_success
 
-        aggregate_failures do
-          expect(result.adyen_provider.id).to eq(adyen_provider.id)
-          expect(result.adyen_provider.api_key).to eq("test_api_key_1")
-          expect(result.adyen_provider.code).to eq(code)
-          expect(result.adyen_provider.name).to eq(name)
-          expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
-        end
+        expect(result.adyen_provider.id).to eq(adyen_provider.id)
+        expect(result.adyen_provider.api_key).to eq("test_api_key_1")
+        expect(result.adyen_provider.code).to eq(code)
+        expect(result.adyen_provider.name).to eq(name)
+        expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
       end
     end
 
@@ -91,12 +87,10 @@ RSpec.describe PaymentProviders::AdyenService do
           merchant_account: nil
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:api_key]).to eq(["value_is_mandatory"])
-          expect(result.error.messages[:merchant_account]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:api_key]).to eq(["value_is_mandatory"])
+        expect(result.error.messages[:merchant_account]).to eq(["value_is_mandatory"])
       end
     end
   end

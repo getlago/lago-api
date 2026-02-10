@@ -16,9 +16,7 @@ RSpec.describe Resolvers::VersionResolver do
 
     version_response = result["data"]["currentVersion"]
 
-    aggregate_failures do
-      expect(version_response["number"]).to be_present
-      expect(version_response["githubUrl"]).to start_with("https://github.com/getlago/lago-api")
-    end
+    expect(version_response["number"]).to be_present
+    expect(version_response["githubUrl"]).to start_with("https://github.com/getlago/lago-api")
   end
 end

@@ -186,10 +186,8 @@ describe "Billing Minimum Commitments In Advance Scenario" do
       it "creates an invoice with minimum commitment fee" do
         # { DateTime.new(2025, 01, 01) }
         travel_to((subscription_time + 1.year).beginning_of_year) do
-          aggregate_failures do
-            expect(invoice.fees.commitment.count).to eq(1)
-            expect(invoice.fees.commitment.sum(:amount_cents)).to eq(808_186)
-          end
+          expect(invoice.fees.commitment.count).to eq(1)
+          expect(invoice.fees.commitment.sum(:amount_cents)).to eq(808_186)
         end
       end
     end

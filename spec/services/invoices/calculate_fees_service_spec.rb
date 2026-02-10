@@ -205,17 +205,15 @@ RSpec.describe Invoices::CalculateFeesService do
         it "returns tax unknown error and puts invoice in valid status" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq("tax_error")
-            expect(result.error.error_message).to eq("unknown taxes")
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("tax_error")
+          expect(result.error.error_message).to eq("unknown taxes")
 
-            expect(invoice.reload.status).to eq("pending")
-            expect(invoice.reload.tax_status).to eq("pending")
-            expect(invoice.reload.fees_amount_cents).to eq(10200)
-            expect(invoice.reload.taxes_amount_cents).to eq(0)
-            expect(invoice.reload.error_details.count).to eq(0)
-          end
+          expect(invoice.reload.status).to eq("pending")
+          expect(invoice.reload.tax_status).to eq("pending")
+          expect(invoice.reload.fees_amount_cents).to eq(10200)
+          expect(invoice.reload.taxes_amount_cents).to eq(0)
+          expect(invoice.reload.error_details.count).to eq(0)
         end
 
         context "when calculating fees for draft invoice" do
@@ -234,17 +232,15 @@ RSpec.describe Invoices::CalculateFeesService do
             it "returns tax unknown error and puts invoice in valid status" do
               result = invoice_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error.code).to eq("tax_error")
-                expect(result.error.error_message).to eq("unknown taxes")
+              expect(result).not_to be_success
+              expect(result.error.code).to eq("tax_error")
+              expect(result.error.error_message).to eq("unknown taxes")
 
-                expect(invoice.reload.status).to eq("draft")
-                expect(invoice.reload.tax_status).to eq("pending")
-                expect(invoice.reload.fees_amount_cents).to eq(10200)
-                expect(invoice.reload.taxes_amount_cents).to eq(0)
-                expect(invoice.reload.error_details.count).to eq(0)
-              end
+              expect(invoice.reload.status).to eq("draft")
+              expect(invoice.reload.tax_status).to eq("pending")
+              expect(invoice.reload.fees_amount_cents).to eq(10200)
+              expect(invoice.reload.taxes_amount_cents).to eq(0)
+              expect(invoice.reload.error_details.count).to eq(0)
             end
           end
 
@@ -254,17 +250,15 @@ RSpec.describe Invoices::CalculateFeesService do
             it "returns tax unknown error and puts invoice in valid status" do
               result = invoice_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error.code).to eq("tax_error")
-                expect(result.error.error_message).to eq("unknown taxes")
+              expect(result).not_to be_success
+              expect(result.error.code).to eq("tax_error")
+              expect(result.error.error_message).to eq("unknown taxes")
 
-                expect(invoice.reload.status).to eq("pending")
-                expect(invoice.reload.tax_status).to eq("pending")
-                expect(invoice.reload.fees_amount_cents).to eq(10200)
-                expect(invoice.reload.taxes_amount_cents).to eq(0)
-                expect(invoice.reload.error_details.count).to eq(0)
-              end
+              expect(invoice.reload.status).to eq("pending")
+              expect(invoice.reload.tax_status).to eq("pending")
+              expect(invoice.reload.fees_amount_cents).to eq(10200)
+              expect(invoice.reload.taxes_amount_cents).to eq(0)
+              expect(invoice.reload.error_details.count).to eq(0)
             end
           end
         end
@@ -285,11 +279,9 @@ RSpec.describe Invoices::CalculateFeesService do
         it "does not create a charge fee" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.fees.charge.count).to eq(0)
-          end
+          expect(invoice.fees.charge.count).to eq(0)
         end
       end
 
@@ -312,11 +304,9 @@ RSpec.describe Invoices::CalculateFeesService do
         it "creates a charge fee", transaction: false do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.fees.charge.count).to eq(1)
-          end
+          expect(invoice.fees.charge.count).to eq(1)
         end
       end
 
@@ -335,11 +325,9 @@ RSpec.describe Invoices::CalculateFeesService do
         it "does not create a charge fee" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(Fee.charge.count).to eq(0)
-          end
+          expect(Fee.charge.count).to eq(0)
         end
       end
 
@@ -677,12 +665,10 @@ RSpec.describe Invoices::CalculateFeesService do
         it "creates subscription, charge and commitment fees" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.fees.charge.count).to eq(1)
-            expect(Fee.where(invoice_id: nil).count).to eq(1)
-          end
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(Fee.where(invoice_id: nil).count).to eq(1)
         end
       end
 
@@ -856,20 +842,18 @@ RSpec.describe Invoices::CalculateFeesService do
         it "creates subscription, charges and commitment fees for both" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
-            expect(invoice.payment_status).to eq("pending")
-            expect(invoice.fees.subscription.count).to eq(2)
-            expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
-            expect(invoice.fees.commitment.count).to eq(2)
+          expect(result).to be_success
+          expect(invoice.subscriptions.to_a).to match_array([subscription, subscription2])
+          expect(invoice.payment_status).to eq("pending")
+          expect(invoice.fees.subscription.count).to eq(2)
+          expect(invoice.fees.charge.count).to eq(1) # 0 amount charge fee is not created for subscription 2
+          expect(invoice.fees.commitment.count).to eq(2)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime((timestamp - 1.month).beginning_of_day)
+          )
         end
       end
     end
@@ -892,17 +876,15 @@ RSpec.describe Invoices::CalculateFeesService do
         it "creates a subscription and a commitment fee" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.commitment.count).to eq(1)
+          expect(result).to be_success
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.commitment.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(terminated_at),
-              from_datetime: match_datetime(terminated_at.beginning_of_month)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime(terminated_at),
+            from_datetime: match_datetime(terminated_at.beginning_of_month)
+          )
         end
       end
 
@@ -910,16 +892,14 @@ RSpec.describe Invoices::CalculateFeesService do
         it "creates a subscription fee" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(invoice.fees.subscription.count).to eq(1)
+          expect(result).to be_success
+          expect(invoice.fees.subscription.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(terminated_at),
-              from_datetime: match_datetime(terminated_at.beginning_of_month)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime(terminated_at),
+            from_datetime: match_datetime(terminated_at.beginning_of_month)
+          )
         end
       end
 
@@ -943,12 +923,10 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee or a commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -964,12 +942,10 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee but it creates a commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-              expect(invoice.fees.commitment.count).to eq(1)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
+            expect(invoice.fees.commitment.count).to eq(1)
           end
         end
       end
@@ -994,12 +970,10 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates a charge fee but no minimum commitment fee", transaction: false do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(1)
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(1)
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1016,12 +990,10 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates a charge fee and a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice).to have_empty_charge_fees
-              expect(invoice.fees.commitment.count).to eq(1)
-            end
+            expect(invoice).to have_empty_charge_fees
+            expect(invoice.fees.commitment.count).to eq(1)
           end
         end
       end
@@ -1059,21 +1031,17 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1089,21 +1057,17 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
           end
 
           it "creates a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(1)
-            end
+            expect(invoice.fees.commitment.count).to eq(1)
           end
         end
       end
@@ -1142,21 +1106,17 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1172,21 +1132,17 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create a charge fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.charge.count).to eq(0)
-            end
+            expect(invoice.fees.charge.count).to eq(0)
           end
 
           it "creates a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(1)
-            end
+            expect(invoice.fees.commitment.count).to eq(1)
           end
         end
       end
@@ -1201,26 +1157,22 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates subscription fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(invoice.fees.subscription.count).to eq(1)
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(1)
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(terminated_at),
+              from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+            )
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1236,16 +1188,14 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates subscription fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(invoice.fees.subscription.count).to eq(1)
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(1)
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(terminated_at),
-                from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(terminated_at),
+              from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+            )
           end
 
           it "creates a minimum commitment fee" do
@@ -1384,29 +1334,25 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates a subscription fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.payment_status).to eq("pending")
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees
+            expect(result).to be_success
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.payment_status).to eq("pending")
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(Time.zone.parse("2022-04-05 23:59:59")),
-                from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(Time.zone.parse("2022-04-05 23:59:59")),
+              from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+            )
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1418,29 +1364,25 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates a subscription fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.payment_status).to eq("pending")
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees
+            expect(result).to be_success
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.payment_status).to eq("pending")
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(Time.zone.parse("2022-04-05 23:59:59")),
-                from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(Time.zone.parse("2022-04-05 23:59:59")),
+              from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+            )
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
       end
@@ -1453,11 +1395,9 @@ RSpec.describe Invoices::CalculateFeesService do
           subscription.created_at
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.fees.subscription.count).to eq(0)
-          end
+          expect(invoice.fees.subscription.count).to eq(0)
         end
 
         it "creates a fixed charge fee even during trial period" do
@@ -1558,23 +1498,19 @@ RSpec.describe Invoices::CalculateFeesService do
           it "does not create any subscription fees" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice.invoice_subscriptions.count).to eq(1)
-              expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
-            end
+            expect(invoice.fees.subscription.count).to eq(0)
+            expect(invoice.invoice_subscriptions.count).to eq(1)
+            expect(invoice.invoice_subscriptions.first.recurring).to be_falsey
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
       end
@@ -1599,11 +1535,9 @@ RSpec.describe Invoices::CalculateFeesService do
         it "does not create any charge fees" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice).to have_empty_charge_fees
-          end
+          expect(invoice).to have_empty_charge_fees
         end
       end
 
@@ -1639,29 +1573,25 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates pro-rated subscription fee and no charge fees" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice).to be_payment_pending
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees
+            expect(invoice).to be_payment_pending
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(subscription.started_at.end_of_month),
-                from_datetime: match_datetime(subscription.started_at.beginning_of_day)
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(subscription.started_at.end_of_month),
+              from_datetime: match_datetime(subscription.started_at.beginning_of_day)
+            )
           end
 
           it "does not create a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1673,30 +1603,26 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates pro-rated subscription fee and no charge fees" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice).to be_payment_pending
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees
-              expect(invoice.fees.fixed_charge.count).to eq(1)
+            expect(invoice).to be_payment_pending
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees
+            expect(invoice.fees.fixed_charge.count).to eq(1)
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(subscription.started_at.end_of_month),
-                from_datetime: match_datetime(subscription.started_at.beginning_of_day)
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(subscription.started_at.end_of_month),
+              from_datetime: match_datetime(subscription.started_at.beginning_of_day)
+            )
           end
 
           it "does not creates a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
       end
@@ -1739,29 +1665,25 @@ RSpec.describe Invoices::CalculateFeesService do
           it "creates only the charge fees" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice).to have_empty_charge_fees
-              expect(invoice.fees.fixed_charge.count).to eq(1) # fixed charge is pay in arrears - sub termination generated fee
+            expect(invoice.fees.subscription.count).to eq(0)
+            expect(invoice).to have_empty_charge_fees
+            expect(invoice.fees.fixed_charge.count).to eq(1) # fixed charge is pay in arrears - sub termination generated fee
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                charges_from_datetime: match_datetime(Time.zone.parse("2022-10-01 00:00:00")),
-                charges_to_datetime: match_datetime(terminated_at)
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              charges_from_datetime: match_datetime(Time.zone.parse("2022-10-01 00:00:00")),
+              charges_to_datetime: match_datetime(terminated_at)
+            )
           end
 
           it "does not creates a minimum commitment fee" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.fees.commitment.count).to eq(0)
-            end
+            expect(invoice.fees.commitment.count).to eq(0)
           end
         end
 
@@ -1774,30 +1696,26 @@ RSpec.describe Invoices::CalculateFeesService do
             it "creates only the charge fees" do
               result = invoice_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
+              expect(result).to be_success
 
-                expect(invoice.fees.subscription.count).to eq(0)
-                expect(invoice).to have_empty_charge_fees
-                # Fixed charge is pay in arrears - sub termination generated fee
-                expect(invoice.fees.fixed_charge.count).to eq(1)
+              expect(invoice.fees.subscription.count).to eq(0)
+              expect(invoice).to have_empty_charge_fees
+              # Fixed charge is pay in arrears - sub termination generated fee
+              expect(invoice.fees.fixed_charge.count).to eq(1)
 
-                invoice_subscription = invoice.invoice_subscriptions.first
-                expect(invoice_subscription).to have_attributes(
-                  charges_from_datetime: match_datetime(Time.zone.parse("2022-10-01 00:00:00")),
-                  charges_to_datetime: match_datetime(terminated_at)
-                )
-              end
+              invoice_subscription = invoice.invoice_subscriptions.first
+              expect(invoice_subscription).to have_attributes(
+                charges_from_datetime: match_datetime(Time.zone.parse("2022-10-01 00:00:00")),
+                charges_to_datetime: match_datetime(terminated_at)
+              )
             end
 
             it "does not creates a minimum commitment fee" do
               result = invoice_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
+              expect(result).to be_success
 
-                expect(invoice.fees.commitment.count).to eq(0)
-              end
+              expect(invoice.fees.commitment.count).to eq(0)
             end
           end
         end
@@ -1811,19 +1729,17 @@ RSpec.describe Invoices::CalculateFeesService do
       it "updates the invoice accordingly" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(invoice.subscriptions.first).to eq(subscription)
-          expect(invoice.fees.subscription.count).to eq(1)
-          expect(invoice.fees.charge.count).to eq(1)
+        expect(invoice.subscriptions.first).to eq(subscription)
+        expect(invoice.fees.subscription.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            from_datetime: match_datetime((timestamp - 1.year).beginning_of_day)
-          )
-        end
+        invoice_subscription = invoice.invoice_subscriptions.first
+        expect(invoice_subscription).to have_attributes(
+          to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+          from_datetime: match_datetime((timestamp - 1.year).beginning_of_day)
+        )
       end
 
       context "when subscription is billed on anniversary date" do
@@ -1837,20 +1753,18 @@ RSpec.describe Invoices::CalculateFeesService do
         it "updates the invoice accordingly" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.fixed_charge.count).to eq(1)
-            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
+          expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
-              from_datetime: match_datetime(Time.zone.parse("2021-06-06 00:00:00"))
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
+            from_datetime: match_datetime(Time.zone.parse("2021-06-06 00:00:00"))
+          )
         end
 
         context "when started_at in the past" do
@@ -1863,18 +1777,16 @@ RSpec.describe Invoices::CalculateFeesService do
           it "updates the invoice accordingly" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription.count).to eq(0)
+            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
-              # plan is billed anniversary on 21 of November (started_at, 2024). At the timestamp, 1st Jan 2025,
-              # previous billing period is "empty" - 21Nov 2024 - 21 Nov 2024, because it's not current usage, so we get an "empty"
-              # boundaries and cannot fetch any usage
-              expect(invoice.fees.fixed_charge.count).to eq(0)
-            end
+            # plan is billed anniversary on 21 of November (started_at, 2024). At the timestamp, 1st Jan 2025,
+            # previous billing period is "empty" - 21Nov 2024 - 21 Nov 2024, because it's not current usage, so we get an "empty"
+            # boundaries and cannot fetch any usage
+            expect(invoice.fees.fixed_charge.count).to eq(0)
           end
         end
 
@@ -1884,19 +1796,17 @@ RSpec.describe Invoices::CalculateFeesService do
           it "updates the invoice accordingly" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(Time.zone.parse("2023-06-05 23:59:59")),
-                from_datetime: match_datetime(Time.zone.parse("2022-06-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(Time.zone.parse("2023-06-05 23:59:59")),
+              from_datetime: match_datetime(Time.zone.parse("2022-06-06 00:00:00"))
+            )
           end
         end
 
@@ -1909,13 +1819,11 @@ RSpec.describe Invoices::CalculateFeesService do
           it "updates the invoice accordingly" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.fees.subscription.count).to eq(0)
-              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
-            end
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription.count).to eq(0)
+            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
           end
         end
 
@@ -1928,13 +1836,11 @@ RSpec.describe Invoices::CalculateFeesService do
           it "updates the invoice accordingly" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
-            end
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice).to have_empty_charge_fees # Because we didn't fake usage events
           end
         end
       end
@@ -1946,19 +1852,17 @@ RSpec.describe Invoices::CalculateFeesService do
         it "updates the invoice accordingly" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
+          )
         end
       end
     end
@@ -1971,21 +1875,19 @@ RSpec.describe Invoices::CalculateFeesService do
       it "updates the invoice accordingly" do
         result = invoice_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(invoice.subscriptions.first).to eq(subscription)
-          expect(invoice.fees.subscription.count).to eq(1)
-          expect(invoice.fees.charge.count).to eq(1)
+        expect(invoice.subscriptions.first).to eq(subscription)
+        expect(invoice.fees.subscription.count).to eq(1)
+        expect(invoice.fees.charge.count).to eq(1)
 
-          invoice_subscription = invoice.invoice_subscriptions.first
-          expect(invoice_subscription).to have_attributes(
-            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
-            charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-            charges_from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day)
-          )
-        end
+        invoice_subscription = invoice.invoice_subscriptions.first
+        expect(invoice_subscription).to have_attributes(
+          to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+          from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day),
+          charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+          charges_from_datetime: match_datetime((timestamp - 2.days).beginning_of_quarter.beginning_of_day)
+        )
       end
 
       context "when subscription is billed on anniversary date" do
@@ -1997,21 +1899,19 @@ RSpec.describe Invoices::CalculateFeesService do
         it "updates the invoice accordingly" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
-              from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00")),
-              charges_to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
-              charges_from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
+            from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00")),
+            charges_to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
+            charges_from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+          )
         end
 
         context "when plan is pay in advance" do
@@ -2031,21 +1931,19 @@ RSpec.describe Invoices::CalculateFeesService do
           it "updates the invoice accordingly" do
             result = invoice_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              expect(invoice.subscriptions.first).to eq(subscription)
-              expect(invoice.fees.subscription.count).to eq(1)
-              expect(invoice.fees.charge.count).to eq(1)
+            expect(invoice.subscriptions.first).to eq(subscription)
+            expect(invoice.fees.subscription.count).to eq(1)
+            expect(invoice.fees.charge.count).to eq(1)
 
-              invoice_subscription = invoice.invoice_subscriptions.first
-              expect(invoice_subscription).to have_attributes(
-                to_datetime: match_datetime(Time.zone.parse("2022-09-05 23:59:59")),
-                from_datetime: match_datetime(Time.zone.parse("2022-06-06 00:00:00")),
-                charges_to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
-                charges_from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
-              )
-            end
+            invoice_subscription = invoice.invoice_subscriptions.first
+            expect(invoice_subscription).to have_attributes(
+              to_datetime: match_datetime(Time.zone.parse("2022-09-05 23:59:59")),
+              from_datetime: match_datetime(Time.zone.parse("2022-06-06 00:00:00")),
+              charges_to_datetime: match_datetime(Time.zone.parse("2022-06-05 23:59:59")),
+              charges_from_datetime: match_datetime(Time.zone.parse("2022-03-06 00:00:00"))
+            )
           end
         end
       end
@@ -2058,21 +1956,19 @@ RSpec.describe Invoices::CalculateFeesService do
         it "updates the invoice accordingly" do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(invoice.subscriptions.first).to eq(subscription)
-            expect(invoice.fees.subscription.count).to eq(1)
-            expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.subscriptions.first).to eq(subscription)
+          expect(invoice.fees.subscription.count).to eq(1)
+          expect(invoice.fees.charge.count).to eq(1)
 
-            invoice_subscription = invoice.invoice_subscriptions.first
-            expect(invoice_subscription).to have_attributes(
-              to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
-              charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
-              charges_from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
-            )
-          end
+          invoice_subscription = invoice.invoice_subscriptions.first
+          expect(invoice_subscription).to have_attributes(
+            to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            from_datetime: match_datetime(subscription.subscription_at.beginning_of_day),
+            charges_to_datetime: match_datetime((timestamp - 1.day).end_of_day),
+            charges_from_datetime: match_datetime(subscription.subscription_at.beginning_of_day)
+          )
         end
       end
     end

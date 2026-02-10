@@ -15,11 +15,9 @@ RSpec.describe Auth::Okta::AuthorizeService do
     it "returns an authorize url" do
       result = service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.url).to include(okta_integration.organization_name.downcase)
-        expect(result.url).to include(okta_integration.client_id)
-      end
+      expect(result).to be_success
+      expect(result.url).to include(okta_integration.organization_name.downcase)
+      expect(result.url).to include(okta_integration.client_id)
     end
 
     context "when domain is not configured with an integration" do
@@ -28,10 +26,8 @@ RSpec.describe Auth::Okta::AuthorizeService do
       it "returns a failure result" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("domain_not_configured")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("domain_not_configured")
       end
     end
 
@@ -43,11 +39,9 @@ RSpec.describe Auth::Okta::AuthorizeService do
       it "returns an authorize url" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.url).to include(okta_integration.organization_name.downcase)
-          expect(result.url).to include(okta_integration.client_id)
-        end
+        expect(result).to be_success
+        expect(result.url).to include(okta_integration.organization_name.downcase)
+        expect(result.url).to include(okta_integration.client_id)
       end
 
       context "when invite email is different from the email" do
@@ -56,10 +50,8 @@ RSpec.describe Auth::Okta::AuthorizeService do
         it "returns a failure result" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.messages.values.flatten).to include("invite_email_mismatch")
-          end
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include("invite_email_mismatch")
         end
       end
 
@@ -69,10 +61,8 @@ RSpec.describe Auth::Okta::AuthorizeService do
         it "returns a failure result" do
           result = service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.messages.values.flatten).to include("invite_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include("invite_not_found")
         end
       end
     end

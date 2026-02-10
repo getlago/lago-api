@@ -14,16 +14,14 @@ RSpec.describe ::V1::LifetimeUsageSerializer do
 
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
-    aggregate_failures do
-      expect(result["lifetime_usage"]).to include(
-        "lago_id" => lifetime_usage.id,
-        "lago_subscription_id" => lifetime_usage.subscription.id,
-        "external_subscription_id" => lifetime_usage.subscription.external_id,
-        "external_historical_usage_amount_cents" => historical_usage_amount_cents,
-        "invoiced_usage_amount_cents" => invoiced_usage_amount_cents,
-        "current_usage_amount_cents" => current_usage_amount_cents
-      )
-    end
+    expect(result["lifetime_usage"]).to include(
+      "lago_id" => lifetime_usage.id,
+      "lago_subscription_id" => lifetime_usage.subscription.id,
+      "external_subscription_id" => lifetime_usage.subscription.external_id,
+      "external_historical_usage_amount_cents" => historical_usage_amount_cents,
+      "invoiced_usage_amount_cents" => invoiced_usage_amount_cents,
+      "current_usage_amount_cents" => current_usage_amount_cents
+    )
   end
 
   context "with usage_thresholds in the plan" do
@@ -51,15 +49,13 @@ RSpec.describe ::V1::LifetimeUsageSerializer do
 
     it "serializes the usage_thresholds" do
       result = JSON.parse(serializer.to_json)
-      aggregate_failures do
-        expect(result["lifetime_usage"]).to include(
-          "lago_id" => lifetime_usage.id,
-          "usage_thresholds" => [
-            {"amount_cents" => 100, "completion_ratio" => 1.0, "reached_at" => applied_usage_threshold.created_at.iso8601(3)},
-            {"amount_cents" => 200, "completion_ratio" => 0.47, "reached_at" => nil}
-          ]
-        )
-      end
+      expect(result["lifetime_usage"]).to include(
+        "lago_id" => lifetime_usage.id,
+        "usage_thresholds" => [
+          {"amount_cents" => 100, "completion_ratio" => 1.0, "reached_at" => applied_usage_threshold.created_at.iso8601(3)},
+          {"amount_cents" => 200, "completion_ratio" => 0.47, "reached_at" => nil}
+        ]
+      )
     end
   end
 end

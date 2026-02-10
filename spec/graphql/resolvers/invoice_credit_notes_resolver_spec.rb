@@ -45,13 +45,11 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver do
 
     credit_notes_response = result["data"]["invoiceCreditNotes"]
 
-    aggregate_failures do
-      expect(credit_notes_response["collection"].count).to eq(1)
-      expect(credit_notes_response["collection"].first["id"]).to eq(credit_note.id)
+    expect(credit_notes_response["collection"].count).to eq(1)
+    expect(credit_notes_response["collection"].first["id"]).to eq(credit_note.id)
 
-      expect(credit_notes_response["metadata"]["currentPage"]).to eq(1)
-      expect(credit_notes_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(credit_notes_response["metadata"]["currentPage"]).to eq(1)
+    expect(credit_notes_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "when invoice does not exists" do

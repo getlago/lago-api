@@ -10,11 +10,9 @@ RSpec.describe ApiKeys::DestroyService do
       let(:api_key) { nil }
 
       it "returns an error" do
-        aggregate_failures do
-          expect(service_result).not_to be_success
-          expect(service_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(service_result.error.error_code).to eq("api_key_not_found")
-        end
+        expect(service_result).not_to be_success
+        expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+        expect(service_result.error.error_code).to eq("api_key_not_found")
       end
 
       it "does not send an API key destroyed email" do
@@ -45,11 +43,9 @@ RSpec.describe ApiKeys::DestroyService do
         before { create(:api_key, :expired, organization: api_key.organization) }
 
         it "returns an error" do
-          aggregate_failures do
-            expect(service_result).not_to be_success
-            expect(service_result.error).to be_a(BaseService::ValidationFailure)
-            expect(service_result.error.messages.values.flatten).to include("last_non_expiring_api_key")
-          end
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::ValidationFailure)
+          expect(service_result.error.messages.values.flatten).to include("last_non_expiring_api_key")
         end
 
         it "does not expire the key" do

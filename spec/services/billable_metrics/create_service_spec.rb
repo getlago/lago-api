@@ -76,11 +76,9 @@ RSpec.describe BillableMetrics::CreateService do
         it "returns an error if a filter is invalid" do
           result = described_class.call(create_args)
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:values]).to eq(["value_is_mandatory"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:values]).to eq(["value_is_mandatory"])
         end
       end
     end
@@ -120,11 +118,9 @@ RSpec.describe BillableMetrics::CreateService do
       it "returns an error" do
         result = described_class.call(create_args)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:code]).to eq(["value_already_exist"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
       end
     end
 

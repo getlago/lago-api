@@ -179,10 +179,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(18_700)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(18_700)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 10, 5)) do
@@ -286,10 +284,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
             subscription = customer.subscriptions.first
             invoice = subscription.invoices.first
 
-            aggregate_failures do
-              expect(invoice.total_amount_cents).to eq(6_000)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            expect(invoice.total_amount_cents).to eq(6_000)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2024, 1, 5)) do
@@ -422,12 +418,10 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
             perform_all_enqueued_jobs
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(258)
-              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(258)
+            expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
           end
         end
       end
@@ -567,10 +561,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
             subscription = customer.subscriptions.first
             invoice = subscription.invoices.first
 
-            aggregate_failures do
-              expect(invoice.total_amount_cents).to eq(18_700)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            expect(invoice.total_amount_cents).to eq(18_700)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2023, 10, 5)) do
@@ -653,12 +645,10 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
             subscription = customer.subscriptions.order(created_at: :desc).first
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              # (95 units * 14/31) -> 26_742 - charge fee
-              # 100 * 14/31 -> 45 -> subscription fee
-              expect(invoice.total_amount_cents).to eq(26_742 + 45)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            # (95 units * 14/31) -> 26_742 - charge fee
+            # 100 * 14/31 -> 45 -> subscription fee
+            expect(invoice.total_amount_cents).to eq(26_742 + 45)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2023, 11, 5)) do
@@ -834,10 +824,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(16_117)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(16_117)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2025, 10, 5)) do
@@ -938,10 +926,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(10_700)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(10_700)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 10, 5)) do
@@ -995,10 +981,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.order(created_at: :desc).first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(10_968)
-            expect(subscription.reload.invoices.count).to eq(2)
-          end
+          expect(invoice.total_amount_cents).to eq(10_968)
+          expect(subscription.reload.invoices.count).to eq(2)
         end
 
         travel_to(DateTime.new(2023, 11, 5)) do
@@ -1168,10 +1152,8 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(17_371)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(17_371)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 11, 5)) do
@@ -1263,12 +1245,10 @@ describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, trans
             perform_all_enqueued_jobs
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(4_161)
-              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(4_161)
+            expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
           end
         end
       end

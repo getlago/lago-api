@@ -185,7 +185,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
     end
     let(:event) { event_list.first }
 
-    it "aggregates the events", :aggregate_failures do
+    it "aggregates the events" do
       result = custom_service.aggregate
 
       expect(result.aggregation).to eq(11)
@@ -214,7 +214,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
         )
       end
 
-      it "aggregates the events with the cached aggregation", :aggregate_failures do
+      it "aggregates the events with the cached aggregation" do
         result = custom_service.aggregate
 
         expect(result.aggregation).to eq(11)
@@ -263,7 +263,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
       ]
     end
 
-    it "aggregates the events in groups", :aggregate_failures do
+    it "aggregates the events in groups" do
       result = custom_service.aggregate
 
       expect(result.aggregations.count).to eq(5)
@@ -320,7 +320,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
         )
       end
 
-      it "aggregates the events with the cached aggregation", :aggregate_failures do
+      it "aggregates the events with the cached aggregation" do
         result = custom_service.aggregate
 
         expect(result.aggregation).to eq(57)

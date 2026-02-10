@@ -34,7 +34,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     }
   end
 
-  it "updates the customer", :aggregate_failures do
+  it "updates the customer" do
     expect(result).to be_success
 
     updated_customer = result.customer
@@ -74,7 +74,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       }
     end
 
-    it "updates only the updated args", :aggregate_failures do
+    it "updates only the updated args" do
       expect { result }.not_to change { customer.reload.email }
 
       expect(result).to be_success
@@ -96,7 +96,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
-    it "assigns the right tax to the customer", :aggregate_failures do
+    it "assigns the right tax to the customer" do
       expect(result).to be_success
 
       tax = result.customer.taxes.first
@@ -141,7 +141,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   context "with validation error" do
     let(:update_args) { {country: "invalid country code"} }
 
-    it "returns an error", :aggregate_failures do
+    it "returns an error" do
       expect(result).not_to be_success
       expect(result.error).to be_a(BaseService::ValidationFailure)
       expect(result.error.messages[:country]).to eq(["not_a_valid_country_code"])

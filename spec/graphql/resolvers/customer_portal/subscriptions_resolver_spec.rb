@@ -33,11 +33,9 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
 
     subscriptions_response = result["data"]["customerPortalSubscriptions"]
 
-    aggregate_failures do
-      expect(subscriptions_response["collection"].pluck("id")).to contain_exactly(active_subscription.id)
-      expect(subscriptions_response["metadata"]["currentPage"]).to eq(1)
-      expect(subscriptions_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(subscriptions_response["collection"].pluck("id")).to contain_exactly(active_subscription.id)
+    expect(subscriptions_response["metadata"]["currentPage"]).to eq(1)
+    expect(subscriptions_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "with filter on status" do
@@ -61,10 +59,8 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
 
       subscriptions_response = result["data"]["customerPortalSubscriptions"]
 
-      aggregate_failures do
-        expect(subscriptions_response["collection"].first["id"]).to eq(terminated_subscription.id)
-        expect(subscriptions_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(subscriptions_response["collection"].first["id"]).to eq(terminated_subscription.id)
+      expect(subscriptions_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 

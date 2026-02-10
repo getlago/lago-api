@@ -29,12 +29,10 @@ RSpec.describe Resolvers::OrganizationResolver do
 
     data = result["data"]["organization"]
 
-    aggregate_failures do
-      expect(data["id"]).to eq(organization.id)
-      expect(data["name"]).to eq(organization.name)
-      expect(data["email"]).to eq(organization.email)
-      expect(data["city"]).to eq(organization.city)
-    end
+    expect(data["id"]).to eq(organization.id)
+    expect(data["name"]).to eq(organization.name)
+    expect(data["email"]).to eq(organization.email)
+    expect(data["city"]).to eq(organization.city)
   end
 
   context "with field requiring permissions" do
@@ -64,14 +62,12 @@ RSpec.describe Resolvers::OrganizationResolver do
 
       data = result["data"]["organization"]
 
-      aggregate_failures do
-        expect(data["taxIdentificationNumber"]).to eq(organization.tax_identification_number)
-        expect(data["apiKey"]).to eq(organization.api_keys.first.value)
-        expect(data["webhookUrl"]).to eq(organization.webhook_endpoints.first.webhook_url)
-        expect(data["billingConfiguration"]["invoiceFooter"]).to eq(organization.invoice_footer)
-        expect(data["emailSettings"]).to eq(organization.email_settings.map { it.tr(".", "_") })
-        expect(data["taxes"]).to eq []
-      end
+      expect(data["taxIdentificationNumber"]).to eq(organization.tax_identification_number)
+      expect(data["apiKey"]).to eq(organization.api_keys.first.value)
+      expect(data["webhookUrl"]).to eq(organization.webhook_endpoints.first.webhook_url)
+      expect(data["billingConfiguration"]["invoiceFooter"]).to eq(organization.invoice_footer)
+      expect(data["emailSettings"]).to eq(organization.email_settings.map { it.tr(".", "_") })
+      expect(data["taxes"]).to eq []
     end
   end
 end

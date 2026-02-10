@@ -307,7 +307,7 @@ RSpec.describe Api::V1::BillableMetricsController do
     include_examples "requires API permission", "billable_metric", "write"
 
     context "with valid inputs" do
-      it "evaluates the expression", :aggregate_failures do
+      it "evaluates the expression" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -319,7 +319,7 @@ RSpec.describe Api::V1::BillableMetricsController do
       let(:event) { {} }
       let(:expression) { "" }
 
-      it "returns unprocessable_entity error", :aggregate_failures do
+      it "returns unprocessable_entity error" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)

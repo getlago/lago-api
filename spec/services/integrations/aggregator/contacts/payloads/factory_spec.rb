@@ -86,11 +86,9 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
       let(:integration_customer) { FactoryBot.create(:netsuite_customer) }
 
       it "returns payload body" do
-        aggregate_failures do
-          expect(subject["recordId"]).to eq(integration_customer.external_customer_id)
-          expect(subject["columns"]["companyname"]).to eq(customer.name)
-          expect(subject["columns"]["entityid"]).to eq(customer.external_id)
-        end
+        expect(subject["recordId"]).to eq(integration_customer.external_customer_id)
+        expect(subject["columns"]["companyname"]).to eq(customer.name)
+        expect(subject["columns"]["entityid"]).to eq(customer.external_id)
       end
     end
 
@@ -98,10 +96,8 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
       let(:integration_customer) { FactoryBot.create(:xero_customer) }
 
       it "returns payload body" do
-        aggregate_failures do
-          expect(subject.first["id"]).to eq(integration_customer.external_customer_id)
-          expect(subject.first["name"]).to eq(customer.name)
-        end
+        expect(subject.first["id"]).to eq(integration_customer.external_customer_id)
+        expect(subject.first["name"]).to eq(customer.name)
       end
     end
 
@@ -109,10 +105,8 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
       let(:integration_customer) { FactoryBot.create(:anrok_customer) }
 
       it "returns payload body" do
-        aggregate_failures do
-          expect(subject.first["id"]).to eq(integration_customer.external_customer_id)
-          expect(subject.first["name"]).to eq(customer.display_name(prefer_legal_name: false))
-        end
+        expect(subject.first["id"]).to eq(integration_customer.external_customer_id)
+        expect(subject.first["name"]).to eq(customer.display_name(prefer_legal_name: false))
       end
     end
   end

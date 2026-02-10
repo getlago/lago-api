@@ -18,11 +18,9 @@ RSpec.describe WebhookEndpoints::UpdateService do
     it "updates the webhook endpoint" do
       result = update_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
-        expect(result.webhook_endpoint.signature_algo).to eq("hmac")
-      end
+      expect(result).to be_success
+      expect(result.webhook_endpoint.webhook_url).to eq("http://foo.bar")
+      expect(result.webhook_endpoint.signature_algo).to eq("hmac")
     end
 
     context "when webhook endpoint does not exist" do
@@ -31,10 +29,8 @@ RSpec.describe WebhookEndpoints::UpdateService do
       it "returns a not found error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.message).to eq("webhook_endpoint_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.message).to eq("webhook_endpoint_not_found")
       end
     end
 
@@ -48,10 +44,8 @@ RSpec.describe WebhookEndpoints::UpdateService do
       it "returns a validation failure" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.class).to eq(BaseService::ValidationFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error.class).to eq(BaseService::ValidationFailure)
       end
     end
   end

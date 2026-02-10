@@ -42,18 +42,16 @@ RSpec.describe Resolvers::SubscriptionsResolver do
     )
     response = result["data"]["subscriptions"]
 
-    aggregate_failures do
-      expect(response["collection"].count).to eq(2)
-      expect(response["collection"].map { |s| s["id"] }).to contain_exactly(
-        first_subscription.id,
-        second_subscription.id
-      )
-      expect(response["collection"].first["plan"]).to include(
-        "code" => plan.code
-      )
+    expect(response["collection"].count).to eq(2)
+    expect(response["collection"].map { |s| s["id"] }).to contain_exactly(
+      first_subscription.id,
+      second_subscription.id
+    )
+    expect(response["collection"].first["plan"]).to include(
+      "code" => plan.code
+    )
 
-      expect(response["metadata"]["currentPage"]).to eq(1)
-      expect(response["metadata"]["totalCount"]).to eq(2)
-    end
+    expect(response["metadata"]["currentPage"]).to eq(1)
+    expect(response["metadata"]["totalCount"]).to eq(2)
   end
 end

@@ -278,12 +278,10 @@ RSpec.describe Api::V1::CustomersController do
         expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
         metadata = json[:customer][:metadata]
-        aggregate_failures do
-          expect(metadata).to be_present
-          expect(metadata.first[:key]).to eq("Hello")
-          expect(metadata.first[:value]).to eq("Hi")
-          expect(metadata.first[:display_in_invoice]).to eq(true)
-        end
+        expect(metadata).to be_present
+        expect(metadata.first[:key]).to eq("Hello")
+        expect(metadata.first[:value]).to eq("Hi")
+        expect(metadata.first[:display_in_invoice]).to eq(true)
       end
     end
 

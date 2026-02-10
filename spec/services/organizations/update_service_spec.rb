@@ -87,9 +87,7 @@ RSpec.describe Organizations::UpdateService do
       it "converts document_number_prefix to upcase version" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result.organization.document_number_prefix).to eq("ABC")
-        end
+        expect(result.organization.document_number_prefix).to eq("ABC")
       end
     end
 
@@ -99,9 +97,7 @@ RSpec.describe Organizations::UpdateService do
       it "converts document_number_prefix to upcase version" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result.organization.finalize_zero_amount_invoice).to eq(false)
-        end
+        expect(result.organization.finalize_zero_amount_invoice).to eq(false)
       end
     end
 
@@ -111,11 +107,9 @@ RSpec.describe Organizations::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:document_number_prefix]).to eq(["value_is_too_long"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:document_number_prefix]).to eq(["value_is_too_long"])
       end
     end
 
@@ -224,11 +218,9 @@ RSpec.describe Organizations::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:country]).to eq(["not_a_valid_country_code"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:country]).to eq(["not_a_valid_country_code"])
       end
     end
 

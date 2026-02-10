@@ -44,14 +44,12 @@ RSpec.describe Mutations::InvoiceCustomSections::Create do
 
     result_data = result["data"]["createInvoiceCustomSection"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("First Invoice Custom Section")
-      expect(result_data["displayName"]).to eq("Section name displayed in the invoice")
-      expect(result_data["code"]).to eq("section_code")
-      expect(result_data["description"]).to eq("this invoice custom section will be added in the PDF")
-      expect(result_data["details"]).to eq("This is the exact information shown in the invoice")
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("First Invoice Custom Section")
+    expect(result_data["displayName"]).to eq("Section name displayed in the invoice")
+    expect(result_data["code"]).to eq("section_code")
+    expect(result_data["description"]).to eq("this invoice custom section will be added in the PDF")
+    expect(result_data["details"]).to eq("This is the exact information shown in the invoice")
   end
 
   context "when fail to create invoice_custom_section" do

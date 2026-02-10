@@ -35,11 +35,9 @@ RSpec.describe Invites::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:email]).to eq(%w[invalid_email_format])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:email]).to eq(%w[invalid_email_format])
       end
     end
 
@@ -54,11 +52,9 @@ RSpec.describe Invites::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:roles]).to eq(%w[invalid_role])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
     end
 
@@ -74,11 +70,9 @@ RSpec.describe Invites::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:roles]).to eq(%w[invalid_role])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
     end
 
@@ -87,11 +81,9 @@ RSpec.describe Invites::CreateService do
         create(:invite, organization: create_args[:current_organization], email: create_args[:email])
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:invite])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:invite])
       end
     end
 
@@ -103,11 +95,9 @@ RSpec.describe Invites::CreateService do
 
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:email])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:email])
       end
     end
   end

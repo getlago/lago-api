@@ -57,9 +57,7 @@ RSpec.describe Resolvers::Integrations::SubsidiariesResolver do
 
     subsidiaries = result["data"]["integrationSubsidiaries"]
 
-    aggregate_failures do
-      expect(subsidiaries["collection"].count).to eq(4)
-      expect(subsidiaries["collection"].first["externalId"]).to eq("1")
-    end
+    expect(subsidiaries["collection"].count).to eq(4)
+    expect(subsidiaries["collection"].first["externalId"]).to eq("1")
   end
 end

@@ -37,12 +37,10 @@ RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
       it "returns an error" do
         result = webhook_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("webhook_error")
-          expect(result.error.error_message).to eq("Organization not found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("webhook_error")
+        expect(result.error.error_message).to eq("Organization not found")
       end
     end
 
@@ -52,12 +50,10 @@ RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
       it "returns an error" do
         result = webhook_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("webhook_error")
-          expect(result.error.error_message).to eq("Payment provider not found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("webhook_error")
+        expect(result.error.error_message).to eq("Payment provider not found")
       end
     end
 
@@ -67,12 +63,10 @@ RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
       it "returns an error" do
         result = webhook_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("webhook_error")
-          expect(result.error.error_message).to eq("Invalid signature")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("webhook_error")
+        expect(result.error.error_message).to eq("Invalid signature")
       end
     end
 
@@ -82,12 +76,10 @@ RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
       it "returns an error" do
         result = webhook_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("webhook_error")
-          expect(result.error.error_message).to eq("Payment provider code is missing")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("webhook_error")
+        expect(result.error.error_message).to eq("Payment provider code is missing")
       end
     end
   end

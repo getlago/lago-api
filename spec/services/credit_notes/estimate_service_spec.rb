@@ -61,41 +61,39 @@ RSpec.describe CreditNotes::EstimateService do
   it "estimates the credit and refund amount" do
     result = estimate_service.call
 
-    aggregate_failures do
-      expect(result).to be_success
+    expect(result).to be_success
 
-      credit_note = result.credit_note
-      expect(credit_note).to have_attributes(
-        invoice:,
-        customer:,
-        currency: invoice.currency,
-        sub_total_excluding_taxes_amount_cents: 8,
-        credit_amount_cents: 9,
-        refund_amount_cents: 9,
-        coupons_adjustment_amount_cents: 8,
-        taxes_amount_cents: 1,
-        total_amount_cents: 9,
-        taxes_rate: 20
-      )
+    credit_note = result.credit_note
+    expect(credit_note).to have_attributes(
+      invoice:,
+      customer:,
+      currency: invoice.currency,
+      sub_total_excluding_taxes_amount_cents: 8,
+      credit_amount_cents: 9,
+      refund_amount_cents: 9,
+      coupons_adjustment_amount_cents: 8,
+      taxes_amount_cents: 1,
+      total_amount_cents: 9,
+      taxes_rate: 20
+    )
 
-      expect(credit_note.applied_taxes.size).to eq(1)
+    expect(credit_note.applied_taxes.size).to eq(1)
 
-      expect(credit_note.items.size).to eq(2)
+    expect(credit_note.items.size).to eq(2)
 
-      item1 = credit_note.items.first
-      expect(item1).to have_attributes(
-        fee: fee1,
-        amount_cents: 10,
-        amount_currency: invoice.currency
-      )
+    item1 = credit_note.items.first
+    expect(item1).to have_attributes(
+      fee: fee1,
+      amount_cents: 10,
+      amount_currency: invoice.currency
+    )
 
-      item2 = credit_note.items.last
-      expect(item2).to have_attributes(
-        fee: fee2,
-        amount_cents: 5,
-        amount_currency: invoice.currency
-      )
-    end
+    item2 = credit_note.items.last
+    expect(item2).to have_attributes(
+      fee: fee2,
+      amount_cents: 5,
+      amount_currency: invoice.currency
+    )
   end
 
   context "with invalid items" do
@@ -115,16 +113,14 @@ RSpec.describe CreditNotes::EstimateService do
     it "returns a failed result" do
       result = estimate_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:amount_cents)
-        expect(result.error.messages[:amount_cents]).to eq(
-          %w[
-            higher_than_remaining_fee_amount
-          ]
-        )
-      end
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages.keys).to include(:amount_cents)
+      expect(result.error.messages[:amount_cents]).to eq(
+        %w[
+          higher_than_remaining_fee_amount
+        ]
+      )
     end
   end
 
@@ -152,12 +148,10 @@ RSpec.describe CreditNotes::EstimateService do
     it "returns a failure" do
       result = estimate_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
+      expect(result).not_to be_success
 
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq("invoice_not_found")
-      end
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.message).to eq("invoice_not_found")
     end
   end
 
@@ -177,12 +171,10 @@ RSpec.describe CreditNotes::EstimateService do
     it "returns a failure" do
       result = estimate_service.call
 
-      aggregate_failures do
-        expect(result).not_to be_success
+      expect(result).not_to be_success
 
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq("invalid_type_or_status")
-      end
+      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(result.error.code).to eq("invalid_type_or_status")
     end
   end
 
@@ -223,20 +215,18 @@ RSpec.describe CreditNotes::EstimateService do
       it "estimates the credit and refund amount not higher than wallet.balance_cents" do
         result = estimate_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to have_attributes(
-            currency: invoice.currency,
-            sub_total_excluding_taxes_amount_cents: 3,
-            credit_amount_cents: 0,
-            refund_amount_cents: 3,
-            coupons_adjustment_amount_cents: 0,
-            taxes_amount_cents: 0,
-            taxes_rate: 0
-          )
-        end
+        credit_note = result.credit_note
+        expect(credit_note).to have_attributes(
+          currency: invoice.currency,
+          sub_total_excluding_taxes_amount_cents: 3,
+          credit_amount_cents: 0,
+          refund_amount_cents: 3,
+          coupons_adjustment_amount_cents: 0,
+          taxes_amount_cents: 0,
+          taxes_rate: 0
+        )
       end
 
       context "when estimating with amount higher than in the active wallet" do
@@ -252,17 +242,15 @@ RSpec.describe CreditNotes::EstimateService do
         it "returns a failure" do
           result = estimate_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
+          expect(result).not_to be_success
 
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:amount_cents)
-            expect(result.error.messages[:amount_cents]).to eq(
-              %w[
-                higher_than_wallet_balance
-              ]
-            )
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:amount_cents)
+          expect(result.error.messages[:amount_cents]).to eq(
+            %w[
+              higher_than_wallet_balance
+            ]
+          )
         end
       end
     end
@@ -273,11 +261,9 @@ RSpec.describe CreditNotes::EstimateService do
       it "estimates the credit and refund amount hot higher than wallet.balance_amount_cents" do
         result = estimate_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        end
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
       end
     end
   end

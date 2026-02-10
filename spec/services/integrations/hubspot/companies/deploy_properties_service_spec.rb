@@ -25,14 +25,12 @@ RSpec.describe Integrations::Hubspot::Companies::DeployPropertiesService do
     it "successfully deploys companies properties and updates the companies_properties_version" do
       deploy_properties_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(http_client).to have_received(:post_with_response) do |payload, headers|
-          expect(payload[:objectType]).to eq("companies")
-          expect(headers["Authorization"]).to include("Bearer")
-        end
-        expect(integration.reload.companies_properties_version).to eq(described_class::VERSION)
+      expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(http_client).to have_received(:post_with_response) do |payload, headers|
+        expect(payload[:objectType]).to eq("companies")
+        expect(headers["Authorization"]).to include("Bearer")
       end
+      expect(integration.reload.companies_properties_version).to eq(described_class::VERSION)
     end
 
     context "when companies_properties_version is already up-to-date" do
@@ -44,11 +42,9 @@ RSpec.describe Integrations::Hubspot::Companies::DeployPropertiesService do
       it "does not make an API call and keeps the version unchanged" do
         deploy_properties_service.call
 
-        aggregate_failures do
-          expect(LagoHttpClient::Client).not_to have_received(:new)
-          expect(http_client).not_to have_received(:post_with_response)
-          expect(integration.reload.companies_properties_version).to eq(described_class::VERSION)
-        end
+        expect(LagoHttpClient::Client).not_to have_received(:new)
+        expect(http_client).not_to have_received(:post_with_response)
+        expect(integration.reload.companies_properties_version).to eq(described_class::VERSION)
       end
     end
 

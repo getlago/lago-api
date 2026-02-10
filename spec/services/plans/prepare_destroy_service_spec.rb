@@ -32,10 +32,8 @@ RSpec.describe Plans::PrepareDestroyService do
       it "returns an error" do
         result = prepare_destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("plan_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("plan_not_found")
       end
     end
   end

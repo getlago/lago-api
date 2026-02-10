@@ -54,9 +54,7 @@ RSpec.describe Mutations::Integrations::Hubspot::Update do
 
     result_data = result["data"]["updateHubspotIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
   end
 end

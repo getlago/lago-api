@@ -180,12 +180,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         it "returns tax error" do
           result = fee_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
-            expect(charge.reload.fees.count).to eq(1)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
+          expect(charge.reload.fees.count).to eq(1)
         end
 
         context "when invoiceable is false" do
@@ -194,12 +192,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           it "returns tax error and fee is not being stored" do
             result = fee_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
-              expect(charge.reload.fees.count).to eq(0)
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
+            expect(charge.reload.fees.count).to eq(0)
           end
         end
       end
@@ -213,12 +209,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       it "returns a failure" do
         result = fee_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("failure")
-          expect(result.error.error_message).to eq("Failure")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("failure")
+        expect(result.error.error_message).to eq("Failure")
       end
     end
 
@@ -230,12 +224,10 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       it "returns a failure" do
         result = fee_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("failure")
-          expect(result.error.error_message).to eq("Failure")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("failure")
+        expect(result.error.error_message).to eq("Failure")
       end
     end
 
@@ -466,34 +458,32 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       it "creates a fee" do
         result = fee_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).to have_attributes(
-            subscription:,
-            charge:,
-            amount_cents: 10,
-            precise_amount_cents: 10.0,
-            amount_currency: "EUR",
-            fee_type: "charge",
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            pay_in_advance_event_id: event.id,
-            pay_in_advance_event_transaction_id: event.transaction_id,
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01111111111,
-            grouped_by: {"operator" => "foo"},
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first).to have_attributes(
+          subscription:,
+          charge:,
+          amount_cents: 10,
+          precise_amount_cents: 10.0,
+          amount_currency: "EUR",
+          fee_type: "charge",
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          properties: Hash,
+          events_count: 1,
+          pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
+          grouped_by: {"operator" => "foo"},
 
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2.0
-          )
-          expect(result.fees.first.applied_taxes.count).to eq(1)
-        end
+          taxes_rate: 20.0,
+          taxes_amount_cents: 2,
+          taxes_precise_amount_cents: 2.0
+        )
+        expect(result.fees.first.applied_taxes.count).to eq(1)
       end
     end
 
@@ -515,34 +505,32 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       it "does not persist the fee" do
         result = fee_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).not_to be_persisted
-          expect(result.fees.first).to have_attributes(
-            subscription:,
-            charge:,
-            amount_cents: 10,
-            precise_amount_cents: 10.0,
-            amount_currency: "EUR",
-            fee_type: "charge",
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            pay_in_advance_event_id: event.id,
-            pay_in_advance_event_transaction_id: event.transaction_id,
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01111111111,
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first).not_to be_persisted
+        expect(result.fees.first).to have_attributes(
+          subscription:,
+          charge:,
+          amount_cents: 10,
+          precise_amount_cents: 10.0,
+          amount_currency: "EUR",
+          fee_type: "charge",
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          properties: Hash,
+          events_count: 1,
+          pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
 
-            taxes_rate: 20.0,
-            taxes_amount_cents: 2,
-            taxes_precise_amount_cents: 2.0
-          )
-          expect(result.fees.first.applied_taxes.size).to eq(1)
-        end
+          taxes_rate: 20.0,
+          taxes_amount_cents: 2,
+          taxes_precise_amount_cents: 2.0
+        )
+        expect(result.fees.first.applied_taxes.size).to eq(1)
       end
 
       context "when customer has a tax customer" do
@@ -713,22 +701,20 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       end
 
       it "creates a cached aggregation" do
-        aggregate_failures do
-          expect { fee_service.call }.to change(CachedAggregation, :count).by(1)
+        expect { fee_service.call }.to change(CachedAggregation, :count).by(1)
 
-          cached_aggregation = CachedAggregation.last
-          expect(cached_aggregation.organization_id).to eq(organization.id)
-          expect(cached_aggregation.event_transaction_id).to eq(event.transaction_id)
-          expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
-          expect(cached_aggregation.charge_id).to eq(charge.id)
-          expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)
-          expect(cached_aggregation.charge_filter_id).to be_nil
-          expect(cached_aggregation.current_aggregation).to eq(9)
-          expect(cached_aggregation.current_amount).to be_nil
-          expect(cached_aggregation.max_aggregation).to eq(9)
-          expect(cached_aggregation.max_aggregation_with_proration).to be_nil
-          expect(cached_aggregation.grouped_by).to eq({})
-        end
+        cached_aggregation = CachedAggregation.last
+        expect(cached_aggregation.organization_id).to eq(organization.id)
+        expect(cached_aggregation.event_transaction_id).to eq(event.transaction_id)
+        expect(cached_aggregation.timestamp.iso8601(3)).to eq(event.timestamp.iso8601(3))
+        expect(cached_aggregation.charge_id).to eq(charge.id)
+        expect(cached_aggregation.external_subscription_id).to eq(event.external_subscription_id)
+        expect(cached_aggregation.charge_filter_id).to be_nil
+        expect(cached_aggregation.current_aggregation).to eq(9)
+        expect(cached_aggregation.current_amount).to be_nil
+        expect(cached_aggregation.max_aggregation).to eq(9)
+        expect(cached_aggregation.max_aggregation_with_proration).to be_nil
+        expect(cached_aggregation.grouped_by).to eq({})
       end
     end
   end

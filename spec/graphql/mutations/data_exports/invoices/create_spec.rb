@@ -54,11 +54,9 @@ RSpec.describe Mutations::DataExports::Invoices::Create do
 
     result_data = result["data"]["createInvoicesDataExport"]
 
-    aggregate_failures do
-      expect(result_data).to include(
-        "id" => String,
-        "status" => "pending"
-      )
-    end
+    expect(result_data).to include(
+      "id" => String,
+      "status" => "pending"
+    )
   end
 end

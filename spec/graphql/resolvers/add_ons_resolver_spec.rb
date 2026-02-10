@@ -35,13 +35,11 @@ RSpec.describe Resolvers::AddOnsResolver do
 
     add_ons_response = result["data"]["addOns"]
 
-    aggregate_failures do
-      expect(add_ons_response["collection"].first["id"]).to eq(add_on.id)
-      expect(add_ons_response["collection"].first["name"]).to eq(add_on.name)
+    expect(add_ons_response["collection"].first["id"]).to eq(add_on.id)
+    expect(add_ons_response["collection"].first["name"]).to eq(add_on.name)
 
-      expect(add_ons_response["metadata"]["currentPage"]).to eq(1)
-      expect(add_ons_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(add_ons_response["metadata"]["currentPage"]).to eq(1)
+    expect(add_ons_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "with integration mappings" do
@@ -76,17 +74,15 @@ RSpec.describe Resolvers::AddOnsResolver do
 
       add_ons_response = result["data"]["addOns"]
 
-      aggregate_failures do
-        expect(add_ons_response["collection"].first["id"]).to eq(add_on.id)
-        expect(add_ons_response["collection"].first["name"]).to eq(add_on.name)
+      expect(add_ons_response["collection"].first["id"]).to eq(add_on.id)
+      expect(add_ons_response["collection"].first["name"]).to eq(add_on.name)
 
-        expect(add_ons_response["collection"].first["integrationMappings"].count).to eq(1)
-        expect(add_ons_response["collection"].first["integrationMappings"].first["externalName"])
-          .to eq("Credits and Discounts")
+      expect(add_ons_response["collection"].first["integrationMappings"].count).to eq(1)
+      expect(add_ons_response["collection"].first["integrationMappings"].first["externalName"])
+        .to eq("Credits and Discounts")
 
-        expect(add_ons_response["metadata"]["currentPage"]).to eq(1)
-        expect(add_ons_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(add_ons_response["metadata"]["currentPage"]).to eq(1)
+      expect(add_ons_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

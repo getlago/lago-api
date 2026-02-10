@@ -49,14 +49,12 @@ RSpec.describe Mutations::InvoiceCustomSections::Update do
 
       result_data = result["data"]["updateInvoiceCustomSection"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["name"]).to eq("First Invoice Custom Section")
-        expect(result_data["displayName"]).to eq("Section name displayed in the invoice")
-        expect(result_data["code"]).to eq(invoice_custom_section.code)
-        expect(result_data["description"]).to eq("this invoice custom section will be added in the PDF")
-        expect(result_data["details"]).to eq("This is the exact information shown in the invoice")
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["name"]).to eq("First Invoice Custom Section")
+      expect(result_data["displayName"]).to eq("Section name displayed in the invoice")
+      expect(result_data["code"]).to eq(invoice_custom_section.code)
+      expect(result_data["description"]).to eq("this invoice custom section will be added in the PDF")
+      expect(result_data["details"]).to eq("This is the exact information shown in the invoice")
     end
   end
 

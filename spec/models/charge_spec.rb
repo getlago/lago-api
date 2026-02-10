@@ -43,16 +43,14 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_amount")
-        expect(charge.errors.messages[:properties]).to include("invalid_graduated_ranges")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_amount")
+      expect(charge.errors.messages[:properties]).to include("invalid_graduated_ranges")
 
-        expect(Charges::Validators::GraduatedService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::GraduatedService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not graduated" do
@@ -99,15 +97,13 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_amount")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_amount")
 
-        expect(Charges::Validators::StandardService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::StandardService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not graduated" do
@@ -156,17 +152,15 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_amount")
-        expect(charge.errors.messages[:properties]).to include("invalid_free_units")
-        expect(charge.errors.messages[:properties]).to include("invalid_package_size")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_amount")
+      expect(charge.errors.messages[:properties]).to include("invalid_free_units")
+      expect(charge.errors.messages[:properties]).to include("invalid_package_size")
 
-        expect(Charges::Validators::PackageService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::PackageService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not package" do
@@ -214,18 +208,16 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_rate")
-        expect(charge.errors.messages[:properties]).to include("invalid_fixed_amount")
-        expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_events")
-        expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_total_aggregation")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_rate")
+      expect(charge.errors.messages[:properties]).to include("invalid_fixed_amount")
+      expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_events")
+      expect(charge.errors.messages[:properties]).to include("invalid_free_units_per_total_aggregation")
 
-        expect(Charges::Validators::PercentageService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::PercentageService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not percentage" do
@@ -272,16 +264,14 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_amount")
-        expect(charge.errors.messages[:properties]).to include("invalid_volume_ranges")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_amount")
+      expect(charge.errors.messages[:properties]).to include("invalid_volume_ranges")
 
-        expect(Charges::Validators::VolumeService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::VolumeService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not volume" do
@@ -352,16 +342,14 @@ RSpec.describe Charge do
       allow(validation_service).to receive(:result)
         .and_return(service_response)
 
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages.keys).to include(:properties)
-        expect(charge.errors.messages[:properties]).to include("invalid_rate")
-        expect(charge.errors.messages[:properties]).to include("invalid_graduated_percentage_ranges")
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages.keys).to include(:properties)
+      expect(charge.errors.messages[:properties]).to include("invalid_rate")
+      expect(charge.errors.messages[:properties]).to include("invalid_graduated_percentage_ranges")
 
-        expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
-        expect(validation_service).to have_received(:valid?)
-        expect(validation_service).to have_received(:result)
-      end
+      expect(Charges::Validators::GraduatedPercentageService).to have_received(:new).with(charge:)
+      expect(validation_service).to have_received(:valid?)
+      expect(validation_service).to have_received(:result)
     end
 
     context "when charge model is not graduated percentage" do
@@ -394,10 +382,8 @@ RSpec.describe Charge do
         billable_metric = create(:max_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
       end
     end
 
@@ -406,10 +392,8 @@ RSpec.describe Charge do
         billable_metric = create(:latest_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
       end
     end
 
@@ -418,10 +402,8 @@ RSpec.describe Charge do
         billable_metric = create(:weighted_sum_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
       end
     end
 
@@ -429,10 +411,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:volume_charge, :pay_in_advance)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:pay_in_advance]).to include("invalid_aggregation_type_or_charge_model")
       end
     end
   end
@@ -457,10 +437,8 @@ RSpec.describe Charge do
         ].each do |params|
           charge = build(:standard_charge, regroup_paid_fees: "invoice", **params)
 
-          aggregate_failures do
-            expect(charge).not_to be_valid
-            expect(charge.errors.messages[:regroup_paid_fees]).to include("only_compatible_with_pay_in_advance_and_non_invoiceable")
-          end
+          expect(charge).not_to be_valid
+          expect(charge.errors.messages[:regroup_paid_fees]).to include("only_compatible_with_pay_in_advance_and_non_invoiceable")
         end
       end
     end
@@ -475,10 +453,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:standard_charge, :pay_in_advance, min_amount_cents: 1200)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:min_amount_cents]).to include("not_compatible_with_pay_in_advance")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:min_amount_cents]).to include("not_compatible_with_pay_in_advance")
       end
     end
   end
@@ -496,10 +472,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:standard_charge, :pay_in_advance, prorated: true, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
       end
     end
 
@@ -507,10 +481,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:package_charge, :pay_in_advance, prorated: true, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
       end
     end
 
@@ -518,10 +490,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:percentage_charge, prorated: true, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
       end
     end
 
@@ -531,10 +501,8 @@ RSpec.describe Charge do
       it "returns an error" do
         charge = build(:percentage_charge, prorated: true, billable_metric:)
 
-        aggregate_failures do
-          expect(charge).not_to be_valid
-          expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
-        end
+        expect(charge).not_to be_valid
+        expect(charge.errors.messages[:prorated]).to include("invalid_billable_metric_or_charge_model")
       end
     end
   end
@@ -545,10 +513,8 @@ RSpec.describe Charge do
     let(:billable_metric) { create(:billable_metric, aggregation_type: :count_agg) }
 
     it "returns an error for invalid metric type" do
-      aggregate_failures do
-        expect(charge).not_to be_valid
-        expect(charge.errors.messages[:charge_model]).to include("invalid_aggregation_type_or_charge_model")
-      end
+      expect(charge).not_to be_valid
+      expect(charge.errors.messages[:charge_model]).to include("invalid_aggregation_type_or_charge_model")
     end
   end
 
@@ -788,10 +754,8 @@ RSpec.describe Charge do
         it "returns an error" do
           charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
 
-          aggregate_failures do
-            expect(charge).not_to be_valid
-            expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
-          end
+          expect(charge).not_to be_valid
+          expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
         end
       end
 
@@ -801,10 +765,8 @@ RSpec.describe Charge do
         it "returns an error" do
           charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
 
-          aggregate_failures do
-            expect(charge).not_to be_valid
-            expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
-          end
+          expect(charge).not_to be_valid
+          expect(charge.errors[:accepts_target_wallet]).to include("feature_unavailable")
         end
       end
 
