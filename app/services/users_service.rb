@@ -67,6 +67,8 @@ class UsersService < BaseService
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
     track_organization_registered(result.organization, result.membership)
 
+    register_security_log(result)
+
     result
   end
 
@@ -113,6 +115,20 @@ class UsersService < BaseService
         organization_name: organization.name,
         organization_id: organization.id
       }
+    )
+  end
+
+  def register_security_log(result)
+    Utils::SecurityLog.produce(
+      organization: result.organization,
+      log_type: "user",
+      log_event: "user.signed_up",
+      user: result.user,
+      resources: {
+        email: result.user.email,
+        roles: result.membership.roles.map(&:code)
+      },
+      skip_organization_check: true
     )
   end
 end
