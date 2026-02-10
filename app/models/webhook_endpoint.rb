@@ -24,6 +24,10 @@ class WebhookEndpoint < ApplicationRecord
     %w[webhook_url]
   end
 
+  def self.event_types
+    SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s)
+  end
+
   private
 
   def max_webhook_endpoints
@@ -39,7 +43,7 @@ class WebhookEndpoint < ApplicationRecord
       errors.add(:event_types, :invalid_format)
     end
 
-    invalid_types = event_types - SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s)
+    invalid_types = event_types - WebhookEndpoint.event_types
     if invalid_types.present?
       errors.add(:event_types, :invalid_types, invalid_types:)
     end

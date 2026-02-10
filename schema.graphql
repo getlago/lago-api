@@ -5537,6 +5537,22 @@ type Event {
   transactionId: String
 }
 
+enum EventCategoryEnum {
+  ALERTS
+  CREDIT_NOTES
+  CUSTOMERS
+  DUNNING_CAMPAIGNS
+  EVENT_INGESTION
+  FEATURES
+  INTEGRATIONS
+  INVOICES
+  PAYMENTS
+  PAYMENT_RECEIPTS
+  PLANS
+  SUBSCRIPTIONS_AND_FEES
+  WALLETS_AND_CREDITS
+}
+
 """
 EventCollection type
 """
@@ -9616,6 +9632,11 @@ type Query {
   ): Event
 
   """
+  Query Event Types for Webhook Endpoints
+  """
+  eventTypes: [WebhookEventType!]!
+
+  """
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
@@ -12653,6 +12674,13 @@ input WebhookEndpointUpdateInput {
   name: String
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
   webhookUrl: String!
+}
+
+type WebhookEventType {
+  category: EventCategoryEnum!
+  deprecated: Boolean!
+  description: String!
+  name: String!
 }
 
 enum WebhookStatusEnum {
