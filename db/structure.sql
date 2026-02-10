@@ -2148,6 +2148,7 @@ CREATE TABLE public.customers (
     subscription_invoice_issuing_date_anchor public.subscription_invoice_issuing_date_anchors,
     subscription_invoice_issuing_date_adjustment public.subscription_invoice_issuing_date_adjustments,
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
+    dunning_campaign_ended_at timestamp(6) without time zone,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -11420,6 +11421,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260209103920'),
 ('20260209103526'),
+('20260206162323'),
 ('20260204153734'),
 ('20260202155431'),
 ('20260202134958'),
@@ -12347,4 +12349,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
