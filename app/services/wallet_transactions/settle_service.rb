@@ -14,7 +14,13 @@ module WalletTransactions
     )
 
     def call
-      wallet_transaction.update!(status: :settled, settled_at: Time.current)
+      updates = {status: :settled, settled_at: Time.current}
+
+      if wallet_transaction.inbound? && wallet_transaction.wallet.traceable?
+        updates[:remaining_amount_cents] = wallet_transaction.amount_cents
+      end
+
+      wallet_transaction.update!(updates)
       after_commit { SendWebhookJob.perform_later("wallet_transaction.updated", wallet_transaction) }
 
       result.wallet_transaction = wallet_transaction

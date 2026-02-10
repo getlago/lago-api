@@ -113,18 +113,36 @@ RSpec.describe WalletTransactions::CreateService do
       let(:wallet) { create(:wallet, customer:, currency:, traceable: true) }
 
       context "when transaction is inbound" do
-        let(:transaction_params) do
-          {
-            status: :settled,
-            transaction_type: :inbound,
-            transaction_status: :purchased
-          }
+        context "when transaction is granted" do
+          let(:transaction_params) do
+            {
+              status: :settled,
+              transaction_type: :inbound,
+              transaction_status: :granted
+            }
+          end
+
+          it "sets remaining_amount_cents to amount_cents" do
+            wallet_transaction = result.wallet_transaction
+
+            expect(wallet_transaction.remaining_amount_cents).to eq(wallet_transaction.amount_cents)
+          end
         end
 
-        it "initializes remaining_amount_cents to amount_cents" do
-          wallet_transaction = result.wallet_transaction
+        context "when transaction is purchased" do
+          let(:transaction_params) do
+            {
+              status: :settled,
+              transaction_type: :inbound,
+              transaction_status: :purchased
+            }
+          end
 
-          expect(wallet_transaction.remaining_amount_cents).to eq(wallet_transaction.amount_cents)
+          it "does not set remaining_amount_cents" do
+            wallet_transaction = result.wallet_transaction
+
+            expect(wallet_transaction.remaining_amount_cents).to be_nil
+          end
         end
       end
 
