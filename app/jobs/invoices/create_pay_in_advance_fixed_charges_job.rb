@@ -18,7 +18,7 @@ module Invoices
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 
     # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-    # When it fails, it raises a WithAdvisoryLock::FailedToAcquireLock error.
+    # When it fails, it raises a Customers::FailedToAcquireLock error.
     # If the lock succeeds but another job/request updates the wallet concurrenly, it will raise a ActiveRecord::StaleObjectError error.
     retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: 25, wait: ->(_) { CreatePayInAdvanceFixedChargesJob.retry_delay }
 
