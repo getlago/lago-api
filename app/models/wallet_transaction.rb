@@ -77,7 +77,8 @@ class WalletTransaction < ApplicationRecord
 
   # note: outbound wallet transactions are synced as part of invoice syncing
   def should_sync_wallet_transaction?
-    settled? && inbound? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    settled? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices } &&
+      ( inbound? || (outbound && voided) )
   end
 end
 

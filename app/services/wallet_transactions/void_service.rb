@@ -29,9 +29,15 @@ module WalletTransactions
           transaction_status: :voided,
           **transaction_params
         ).wallet_transaction
-        # TODO: should we also send this WT?
+
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
+      end
+
+      after_commit do
+        if wallet_transaction.should_sync_wallet_transaction?
+          Integrations::Aggregator::WalletTransactions::CreateJob.perform_later(wallet_transaction:)
+        end
       end
 
       result
