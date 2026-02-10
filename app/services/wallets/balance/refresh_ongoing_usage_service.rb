@@ -3,10 +3,14 @@
 module Wallets
   module Balance
     class RefreshOngoingUsageService < BaseService
-      def initialize(wallet:, usage_amount_cents:, allocation_rules:)
+      def initialize(wallet:, usage_amount_cents:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:, skip_single_wallet_update: false)
         @wallet = wallet
         @usage_amount_cents = usage_amount_cents
-        @allocation_rules = allocation_rules
+        @skip_single_wallet_update = skip_single_wallet_update
+        @current_usage_fees = current_usage_fees
+        @draft_invoices_fees = draft_invoices_fees
+        @progressive_billing_fees = progressive_billing_fees
+        @pay_in_advance_fees = pay_in_advance_fees
 
         super
       end
@@ -21,7 +25,7 @@ module Wallets
         wallet.reload
         update_params = wallet_update_params
 
-        Wallets::Balance::UpdateOngoingService.call(wallet:, update_params:).raise_if_error!
+        Wallets::Balance::UpdateOngoingService.call(wallet:, update_params:, skip_single_wallet_update:).raise_if_error!
 
         result.wallet = wallet
         result
@@ -29,63 +33,36 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents, :allocation_rules
+      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :usage_amount_cents, :skip_single_wallet_update,
+        :current_usage_fees, :draft_invoices_fees, :progressive_billing_fees, :pay_in_advance_fees
 
       delegate :customer, to: :wallet
 
       def calculate_total_billed_usage_amount_cents
-        usage_amount_cents.sum do |e|
-          billed_progressive_invoices_amount_cents(e[:billed_progressive_invoice_subscriptions]) +
-            billed_pay_in_advance_amount_cents(e[:invoice])
-        end
+        billed_progressive_invoices_amount_cents +
+          billed_pay_in_advance_amount_cents
       end
 
-      def billed_progressive_invoices_amount_cents(invoice_subscriptions)
-        fees = progressive_billing_fees(invoice_subscriptions)
-
-        fees.sum do |fee|
+      def billed_progressive_invoices_amount_cents
+        progressive_billing_fees.sum do |fee|
           fee.taxes_amount_cents + fee.sub_total_excluding_taxes_amount_cents
         end
       end
 
-      def progressive_billing_fees(invoice_subscriptions)
-        fees = invoice_subscriptions.flat_map { it.invoice.fees }
-        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
-
-        applicable_fees(fees, wallets_applicable_on_fees)
-      end
-
-      def applicable_fees(fees, fee_map)
-        fees.select { |fee| fee_map[(fee.id || fee.object_id)] == wallet.id }
-      end
-
-      def invoice_pay_in_advance_fees(invoice)
-        fees = invoice.fees.select { |f| f.charge.pay_in_advance? }
-        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
-
-        applicable_fees(fees, wallets_applicable_on_fees)
-      end
-
-      def draft_invoices_fees
-        fees = wallet.customer.invoices.draft.where.not(total_amount_cents: 0).flat_map(&:fees)
-        wallets_applicable_on_fees = assign_wallet_per_fee(fees)
-
-        applicable_fees(fees, wallets_applicable_on_fees)
-      end
-
       def draft_invoices_total_amount_cents
-        fees = draft_invoices_fees
-
-        fees.sum do |fee|
+        draft_invoices_fees.sum do |fee|
           fee.amount_cents + fee.taxes_amount_cents - fee.precise_coupons_amount_cents
         end
       end
 
-      def billed_pay_in_advance_amount_cents(invoice)
-        paid_in_advance_fees = invoice_pay_in_advance_fees(invoice)
+      def billed_pay_in_advance_amount_cents
         # Invoice that is returned from CustomerUsageService includes the taxes in total_usage
         # so if the fees ae already paid, we should exclude fees AND their taxes
-        paid_in_advance_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
+        pay_in_advance_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
+      end
+
+      def calculate_total_usage_with_limitation
+        current_usage_fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
       end
 
       def wallet_update_params
@@ -125,30 +102,6 @@ module Wallets
 
       def credits_ongoing_balance
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
-      end
-
-      def assign_wallet_per_fee(fees)
-        fee_wallet = {}
-
-        fees.each do |fee|
-          key = fee.id || fee.object_id
-
-          applicable_wallets = Wallets::FindApplicableOnFeesService
-            .call!(allocation_rules:, fee:)
-            .top_priority_wallet
-
-          fee_wallet[key] = applicable_wallets.presence
-        end
-
-        fee_wallet
-      end
-
-      def calculate_total_usage_with_limitation
-        all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
-        wallets_applicable_on_fees = assign_wallet_per_fee(all_fees) # { fee_key => wallet_id }
-        fees = applicable_fees(all_fees, wallets_applicable_on_fees)
-
-        fees.sum { |fee| fee.amount_cents + fee.taxes_amount_cents }
       end
     end
   end

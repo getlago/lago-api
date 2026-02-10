@@ -4,7 +4,10 @@ require "rails_helper"
 
 RSpec.describe Wallets::FindApplicableOnFeesService do
   describe ".call" do
-    subject(:result) { described_class.call(allocation_rules:, fee:) }
+    subject(:result) { described_class.call(allocation_rules:, fee:, customer_id:, fee_targeting_wallets_enabled:) }
+
+    let(:fee_targeting_wallets_enabled) { nil }
+    let(:customer_id) { nil }
 
     context "when there are applicable wallets for billable metrics, fee types and unrestricted" do
       let(:allocation_rules) do
@@ -137,6 +140,102 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
       it "returns nil" do
         expect(result).to be_success
         expect(result.top_priority_wallet).to be_nil
+      end
+    end
+
+    context "when fee has target_wallet_code in grouped_by" do
+      around { |test| lago_premium!(&test) }
+
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:wallet) { create(:wallet, customer:, code: "target_wallet") }
+      let(:charge) { create(:standard_charge, organization:, accepts_target_wallet:) }
+      let(:accepts_target_wallet) { nil }
+      let(:customer_id) { customer.id }
+      let(:fee) do
+        create(:charge_fee, invoice:, subscription:, charge:,
+          grouped_by: {"target_wallet_code" => "target_wallet"})
+      end
+
+      let(:allocation_rules) do
+        {
+          bm_map: {},
+          type_map: {},
+          unrestricted: [SecureRandom.uuid, SecureRandom.uuid]
+        }
+      end
+
+      before { wallet }
+
+      context "when fee_targeting_wallets_enabled is true" do
+        let(:fee_targeting_wallets_enabled) { true }
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+
+        context "when charge accepts target wallet" do
+          let(:accepts_target_wallet) { true }
+
+          it "returns the wallet matching target_wallet_code" do
+            expect(result).to be_success
+            expect(result.top_priority_wallet).to eq(wallet.id)
+          end
+
+          context "when target wallet does not exist" do
+            let(:fee) do
+              create(:charge_fee, invoice:, subscription:, charge:,
+                grouped_by: {"target_wallet_code" => "nonexistent"})
+            end
+
+            it "falls back to allocation rules" do
+              expect(result).to be_success
+              expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+            end
+          end
+
+          context "when target wallet exists but is not active" do
+            before { wallet.update!(status: :terminated) }
+
+            it "falls back to allocation rules" do
+              expect(result).to be_success
+              expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+            end
+          end
+
+          context "when target_wallet_code takes priority over billable metric wallets" do
+            let(:allocation_rules) do
+              {
+                bm_map: {fee.charge.billable_metric_id => [SecureRandom.uuid]},
+                type_map: {},
+                unrestricted: []
+              }
+            end
+
+            it "returns the wallet matching target_wallet_code" do
+              expect(result).to be_success
+              expect(result.top_priority_wallet).to eq(wallet.id)
+            end
+          end
+        end
+
+        context "when charge does not accept target wallet" do
+          let(:accepts_target_wallet) { false }
+
+          it "ignores target_wallet_code and falls back to allocation rules" do
+            expect(result).to be_success
+            expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+          end
+        end
+      end
+
+      context "when fee_targeting_wallets_enabled is false" do
+        let(:fee_targeting_wallets_enabled) { false }
+        let(:accepts_target_wallet) { false }
+        let(:organization) { create(:organization, premium_integrations: []) }
+
+        it "ignores target_wallet_code and falls back to allocation rules" do
+          expect(result).to be_success
+          expect(result.top_priority_wallet).to eq(allocation_rules[:unrestricted].first)
+        end
       end
     end
   end

@@ -39,7 +39,7 @@ module Credits
           ordered_remaining_amounts.each do |fee_key, remaining_amount|
             next if remaining_amount <= 0
 
-            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array)
+            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array, wallet:)
 
             used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
             remaining_wallet_balance = wallet.balance_cents - used_amount
@@ -139,6 +139,9 @@ module Credits
 
         next if cap <= 0
         key = [fee.fee_type, fee.charge&.billable_metric_id]
+        if fee.organization.events_targeting_wallets_enabled? && fee.charge&.accepts_target_wallet
+          key << fee.grouped_by&.dig("target_wallet_code")
+        end
         remaining[key] += cap
       end
 
@@ -182,8 +185,16 @@ module Credits
       end
     end
 
-    def applicable_fee?(fee_key:, targets:, types:)
-      target_match = targets.include?(fee_key)
+    def applicable_fee?(fee_key:, targets:, types:, wallet:)
+      target_wallet_code = fee_key[2]
+
+      # If fee has target_wallet_code, only matching wallet can apply credits
+      if target_wallet_code.present?
+        return wallet.code == target_wallet_code
+      end
+
+      fee_key_without_wallet = fee_key.first(2)
+      target_match = targets.include?(fee_key_without_wallet)
       type_match = types.include?(fee_key.first)
       unrestricted_wallet = targets.empty? && types.empty?
 
