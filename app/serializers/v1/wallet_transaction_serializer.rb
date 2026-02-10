@@ -8,6 +8,7 @@ module V1
         lago_wallet_id: model.wallet_id,
         lago_invoice_id: model.invoice_id,
         lago_credit_note_id: model.credit_note_id,
+        lago_voided_invoice_id: model.voided_invoice_id,
         status: model.status,
         source: model.source,
         transaction_status: model.transaction_status,

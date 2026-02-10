@@ -67202,6 +67202,18 @@
               "deprecationReason": null
             },
             {
+              "name": "voidedInvoice",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Invoice",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "wallet",
               "description": null,
               "args": [],

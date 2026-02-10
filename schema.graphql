@@ -12522,6 +12522,7 @@ type WalletTransaction {
   transactionStatus: WalletTransactionTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
   updatedAt: ISO8601DateTime!
+  voidedInvoice: Invoice
   wallet: Wallet
   walletName: String
 }
