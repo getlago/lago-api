@@ -36,7 +36,7 @@ module Credits
             ordered_remaining_amounts.each do |fee_key, remaining_amount|
               next if remaining_amount <= 0
 
-            next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array, wallet:)
+              next unless applicable_fee?(fee_key:, targets: wallet_targets_array, types: wallet_types_array, wallet:)
 
               used_amount = wallet_fee_transactions.sum { |t| t[:amount_cents] }
               remaining_wallet_balance = wallet.balance_cents - used_amount
