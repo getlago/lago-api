@@ -45,11 +45,13 @@ RSpec.describe CreditNotes::RecreditService do
     end
 
     it "recredits the credit note" do
-      expect { service.call }
+      result = nil
+
+      expect { result = service.call }
         .to change { credit_note.reload.balance_amount_cents }
         .from(amount_cents).to(amount_cents_recredited)
 
-      expect(service.call).to be_success
+      expect(result).to be_success
     end
 
     it "updates credit note credit status to available" do
