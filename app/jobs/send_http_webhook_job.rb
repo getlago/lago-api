@@ -15,6 +15,20 @@ class SendHttpWebhookJob < ApplicationJob
   end
 
   def perform(webhook)
+    if webhook.webhook_endpoint.slow_response? && pending_non_slow_webhooks?
+      self.class.perform_later(webhook)
+      return
+    end
+
     Webhooks::SendHttpService.call(webhook:)
+  end
+
+  private
+
+  def pending_non_slow_webhooks?
+    Webhook.pending
+      .joins(:webhook_endpoint)
+      .where(webhook_endpoints: {slow_response: false})
+      .exists?
   end
 end
