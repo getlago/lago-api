@@ -6536,6 +6536,11 @@ enum LogEventEnum {
   user_invited
 
   """
+  user.role_edited
+  """
+  user_role_edited
+
+  """
   user.signed_up
   """
   user_signed_up
