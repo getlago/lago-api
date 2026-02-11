@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService do
+RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
   subject(:service) { described_class.new(subscription_activity:) }
 
   let(:organization) { create(:organization, premium_integrations:) }
@@ -17,8 +17,6 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService do
     allow(LifetimeUsages::CalculateService).to receive(:call!)
     allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
   end
-
-  around { |test| lago_premium!(&test) }
 
   context "when both lifetime_usage and progressive_billing are enabled" do
     let(:premium_integrations) { %w[lifetime_usage progressive_billing] }

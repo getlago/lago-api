@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::ApiKeys::Update do
+RSpec.describe Mutations::ApiKeys::Update, :premium do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -12,8 +12,6 @@ RSpec.describe Mutations::ApiKeys::Update do
       variables: {input: input_params}
     )
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:query) do
     <<-GQL

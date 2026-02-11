@@ -122,9 +122,7 @@ RSpec.describe Mutations::Organizations::Update do
     end
   end
 
-  context "with premium features" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium features", :premium do
     let(:timezone) { "TZ_EUROPE_PARIS" }
 
     it "updates an organization" do

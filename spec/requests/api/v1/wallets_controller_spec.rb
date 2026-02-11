@@ -223,9 +223,7 @@ RSpec.describe Api::V1::WalletsController do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:create_params) do
         {
           external_customer_id: customer.external_id,
@@ -737,9 +735,7 @@ RSpec.describe Api::V1::WalletsController do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:update_params) do
         {

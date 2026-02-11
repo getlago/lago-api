@@ -2,15 +2,13 @@
 
 require "rails_helper"
 
-describe "Coupons breakdown Spec" do
+describe "Coupons breakdown Spec", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do
     organization
     stub_pdf_generation
   end
-
-  around { |test| lago_premium!(&test) }
 
   context "when there are multiple subscriptions and coupons of different kinds" do
     it "creates an invoice for the expected period" do

@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-describe "Pay in advance fixed charge units change mid-period" do
-  around { |test| lago_premium!(&test) }
-
+describe "Pay in advance fixed charge units change mid-period", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:add_on) { create(:add_on, organization:) }

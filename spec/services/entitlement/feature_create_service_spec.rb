@@ -18,9 +18,7 @@ RSpec.describe Entitlement::FeatureCreateService do
     }
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "creates a feature with the provided attributes" do
       expect { subject }.to change(Entitlement::Feature, :count).by(1)
 

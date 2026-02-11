@@ -359,11 +359,9 @@ RSpec.describe BillingEntity do
       expect(from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
+    context "when organization from_email integration is enabled", :premium do
       let(:organization) { create(:organization, premium_integrations: ["from_email"]) }
       let(:billing_entity) { build(:billing_entity, organization:) }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns the billing_entity email" do
         expect(from_email_address).to eq(billing_entity.email)

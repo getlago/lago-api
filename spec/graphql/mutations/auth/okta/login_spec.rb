@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
+RSpec.describe Mutations::Auth::Okta::Login, :premium, cache: :memory do
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo") }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
@@ -21,8 +21,6 @@ RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     okta_integration

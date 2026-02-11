@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-describe "Top up with wallet limits", transaction: false do
+describe "Top up with wallet limits", :premium, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 600, pay_in_advance: true) }
-
-  around { |test| lago_premium!(&test) }
 
   context "when recurring rule has ignore limits enabled" do
     it "creates top up that exceeds wallet limits" do

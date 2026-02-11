@@ -144,9 +144,7 @@ RSpec.describe Mutations::Customers::Create do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "creates a customer" do
       stripe_provider
 

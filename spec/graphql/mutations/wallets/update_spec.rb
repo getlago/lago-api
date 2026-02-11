@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Update do
+RSpec.describe Mutations::Wallets::Update, :premium do
   let(:required_permission) { "wallets:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -63,8 +63,6 @@ RSpec.describe Mutations::Wallets::Update do
     subscription
     recurring_transaction_rule
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

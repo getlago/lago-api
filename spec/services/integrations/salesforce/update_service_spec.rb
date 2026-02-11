@@ -24,9 +24,7 @@ RSpec.describe Integrations::Salesforce::UpdateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "with salesforce premium integration not present" do
         it "returns an error" do
           result = service_call

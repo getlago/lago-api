@@ -24,9 +24,7 @@ RSpec.describe PricingUnits::CreateService do
 
     before { create(:pricing_unit, code: already_used_code, organization:) }
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :premium do
       context "when params are valid" do
         let(:code) { "tokens" }
 

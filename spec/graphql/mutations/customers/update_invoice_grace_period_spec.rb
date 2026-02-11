@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
+RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, :premium do
   let(:required_permissions) { "customers:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -20,8 +20,6 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires permission", %w[customers:update]

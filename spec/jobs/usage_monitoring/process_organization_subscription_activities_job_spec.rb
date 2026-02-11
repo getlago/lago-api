@@ -9,9 +9,7 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob do
     allow(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).to receive(:call!)
   end
 
-  context "when license is premium" do
-    around { |test| lago_premium!(&test) }
-
+  context "when license is premium", :premium do
     it "calls the service with the organization" do
       described_class.perform_now(organization.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).to have_received(:call!).with(organization:)

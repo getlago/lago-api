@@ -2,15 +2,13 @@
 
 require "rails_helper"
 
-describe "Use wallet's credits and recalculate balances", transaction: false do
+describe "Use wallet's credits and recalculate balances", :premium, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
   let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 10) }
   let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 1_00, pay_in_advance: false) }
   let(:billable_metric) { create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg") }
   let(:charge) { create(:charge, plan:, billable_metric:, charge_model: "standard", properties: {"amount" => "1"}) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
-
-  around { |test| lago_premium!(&test) }
 
   def ingest_event(subscription, amount, billable_metric_code = nil, filter = nil)
     create_event({

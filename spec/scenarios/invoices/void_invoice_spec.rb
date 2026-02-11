@@ -2,13 +2,11 @@
 
 require "rails_helper"
 
-describe "Void Invoice Scenarios" do
+describe "Void Invoice Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 1000, pay_in_advance: true) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     tax

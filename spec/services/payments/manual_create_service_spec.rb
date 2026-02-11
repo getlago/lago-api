@@ -23,9 +23,7 @@ RSpec.describe Payments::ManualCreateService do
       end
     end
 
-    context "when organization is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when organization is premium", :premium do
       context "when invoice does not exist" do
         let(:invoice_id) { SecureRandom.uuid }
 

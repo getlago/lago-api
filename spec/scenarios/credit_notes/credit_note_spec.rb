@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Create credit note Scenarios" do
+describe "Create credit note Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 
@@ -47,8 +47,6 @@ describe "Create credit note Scenarios" do
   let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 10, applied_to_organization: false) }
   let(:plan_applied_tax) { create(:plan_applied_tax, plan: plan2, tax: plan_tax) }
   let(:plan_applied_tax2) { create(:plan_applied_tax, plan: plan2, tax:) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     tax

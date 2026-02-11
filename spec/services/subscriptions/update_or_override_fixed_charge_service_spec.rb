@@ -28,9 +28,7 @@ RSpec.describe Subscriptions::UpdateOrOverrideFixedChargeService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       before do
         fixed_charge
         subscription

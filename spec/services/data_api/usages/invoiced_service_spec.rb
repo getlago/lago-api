@@ -24,9 +24,7 @@ RSpec.describe DataApi::Usages::InvoicedService do
       end
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       it "returns expected invoiced usage" do
         expect(service_call).to be_success
         expect(service_call.invoiced_usages.count).to eq(4)

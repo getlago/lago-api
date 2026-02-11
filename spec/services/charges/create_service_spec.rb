@@ -140,9 +140,7 @@ RSpec.describe Charges::CreateService do
           )
         end
 
-        context "when premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when premium", :premium do
           it "assigns premium attributes values from params" do
             expect(result.charge)
               .to be_persisted

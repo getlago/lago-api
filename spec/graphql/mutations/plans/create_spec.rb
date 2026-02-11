@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Plans::Create do
+RSpec.describe Mutations::Plans::Create, :premium do
   let(:required_permission) { "plans:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -115,8 +115,6 @@ RSpec.describe Mutations::Plans::Create do
 
   let(:tax) { create(:tax, organization:) }
   let(:pricing_unit) { create(:pricing_unit, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   before { organization.update!(premium_integrations: ["progressive_billing"]) }
 

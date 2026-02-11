@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentRequests::CreateService do
+RSpec.describe PaymentRequests::CreateService, :premium do
   subject(:create_service) { described_class.new(organization:, params:) }
 
   let(:membership) { create(:membership) }
@@ -24,8 +24,6 @@ RSpec.describe PaymentRequests::CreateService do
       lago_invoice_ids: [first_invoice.id, second_invoice.id]
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   describe "#call" do
     let(:amount_cents) do

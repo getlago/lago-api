@@ -37,9 +37,7 @@ RSpec.describe Mutations::PricingUnits::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "pricing_units:create"
 
-  context "with premium organization" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium organization", :premium do
     context "with valid params" do
       let(:code) { "cloud_token" }
 

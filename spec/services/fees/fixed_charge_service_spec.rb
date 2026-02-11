@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::FixedChargeService do
+RSpec.describe Fees::FixedChargeService, :premium do
   subject(:fixed_charge_service) do
     described_class.new(invoice:, fixed_charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }

@@ -40,9 +40,7 @@ RSpec.describe Mutations::Payments::Create do
     GQL
   end
 
-  context "with premium organization" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium organization", :premium do
     it "creates a manual payment" do
       expect(result["data"]).to include(
         "createPayment" => {

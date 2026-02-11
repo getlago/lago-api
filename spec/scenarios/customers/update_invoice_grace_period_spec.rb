@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-describe "Update Customer Invoice Grace Period Scenarios" do
+describe "Update Customer Invoice Grace Period Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     stub_pdf_generation

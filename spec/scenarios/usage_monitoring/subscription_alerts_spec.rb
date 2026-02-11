@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscriptions Alerting Scenario", cache: :redis do
+describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
   let(:organization) { create(:organization, premium_integrations:) }
   let(:premium_integrations) { [] }
   let(:plan) { create(:plan, organization:, name: "Premium Plan", code: "premium_plan", amount_cents: 49_00) }
@@ -18,8 +18,6 @@ describe "Subscriptions Alerting Scenario", cache: :redis do
   let(:subscription_external_id) { "sub_#{external_id}" }
 
   include_context "with webhook tracking"
-
-  around { |test| lago_premium!(&test) }
 
   def send_event!(params)
     create_event({

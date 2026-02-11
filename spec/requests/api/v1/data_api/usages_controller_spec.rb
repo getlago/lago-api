@@ -20,9 +20,7 @@ RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/Fil
       allow(DataApi::UsagesService).to receive(:call).and_return(result)
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the usage" do

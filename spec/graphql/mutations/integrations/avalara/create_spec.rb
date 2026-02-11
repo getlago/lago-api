@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Avalara::Create do
+RSpec.describe Mutations::Integrations::Avalara::Create, :premium do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "avalara1" }
@@ -22,8 +22,6 @@ RSpec.describe Mutations::Integrations::Avalara::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before { membership.organization.update!(premium_integrations: ["avalara"]) }
 
