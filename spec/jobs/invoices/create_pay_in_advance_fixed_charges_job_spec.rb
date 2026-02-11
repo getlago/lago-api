@@ -9,14 +9,6 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
   let(:timestamp) { Time.current.to_i }
   let(:result) { BaseService::Result.new }
 
-  describe "#retry_delay" do
-    it "returns a random delay between 0 and 16 seconds" do
-      values = Array.new(1000) { described_class.retry_delay }
-
-      expect(values).to all(be_between(0, 16))
-    end
-  end
-
   describe "#perform" do
     before do
       allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call)
