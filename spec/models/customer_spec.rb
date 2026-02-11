@@ -1190,4 +1190,26 @@ RSpec.describe Customer do
       end
     end
   end
+
+  describe "#default_payment_method" do
+    let(:customer) { create(:customer) }
+
+    before { payment_method }
+
+    context "with default payment method" do
+      let(:payment_method) { create(:payment_method, customer:, organization: customer.organization, is_default: true) }
+
+      it "returns correct payment method" do
+        expect(customer.default_payment_method.id).to eq(payment_method.id)
+      end
+    end
+
+    context "without default payment method" do
+      let(:payment_method) { create(:payment_method, customer:, organization: customer.organization, is_default: false) }
+
+      it "returns nil" do
+        expect(customer.default_payment_method).to eq(nil)
+      end
+    end
+  end
 end
