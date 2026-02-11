@@ -29,7 +29,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
   end
 
   describe "#call" do
-    it "checks for the existance of the payment method" do
+    it "checks for the existence of the payment method" do
       allow(stripe_api_customer)
         .to receive(:retrieve_payment_method)
         .and_return(payment_method)
@@ -58,12 +58,33 @@ RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
         expect(Stripe::Customer).to have_received(:new)
         expect(stripe_api_customer).to have_received(:retrieve_payment_method)
       end
+
+      context "with multiple payment methods enabled" do
+        let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: payment_method_id) }
+
+        before do
+          default_payment_method
+          organization.update!(feature_flags: ["multiple_payment_methods"])
+        end
+
+        it "returns a failed result and discards payment method" do
+          result = check_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+
+            expect(Stripe::Customer).to have_received(:new)
+            expect(stripe_api_customer).to have_received(:retrieve_payment_method)
+            expect(default_payment_method.reload.deleted_at).to be_present
+          end
+        end
+      end
     end
 
     context "when customer is deleted" do
       let(:customer) { create(:customer, :deleted, organization:) }
 
-      it "checks for the existance of the payment method" do
+      it "checks for the existence of the payment method" do
         allow(stripe_api_customer)
           .to receive(:retrieve_payment_method)
           .and_return(payment_method)
