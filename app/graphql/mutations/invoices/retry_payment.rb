@@ -11,13 +11,16 @@ module Mutations
       graphql_name "RetryInvoicePayment"
       description "Retry invoice payment"
 
-      argument :id, ID, required: true
+      input_object_class Types::Invoices::RetryPaymentInput
 
       type Types::Invoices::Object
 
       def resolve(**args)
         invoice = current_organization.invoices.visible.find_by(id: args[:id])
-        result = ::Invoices::Payments::RetryService.new(invoice:).call
+        result = ::Invoices::Payments::RetryService.new(
+          invoice:,
+          payment_method_params: args[:payment_method]&.to_h
+        ).call
 
         result.success? ? result.invoice : result_error(result)
       end
