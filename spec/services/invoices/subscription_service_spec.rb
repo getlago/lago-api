@@ -572,5 +572,16 @@ RSpec.describe Invoices::SubscriptionService do
         expect(result.invoice.fees.fixed_charge.count).to eq(0)
       end
     end
+
+    context "when Customers::FailedToAcquireLock is raised" do
+      before do
+        allow(described_class).to receive(:call)
+          .and_raise(Customers::FailedToAcquireLock.new("customer-123-prepaid_credit"))
+      end
+
+      it "re-raises the error for job retry" do
+        expect { described_class.call }.to raise_error(Customers::FailedToAcquireLock)
+      end
+    end
   end
 end
