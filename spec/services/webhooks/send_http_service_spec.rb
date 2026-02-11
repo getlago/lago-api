@@ -83,27 +83,64 @@ RSpec.describe Webhooks::SendHttpService do
     context "with a retrying webhook" do
       let(:webhook) { create(:webhook, :retrying, retries: 1) }
 
-      it "fails the retried webhooks" do
+      it "does not mark the webhook endpoint as slow" do
         service.call
 
-        expect(webhook).to be_retrying
-        expect(webhook.http_status).to eq(403)
-        expect(webhook.retries).to eq(2)
-        expect(webhook.last_retried_at).not_to be_nil
-        expect(SendHttpWebhookJob).to have_received(:set)
+        expect(webhook_endpoint.reload.slow_response).to be(false)
       end
 
-      context "when the webhook failed 3 times" do
-        let(:webhook) { create(:webhook, :retrying, retries: 2) }
+      context "with a failed webhook" do
+        let(:webhook) { create(:webhook, :failed, webhook_endpoint:, retries: 1) }
 
-        it "stops trying and marks the webhook as failed" do
+        it "fails the retried webhooks" do
           service.call
 
-          expect(webhook).to be_failed
+          expect(webhook).to be_retrying
           expect(webhook.http_status).to eq(403)
-          expect(webhook.reload.retries).to eq 3
-          expect(SendHttpWebhookJob).not_to have_received(:set)
+          expect(webhook.retries).to eq(2)
+          expect(webhook.last_retried_at).not_to be_nil
+          expect(SendHttpWebhookJob).to have_received(:set)
         end
+
+        context "when the webhook failed 3 times" do
+          let(:webhook) { create(:webhook, :retrying, webhook_endpoint:, retries: 2) }
+
+          it "stops trying and marks the webhook as failed" do
+            service.call
+
+            expect(webhook).to be_failed
+            expect(webhook.http_status).to eq(403)
+            expect(webhook.reload.retries).to eq 3
+            expect(SendHttpWebhookJob).not_to have_received(:set)
+          end
+        end
+      end
+    end
+  end
+
+  context "when error is a timeout" do
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).and_return(lago_client)
+      allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
+    end
+
+    context "with Net::OpenTimeout" do
+      before do
+        allow(lago_client).to receive(:post_with_response).and_raise(Net::OpenTimeout)
+      end
+
+      it "marks the webhook endpoint as slow" do
+        expect { service.call }.to change { webhook_endpoint.reload.slow_response }.from(false).to(true)
+      end
+    end
+
+    context "with Net::ReadTimeout" do
+      before do
+        allow(lago_client).to receive(:post_with_response).and_raise(Net::ReadTimeout)
+      end
+
+      it "marks the webhook endpoint as slow" do
+        expect { service.call }.to change { webhook_endpoint.reload.slow_response }.from(false).to(true)
       end
     end
   end

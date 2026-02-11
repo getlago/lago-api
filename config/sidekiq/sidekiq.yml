@@ -8,6 +8,7 @@ queues:
   - clock
   - providers
   - webhook
+  - webhook_low_priority
   - invoices
   - integrations
   - low_priority

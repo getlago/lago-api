@@ -330,6 +330,7 @@ DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_status_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_for_query;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoints_on_slow_response;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
@@ -4963,7 +4964,8 @@ CREATE TABLE public.webhook_endpoints (
     updated_at timestamp(6) without time zone NOT NULL,
     signature_algo integer DEFAULT 0 NOT NULL,
     event_types character varying[],
-    name character varying
+    name character varying,
+    slow_response boolean DEFAULT false NOT NULL
 );
 
 
@@ -9377,6 +9379,13 @@ CREATE INDEX index_webhook_endpoints_on_organization_id ON public.webhook_endpoi
 
 
 --
+-- Name: index_webhook_endpoints_on_slow_response; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_endpoints_on_slow_response ON public.webhook_endpoints USING btree (slow_response);
+
+
+--
 -- Name: index_webhook_endpoints_on_webhook_url_and_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11858,6 +11867,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260219083335'),
 ('20260218102426'),
 ('20260216115709'),
+('20260211194749'),
 ('20260209103920'),
 ('20260209103526'),
 ('20260204153734'),
