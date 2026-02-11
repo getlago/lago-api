@@ -29,3 +29,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {email: "dinesh@hooli.com"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.invited",
+  user:,
+  resources: {invitee_email: "invited@example.com"}
+)
