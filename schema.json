@@ -34404,6 +34404,12 @@
               "deprecationReason": null
             },
             {
+              "name": "user_invited",
+              "description": "user.invited",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_signed_up",
               "description": "user.signed_up",
               "isDeprecated": false,
