@@ -693,10 +693,11 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
 
       before do
         stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+        create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0)
       end
 
       around do |test|
-        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
+        with_advisory_lock("customer-#{customer.id}-prepaid_credit", lock_released_after:) do
           test.run
         end
       end

@@ -643,7 +643,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
 
       around do |test|
-        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
+        with_advisory_lock("customer-#{customer.id}-prepaid_credit", lock_released_after:) do
           test.run
         end
       end
