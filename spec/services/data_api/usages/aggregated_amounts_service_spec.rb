@@ -24,9 +24,7 @@ RSpec.describe DataApi::Usages::AggregatedAmountsService do
       end
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       it "returns expected aggregated amounts usage" do
         expect(service_call).to be_success
         expect(service_call.aggregated_amounts_usages.count).to eq(3)

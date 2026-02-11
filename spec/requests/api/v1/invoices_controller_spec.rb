@@ -486,12 +486,10 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
-    context "when passing credit note parameters" do
+    context "when passing credit note parameters", :premium do
       let(:credit_amount) { 0 }
       let(:refund_amount) { 0 }
       let(:params) { {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount} }
-
-      around { |test| lago_premium!(&test) }
 
       it "calls the void service with all parameters" do
         allow(Invoices::VoidService).to receive(:call).with(
@@ -856,7 +854,7 @@ RSpec.describe Api::V1::InvoicesController do
     end
   end
 
-  describe "POST /api/v1/invoices/preview" do
+  describe "POST /api/v1/invoices/preview", :premium do
     subject { post_with_token(organization, "/api/v1/invoices/preview", preview_params) }
 
     let(:plan) { create(:plan, organization:) }
@@ -873,8 +871,6 @@ RSpec.describe Api::V1::InvoicesController do
     end
 
     before { organization.update!(premium_integrations: ["preview"]) }
-
-    around { |test| lago_premium!(&test) }
 
     it "creates a preview invoice" do
       subject

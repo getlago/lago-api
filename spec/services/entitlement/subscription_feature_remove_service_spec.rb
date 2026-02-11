@@ -12,9 +12,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
   let(:feature) { create(:feature, organization:, code: "test_feature") }
   let(:feature_code) { feature.code }
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     context "when subscription is nil" do
       let(:subscription) { nil }
 

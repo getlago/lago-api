@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Auth::Okta::AcceptInvite, cache: :memory do
+RSpec.describe Mutations::Auth::Okta::AcceptInvite, :premium, cache: :memory do
   let(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
@@ -23,8 +23,6 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, cache: :memory do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     invite

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Subscriptions::FlagRefreshedService do
+RSpec.describe Subscriptions::FlagRefreshedService, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
@@ -11,8 +11,6 @@ RSpec.describe Subscriptions::FlagRefreshedService do
     allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call).and_call_original
     create(:wallet, customer:, organization:)
   end
-
-  around { |test| lago_premium!(&test) }
 
   describe "#call" do
     subject(:result) { described_class.call(subscription.id) }

@@ -29,9 +29,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
     privilege
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     context "when successful" do
       before do
         # Ensure result.entitlement can be resolved even if inner service is mocked

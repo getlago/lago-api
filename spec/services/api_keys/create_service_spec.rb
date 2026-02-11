@@ -9,9 +9,7 @@ RSpec.describe ApiKeys::CreateService do
     let(:name) { Faker::Lorem.words.join(" ") }
     let(:organization) { create(:organization) }
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :premium do
       context "when permissions hash is provided" do
         let(:params) { {permissions:, name:, organization:} }
         let(:permissions) { ApiKey.default_permissions }

@@ -326,9 +326,7 @@ RSpec.describe CreditNotes::CreateService do
         expect(result.error.code).to eq("feature_unavailable")
       end
 
-      context "with a valid license" do
-        around { |test| lago_premium!(&test) }
-
+      context "with a valid license", :premium do
         it "returns a success" do
           result = create_service.call
           expect(result).to be_success
@@ -476,7 +474,7 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
-    context "when invoice is credit" do
+    context "when invoice is credit", :premium do
       let(:invoice) do
         create(
           :invoice,
@@ -510,8 +508,6 @@ RSpec.describe CreditNotes::CreateService do
         wallet
         fee
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "Creates credit note and voids corresponding amount of credits from the wallet" do
         result = create_service.call
@@ -834,7 +830,7 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
-    context "with credit invoices" do
+    context "with credit invoices", :premium do
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
       let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
@@ -842,7 +838,6 @@ RSpec.describe CreditNotes::CreateService do
       let(:automatic) { false }
 
       before { wallet && fee }
-      around { |test| lago_premium!(&test) }
 
       context "when payment is pending" do
         let(:invoice) do

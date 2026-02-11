@@ -158,7 +158,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       it_behaves_like "a charge model"
     end
 
-    describe "when graduated percentage charge model" do
+    describe "when graduated percentage charge model", :premium do
       let(:charge) do
         create(
           :graduated_percentage_charge,
@@ -178,8 +178,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       end
 
       let(:charge_model_class) { ChargeModels::GraduatedPercentageService }
-
-      around { |test| lago_premium!(&test) }
 
       it_behaves_like "a charge model"
     end

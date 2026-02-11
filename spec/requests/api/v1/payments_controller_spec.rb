@@ -46,7 +46,7 @@ RSpec.describe Api::V1::PaymentsController do
       end
     end
 
-    context "when amount_cents is missing or misspelled" do
+    context "when amount_cents is missing or misspelled", :premium do
       let(:params) do
         {
           invoice_id: invoice.id,
@@ -56,8 +56,6 @@ RSpec.describe Api::V1::PaymentsController do
       end
 
       let(:error_details) { {amount_cents: %w[invalid_value]} }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns a bad request error" do
         subject

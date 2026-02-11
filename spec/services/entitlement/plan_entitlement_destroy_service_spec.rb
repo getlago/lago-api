@@ -16,9 +16,7 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService do
     entitlement_value
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "returns success" do
       expect(result).to be_success
     end

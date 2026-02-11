@@ -693,9 +693,7 @@ RSpec.describe Charge do
       let(:charge) { build_stubbed(:charge, charge_model:, properties:) }
       let(:properties) { attributes_for("#{charge_model}_charge")[:properties] }
 
-      context "when premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when premium", :premium do
         before { subject }
 
         context "when charge model is graduated percentage" do
@@ -759,9 +757,7 @@ RSpec.describe Charge do
         end
       end
 
-      context "when premium license is active but integration is not enabled" do
-        around { |test| lago_premium!(&test) }
-
+      context "when premium license is active but integration is not enabled", :premium do
         it "returns an error" do
           charge = build(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true)
 
@@ -770,9 +766,7 @@ RSpec.describe Charge do
         end
       end
 
-      context "when feature is enabled" do
-        around { |test| lago_premium!(&test) }
-
+      context "when feature is enabled", :premium do
         before do
           organization.update!(premium_integrations: ["events_targeting_wallets"])
         end

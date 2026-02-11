@@ -6,9 +6,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
-  describe "pay in arrears charges with wallet targeting" do
-    around { |test| lago_premium!(&test) }
-
+  describe "pay in arrears charges with wallet targeting", :premium do
     let(:plan) { create(:plan, organization:, amount_cents: 0) }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
 
@@ -229,9 +227,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     end
   end
 
-  describe "pay in advance charges with wallet targeting" do
-    around { |test| lago_premium!(&test) }
-
+  describe "pay in advance charges with wallet targeting", :premium do
     let(:plan) { create(:plan, organization:, amount_cents: 0) }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
 
@@ -318,9 +314,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     end
   end
 
-  describe "events without target_wallet_code on accepting charge" do
-    around { |test| lago_premium!(&test) }
-
+  describe "events without target_wallet_code on accepting charge", :premium do
     let(:plan) { create(:plan, organization:, amount_cents: 0) }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
 
@@ -421,9 +415,7 @@ describe "Events Targeting Wallets Scenarios", transaction: false do
     end
   end
 
-  describe "events with target_wallet_code when feature is disabled" do
-    around { |test| lago_premium!(&test) }
-
+  describe "events with target_wallet_code when feature is disabled", :premium do
     let(:plan) { create(:plan, organization:, amount_cents: 0) }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value") }
 

@@ -10,9 +10,7 @@ RSpec.describe AppliedPricingUnits::CreateService do
 
     let(:charge) { build_stubbed(:standard_charge) }
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium", :premium do
       context "when params are present" do
         let(:params) { {code: "credits", conversion_rate: 1.5} }
 
@@ -79,10 +77,8 @@ RSpec.describe AppliedPricingUnits::CreateService do
         end
       end
 
-      context "when applied pricing unit should be created" do
+      context "when applied pricing unit should be created", :premium do
         let!(:pricing_unit) { create(:pricing_unit, organization:) }
-
-        around { |test| lago_premium!(&test) }
 
         context "when params are valid" do
           let(:params) { {code: pricing_unit.code, conversion_rate: 1.5} }

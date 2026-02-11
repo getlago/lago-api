@@ -32,9 +32,7 @@ RSpec.describe Integrations::Okta::UpdateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "with okta premium integration not present" do
         it "returns an error" do
           result = service_call

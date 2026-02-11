@@ -1084,7 +1084,7 @@ describe "Billing Boundaries Scenario" do
     # NOTE: there are no quarterly with charges monthly!
   end
 
-  context "with progressive billing thresholds", transaction: false do
+  context "with progressive billing thresholds", :premium, transaction: false do
     let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
     let(:plan_interval) { :monthly }
     let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "amount") }
@@ -1092,8 +1092,6 @@ describe "Billing Boundaries Scenario" do
       create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "2"})
     end
     let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 20_000) }
-
-    around { |test| lago_premium!(&test) }
 
     before do
       progressive_charge

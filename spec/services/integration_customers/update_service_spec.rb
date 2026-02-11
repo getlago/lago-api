@@ -27,7 +27,7 @@ RSpec.describe IntegrationCustomers::UpdateService do
 
     before { integration_customer }
 
-    context "with netsuite premium integration present" do
+    context "with netsuite premium integration present", :premium do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }
       let(:sync_with_provider) { true }
@@ -39,8 +39,6 @@ RSpec.describe IntegrationCustomers::UpdateService do
         result.contact_id = contact_id
         result
       end
-
-      around { |test| lago_premium!(&test) }
 
       before do
         organization.update!(premium_integrations: ["netsuite"])

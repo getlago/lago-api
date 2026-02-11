@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::MrrsResolver do
+RSpec.describe Resolvers::DataApi::MrrsResolver, :premium do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
@@ -33,8 +33,6 @@ RSpec.describe Resolvers::DataApi::MrrsResolver do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/")
       .to_return(status: 200, body: body_response, headers: {})
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

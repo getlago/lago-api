@@ -2,14 +2,12 @@
 
 require "rails_helper"
 
-describe "Credit note rounding issues Scenarios" do
+describe "Credit note rounding issues Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 25) }
   let(:plan) { create(:plan, organization:, interval: :monthly, amount_cents:, pay_in_advance: true) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     tax

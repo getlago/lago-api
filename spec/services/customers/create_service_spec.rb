@@ -126,8 +126,6 @@ RSpec.describe Customers::CreateService do
   end
 
   context "with premium features", :premium do
-    around { |test| lago_premium!(&test) }
-
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,

@@ -19,9 +19,7 @@ RSpec.describe Entitlement::FeatureUpdateService do
     privilege3
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     context "when update is full" do
       let(:partial) { false }
 

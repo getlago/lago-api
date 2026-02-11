@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Progressive Billing enablement", transaction: false do
+describe "Progressive Billing enablement", :premium, transaction: false do
   let(:timezone) { "UTC" }
   let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
@@ -18,8 +18,6 @@ describe "Progressive Billing enablement", transaction: false do
 
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}) }
   let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 20000) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     charge

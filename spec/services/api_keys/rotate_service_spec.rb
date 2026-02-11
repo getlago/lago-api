@@ -16,9 +16,7 @@ RSpec.describe ApiKeys::RotateService do
       context "when preferred expiration date is provided" do
         let(:expires_at) { generate(:future_date) }
 
-        context "with premium organization" do
-          around { |test| lago_premium!(&test) }
-
+        context "with premium organization", :premium do
           it "expires the API key with preferred date" do
             expect { service_result }
               .to change { api_key.reload.expires_at&.iso8601 }
@@ -60,9 +58,7 @@ RSpec.describe ApiKeys::RotateService do
 
         before { freeze_time }
 
-        context "with premium organization" do
-          around { |test| lago_premium!(&test) }
-
+        context "with premium organization", :premium do
           it "expires the API key with current time" do
             expect { service_result }.to change(api_key, :expires_at).to(Time.current)
           end

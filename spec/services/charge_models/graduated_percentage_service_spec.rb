@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ChargeModels::GraduatedPercentageService do
+RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
   subject(:apply_graduated_percentage_service) do
     described_class.apply(
       charge:,
@@ -46,8 +46,6 @@ RSpec.describe ChargeModels::GraduatedPercentageService do
       }
     )
   end
-
-  around { |test| lago_premium!(&test) }
 
   context "when aggregation is 0" do
     let(:aggregation) { 0 }

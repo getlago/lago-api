@@ -57,10 +57,8 @@ RSpec.describe DataApi::UsagesService do
       end
     end
 
-    context "when licence is premium" do
+    context "when licence is premium", :premium do
       let(:query) { {time_granularity: "daily"} }
-
-      around { |test| lago_premium!(&test) }
 
       before do
         stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/")
@@ -137,9 +135,7 @@ RSpec.describe DataApi::UsagesService do
       end
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       let(:params) { {time_granularity: "monthly"} }
 
       it "returns params with time granularity preserved" do

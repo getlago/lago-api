@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Entitlement::FeaturesResolver do
+RSpec.describe Resolvers::Entitlement::FeaturesResolver, :premium do
   subject { execute_query(query:) }
 
   let(:organization) { create(:organization) }
@@ -30,8 +30,6 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

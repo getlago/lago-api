@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::CreditNotes::Create do
+RSpec.describe Mutations::CreditNotes::Create, :premium do
   let(:required_permission) { "credit_notes:create" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
@@ -50,8 +50,6 @@ RSpec.describe Mutations::CreditNotes::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

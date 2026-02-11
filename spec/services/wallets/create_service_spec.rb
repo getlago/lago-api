@@ -335,9 +335,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:rules) do
         [
           {

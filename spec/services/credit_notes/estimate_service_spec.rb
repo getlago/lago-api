@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe CreditNotes::EstimateService do
+RSpec.describe CreditNotes::EstimateService, :premium do
   subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
   let(:organization) { create(:organization) }
@@ -48,8 +48,6 @@ RSpec.describe CreditNotes::EstimateService do
   end
 
   let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: "ref1"} }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     create(:fee_applied_tax, tax:, fee: fee1)

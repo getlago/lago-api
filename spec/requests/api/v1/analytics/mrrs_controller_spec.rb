@@ -15,9 +15,7 @@ RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable Rails/Fil
       allow(Analytics::MrrsService).to receive(:call).and_call_original
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the mrr" do

@@ -41,9 +41,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
       end
     end
 
-    context "with Lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with Lago premium", :premium do
       context "when customer does not exist" do
         it "returns an error" do
           result = described_class.new(customer: nil, subscriptions: [subscription]).call

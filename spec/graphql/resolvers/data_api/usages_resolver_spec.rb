@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::UsagesResolver do
+RSpec.describe Resolvers::DataApi::UsagesResolver, :premium do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
@@ -31,8 +31,6 @@ RSpec.describe Resolvers::DataApi::UsagesResolver do
       .with(query: params)
       .to_return(status: 200, body: body_response, headers: {})
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

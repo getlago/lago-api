@@ -18,9 +18,7 @@ RSpec.describe PricingUnits::UpdateService do
       }
     end
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :premium do
       context "when pricing unit is present" do
         let!(:pricing_unit) { create(:pricing_unit) }
 

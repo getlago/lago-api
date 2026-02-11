@@ -143,9 +143,7 @@ RSpec.describe Wallets::FindApplicableOnFeesService do
       end
     end
 
-    context "when fee has target_wallet_code in grouped_by" do
-      around { |test| lago_premium!(&test) }
-
+    context "when fee has target_wallet_code in grouped_by", :premium do
       let(:customer) { create(:customer, organization:) }
       let(:invoice) { create(:invoice, customer:, organization:) }
       let(:subscription) { create(:subscription, customer:) }

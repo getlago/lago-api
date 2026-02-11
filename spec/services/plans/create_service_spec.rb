@@ -165,9 +165,7 @@ RSpec.describe Plans::CreateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "when progressive billing premium integration is not present" do
         it "does not create progressive billing thresholds" do
           plans_service.call
@@ -444,9 +442,7 @@ RSpec.describe Plans::CreateService do
       expect(Utils::ActivityLog).to have_produced("plan.created").after_commit.with(result.plan)
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium", :premium do
       let(:charges_args) do
         [
           {

@@ -245,9 +245,7 @@ RSpec.describe Charges::Validators::PercentageService do
       it { expect(validation_service).to be_valid }
     end
 
-    context "with per_transaction_min_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with per_transaction_min_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",
@@ -281,9 +279,7 @@ RSpec.describe Charges::Validators::PercentageService do
       end
     end
 
-    context "with per_transaction_max_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with per_transaction_max_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",
@@ -317,9 +313,7 @@ RSpec.describe Charges::Validators::PercentageService do
       end
     end
 
-    context "with both per_transaction_min_amount and per_transaction_max_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with both per_transaction_min_amount and per_transaction_max_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",

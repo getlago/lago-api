@@ -1114,7 +1114,7 @@ describe "Invoices Scenarios" do
     end
   end
 
-  context "when pay in advance subscription with grace period is terminated" do
+  context "when pay in advance subscription with grace period is terminated", :premium do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
@@ -1127,8 +1127,6 @@ describe "Invoices Scenarios" do
         units: 3
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
@@ -1765,11 +1763,9 @@ describe "Invoices Scenarios" do
       end
     end
 
-    context "when invoice grace period is removed" do
+    context "when invoice grace period is removed", :premium do
       let(:organization) { create(:organization, webhook_url: nil, invoice_grace_period: 3) }
       let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
-
-      around { |test| lago_premium!(&test) }
 
       it "finalizes draft invoices" do
         create_subscription(

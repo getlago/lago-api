@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::SubscriptionsController do
+RSpec.describe Api::V1::SubscriptionsController, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[progressive_billing]) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
@@ -11,8 +11,6 @@ RSpec.describe Api::V1::SubscriptionsController do
   let(:commitment_amount_cents) { 1234 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
   let(:payment_method) { create(:payment_method, customer:, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     plan_usage_threshold
@@ -888,9 +886,7 @@ RSpec.describe Api::V1::SubscriptionsController do
       )
     end
 
-    context "when progressive billing premium integration is present" do
-      around { |test| lago_premium!(&test) }
-
+    context "when progressive billing premium integration is present", :premium do
       before do
         organization.update!(premium_integrations: ["progressive_billing"])
       end
@@ -997,9 +993,7 @@ RSpec.describe Api::V1::SubscriptionsController do
         other_billable_metric
       end
 
-      context "when progressive billing premium integration is present" do
-        around { |test| lago_premium!(&test) }
-
+      context "when progressive billing premium integration is present", :premium do
         before do
           organization.update!(premium_integrations: ["progressive_billing"])
         end

@@ -9,9 +9,7 @@ RSpec.describe Integrations::Okta::DestroyService do
   let(:organization) { membership.organization }
   let(:integration) { create(:okta_integration, organization:) }
 
-  describe ".call" do
-    around { |test| lago_premium!(&test) }
-
+  describe ".call", :premium do
     before do
       integration
       organization.enable_okta_authentication!

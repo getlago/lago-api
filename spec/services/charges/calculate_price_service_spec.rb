@@ -162,7 +162,7 @@ RSpec.describe Charges::CalculatePriceService do
       end
     end
 
-    context "when there is a graduated percentage charge" do
+    context "when there is a graduated percentage charge", :premium do
       let(:charge) do
         create(
           :graduated_percentage_charge,
@@ -177,8 +177,6 @@ RSpec.describe Charges::CalculatePriceService do
         )
       end
 
-      around { |test| lago_premium!(&test) }
-
       it "calculates the total amount correctly" do
         result = calculate_price_service.call
 
@@ -191,7 +189,7 @@ RSpec.describe Charges::CalculatePriceService do
       end
     end
 
-    context "when there is a dynamic charge" do
+    context "when there is a dynamic charge", :premium do
       let(:billable_metric) { create(:sum_billable_metric, organization:) }
 
       let(:charge) do
@@ -202,8 +200,6 @@ RSpec.describe Charges::CalculatePriceService do
         )
       end
 
-      around { |test| lago_premium!(&test) }
-
       it "calculates the total amount correctly" do
         result = calculate_price_service.call
 
@@ -213,14 +209,12 @@ RSpec.describe Charges::CalculatePriceService do
       end
     end
 
-    context "when there is a custom charge" do
+    context "when there is a custom charge", :premium do
       let(:billable_metric) { create(:custom_billable_metric, organization:) }
 
       let(:charge) do
         create(:custom_charge, plan:, billable_metric:)
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "calculates the total amount correctly" do
         result = calculate_price_service.call

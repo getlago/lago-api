@@ -34,9 +34,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
       end
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium", :premium do
       it "creates rule with expected attributes" do
         expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 

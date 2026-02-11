@@ -362,7 +362,7 @@ RSpec.describe Api::V1::CreditNotesController do
     end
   end
 
-  describe "POST /api/v1/credit_notes" do
+  describe "POST /api/v1/credit_notes", :premium do
     subject do
       post_with_token(organization, "/api/v1/credit_notes", {credit_note: create_params})
     end
@@ -390,8 +390,6 @@ RSpec.describe Api::V1::CreditNotesController do
         ]
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     include_examples "requires API permission", "credit_note", "write"
 
@@ -697,7 +695,7 @@ RSpec.describe Api::V1::CreditNotesController do
     end
   end
 
-  describe "POST /api/v1/credit_notes/estimate" do
+  describe "POST /api/v1/credit_notes/estimate", :premium do
     subject do
       post_with_token(
         organization,
@@ -716,8 +714,6 @@ RSpec.describe Api::V1::CreditNotesController do
         items: fees.map { |f| {fee_id: f.id, amount_cents: 50} }
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     include_examples "requires API permission", "credit_note", "write"
 

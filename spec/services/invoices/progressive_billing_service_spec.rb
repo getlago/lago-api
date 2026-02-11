@@ -202,9 +202,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues an GenerateDocumentsJob with email true" do
         expect { create_service.call }
           .to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))

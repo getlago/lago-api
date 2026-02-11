@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::DestroyFeature do
+RSpec.describe Mutations::Entitlement::DestroyFeature, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:delete" }
@@ -22,8 +22,6 @@ RSpec.describe Mutations::Entitlement::DestroyFeature do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

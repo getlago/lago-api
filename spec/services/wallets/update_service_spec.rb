@@ -108,9 +108,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:transaction_metadata) { [] }
       let(:rules) do
@@ -406,9 +404,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "when recurring rule paid credits exceeds wallet limits" do
-      around { |test| lago_premium!(&test) }
-
+    context "when recurring rule paid credits exceeds wallet limits", :premium do
       let(:params) do
         {
           id: wallet.id,

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver do
+RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver, :premium do
   subject { execute_query(query:, variables:) }
 
   let(:organization) { create(:organization) }
@@ -32,8 +32,6 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver do
   let(:privilege) { create(:privilege, feature: feature, code: "max", value_type: "integer") }
 
   let(:variables) { {subscriptionId: subscription.id, featureCode: feature.code} }
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

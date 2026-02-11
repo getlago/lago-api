@@ -12,9 +12,7 @@ RSpec.describe Roles::CreateService do
     let(:description) { "A custom role description" }
     let(:permissions) { %w[customers:view customers:create] }
 
-    context "with premium license and custom_roles integration" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }
 
       it "creates a new role" do
@@ -61,9 +59,7 @@ RSpec.describe Roles::CreateService do
       end
     end
 
-    context "with premium license but without custom_roles integration" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license but without custom_roles integration", :premium do
       before { organization.update!(premium_integrations: []) }
 
       it "does not create a role" do

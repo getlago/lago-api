@@ -11,9 +11,7 @@ RSpec.describe DunningCampaigns::BulkProcessJob do
       .and_return(result)
   end
 
-  context "when premium features are enabled" do
-    around { |test| lago_premium!(&test) }
-
+  context "when premium features are enabled", :premium do
     it "calls DunningCampaigns::BulkProcessService service" do
       described_class.perform_now
 

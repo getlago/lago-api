@@ -214,9 +214,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
       end
     end
 
-    context "with applied_pricing_unit" do
-      around { |test| lago_premium!(&test) }
-
+    context "with applied_pricing_unit", :premium do
       let(:pricing_unit) { create(:pricing_unit, organization:) }
       let(:create_params) do
         {
@@ -258,9 +256,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject
@@ -357,9 +353,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject

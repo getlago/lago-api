@@ -167,9 +167,7 @@ RSpec.describe Api::V1::Subscriptions::ChargesController do
       }
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       it_behaves_like "requires API permission", "subscription", "write"
 
       it "creates a plan override and charge override" do

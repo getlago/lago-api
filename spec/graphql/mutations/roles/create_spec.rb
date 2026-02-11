@@ -38,9 +38,7 @@ RSpec.describe Mutations::Roles::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "roles:create"
 
-  context "with premium organization and custom_roles integration" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium organization and custom_roles integration", :premium do
     before { organization.update!(premium_integrations: ["custom_roles"]) }
 
     it "creates a new role" do
@@ -71,9 +69,7 @@ RSpec.describe Mutations::Roles::Create do
     end
   end
 
-  context "with premium organization but without custom_roles integration" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium organization but without custom_roles integration", :premium do
     before { organization.update!(premium_integrations: []) }
 
     it "returns an error" do
@@ -101,9 +97,7 @@ RSpec.describe Mutations::Roles::Create do
 
     let!(:membership) { create(:membership, organization:, roles: [:admin]) }
 
-    context "with premium organization and custom_roles integration" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }
 
       it "allows admin to create a role" do

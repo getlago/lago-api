@@ -162,7 +162,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         end
       end
 
-      describe "when charge accepts_target_wallet" do
+      describe "when charge accepts_target_wallet", :premium do
         let(:charge) do
           create(
             :standard_charge,
@@ -180,8 +180,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             properties: {"target_wallet_code" => "my_wallet"}
           )
         end
-
-        around { |test| lago_premium!(&test) }
 
         before do
           organization.update!(premium_integrations: ["events_targeting_wallets"])

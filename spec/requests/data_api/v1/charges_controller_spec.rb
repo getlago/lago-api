@@ -72,9 +72,7 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePat
       stub_const("ENV", ENV.to_hash.merge("LAGO_DATA_API_BEARER_TOKEN" => "test_api_key"))
     end
 
-    context "when authenticated and premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when authenticated and premium", :premium do
       context "when charges are found" do
         it "returns the bulk forecasted usage amounts" do
           subject

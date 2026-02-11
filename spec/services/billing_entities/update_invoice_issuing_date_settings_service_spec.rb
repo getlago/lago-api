@@ -31,8 +31,6 @@ RSpec.describe BillingEntities::UpdateInvoiceIssuingDateSettingsService do
     end
 
     context "with premium feature", :premium do
-      around { |test| lago_premium!(&test) }
-
       it "updates invoice issuing date settings on billing_entity" do
         update_service.call
 

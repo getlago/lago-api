@@ -15,9 +15,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
       allow(Analytics::InvoiceCollectionsService).to receive(:call).and_call_original
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the gross revenue" do

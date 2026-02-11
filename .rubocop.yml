@@ -16,6 +16,7 @@ require:
   - ./dev/cops/service_call_cop.rb
   - ./dev/cops/discard_all_cop.rb
   - ./dev/cops/no_drop_column_or_table_cop.rb
+  - ./dev/cops/lago_premium_around_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -31,6 +32,10 @@ AllCops:
     - "tmp/**/*"
     - "coverage/**/*"
     - "log/**/*"
+
+Lago/LagoPremiumAround:
+  Include:
+    - "spec/**/*.rb"
 
 Lago/NoDropColumnOrTable:
   Include:

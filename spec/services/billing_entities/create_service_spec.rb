@@ -82,9 +82,7 @@ RSpec.describe BillingEntities::CreateService do
     end
   end
 
-  context "when lago premium" do
-    around { |test| lago_premium!(&test) }
-
+  context "when lago premium", :premium do
     context "when no multi_entity premium feature is enabled" do
       it "returns an error" do
         expect(result).to be_failure

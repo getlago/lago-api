@@ -2,13 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Payments::Ubl::CreateService do
+RSpec.describe EInvoices::Payments::Ubl::CreateService, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[issue_receipts]) }
   let(:payment) { create(:payment, organization:) }
   let(:xml_builder_double) { instance_double(Nokogiri::XML::Builder, to_xml: xml_content) }
   let(:xml_content) { "<xml>content</xml>" }
-
-  around { |test| lago_premium!(&test) }
 
   describe "#call" do
     context "when payment exists" do

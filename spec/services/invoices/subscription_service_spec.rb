@@ -174,9 +174,7 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       context "when there is a hubspot integration" do
         let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
@@ -389,9 +387,7 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
-    context "when revenue_analytics is set" do
-      around { |test| lago_premium!(&test) }
-
+    context "when revenue_analytics is set", :premium do
       before do
         organization.update!(premium_integrations: %w[revenue_analytics])
       end

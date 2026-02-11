@@ -33,9 +33,7 @@ RSpec.describe DunningCampaigns::UpdateService do
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when lago premium", :premium do
       context "when no auto_dunning premium integration" do
         it "returns an error" do
           expect(result).not_to be_success
