@@ -380,7 +380,7 @@ class Invoice < ApplicationRecord
   def associated_active_wallet
     return if !credit? || customer.wallets.active.empty?
 
-    wallet = fees.credit.first&.invoiceable&.wallet
+    wallet = fees.first&.invoiceable&.wallet
     wallet if wallet&.active?
   end
 

@@ -887,29 +887,30 @@ RSpec.describe CreditNotes::CreateService do
     context "with credit invoices" do
       let(:wallet) { create(:wallet, customer:, balance_cents: 1000) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
-      let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
-      let(:items) { [{fee_id: fee.id, amount_cents: 500}] }
+      let(:fee1) { create(:credit_fee, invoice:, invoiceable: wallet_transaction, amount_cents: 1000, taxes_rate: 20) }
+      let(:fee2) { nil }
+      let(:items) { [{fee_id: fee1.id, amount_cents: 1000}] }
       let(:automatic) { false }
 
-      before { wallet && fee }
+      before { wallet }
       around { |test| lago_premium!(&test) }
 
       context "when payment is pending" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1000, payment_status: :pending)
+            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :pending)
         end
 
         it "allows offset_amount_cents only" do
           service = described_class.new(
-            invoice:, items: [{fee_id: fee.id, amount_cents: 1000}],
+            invoice:, items: [{fee_id: fee1.id, amount_cents: 1000}],
             reason: "other",
-            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000
+            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1200
           )
           result = service.call
 
           expect(result).to be_success
-          expect(result.credit_note.offset_amount_cents).to eq(1000)
+          expect(result.credit_note.offset_amount_cents).to eq(1200)
           expect(result.credit_note.credit_amount_cents).to eq(0)
           expect(result.credit_note.refund_amount_cents).to eq(0)
         end
@@ -942,19 +943,19 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment failed" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1000, payment_status: :failed)
+            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :failed)
         end
 
         it "allows offset_amount_cents only" do
           service = described_class.new(
-            invoice:, items: [{fee_id: fee.id, amount_cents: 1000}],
+            invoice:, items: [{fee_id: fee1.id, amount_cents: 1000}],
             reason: "other",
-            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1000
+            credit_amount_cents: 0, refund_amount_cents: 0, offset_amount_cents: 1200
           )
           result = service.call
 
           expect(result).to be_success
-          expect(result.credit_note.offset_amount_cents).to eq(1000)
+          expect(result.credit_note.offset_amount_cents).to eq(1200)
           expect(result.credit_note.credit_amount_cents).to eq(0)
           expect(result.credit_note.refund_amount_cents).to eq(0)
         end
