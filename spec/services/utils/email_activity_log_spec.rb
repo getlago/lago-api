@@ -14,7 +14,9 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       to: ["to@example.com"],
       cc: nil,
       bcc: nil,
-      text_part: instance_double(Mail::Part, body: instance_double(Mail::Body, decoded: "Body preview"))
+      text_part: nil,
+      html_part: instance_double(Mail::Part, body: instance_double(Mail::Body, decoded: "<h1>Hello</h1><p>Body preview</p>")),
+      body: instance_double(Mail::Body, decoded: "")
     )
   end
 
@@ -123,6 +125,115 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
 
         expect(document["type"]).to eq("CreditNote")
         expect(document["number"]).to eq(credit_note.number)
+      end
+    end
+
+    context "with html-only email" do
+      it "extracts body preview from html_part with tags stripped" do
+        described_class.produce(document: invoice, message:)
+
+        payload = JSON.parse(kafka_messages.first[:payload])
+        email = JSON.parse(payload["activity_object"]["email"])
+
+        expect(email["body_preview"]).to eq("Hello Body preview")
+      end
+    end
+
+    context "with text_part present" do
+      let(:message) do
+        instance_double(
+          Mail::Message,
+          subject: "Test Subject",
+          to: ["to@example.com"],
+          cc: nil,
+          bcc: nil,
+          text_part: instance_double(Mail::Part, body: instance_double(Mail::Body, decoded: "Plain text body")),
+          html_part: instance_double(Mail::Part, body: instance_double(Mail::Body, decoded: "<p>HTML body</p>")),
+          body: instance_double(Mail::Body, decoded: "")
+        )
+      end
+
+      it "prefers text_part over html_part" do
+        described_class.produce(document: invoice, message:)
+
+        payload = JSON.parse(kafka_messages.first[:payload])
+        email = JSON.parse(payload["activity_object"]["email"])
+
+        expect(email["body_preview"]).to eq("Plain text body")
+      end
+    end
+
+    context "with simple non-multipart message" do
+      let(:message) do
+        instance_double(
+          Mail::Message,
+          subject: "Test Subject",
+          to: ["to@example.com"],
+          cc: nil,
+          bcc: nil,
+          text_part: nil,
+          html_part: nil,
+          body: instance_double(Mail::Body, decoded: "Simple body text")
+        )
+      end
+
+      it "falls back to message body" do
+        described_class.produce(document: invoice, message:)
+
+        payload = JSON.parse(kafka_messages.first[:payload])
+        email = JSON.parse(payload["activity_object"]["email"])
+
+        expect(email["body_preview"]).to eq("Simple body text")
+      end
+    end
+
+    context "with empty body" do
+      let(:message) do
+        instance_double(
+          Mail::Message,
+          subject: "Test Subject",
+          to: ["to@example.com"],
+          cc: nil,
+          bcc: nil,
+          text_part: nil,
+          html_part: nil,
+          body: instance_double(Mail::Body, decoded: "")
+        )
+      end
+
+      it "returns empty string" do
+        described_class.produce(document: invoice, message:)
+
+        payload = JSON.parse(kafka_messages.first[:payload])
+        email = JSON.parse(payload["activity_object"]["email"])
+
+        expect(email["body_preview"]).to eq("")
+      end
+    end
+
+    context "with long html body" do
+      let(:long_html) { "<p>#{"a" * 600}</p>" }
+
+      let(:message) do
+        instance_double(
+          Mail::Message,
+          subject: "Test Subject",
+          to: ["to@example.com"],
+          cc: nil,
+          bcc: nil,
+          text_part: nil,
+          html_part: instance_double(Mail::Part, body: instance_double(Mail::Body, decoded: long_html)),
+          body: instance_double(Mail::Body, decoded: "")
+        )
+      end
+
+      it "truncates to BODY_PREVIEW_LENGTH" do
+        described_class.produce(document: invoice, message:)
+
+        payload = JSON.parse(kafka_messages.first[:payload])
+        email = JSON.parse(payload["activity_object"]["email"])
+
+        expect(email["body_preview"].length).to be <= described_class::BODY_PREVIEW_LENGTH
       end
     end
 

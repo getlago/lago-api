@@ -98,8 +98,13 @@ module Utils
     end
 
     def extract_body_preview
-      body = message.text_part&.body&.decoded || message.body&.decoded || ""
-      body.to_s.truncate(BODY_PREVIEW_LENGTH)
+      raw = ((message.text_part || message.html_part)&.body || message.body)&.decoded.to_s
+      sanitize(raw).truncate(BODY_PREVIEW_LENGTH)
+    end
+
+    def sanitize(html)
+      spaced = html.gsub("<", " <")
+      Rails::Html::FullSanitizer.new.sanitize(spaced).to_s.gsub(/\s+/, " ").strip
     end
 
     def document_reference
