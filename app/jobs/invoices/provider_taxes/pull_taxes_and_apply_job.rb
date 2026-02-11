@@ -10,7 +10,7 @@ module Invoices
       retry_on OpenSSL::SSL::SSLError, wait: :polynomially_longer, attempts: 6
       retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
       retry_on Net::OpenTimeout, wait: :polynomially_longer, attempts: 6
-      retry_on Customers::FailedToAcquireLock, attempts: 25, wait: ->(_) { rand(0...16) }
+      retry_on Customers::FailedToAcquireLock, wait: :polynomially_longer, attempts: MAX_LOCK_RETRY_ATTEMPTS
 
       def perform(invoice:)
         Invoices::ProviderTaxes::PullTaxesAndApplyService.call!(invoice:)

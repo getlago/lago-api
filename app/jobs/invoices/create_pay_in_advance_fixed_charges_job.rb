@@ -2,10 +2,6 @@
 
 module Invoices
   class CreatePayInAdvanceFixedChargesJob < ApplicationJob
-    def self.retry_delay
-      rand(0...16)
-    end
-
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
         :billing
@@ -20,7 +16,7 @@ module Invoices
     # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
     # When it fails, it raises a Customers::FailedToAcquireLock error.
     # If the lock succeeds but another job/request updates the wallet concurrenly, it will raise a ActiveRecord::StaleObjectError error.
-    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: 25, wait: ->(_) { CreatePayInAdvanceFixedChargesJob.retry_delay }
+    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
     unique :until_executed, on_conflict: :log
 
