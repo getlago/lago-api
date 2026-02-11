@@ -3,12 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Roles::UpdateService do
+  include_context "with mocked security logger"
+
   describe "#call" do
     subject(:result) { described_class.call(role:, params:) }
 
     let(:organization) { create(:organization) }
-    let(:role) { create(:role, organization:, code: "old_role", name: "Old Name", description: "Old description") }
-    let(:params) { {name: "New Name", description: "New description", permissions: %w[customers:view]} }
+    let(:role) { create(:role, organization:, code: "old_role", name: "Old Name", description: "Old description", permissions: %w[customers:view addons:view]) }
+    let(:params) { {name: "New Name", description: "New description", permissions: %w[customers:view plans:view]} }
 
     context "when role exists" do
       it "updates the role" do
@@ -19,6 +21,22 @@ RSpec.describe Roles::UpdateService do
       it "returns success" do
         expect(result).to be_success
         expect(result.role).to eq(role)
+      end
+
+      it "produces a security log" do
+        result
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "role",
+          log_event: "role.updated",
+          resources: {
+            role_code: role.code,
+            name: {deleted: "Old Name", added: "New Name"},
+            description: {deleted: "Old description", added: "New description"},
+            permissions: {deleted: %w[addons:view], added: %w[plans:view]}
+          }
+        )
       end
 
       context "with partial params" do
@@ -41,6 +59,12 @@ RSpec.describe Roles::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
+
+        it "does not produce a security log" do
+          result
+
+          expect(security_logger).not_to have_received(:produce)
+        end
       end
     end
 
@@ -51,6 +75,12 @@ RSpec.describe Roles::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("role_not_found")
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -65,6 +95,12 @@ RSpec.describe Roles::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("predefined_role")
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 

@@ -34404,6 +34404,12 @@
               "deprecationReason": null
             },
             {
+              "name": "role_updated",
+              "description": "role.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_deleted",
               "description": "user.deleted",
               "isDeprecated": false,
