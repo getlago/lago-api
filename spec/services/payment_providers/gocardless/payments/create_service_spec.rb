@@ -147,5 +147,32 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
         expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
+
+    context "when multiple payment methods are enabled" do
+      let(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "mandate_id2") }
+
+      before do
+        payment.update!(payment_method: default_payment_method)
+        organization.update!(feature_flags: ["multiple_payment_methods"])
+        gocardless_customer.update!(provider_mandate_id: "mandate_id2")
+      end
+
+      it "creates a gocardless payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payment.id).to be_present
+        expect(result.payment.payable).to eq(invoice)
+        expect(result.payment.payment_provider).to eq(gocardless_payment_provider)
+        expect(result.payment.payment_provider_customer).to eq(gocardless_customer)
+        expect(result.payment.amount_cents).to eq(invoice.total_amount_cents)
+        expect(result.payment.amount_currency).to eq(invoice.currency)
+        expect(result.payment.status).to eq("paid_out")
+        expect(result.payment.payable_payment_status).to eq("succeeded")
+        expect(gocardless_customer.reload.provider_mandate_id).to eq("mandate_id2")
+        expect(gocardless_payments_service).to have_received(:create)
+      end
+    end
   end
 end
