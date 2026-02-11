@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Memberships::UpdateService do
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:admin_role) { create(:role, :admin) }
@@ -23,6 +25,20 @@ RSpec.describe Memberships::UpdateService do
         expect(result).to be_success
         expect(result.membership.roles).to eq([manager_role])
       end
+
+      it "produces a security log" do
+        described_class.call(membership:, params:)
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "user",
+          log_event: "user.role_edited",
+          resources: {
+            email: membership.user.email,
+            roles: {deleted: %w[admin], added: %w[manager]}
+          }
+        )
+      end
     end
 
     context "when membership is the last admin" do
@@ -34,6 +50,12 @@ RSpec.describe Memberships::UpdateService do
         expect(result).not_to be_success
         expect(result.error.code).to eq("last_admin")
       end
+
+      it "does not produce a security log" do
+        described_class.call(membership:, params:)
+
+        expect(security_logger).not_to have_received(:produce)
+      end
     end
 
     context "when membership is not found" do
@@ -42,6 +64,12 @@ RSpec.describe Memberships::UpdateService do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("membership_not_found")
+      end
+
+      it "does not produce a security log" do
+        described_class.call(membership: nil, params:)
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -55,6 +83,12 @@ RSpec.describe Memberships::UpdateService do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("role_not_found")
+      end
+
+      it "does not produce a security log" do
+        described_class.call(membership:, params:)
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end

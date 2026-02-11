@@ -34410,6 +34410,12 @@
               "deprecationReason": null
             },
             {
+              "name": "user_role_edited",
+              "description": "user.role_edited",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_signed_up",
               "description": "user.signed_up",
               "isDeprecated": false,
