@@ -3,8 +3,7 @@
 module Api
   module V1
     module Plans
-      class FixedChargesController < Api::BaseController
-        before_action :find_plan
+      class FixedChargesController < BaseController
         before_action :find_fixed_charge, only: %i[show update destroy]
 
         def index
@@ -90,7 +89,7 @@ module Api
 
         private
 
-        attr_reader :plan, :fixed_charge
+        attr_reader :fixed_charge
 
         def input_params
           params.require(:fixed_charge).permit(
@@ -106,12 +105,6 @@ module Api
             properties: {},
             tax_codes: []
           )
-        end
-
-        def find_plan
-          @plan = current_organization.plans.parents.find_by!(code: params[:plan_code])
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "plan")
         end
 
         def find_fixed_charge

@@ -3,8 +3,7 @@
 module Api
   module V1
     module Plans
-      class ChargesController < Api::BaseController
-        before_action :find_plan
+      class ChargesController < BaseController
         before_action :find_charge, only: %i[show update destroy]
 
         def index
@@ -86,7 +85,7 @@ module Api
 
         private
 
-        attr_reader :plan, :charge
+        attr_reader :charge
 
         def input_params
           params.require(:charge).permit(
@@ -111,12 +110,6 @@ module Api
             tax_codes: [],
             applied_pricing_unit: %i[code conversion_rate]
           )
-        end
-
-        def find_plan
-          @plan = current_organization.plans.parents.find_by!(code: params[:plan_code])
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "plan")
         end
 
         def find_charge
