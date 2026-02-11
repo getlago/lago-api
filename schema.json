@@ -34398,6 +34398,12 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "user_deleted",
+              "description": "user.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_signed_up",
               "description": "user.signed_up",
               "isDeprecated": false,
