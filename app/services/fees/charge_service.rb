@@ -15,7 +15,7 @@ module Fees
       with_zero_units_filters: true,
       skip_adjusted_fees: false,
       plan: nil,
-      customer: nil,
+      customer: nil
     )
       @invoice = invoice
       @charge = charge
@@ -180,7 +180,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization_id: organization.id,
+        organization_id: subscription.organization_id,
         billing_entity_id: subscription.customer.billing_entity_id,
         subscription:,
         charge:,
