@@ -4,7 +4,7 @@ module Plans
   class DestroyJob < ApplicationJob
     queue_as "default"
 
-    retry_on Customers::FailedToAcquireLock, attempts: 25, wait: ->(_) { rand(0...16) }
+    retry_on Customers::FailedToAcquireLock, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
     unique :until_executed, on_conflict: :log
 
