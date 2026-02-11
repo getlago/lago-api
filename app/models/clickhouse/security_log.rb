@@ -17,6 +17,7 @@ module Clickhouse
 
     LOG_EVENTS = %w[
       user.deleted
+      user.invited
       user.signed_up
     ].freeze
 
