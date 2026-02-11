@@ -41,6 +41,14 @@ module FixedCharges
             apply_units_immediately: params[:apply_units_immediately],
             timestamp:
           )
+
+          if params[:apply_units_immediately] && fixed_charge.pay_in_advance?
+            plan.subscriptions.active.find_each do |subscription|
+              after_commit do
+                Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
+              end
+            end
+          end
         end
 
         unless cascade || plan.attached_to_subscriptions?

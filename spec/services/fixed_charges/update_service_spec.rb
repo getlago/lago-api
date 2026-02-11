@@ -259,6 +259,22 @@ RSpec.describe FixedCharges::UpdateService do
             .once
         end
 
+        context "when fixed charge is pay_in_advance" do
+          let(:fixed_charge) do
+            create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: true, units: 10)
+          end
+
+          let!(:subscription) { create(:subscription, plan:) }
+
+          it "enqueues pay in advance billing job" do
+            result
+
+            expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+              .to have_been_enqueued
+              .with(subscription, timestamp)
+          end
+        end
+
         context "when apply_units_immediately is false" do
           let(:params) do
             {
@@ -280,6 +296,13 @@ RSpec.describe FixedCharges::UpdateService do
                 timestamp:
               )
               .once
+          end
+
+          it "does not enqueue pay in advance billing job" do
+            result
+
+            expect(Invoices::CreatePayInAdvanceFixedChargesJob)
+              .not_to have_been_enqueued
           end
         end
       end
