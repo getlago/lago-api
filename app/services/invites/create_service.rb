@@ -18,6 +18,8 @@ module Invites
       )
 
       result.invite_url = build_invite_url(result.invite.token)
+      register_security_log
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -26,6 +28,15 @@ module Invites
     private
 
     attr_reader :args
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: args[:current_organization],
+        log_type: "user",
+        log_event: "user.invited",
+        resources: {invitee_email: result.invite.email}
+      )
+    end
 
     def generate_token
       token = SecureRandom.hex(20)
