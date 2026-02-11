@@ -8530,6 +8530,7 @@ type Payment {
   id: ID!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
+  paymentMethodId: ID
   paymentProvider: PaymentProvider
   paymentProviderType: ProviderTypeEnum
   paymentReceipt: PaymentReceipt
@@ -8671,6 +8672,7 @@ input PaymentRequestCreateInput {
   email: String
   externalCustomerId: String!
   lagoInvoiceIds: [String!]
+  paymentMethod: PaymentMethodReferenceInput
 }
 
 enum PaymentTypeEnum {
