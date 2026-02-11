@@ -18,7 +18,8 @@ module Clickhouse
     LOG_EVENTS = {
       user_signed_up: "user.signed_up",
       user_deleted: "user.deleted",
-      user_invited: "user.invited"
+      user_invited: "user.invited",
+      user_role_edited: "user.role_edited"
     }.freeze
 
     before_save :ensure_log_id

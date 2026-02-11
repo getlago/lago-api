@@ -22,6 +22,8 @@ module Memberships
         MembershipRole.where(membership:, role: roles_to_remove).discard_all! if roles_to_remove.present?
       end
 
+      register_security_log
+
       result.membership = membership.reload
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -31,6 +33,18 @@ module Memberships
     private
 
     attr_reader :membership, :params
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: organization,
+        log_type: "user",
+        log_event: "user.role_edited",
+        resources: {
+          email: membership.user.email,
+          changes: {roles: {old: old_roles.map(&:code), new: new_roles.map(&:code)}}
+        }
+      )
+    end
 
     def organization
       @organization ||= membership.organization

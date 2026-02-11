@@ -38,3 +38,12 @@ Utils::SecurityLog.produce(
   resources: {invitee_email: "invited@example.com"},
   skip_organization_check: true
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.role_edited",
+  user:,
+  resources: {email: "dinesh@hooli.com", roles: ["finance"]},
+  skip_organization_check: true
+)
