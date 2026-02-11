@@ -6529,6 +6529,11 @@ enum LogEventEnum {
   role_created
 
   """
+  role.updated
+  """
+  role_updated
+
+  """
   user.deleted
   """
   user_deleted
