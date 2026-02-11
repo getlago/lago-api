@@ -3,11 +3,15 @@
 module Customers
   class LockService < BaseService
     ACQUIRE_LOCK_TIMEOUT = 5.seconds
+    VALID_SCOPES = %i[prepaid_credit].freeze
 
-    def initialize(customer:, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
+    def initialize(customer:, scope:, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
       @customer = customer
+      @scope = scope
       @timeout_seconds = timeout_seconds
       @transaction = transaction
+
+      validate_scope!
 
       super
     end
@@ -17,7 +21,7 @@ module Customers
         yield
       end
     rescue WithAdvisoryLock::FailedToAcquireLock
-      raise FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}"
+      raise FailedToAcquireLock, "Failed to acquire lock #{lock_key}"
     end
 
     def locked?
@@ -26,10 +30,16 @@ module Customers
 
     private
 
-    attr_reader :customer, :timeout_seconds, :transaction
+    attr_reader :customer, :scope, :timeout_seconds, :transaction
+
+    def validate_scope!
+      return if VALID_SCOPES.include?(scope)
+
+      raise ArgumentError, "Invalid scope: #{scope}. Valid scopes are: #{VALID_SCOPES.join(", ")}"
+    end
 
     def lock_key
-      "customer-#{customer.id}"
+      "customer-#{customer.id}-#{scope}"
     end
   end
 end
