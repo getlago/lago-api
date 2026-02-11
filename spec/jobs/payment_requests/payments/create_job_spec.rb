@@ -10,12 +10,12 @@ RSpec.describe PaymentRequests::Payments::CreateJob do
 
   before do
     allow(PaymentRequests::Payments::CreateService).to receive(:call!)
-      .with(payable: payment_request, payment_provider:)
+      .with(payable: payment_request, payment_provider:, payment_method_params: {})
       .and_return(service_result)
   end
 
   it "calls the stripe create service" do
-    described_class.perform_now(payable: payment_request, payment_provider:)
+    described_class.perform_now(payable: payment_request, payment_provider:, payment_method_params: {})
 
     expect(PaymentRequests::Payments::CreateService).to have_received(:call!)
   end

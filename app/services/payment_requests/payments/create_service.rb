@@ -6,9 +6,10 @@ module PaymentRequests
       include Customers::PaymentProviderFinder
       include Updatable
 
-      def initialize(payable:, payment_provider: nil)
+      def initialize(payable:, payment_provider: nil, payment_method_params: {})
         @payable = payable
         @provider = payment_provider&.to_sym
+        @payment_method_params = payment_method_params
 
         super
       end
@@ -45,6 +46,11 @@ module PaymentRequests
           payable:,
           payable_payment_status: "pending"
         )
+
+        if organization.feature_flag_enabled?(:multiple_payment_methods)
+          payment.payment_method_id = determine_payment_method&.id
+          payment.save!
+        end
 
         result.payment = payment
 
@@ -83,7 +89,7 @@ module PaymentRequests
       def call_async
         return result.not_found_failure!(resource: "payment_provider") unless provider
 
-        PaymentRequests::Payments::CreateJob.perform_later(payable:, payment_provider: provider)
+        PaymentRequests::Payments::CreateJob.perform_later(payable:, payment_provider: provider, payment_method_params:)
 
         result.payment_provider = provider
         result
@@ -91,7 +97,7 @@ module PaymentRequests
 
       private
 
-      attr_reader :payable
+      attr_reader :payable, :payment_method_params
 
       delegate :customer, :organization, to: :payable
 
@@ -161,6 +167,24 @@ module PaymentRequests
           amount_currency: payable.currency,
           payable_payment_status: "processing"
         )
+      end
+
+      def determine_payment_method
+        @determine_payment_method ||= if payment_method_params.present?
+          determine_override_payment_method
+        else
+          customer.default_payment_method
+        end
+      end
+
+      def determine_override_payment_method
+        return nil if payment_method_params[:payment_method_type] == "manual"
+
+        if payment_method_params[:payment_method_id].present?
+          customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
+        else
+          customer.default_payment_method
+        end
       end
     end
   end

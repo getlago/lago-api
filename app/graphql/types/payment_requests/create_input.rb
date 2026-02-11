@@ -9,6 +9,7 @@ module Types
 
       argument :email, String, required: false
       argument :lago_invoice_ids, [String], required: false
+      argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
     end
   end
 end
