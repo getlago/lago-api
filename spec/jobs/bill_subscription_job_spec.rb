@@ -165,7 +165,7 @@ RSpec.describe BillSubscriptionJob do
   end
 
   [
-    [Customers::FailedToAcquireLock.new("customer-1"), 25],
+    [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
     [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15]
   ].each do |error, attempts|
     error_class = error.class

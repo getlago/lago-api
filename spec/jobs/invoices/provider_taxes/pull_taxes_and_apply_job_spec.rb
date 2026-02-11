@@ -22,7 +22,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
   end
 
   [
-    [Customers::FailedToAcquireLock.new("customer-1"), 25],
+    [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
     [BaseService::ThrottlingError.new, 25],
     [LagoHttpClient::HttpError.new(401, "body", "uri"), 6],
     [OpenSSL::SSL::SSLError.new("OpenSSL::SSL::SSLError"), 6],
