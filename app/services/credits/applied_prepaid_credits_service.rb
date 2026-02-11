@@ -19,7 +19,7 @@ module Credits
       return result if wallets.empty?
 
       ActiveRecord::Base.transaction do
-        Customers::LockService.call(customer:) do
+        Customers::LockService.call(customer:, scope: :prepaid_credit) do
           ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
           remaining_invoice_amount = invoice.total_amount_cents
 
