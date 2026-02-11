@@ -12,11 +12,13 @@ module Clickhouse
     default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
 
     LOG_TYPES = {
-      user: "user"
+      user: "user",
+      role: "role"
     }.freeze
 
     LOG_EVENTS = {
-      user_signed_up: "user.signed_up"
+      user_signed_up: "user.signed_up",
+      role_created: "role.created"
     }.freeze
 
     before_save :ensure_log_id
