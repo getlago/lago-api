@@ -9,35 +9,38 @@ module Cops
 
     MSG = "Use `:premium` metadata on the context/describe block instead of `around { |test| lago_premium!(&test) }`."
 
-    # Matches: around { |var| lago_premium!(&var) }
-    def_node_matcher :lago_premium_around?, <<~PATTERN
-      (block
-        (send nil? :around)
-        (args ({arg procarg0} $_name))
-        (send nil? :lago_premium!
-          (block_pass (lvar $_ref))))
+    # Matches: lago_premium!(&var)
+    def_node_matcher :lago_premium_call_with_block_pass?, <<~PATTERN
+      (send nil? :lago_premium! (block_pass (lvar $_var_name)))
     PATTERN
 
     def self.badge
       @badge ||= ::RuboCop::Cop::Badge.for("Lago/LagoPremiumAround") # rubocop:disable ThreadSafety/ClassInstanceVariable
     end
 
-    def on_block(node)
-      captures = lago_premium_around?(node)
-      return unless captures
+    def on_send(node)
+      var_name = lago_premium_call_with_block_pass?(node)
+      return unless var_name
 
-      var_name, var_ref = captures
-      return unless var_name == var_ref
+      around_block = find_parent_around_block(node)
+      return unless around_block
+
+      around_var = around_block.arguments.first&.name
+      return unless around_var == var_name
 
       add_offense(node) do |corrector|
-        remove_around_line(corrector, node)
-        add_premium_metadata_to_parent(corrector, node)
+        if around_block.body == node
+          remove_around_block(corrector, around_block)
+        else
+          corrector.replace(node, "#{var_name}.run")
+        end
+        add_premium_metadata_to_parent(corrector, around_block)
       end
     end
 
     private
 
-    def remove_around_line(corrector, node)
+    def remove_around_block(corrector, node)
       range = range_by_whole_lines(node.source_range, include_final_newline: true)
 
       # Also remove trailing blank line if present
@@ -71,6 +74,12 @@ module Cops
         corrector.insert_before(hash_arg, ":premium, ")
       else
         corrector.insert_after(send_node.last_argument, ", :premium")
+      end
+    end
+
+    def find_parent_around_block(node)
+      node.each_ancestor(:block).find do |ancestor|
+        ancestor.method_name == :around && ancestor.send_node.receiver.nil?
       end
     end
 
