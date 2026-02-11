@@ -61,3 +61,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {email: "gavin@hooli.com"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "role",
+  log_event: "role.created",
+  user:,
+  resources: {role_code: "accountant", permissions: %w[customers:view invoices:view invoices:create]}
+)
