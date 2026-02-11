@@ -33,7 +33,7 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
       freeze_time do
         expected_deleted_at = Time.current.beginning_of_hour
 
-        expect { task.invoke }.to output(/Done/).to_stdout
+        expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
 
         expect(duplicate_entitlement.reload.deleted_at).to eq(expected_deleted_at)
       end
@@ -48,7 +48,7 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
     end
 
     it "does not soft-delete entitlements that have values" do
-      expect { task.invoke }.to output(/Soft-deleted 0 entitlements/).to_stdout
+      expect { task.invoke(organization.id) }.to output(/Soft-deleted 0 entitlements/).to_stdout
 
       expect(entitlement_with_values.reload.deleted_at).to be_nil
     end
@@ -62,7 +62,7 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
     end
 
     it "does not soft-delete entitlements for features not on the plan" do
-      expect { task.invoke }.to output(/Soft-deleted 0 entitlements/).to_stdout
+      expect { task.invoke(organization.id) }.to output(/Soft-deleted 0 entitlements/).to_stdout
 
       expect(unique_entitlement.reload.deleted_at).to be_nil
     end
@@ -82,10 +82,31 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
 
     it "soft-deletes duplicates using COALESCE(parent_id, plan_id)" do
       freeze_time do
-        expect { task.invoke }.to output(/Done/).to_stdout
+        expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
 
         expect(duplicate_on_standalone.reload.deleted_at).to eq(Time.current.beginning_of_hour)
       end
+    end
+  end
+
+  context "with a duplicate in a different organization" do
+    let(:other_organization) { create(:organization) }
+    let(:other_feature) { create(:feature, organization: other_organization) }
+    let(:other_plan) { create(:plan, organization: other_organization) }
+    let(:other_subscription) { create(:subscription, organization: other_organization, plan: other_plan) }
+
+    let!(:other_duplicate) do
+      create(:entitlement, :subscription, feature: other_feature, subscription: other_subscription, organization: other_organization)
+    end
+
+    before do
+      create(:entitlement, feature: other_feature, plan: other_plan, organization: other_organization)
+    end
+
+    it "does not soft-delete entitlements from other organizations" do
+      expect { task.invoke(organization.id) }.to output(/Soft-deleted 0 entitlements/).to_stdout
+
+      expect(other_duplicate.reload.deleted_at).to be_nil
     end
   end
 end

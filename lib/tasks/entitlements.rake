@@ -2,15 +2,18 @@
 
 namespace :entitlements do
   desc "Soft-delete duplicate subscription entitlements that have no values and whose feature is already on the parent plan"
-  task cleanup_duplicate_subscription_entitlements: :environment do
+  task :cleanup_duplicate_subscription_entitlements, [:organization_id] => :environment do |_task, args|
+    organization_id = args[:organization_id]
+    abort "Missing organization_id argument\n\nUsage: rake entitlements:cleanup_duplicate_subscription_entitlements[organization_id]" unless organization_id
+
     deleted_at = Time.current.beginning_of_hour
     batch_size = 5_000
     total_deleted = 0
 
-    puts "Starting cleanup of duplicate subscription entitlements (deleted_at: #{deleted_at})..."
+    puts "Starting cleanup of duplicate subscription entitlements for organization #{organization_id} (deleted_at: #{deleted_at})..."
 
     loop do
-      result = ActiveRecord::Base.connection.exec_update(<<~SQL.squish, "Cleanup duplicate entitlements", [deleted_at, batch_size])
+      result = ActiveRecord::Base.connection.exec_update(<<~SQL.squish, "Cleanup duplicate entitlements", [deleted_at, organization_id, batch_size])
         UPDATE entitlement_entitlements
         SET deleted_at = $1
         WHERE id IN (
@@ -24,12 +27,13 @@ namespace :entitlements do
             AND plan_ent.deleted_at IS NULL
           WHERE sub_ent.subscription_id IS NOT NULL
             AND sub_ent.deleted_at IS NULL
+            AND sub_ent.organization_id = $2
             AND NOT EXISTS (
               SELECT 1 FROM entitlement_entitlement_values v
               WHERE v.entitlement_entitlement_id = sub_ent.id
                 AND v.deleted_at IS NULL
             )
-          LIMIT $2
+          LIMIT $3
         )
       SQL
 
