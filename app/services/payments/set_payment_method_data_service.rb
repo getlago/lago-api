@@ -28,6 +28,10 @@ module Payments
       id = data.delete(:id)
       payment.update!(provider_payment_method_id: id, provider_payment_method_data: data)
 
+      if payment.payment_method && payment.organization.feature_flag_enabled?(:multiple_payment_methods)
+        payment.payment_method.update!(details: data)
+      end
+
       result.payment = payment
       result
     end
@@ -46,9 +50,11 @@ module Payments
         type: pm.type
       }
 
-      if pm.respond_to?(:card)
+      if pm.respond_to?(:card) && pm.card
         data[:last4] = pm.card.last4
         data[:brand] = pm.card.display_brand
+        data[:expiration_month] = pm.card.exp_month
+        data[:expiration_year] = pm.card.exp_year
       end
 
       data

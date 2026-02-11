@@ -40,7 +40,7 @@ module PaymentProviders
             .new
             .delete_payment_method(
               organization_id: organization.id,
-              stripe_customer_id: event.data.object.customer,
+              stripe_customer_id: event.data.object.customer || event.data.previous_attributes.customer,
               payment_method_id: event.data.object.id,
               metadata: event.data.object.metadata.to_h.symbolize_keys
             ).raise_if_error!
