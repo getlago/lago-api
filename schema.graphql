@@ -6526,6 +6526,11 @@ Security Log event
 """
 enum LogEventEnum {
   """
+  user.deleted
+  """
+  user_deleted
+
+  """
   user.signed_up
   """
   user_signed_up
