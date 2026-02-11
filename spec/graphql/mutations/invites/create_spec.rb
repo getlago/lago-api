@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Invites::Create do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:members:create" }
   let(:membership) { create(:membership) }
   let(:revoked_membership) do
@@ -35,25 +37,40 @@ RSpec.describe Mutations::Invites::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:members:create"
 
-  it "creates an invite for a new user" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          email:,
-          roles:
+  context "when creating an invite for a new user" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            email:,
+            roles:
+          }
         }
-      }
-    )
+      )
+    end
 
-    data = result["data"]["createInvite"]
+    it "creates an invite" do
+      data = result["data"]["createInvite"]
 
-    expect(data["email"]).to eq(email)
-    expect(data["roles"]).to eq(roles)
-    expect(data["token"]).to be_present
+      expect(data["email"]).to eq(email)
+      expect(data["roles"]).to eq(roles)
+      expect(data["token"]).to be_present
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "user",
+        log_event: "user.invited",
+        resources: {invitee_email: email}
+      )
+    end
   end
 
   it "creates an invite with admin role using roles param" do
