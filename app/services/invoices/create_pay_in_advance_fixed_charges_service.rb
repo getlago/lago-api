@@ -26,46 +26,43 @@ module Invoices
       vies_check_failed = false
 
       ActiveRecord::Base.transaction do
-        # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-        Customers::LockService.call(customer:) do
-          create_generating_invoice
-          fees.each do |fee|
-            fee.invoice = invoice
-            fee.save!
-          end
-
-          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-          Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
-
-          if customer_provider_taxation?
-            taxes_result = apply_provider_taxes
-            unless taxes_result.success?
-              tax_error = taxes_result.error.code
-              invoice.failed!
-              deliver_fee_webhooks
-              create_error_detail(tax_error)
-              Utils::ActivityLog.produce(invoice, "invoice.failed")
-              next
-            end
-          else
-            vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
-            if vies_check_failed
-              deliver_fee_webhooks
-              Utils::ActivityLog.produce(invoice, "invoice.pending")
-              next
-            end
-          end
-
-          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-          create_credit_note_credit
-          create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-          Invoices::TransitionToFinalStatusService.call(invoice:)
-          invoice.save!
+        create_generating_invoice
+        fees.each do |fee|
+          fee.invoice = invoice
+          fee.save!
         end
+
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
+
+        if customer_provider_taxation?
+          taxes_result = apply_provider_taxes
+          unless taxes_result.success?
+            tax_error = taxes_result.error.code
+            invoice.failed!
+            deliver_fee_webhooks
+            create_error_detail(tax_error)
+            Utils::ActivityLog.produce(invoice, "invoice.failed")
+            next
+          end
+        else
+          vies_check_failed = Invoices::EnsureCompletedViesCheckService.call(invoice:).failure?
+          if vies_check_failed
+            deliver_fee_webhooks
+            Utils::ActivityLog.produce(invoice, "invoice.pending")
+            next
+          end
+        end
+
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+        create_credit_note_credit
+        create_applied_prepaid_credit if should_create_applied_prepaid_credit?
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        Invoices::TransitionToFinalStatusService.call(invoice:)
+        invoice.save!
       end
 
       result.invoice = invoice
