@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Memberships::RevokeService do
   subject(:revoke_service) { described_class.new(user:, membership:) }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization) }
   let(:admin_role) { create(:role, :admin) }
   let(:finance_role) { create(:role, :finance) }
@@ -26,6 +28,12 @@ RSpec.describe Memberships::RevokeService do
         expect(result).not_to be_success
         expect(result.error.code).to eq("cannot_revoke_own_membership")
       end
+
+      it "does not produce a security log" do
+        revoke_service.call
+
+        expect(security_logger).not_to have_received(:produce)
+      end
     end
 
     context "when membership is not found" do
@@ -36,6 +44,12 @@ RSpec.describe Memberships::RevokeService do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("membership_not_found")
+      end
+
+      it "does not produce a security log" do
+        revoke_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -52,6 +66,18 @@ RSpec.describe Memberships::RevokeService do
           expect(result.membership.revoked_at).to eq(Time.current)
         end
       end
+
+      it "produces a security log" do
+        revoke_service.call
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "user",
+          log_event: "user.deleted",
+          user: user,
+          resources: {email: membership.user.email}
+        )
+      end
     end
 
     context "when removing the last admin" do
@@ -65,6 +91,12 @@ RSpec.describe Memberships::RevokeService do
 
         expect(result).not_to be_success
         expect(result.error.code).to eq("last_admin")
+      end
+
+      it "does not produce a security log" do
+        revoke_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -82,6 +114,12 @@ RSpec.describe Memberships::RevokeService do
 
         expect(result).not_to be_success
         expect(result.error.code).to eq("last_admin")
+      end
+
+      it "does not produce a security log" do
+        revoke_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end

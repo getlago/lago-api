@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Memberships::Revoke do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:members:update" }
   let(:admin_role) { create(:role, :admin) }
   let(:finance_role) { create(:role, :finance) }
@@ -24,25 +26,44 @@ RSpec.describe Mutations::Memberships::Revoke do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:members:update"
 
-  it "Revokes a membership" do
-    membership_to_remove = create(:membership, organization:)
-    create(:membership_role, membership: membership_to_remove, role: admin_role)
-    create(:membership_role, membership:, role: admin_role)
+  context "when revoking another membership" do
+    subject(:result) do
+      execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: membership_to_remove.id}
+        }
+      )
+    end
 
-    result = execute_graphql(
-      current_organization: organization,
-      current_user: membership.user,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {id: membership_to_remove.id}
-      }
-    )
+    let(:membership_to_remove) { create(:membership, organization:) }
 
-    data = result["data"]["revokeMembership"]
+    before do
+      create(:membership_role, membership: membership_to_remove, role: admin_role)
+      create(:membership_role, membership:, role: admin_role)
+    end
 
-    expect(data["id"]).to eq(membership_to_remove.id)
-    expect(data["revokedAt"]).to be_present
+    it "revokes a membership" do
+      data = result["data"]["revokeMembership"]
+
+      expect(data["id"]).to eq(membership_to_remove.id)
+      expect(data["revokedAt"]).to be_present
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "user",
+        log_event: "user.deleted",
+        user: membership.user,
+        resources: {email: membership_to_remove.user.email}
+      )
+    end
   end
 
   it "Cannot Revoke my own membership" do

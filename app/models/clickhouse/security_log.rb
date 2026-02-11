@@ -16,7 +16,8 @@ module Clickhouse
     }.freeze
 
     LOG_EVENTS = {
-      user_signed_up: "user.signed_up"
+      user_signed_up: "user.signed_up",
+      user_deleted: "user.deleted"
     }.freeze
 
     before_save :ensure_log_id
