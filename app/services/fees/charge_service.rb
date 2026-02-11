@@ -21,11 +21,10 @@ module Fees
       apply_taxes: false,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      usage_filters: UsageFilters::NONE
-      with_zero_units_filters: true,
+      usage_filters: UsageFilters::NONE,
       skip_adjusted_fees: false,
       plan: nil,
-      customer: nil,
+      customer: nil
     )
       @invoice = invoice
       @charge = charge
@@ -289,7 +288,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization_id: organization.id,
+        organization_id: subscription.organization_id,
         billing_entity_id: subscription.applicable_billing_entity_id,
         subscription:,
         charge:,
