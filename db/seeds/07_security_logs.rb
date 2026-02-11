@@ -21,3 +21,11 @@ Utils::SecurityLog.produce(
   user:,
   skip_organization_check: true
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.deleted",
+  user:,
+  resources: {email: "dinesh@hooli.com"}
+)
