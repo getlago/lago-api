@@ -17,6 +17,7 @@ module PaymentProviders
           payment_method = find_payment_method_by_mandate
 
           return result unless payment_method
+          return result unless payment_provider.organization.feature_flag_enabled?(:multiple_payment_methods)
 
           gocardless_customer = payment_method.payment_provider_customer
           result.gocardless_customer = gocardless_customer
@@ -26,10 +27,8 @@ module PaymentProviders
             gocardless_customer.save!
           end
 
-          if payment_provider.organization.feature_flag_enabled?(:multiple_payment_methods)
-            destroy_result = PaymentMethods::DestroyService.call(payment_method:)
-            result.payment_method = destroy_result.payment_method
-          end
+          destroy_result = PaymentMethods::DestroyService.call(payment_method:)
+          result.payment_method = destroy_result.payment_method
 
           result
         rescue ActiveRecord::RecordInvalid => e

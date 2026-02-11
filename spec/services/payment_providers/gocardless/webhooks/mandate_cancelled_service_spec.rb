@@ -76,10 +76,10 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCancelledService d
         expect(result.payment_method).to be_nil
       end
 
-      it "still clears the gocardless customer provider_mandate_id" do
+      it "does not clear the gocardless customer provider_mandate_id" do
         mandate_cancelled_service.call
 
-        expect(gocardless_customer.reload.provider_mandate_id).to be_nil
+        expect(gocardless_customer.reload.provider_mandate_id).not_to be_nil
       end
     end
 
