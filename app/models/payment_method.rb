@@ -47,12 +47,13 @@ end
 #
 # Indexes
 #
-#  index_payment_methods_on_customer_id                   (customer_id)
-#  index_payment_methods_on_organization_id               (organization_id)
-#  index_payment_methods_on_payment_provider_customer_id  (payment_provider_customer_id)
-#  index_payment_methods_on_payment_provider_id           (payment_provider_id)
-#  index_payment_methods_on_provider_method_type          (provider_method_type)
-#  unique_default_payment_method_per_customer             (customer_id) UNIQUE WHERE ((is_default = true) AND (deleted_at IS NULL))
+#  index_payment_methods_on_customer_id                            (customer_id)
+#  index_payment_methods_on_organization_id                        (organization_id)
+#  index_payment_methods_on_payment_provider_customer_id           (payment_provider_customer_id)
+#  index_payment_methods_on_payment_provider_id                    (payment_provider_id)
+#  index_payment_methods_on_provider_customer_and_provider_method  (payment_provider_customer_id,provider_method_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_payment_methods_on_provider_method_type                   (provider_method_type)
+#  unique_default_payment_method_per_customer                      (customer_id) UNIQUE WHERE ((is_default = true) AND (deleted_at IS NULL))
 #
 # Foreign Keys
 #
