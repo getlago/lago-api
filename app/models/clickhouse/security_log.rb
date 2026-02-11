@@ -12,10 +12,12 @@ module Clickhouse
     default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
 
     LOG_TYPES = %w[
+      role
       user
     ].freeze
 
     LOG_EVENTS = %w[
+      role.created
       user.deleted
       user.invited
       user.password_edited
