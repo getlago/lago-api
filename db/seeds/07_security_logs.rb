@@ -37,3 +37,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {invitee_email: "invited@example.com"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.role_edited",
+  user:,
+  resources: {email: "dinesh@hooli.com", roles: {deleted: %w[admin], added: %w[finance]}}
+)
