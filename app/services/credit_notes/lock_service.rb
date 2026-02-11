@@ -9,9 +9,16 @@ module CreditNotes
     end
 
     def call
-      customer.with_advisory_lock("CREDIT_NOTES-#{customer.id}", timeout_seconds: 5) do
+      customer.with_advisory_lock!(
+        "CREDIT_NOTES-#{customer.id}",
+        timeout_seconds: 5,
+        transaction: true,
+        disable_query_cache: true
+      ) do
         yield
       end
+    rescue WithAdvisoryLock::FailedToAcquireLock
+      raise Customers::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}"
     end
 
     def locked?
