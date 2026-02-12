@@ -54,8 +54,8 @@ module Events
           applicable_to_datetime
         )
 
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
         query = arel_filters_scope(query)
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
 
         {"events" => query.project(select).to_sql}
       end

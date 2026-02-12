@@ -10,7 +10,9 @@ module Invoices
       with_cache: true,
       max_timestamp: nil,
       calculate_projected_usage: false,
-      with_zero_units_filters: true
+      with_zero_units_filters: true,
+      for_charge: nil,
+      for_pricing_group_pairs: nil
     )
       super
 
@@ -21,6 +23,9 @@ module Invoices
       @with_cache = with_cache
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
+
+      @for_charge = for_charge
+      @for_pricing_group_pairs = for_pricing_group_pairs
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
@@ -56,6 +61,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
+    attr_reader :for_charge, :for_pricing_group_pairs
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -93,14 +99,23 @@ module Invoices
 
       filters = event_filters(subscription, boundaries).charges
 
-      subscription
+      charges = subscription
         .plan
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
-      fees.sort_by { |f| f.billable_metric.name.downcase }
+      if for_charge
+        charges = charges.where(id: for_charge.id)
+      end
+
+      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+
+      if for_charge
+        fees
+      else
+        fees.sort_by { |f| f.billable_metric.name.downcase }
+      end
     end
 
     def charge_usage(charge, applied_filters)
@@ -113,6 +128,9 @@ module Invoices
 
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
+      if for_pricing_group_pairs
+        cache_middleware = nil
+      end
 
       Fees::ChargeService
         .call!(
@@ -124,7 +142,8 @@ module Invoices
           cache_middleware:,
           calculate_projected_usage:,
           with_zero_units_filters:,
-          filtered_aggregations: applied_filters
+          filtered_aggregations: applied_filters,
+          for_pricing_group_pairs:
         )
         .fees
     end

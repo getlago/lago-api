@@ -12,7 +12,8 @@ module Fees
       filtered_aggregations: nil,
       apply_taxes: false,
       calculate_projected_usage: false,
-      with_zero_units_filters: true
+      with_zero_units_filters: true,
+      for_pricing_group_pairs: nil
     )
       @invoice = invoice
       @charge = charge
@@ -30,6 +31,7 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
+      @for_pricing_group_pairs = for_pricing_group_pairs
 
       super(nil)
     end
@@ -366,6 +368,12 @@ module Fees
         filters[:charge_filter] = charge_filter
         filters[:matching_filters] = result.matching_filters
         filters[:ignored_filters] = result.ignored_filters
+      end
+
+      if @for_pricing_group_pairs.present?
+        filters[:grouped_by] = nil
+        filters[:matching_filters] ||= {}
+        filters[:matching_filters].merge!(@for_pricing_group_pairs)
       end
 
       filters
