@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ApiKeys::UpdateService, :premium do
   subject(:service_result) { described_class.call(api_key:, params:) }
 
+  include_context "with mocked security logger"
+
   let(:name) { Faker::Lorem.words.join(" ") }
 
   context "when API key is provided" do
@@ -23,6 +25,21 @@ RSpec.describe ApiKeys::UpdateService, :premium do
         it "updates the API key" do
           expect { service_result }.to change { api_key.reload.permissions }.to(permissions)
         end
+
+        it "produces a security log" do
+          service_result
+
+          expect(security_logger).to have_received(:produce).with(
+            organization: organization,
+            log_type: "api_key",
+            log_event: "api_key.updated",
+            resources: hash_including(
+              value_ending: api_key.value.last(4),
+              name: {deleted: "API Key", added: name},
+              permissions: {deleted: %w[add_on:write]}
+            )
+          )
+        end
       end
 
       context "when organization has no api permissions addon" do
@@ -36,6 +53,12 @@ RSpec.describe ApiKeys::UpdateService, :premium do
           expect(service_result).not_to be_success
           expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
           expect(service_result.error.code).to eq("premium_integration_missing")
+        end
+
+        it "does not produce a security log" do
+          service_result
+
+          expect(security_logger).not_to have_received(:produce)
         end
       end
     end
@@ -71,6 +94,12 @@ RSpec.describe ApiKeys::UpdateService, :premium do
       expect(service_result).not_to be_success
       expect(service_result.error).to be_a(BaseService::NotFoundFailure)
       expect(service_result.error.error_code).to eq("api_key_not_found")
+    end
+
+    it "does not produce a security log" do
+      service_result
+
+      expect(security_logger).not_to have_received(:produce)
     end
   end
 end

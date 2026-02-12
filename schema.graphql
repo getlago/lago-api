@@ -6531,6 +6531,11 @@ enum LogEventEnum {
   api_key_created
 
   """
+  api_key.updated
+  """
+  api_key_updated
+
+  """
   role.created
   """
   role_created
