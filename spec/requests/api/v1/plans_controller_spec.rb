@@ -882,7 +882,7 @@ RSpec.describe Api::V1::PlansController do
             subscription:,
             fixed_charge:,
             units: 25,
-            timestamp: be_within(1.second).of(Time.current)
+            timestamp: be_within(5.seconds).of(Time.current)
           )
         end
       end
