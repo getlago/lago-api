@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Hubspot::Update, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:hubspot_integration, organization:) }
   let(:organization) { membership.organization }
@@ -35,24 +37,40 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
-  it "updates a hubspot integration" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          id: integration.id,
-          name:,
-          code:
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: integration.id,
+            name:,
+            code:
+          }
         }
-      }
-    )
+      )
+    end
 
-    result_data = result["data"]["updateHubspotIntegration"]
+    it "updates a hubspot integration" do
+      result_data = result["data"]["updateHubspotIntegration"]
 
-    expect(result_data["name"]).to eq(name)
-    expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["code"]).to eq(code)
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.updated",
+        resources: hash_including(
+          integration_name: name,
+          integration_type: "hubspot"
+        )
+      )
+    end
   end
 end
