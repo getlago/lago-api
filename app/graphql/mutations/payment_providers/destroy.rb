@@ -4,6 +4,7 @@ module Mutations
   module PaymentProviders
     class Destroy < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "organization:integrations:delete"
 
@@ -17,7 +18,7 @@ module Mutations
       def resolve(id:)
         payment_provider = ::PaymentProviders::BaseProvider.find_by(
           id:,
-          organization_id: context[:current_user].organization_ids
+          organization_id: current_organization.id
         )
         result = ::PaymentProviders::DestroyService.call(payment_provider)
 
