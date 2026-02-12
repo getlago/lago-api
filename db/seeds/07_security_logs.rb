@@ -93,3 +93,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {name: "Hooli Key", value_ending: "7890", permissions: ApiKey.default_permissions}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "api_key",
+  log_event: "api_key.updated",
+  user:,
+  resources: {name: "Hooli Key", value_ending: "7890", permissions: {add_on: {deleted: %w[write]}}}
+)
