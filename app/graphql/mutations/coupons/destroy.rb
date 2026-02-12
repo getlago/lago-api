@@ -4,6 +4,7 @@ module Mutations
   module Coupons
     class Destroy < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "coupons:delete"
 
@@ -15,7 +16,7 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        coupon = context[:current_user].coupons.find_by(id:)
+        coupon = current_organization.coupons.find_by(id:)
         result = ::Coupons::DestroyService.call(coupon:)
 
         result.success? ? result.coupon : result_error(result)

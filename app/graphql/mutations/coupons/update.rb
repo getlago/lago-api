@@ -4,6 +4,7 @@ module Mutations
   module Coupons
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "coupons:update"
 
@@ -15,7 +16,7 @@ module Mutations
       type Types::Coupons::Object
 
       def resolve(**args)
-        coupon = context[:current_user].coupons.find_by(id: args[:id])
+        coupon = current_organization.coupons.find_by(id: args[:id])
         result = ::Coupons::UpdateService.call(coupon:, params: args)
         result.success? ? result.coupon : result_error(result)
       end
