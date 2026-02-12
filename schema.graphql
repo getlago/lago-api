@@ -6524,6 +6524,11 @@ Security Log event
 """
 enum LogEventEnum {
   """
+  api_key.created
+  """
+  api_key_created
+
+  """
   role.created
   """
   role_created
@@ -6573,6 +6578,11 @@ enum LogEventEnum {
 Security Log type
 """
 enum LogTypeEnum {
+  """
+  api_key
+  """
+  api_key
+
   """
   role
   """

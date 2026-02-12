@@ -67,7 +67,7 @@ Utils::SecurityLog.produce(
   log_type: "role",
   log_event: "role.created",
   user:,
-  resources: {role_code: "accountant", permissions: %w[customers:view invoices:view invoices:create]},
+  resources: {role_code: "accountant", permissions: %w[customers:view invoices:view invoices:create]}
 )
 
 Utils::SecurityLog.produce(
@@ -84,4 +84,12 @@ Utils::SecurityLog.produce(
   log_event: "role.deleted",
   user:,
   resources: {role_code: "hr_manager"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "api_key",
+  log_event: "api_key.created",
+  user:,
+  resources: {name: "Hooli Key", value_ending: "7890", permissions: ApiKey.default_permissions}
 )
