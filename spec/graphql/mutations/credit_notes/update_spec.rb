@@ -22,18 +22,15 @@ RSpec.describe Mutations::CreditNotes::Update do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "credit_notes:update"
 
   it "updates the credit note" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: credit_note.id,
-          refundStatus: "succeeded"
-        }
+      input: {
+        id: credit_note.id,
+        refundStatus: "succeeded"
       }
     )
 
@@ -45,15 +42,11 @@ RSpec.describe Mutations::CreditNotes::Update do
 
   context "when credit note is not found" do
     it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {
-            id: "foo_bar",
-            refundStatus: "succeeded"
-          }
+        input: {
+          id: "foo_bar",
+          refundStatus: "succeeded"
         }
       )
 
@@ -76,15 +69,11 @@ RSpec.describe Mutations::CreditNotes::Update do
     before { create(:item_metadata, owner: credit_note, organization:, value: {"existing" => "value"}) }
 
     it "replaces metadata (not merges)" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {
-            id: credit_note.id,
-            metadata: [{key: "new", value: "data"}]
-          }
+        input: {
+          id: credit_note.id,
+          metadata: [{key: "new", value: "data"}]
         }
       )
 
