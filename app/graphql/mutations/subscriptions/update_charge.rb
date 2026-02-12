@@ -4,6 +4,7 @@ module Mutations
   module Subscriptions
     class UpdateCharge < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "subscriptions:update"
 
@@ -15,7 +16,7 @@ module Mutations
       type Types::Charges::Object
 
       def resolve(**args)
-        subscription = context[:current_user].subscriptions.find_by(id: args[:subscription_id])
+        subscription = current_organization.subscriptions.find_by(id: args[:subscription_id])
         charge = subscription&.plan&.charges&.find_by(code: args[:charge_code])
 
         result = ::Subscriptions::UpdateOrOverrideChargeService.call(
