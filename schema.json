@@ -34404,6 +34404,12 @@
               "deprecationReason": null
             },
             {
+              "name": "api_key_deleted",
+              "description": "api_key.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "api_key_updated",
               "description": "api_key.updated",
               "isDeprecated": false,
