@@ -13,9 +13,6 @@ module Invoices
     retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 
-    # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-    # When it fails, it raises a Customers::FailedToAcquireLock error.
-    # If the lock succeeds but another job/request updates the wallet concurrently, it will raise a ActiveRecord::StaleObjectError error.
     retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
     # DEPRECATED: These errors should not be raised anymore but we keep them and monitor to be sure.
