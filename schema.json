@@ -34398,6 +34398,12 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "api_key_created",
+              "description": "api_key.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role_created",
               "description": "role.created",
               "isDeprecated": false,
@@ -34462,6 +34468,12 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
+            {
+              "name": "api_key",
+              "description": "api_key",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "role",
               "description": "role",

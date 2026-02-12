@@ -25,6 +25,8 @@ RSpec.describe Mutations::ApiKeys::Create do
   let!(:membership) { create(:membership) }
   let(:name) { Faker::Lorem.word }
 
+  include_context "with mocked security logger"
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
@@ -38,6 +40,21 @@ RSpec.describe Mutations::ApiKeys::Create do
       api_key_response = result["data"]["createApiKey"]
 
       expect(api_key_response["name"]).to eq(name)
+    end
+
+    it "produces a security log" do
+      api_key_response = result["data"]["createApiKey"]
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "api_key",
+        log_event: "api_key.created",
+        resources: {
+          name: name,
+          value_ending: api_key_response["value"].last(4),
+          permissions: kind_of(Array)
+        }
+      )
     end
   end
 

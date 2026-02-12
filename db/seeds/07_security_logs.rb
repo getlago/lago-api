@@ -85,3 +85,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {role_code: "hr_manager"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "api_key",
+  log_event: "api_key.created",
+  user:,
+  resources: {name: "Hooli Key", value_ending: "7890", permissions: ApiKey.default_permissions}
+)

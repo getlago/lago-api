@@ -12,11 +12,13 @@ module Clickhouse
     default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
 
     LOG_TYPES = %w[
+      api_key
       role
       user
     ].freeze
 
     LOG_EVENTS = %w[
+      api_key.created
       role.created
       role.deleted
       role.updated
