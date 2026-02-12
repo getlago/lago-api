@@ -66,7 +66,7 @@ RSpec.describe Mutations::Memberships::Update do
         log_event: "user.role_edited",
         resources: {
           email: membership_to_edit.user.email,
-          changes: {roles: {old: %w[finance], new: %w[admin]}}
+          roles: {deleted: %w[finance], added: %w[admin]}
         }
       )
     end

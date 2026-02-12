@@ -16,23 +16,38 @@ module PasswordResets
       return result.single_validation_failure!(field: :token, error_code: "missing_token") if token.blank?
 
       password_reset = PasswordReset.where("expire_at > ?", Time.current).find_by(token:)
-
       return result.not_found_failure!(resource: "password_reset") if password_reset.blank?
 
-      ActiveRecord::Base.transaction do
-        password_reset.user.password = new_password
-        password_reset.user.save!
+      user = password_reset.user
 
-        result = UsersService.new.login(password_reset.user.email, new_password)
+      result = ActiveRecord::Base.transaction do
+        user.password = new_password
+        user.save!
 
-        password_reset.destroy!
-
-        result
+        UsersService
+          .new
+          .login(user.email, new_password)
+          .tap { password_reset.destroy! }
       end
+
+      register_security_log(user)
+      result
     end
 
     private
 
     attr_reader :token, :new_password
+
+    def register_security_log(user)
+      user.memberships.active.each do |membership|
+        Utils::SecurityLog.produce(
+          organization: membership.organization,
+          log_type: "user",
+          log_event: "user.password_edited",
+          user: user,
+          resources: {email: user.email}
+        )
+      end
+    end
   end
 end
