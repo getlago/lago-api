@@ -158,3 +158,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {export_type: "invoices"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.created",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite"}
+)

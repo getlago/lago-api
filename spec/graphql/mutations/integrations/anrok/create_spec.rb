@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Anrok::Create, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "anrok1" }
@@ -26,29 +28,42 @@ RSpec.describe Mutations::Integrations::Anrok::Create, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates an anrok integration" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          code:,
-          name:,
-          apiKey: "123/456/789",
-          connectionId: "this-is-random-uuid"
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code:,
+            name:,
+            apiKey: "123/456/789",
+            connectionId: "this-is-random-uuid"
+          }
         }
-      }
-    )
+      )
+    end
 
-    result_data = result["data"]["createAnrokIntegration"]
+    it "creates an anrok integration" do
+      result_data = result["data"]["createAnrokIntegration"]
 
-    expect(result_data["id"]).to be_present
-    expect(result_data["code"]).to eq(code)
-    expect(result_data["name"]).to eq(name)
-    expect(result_data["apiKey"]).to eq("••••••••…789")
-    expect(result_data["externalAccountId"]).to eq("123")
-    expect(Integrations::AnrokIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["apiKey"]).to eq("••••••••…789")
+      expect(result_data["externalAccountId"]).to eq("123")
+      expect(Integrations::AnrokIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "anrok"}
+      )
+    end
   end
 end

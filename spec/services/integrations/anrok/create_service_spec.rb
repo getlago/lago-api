@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Anrok::CreateService do
+  include_context "with mocked security logger"
+
   let(:service) { described_class.new(membership.user) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -49,6 +51,17 @@ RSpec.describe Integrations::Anrok::CreateService do
           result = service_call
 
           expect(result.integration).to be_a(Integrations::AnrokIntegration)
+        end
+
+        it "produces a security log" do
+          service_call
+
+          expect(security_logger).to have_received(:produce).with(
+            organization:,
+            log_type: "integration",
+            log_event: "integration.created",
+            resources: {integration_name: name, integration_type: "anrok"}
+          )
         end
       end
 

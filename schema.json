@@ -34404,6 +34404,12 @@
               "deprecationReason": null
             },
             {
+              "name": "integration_created",
+              "description": "integration.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role_created",
               "description": "role.created",
               "isDeprecated": false,
@@ -34495,6 +34501,12 @@
             {
               "name": "export",
               "description": "export",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration",
+              "description": "integration",
               "isDeprecated": false,
               "deprecationReason": null
             },

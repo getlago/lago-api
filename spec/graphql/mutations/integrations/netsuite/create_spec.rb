@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Netsuite::Create, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "netsuite1" }
@@ -35,34 +37,47 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates a netsuite integration" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          code:,
-          name:,
-          scriptEndpointUrl: script_endpoint_url,
-          accountId: "012",
-          clientId: "123",
-          clientSecret: "456",
-          tokenId: "xyz",
-          tokenSecret: "zyx",
-          connectionId: "this-is-random-uuid"
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code:,
+            name:,
+            scriptEndpointUrl: script_endpoint_url,
+            accountId: "012",
+            clientId: "123",
+            clientSecret: "456",
+            tokenId: "xyz",
+            tokenSecret: "zyx",
+            connectionId: "this-is-random-uuid"
+          }
         }
-      }
-    )
+      )
+    end
 
-    result_data = result["data"]["createNetsuiteIntegration"]
+    it "creates a netsuite integration" do
+      result_data = result["data"]["createNetsuiteIntegration"]
 
-    expect(result_data["id"]).to be_present
-    expect(result_data["code"]).to eq(code)
-    expect(result_data["name"]).to eq(name)
-    expect(result_data["tokenId"]).to eq("xyz")
-    expect(result_data["tokenSecret"]).to eq("••••••••…zyx")
-    expect(result_data["scriptEndpointUrl"]).to eq(script_endpoint_url)
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["tokenId"]).to eq("xyz")
+      expect(result_data["tokenSecret"]).to eq("••••••••…zyx")
+      expect(result_data["scriptEndpointUrl"]).to eq(script_endpoint_url)
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "netsuite"}
+      )
+    end
   end
 end

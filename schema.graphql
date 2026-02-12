@@ -6549,6 +6549,11 @@ enum LogEventEnum {
   export_created
 
   """
+  integration.created
+  """
+  integration_created
+
+  """
   role.created
   """
   role_created
@@ -6622,6 +6627,11 @@ enum LogTypeEnum {
   export
   """
   export
+
+  """
+  integration
+  """
+  integration
 
   """
   role
