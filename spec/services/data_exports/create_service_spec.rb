@@ -7,6 +7,8 @@ RSpec.describe DataExports::CreateService do
     described_class.call(organization:, user:, format:, resource_type:, resource_query:)
   end
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization) }
   let(:user) { create(:user) }
   let(:membership) { create(:membership, user:, organization:) }
@@ -46,5 +48,17 @@ RSpec.describe DataExports::CreateService do
     expect(DataExports::ExportResourcesJob)
       .to have_received(:perform_later)
       .with(data_export)
+  end
+
+  it "produces a security log" do
+    result
+
+    expect(security_logger).to have_received(:produce).with(
+      organization: organization,
+      log_type: "export",
+      log_event: "export.created",
+      user: user,
+      resources: {export_type: "invoices", resource_query: resource_query}
+    )
   end
 end

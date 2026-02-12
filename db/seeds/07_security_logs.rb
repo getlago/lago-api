@@ -150,3 +150,11 @@ Utils::SecurityLog.produce(
   api_key:,
   resources: {webhook_url: "https://webhook.example.com/api-deleted"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "export",
+  log_event: "export.created",
+  user:,
+  resources: {export_type: "invoices"}
+)
