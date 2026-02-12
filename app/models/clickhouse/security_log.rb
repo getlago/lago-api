@@ -27,6 +27,7 @@ module Clickhouse
       api_key.updated
       export.created
       integration.created
+      integration.updated
       role.created
       role.deleted
       role.updated

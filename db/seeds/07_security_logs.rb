@@ -166,3 +166,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {integration_name: "Netsuite Production", integration_type: "netsuite"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.updated",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite", name: {deleted: "Netsuite Old", added: "Netsuite Production"}}
+)
