@@ -3,8 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::PasswordResets::Reset do
-  let(:membership) { create(:membership, user: create(:user, password: "HelloLago!1")) }
-  let(:password_reset) { create(:password_reset, user: membership.user) }
+  include_context "with mocked security logger"
+
+  let(:organization) { create(:organization) }
+  let(:membership) { create(:membership, organization:, user: create(:user, password: "HelloLago!1")) }
+  let(:user) { membership.user }
+  let(:password_reset) { create(:password_reset, user:) }
 
   let(:mutation) do
     <<~GQL
@@ -16,25 +20,41 @@ RSpec.describe Mutations::PasswordResets::Reset do
     GQL
   end
 
-  it "returns the auth token after a password reset" do
-    result = execute_graphql(
-      query: mutation,
-      variables: {
-        input: {
-          newPassword: "HelloLago!2",
-          token: password_reset.token
+  context "with a valid token" do
+    subject(:result) do
+      execute_graphql(
+        query: mutation,
+        variables: {
+          input: {
+            newPassword: "HelloLago!2",
+            token: password_reset.token
+          }
         }
-      }
-    )
+      )
+    end
 
-    data = result["data"]["resetPassword"]
+    it "returns the auth token after a password reset" do
+      data = result["data"]["resetPassword"]
 
-    expect(data["token"]).to be_present
+      expect(data["token"]).to be_present
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "user",
+        log_event: "user.password_edited",
+        user: user,
+        resources: {email: user.email}
+      )
+    end
   end
 
   context "when the password reset is expired" do
     let(:expired_password_reset) do
-      create(:password_reset, user: membership.user, expire_at: Time.current - 1.minute)
+      create(:password_reset, user:, expire_at: Time.current - 1.minute)
     end
 
     it "returns an error" do

@@ -18,6 +18,7 @@ module Clickhouse
     LOG_EVENTS = %w[
       user.deleted
       user.invited
+      user.password_edited
       user.password_reset_requested
       user.role_edited
       user.signed_up

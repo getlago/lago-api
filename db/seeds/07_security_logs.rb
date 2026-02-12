@@ -53,3 +53,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {email: "gavin@hooli.com"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.password_edited",
+  user:,
+  resources: {email: "gavin@hooli.com"}
+)
