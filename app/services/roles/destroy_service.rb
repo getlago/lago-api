@@ -16,6 +16,8 @@ module Roles
 
       role.discard!
 
+      register_security_log
+
       result.role = role
       result
     end
@@ -26,6 +28,15 @@ module Roles
 
     def predefined_role?
       role.organization_id.nil?
+    end
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: role.organization,
+        log_type: "role",
+        log_event: "role.deleted",
+        resources: {role_code: role.code}
+      )
     end
   end
 end

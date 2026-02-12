@@ -77,3 +77,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {role_code: "accountant", permissions: {added: %w[invoices:view invoices:create]}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "role",
+  log_event: "role.deleted",
+  user:,
+  resources: {role_code: "hr_manager"}
+)
