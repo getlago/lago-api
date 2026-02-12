@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/redis_config_builder"
+
 ActiveJob::Uniqueness.configure do |config|
   config.lock_ttl = 1.hour
 
@@ -8,19 +10,13 @@ ActiveJob::Uniqueness.configure do |config|
     redis_timeout: 5
   }
 
-  redis_config = {
-    url: ENV["REDIS_URL"],
-    ssl_params: {
-      verify_mode: OpenSSL::SSL::VERIFY_NONE
-    },
-    reconnect_attempts: 4
-  }
+  redis_config = Lago::RedisConfigBuilder.new
+    .with_options(reconnect_attempts: 4)
+    .sidekiq
 
-  if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
-    redis_config = redis_config.merge({password: ENV["REDIS_PASSWORD"]})
-  end
+  # `active_job_uniqueness` uses `redlock-rb` under the hood, which only supports `redis-client` gem which uses a
+  # different configuration than `redis` gem used by Sidekiq.
+  client = Redis.new(redis_config)._client
 
-  config.redlock_servers = [
-    RedisClient.new(redis_config)
-  ]
+  config.redlock_servers = [client]
 end
