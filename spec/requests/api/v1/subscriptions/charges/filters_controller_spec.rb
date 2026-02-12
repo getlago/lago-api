@@ -153,9 +153,7 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
       }
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       it_behaves_like "requires API permission", "subscription", "write"
 
       it "creates a plan override, charge override, and charge filter" do
@@ -261,9 +259,7 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
       create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["us"], organization:)
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       it_behaves_like "requires API permission", "subscription", "write"
 
       it "creates a plan override and charge override, then updates the filter" do
@@ -362,9 +358,7 @@ RSpec.describe Api::V1::Subscriptions::Charges::FiltersController do
 
     before { charge_filter_value }
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       it_behaves_like "requires API permission", "subscription", "write"
 
       it "creates a plan override and charge override, then soft deletes the filter" do

@@ -36,7 +36,8 @@ module FixedCharges
                 cascade_options: {
                   cascade: true,
                   equal_properties: old_parent.equal_properties?(fixed_charge)
-                }
+                },
+                trigger_billing: false
               )
             else
               raise UnknownActionError, "Unknown action #{payload[:action]} for fixed charge cascade"

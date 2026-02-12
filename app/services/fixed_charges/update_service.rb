@@ -4,12 +4,13 @@ module FixedCharges
   class UpdateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {})
+    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {}, trigger_billing: true)
       @fixed_charge = fixed_charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
       @timestamp = timestamp
+      @trigger_billing = trigger_billing
 
       super
     end
@@ -42,7 +43,7 @@ module FixedCharges
             timestamp:
           )
 
-          if params[:apply_units_immediately] && fixed_charge.pay_in_advance?
+          if trigger_billing && params[:apply_units_immediately] && fixed_charge.pay_in_advance?
             plan.subscriptions.active.find_each do |subscription|
               after_commit do
                 Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
@@ -72,7 +73,7 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp
+    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp, :trigger_billing
 
     delegate :plan, to: :fixed_charge
   end
