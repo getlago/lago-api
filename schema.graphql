@@ -6556,6 +6556,11 @@ enum LogEventEnum {
   integration_created
 
   """
+  integration.deleted
+  """
+  integration_deleted
+
+  """
   integration.updated
   """
   integration_updated

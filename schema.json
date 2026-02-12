@@ -34434,6 +34434,12 @@
               "deprecationReason": null
             },
             {
+              "name": "integration_deleted",
+              "description": "integration.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "integration_updated",
               "description": "integration.updated",
               "isDeprecated": false,

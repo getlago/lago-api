@@ -174,3 +174,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {integration_name: "Netsuite Production", integration_type: "netsuite", name: {deleted: "Netsuite Old", added: "Netsuite Production"}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.deleted",
+  user:,
+  resources: {integration_name: "Okta Production", integration_type: "okta"}
+)
