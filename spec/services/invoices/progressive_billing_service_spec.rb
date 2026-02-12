@@ -248,14 +248,23 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       let(:service_call) { create_service.call }
     end
 
-    context "when Customers::FailedToAcquireLock is raised" do
-      before do
-        allow(described_class).to receive(:call)
-          .and_raise(Customers::FailedToAcquireLock.new("customer-123-prepaid_credit"))
+    context "when an error occurs" do
+      context "with a stale object error" do
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(ActiveRecord::StaleObjectError)
+
+          expect { create_service.call }.to raise_error(ActiveRecord::StaleObjectError)
+        end
       end
 
-      it "re-raises the error for job retry" do
-        expect { described_class.call }.to raise_error(Customers::FailedToAcquireLock)
+      context "with a failed to acquire lock error" do
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+
+          expect { create_service.call }.to raise_error(Customers::FailedToAcquireLock)
+        end
       end
     end
   end

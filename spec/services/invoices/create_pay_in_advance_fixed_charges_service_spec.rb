@@ -535,23 +535,25 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         end
       end
 
+      context "with a failed to acquire lock error" do
+        before do
+          create(:wallet, customer:, balance_cents: 100)
+        end
+
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+        end
+      end
+
       context "with a sequence error" do
         it "propagates the error" do
           allow_any_instance_of(Invoice) # rubocop:disable RSpec/AnyInstance
             .to receive(:save!).and_raise(Sequenced::SequenceError)
 
           expect { invoice_service.call }.to raise_error(Sequenced::SequenceError)
-        end
-      end
-
-      context "when Customers::FailedToAcquireLock is raised" do
-        before do
-          allow(described_class).to receive(:call)
-            .and_raise(Customers::FailedToAcquireLock.new("customer-123-prepaid_credit"))
-        end
-
-        it "re-raises the error for job retry" do
-          expect { described_class.call }.to raise_error(Customers::FailedToAcquireLock)
         end
       end
     end
