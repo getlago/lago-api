@@ -21,6 +21,8 @@ module ApiKeys
       ApiKeyMailer.with(api_key:).destroyed.deliver_later
       ApiKeys::CacheService.expire_cache(api_key.value)
 
+      register_security_log
+
       result.api_key = api_key
       result
     end
@@ -28,5 +30,17 @@ module ApiKeys
     private
 
     attr_reader :api_key
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: api_key.organization,
+        log_type: "api_key",
+        log_event: "api_key.deleted",
+        resources: {
+          name: api_key.name,
+          value_ending: api_key.value.last(4)
+        }
+      )
+    end
   end
 end

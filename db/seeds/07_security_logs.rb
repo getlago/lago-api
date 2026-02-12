@@ -101,3 +101,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {name: "Hooli Key", value_ending: "7890", permissions: {add_on: {deleted: %w[write]}}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "api_key",
+  log_event: "api_key.deleted",
+  user:,
+  resources: {name: "Expired Key", value_ending: "4321"}
+)
