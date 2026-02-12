@@ -15,6 +15,7 @@ module Clickhouse
       api_key
       role
       user
+      webhook_endpoint
     ].freeze
 
     LOG_EVENTS = %w[
@@ -31,6 +32,7 @@ module Clickhouse
       user.password_reset_requested
       user.role_edited
       user.signed_up
+      webhook_endpoint.created
     ].freeze
 
     before_save :ensure_log_id

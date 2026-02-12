@@ -6589,6 +6589,11 @@ enum LogEventEnum {
   user.signed_up
   """
   user_signed_up
+
+  """
+  webhook_endpoint.created
+  """
+  webhook_endpoint_created
 }
 
 """
@@ -6609,6 +6614,11 @@ enum LogTypeEnum {
   user
   """
   user
+
+  """
+  webhook_endpoint
+  """
+  webhook_endpoint
 }
 
 type LoginUser {

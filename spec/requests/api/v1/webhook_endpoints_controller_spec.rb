@@ -20,6 +20,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       }
     end
 
+    include_context "with mocked security logger"
     include_examples "requires API permission", "webhook_endpoint", "write"
 
     it "returns a success" do
@@ -29,6 +30,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
       expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+    end
+
+    it "produces a security log" do
+      subject
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.created",
+        resources: {webhook_url: create_params[:webhook_url], signature_algo: "jwt"}
+      )
     end
   end
 

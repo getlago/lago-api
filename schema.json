@@ -34474,6 +34474,12 @@
               "description": "user.signed_up",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint_created",
+              "description": "webhook_endpoint.created",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -34501,6 +34507,12 @@
             {
               "name": "user",
               "description": "user",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint",
+              "description": "webhook_endpoint",
               "isDeprecated": false,
               "deprecationReason": null
             }
