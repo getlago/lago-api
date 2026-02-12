@@ -14,9 +14,11 @@ ActiveJob::Uniqueness.configure do |config|
     .with_options(reconnect_attempts: 4)
     .sidekiq
 
-  # `active_job_uniqueness` uses `redlock-rb` under the hood, which only supports `redis-client` gem which uses a
-  # different configuration than `redis` gem used by Sidekiq.
-  client = Redis.new(redis_config)._client
+  client = if redis_config.key?(:sentinels)
+    RedisClient.sentinel(**redis_config).new_client
+  else
+    RedisClient.new(**redis_config)
+  end
 
   config.redlock_servers = [client]
 end
