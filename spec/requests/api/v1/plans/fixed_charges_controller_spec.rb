@@ -264,6 +264,26 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
         expect(json[:fixed_charge][:invoice_display_name]).to eq("Updated Fixed Charge Name")
       end
     end
+
+    context "with cascade_updates" do
+      subject { put_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges/#{fixed_charge.code}?cascade_updates=true", {fixed_charge: update_params}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_fixed_charge
+        allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "passes cascade_updates to the service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
   end
 
   describe "DELETE /api/v1/plans/:plan_code/fixed_charges/:code" do
@@ -296,6 +316,25 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
         subject
 
         expect(response).to be_not_found_error("fixed_charge")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { delete_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges/#{fixed_charge.code}?cascade_updates=true") }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+      before do
+        child_fixed_charge
+        allow(FixedCharges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "cascades the deletion to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(FixedCharges::DestroyChildrenJob).to have_received(:perform_later).with(fixed_charge.id)
       end
     end
   end

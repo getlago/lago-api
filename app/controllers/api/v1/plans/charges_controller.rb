@@ -52,7 +52,11 @@ module Api
         end
 
         def update
-          result = ::Charges::UpdateService.call(charge:, params: input_params.to_h.deep_symbolize_keys)
+          result = ::Charges::UpdateService.call(
+            charge:,
+            params: input_params.to_h.deep_symbolize_keys,
+            cascade_updates: cascade_updates?
+          )
 
           if result.success?
             render(
@@ -68,7 +72,7 @@ module Api
         end
 
         def destroy
-          result = ::Charges::DestroyService.call(charge:)
+          result = ::Charges::DestroyService.call(charge:, cascade_updates: cascade_updates?)
 
           if result.success?
             render(
@@ -110,6 +114,10 @@ module Api
             tax_codes: [],
             applied_pricing_unit: %i[code conversion_rate]
           )
+        end
+
+        def cascade_updates?
+          ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
         end
 
         def find_charge

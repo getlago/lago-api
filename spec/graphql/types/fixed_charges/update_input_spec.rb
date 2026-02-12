@@ -14,6 +14,7 @@ RSpec.describe Types::FixedCharges::UpdateInput do
     expect(subject).to accept_argument(:pay_in_advance).of_type("Boolean")
     expect(subject).to accept_argument(:prorated).of_type("Boolean")
     expect(subject).to accept_argument(:units).of_type("String")
+    expect(subject).to accept_argument(:cascade_updates).of_type("Boolean")
     expect(subject).to accept_argument(:properties).of_type("FixedChargePropertiesInput")
     expect(subject).to accept_argument(:tax_codes).of_type("[String!]")
   end

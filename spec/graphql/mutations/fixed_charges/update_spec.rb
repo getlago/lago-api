@@ -58,6 +58,39 @@ RSpec.describe Mutations::FixedCharges::Update, type: :graphql do
     expect(result_data["properties"]["amount"]).to eq("200")
   end
 
+  context "with cascade_updates" do
+    let(:child_plan) { create(:plan, organization:, parent: plan) }
+    let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+    before do
+      create(:subscription, plan: child_plan, status: :active)
+      child_fixed_charge
+      allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
+    end
+
+    it "passes cascade_updates to the service" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: fixed_charge.id,
+            chargeModel: "standard",
+            cascadeUpdates: true,
+            units: "25",
+            properties: {
+              amount: "200"
+            }
+          }
+        }
+      )
+
+      expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later)
+    end
+  end
+
   context "when fixed charge does not exist" do
     it "returns an error" do
       result = execute_graphql(

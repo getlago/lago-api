@@ -55,7 +55,8 @@ module Api
           result = FixedCharges::UpdateService.call(
             fixed_charge:,
             params: input_params.to_h.deep_symbolize_keys,
-            timestamp: Time.current.to_i
+            timestamp: Time.current.to_i,
+            cascade_updates: cascade_updates?
           )
 
           if result.success?
@@ -72,7 +73,7 @@ module Api
         end
 
         def destroy
-          result = FixedCharges::DestroyService.call(fixed_charge:)
+          result = FixedCharges::DestroyService.call(fixed_charge:, cascade_updates: cascade_updates?)
 
           if result.success?
             render(
@@ -105,6 +106,10 @@ module Api
             properties: {},
             tax_codes: []
           )
+        end
+
+        def cascade_updates?
+          ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
         end
 
         def find_fixed_charge

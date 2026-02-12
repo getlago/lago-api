@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ChargeFilters
+module Charges
   module CascadeUpdatable
     extend ActiveSupport::Concern
 
@@ -20,6 +20,7 @@ module ChargeFilters
 
     def build_cascade_params
       {
+        code: charge.code,
         charge_model: charge.charge_model,
         properties: charge.properties,
         filters: charge.filters.reload.map do |f|
@@ -34,6 +35,10 @@ module ChargeFilters
 
     def capture_old_filters_attrs
       charge.filters.map { |f| {id: f.id, properties: f.properties} }
+    end
+
+    def capture_old_applied_pricing_unit_attrs
+      charge.applied_pricing_unit&.attributes
     end
   end
 end

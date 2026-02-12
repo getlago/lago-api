@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateService do
-  let(:update_service) { described_class.new(charge:, params:, cascade_options:) }
+  let(:update_service) { described_class.new(charge:, params:, cascade_options:, cascade_updates:) }
+  let(:cascade_updates) { false }
 
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
@@ -327,6 +328,56 @@ RSpec.describe Charges::UpdateService do
           it "does not update applied pricing unit's conversion rate" do
             expect { subject }.not_to change { charge.applied_pricing_unit.reload.conversion_rate }
           end
+        end
+      end
+
+      context "with cascade_updates" do
+        let(:cascade_updates) { true }
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric: sum_billable_metric, parent: charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_charge
+          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "triggers cascade update via Charges::UpdateChildrenJob" do
+          subject
+
+          expect(Charges::UpdateChildrenJob).to have_received(:perform_later).with(
+            params: hash_including("charge_model", "properties", "filters"),
+            old_parent_attrs: hash_including("id" => charge.id),
+            old_parent_filters_attrs: array_including,
+            old_parent_applied_pricing_unit_attrs: anything
+          )
+        end
+
+        context "when charge has no children" do
+          before { child_charge.update!(parent_id: nil) }
+
+          it "does not trigger cascade update" do
+            subject
+
+            expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+          end
+        end
+      end
+
+      context "without cascade_updates when charge has children" do
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric: sum_billable_metric, parent: charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_charge
+          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "does not trigger cascade update" do
+          subject
+
+          expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
         end
       end
     end
