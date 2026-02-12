@@ -45,3 +45,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {email: "dinesh@hooli.com", roles: {deleted: %w[admin], added: %w[finance]}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
+  log_event: "user.password_reset_requested",
+  user:,
+  resources: {email: "gavin@hooli.com"}
+)

@@ -34410,6 +34410,12 @@
               "deprecationReason": null
             },
             {
+              "name": "user_password_reset_requested",
+              "description": "user.password_reset_requested",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_role_edited",
               "description": "user.role_edited",
               "isDeprecated": false,
