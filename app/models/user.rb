@@ -14,7 +14,6 @@ class User < ApplicationRecord
   has_many :active_organizations, through: :active_memberships, source: :organization
 
   has_many :billable_metrics, through: :organizations
-  has_many :add_ons, through: :organizations
   has_many :credit_notes, through: :organizations
   has_many :wallets, through: :organizations
 

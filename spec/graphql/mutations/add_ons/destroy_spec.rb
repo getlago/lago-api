@@ -17,16 +17,13 @@ RSpec.describe Mutations::AddOns::Destroy do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "addons:delete"
 
   it "deletes an add-on" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {id: add_on.id}
-      }
+      input: {id: add_on.id}
     )
 
     data = result["data"]["destroyAddOn"]
