@@ -51,9 +51,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
     it_behaves_like "blocked feature", "feature_unavailable"
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "returns a single activity log with parsed object changes" do
       result = execute_graphql(
         current_user: membership.user,
