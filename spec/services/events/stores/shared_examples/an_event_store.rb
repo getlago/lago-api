@@ -1681,4 +1681,29 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
       end
     end
   end
+
+  describe "#distinct_charges_and_filters" do
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+
+    before do
+      create_enriched_event(
+        timestamp: boundaries[:from_datetime] + 12.days,
+        value: 12,
+        properties: {billable_metric.field_name => 12}
+      )
+    end
+
+    it "returns distinct charges and filters" do
+      expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
+    end
+
+    context "when charge_filter is nil" do
+      let(:charge_filter) { nil }
+
+      it "returns the distinct event codes" do
+        expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
+      end
+    end
+  end
 end
