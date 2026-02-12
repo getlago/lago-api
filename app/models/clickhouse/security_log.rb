@@ -13,6 +13,7 @@ module Clickhouse
 
     LOG_TYPES = %w[
       api_key
+      export
       role
       user
       webhook_endpoint
@@ -23,6 +24,7 @@ module Clickhouse
       api_key.deleted
       api_key.rotated
       api_key.updated
+      export.created
       role.created
       role.deleted
       role.updated
