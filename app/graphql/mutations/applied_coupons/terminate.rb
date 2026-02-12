@@ -4,6 +4,7 @@ module Mutations
   module AppliedCoupons
     class Terminate < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "coupons:detach"
 
@@ -16,7 +17,7 @@ module Mutations
 
       def resolve(id:)
         applied_coupon = AppliedCoupon.joins(coupon: :organization)
-          .where(organizations: {id: context[:current_user].organization_ids})
+          .where(organizations: {id: current_organization.id})
           .find_by(id:)
 
         result = ::AppliedCoupons::TerminateService.call(applied_coupon:)
