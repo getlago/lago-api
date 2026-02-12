@@ -4,6 +4,7 @@ module Resolvers
   module Customers
     class ProjectedUsageResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "customers:view"
 
@@ -16,7 +17,7 @@ module Resolvers
 
       def resolve(customer_id:, subscription_id:)
         result = Invoices::CustomerUsageService.with_ids(
-          organization_id: context[:current_user].organization_ids,
+          organization_id: current_organization.id,
           customer_id:,
           subscription_id:,
           apply_taxes: false,
