@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::WebhookEndpoints::Update do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
@@ -34,19 +36,35 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:manage"
 
-  it "updates a webhook_endpoint" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {input:}
-    )
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+    end
 
-    expect(result["data"]["updateWebhookEndpoint"]).to include(
-      "id" => String,
-      "webhookUrl" => webhook_url,
-      "signatureAlgo" => "hmac"
-    )
+    it "updates a webhook_endpoint" do
+      expect(result["data"]["updateWebhookEndpoint"]).to include(
+        "id" => String,
+        "webhookUrl" => webhook_url,
+        "signatureAlgo" => "hmac"
+      )
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.updated",
+        resources: {
+          webhook_url: {deleted: webhook_endpoint.webhook_url, added: webhook_url},
+          signature_algo: {deleted: "jwt", added: "hmac"}
+        }
+      )
+    end
   end
 end
