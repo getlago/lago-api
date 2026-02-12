@@ -77,7 +77,9 @@ Rails.application.routes.draw do
         end
         patch :entitlements, to: "subscriptions/entitlements#update"
         resources :fixed_charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/fixed_charges"
-        resources :charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/charges"
+        resources :charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/charges" do
+          resources :filters, only: %i[index show create update destroy], controller: "subscriptions/charges/filters"
+        end
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 

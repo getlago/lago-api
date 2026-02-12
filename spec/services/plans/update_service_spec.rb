@@ -1552,7 +1552,8 @@ RSpec.describe Plans::UpdateService do
                 properties: {amount: "150"},
                 tax_codes: [tax1.code]
               },
-              timestamp: Time.current.to_i
+              timestamp: Time.current.to_i,
+              trigger_billing: false
             )
           end
         end

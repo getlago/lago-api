@@ -2,9 +2,9 @@
 
 module Api
   module V1
-    module Plans
+    module Subscriptions
       module Charges
-        class FiltersController < Plans::BaseController
+        class FiltersController < Api::V1::Subscriptions::BaseController
           before_action :find_charge
           before_action :find_charge_filter, only: %i[show update destroy]
 
@@ -29,7 +29,11 @@ module Api
           end
 
           def create
-            result = ChargeFilters::CreateService.call(charge:, params: input_params.to_h.deep_symbolize_keys)
+            result = ::Subscriptions::ChargeFilters::CreateService.call(
+              subscription:,
+              charge:,
+              params: input_params.to_h.deep_symbolize_keys
+            )
 
             if result.success?
               render(
@@ -44,10 +48,11 @@ module Api
           end
 
           def update
-            result = ChargeFilters::UpdateService.call(
+            result = ::Subscriptions::ChargeFilters::UpdateOrOverrideService.call(
+              subscription:,
+              charge:,
               charge_filter:,
-              params: input_params.to_h.deep_symbolize_keys,
-              cascade_updates: cascade_updates?
+              params: input_params.to_h.deep_symbolize_keys
             )
 
             if result.success?
@@ -63,7 +68,11 @@ module Api
           end
 
           def destroy
-            result = ChargeFilters::DestroyService.call(charge_filter:, cascade_updates: cascade_updates?)
+            result = ::Subscriptions::ChargeFilters::DestroyService.call(
+              subscription:,
+              charge:,
+              charge_filter:
+            )
 
             if result.success?
               render(
@@ -81,31 +90,26 @@ module Api
 
           attr_reader :charge, :charge_filter
 
+          def resource_name
+            "subscription"
+          end
+
           def input_params
             params.require(:filter).permit(
               :invoice_display_name,
-              :cascade_updates,
               properties: {},
               values: {}
             )
           end
 
-          def cascade_updates?
-            return false unless params[:filter]
-
-            ActiveModel::Type::Boolean.new.cast(params[:filter][:cascade_updates])
-          end
-
           def find_charge
-            @charge = plan.charges.parents.find_by!(code: params[:charge_code])
-          rescue ActiveRecord::RecordNotFound
-            not_found_error(resource: "charge")
+            @charge = subscription.plan.charges.find_by(code: params[:charge_code])
+            not_found_error(resource: "charge") unless @charge
           end
 
           def find_charge_filter
-            @charge_filter = charge.filters.find_by!(id: params[:id])
-          rescue ActiveRecord::RecordNotFound
-            not_found_error(resource: "charge_filter")
+            @charge_filter = charge.filters.find_by(id: params[:id])
+            not_found_error(resource: "charge_filter") unless @charge_filter
           end
         end
       end
