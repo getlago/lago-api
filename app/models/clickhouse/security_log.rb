@@ -18,6 +18,7 @@ module Clickhouse
 
     LOG_EVENTS = %w[
       role.created
+      role.deleted
       role.updated
       user.deleted
       user.invited
