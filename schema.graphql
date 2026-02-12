@@ -6596,6 +6596,11 @@ enum LogEventEnum {
   webhook_endpoint_created
 
   """
+  webhook_endpoint.deleted
+  """
+  webhook_endpoint_deleted
+
+  """
   webhook_endpoint.updated
   """
   webhook_endpoint_updated

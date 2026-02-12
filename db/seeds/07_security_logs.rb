@@ -133,3 +133,20 @@ Utils::SecurityLog.produce(
   user:,
   resources: {webhook_url: {deleted: "https://webhook.example.com/old", added: "https://webhook.example.com/#{organization.id}"}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.deleted",
+  user:,
+  resources: {webhook_url: "https://webhook.example.com/#{organization.id}"}
+)
+
+api_key = organization.api_keys.first
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.deleted",
+  api_key:,
+  resources: {webhook_url: "https://webhook.example.com/api-deleted"}
+)

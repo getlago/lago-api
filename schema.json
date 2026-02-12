@@ -34482,6 +34482,12 @@
               "deprecationReason": null
             },
             {
+              "name": "webhook_endpoint_deleted",
+              "description": "webhook_endpoint.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "webhook_endpoint_updated",
               "description": "webhook_endpoint.updated",
               "isDeprecated": false,
