@@ -125,3 +125,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {webhook_url: "https://webhook.example.com/#{organization.id}"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.updated",
+  user:,
+  resources: {webhook_url: {deleted: "https://webhook.example.com/old", added: "https://webhook.example.com/#{organization.id}"}}
+)

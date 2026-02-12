@@ -34480,6 +34480,12 @@
               "description": "webhook_endpoint.created",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint_updated",
+              "description": "webhook_endpoint.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
