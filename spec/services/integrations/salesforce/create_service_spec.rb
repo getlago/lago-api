@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Salesforce::CreateService do
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -52,6 +54,17 @@ RSpec.describe Integrations::Salesforce::CreateService do
 
             integration = Integrations::SalesforceIntegration.order(:created_at).last
             expect(integration.instance_id).to eq("Instance1")
+          end
+
+          it "produces a security log" do
+            service_call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization:,
+              log_type: "integration",
+              log_event: "integration.created",
+              resources: {integration_name: name, integration_type: "salesforce"}
+            )
           end
         end
 

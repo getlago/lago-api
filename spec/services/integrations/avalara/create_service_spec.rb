@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Avalara::CreateService do
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -75,6 +77,17 @@ RSpec.describe Integrations::Avalara::CreateService do
 
             integration = Integrations::AvalaraIntegration.order(:created_at).last
             expect(Integrations::Avalara::FetchCompanyIdJob).to have_received(:perform_later).with(integration:)
+          end
+
+          it "produces a security log" do
+            service_call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization:,
+              log_type: "integration",
+              log_event: "integration.created",
+              resources: {integration_name: name, integration_type: "avalara"}
+            )
           end
         end
 
