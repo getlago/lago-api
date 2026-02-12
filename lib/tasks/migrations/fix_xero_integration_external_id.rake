@@ -39,6 +39,8 @@ namespace :migrations do
       end
     end
 
+    max_pages = 15
+
     Integrations::XeroIntegration.find_each do |integration|
       item_count = integration.integration_items.standard.count
       puts "Processing integration #{integration.code} (#{integration.organization.name}) with #{item_count} items..."
@@ -46,7 +48,7 @@ namespace :migrations do
       remote_items = []
       cursor = nil
 
-      loop do
+      max_pages.times do
         response = fetch_service.call(integration:, cursor:)
 
         remote_items.concat(response["records"])
@@ -57,30 +59,28 @@ namespace :migrations do
 
       # Build mapping from old external_id (Xero id) to new external_id (item_code)
       id_to_item_code = remote_items.to_h { |ri| [ri["id"], ri["item_code"]] }
+      item_code_values = id_to_item_code.values.to_set
 
-      item_mapping = integration.integration_items.standard.to_h do |item|
-        [item.id, id_to_item_code[item.external_id]]
+      items = integration.integration_items.standard.to_a
+      mappings = integration.integration_mappings.to_a
+      collection_mappings = integration.integration_collection_mappings.where.not(mapping_type: :account).to_a
+
+      all_external_ids = items.map(&:external_id) +
+        mappings.map(&:external_id) +
+        collection_mappings.map(&:external_id)
+
+      # Skip if all external_ids are already item_codes (already migrated)
+      if all_external_ids.all? { |ext_id| item_code_values.include?(ext_id) }
+        puts "Integration #{integration.code} already migrated, skipping.\n\n"
+        next
       end
 
+      # Check for unknown external_ids
       missing = {
-        integration_items: [],
-        integration_mappings: [],
-        integration_collection_mappings: []
+        integration_items: items.reject { |item| id_to_item_code.key?(item.external_id) }.map(&:id),
+        integration_mappings: mappings.reject { |m| id_to_item_code.key?(m.external_id) }.map(&:id),
+        integration_collection_mappings: collection_mappings.reject { |m| id_to_item_code.key?(m.external_id) }.map(&:id)
       }
-      integration.integration_items.standard.each do |item|
-        next if id_to_item_code.key?(item.external_id)
-        missing[:integration_items] << item.id
-      end
-
-      integration.integration_mappings.each do |mapping|
-        next if id_to_item_code.key?(mapping.external_id)
-        missing[:integration_mappings] << mapping.id
-      end
-
-      integration.integration_collection_mappings.where.not(mapping_type: :account).find_each do |mapping|
-        next if id_to_item_code.key?(mapping.external_id)
-        missing[:integration_collection_mappings] << mapping.id
-      end
 
       if missing.values.any?(&:any?)
         puts "Error: Missing remote items for integration #{integration.code}:"
@@ -93,31 +93,23 @@ namespace :migrations do
       end
 
       IntegrationItem.transaction do
-        item_mapping.each do |item_id, item_code|
-          integration_item = integration.integration_items.find(item_id)
-          integration_item.update!(external_id: item_code)
+        items.each do |item|
+          item.update!(external_id: id_to_item_code[item.external_id])
         end
 
         # Update integration mappings
-        integration.integration_mappings.each do |mapping|
-          new_item_code = id_to_item_code[mapping.external_id]
-          next unless new_item_code
-
-          mapping.external_id = new_item_code
-          mapping.save!
+        mappings.each do |mapping|
+          mapping.update!(external_id: id_to_item_code[mapping.external_id])
         end
 
-        # Update integration collection mappings
-        integration.integration_collection_mappings.each do |mapping|
-          new_item_code = id_to_item_code[mapping.external_id]
-          next unless new_item_code
-
-          mapping.external_id = new_item_code
-          mapping.save!
+        # Update integration collection mappings (exclude account mappings)
+        collection_mappings.each do |mapping|
+          mapping.update!(external_id: id_to_item_code[mapping.external_id])
         end
       end
 
-      puts "Processed integration #{integration.code} with #{item_mapping.size} items.\n\n"
+      updated_count = items.count { |item| id_to_item_code.key?(item.external_id) }
+      puts "Processed integration #{integration.code} with #{updated_count} items.\n\n"
     rescue => e
       puts "Error processing integration #{integration.code}: #{e.message}\n\n"
     end

@@ -90,6 +90,37 @@ RSpec.describe "migrations:fix_xero_integration_external_id" do # rubocop:disabl
     end
   end
 
+  context "when all items, mappings and collection mappings are already migrated" do
+    let!(:item1) do
+      create(:integration_item, integration:, organization:, external_id: "new-code-1", item_type: :standard)
+    end
+
+    let!(:item2) do
+      create(:integration_item, integration:, organization:, external_id: "new-code-2", item_type: :standard)
+    end
+
+    let(:add_on) { create(:add_on, organization:) }
+
+    let!(:mapping) do
+      create(:xero_mapping, integration:, organization:, mappable: add_on,
+        settings: {"external_id" => "new-code-1", "external_account_code" => "1000", "external_name" => "Item 1"})
+    end
+
+    let!(:collection_mapping) do
+      create(:xero_collection_mapping, integration:, organization:, mapping_type: :coupon,
+        settings: {"external_id" => "new-code-2", "external_account_code" => "2000", "external_name" => "Item 2"})
+    end
+
+    it "skips the integration" do
+      expect { task.invoke }.to output(/already migrated/).to_stdout
+
+      expect(item1.reload.external_id).to eq("new-code-1")
+      expect(item2.reload.external_id).to eq("new-code-2")
+      expect(mapping.reload.external_id).to eq("new-code-1")
+      expect(collection_mapping.reload.external_id).to eq("new-code-2")
+    end
+  end
+
   context "when a remote item is missing for an integration item" do
     let!(:item_with_unknown_id) do
       create(:integration_item, integration:, organization:, external_id: "unknown-id", item_type: :standard)

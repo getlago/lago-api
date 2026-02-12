@@ -8,18 +8,6 @@ RSpec.describe Integrations::Aggregator::ItemsService do
   let(:integration) { create(:netsuite_integration) }
 
   describe ".call" do
-    let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:items_endpoint) { "https://api.nango.dev/v1/netsuite/items" }
-    let(:params) { {limit: 450} }
-
-    let(:headers) do
-      {
-        "Connection-Id" => integration.connection_id,
-        "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-        "Provider-Config-Key" => "netsuite-tba"
-      }
-    end
-
     let(:aggregator_response) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/items_response.json")
       JSON.parse(File.read(path))
