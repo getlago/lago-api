@@ -117,3 +117,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {name: "Hooli Key", value_ending: {deleted: "7890", added: "5678"}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.created",
+  user:,
+  resources: {webhook_url: "https://webhook.example.com/#{organization.id}"}
+)
