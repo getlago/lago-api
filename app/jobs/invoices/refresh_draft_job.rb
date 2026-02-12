@@ -10,7 +10,6 @@ module Invoices
       end
     end
 
-    retry_on Customers::FailedToAcquireLock, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     def perform(invoice:)
