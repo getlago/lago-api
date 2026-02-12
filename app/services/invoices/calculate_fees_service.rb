@@ -116,11 +116,17 @@ module Invoices
       return unless charge_boundaries_valid?(boundaries)
 
       filters = event_filters(subscription, boundaries).charges
+      plan = subscription.plan
+      customer = subscription.customer
+      adjusted_fee_exists = AdjustedFee
+                              .where(invoice:, subscription:,fee_type: :charge)
+                              .where("(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3))
+                              .where("(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)).exists?
 
       subscription
         .plan
         .charges
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:taxes, :applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .joins(:billable_metric)
         .where(invoiceable: true)
         .where
@@ -134,6 +140,9 @@ module Invoices
             subscription:,
             boundaries:,
             context:,
+            plan:,
+            customer:,
+            skip_adjusted_fees: !adjusted_fee_exists:,
             filtered_aggregations: filters[charge.id] || []
           )
         end

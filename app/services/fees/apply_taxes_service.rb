@@ -72,7 +72,7 @@ module Fees
       return customer.taxes if customer.taxes.any?
 
       # billing_entity.taxes - are the default taxes applied on the billing entity
-      customer.billing_entity.taxes
+      BillingEntity::AppliedTax.where(billing_entity_id: customer.billing_entity_id).taxes
     end
   end
 end
