@@ -26,9 +26,9 @@ class SendHttpWebhookJob < ApplicationJob
   private
 
   def pending_non_slow_webhooks?
-    Webhook.pending
-      .joins(:webhook_endpoint)
-      .where(webhook_endpoints: {slow_response: false})
+    WebhookEndpoint
+      .where(slow_response: false)
+      .where(Webhook.pending.where("webhooks.webhook_endpoint_id = webhook_endpoints.id").arel.exists)
       .exists?
   end
 end
