@@ -16,7 +16,7 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
-        wallet = context[:current_user].wallets.find_by(id: args[:id])
+        wallet = current_organization.wallets.find_by(id: args[:id])
         result = ::Wallets::UpdateService.call(wallet:, params: args)
 
         result.success? ? result.wallet : result_error(result)
