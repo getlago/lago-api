@@ -14,8 +14,9 @@ module Integrations
           end
 
           def coupons
-            super.map do |coupon|
-              coupon.merge("item_code" => coupon.delete("external_id"))
+            coupons = super
+            coupons.each do |coupon|
+              coupon["item_code"] = coupon.delete("external_id")
             end
           end
         end
