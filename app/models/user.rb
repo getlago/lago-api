@@ -13,7 +13,6 @@ class User < ApplicationRecord
   has_many :active_memberships, -> { where(status: "active") }, class_name: "Membership"
   has_many :active_organizations, through: :active_memberships, source: :organization
 
-  has_many :credit_notes, through: :organizations
   has_many :wallets, through: :organizations
 
   validates :email, presence: true
