@@ -33,6 +33,7 @@ module Clickhouse
       user.role_edited
       user.signed_up
       webhook_endpoint.created
+      webhook_endpoint.deleted
       webhook_endpoint.updated
     ].freeze
 

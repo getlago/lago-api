@@ -93,6 +93,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
   describe "DELETE /api/v1webhook_endpoints/:id" do
     subject { delete_with_token(organization, "/api/v1/webhook_endpoints/#{id}") }
 
+    include_context "with mocked security logger"
+
     let!(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
 
@@ -113,6 +115,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
         expect(json[:webhook_endpoint][:webhook_url]).to eq(webhook_endpoint.webhook_url)
       end
+
+      it "produces a security log" do
+        subject
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.deleted",
+          resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
+        )
+      end
     end
 
     context "when webhook endpoint does not exist" do
@@ -126,8 +139,6 @@ RSpec.describe Api::V1::WebhookEndpointsController do
   end
 
   describe "PUT /api/v1/webhook_endpoints/:id" do
-    include_context "with mocked security logger"
-
     subject do
       put_with_token(
         organization,
@@ -135,6 +146,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         {webhook_endpoint: update_params}
       )
     end
+
+    include_context "with mocked security logger"
 
     let(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
