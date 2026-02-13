@@ -25,12 +25,12 @@ module Api
       def index
         result = WalletTransactionsQuery.call(
           organization: current_organization,
-          wallet_id: params[:id],
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
           filters: {
+            wallet_id: params[:id],
             status: params[:status],
             transaction_type: params[:transaction_type],
             transaction_status: params[:transaction_status]

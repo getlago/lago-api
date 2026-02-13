@@ -18,12 +18,11 @@ module Resolvers
     type Types::Webhooks::Object.collection_type, null: false
 
     def resolve(webhook_endpoint_id:, page: nil, limit: nil, status: nil, search_term: nil)
-      webhook_endpoint = current_organization.webhook_endpoints.find(webhook_endpoint_id)
-
       result = WebhooksQuery.call(
-        webhook_endpoint:,
+        organization: current_organization,
         search_term:,
         filters: {
+          webhook_endpoint_id:,
           status:
         },
         pagination: {
