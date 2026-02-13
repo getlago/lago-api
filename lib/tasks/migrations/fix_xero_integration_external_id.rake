@@ -108,7 +108,7 @@ namespace :migrations do
         end
       end
 
-      updated_count = items.count { |item| id_to_item_code.key?(item.external_id) }
+      updated_count = items.count + mappings.count + collection_mappings.count
       puts "Processed integration #{integration.code} with #{updated_count} items.\n\n"
     rescue => e
       puts "Error processing integration #{integration.code}: #{e.message}\n\n"
