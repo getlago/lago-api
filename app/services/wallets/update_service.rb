@@ -27,7 +27,7 @@ module Wallets
         wallet.code = params[:code] if params[:code]
         wallet.priority = params[:priority] if params[:priority]
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
-        if params[:invoice_requires_successful_payment]
+        unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
