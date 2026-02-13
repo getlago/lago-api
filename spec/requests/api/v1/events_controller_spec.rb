@@ -484,10 +484,13 @@ RSpec.describe Api::V1::EventsController do
   end
 
   describe "GET /api/v1/events/:id" do
-    subject { get_with_token(organization, "/api/v1/events/#{transaction_id}") }
+    subject { get_with_token(organization, "/api/v1/events/#{CGI.escapeURIComponent(transaction_id)}") }
 
-    let(:event) { create(:event, organization_id: organization.id) }
-    let(:transaction_id) { event.transaction_id }
+    let(:event) { create(:event, organization_id: organization.id, transaction_id: event_transaction_id) }
+    let(:event_transaction_id) { SecureRandom.uuid }
+    let(:transaction_id) { event_transaction_id }
+
+    before { event }
 
     include_examples "requires API permission", "event", "read"
 
@@ -502,6 +505,17 @@ RSpec.describe Api::V1::EventsController do
 
       expect(json[:event][:lago_subscription_id]).to eq event.subscription_id
       expect(json[:event][:lago_customer_id]).to eq event.customer_id
+    end
+
+    context "when transaction_id contains special characters" do
+      let(:event_transaction_id) { "1Az()[]?#._/|-/../" }
+
+      it "returns an event" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:event][:transaction_id]).to eq event.transaction_id
+      end
     end
 
     context "with a non-existing transaction_id" do
@@ -525,7 +539,7 @@ RSpec.describe Api::V1::EventsController do
     context "with clickhouse", clickhouse: true do
       let(:event) do
         Clickhouse::EventsRaw.create!(
-          transaction_id: SecureRandom.uuid,
+          transaction_id: event_transaction_id,
           organization_id: organization.id,
           external_subscription_id: subscription.external_id,
           code: metric.code,
