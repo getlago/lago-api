@@ -29,10 +29,17 @@ module V1
       }
 
       payload.merge!(payment_receipt) if include?(:payment_receipt)
+      payload.merge!(payment_method) if include?(:payment_method) && model.payment_method
       payload
     end
 
     private
+
+    def payment_method
+      {
+        payment_method: ::V1::PaymentMethodSerializer.new(model.payment_method).serialize
+      }
+    end
 
     def payment_receipt
       {

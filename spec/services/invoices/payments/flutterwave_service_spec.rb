@@ -60,6 +60,16 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
         expect(payment.payment_provider_customer_id).to eq(flutterwave_customer.id)
         expect(payment.amount_currency).to eq("USD")
       end
+
+      it "enqueues a SendWebhookJob for payment.succeeded" do
+        expect do
+          flutterwave_service.update_payment_status(
+            organization_id: organization.id,
+            status: :succeeded,
+            flutterwave_payment: flutterwave_payment
+          )
+        end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
+      end
     end
 
     context "when updating existing payment" do

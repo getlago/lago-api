@@ -47,7 +47,6 @@ RSpec.describe Invoices::Payments::CashfreeService do
     end
 
     before do
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 
@@ -66,6 +65,16 @@ RSpec.describe Invoices::Payments::CashfreeService do
         ready_for_payment_processing: false,
         total_paid_amount_cents: 200
       )
+    end
+
+    it "enqueues a SendWebhookJob for payment.succeeded" do
+      expect do
+        cashfree_service.update_payment_status(
+          organization_id: organization.id,
+          status: cashfree_payment.status,
+          cashfree_payment:
+        )
+      end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
     context "when status is failed" do
