@@ -141,6 +141,31 @@ RSpec.describe Mutations::Customers::Update do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
+  context "when stripe customer does not exist" do
+    before do
+      stripe_provider
+
+      allow(Stripe::Customer).to receive(:update)
+        .and_raise(Stripe::InvalidRequestError.new("No such customer: 'cus_invalid'", nil, code: "resource_missing"))
+    end
+
+    it "returns a third party error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        permissions: required_permissions,
+        query: mutation,
+        variables: {
+          input: input.merge(
+            providerCustomer: {providerCustomerId: "cus_invalid"}
+          )
+        }
+      )
+
+      expect(result["errors"].first["extensions"]["status"]).to eq(422)
+      expect(result["errors"].first["extensions"]["code"]).to eq("third_party_error")
+    end
+  end
+
   context "with premium feature", :premium do
     it "updates a customer" do
       result = execute_graphql(

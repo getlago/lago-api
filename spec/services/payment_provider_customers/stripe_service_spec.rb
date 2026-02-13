@@ -220,9 +220,10 @@ RSpec.describe PaymentProviderCustomers::StripeService do
             result = stripe_service.update
 
             expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("stripe_error")
-            expect(result.error.message).to eq("stripe_error: Invalid request")
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error.third_party).to eq("Stripe")
+            expect(result.error.error_code).to be_nil
+            expect(result.error.error_message).to eq("Invalid request")
           end
 
           it "delivers an error webhook" do
@@ -245,9 +246,10 @@ RSpec.describe PaymentProviderCustomers::StripeService do
             result = stripe_service.update
 
             expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("stripe_error")
-            expect(result.error.message).to eq("stripe_error: Permission error")
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error.third_party).to eq("Stripe")
+            expect(result.error.error_code).to be_nil
+            expect(result.error.error_message).to eq("Permission error")
           end
 
           it "delivers an error webhook" do
