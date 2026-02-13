@@ -1,6 +1,6 @@
 ARG PDFCPU_VERSION=0.11.1
 
-FROM ruby:3.4.8-slim
+FROM ruby:4.0.1-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=15
@@ -25,9 +25,9 @@ ENV PATH="$PATH:/root/.cargo/bin/"
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-RUN gem install bundler --no-document -v '2.6.8'
+RUN gem install bundler --no-document -v '4.0.4'
 
-RUN bundle config build.nokogiri --use-system-libraries && \
+RUN bundle config set build.nokogiri --use-system-libraries && \
   bundle install
 
 CMD ["./scripts/start.dev.sh"]

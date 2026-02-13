@@ -7817,7 +7817,7 @@
             },
             {
               "name": "AE",
-              "description": "United Arab Emirates (the)",
+              "description": "United Arab Emirates",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -7997,7 +7997,7 @@
             },
             {
               "name": "BS",
-              "description": "Bahamas (the)",
+              "description": "Bahamas",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8039,25 +8039,25 @@
             },
             {
               "name": "CC",
-              "description": "Cocos (Keeling) Islands (the)",
+              "description": "Cocos (Keeling) Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "CD",
-              "description": "Congo (the Democratic Republic of the)",
+              "description": "Congo (Democratic Republic of the)",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "CF",
-              "description": "Central African Republic (the)",
+              "description": "Central African Republic",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "CG",
-              "description": "Congo (the)",
+              "description": "Congo",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8075,7 +8075,7 @@
             },
             {
               "name": "CK",
-              "description": "Cook Islands (the)",
+              "description": "Cook Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8171,7 +8171,7 @@
             },
             {
               "name": "DO",
-              "description": "Dominican Republic (the)",
+              "description": "Dominican Republic",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8237,7 +8237,7 @@
             },
             {
               "name": "FK",
-              "description": "Falkland Islands (the) [Malvinas]",
+              "description": "Falkland Islands (Malvinas)",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8249,7 +8249,7 @@
             },
             {
               "name": "FO",
-              "description": "Faroe Islands (the)",
+              "description": "Faroe Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8267,7 +8267,7 @@
             },
             {
               "name": "GB",
-              "description": "United Kingdom of Great Britain and Northern Ireland (the)",
+              "description": "United Kingdom of Great Britain and Northern Ireland",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8315,7 +8315,7 @@
             },
             {
               "name": "GM",
-              "description": "Gambia (the)",
+              "description": "Gambia",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8441,7 +8441,7 @@
             },
             {
               "name": "IO",
-              "description": "British Indian Ocean Territory (the)",
+              "description": "British Indian Ocean Territory",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8519,7 +8519,7 @@
             },
             {
               "name": "KM",
-              "description": "Comoros (the)",
+              "description": "Comoros",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8531,13 +8531,13 @@
             },
             {
               "name": "KP",
-              "description": "Korea (the Democratic People's Republic of)",
+              "description": "Korea (Democratic People's Republic of)",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "KR",
-              "description": "Korea (the Republic of)",
+              "description": "Korea (Republic of)",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8549,7 +8549,7 @@
             },
             {
               "name": "KY",
-              "description": "Cayman Islands (the)",
+              "description": "Cayman Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8561,7 +8561,7 @@
             },
             {
               "name": "LA",
-              "description": "Lao People's Democratic Republic (the)",
+              "description": "Lao People's Democratic Republic",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8639,7 +8639,7 @@
             },
             {
               "name": "MD",
-              "description": "Moldova (the Republic of)",
+              "description": "Moldova (Republic of)",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8663,7 +8663,7 @@
             },
             {
               "name": "MH",
-              "description": "Marshall Islands (the)",
+              "description": "Marshall Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8699,7 +8699,7 @@
             },
             {
               "name": "MP",
-              "description": "Northern Mariana Islands (the)",
+              "description": "Northern Mariana Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8777,7 +8777,7 @@
             },
             {
               "name": "NE",
-              "description": "Niger (the)",
+              "description": "Niger",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8801,7 +8801,7 @@
             },
             {
               "name": "NL",
-              "description": "Netherlands (the)",
+              "description": "Netherlands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8867,7 +8867,7 @@
             },
             {
               "name": "PH",
-              "description": "Philippines (the)",
+              "description": "Philippines",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8951,7 +8951,7 @@
             },
             {
               "name": "RU",
-              "description": "Russian Federation (the)",
+              "description": "Russian Federation",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -8981,7 +8981,7 @@
             },
             {
               "name": "SD",
-              "description": "Sudan (the)",
+              "description": "Sudan",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -9089,7 +9089,7 @@
             },
             {
               "name": "TC",
-              "description": "Turks and Caicos Islands (the)",
+              "description": "Turks and Caicos Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -9101,7 +9101,7 @@
             },
             {
               "name": "TF",
-              "description": "French Southern Territories (the)",
+              "description": "French Southern Territories",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -9173,7 +9173,7 @@
             },
             {
               "name": "TW",
-              "description": "Taiwan (Province of China)",
+              "description": "Taiwan, Province of China",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -9197,13 +9197,13 @@
             },
             {
               "name": "UM",
-              "description": "United States Minor Outlying Islands (the)",
+              "description": "United States Minor Outlying Islands",
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "US",
-              "description": "United States of America (the)",
+              "description": "United States of America",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -9221,7 +9221,7 @@
             },
             {
               "name": "VA",
-              "description": "Holy See (the)",
+              "description": "Holy See",
               "isDeprecated": false,
               "deprecationReason": null
             },
