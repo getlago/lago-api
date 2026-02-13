@@ -6,15 +6,15 @@ module Charges
 
     private
 
-    def trigger_cascade(old_filters_attrs)
+    def trigger_cascade(old_filters_attrs, old_parent_attrs: nil, old_applied_pricing_unit_attrs: nil)
       return unless cascade_updates
       return unless charge.children.exists?
 
       Charges::UpdateChildrenJob.perform_later(
         params: build_cascade_params.deep_stringify_keys,
-        old_parent_attrs: charge.attributes,
+        old_parent_attrs: old_parent_attrs || charge.attributes,
         old_parent_filters_attrs: old_filters_attrs.map(&:deep_stringify_keys),
-        old_parent_applied_pricing_unit_attrs: charge.applied_pricing_unit&.attributes
+        old_parent_applied_pricing_unit_attrs: old_applied_pricing_unit_attrs || charge.applied_pricing_unit&.attributes
       )
     end
 
