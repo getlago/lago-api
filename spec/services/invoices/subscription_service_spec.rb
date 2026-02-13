@@ -572,5 +572,25 @@ RSpec.describe Invoices::SubscriptionService do
         expect(result.invoice.fees.fixed_charge.count).to eq(0)
       end
     end
+
+    context "when an error occurs" do
+      context "with a stale object error" do
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(ActiveRecord::StaleObjectError)
+
+          expect { invoice_service.call }.to raise_error(ActiveRecord::StaleObjectError)
+        end
+      end
+
+      context "with a failed to acquire lock error" do
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
+        end
+      end
+    end
   end
 end

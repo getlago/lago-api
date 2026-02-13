@@ -3,6 +3,9 @@
 class ApplicationJob < ActiveJob::Base
   sidekiq_options retry: 0
 
+  MAX_LOCK_RETRY_ATTEMPTS = 25
+  MAX_LOCK_RETRY_DELAY = 16 # seconds
+
   # This is a generic error to trigger the retry of any job
   # The max attempt is set to avoid infinite loops
   retry_on RetriableError, wait: :polynomially_longer, attempts: 20
@@ -22,5 +25,21 @@ class ApplicationJob < ActiveJob::Base
     AfterCommitEverywhere.after_commit do
       perform_later(...)
     end
+  end
+
+  # This method is a generic proc for specifying random wait between retries
+  # Usage:
+  # retry_on ExceptionClass, attempts: 5, wait: random_delay(16)
+  #
+  def self.random_delay(max_seconds)
+    ->(_) { rand(0...max_seconds) }
+  end
+
+  # This method is a generic proc for using with lock retry attempts
+  # Usage:
+  # retry_on ExceptionClass, attempts: 5, wait: random_lock_retry_delay
+  #
+  def self.random_lock_retry_delay
+    random_delay(MAX_LOCK_RETRY_DELAY)
   end
 end

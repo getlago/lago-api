@@ -11,7 +11,7 @@ namespace :upgrade do
     Rails.logger.level = Logger::Severity::ERROR
 
     resources_to_fill = [
-      {model: Wallet, job: DatabaseMigrations::PopulateWalletsWithCodeJob},
+      {model: Wallet, job: DatabaseMigrations::PopulateWalletsWithCodeJob}
     ]
 
     puts "##################################\nStarting required jobs"

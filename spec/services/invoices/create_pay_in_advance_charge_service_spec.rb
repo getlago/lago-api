@@ -287,8 +287,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         expect(result.invoice.prepaid_credit_amount_cents).to eq(12)
 
         expect(Credits::AppliedPrepaidCreditsService).to have_received(:call).with(
-          invoice: result.invoice,
-          max_wallet_decrease_attempts: 1
+          invoice: result.invoice
         )
       end
     end
@@ -309,36 +308,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
     end
 
-    context "when there is a concurrent lock", transaction: false do
-      let(:lock_released_after) { 0.1.seconds }
-
-      before do
-        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
-      end
-
-      around do |test|
-        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
-          test.run
-        end
-      end
-
-      context "when it fails to acquire the lock" do
-        let(:lock_released_after) { 2.seconds }
-
-        it "raises a Customers::FailedToAcquireLock error" do
-          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
-
-          expect(customer.invoices.count).to eq(0)
-        end
-      end
-
-      context "when the lock is acquired" do
-        it "creates the invoice" do
-          expect { invoice_service.call }.to change(Invoice, :count).by(1)
-        end
-      end
-    end
-
     it_behaves_like "applies invoice_custom_sections" do
       let(:service_call) { invoice_service.call }
     end
@@ -354,6 +323,15 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
             .to receive(:call).and_raise(ActiveRecord::StaleObjectError)
 
           expect { invoice_service.call }.to raise_error(ActiveRecord::StaleObjectError)
+        end
+      end
+
+      context "with a failed to acquire lock error" do
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
         end
       end
 

@@ -3,14 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
-  describe "#retry_delay" do
-    it "returns a random delay between 0 and 8 seconds" do
-      values = Array.new(1000) { described_class.retry_delay }
-
-      expect(values).to all(be_between(0, 16))
-    end
-  end
-
   describe "#perform" do
     let(:charge) { create(:standard_charge, :pay_in_advance, invoiceable: true) }
     let(:event) { create(:event) }
@@ -71,24 +63,26 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
       end
     end
 
-    [
-      [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
-      [Customers::FailedToAcquireLock.new("customer-1"), 25],
-      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
-      [BaseService::ThrottlingError.new(provider_name: "Stripe"), 25]
-    ].each do |error, attempts|
-      error_class = error.class
+    describe "retry_on" do
+      [
+        [Sequenced::SequenceError.new("Sequenced::SequenceError"), 15],
+        [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
+        [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25],
+        [BaseService::ThrottlingError.new(provider_name: "Stripe"), 25]
+      ].each do |error, attempts|
+        error_class = error.class
 
-      context "when a #{error_class} error is raised" do
-        before do
-          allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call).and_raise(error)
-        end
+        context "when a #{error_class} error is raised" do
+          before do
+            allow(Invoices::CreatePayInAdvanceChargeService).to receive(:call).and_raise(error)
+          end
 
-        it "raises a #{error_class.class.name} error and retries" do
-          assert_performed_jobs(attempts, only: [described_class]) do
-            expect do
-              described_class.perform_later(charge:, event:, timestamp:)
-            end.to raise_error(error_class)
+          it "raises a #{error_class.class.name} error and retries" do
+            assert_performed_jobs(attempts, only: [described_class]) do
+              expect do
+                described_class.perform_later(charge:, event:, timestamp:)
+              end.to raise_error(error_class)
+            end
           end
         end
       end
