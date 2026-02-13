@@ -14,12 +14,16 @@ module IntegrationCustomers
     # schedule a second `IntegrationCustomers::CreateJob`. This second job should be ignored if the first one is still
     # running.
     #
-    # Note that we kept the `integration_customer_params` in the lock key arguments to ensure we still raise an error if the
-    # update changes the integration customer settings.
+    # The lock key only includes integration and customer to prevent duplicate creation in external providers (e.g. NetSuite)
+    # when a create and update happen in quick succession with slightly different params.
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     def perform(integration_customer_params:, integration:, customer:)
       IntegrationCustomers::CreateService.call!(params: integration_customer_params, integration:, customer:)
+    end
+
+    def lock_key_arguments
+      [arguments.first[:integration], arguments.first[:customer]]
     end
   end
 end

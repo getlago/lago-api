@@ -33,9 +33,7 @@ RSpec.describe IntegrationCustomers::CreateJob do
         customer: customer
       )
 
-      expect(job.lock_key_arguments).to eq([integration_customer_params: integration_customer_params,
-                                            integration: integration,
-                                            customer: customer])
+      expect(job.lock_key_arguments).to eq([integration, customer])
     end
   end
 end
