@@ -4,10 +4,11 @@ module FixedCharges
   class CreateService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(plan:, params:, timestamp: Time.current.to_i)
+    def initialize(plan:, params:, timestamp: Time.current.to_i, cascade_updates: false)
       @plan = plan
       @params = params
       @timestamp = timestamp.to_i
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -50,6 +51,10 @@ module FixedCharges
         result.fixed_charge = fixed_charge
       end
 
+      if cascade_updates && result.success? && plan.children.exists?
+        FixedCharges::CreateChildrenJob.perform_later(fixed_charge: result.fixed_charge, payload: params)
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -61,7 +66,7 @@ module FixedCharges
 
     private
 
-    attr_reader :plan, :params, :timestamp
+    attr_reader :plan, :params, :timestamp, :cascade_updates
 
     delegate :organization, to: :plan
 

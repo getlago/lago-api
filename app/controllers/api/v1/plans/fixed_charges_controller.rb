@@ -36,7 +36,9 @@ module Api
         end
 
         def create
-          result = FixedCharges::CreateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
+          result = FixedCharges::CreateService.call(
+            plan:, params: input_params.to_h.deep_symbolize_keys, cascade_updates: cascade_updates?
+          )
 
           if result.success?
             render(
@@ -109,7 +111,7 @@ module Api
         end
 
         def cascade_updates?
-          ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
+          ActiveModel::Type::Boolean.new.cast(params.dig(:fixed_charge, :cascade_updates))
         end
 
         def find_fixed_charge

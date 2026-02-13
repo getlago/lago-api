@@ -2,9 +2,10 @@
 
 module Charges
   class CreateService < BaseService
-    def initialize(plan:, params:)
+    def initialize(plan:, params:, cascade_updates: false)
       @plan = plan
       @params = params
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -62,6 +63,10 @@ module Charges
         result.charge = charge
       end
 
+      if cascade_updates && result.success? && result.charge.plan.children.exists?
+        Charges::CreateChildrenJob.perform_later(charge: result.charge, payload: params)
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -71,7 +76,7 @@ module Charges
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :cascade_updates
 
     def billable_metric
       @billable_metric ||= plan.organization.billable_metrics.find_by(id: params[:billable_metric_id])

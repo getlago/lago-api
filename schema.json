@@ -6038,6 +6038,18 @@
               "deprecationReason": null
             },
             {
+              "name": "cascadeUpdates",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "taxCodes",
               "description": null,
               "type": {
@@ -6174,6 +6186,18 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cascadeUpdates",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -28956,6 +28980,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "FixedChargePropertiesInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "cascadeUpdates",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "defaultValue": null,
