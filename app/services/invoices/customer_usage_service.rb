@@ -11,8 +11,9 @@ module Invoices
       max_timestamp: nil,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      for_charge: nil,
-      for_pricing_group_pairs: nil
+      filter_by_charge: nil,
+      filter_by_group: nil,
+      full_usage: false
     )
       super
 
@@ -24,8 +25,9 @@ module Invoices
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
 
-      @for_charge = for_charge
-      @for_pricing_group_pairs = for_pricing_group_pairs
+      @filter_by_charge = filter_by_charge
+      @filter_by_group = filter_by_group
+      @full_usage = full_usage
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
@@ -50,6 +52,8 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
+      full_usage_not_allowed = (filter_by_charge.empty? && filter_by_group.empty?) || subscription.plan.charges.where(prorated: true).any?
+      return result.not_allowed_failure!(code: "full_usage_not_allowed") if full_usage && full_usage_not_allowed
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -61,7 +65,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :for_charge, :for_pricing_group_pairs
+    attr_reader :filter_by_charge, :filter_by_group, :full_usage
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -105,13 +109,13 @@ module Invoices
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
 
-      if for_charge
-        charges = charges.where(id: for_charge.id)
+      if filter_by_charge
+        charges = charges.where(id: filter_by_charge.id)
       end
 
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
-      if for_charge
+      if filter_by_charge
         fees
       else
         fees.sort_by { |f| f.billable_metric.name.downcase }
@@ -128,7 +132,7 @@ module Invoices
 
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-      if for_pricing_group_pairs
+      if filter_by_group
         cache_middleware = nil
       end
 
@@ -143,7 +147,8 @@ module Invoices
           calculate_projected_usage:,
           with_zero_units_filters:,
           filtered_aggregations: applied_filters,
-          for_pricing_group_pairs:
+          filter_by_group:,
+          full_usage:
         )
         .fees
     end

@@ -13,7 +13,8 @@ module Fees
       apply_taxes: false,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      for_pricing_group_pairs: nil
+      filter_by_group: nil,
+      full_usage: false
     )
       @invoice = invoice
       @charge = charge
@@ -31,12 +32,15 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
-      @for_pricing_group_pairs = for_pricing_group_pairs
+      @filter_by_group = filter_by_group
+      @full_usage = full_usage
 
       super(nil)
     end
 
     def call
+      return result.not_allowed_failure!(code: "cannot_retrieve_full_usage") if full_usage && charge.prorated?
+
       return result if !current_usage && already_billed?
 
       init_fees
@@ -71,7 +75,7 @@ module Fees
     private
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
-      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :filter_by_group, :full_usage
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -312,13 +316,15 @@ module Fees
     def aggregator(charge_filter:)
       aggregate = true
       aggregate = filtered_aggregations.include?(charge_filter&.id) unless filtered_aggregations.nil?
+      from_datetime = boundaries.charges_from_datetime
+      from_datetime = subscription.started_at if full_usage
 
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
         current_usage:,
         subscription:,
         boundaries: {
-          from_datetime: boundaries.charges_from_datetime,
+          from_datetime: from_datetime,
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration,
           max_timestamp: boundaries.max_timestamp
@@ -370,10 +376,10 @@ module Fees
         filters[:ignored_filters] = result.ignored_filters
       end
 
-      if @for_pricing_group_pairs.present?
-        filters[:grouped_by] = nil
+      if filter_by_group.present?
+        filter_by_group.keys.each { |key| filters[:grouped_by].delete(key) }
         filters[:matching_filters] ||= {}
-        filters[:matching_filters].merge!(@for_pricing_group_pairs)
+        filters[:matching_filters].merge!(filter_by_group)
       end
 
       filters

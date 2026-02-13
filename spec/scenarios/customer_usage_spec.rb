@@ -77,7 +77,7 @@ describe "Customer usage Scenario" do
     end
   end
 
-  context "with for_charge and for_pricing_group_pairs filtering" do
+  context "with filter_by_charge and filter_by_group filtering" do
     let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
 
     let(:billable_metric_1) { create(:sum_billable_metric, organization:, field_name: "units") }
@@ -150,14 +150,14 @@ describe "Customer usage Scenario" do
       end
     end
 
-    it "with only for_pricing_group_pairs returns one fee per charge filtered to that pair" do
+    it "with filter_by_group returns one fee per charge filtered to that group" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          for_pricing_group_pairs: {user: ["0"]}
+          filter_by_group: {user: ["0"]}
         )
 
         expect(result).to be_success
@@ -177,14 +177,14 @@ describe "Customer usage Scenario" do
       end
     end
 
-    it "with only for_charge returns all grouped usage for that charge" do
+    it "with filter_by_charge returns all grouped usage for that charge" do
       travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
         result = Invoices::CustomerUsageService.call(
           customer:,
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          for_charge: charge_1
+          filter_by_charge: charge_1
         )
 
         expect(result).to be_success
@@ -203,6 +203,138 @@ describe "Customer usage Scenario" do
         expect(fees.map { |f| f.grouped_by["user"] }).to match_array(
           (0..9).map(&:to_s)
         )
+      end
+    end
+  end
+
+  context "with multi-level pricing_group_keys filtering by workspace" do
+    let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "units") }
+
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        properties: {amount: "10", pricing_group_keys: %w[workspace user]}
+      )
+    end
+
+    before { charge }
+
+    let!(:subscription) do
+      sub = nil
+      travel_to(DateTime.new(2024, 3, 1, 10, 0)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+        sub = customer.subscriptions.first
+      end
+      sub
+    end
+
+    before do
+      travel_to(DateTime.new(2024, 3, 5, 10, 0)) do
+        # Send 10 events for different users across two workspaces
+        # workspace_a: users 0..4, workspace_b: users 5..9
+        10.times do |i|
+          workspace = i < 5 ? "workspace_a" : "workspace_b"
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: subscription.external_id,
+              properties: {workspace:, user: i.to_s, units: 3}
+            }
+          )
+        end
+      end
+    end
+
+    it "filtering by workspace still returns fees divided by user" do
+      travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
+        result = Invoices::CustomerUsageService.call(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          filter_by_group: {workspace: ["workspace_a"]}
+        )
+
+        expect(result).to be_success
+
+        fees = result.usage.fees
+        # 5 users in workspace_a, each with their own fee grouped by user
+        expect(fees.size).to eq(5)
+
+        fees.each do |fee|
+          expect(fee.charge_id).to eq(charge.id)
+          expect(fee.units).to eq(3)
+          expect(fee.events_count).to eq(1)
+          expect(fee.amount_cents).to eq(3_000) # 3 units * 10 amount * 100 cents
+        end
+
+        expect(fees.map { |f| f.grouped_by["user"] }).to match_array(
+          (0..4).map(&:to_s)
+        )
+      end
+    end
+
+    it "filtering by the other workspace returns only its users" do
+      travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
+        result = Invoices::CustomerUsageService.call(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          filter_by_group: {workspace: ["workspace_b"]}
+        )
+
+        expect(result).to be_success
+
+        fees = result.usage.fees
+        expect(fees.size).to eq(5)
+
+        fees.each do |fee|
+          expect(fee.charge_id).to eq(charge.id)
+          expect(fee.units).to eq(3)
+          expect(fee.events_count).to eq(1)
+          expect(fee.amount_cents).to eq(3_000)
+        end
+
+        expect(fees.map { |f| f.grouped_by["user"] }).to match_array(
+          (5..9).map(&:to_s)
+        )
+      end
+    end
+
+    it "without filter returns fees grouped by both workspace and user" do
+      travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
+        result = Invoices::CustomerUsageService.call(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false
+        )
+
+        expect(result).to be_success
+
+        fees = result.usage.fees
+        # 10 unique workspace+user combinations
+        expect(fees.size).to eq(10)
+
+        fees.each do |fee|
+          expect(fee.charge_id).to eq(charge.id)
+          expect(fee.units).to eq(3)
+          expect(fee.events_count).to eq(1)
+          expect(fee.amount_cents).to eq(3_000)
+          expect(fee.grouped_by.keys).to match_array(%w[workspace user])
+        end
       end
     end
   end
