@@ -34422,6 +34422,12 @@
               "deprecationReason": null
             },
             {
+              "name": "billing_entity_created",
+              "description": "billing_entity.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "export_created",
               "description": "export.created",
               "isDeprecated": false,
@@ -34531,6 +34537,12 @@
             {
               "name": "api_key",
               "description": "api_key",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity",
+              "description": "billing_entity",
               "isDeprecated": false,
               "deprecationReason": null
             },

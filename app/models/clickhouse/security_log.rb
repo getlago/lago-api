@@ -13,6 +13,7 @@ module Clickhouse
 
     LOG_TYPES = %w[
       api_key
+      billing_entity
       export
       integration
       role
@@ -25,6 +26,7 @@ module Clickhouse
       api_key.deleted
       api_key.rotated
       api_key.updated
+      billing_entity.created
       export.created
       integration.created
       integration.deleted
