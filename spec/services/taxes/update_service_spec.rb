@@ -119,10 +119,8 @@ RSpec.describe Taxes::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("tax_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("tax_not_found")
       end
     end
 
@@ -140,11 +138,9 @@ RSpec.describe Taxes::UpdateService do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
   end

@@ -20,11 +20,9 @@ RSpec.describe Admin::MembershipsController, type: [:request, :admin] do
         create_params
       )
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:membership][:lago_user_id]).to eq(user.id)
-        expect(json[:membership][:lago_organization_id]).to eq(organization.id)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:membership][:lago_user_id]).to eq(user.id)
+      expect(json[:membership][:lago_organization_id]).to eq(organization.id)
     end
   end
 end

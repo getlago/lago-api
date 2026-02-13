@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
+RSpec.describe Mutations::Auth::Okta::Login, :premium, cache: :memory do
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo") }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
   let(:okta_token_response) { OpenStruct.new(body: {access_token: "access_token"}) }
@@ -21,8 +21,6 @@ RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     okta_integration
@@ -53,10 +51,8 @@ RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
 
     response = result["data"]["oktaLogin"]
 
-    aggregate_failures do
-      expect(response["user"]["email"]).to eq("foo@bar.com")
-      expect(response["token"]).to be_present
-    end
+    expect(response["user"]["email"]).to eq("foo@bar.com")
+    expect(response["token"]).to be_present
   end
 
   context "when email domain is not configured with an integration" do
@@ -75,10 +71,8 @@ RSpec.describe Mutations::Auth::Okta::Login, cache: :memory do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["base"]).to include("domain_not_configured")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["base"]).to include("domain_not_configured")
     end
   end
 end

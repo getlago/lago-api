@@ -34,12 +34,10 @@ RSpec.describe Resolvers::CustomerPortal::CustomerResolver do
 
     customer_response = result["data"]["customerPortalUser"]
 
-    aggregate_failures do
-      expect(customer_response["id"]).to eq(customer.id)
-      expect(customer_response["name"]).to eq(customer.name)
-      expect(customer_response["currency"]).to eq("EUR")
-      expect(customer_response["billingEntityBillingConfiguration"]["documentLocale"]).to eq(customer.billing_entity.document_locale)
-    end
+    expect(customer_response["id"]).to eq(customer.id)
+    expect(customer_response["name"]).to eq(customer.name)
+    expect(customer_response["currency"]).to eq("EUR")
+    expect(customer_response["billingEntityBillingConfiguration"]["documentLocale"]).to eq(customer.billing_entity.document_locale)
   end
 
   context "without customer portal user" do

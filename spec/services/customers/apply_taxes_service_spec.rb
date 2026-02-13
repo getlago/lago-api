@@ -33,10 +33,8 @@ RSpec.describe Customers::ApplyTaxesService do
       it "returns an error" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("customer_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("customer_not_found")
       end
     end
 
@@ -46,10 +44,8 @@ RSpec.describe Customers::ApplyTaxesService do
       it "returns an error" do
         result = apply_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("tax_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("tax_not_found")
       end
     end
 

@@ -31,7 +31,7 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
 
   it_behaves_like "requires a customer portal user"
 
-  it "returns a single subscription", :aggregate_failures do
+  it "returns a single subscription" do
     result = execute_graphql(
       customer_portal_user: customer,
       query:,

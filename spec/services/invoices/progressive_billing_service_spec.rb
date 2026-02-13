@@ -39,7 +39,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
   end
 
   describe "#call" do
-    it "creates a progressive billing invoice", aggregate_failures: true do
+    it "creates a progressive billing invoice" do
       result = create_service.call
 
       expect(result).to be_success
@@ -85,7 +85,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       end
 
       context "when taxes are unknown" do
-        it "keeps the tax status as pending", aggregate_failures: true do
+        it "keeps the tax status as pending" do
           result = create_service.call
 
           expect(result).to be_success
@@ -106,7 +106,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
         ]
       end
 
-      it "creates a progressive billing invoice", aggregate_failures: true do
+      it "creates a progressive billing invoice" do
         result = create_service.call
 
         expect(result).to be_success
@@ -160,7 +160,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
         )
       end
 
-      it "creates a progressive billing invoice", aggregate_failures: true do
+      it "creates a progressive billing invoice" do
         result = create_service.call
 
         expect(result).to be_success
@@ -202,9 +202,7 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues an GenerateDocumentsJob with email true" do
         expect { create_service.call }
           .to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: true))

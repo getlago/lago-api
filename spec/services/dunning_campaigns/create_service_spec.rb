@@ -42,9 +42,7 @@ RSpec.describe DunningCampaigns::CreateService do
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when lago premium", :premium do
       context "when no auto_dunning premium integration" do
         it "returns an error" do
           result = create_service.call
@@ -144,11 +142,9 @@ RSpec.describe DunningCampaigns::CreateService do
           it "returns an error" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:thresholds]).to eq(["can't be blank"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:thresholds]).to eq(["can't be blank"])
           end
         end
       end

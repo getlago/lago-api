@@ -27,9 +27,7 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "creates user, membership and authenticate user" do
       result = service.call
 
@@ -71,10 +69,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
       end
     end
 
@@ -84,10 +80,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("domain_not_configured")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("domain_not_configured")
       end
     end
 
@@ -97,10 +91,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
       end
     end
 

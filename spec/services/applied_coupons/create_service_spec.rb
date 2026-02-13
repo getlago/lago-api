@@ -106,12 +106,10 @@ RSpec.describe AppliedCoupons::CreateService do
         before { customer.update!(currency: "EUR") }
 
         it "fails" do
-          aggregate_failures do
-            expect(create_result).not_to be_success
-            expect(create_result.error).to be_a(BaseService::ValidationFailure)
-            expect(create_result.error.messages.keys).to include(:currency)
-            expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
-          end
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages.keys).to include(:currency)
+          expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
         end
       end
     end
@@ -120,11 +118,9 @@ RSpec.describe AppliedCoupons::CreateService do
       let(:customer) { nil }
 
       it "returns a not found error" do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq("customer_not_found")
-        end
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+        expect(create_result.error.message).to eq("customer_not_found")
       end
     end
 
@@ -132,11 +128,9 @@ RSpec.describe AppliedCoupons::CreateService do
       let(:coupon) { nil }
 
       it "returns a not found error" do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq("coupon_not_found")
-        end
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+        expect(create_result.error.message).to eq("coupon_not_found")
       end
     end
 
@@ -146,12 +140,10 @@ RSpec.describe AppliedCoupons::CreateService do
       before { create(:applied_coupon, customer:, coupon:) }
 
       it "fails" do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:coupon)
-          expect(create_result.error.messages[:coupon]).to include("coupon_is_not_reusable")
-        end
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::ValidationFailure)
+        expect(create_result.error.messages.keys).to include(:coupon)
+        expect(create_result.error.messages[:coupon]).to include("coupon_is_not_reusable")
       end
     end
 
@@ -171,11 +163,9 @@ RSpec.describe AppliedCoupons::CreateService do
         before { coupon_plan }
 
         it "fails" do
-          aggregate_failures do
-            expect(create_result).not_to be_success
-            expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(create_result.error.code).to eq("plan_overlapping")
-          end
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(create_result.error.code).to eq("plan_overlapping")
         end
       end
 
@@ -191,11 +181,9 @@ RSpec.describe AppliedCoupons::CreateService do
         end
 
         it "fails" do
-          aggregate_failures do
-            expect(create_result).not_to be_success
-            expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(create_result.error.code).to eq("plan_overlapping")
-          end
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(create_result.error.code).to eq("plan_overlapping")
         end
       end
 
@@ -214,11 +202,9 @@ RSpec.describe AppliedCoupons::CreateService do
         end
 
         it "fails" do
-          aggregate_failures do
-            expect(create_result).not_to be_success
-            expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(create_result.error.code).to eq("plan_overlapping")
-          end
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(create_result.error.code).to eq("plan_overlapping")
         end
       end
     end
@@ -227,11 +213,9 @@ RSpec.describe AppliedCoupons::CreateService do
       before { coupon.terminated! }
 
       it "returns a not found error" do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::NotFoundFailure)
-          expect(create_result.error.message).to eq("coupon_not_found")
-        end
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::NotFoundFailure)
+        expect(create_result.error.message).to eq("coupon_not_found")
       end
     end
 
@@ -241,12 +225,10 @@ RSpec.describe AppliedCoupons::CreateService do
       before { customer.update!(currency: "EUR") }
 
       it "fails" do
-        aggregate_failures do
-          expect(create_result).not_to be_success
-          expect(create_result.error).to be_a(BaseService::ValidationFailure)
-          expect(create_result.error.messages.keys).to include(:currency)
-          expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
-        end
+        expect(create_result).not_to be_success
+        expect(create_result.error).to be_a(BaseService::ValidationFailure)
+        expect(create_result.error.messages.keys).to include(:currency)
+        expect(create_result.error.messages[:currency]).to include("currencies_does_not_match")
       end
     end
 

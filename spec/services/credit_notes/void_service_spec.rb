@@ -11,13 +11,11 @@ RSpec.describe CreditNotes::VoidService do
     it "voids the credit_note" do
       result = void_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.credit_note).to be_voided
-        expect(result.credit_note.voided_at).to be_present
-        expect(result.credit_note.balance_amount_cents).to eq(0)
-      end
+      expect(result.credit_note).to be_voided
+      expect(result.credit_note.voided_at).to be_present
+      expect(result.credit_note.balance_amount_cents).to eq(0)
     end
 
     context "when credit note is nil" do
@@ -26,12 +24,10 @@ RSpec.describe CreditNotes::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("credit_note")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("credit_note")
       end
     end
 
@@ -41,11 +37,9 @@ RSpec.describe CreditNotes::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("credit_note")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("credit_note")
       end
     end
 
@@ -55,12 +49,10 @@ RSpec.describe CreditNotes::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("no_voidable_amount")
-        end
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("no_voidable_amount")
       end
     end
   end

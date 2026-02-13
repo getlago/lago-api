@@ -26,7 +26,11 @@ module V1
         sub_total_including_taxes_amount_cents: model.sub_total_including_taxes_amount_cents,
         total_amount_cents: model.total_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
+        total_paid_amount_cents: model.total_paid_amount_cents,
+        total_offsetted_credit_note_amount_cents: model.offset_amount_cents,
         prepaid_credit_amount_cents: model.prepaid_credit_amount_cents,
+        prepaid_granted_credit_amount_cents: model.prepaid_granted_credit_amount_cents,
+        prepaid_purchased_credit_amount_cents: model.prepaid_purchased_credit_amount_cents,
         file_url: model.file_url,
         xml_url: model.xml_url,
         version_number: model.version_number,
@@ -65,7 +69,9 @@ module V1
 
     def subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: "subscriptions"
+        model.sorted_invoice_subscriptions.includes(subscription: [:customer, :plan]).map(&:subscription),
+        ::V1::SubscriptionSerializer,
+        collection_name: "subscriptions"
       ).serialize
     end
 
@@ -144,7 +150,7 @@ module V1
 
     def billing_periods
       ::CollectionSerializer.new(
-        model.invoice_subscriptions,
+        model.sorted_invoice_subscriptions,
         ::V1::Invoices::BillingPeriodSerializer,
         collection_name: "billing_periods"
       ).serialize

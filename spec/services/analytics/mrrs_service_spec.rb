@@ -10,9 +10,7 @@ RSpec.describe Analytics::MrrsService do
   describe "#call" do
     subject(:service_call) { service.call }
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       it "returns success" do
         expect(service_call).to be_success
       end
@@ -20,10 +18,8 @@ RSpec.describe Analytics::MrrsService do
 
     context "when licence is not premium" do
       it "returns an error" do
-        aggregate_failures do
-          expect(service_call).not_to be_success
-          expect(service_call.error.code).to eq("feature_unavailable")
-        end
+        expect(service_call).not_to be_success
+        expect(service_call.error.code).to eq("feature_unavailable")
       end
     end
   end

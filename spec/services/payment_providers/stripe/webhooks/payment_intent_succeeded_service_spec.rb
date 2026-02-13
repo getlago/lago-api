@@ -53,8 +53,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         expect { event_service.call }.not_to have_enqueued_job(PaymentReceipts::CreateJob)
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -78,8 +77,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         end
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -153,7 +151,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           create(:payment, payable: payment_request_other_organization, provider_payment_id: event.data.object.id)
         end
 
-        it "returns an empty result", :aggregate_failures do
+        it "returns an empty result" do
           result = event_service.call
           expect(result).to be_success
           expect(result.payment).to be_nil

@@ -20,13 +20,11 @@ RSpec.describe ::V1::PaymentProviders::ErrorSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["data"]["lago_payment_provider_id"]).to eq(payment_provider.id)
-      expect(result["data"]["payment_provider_code"]).to eq(payment_provider.code)
-      expect(result["data"]["payment_provider_name"]).to eq(payment_provider.name)
-      expect(result["data"]["source"]).to eq("stripe")
-      expect(result["data"]["action"]).to eq("payment_provider.register_webhook")
-      expect(result["data"]["provider_error"]).to eq({"error_message" => "message", "error_code" => nil})
-    end
+    expect(result["data"]["lago_payment_provider_id"]).to eq(payment_provider.id)
+    expect(result["data"]["payment_provider_code"]).to eq(payment_provider.code)
+    expect(result["data"]["payment_provider_name"]).to eq(payment_provider.name)
+    expect(result["data"]["source"]).to eq("stripe")
+    expect(result["data"]["action"]).to eq("payment_provider.register_webhook")
+    expect(result["data"]["provider_error"]).to eq({"error_message" => "message", "error_code" => nil})
   end
 end

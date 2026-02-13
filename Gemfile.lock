@@ -24,7 +24,7 @@ GIT
 
 GIT
   remote: https://github.com/glebm/i18n-tasks.git
-  revision: b7db1cb2fe1484d93ee1cf14b5100c321d16392a
+  revision: 799cc333012ae43d3ee021d90d3ca1bfcd265d7c
   specs:
     i18n-tasks (1.1.2)
       activesupport (>= 4.0.2)
@@ -55,7 +55,7 @@ GEM
 GEM
   remote: https://rubygems.org/
   specs:
-    aasm (5.5.0)
+    aasm (5.5.2)
       concurrent-ruby (~> 1.0)
     actioncable (8.0.3)
       actionpack (= 8.0.3)
@@ -174,7 +174,7 @@ GEM
     aws-sigv4 (1.12.1)
       aws-eventstream (~> 1, >= 1.0.2)
     base64 (0.3.0)
-    bcrypt (3.1.20)
+    bcrypt (3.1.21)
     benchmark (0.4.1)
     bigdecimal (3.3.1)
     bootsnap (1.18.4)
@@ -238,36 +238,37 @@ GEM
     dry-configurable (1.2.0)
       dry-core (~> 1.0, < 2)
       zeitwerk (~> 2.6)
-    dry-core (1.0.2)
+    dry-core (1.2.0)
       concurrent-ruby (~> 1.0)
       logger
       zeitwerk (~> 2.6)
     dry-inflector (1.1.0)
-    dry-initializer (3.1.1)
-    dry-logic (1.5.0)
+    dry-initializer (3.2.0)
+    dry-logic (1.6.0)
+      bigdecimal
       concurrent-ruby (~> 1.0)
-      dry-core (~> 1.0, < 2)
+      dry-core (~> 1.1)
       zeitwerk (~> 2.6)
-    dry-schema (1.13.4)
+    dry-schema (1.15.0)
       concurrent-ruby (~> 1.0)
       dry-configurable (~> 1.0, >= 1.0.1)
-      dry-core (~> 1.0, < 2)
-      dry-initializer (~> 3.0)
-      dry-logic (>= 1.4, < 2)
-      dry-types (>= 1.7, < 2)
+      dry-core (~> 1.1)
+      dry-initializer (~> 3.2)
+      dry-logic (~> 1.6)
+      dry-types (~> 1.8)
       zeitwerk (~> 2.6)
-    dry-types (1.7.2)
-      bigdecimal (~> 3.0)
+    dry-types (1.9.0)
+      bigdecimal (>= 3.0)
       concurrent-ruby (~> 1.0)
       dry-core (~> 1.0)
       dry-inflector (~> 1.0)
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
-    dry-validation (1.10.0)
+    dry-validation (1.11.1)
       concurrent-ruby (~> 1.0)
-      dry-core (~> 1.0, < 2)
-      dry-initializer (~> 3.0)
-      dry-schema (>= 1.12, < 2)
+      dry-core (~> 1.1)
+      dry-initializer (~> 3.2)
+      dry-schema (~> 1.14)
       zeitwerk (~> 2.6)
     erb (5.1.1)
     erubi (1.13.1)
@@ -280,10 +281,12 @@ GEM
       railties (>= 6.1.0)
     faker (3.5.3)
       i18n (>= 1.8.11, < 2)
-    faraday (2.10.1)
-      faraday-net_http (>= 2.0, < 3.2)
+    faraday (2.14.1)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
       logger
-    faraday-net_http (2.1.0)
+    faraday-net_http (3.4.2)
+      net-http (~> 0.5)
     ffi (1.17.2-aarch64-linux-gnu)
     ffi (1.17.2-aarch64-linux-musl)
     ffi (1.17.2-arm64-darwin)
@@ -350,7 +353,7 @@ GEM
       multi_json (~> 1.11)
       os (>= 0.9, < 2.0)
       signet (>= 0.16, < 2.a)
-    graphql (2.5.13)
+    graphql (2.5.18)
       base64
       fiber-storage
       logger
@@ -376,7 +379,8 @@ GEM
       reline
     htmlbeautifier (1.4.3)
     httpclient (2.8.3)
-    httplog (1.7.3)
+    httplog (1.8.0)
+      benchmark
       rack (>= 2.0)
       rainbow (>= 2.0.0)
     i18n (1.14.7)
@@ -394,35 +398,34 @@ GEM
       activerecord
       kaminari-core (= 1.2.2)
     kaminari-core (1.2.2)
-    karafka (2.5.1)
-      base64 (~> 0.2)
+    karafka (2.5.5)
       karafka-core (>= 2.5.6, < 2.6.0)
-      karafka-rdkafka (>= 0.22.0)
-      waterdrop (>= 2.8.9, < 3.0.0)
+      karafka-rdkafka (>= 0.23.1)
+      waterdrop (>= 2.8.14, < 3.0.0)
       zeitwerk (~> 2.3)
     karafka-core (2.5.7)
       karafka-rdkafka (>= 0.20.0)
       logger (>= 1.6.0)
-    karafka-rdkafka (0.22.0)
-      ffi (~> 1.15)
+    karafka-rdkafka (0.23.1)
+      ffi (~> 1.17.1)
       json (> 2.0)
       logger
       mini_portile2 (~> 2.6)
       rake (> 12)
-    karafka-rdkafka (0.22.0-aarch64-linux-gnu)
-      ffi (~> 1.15)
+    karafka-rdkafka (0.23.1-aarch64-linux-gnu)
+      ffi (~> 1.17.1)
       json (> 2.0)
       logger
       mini_portile2 (~> 2.6)
       rake (> 12)
-    karafka-rdkafka (0.22.0-arm64-darwin)
-      ffi (~> 1.15)
+    karafka-rdkafka (0.23.1-arm64-darwin)
+      ffi (~> 1.17.1)
       json (> 2.0)
       logger
       mini_portile2 (~> 2.6)
       rake (> 12)
-    karafka-rdkafka (0.22.0-x86_64-linux-gnu)
-      ffi (~> 1.15)
+    karafka-rdkafka (0.23.1-x86_64-linux-gnu)
+      ffi (~> 1.17.1)
       json (> 2.0)
       logger
       mini_portile2 (~> 2.6)
@@ -430,13 +433,13 @@ GEM
     karafka-testing (2.5.5)
       karafka (>= 2.5.0, < 2.6.0)
       waterdrop (>= 2.8.0)
-    karafka-web (0.11.3)
+    karafka-web (0.11.5)
       erubi (~> 1.4)
-      karafka (>= 2.5.0, < 2.6.0)
+      karafka (>= 2.5.2, < 2.6.0)
       karafka-core (>= 2.5.0, < 2.6.0)
-      roda (~> 3.68, >= 3.69)
+      roda (~> 3.69, >= 3.69)
       tilt (~> 2.0)
-    knapsack_pro (9.0.0)
+    knapsack_pro (9.2.1)
       rake
     language_server-protocol (3.17.0.5)
     libdatadog (22.0.1.1.0)
@@ -494,6 +497,8 @@ GEM
     multipart-post (2.4.1)
     mutex_m (0.3.0)
     nenv (0.3.0)
+    net-http (0.9.1)
+      uri (>= 0.11.1)
     net-imap (0.5.12)
       date
       net-protocol
@@ -520,13 +525,14 @@ GEM
     notiffany (0.1.3)
       nenv (~> 0.1)
       shellany (~> 0.0)
-    oauth2 (2.0.9)
-      faraday (>= 0.17.3, < 3.0)
-      jwt (>= 1.0, < 3.0)
+    oauth2 (2.0.18)
+      faraday (>= 0.17.3, < 4.0)
+      jwt (>= 1.0, < 4.0)
+      logger (~> 1.2)
       multi_xml (~> 0.5)
       rack (>= 1.2, < 4)
-      snaky_hash (~> 2.0)
-      version_gem (~> 1.1)
+      snaky_hash (~> 2.0, >= 2.0.3)
+      version_gem (~> 1.1, >= 1.1.9)
     opentelemetry-api (1.3.0)
     opentelemetry-common (0.21.0)
       opentelemetry-api (~> 1.0)
@@ -730,7 +736,7 @@ GEM
       opentelemetry-api (~> 1.0)
     optimist (3.2.1)
     os (1.1.4)
-    ostruct (0.6.1)
+    ostruct (0.6.3)
     paper_trail (16.0.0)
       activerecord (>= 6.1)
       request_store (~> 1.4)
@@ -810,9 +816,9 @@ GEM
     rake-compiler (1.3.0)
       rake
     rake-compiler-dock (1.10.0)
-    ransack (4.4.0)
-      activerecord (>= 7.1)
-      activesupport (>= 7.1)
+    ransack (4.4.1)
+      activerecord (>= 7.2)
+      activesupport (>= 7.2)
       i18n
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
@@ -872,7 +878,7 @@ GEM
       awesome_print (> 1.0.0)
       rspec (> 3.0.0)
     rspec-support (3.13.2)
-    rubocop (1.81.7)
+    rubocop (1.82.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -880,14 +886,12 @@ GEM
       parser (>= 3.3.0.2)
       rainbow (>= 2.2.2, < 4.0)
       regexp_parser (>= 2.9.3, < 3.0)
-      rubocop-ast (>= 1.47.1, < 2.0)
+      rubocop-ast (>= 1.48.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 4.0)
     rubocop-ast (1.48.0)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
-    rubocop-capybara (2.21.0)
-      rubocop (~> 1.41)
     rubocop-factory_bot (2.28.0)
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
@@ -898,19 +902,19 @@ GEM
       lint_roller (~> 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.47.1, < 2.0)
-    rubocop-rails (2.34.2)
+    rubocop-rails (2.34.3)
       activesupport (>= 4.2.0)
       lint_roller (~> 1.1)
       rack (>= 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.44.0, < 2.0)
-    rubocop-rspec (2.31.0)
-      rubocop (~> 1.40)
-      rubocop-capybara (~> 2.17)
-      rubocop-factory_bot (~> 2.22)
-      rubocop-rspec_rails (~> 2.28)
-    rubocop-rspec_rails (2.29.1)
-      rubocop (~> 1.61)
+    rubocop-rspec (3.9.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.81)
+    rubocop-rspec_rails (2.32.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.72, >= 1.72.1)
+      rubocop-rspec (~> 3.5)
     rubocop-thread_safety (0.7.3)
       lint_roller (~> 1.1)
       rubocop (~> 1.72, >= 1.72.1)
@@ -954,6 +958,9 @@ GEM
       logger
       rack (>= 2.2.4)
       redis-client (>= 0.22.2)
+    sidekiq-prometheus-exporter (0.3.0)
+      rack (>= 1.6.0)
+      sidekiq (>= 4.1.0)
     sidekiq-throttled (1.4.0)
       concurrent-ruby (>= 1.2.0)
       redis-prescription (~> 2.2)
@@ -976,9 +983,9 @@ GEM
       actionpack (>= 3.1)
       railties (>= 3.1)
       slim (>= 3.0, < 6.0, != 5.0.0)
-    snaky_hash (2.0.1)
-      hashie
-      version_gem (~> 1.1, >= 1.1.1)
+    snaky_hash (2.0.3)
+      hashie (>= 0.1.0, < 6)
+      version_gem (>= 1.1.8, < 3)
     sprockets (4.2.1)
       concurrent-ruby (~> 1.0)
       rack (>= 2.2.4, < 4)
@@ -987,10 +994,10 @@ GEM
       activesupport (>= 6.1)
       sprockets (>= 3.0.0)
     stackprof (0.2.27)
-    standard (1.52.0)
+    standard (1.53.0)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
-      rubocop (~> 1.81.7)
+      rubocop (~> 1.82.0)
       standard-custom (~> 1.0.0)
       standard-performance (~> 1.8)
     standard-custom (1.0.2)
@@ -1011,7 +1018,8 @@ GEM
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
     thor (1.4.0)
-    throttling (0.4.0)
+    throttling (0.4.1)
+      logger
     tilt (2.0.11)
     timecop (0.9.10)
     timeout (0.4.3)
@@ -1019,7 +1027,7 @@ GEM
     tsort (0.2.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
-    tzinfo-data (1.2025.2)
+    tzinfo-data (1.2025.3)
       tzinfo (>= 1.0.0)
     uber (0.1.0)
     uglifier (4.2.1)
@@ -1034,10 +1042,10 @@ GEM
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
     vernier (1.9.0)
-    version_gem (1.1.4)
-    waterdrop (2.8.11)
+    version_gem (1.1.9)
+    waterdrop (2.8.15)
       karafka-core (>= 2.4.9, < 3.0.0)
-      karafka-rdkafka (>= 0.20.0)
+      karafka-rdkafka (>= 0.23.1)
       zeitwerk (~> 2.3)
     webmock (3.26.1)
       addressable (>= 2.8.0)
@@ -1151,10 +1159,12 @@ DEPENDENCIES
   rspec-graphql_matchers
   rspec-rails
   rspec-snapshot (~> 2.0)
+  rubocop-factory_bot
   rubocop-graphql
   rubocop-performance
   rubocop-rails
   rubocop-rspec
+  rubocop-rspec_rails
   rubocop-thread_safety
   ruby-lsp-rails
   sass-rails
@@ -1165,6 +1175,7 @@ DEPENDENCIES
   shoulda-matchers
   sidekiq
   sidekiq-pro!
+  sidekiq-prometheus-exporter
   sidekiq-throttled (= 1.4.0)
   simplecov
   slim
@@ -1188,7 +1199,7 @@ DEPENDENCIES
   yabeda-rails!
 
 RUBY VERSION
-   ruby 3.4.7p58
+   ruby 3.4.8p72
 
 BUNDLED WITH
    2.6.8

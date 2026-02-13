@@ -36,10 +36,8 @@ RSpec.describe Mutations::Integrations::Destroy do
     end.to change(::Integrations::BaseIntegration, :count).by(-1)
   end
 
-  context "when okta integration" do
+  context "when okta integration", :premium do
     let(:integration) { create(:okta_integration, organization:) }
-
-    around { |test| lago_premium!(&test) }
 
     before do
       organization.enable_okta_authentication!

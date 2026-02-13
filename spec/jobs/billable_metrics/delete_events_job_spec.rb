@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillableMetrics::DeleteEventsJob, transaction: false, clickhouse: true do
+RSpec.describe BillableMetrics::DeleteEventsJob, clickhouse: true, transaction: false do
   let(:billable_metric) { create(:billable_metric, :deleted) }
   let(:subscription) { create(:subscription) }
 

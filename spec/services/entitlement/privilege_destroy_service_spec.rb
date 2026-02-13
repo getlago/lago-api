@@ -13,9 +13,7 @@ RSpec.describe Entitlement::PrivilegeDestroyService do
     privilege.reload
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "discards the privilege" do
       expect { subject }.to change { privilege.reload.discarded? }.from(false).to(true)
     end

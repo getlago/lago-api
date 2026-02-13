@@ -10,11 +10,9 @@ RSpec.describe ::V1::WebhookEndpointSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["webhook_endpoint"]["lago_organization_id"]).to eq(webhook_endpoint.organization_id)
-      expect(result["webhook_endpoint"]["webhook_url"]).to eq(webhook_endpoint.webhook_url)
-      expect(result["webhook_endpoint"]["created_at"]).to eq(webhook_endpoint.created_at.iso8601)
-      expect(result["webhook_endpoint"]["signature_algo"]).to eq(webhook_endpoint.signature_algo)
-    end
+    expect(result["webhook_endpoint"]["lago_organization_id"]).to eq(webhook_endpoint.organization_id)
+    expect(result["webhook_endpoint"]["webhook_url"]).to eq(webhook_endpoint.webhook_url)
+    expect(result["webhook_endpoint"]["created_at"]).to eq(webhook_endpoint.created_at.iso8601)
+    expect(result["webhook_endpoint"]["signature_algo"]).to eq(webhook_endpoint.signature_algo)
   end
 end

@@ -41,6 +41,7 @@ RSpec.describe V1::CreditNoteSerializer do
       "balance_amount_cents" => credit_note.balance_amount_cents,
       "credit_amount_cents" => credit_note.credit_amount_cents,
       "refund_amount_cents" => credit_note.refund_amount_cents,
+      "offset_amount_cents" => credit_note.offset_amount_cents,
       "coupons_adjustment_amount_cents" => credit_note.coupons_adjustment_amount_cents,
       "created_at" => credit_note.created_at.iso8601,
       "updated_at" => credit_note.updated_at.iso8601,

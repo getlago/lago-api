@@ -10,7 +10,16 @@ RSpec.describe Charges::Validators::StandardService do
 
   describe ".valid?" do
     it "is invalid" do
-      aggregate_failures do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+      expect(validation_service.result.error.messages.keys).to include(:amount)
+      expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
+    end
+
+    context "when amount is not an integer" do
+      let(:properties) { {amount: "Foo"} }
+
+      it "is invalid" do
         expect(validation_service).not_to be_valid
         expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
         expect(validation_service.result.error.messages.keys).to include(:amount)
@@ -18,29 +27,14 @@ RSpec.describe Charges::Validators::StandardService do
       end
     end
 
-    context "when amount is not an integer" do
-      let(:properties) { {amount: "Foo"} }
-
-      it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:amount)
-          expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
-        end
-      end
-    end
-
     context "when amount is negative" do
       let(:properties) { {amount: "-12"} }
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:amount)
-          expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:amount)
+        expect(validation_service.result.error.messages[:amount]).to include("invalid_amount")
       end
     end
 

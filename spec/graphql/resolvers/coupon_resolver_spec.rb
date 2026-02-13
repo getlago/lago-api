@@ -44,12 +44,10 @@ RSpec.describe Resolvers::CouponResolver do
 
     coupon_response = result["data"]["coupon"]
 
-    aggregate_failures do
-      expect(coupon_response["id"]).to eq(coupon.id)
-      expect(coupon_response["customersCount"]).to eq(1)
-      expect(coupon_response["description"]).to eq(coupon.description)
-      expect(coupon_response["appliedCouponsCount"]).to eq(1)
-    end
+    expect(coupon_response["id"]).to eq(coupon.id)
+    expect(coupon_response["customersCount"]).to eq(1)
+    expect(coupon_response["description"]).to eq(coupon.description)
+    expect(coupon_response["appliedCouponsCount"]).to eq(1)
   end
 
   context "when plan is not found" do

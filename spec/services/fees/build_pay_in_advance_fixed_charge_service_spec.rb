@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
+RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
   subject(:result) do
     described_class.call(subscription:, fixed_charge:, fixed_charge_event:, timestamp:)
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -135,22 +133,11 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
       existing_fee
     end
 
-    it "does not create a fee" do
+    it "creates a zero-amount fee (no refund)" do
       expect(result).to be_success
-      expect(result.fee).not_to be_present
-    end
-
-    context "when organization as zero_amount_fees premium integration" do
-      before do
-        organization.update!(premium_integrations: ["zero_amount_fees"])
-      end
-
-      it "creates a zero-amount fee (no refund)" do
-        expect(result).to be_success
-        expect(result.fee).to be_present
-        expect(result.fee.units).to eq(0)
-        expect(result.fee.amount_cents).to eq(0)
-      end
+      expect(result.fee).to be_present
+      expect(result.fee.units).to eq(0)
+      expect(result.fee.amount_cents).to eq(0)
     end
   end
 
@@ -189,22 +176,11 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
       existing_fee
     end
 
-    it "returns no fee" do
+    it "creates a zero-amount fee (no refund)" do
       expect(result).to be_success
-      expect(result.fee).not_to be_present
-    end
-
-    context "when organization as zero_amount_fees premium integration" do
-      before do
-        organization.update!(premium_integrations: ["zero_amount_fees"])
-      end
-
-      it "creates a zero-amount fee (no refund)" do
-        expect(result).to be_success
-        expect(result.fee).to be_present
-        expect(result.fee.units).to eq(0)
-        expect(result.fee.amount_cents).to eq(0)
-      end
+      expect(result.fee).to be_present
+      expect(result.fee.units).to eq(0)
+      expect(result.fee.amount_cents).to eq(0)
     end
   end
 
@@ -496,22 +472,11 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
 
       before { existing_fee }
 
-      it "does not create a fee (no refund for prorated charges)" do
+      it "creates a zero-amount fee (no refund for prorated charges)" do
         expect(result).to be_success
-        expect(result.fee).not_to be_present
-      end
-
-      context "when organization has zero_amount_fees premium integration" do
-        before do
-          organization.update!(premium_integrations: ["zero_amount_fees"])
-        end
-
-        it "creates a zero-amount fee" do
-          expect(result).to be_success
-          expect(result.fee).to be_present
-          expect(result.fee.units).to eq(0)
-          expect(result.fee.amount_cents).to eq(0)
-        end
+        expect(result.fee).to be_present
+        expect(result.fee.units).to eq(0)
+        expect(result.fee.amount_cents).to eq(0)
       end
     end
 

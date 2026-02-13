@@ -82,5 +82,27 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
         expect(Subscriptions::FlagRefreshedJob).not_to have_been_enqueued
       end
     end
+
+    context "when redis env vars contains redis:// prefix" do
+      let(:redis_url) { "redis://localhost:6379" }
+
+      it "flags all subscriptions as refreshed" do
+        result = flag_service.call
+
+        expect(result).to be_success
+        expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.twice
+      end
+    end
+
+    context "when redis env vars contains rediss:// prefix" do
+      let(:redis_url) { "rediss://localhost:6379" }
+
+      it "flags all subscriptions as refreshed" do
+        result = flag_service.call
+
+        expect(result).to be_success
+        expect(Subscriptions::FlagRefreshedJob).to have_been_enqueued.twice
+      end
+    end
   end
 end

@@ -206,8 +206,8 @@ RSpec.describe Subscriptions::UpdateService do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
 
-          context "when plan has fixed charges" do
-            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan) }
+          context "when plan has pay in advance fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
 
             before { fixed_charge }
 
@@ -215,6 +215,10 @@ RSpec.describe Subscriptions::UpdateService do
               expect { update_service.call }.to change(FixedChargeEvent, :count).by(1)
               expect(subscription.fixed_charge_events.pluck(:fixed_charge_id, :timestamp))
                 .to contain_exactly([fixed_charge.id, be_within(1.second).of(subscription.started_at)])
+            end
+
+            it "does not enqueue a job to bill the pay in advance fixed charges" do
+              expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
             end
           end
         end
@@ -316,6 +320,22 @@ RSpec.describe Subscriptions::UpdateService do
               it "schedules a Invoices::CreatePayInAdvanceFixedChargesJob" do
                 expect { update_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
               end
+            end
+          end
+        end
+
+        context "when subscription_at is in the past" do
+          it "does not enqueue a job to bill the subscription" do
+            expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          context "when plan has pay in advance fixed charges" do
+            let(:fixed_charge) { create(:fixed_charge, plan: subscription.plan, pay_in_advance: true) }
+
+            before { fixed_charge }
+
+            it "does not enqueue a job to bill the pay in advance fixed charges" do
+              expect { update_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
             end
           end
         end
@@ -465,9 +485,7 @@ RSpec.describe Subscriptions::UpdateService do
         }
       end
 
-      context "when License is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when License is premium", :premium do
         it "creates the new plan accordingly" do
           update_service.call
 
@@ -562,9 +580,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
-      context "with fixed charge overrides and apply_units_immediately true" do
-        around { |test| lago_premium!(&test) }
-
+      context "with fixed charge overrides and apply_units_immediately true", :premium do
         let(:organization) { membership.organization }
         let(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
@@ -649,9 +665,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
-      context "with fixed charge overrides and apply_units_immediately false" do
-        around { |test| lago_premium!(&test) }
-
+      context "with fixed charge overrides and apply_units_immediately false", :premium do
         let(:organization) { membership.organization }
         let(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
@@ -735,9 +749,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
-      context "with pending subscription, fixed charge overrides and mixed apply_units_immediately" do
-        around { |test| lago_premium!(&test) }
-
+      context "with pending subscription, fixed charge overrides and mixed apply_units_immediately", :premium do
         let(:organization) { membership.organization }
         let(:plan) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }

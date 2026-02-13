@@ -326,11 +326,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           end
 
           it "fails" do
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
           end
         end
 
@@ -343,11 +341,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           end
 
           it "fails" do
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
           end
         end
       end

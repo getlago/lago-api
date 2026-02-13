@@ -197,7 +197,8 @@ module Fees
     end
 
     def format_grouped_by
-      grouped_by = properties["pricing_group_keys"].presence || properties["grouped_by"]
+      grouped_by = properties["pricing_group_keys"].presence || properties["grouped_by"] || []
+      grouped_by << "target_wallet_code" if charge.accepts_target_wallet && event.properties["target_wallet_code"].present?
       return {} if grouped_by.blank?
 
       grouped_by.index_with { event.properties[it] }

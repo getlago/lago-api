@@ -108,9 +108,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:transaction_metadata) { [] }
       let(:rules) do
@@ -406,9 +404,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "when recurring rule paid credits exceeds wallet limits" do
-      around { |test| lago_premium!(&test) }
-
+    context "when recurring rule paid credits exceeds wallet limits", :premium do
       let(:params) do
         {
           id: wallet.id,
@@ -626,6 +622,115 @@ RSpec.describe Wallets::UpdateService do
         it "returns an error" do
           expect(result).not_to be_success
           expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
+
+    context "when updating code" do
+      let(:params) do
+        {
+          id: wallet.id,
+          code: "updated_code",
+          priority: 5
+        }
+      end
+
+      it "updates the wallet code" do
+        expect(result).to be_success
+        expect(result.wallet.code).to eq("updated_code")
+      end
+    end
+
+    context "when code is not provided in params" do
+      let(:wallet) { create(:wallet, customer:, code: "existing_code") }
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "updated name",
+          priority: 5
+        }
+      end
+
+      it "keeps the existing code" do
+        expect(result).to be_success
+        expect(result.wallet.code).to eq("existing_code")
+      end
+    end
+
+    context "when updating code to a value already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "taken_code")
+      end
+
+      let(:params) do
+        {
+          id: wallet.id,
+          code: "taken_code",
+          priority: 5
+        }
+      end
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
+      end
+    end
+
+    context "with metadata" do
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "new name",
+          priority: 5,
+          metadata: {"foo" => "bar", "baz" => "qux"}
+        }
+      end
+
+      it "creates metadata" do
+        expect(result).to be_success
+        expect(result.wallet.metadata).to be_present
+        expect(result.wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+
+      context "when wallet has existing metadata" do
+        before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value", "foo" => "old"}) }
+
+        it "replaces all metadata" do
+          expect(result).to be_success
+          expect(result.wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+        end
+      end
+
+      context "when partial_metadata is true" do
+        subject(:result) { described_class.call(wallet:, params:, partial_metadata: true) }
+
+        context "when wallet has existing metadata" do
+          before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value", "foo" => "old"}) }
+
+          it "merges metadata" do
+            expect(result).to be_success
+            expect(result.wallet.metadata.value).to eq({"old" => "value", "foo" => "bar", "baz" => "qux"})
+          end
+        end
+      end
+
+      context "when metadata is nil" do
+        let(:params) do
+          {
+            id: wallet.id,
+            name: "new name",
+            priority: 5,
+            metadata: nil
+          }
+        end
+
+        context "when wallet has existing metadata" do
+          before { create(:item_metadata, owner: wallet, organization:, value: {"old" => "value"}) }
+
+          it "deletes all metadata" do
+            expect(result).to be_success
+            expect(result.wallet.reload.metadata).to be_nil
+          end
         end
       end
     end

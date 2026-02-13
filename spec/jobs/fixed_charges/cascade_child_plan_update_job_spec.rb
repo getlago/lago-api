@@ -12,13 +12,17 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateJob do
   end
 
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let(:parent_plan) { create(:plan, organization:) }
+  let(:plan) { create(:plan, organization:, parent: parent_plan) }
   let(:add_on) { create(:add_on, organization:) }
+  let(:parent_fixed_charge) { create(:fixed_charge, plan: parent_plan, add_on:, units: 10) }
   let(:timestamp) { Time.current.to_i }
   let(:cascade_fixed_charges_payload) do
     [
       {
         action: :create,
+        parent_id: parent_fixed_charge.id,
+        code: parent_fixed_charge.code,
         add_on_id: add_on.id,
         charge_model: "standard",
         units: 10,

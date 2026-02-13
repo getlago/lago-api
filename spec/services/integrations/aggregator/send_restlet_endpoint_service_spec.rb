@@ -24,12 +24,10 @@ RSpec.describe Integrations::Aggregator::SendRestletEndpointService do
     it "successfully sends restlet endpoint" do
       send_restlet_endpoint_service.call
 
-      aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new)
-          .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(lago_client).to have_received(:post_with_response) do |payload|
-          expect(payload[:restletEndpoint]).to eq("https://example.com")
-        end
+      expect(LagoHttpClient::Client).to have_received(:new)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      expect(lago_client).to have_received(:post_with_response) do |payload|
+        expect(payload[:restletEndpoint]).to eq("https://example.com")
       end
     end
   end

@@ -50,19 +50,17 @@ RSpec.describe Customers::UpdateService do
 
       result = customers_service.call
       updated_customer = result.customer
-      aggregate_failures do
-        expect(updated_customer.name).to eq(update_args[:name])
-        expect(updated_customer.firstname).to eq(update_args[:firstname])
-        expect(updated_customer.lastname).to eq(update_args[:lastname])
-        expect(updated_customer.customer_type).to eq(update_args[:customer_type])
-        expect(updated_customer.tax_identification_number).to eq(update_args[:tax_identification_number])
-        expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
-        expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+      expect(updated_customer.name).to eq(update_args[:name])
+      expect(updated_customer.firstname).to eq(update_args[:firstname])
+      expect(updated_customer.lastname).to eq(update_args[:lastname])
+      expect(updated_customer.customer_type).to eq(update_args[:customer_type])
+      expect(updated_customer.tax_identification_number).to eq(update_args[:tax_identification_number])
+      expect(updated_customer.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
+      expect(updated_customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
 
-        shipping_address = update_args[:shipping_address]
-        expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-        expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
-      end
+      shipping_address = update_args[:shipping_address]
+      expect(updated_customer.shipping_city).to eq(shipping_address[:city])
+      expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
     end
 
     it "produces an activity log" do
@@ -143,8 +141,6 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "with premium features", :premium do
-      around { |test| lago_premium!(&test) }
-
       let(:update_args) do
         {
           id: customer.id,
@@ -161,10 +157,8 @@ RSpec.describe Customers::UpdateService do
         result = customers_service.call
 
         updated_customer = result.customer
-        aggregate_failures do
-          expect(updated_customer.timezone).to eq("Europe/Paris")
-          expect(updated_customer.invoice_grace_period).to eq(3)
-        end
+        expect(updated_customer.timezone).to eq("Europe/Paris")
+        expect(updated_customer.invoice_grace_period).to eq(3)
       end
 
       context "when revenue_share feature is enabled and updates account_type to partner" do
@@ -257,11 +251,9 @@ RSpec.describe Customers::UpdateService do
       it "returns an error" do
         result = customers_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:external_id]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:external_id]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -293,12 +285,10 @@ RSpec.describe Customers::UpdateService do
         it "fails" do
           result = customers_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:currency)
-            expect(result.error.messages[:currency]).to include("currencies_does_not_match")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:currency)
+          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
         end
       end
     end
@@ -328,10 +318,8 @@ RSpec.describe Customers::UpdateService do
         expect(result).to be_success
 
         updated_customer = result.customer
-        aggregate_failures do
-          expect(updated_customer.payment_provider).to eq("stripe")
-          expect(updated_customer.stripe_customer).to be_present
-        end
+        expect(updated_customer.payment_provider).to eq("stripe")
+        expect(updated_customer.stripe_customer).to be_present
       end
 
       it "does not call payment provider customer update service" do
@@ -359,15 +347,13 @@ RSpec.describe Customers::UpdateService do
         it "creates a payment provider customer" do
           result = customers_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            customer = result.customer
-            expect(customer.id).to be_present
-            expect(customer.payment_provider).to eq("stripe")
-            expect(customer.stripe_customer).to be_present
-            expect(customer.stripe_customer.provider_customer_id).to eq("cus_12345")
-          end
+          customer = result.customer
+          expect(customer.id).to be_present
+          expect(customer.payment_provider).to eq("stripe")
+          expect(customer.stripe_customer).to be_present
+          expect(customer.stripe_customer.provider_customer_id).to eq("cus_12345")
         end
 
         context "when removing a provider customer id" do
@@ -392,22 +378,20 @@ RSpec.describe Customers::UpdateService do
           it "removes the provider customer id" do
             result = customers_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              result_customer = result.customer
-              expect(result_customer.id).to eq(customer.id)
-              expect(result_customer.payment_provider).to be_nil
+            result_customer = result.customer
+            expect(result_customer.id).to eq(customer.id)
+            expect(result_customer.payment_provider).to be_nil
 
-              expect(result_customer.stripe_customer).to eq(stripe_customer)
-              expect(result_customer.stripe_customer.provider_customer_id).to be_nil
-            end
+            expect(result_customer.stripe_customer).to eq(stripe_customer)
+            expect(result_customer.stripe_customer.provider_customer_id).to be_nil
           end
         end
       end
     end
 
-    context "when partialy updating" do
+    context "when partialy updating", :premium do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
 
       let(:update_args) do
@@ -417,18 +401,15 @@ RSpec.describe Customers::UpdateService do
         }
       end
 
-      around { |test| lago_premium!(&test) }
       before { stripe_customer }
 
       it "updates only the updated args" do
         result = customers_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
+        expect(result).to be_success
+        expect(result.customer.invoice_grace_period).to eq(update_args[:invoice_grace_period])
 
-          expect(result.customer.stripe_customer.provider_payment_methods).to eq(%w[sepa_debit])
-        end
+        expect(result.customer.stripe_customer.provider_payment_methods).to eq(%w[sepa_debit])
       end
     end
 
@@ -440,10 +421,8 @@ RSpec.describe Customers::UpdateService do
 
         result = customers_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
-        end
+        expect(result).to be_success
+        expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
       end
     end
 
@@ -554,12 +533,10 @@ RSpec.describe Customers::UpdateService do
       it "assigns the right tax to the customer" do
         result = customers_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          tax = result.customer.taxes.first
-          expect(tax.code).to eq(tax_code)
-        end
+        tax = result.customer.taxes.first
+        expect(tax.code).to eq(tax_code)
       end
 
       context "when eu tax code is not applicable" do
@@ -605,7 +582,7 @@ RSpec.describe Customers::UpdateService do
         expect(customers_service.call).to be_success
       end
 
-      context "with auto_dunning premium integration" do
+      context "with auto_dunning premium integration", :premium do
         let(:customer) do
           create(
             :customer,
@@ -623,8 +600,6 @@ RSpec.describe Customers::UpdateService do
         let(:update_args) do
           {applied_dunning_campaign_id: dunning_campaign.id}
         end
-
-        around { |test| lago_premium!(&test) }
 
         it "updates auto dunning config" do
           expect { customers_service.call }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable Rails/FilePath
   describe "GET /analytics/mrr" do
     subject { get_with_token(organization, "/api/v1/analytics/mrr", params) }
 
@@ -15,9 +15,7 @@ RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable RSpec/Fil
       allow(Analytics::MrrsService).to receive(:call).and_call_original
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the mrr" do

@@ -205,6 +205,38 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         expect(values).to match_array(["1", "2", "3"])
       end
     end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the filtered events" do
+        retrieved_events = event_store.events.to_a
+        values = retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, manchester -> -1
+        expect(retrieved_events.count).to eq(4)
+        expect(values).to match_array(["1", "3", "-1", "-2"])
+      end
+    end
   end
 
   describe "#count" do
@@ -583,14 +615,73 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         end
       end
     end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the filtered event values" do
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, manchester -> -1
+        expect(event_store.events_values).to eq([1, 3, -1, -2])
+      end
+    end
   end
 
   describe "#last_event" do
-    it "returns the last event" do
+    before do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
+    end
 
+    it "returns the last event" do
       expect(event_store.last_event.transaction_id).to eq(events.last.transaction_id)
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the last filtered event" do
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, paris -> 1 (day +1)
+        # - europe, france, <nil> -> 3 (day +3)
+        # - europe, united kingdom, manchester -> -1 (day +6)
+        # - europe, france, cambridge -> -2 (day +7)
+        # Last event is france, cambridge with value -2
+        expect(event_store.last_event.properties[billable_metric.field_name].to_i).to eq(-2)
+      end
     end
   end
 
@@ -674,11 +765,58 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
   end
 
   describe "#max" do
-    it "returns the max value" do
+    before do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
+    end
 
+    it "returns the max value" do
       expect(event_store.max).to eq(5)
+    end
+
+    context "with grouped_by_values" do
+      let(:grouped_by_values) { {"region" => "europe"} }
+
+      it "returns the max value" do
+        expect(event_store.max).to eq(5)
+      end
+
+      context "when grouped_by_values value is nil" do
+        let(:grouped_by_values) { {"region" => nil} }
+
+        it "returns the max value" do
+          expect(event_store.max).to eq(4)
+        end
+      end
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the max value filtered" do
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, manchester -> -1
+        # Max value is 3
+        expect(event_store.max).to eq(3)
+      end
     end
   end
 
@@ -776,6 +914,35 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
 
       it "returns nil" do
         expect(event_store.last).to be_nil
+      end
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the last filtered event value" do
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, paris -> 1 (day +1)
+        # - europe, france, <nil> -> 3 (day +3)
+        # - europe, united kingdom, manchester -> -1 (day +6)
+        # - europe, france, cambridge -> -2 (day +7)
+        # Last value is -2
+        expect(event_store.last).to eq(-2)
       end
     end
   end
@@ -1020,13 +1187,45 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
   end
 
   describe "#prorated_events_values" do
-    it "returns the values attached to each event with prorata on period duration" do
+    before do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
+    end
 
+    it "returns the values attached to each event with prorata on period duration" do
       expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
         [0.516, 0.968, 1.355, 1.677, 1.935]
       )
+    end
+
+    context "with filters" do
+      let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
+      let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+      before { create_events_for_filters }
+
+      it "returns the filtered prorated event values" do
+        # We include:
+        # - europe, france, <nil> -> 3
+        # - europe, france, paris -> 1
+        # - europe, france, caen -> -3
+        # - europe, france, cambridge -> -2
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # - europe, united kingdom, manchester -> -1
+        # Then exclude:
+        # - europe, france, caen -> -3
+        # - europe, united kingdom, cambridge -> -5
+        # - europe, united kingdom, london -> 5
+        # We should have 4 events:
+        # - europe, france, paris -> 1 (day +1) -> 1 * 16/31 ≈ 0.516
+        # - europe, france, <nil> -> 3 (day +3) -> 3 * 14/31 ≈ 1.355
+        # - europe, united kingdom, manchester -> -1 (day +6) -> -1 * 11/31 ≈ -0.355
+        # - europe, france, cambridge -> -2 (day +7) -> -2 * 10/31 ≈ -0.645
+        expect(event_store.prorated_events_values(31).map { |v| v.round(3) }).to eq(
+          [0.516, 1.355, -0.355, -0.645]
+        )
+      end
     end
   end
 
@@ -1479,6 +1678,31 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
             expect(row[:value].round(5)).to eq(1000)
           end
         end
+      end
+    end
+  end
+
+  describe "#distinct_charges_and_filters" do
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+
+    before do
+      create_enriched_event(
+        timestamp: boundaries[:from_datetime] + 12.days,
+        value: 12,
+        properties: {billable_metric.field_name => 12}
+      )
+    end
+
+    it "returns distinct charges and filters" do
+      expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, charge_filter.id]])
+    end
+
+    context "when charge_filter is nil" do
+      let(:charge_filter) { nil }
+
+      it "returns the distinct event codes" do
+        expect(event_store.distinct_charges_and_filters).to match_array([[charge.id, nil]])
       end
     end
   end

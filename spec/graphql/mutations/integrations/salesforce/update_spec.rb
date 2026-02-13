@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Salesforce::Update do
+RSpec.describe Mutations::Integrations::Salesforce::Update, :premium do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:salesforce_integration, organization:) }
   let(:organization) { membership.organization }
@@ -23,8 +23,6 @@ RSpec.describe Mutations::Integrations::Salesforce::Update do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     integration
@@ -53,10 +51,8 @@ RSpec.describe Mutations::Integrations::Salesforce::Update do
 
     result_data = result["data"]["updateSalesforceIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["instanceId"]).to eq(instance_id)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["instanceId"]).to eq(instance_id)
   end
 end

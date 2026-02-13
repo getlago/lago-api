@@ -10,7 +10,7 @@ RSpec.describe BaseResult do
   describe "#[]" do
     let(:result_class) { described_class[:property] }
 
-    it { expect(result_class.new).to be_kind_of(described_class) }
+    it { expect(result_class.new).to be_a(described_class) }
 
     it "defines the attributes" do
       expect(result_class.new).to respond_to(:property)

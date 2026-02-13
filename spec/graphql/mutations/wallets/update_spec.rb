@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Update do
+RSpec.describe Mutations::Wallets::Update, :premium do
   let(:required_permission) { "wallets:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -18,6 +18,7 @@ RSpec.describe Mutations::Wallets::Update do
       mutation($input: UpdateCustomerWalletInput!) {
         updateCustomerWallet(input: $input) {
           id
+          code
           name
           priority
           status
@@ -25,6 +26,10 @@ RSpec.describe Mutations::Wallets::Update do
           invoiceRequiresSuccessfulPayment
           paidTopUpMinAmountCents
           paidTopUpMaxAmountCents
+          metadata {
+            key
+            value
+          }
           recurringTransactionRules {
             lagoId
             method
@@ -58,8 +63,6 @@ RSpec.describe Mutations::Wallets::Update do
     subscription
     recurring_transaction_rule
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -111,6 +114,7 @@ RSpec.describe Mutations::Wallets::Update do
 
     expect(result_data).to include(
       "id" => wallet.id,
+      "code" => wallet.code,
       "name" => "New name",
       "priority" => 22,
       "status" => "active",
@@ -141,5 +145,83 @@ RSpec.describe Mutations::Wallets::Update do
     expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+  end
+
+  context "with metadata" do
+    it "updates a wallet with metadata" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            name: "Wallet with Metadata",
+            priority: 22,
+            metadata: [
+              {key: "env", value: "staging"},
+              {key: "region", value: "us-east"}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["id"]).to eq(wallet.id)
+      expect(result_data["name"]).to eq("Wallet with Metadata")
+      expect(result_data["metadata"]).to contain_exactly(
+        {"key" => "env", "value" => "staging"},
+        {"key" => "region", "value" => "us-east"}
+      )
+    end
+  end
+
+  context "when updating code" do
+    it "updates a wallet with the new code" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            code: "updated_code",
+            priority: 22
+          }
+        }
+      )
+
+      result_data = result["data"]["updateCustomerWallet"]
+
+      expect(result_data["id"]).to eq(wallet.id)
+      expect(result_data["code"]).to eq("updated_code")
+    end
+  end
+
+  context "when updating code to a value already taken for the customer" do
+    before do
+      create(:wallet, customer:, code: "existing_code")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: wallet.id,
+            code: "existing_code",
+            priority: 22
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result, details: {code: ["value_already_exist"]})
+    end
   end
 end

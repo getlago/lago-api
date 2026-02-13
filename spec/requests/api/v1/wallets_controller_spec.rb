@@ -197,9 +197,33 @@ RSpec.describe Api::V1::WalletsController do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
+    context "when transaction_priority is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          transaction_priority: 5
+        }
+      end
 
+      before { subject }
+
+      it "schedules a WalletTransactions::CreateJob with the transaction priority" do
+        expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
+          organization_id: organization.id,
+          params: hash_including(
+            priority: 5
+          )
+        )
+      end
+    end
+
+    context "with recurring transaction rules", :premium do
       let(:create_params) do
         {
           external_customer_id: customer.external_id,
@@ -482,6 +506,108 @@ RSpec.describe Api::V1::WalletsController do
         end
       end
     end
+
+    context "with wallet metadata" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          metadata: {"meta_key_1" => "meta_value_1", "meta_key_2" => "meta_value_2"}
+        }
+      end
+
+      it "creates a wallet with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to be_present
+        expect(json[:wallet][:metadata]).to eq(
+          {
+            meta_key_1: "meta_value_1",
+            meta_key_2: "meta_value_2"
+          }
+        )
+      end
+    end
+
+    context "when code is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          code: "custom_wallet_code",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with the provided code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("custom_wallet_code")
+      end
+    end
+
+    context "when code is not provided but name is" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "My Premium Wallet",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with code derived from name" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("my_premium_wallet")
+      end
+    end
+
+    context "when neither code nor name is provided" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          currency: "EUR"
+        }
+      end
+
+      it "creates a wallet with default code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:code]).to eq("default")
+      end
+    end
+
+    context "when code is already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "existing_code")
+      end
+
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          code: "existing_code",
+          currency: "EUR"
+        }
+      end
+
+      it "returns an error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:code]).to eq(["value_already_exist"])
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
@@ -609,9 +735,7 @@ RSpec.describe Api::V1::WalletsController do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:update_params) do
         {
@@ -720,13 +844,11 @@ RSpec.describe Api::V1::WalletsController do
           subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:transaction_metadata]).to eq(update_transaction_metadata)
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:transaction_metadata]).to eq(update_transaction_metadata)
 
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
@@ -753,13 +875,11 @@ RSpec.describe Api::V1::WalletsController do
           subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:transaction_name]).to eq("Updated Transaction Name")
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:transaction_name]).to eq("Updated Transaction Name")
 
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
@@ -791,17 +911,15 @@ RSpec.describe Api::V1::WalletsController do
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-            aggregate_failures do
-              expect(response).to have_http_status(:success)
+            expect(response).to have_http_status(:success)
 
-              expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
-              expect(recurring_rules).to be_present
-              expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
-              expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(false)
-              expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
+            expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
+            expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(false)
+            expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
 
-              expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-            end
+            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
           end
         end
 
@@ -813,15 +931,13 @@ RSpec.describe Api::V1::WalletsController do
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-            aggregate_failures do
-              expect(response).to have_http_status(:success)
+            expect(response).to have_http_status(:success)
 
-              expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
-              expect(recurring_rules).to be_present
-              expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+            expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
 
-              expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-            end
+            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
           end
         end
 
@@ -853,17 +969,72 @@ RSpec.describe Api::V1::WalletsController do
 
             recurring_rules = json[:wallet][:recurring_transaction_rules]
 
-            aggregate_failures do
-              expect(response).to have_http_status(:success)
+            expect(response).to have_http_status(:success)
 
-              expect(json[:wallet][:invoice_requires_successful_payment]).to eq(false)
-              expect(recurring_rules).to be_present
-              expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+            expect(json[:wallet][:invoice_requires_successful_payment]).to eq(false)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
 
-              expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-            end
+            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
           end
         end
+      end
+    end
+
+    context "with wallet metadata" do
+      let(:update_params) do
+        {
+          name: "wallet1",
+          metadata: {"meta_key_1" => "updated_meta_value_1", "meta_key_3" => "meta_value_3"}
+        }
+      end
+
+      it "updates a wallet with metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:metadata]).to eq(
+          {
+            meta_key_1: "updated_meta_value_1",
+            meta_key_3: "meta_value_3"
+          }
+        )
+      end
+    end
+
+    context "when updating code" do
+      let(:update_params) do
+        {
+          code: "updated_wallet_code"
+        }
+      end
+
+      it "updates the wallet code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:code]).to eq("updated_wallet_code")
+      end
+    end
+
+    context "when updating code to a value already taken for the customer" do
+      before do
+        create(:wallet, customer:, code: "taken_code")
+      end
+
+      let(:update_params) do
+        {
+          code: "taken_code"
+        }
+      end
+
+      it "returns an error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:code]).to eq(["value_already_exist"])
       end
     end
   end

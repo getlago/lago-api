@@ -57,10 +57,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
       it "returns an error" do
         result = service_call_async
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("subscription_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("subscription_not_found")
       end
     end
   end
@@ -72,10 +70,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
       it "does not return external id" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.external_id).to be(nil)
-        end
+        expect(result).to be_success
+        expect(result.external_id).to be(nil)
       end
 
       it "does not create integration resource object" do
@@ -102,10 +98,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           it "returns external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to eq("123456789123")
-            end
+            expect(result).to be_success
+            expect(result.external_id).to eq("123456789123")
           end
 
           it "creates integration resource object" do
@@ -130,10 +124,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           it "does not return external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to be(nil)
-            end
+            expect(result).to be_success
+            expect(result.external_id).to be(nil)
           end
 
           it "does not create integration resource object" do

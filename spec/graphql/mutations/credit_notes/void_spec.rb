@@ -39,10 +39,8 @@ RSpec.describe Mutations::CreditNotes::Void do
 
     result_data = result["data"]["voidCreditNote"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to eq(credit_note.id)
-      expect(result_data["creditStatus"]).to eq("voided")
-    end
+    expect(result_data["id"]).to eq(credit_note.id)
+    expect(result_data["creditStatus"]).to eq("voided")
   end
 
   context "when credit note is not found" do

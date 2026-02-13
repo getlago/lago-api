@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::SubscriptionsController do
+RSpec.describe Api::V1::SubscriptionsController, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[progressive_billing]) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
@@ -11,8 +11,6 @@ RSpec.describe Api::V1::SubscriptionsController do
   let(:commitment_amount_cents) { 1234 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
   let(:payment_method) { create(:payment_method, customer:, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     plan_usage_threshold
@@ -25,6 +23,7 @@ RSpec.describe Api::V1::SubscriptionsController do
     let(:subscription_at) { Time.current.iso8601 }
     let(:ending_at) { (Time.current + 1.year).iso8601 }
     let(:plan_code) { plan.code }
+    let(:plan_amount_cents_override) { 100 }
 
     let(:params) do
       {
@@ -39,11 +38,11 @@ RSpec.describe Api::V1::SubscriptionsController do
           invoice_custom_section_codes: [section_1.code]
         },
         payment_method: {
-          payment_method_id: payment_method.id,
+          payment_method_id: payment_method&.id,
           payment_method_type: "provider"
         },
         plan_overrides: {
-          amount_cents: 100,
+          amount_cents: plan_amount_cents_override,
           name: "overridden name",
           minimum_commitment: {
             invoice_display_name: commitment_invoice_display_name,
@@ -81,6 +80,8 @@ RSpec.describe Api::V1::SubscriptionsController do
           external_customer_id: customer.external_id,
           lago_customer_id: customer.id,
           plan_code: plan.code,
+          plan_amount_cents: plan_amount_cents_override,
+          plan_amount_currency: plan.amount_currency,
           status: "active",
           name: "subscription name",
           started_at: String,
@@ -106,7 +107,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           }
         )
         expect(json[:subscription][:plan]).to include(
-          amount_cents: 100,
+          amount_cents: plan_amount_cents_override,
           name: "overridden name",
           description: "desc"
         )
@@ -275,6 +276,8 @@ RSpec.describe Api::V1::SubscriptionsController do
         expect(json[:subscription][:external_customer_id]).to eq(customer.external_id)
         expect(json[:subscription][:lago_customer_id]).to eq(customer.id)
         expect(json[:subscription][:plan_code]).to eq(plan.code)
+        expect(json[:subscription][:plan_amount_cents]).to eq(plan.amount_cents)
+        expect(json[:subscription][:plan_amount_currency]).to eq(plan.amount_currency)
         expect(json[:subscription][:status]).to eq("active")
         expect(json[:subscription][:name]).to eq("subscription name")
         expect(json[:subscription][:started_at]).to be_present
@@ -353,6 +356,7 @@ RSpec.describe Api::V1::SubscriptionsController do
         context "when customer has no payment method" do
           let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
           let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
+          let(:payment_method) { nil }
 
           context "when customer has a default payment method on Stripe" do
             it do
@@ -853,6 +857,7 @@ RSpec.describe Api::V1::SubscriptionsController do
           pay_in_advance: false,
           prorated: false,
           min_amount_cents: 6000,
+          accepts_target_wallet: false,
           properties: {
             amount: "60",
             free_units: 200,
@@ -881,9 +886,7 @@ RSpec.describe Api::V1::SubscriptionsController do
       )
     end
 
-    context "when progressive billing premium integration is present" do
-      around { |test| lago_premium!(&test) }
-
+    context "when progressive billing premium integration is present", :premium do
       before do
         organization.update!(premium_integrations: ["progressive_billing"])
       end
@@ -990,9 +993,7 @@ RSpec.describe Api::V1::SubscriptionsController do
         other_billable_metric
       end
 
-      context "when progressive billing premium integration is present" do
-        around { |test| lago_premium!(&test) }
-
+      context "when progressive billing premium integration is present", :premium do
         before do
           organization.update!(premium_integrations: ["progressive_billing"])
         end
@@ -1076,6 +1077,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               pay_in_advance: false,
               prorated: false,
               min_amount_cents: 0,
+              accepts_target_wallet: false,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               applied_pricing_unit: nil,
               lago_parent_id: nil,
@@ -1113,6 +1115,7 @@ RSpec.describe Api::V1::SubscriptionsController do
               prorated: false,
               min_amount_cents: 6000,
               applied_pricing_unit: {conversion_rate: "40.0", code: pricing_unit.code},
+              accepts_target_wallet: false,
               properties: {amount: "60", free_units: 200, package_size: 2000},
               lago_parent_id: nil,
               filters: [],

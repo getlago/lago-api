@@ -30,6 +30,7 @@ class Invoice < ApplicationRecord
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
+  has_many :invoice_settlements, foreign_key: :target_invoice_id
 
   has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -70,6 +71,13 @@ class Invoice < ApplicationRecord
   monetize :charge_amount_cents,
     :subscription_amount_cents,
     :total_due_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
+
+  # NOTE: Prepaid credit breakdown - nil for historical invoices
+  monetize :prepaid_granted_credit_amount_cents,
+    :prepaid_purchased_credit_amount_cents,
     disable_validation: true,
     allow_nil: true,
     with_model_currency: :currency
@@ -205,6 +213,14 @@ class Invoice < ApplicationRecord
     invoice_subscriptions.find_by(subscription_id:)
   end
 
+  def sorted_invoice_subscriptions
+    invoice_subscriptions.order_by_subscription_invoice_name
+  end
+
+  def sorted_subscriptions
+    sorted_invoice_subscriptions.map(&:subscription)
+  end
+
   def subscription_fees(subscription_id)
     invoice_subscription(subscription_id).fees
   end
@@ -213,16 +229,6 @@ class Invoice < ApplicationRecord
     credits.where(
       progressive_billing_invoice_id: subscription.invoices.progressive_billing.select(:id)
     )
-  end
-
-  def existing_fees_in_interval?(subscription_id:, charge_in_advance: false)
-    subscription_fees(subscription_id)
-      .charge
-      .positive_units
-      .where(true_up_parent_fee: nil)
-      .joins(:charge)
-      .where(charge: {pay_in_advance: charge_in_advance})
-      .any?
   end
 
   def recurring_fees(subscription_id)
@@ -287,8 +293,25 @@ class Invoice < ApplicationRecord
     }
   end
 
+  # Caches offset_amount_cents in the invoice instance to avoid N+1 queries when exporting invoices.
+  # Allows batch calculation of offset amounts for many invoices in a single aggregated query.
+  def save_precalculated_offset_amount_cents(offset_amount_cents)
+    @precalculated_offset_amount_cents = offset_amount_cents
+  end
+
+  def offset_amount_cents
+    return @precalculated_offset_amount_cents if instance_variable_defined?(:@precalculated_offset_amount_cents)
+
+    credit_notes.finalized.sum(:offset_amount_cents)
+  end
+
   def total_due_amount_cents
-    total_amount_cents - total_paid_amount_cents
+    return 0 if voided?
+    total_amount_cents - total_paid_amount_cents - offset_amount_cents
+  end
+
+  def total_settled_amount_cents
+    total_paid_amount_cents + offset_amount_cents
   end
 
   # amount cents onto which we can issue a credit note
@@ -320,6 +343,18 @@ class Invoice < ApplicationRecord
   def creditable_amount_cents
     return 0 if credit?
     available_to_credit_amount_cents
+  end
+
+  # amount cents onto which we can issue a credit note as offset
+  # when invoice type is credit theres no partial payments/refund/offset only full amount
+  def offsettable_amount_cents
+    due_amount_cents = total_due_amount_cents
+
+    return total_amount_cents if credit? &&
+      due_amount_cents.positive? &&
+      (payment_pending? || payment_failed?)
+
+    [due_amount_cents, creditable_amount_cents].min
   end
 
   # amount cents onto which we can issue a credit note as refund
@@ -623,6 +658,8 @@ end
 #  payment_overdue                         :boolean          default(FALSE)
 #  payment_status                          :integer          default("pending"), not null
 #  prepaid_credit_amount_cents             :bigint           default(0), not null
+#  prepaid_granted_credit_amount_cents     :bigint
+#  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null

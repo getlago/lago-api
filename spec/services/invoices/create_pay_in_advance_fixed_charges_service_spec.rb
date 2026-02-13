@@ -195,7 +195,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         result = invoice_service.call
 
         expect(result).to be_success
-        expect(result.invoice.fees.count).to eq(0)
+        expect(result.invoice.fees.count).to eq(1)
         expect(result.invoice.total_amount_cents).to eq(0)
         expect(result.invoice).to be_closed
         expect(result.invoice.payment_status).to eq("succeeded")
@@ -217,9 +217,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do
           invoice_service.call
@@ -374,6 +372,136 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
         expect do
           invoice_service.call
         end.to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::CreateJob)
+      end
+    end
+
+    context "when EU tax management is enabled" do
+      before { billing_entity.update!(eu_tax_management: true) }
+
+      context "when VIES check is in progress" do
+        before { create(:pending_vies_check, customer:) }
+
+        it "sets invoice to pending status" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice.status).to eq("pending")
+          expect(result.invoice.tax_status).to eq("pending")
+        end
+
+        it "does not enqueue invoice webhooks or payments" do
+          allow(Invoices::Payments::CreateService).to receive(:call_async)
+
+          expect { invoice_service.call }
+            .not_to have_enqueued_job(SendWebhookJob).with("invoice.created", anything)
+
+          expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+        end
+
+        it "enqueues SendWebhookJob for each fee" do
+          expect { invoice_service.call }
+            .to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
+        end
+
+        it "produces invoice.pending activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).to have_produced("invoice.pending").with(invoice)
+        end
+
+        it "does not produce invoice.created activity log" do
+          invoice_service.call
+
+          invoice = customer.invoices.order(created_at: :desc).first
+          expect(Utils::ActivityLog).not_to have_produced("invoice.created").with(invoice)
+        end
+      end
+
+      context "when VIES check is not in progress" do
+        it "finalizes the invoice normally" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+        end
+      end
+    end
+
+    context "when there is tax provider integration" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:lago_client) { instance_double(LagoHttpClient::Client) }
+      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+      let(:body) do
+        p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+        File.read(p)
+      end
+      let(:integration_collection_mapping) do
+        create(
+          :netsuite_collection_mapping,
+          integration:,
+          mapping_type: :fallback_item,
+          settings: {external_id: "1", external_account_code: "11", external_name: ""}
+        )
+      end
+
+      before do
+        integration_collection_mapping
+        integration_customer
+
+        allow(LagoHttpClient::Client).to receive(:new)
+          .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+          .and_return(lago_client)
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+        allow_any_instance_of(Fee).to receive(:id).and_return("lago_fee_id") # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "creates an invoice with provider taxes" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.fees_amount_cents).to eq(10_000)
+        # Provider returns 990 tax_amount for 9900 amount (10%), which results in
+        # taxes_base_rate of 0.99 being applied to the actual fee amount of 10,000
+        expect(result.invoice.taxes_amount_cents).to eq(990)
+        expect(result.invoice.taxes_rate).to eq(10)
+        expect(result.invoice.total_amount_cents).to eq(10_990)
+        expect(result.invoice).to be_finalized
+        expect(result.invoice.reload.error_details.count).to eq(0)
+      end
+
+      context "when there is error received from the provider" do
+        let(:body) do
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+          File.read(p)
+        end
+
+        it "returns a tax error, marks invoice as failed and creates error detail" do
+          result = invoice_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
+
+          invoice = customer.invoices.order(created_at: :desc).first
+
+          expect(invoice.status).to eq("failed")
+          expect(invoice.error_details.count).to eq(1)
+          expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(invoice)
+        end
+
+        it "enqueues SendWebhookJob for each fee" do
+          invoice_service.call
+
+          expect(SendWebhookJob).to have_been_enqueued.with(
+            "fee.created",
+            hash_including("_aj_globalid" => a_string_matching(%r{gid://lago-api/Fee/}))
+          )
+        end
       end
     end
 

@@ -28,6 +28,7 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
         {
           action: :create,
           parent_id: parent_fixed_charge.id,
+          code: parent_fixed_charge.code,
           add_on_id: add_on.id,
           charge_model: "standard",
           units: new_units,
@@ -81,6 +82,7 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
           {
             action: :create,
             parent_id: parent_fixed_charge.id,
+            code: parent_fixed_charge.code,
             add_on_id: add_on.id,
             charge_model: "standard",
             units: new_units,
@@ -174,7 +176,8 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
         cascade_options: {
           cascade: true,
           equal_properties: true
-        }
+        },
+        trigger_billing: false
       )
     end
 
@@ -266,7 +269,8 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
           cascade_options: {
             cascade: true,
             equal_properties: false
-          }
+          },
+          trigger_billing: false
         )
       end
     end
@@ -331,6 +335,7 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
         {
           action: :create,
           parent_id: parent_fixed_charge.id,
+          code: parent_fixed_charge.code,
           add_on_id: add_on.id,
           charge_model: "standard",
           units: new_units,
@@ -374,7 +379,8 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
         cascade_options: {
           cascade: true,
           equal_properties: true
-        }
+        },
+        trigger_billing: false
       )
     end
   end
@@ -385,6 +391,7 @@ RSpec.describe FixedCharges::CascadeChildPlanUpdateService do
         {
           action: :create,
           parent_id: parent_fixed_charge.id,
+          code: parent_fixed_charge.code,
           add_on_id: add_on.id,
           charge_model: "standard",
           units: 10,

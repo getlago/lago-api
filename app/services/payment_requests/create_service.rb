@@ -18,7 +18,7 @@ module PaymentRequests
         request = customer.payment_requests.create!(
           organization:,
           dunning_campaign:,
-          amount_cents: invoices.sum("total_amount_cents - total_paid_amount_cents"),
+          amount_cents: total_amount_cents,
           amount_currency: currency,
           email:
         )
@@ -50,6 +50,11 @@ module PaymentRequests
     private
 
     attr_reader :organization, :params, :dunning_campaign
+
+    def total_amount_cents
+      invoices.sum("total_amount_cents - total_paid_amount_cents") -
+        CreditNote.finalized.where(invoice_id: invoices.select(:id)).sum(:offset_amount_cents)
+    end
 
     def check_preconditions
       # NOTE: Prevent creation of payment request if:

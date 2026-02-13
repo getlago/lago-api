@@ -6,7 +6,8 @@ describe "Create Event Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
   let(:params) do
     {code: billable_metric.code, transaction_id: SecureRandom.uuid}
   end
@@ -201,6 +202,21 @@ describe "Create Event Scenarios" do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change { Event.where(external_subscription_id: subscription.external_id).count }
+    end
+  end
+
+  context "with 2 charges for the same event" do
+    let(:charges) { create_list(:standard_charge, 2, plan:, billable_metric:) }
+
+    before do
+      charges
+      organization.enable_feature_flag!(:postgres_enriched_events)
+    end
+
+    it "creates the event" do
+      expect do
+        create_event(params.merge(external_subscription_id: subscription.external_id))
+      end.to change(Event, :count).by(1).and change(EnrichedEvent, :count).by(2)
     end
   end
 end

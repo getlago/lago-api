@@ -29,9 +29,7 @@ RSpec.describe Mutations::ApiKeys::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
 
-  context "with premium organization" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium organization", :premium do
     it "creates a new API key" do
       expect { result }.to change(ApiKey, :count).by(1)
     end

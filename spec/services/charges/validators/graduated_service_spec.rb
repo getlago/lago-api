@@ -38,12 +38,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       let(:ranges) { [] }
 
       it "ensures the presence of ranges" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("missing_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("missing_graduated_ranges")
       end
     end
 
@@ -51,12 +49,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       let(:ranges) { nil }
 
       it "ensures the presence of ranges" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("missing_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("missing_graduated_ranges")
       end
     end
 
@@ -66,12 +62,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
       end
     end
 
@@ -81,12 +75,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
       end
     end
 
@@ -99,12 +91,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
       end
     end
 
@@ -117,12 +107,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
-          expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+        expect(validation_service.result.error.messages[:graduated_ranges]).to include("invalid_graduated_ranges")
       end
     end
 
@@ -132,12 +120,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+        expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
       end
     end
 
@@ -147,12 +133,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+        expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
       end
     end
 
@@ -162,12 +146,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+        expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
       end
     end
 
@@ -177,12 +159,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+        expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
       end
     end
 
@@ -192,12 +172,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+        expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
       end
     end
 
@@ -207,12 +185,10 @@ RSpec.describe Charges::Validators::GraduatedService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
-          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+        expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
       end
     end
 

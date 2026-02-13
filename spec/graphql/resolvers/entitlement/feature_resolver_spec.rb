@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Entitlement::FeatureResolver do
+RSpec.describe Resolvers::Entitlement::FeatureResolver, :premium do
   subject { execute_query(query:, variables:) }
 
   let(:organization) { create(:organization) }
@@ -29,8 +29,6 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver do
   end
   let(:variables) { {featureId: feature.id} }
   let(:feature) { create(:feature, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     feature

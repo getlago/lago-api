@@ -29,6 +29,7 @@ module InvoiceIndex
         payment_dispute_lost: params[:payment_dispute_lost],
         payment_overdue: params[:payment_overdue],
         payment_status: params[:payment_status] || params[:payment_statuses],
+        settlements: params[:settlements],
         self_billed: params[:self_billed],
         status: params[:status] || params[:statuses]
       }

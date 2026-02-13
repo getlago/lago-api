@@ -97,12 +97,10 @@ RSpec.describe Invoices::Payments::GocardlessService do
           status: "foo-bar"
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:payable_payment_status)
-          expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:payable_payment_status)
+        expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
       end
     end
 

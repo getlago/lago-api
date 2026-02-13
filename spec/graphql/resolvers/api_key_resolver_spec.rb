@@ -39,11 +39,9 @@ RSpec.describe Resolvers::ApiKeyResolver do
     it "returns an api key" do
       api_key_response = result["data"]["apiKey"]
 
-      aggregate_failures do
-        expect(api_key_response["id"]).to eq(api_key.id)
-        expect(api_key_response["value"]).to eq(api_key.value)
-        expect(api_key_response["createdAt"]).to eq(api_key.created_at.iso8601)
-      end
+      expect(api_key_response["id"]).to eq(api_key.id)
+      expect(api_key_response["value"]).to eq(api_key.value)
+      expect(api_key_response["createdAt"]).to eq(api_key.created_at.iso8601)
     end
   end
 

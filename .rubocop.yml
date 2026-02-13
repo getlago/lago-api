@@ -8,13 +8,15 @@ plugins:
   - rubocop-factory_bot
   - rubocop-performance
   - rubocop-thread_safety
+  - rubocop-rspec
+  - rubocop-rspec_rails
 
 require:
   - standard
-  - rubocop-rspec
-  - rubocop-rspec_rails
   - ./dev/cops/service_call_cop.rb
   - ./dev/cops/discard_all_cop.rb
+  - ./dev/cops/no_drop_column_or_table_cop.rb
+  - ./dev/cops/lago_premium_around_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -30,6 +32,28 @@ AllCops:
     - "tmp/**/*"
     - "coverage/**/*"
     - "log/**/*"
+
+Lago/LagoPremiumAround:
+  Include:
+    - "spec/**/*.rb"
+
+Lago/NoDropColumnOrTable:
+  Include:
+    - "db/migrate/**/*.rb"
+  Exclude:
+    - "db/migrate/20250218165958_drop_invoice_error_table.rb"
+    - "db/migrate/20250227091909_remove_is_default_from_billing_entity.rb"
+    - "db/migrate/20250526133654_drop_clickhouse_aggregation_from_organizations.rb"
+    - "db/migrate/20250912081524_change_wallet_min_max_to_big_int.rb"
+    - "db/migrate/20251020090137_remove_event_id_from_cached_aggregation.rb"
+    - "db/migrate/20251221174251_create_roles.rb"
+    - "db/migrate/20251221174733_create_membership_roles.rb"
+    - "db/migrate/20251221174938_add_roles_to_invites.rb"
+    - "db/migrate/20260109110146_create_enriched_events.rb"
+    - "db/migrate/20260116121015_remove_role_from_memberships.rb"
+    - "db/migrate/20260116121019_remove_role_from_invites.rb"
+    - "db/migrate/20260119162712_drop_subscription_fixed_charge_units_overrides.rb"
+    - "db/migrate/20260129145352_drop_properties_from_enriched_events.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:
@@ -93,6 +117,31 @@ RSpec/NamedSubject:
 RSpec/DescribeClass:
   Exclude:
     - "spec/scenarios/**/*"
+
+# RSpec rules below are enabled by default in rubocop-rspec 3.X but we disabled to ease migration.
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/MatchArray:
+  Enabled: false
+
+RSpec/MetadataStyle:
+  Enabled: false
+
+RSpec/NoExpectationExample:
+  Enabled: false
+
+RSpec/ReceiveMessages:
+  Enabled: false
+
+RSpec/VerifiedDoubleReference:
+  Enabled: false
+
+RSpec/BeEq:
+  Enabled: false
+
+RSpec/BeNil:
+  Enabled: false
 
 # GraphQL
 

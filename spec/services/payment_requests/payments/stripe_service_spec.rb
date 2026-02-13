@@ -284,6 +284,142 @@ RSpec.describe PaymentRequests::Payments::StripeService do
       end
     end
 
+    context "when invoices have offset amounts from credit notes" do
+      let(:credit_note_1) do
+        create(
+          :credit_note,
+          invoice: invoice_1,
+          customer:,
+          offset_amount_cents: 50,
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          total_amount_cents: 50,
+          status: :finalized
+        )
+      end
+
+      let(:credit_note_2) do
+        create(
+          :credit_note,
+          invoice: invoice_2,
+          customer:,
+          offset_amount_cents: 99,
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          total_amount_cents: 99,
+          status: :finalized
+        )
+      end
+
+      before do
+        credit_note_1
+        credit_note_2
+      end
+
+      it "updates invoices considering offset amounts" do
+        expect(result).to be_success
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_2.reload).to be_payment_succeeded
+
+        # Invoice 1: total_amount_cents = 200, offset = 50, due = 150
+        # After payment: total_paid_amount_cents should be 150 (to cover the due amount)
+        expect(invoice_1.total_paid_amount_cents).to eq(150)
+
+        # Invoice 2: total_amount_cents = 599, offset = 99, due = 500
+        # After payment: total_paid_amount_cents should be 500 (to cover the due amount)
+        expect(invoice_2.total_paid_amount_cents).to eq(500)
+      end
+
+      it "marks invoices as paid even though paid amount doesn't equal total amount" do
+        result
+
+        # Due to offsets, paid amount < total amount, but invoice should still be marked as paid
+        expect(invoice_1.reload.total_paid_amount_cents).to be < invoice_1.total_amount_cents
+        expect(invoice_2.reload.total_paid_amount_cents).to be < invoice_2.total_amount_cents
+
+        expect(invoice_1).to be_payment_succeeded
+        expect(invoice_2).to be_payment_succeeded
+      end
+    end
+
+    context "when invoice is fully offset by credit note" do
+      let(:invoice_3) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 100,
+          currency: "EUR",
+          ready_for_payment_processing: true
+        )
+      end
+
+      let(:credit_note_3) do
+        create(
+          :credit_note,
+          invoice: invoice_3,
+          customer:,
+          offset_amount_cents: 100,
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          total_amount_cents: 100,
+          status: :finalized
+        )
+      end
+
+      let(:invoices) { [invoice_1, invoice_2, invoice_3] }
+
+      before { credit_note_3 }
+
+      it "does not increase paid amount for fully offset invoice" do
+        result
+
+        # Invoice 3 is fully offset, so total_due_amount_cents = 0
+        # No payment should be applied to it
+        expect(invoice_3.reload.total_paid_amount_cents).to eq(0)
+        expect(invoice_3).to be_payment_succeeded
+      end
+    end
+
+    context "when invoice is partially paid and has offset amount" do
+      let(:invoice_1) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 300,
+          total_paid_amount_cents: 100,
+          currency: "EUR",
+          ready_for_payment_processing: true
+        )
+      end
+
+      let(:credit_note) do
+        create(
+          :credit_note,
+          invoice: invoice_1,
+          customer:,
+          offset_amount_cents: 50,
+          credit_amount_cents: 0,
+          refund_amount_cents: 0,
+          total_amount_cents: 50,
+          status: :finalized
+        )
+      end
+
+      before { credit_note }
+
+      it "updates paid amount correctly" do
+        result
+
+        # Invoice 1: total = 300, already paid = 100, offset = 50, due = 150
+        # After payment: total_paid_amount_cents = 100 + 150 = 250
+        expect(invoice_1.reload.total_paid_amount_cents).to eq(250)
+        expect(invoice_1).to be_payment_succeeded
+      end
+    end
+
     context "when payment_request and invoice is already payment_succeeded" do
       before do
         payment_request.payment_succeeded!

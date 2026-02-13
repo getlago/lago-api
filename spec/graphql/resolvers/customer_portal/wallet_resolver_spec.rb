@@ -28,7 +28,7 @@ RSpec.describe Resolvers::CustomerPortal::WalletResolver do
 
   it_behaves_like "requires a customer portal user"
 
-  it "returns a single wallet", :aggregate_failures do
+  it "returns a single wallet" do
     result = execute_graphql(
       customer_portal_user: customer,
       query:,

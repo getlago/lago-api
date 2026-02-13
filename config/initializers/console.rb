@@ -111,7 +111,7 @@ Rails.application.console do
     result = Invites::CreateService.call(
       current_organization: organization,
       email: email,
-      role: :admin
+      roles: %w[admin]
     )
 
     puts "Organization `#{org_name}` created with admin invite: #{result.invite_url}"

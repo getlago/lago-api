@@ -181,11 +181,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     it "ignores the event" do
       result = sum_service.aggregate
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
-        expect(result.count).to eq(4)
-      end
+      expect(result).to be_success
+      expect(result.aggregation).to eq(9.64517) # 5 + (12*6/31) + (12*6/31)
+      expect(result.count).to eq(4)
     end
   end
 
@@ -766,7 +764,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         end
       end
 
-      context "when  charge is pay in advance and just upgraded" do
+      context "when charge is pay in advance and just upgraded" do
         let(:from_datetime) { Time.zone.parse("2023-05-15 00:00:00") }
         let(:is_pay_in_advance) { true }
         let(:latest_events) { nil }

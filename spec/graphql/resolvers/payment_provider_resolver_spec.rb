@@ -62,10 +62,8 @@ RSpec.describe Resolvers::PaymentProviderResolver do
 
     payment_provider_response = result["data"]["paymentProvider"]
 
-    aggregate_failures do
-      expect(payment_provider_response["id"]).to eq(stripe_provider.id)
-      expect(payment_provider_response["code"]).to eq(stripe_provider.code)
-      expect(payment_provider_response["name"]).to eq(stripe_provider.name)
-    end
+    expect(payment_provider_response["id"]).to eq(stripe_provider.id)
+    expect(payment_provider_response["code"]).to eq(stripe_provider.code)
+    expect(payment_provider_response["name"]).to eq(stripe_provider.name)
   end
 end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::Create do
+RSpec.describe Mutations::Subscriptions::Create, :premium do
   let(:required_permission) { "subscriptions:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -52,15 +52,13 @@ RSpec.describe Mutations::Subscriptions::Create do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:create"
 
-  it "creates a subscription", :aggregate_failures do
+  it "creates a subscription" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

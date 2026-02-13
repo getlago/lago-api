@@ -69,35 +69,35 @@ module DataExports
           .find_each
           .lazy
           .each do |fee|
-          serialized_fee = fee_serializer_klass.new(fee).serialize
+            serialized_fee = fee_serializer_klass.new(fee).serialize
 
-          serialized_subscription = {
-            external_id: fee.subscription&.external_id,
-            plan_code: fee.subscription&.plan&.code
-          }
+            serialized_subscription = {
+              external_id: fee.subscription&.external_id,
+              plan_code: fee.subscription&.plan&.code
+            }
 
-          csv << [
-            serialized_invoice[:lago_id],
-            serialized_invoice[:number],
-            serialized_invoice[:issuing_date],
-            serialized_fee[:lago_id],
-            serialized_fee.dig(:item, :type),
-            serialized_fee.dig(:item, :code),
-            serialized_fee.dig(:item, :name),
-            serialized_fee.dig(:item, :description),
-            serialized_fee.dig(:item, :invoice_display_name),
-            serialized_fee.dig(:item, :filter_invoice_display_name),
-            serialized_fee.dig(:item, :grouped_by),
-            serialized_subscription[:external_id],
-            serialized_subscription[:plan_code],
-            serialized_fee[:from_date],
-            serialized_fee[:to_date],
-            serialized_fee[:total_amount_currency],
-            serialized_fee[:units],
-            serialized_fee[:precise_unit_amount],
-            serialized_fee[:taxes_amount_cents],
-            serialized_fee[:total_amount_cents]
-          ]
+            csv << [
+              serialized_invoice[:lago_id],
+              serialized_invoice[:number],
+              serialized_invoice[:issuing_date],
+              serialized_fee[:lago_id],
+              serialized_fee.dig(:item, :type),
+              serialized_fee.dig(:item, :code),
+              serialized_fee.dig(:item, :name),
+              serialized_fee.dig(:item, :description),
+              serialized_fee.dig(:item, :invoice_display_name),
+              serialized_fee.dig(:item, :filter_invoice_display_name),
+              serialized_fee.dig(:item, :grouped_by),
+              serialized_subscription[:external_id],
+              serialized_subscription[:plan_code],
+              serialized_fee[:from_date],
+              serialized_fee[:to_date],
+              serialized_fee[:total_amount_currency],
+              serialized_fee[:units],
+              serialized_fee[:precise_unit_amount],
+              serialized_fee[:taxes_amount_cents],
+              serialized_fee[:total_amount_cents]
+            ]
         end
       end
 

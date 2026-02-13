@@ -49,7 +49,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(0)
       expect(apply_graduated_service.unit_amount).to eq(0)
       expect(apply_graduated_service.amount_details).to eq(
@@ -73,7 +73,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 1" do
     let(:aggregation) { 1 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(12)
       expect(apply_graduated_service.unit_amount).to eq(12)
       expect(apply_graduated_service.amount_details).to eq(
@@ -97,7 +97,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 10" do
     let(:aggregation) { 10 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(102)
       expect(apply_graduated_service.unit_amount).to eq(10.2)
       expect(apply_graduated_service.amount_details).to eq(
@@ -121,7 +121,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 11" do
     let(:aggregation) { 11 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(110)
       expect(apply_graduated_service.unit_amount).to eq(10)
       expect(apply_graduated_service.amount_details).to eq(
@@ -154,7 +154,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 12" do
     let(:aggregation) { 12 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(115)
       expect(apply_graduated_service.unit_amount.round(5)).to eq(9.58333)
       expect(apply_graduated_service.amount_details).to eq(
@@ -187,7 +187,7 @@ RSpec.describe ChargeModels::GraduatedService do
   context "when aggregation is 21" do
     let(:aggregation) { 21 }
 
-    it "returns expected amount", :aggregate_failures do
+    it "returns expected amount" do
       expect(apply_graduated_service.amount).to eq(163)
       expect(apply_graduated_service.unit_amount.round(2)).to eq(7.76)
       expect(apply_graduated_service.amount_details).to eq(

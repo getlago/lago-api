@@ -126,7 +126,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
         )
       end
 
-      it "does not update the payment_status of invoice", aggregate_failures: true do
+      it "does not update the payment_status of invoice" do
         result = cashfree_service.update_payment_status(
           organization_id: organization.id,
           status: cashfree_payment.status,
@@ -156,7 +156,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
         cashfree_customer
       end
 
-      it "creates a payment and updates invoice payment status", aggregate_failure: true do
+      it "creates a payment and updates invoice payment status" do
         result = cashfree_service.update_payment_status(
           organization_id: organization.id,
           status: cashfree_payment.status,

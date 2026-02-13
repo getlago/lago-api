@@ -114,41 +114,37 @@ RSpec.describe Mutations::Customers::Create do
 
     result_data = result["data"]["createCustomer"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("John Doe Inc")
-      expect(result_data["firstname"]).to eq("John")
-      expect(result_data["lastname"]).to eq("Doe")
-      expect(result_data["displayName"]).to eq("John Doe Inc - John Doe")
-      expect(result_data["customerType"]).to eq("company")
-      expect(result_data["externalId"]).to eq("john_doe_2")
-      expect(result_data["city"]).to eq("London")
-      expect(result_data["country"]).to eq("GB")
-      expect(result_data["currency"]).to eq("EUR")
-      expect(result_data["taxIdentificationNumber"]).to eq("123456789")
-      expect(result_data["paymentProvider"]).to eq("stripe")
-      expect(result_data["providerCustomer"]["id"]).to be_present
-      expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
-      expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(["card"])
-      expect(result_data["invoiceGracePeriod"]).to be_nil
-      expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
-      expect(result_data["shippingAddress"]["addressLine1"]).to eq("Test 12")
-      expect(result_data["shippingAddress"]["city"]).to eq("Paris")
-      expect(result_data["shippingAddress"]["state"]).to eq("test state")
-      expect(result_data["netPaymentTerm"]).to eq(30)
-      expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
-      expect(result_data["metadata"].count).to eq(1)
-      expect(result_data["metadata"][0]["value"]).to eq("John Doe")
-      expect(result_data["taxes"][0]["code"]).to eq(tax.code)
-      expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("John Doe Inc")
+    expect(result_data["firstname"]).to eq("John")
+    expect(result_data["lastname"]).to eq("Doe")
+    expect(result_data["displayName"]).to eq("John Doe Inc - John Doe")
+    expect(result_data["customerType"]).to eq("company")
+    expect(result_data["externalId"]).to eq("john_doe_2")
+    expect(result_data["city"]).to eq("London")
+    expect(result_data["country"]).to eq("GB")
+    expect(result_data["currency"]).to eq("EUR")
+    expect(result_data["taxIdentificationNumber"]).to eq("123456789")
+    expect(result_data["paymentProvider"]).to eq("stripe")
+    expect(result_data["providerCustomer"]["id"]).to be_present
+    expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
+    expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(["card"])
+    expect(result_data["invoiceGracePeriod"]).to be_nil
+    expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
+    expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+    expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
+    expect(result_data["shippingAddress"]["addressLine1"]).to eq("Test 12")
+    expect(result_data["shippingAddress"]["city"]).to eq("Paris")
+    expect(result_data["shippingAddress"]["state"]).to eq("test state")
+    expect(result_data["netPaymentTerm"]).to eq(30)
+    expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
+    expect(result_data["metadata"].count).to eq(1)
+    expect(result_data["metadata"][0]["value"]).to eq("John Doe")
+    expect(result_data["taxes"][0]["code"]).to eq(tax.code)
+    expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "creates a customer" do
       stripe_provider
 
@@ -177,10 +173,8 @@ RSpec.describe Mutations::Customers::Create do
 
       result_data = result["data"]["createCustomer"]
 
-      aggregate_failures do
-        expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
-        expect(result_data["invoiceGracePeriod"]).to eq(2)
-      end
+      expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
+      expect(result_data["invoiceGracePeriod"]).to eq(2)
     end
   end
 

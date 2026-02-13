@@ -92,6 +92,7 @@ RSpec.describe Charges::CreateService do
             invoiceable: true,
             parent_id: parent_charge.id,
             min_amount_cents: 10,
+            accepts_target_wallet: true,
             filters: [
               {
                 invoice_display_name: "Card filter",
@@ -139,13 +140,31 @@ RSpec.describe Charges::CreateService do
           )
         end
 
-        context "when premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when premium", :premium do
           it "assigns premium attributes values from params" do
             expect(result.charge)
               .to be_persisted
               .and have_attributes(invoiceable: true, min_amount_cents: 10)
+          end
+
+          context "with accepts_target_wallet" do
+            context "when events_targeting_wallets is enabled" do
+              before do
+                organization.update!(premium_integrations: ["events_targeting_wallets"])
+              end
+
+              it "sets accepts_target_wallet from params" do
+                expect(result.charge).to be_persisted
+                expect(result.charge.accepts_target_wallet).to be true
+              end
+            end
+
+            context "when events_targeting_wallets is not enabled" do
+              it "does not set accepts_target_wallet" do
+                expect(result.charge).to be_persisted
+                expect(result.charge.accepts_target_wallet).to be false
+              end
+            end
           end
 
           context "when applied pricing unit params are valid" do
@@ -190,6 +209,11 @@ RSpec.describe Charges::CreateService do
 
           it "does not create applied pricing units" do
             expect { subject }.not_to change(AppliedPricingUnit, :count)
+          end
+
+          it "ignores accepts_target_wallet from params" do
+            expect(result.charge).to be_persisted
+            expect(result.charge.accepts_target_wallet).to be false
           end
         end
       end

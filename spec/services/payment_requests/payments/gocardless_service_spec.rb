@@ -73,7 +73,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
       payment
     end
 
-    it "updates the payment, payment_request and invoice payment_status", :aggregate_failures do
+    it "updates the payment, payment_request and invoice payment_status" do
       expect(result).to be_success
       expect(result.payment.status).to eq("paid_out")
       expect(result.payment.payable_payment_status).to eq("succeeded")
@@ -140,7 +140,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
     context "when status is failed" do
       let(:status) { "failed" }
 
-      it "updates the payment, payment_request and invoice status", :aggregate_failures do
+      it "updates the payment, payment_request and invoice status" do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
         expect(result.payment.payable_payment_status).to eq("failed")
@@ -165,7 +165,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
       let(:payment) { nil }
       let(:status) { "paid_out" }
 
-      it "returns a not found error", :aggregate_failures do
+      it "returns a not found error" do
         expect(result).not_to be_success
         expect(result.payment).to be_nil
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -200,7 +200,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
     context "with invalid status" do
       let(:status) { "invalid-status" }
 
-      it "does not update the payment_status of payment_request, invoice and payment", :aggregate_failures do
+      it "does not update the payment_status of payment_request, invoice and payment" do
         expect { result }
           .to not_change { payment_request.reload.payment_status }
           .and not_change { invoice_1.reload.payment_status }
@@ -208,7 +208,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
           .and not_change { payment.reload.status }
       end
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payable_payment_status)

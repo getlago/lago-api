@@ -39,9 +39,7 @@ RSpec.describe Charges::OverrideService do
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when lago premium", :premium do
       it "creates a charge based on the given charge" do
         applied_tax = create(:charge_applied_tax, charge:)
 

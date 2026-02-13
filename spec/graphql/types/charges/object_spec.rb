@@ -6,8 +6,10 @@ RSpec.describe Types::Charges::Object do
   subject { described_class }
 
   it do
+    expect(subject).to have_field(:code).of_type("String")
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
+    expect(subject).to have_field(:parent_id).of_type("ID")
     expect(subject).to have_field(:billable_metric).of_type("BillableMetric!")
     expect(subject).to have_field(:charge_model).of_type("ChargeModelEnum!")
     expect(subject).to have_field(:regroup_paid_fees).of_type("RegroupPaidFeesEnum")

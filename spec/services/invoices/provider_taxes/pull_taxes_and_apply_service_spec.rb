@@ -248,9 +248,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
       end
 
-      context "with lago_premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "with lago_premium", :premium do
         it "enqueues GenerateDocumentsJob with email true" do
           expect do
             pull_taxes_service.call
@@ -462,6 +460,56 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             .to eq("validationError")
           expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
             .to eq("You've exceeded your API limit of 10 per second")
+        end
+      end
+
+      context "with script error" do
+        let(:invoice) do
+          create(
+            :invoice,
+            :draft,
+            :with_tax_error,
+            :with_subscriptions,
+            customer:,
+            billing_entity:,
+            organization:,
+            subscriptions: [subscription],
+            currency: "EUR",
+            tax_status: "pending",
+            issuing_date: Time.zone.at(timestamp).to_date
+          )
+        end
+
+        let(:body) do
+          p = Rails.root.join("spec/fixtures/integration_aggregator/error_script_response.json")
+          File.read(p)
+        end
+
+        before do
+          allow(lago_client).to receive(:post_with_response)
+            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint_draft, response_headers: {}))
+        end
+
+        it "puts invoice in failed status" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload.status).to eq("draft")
+          expect(invoice.tax_status).to eq("failed")
+        end
+
+        it "resolves old tax error and creates new one" do
+          old_error_id = invoice.reload.error_details.last.id
+
+          pull_taxes_service.call
+
+          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_error.count).to be(1)
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
+            .to eq("action_script_failure")
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
+            .to eq("Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}")
         end
       end
     end

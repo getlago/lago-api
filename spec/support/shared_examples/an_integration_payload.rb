@@ -39,9 +39,11 @@ RSpec.shared_examples "an integration payload" do |integration_type|
   let(:integration_customer) { create("#{integration_type}_customer", customer:, integration:) }
 
   let(:add_on) { create(:add_on, organization:, name: "Add-on") }
+  let(:fixed_charge_add_on) { create(:add_on, organization:, name: "Fixed Charge Add-on") }
   let(:billable_metric) { create(:billable_metric, organization:, name: "Billable Metric") }
   let(:plan) { create(:plan, organization:, name: "Plan") }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
+  let(:fixed_charge) { create(:fixed_charge, organization:, plan:, add_on: fixed_charge_add_on) }
   let(:subscription) { create(:subscription, organization:, plan:) }
 
   let(:invoice) do
@@ -66,6 +68,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
   let(:billable_metric_fee) { create(:charge_fee, invoice:, billable_metric:, units: 3, amount_cents: 300, charge:, invoice_display_name: "Standard Charge Fee", precise_unit_amount: 100.0) }
   let(:minimum_commitment_fee) { create(:minimum_commitment_fee, invoice:, units: 4, amount_cents: 400, invoice_display_name: "Minimum Commitment Fee", precise_unit_amount: 100.0) }
   let(:subscription_fee) { create(:fee, invoice:, subscription:, units: 5, amount_cents: 500, precise_unit_amount: 100.0) }
+  let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, fixed_charge:, units: 6, amount_cents: 150, precise_unit_amount: 25.0, invoice_display_name: "Fixed Charge Fee") }
   let(:fees) { invoice.fees }
 
   let(:credit_note) { create(:credit_note, customer:, invoice:, issuing_date: DateTime.new(2024, 7, 8)) }
@@ -74,10 +77,15 @@ RSpec.shared_examples "an integration payload" do |integration_type|
   let(:billable_metric_credit_note_item) { create(:credit_note_item, credit_note:, fee: billable_metric_fee, amount_cents: 180) }
   let(:minimum_commitment_credit_note_item) { create(:credit_note_item, credit_note:, fee: minimum_commitment_fee, amount_cents: 170) }
   let(:subscription_credit_note_item) { create(:credit_note_item, credit_note:, fee: subscription_fee, amount_cents: 160) }
+  let(:fixed_charge_credit_note_item) { create(:credit_note_item, credit_note:, fee: fixed_charge_fee, amount_cents: 140) }
 
   let(:add_on_mapping_on_billing_entity) do
     settings = {external_id: "add_on_on_billing_entity", external_account_code: "11", external_name: "add_on_on_billing_entity"}
     create_mapping("AddOn", add_on.id, billing_entity:, settings:)
+  end
+  let(:fixed_charge_add_on_mapping_on_billing_entity) do
+    settings = {external_id: "fixed_charge_on_billing_entity", external_account_code: "21", external_name: "fixed_charge_on_billing_entity"}
+    create_mapping("AddOn", fixed_charge_add_on.id, billing_entity:, settings:)
   end
   let(:billable_metric_mapping_on_billing_entity) do
     settings = {external_id: "billable_metric_on_billing_entity", external_account_code: "12", external_name: "billable_metric_on_billing_entity"}
@@ -120,6 +128,10 @@ RSpec.shared_examples "an integration payload" do |integration_type|
     settings = {external_id: "add_on_on_organization", external_account_code: "111", external_name: "add_on_on_organization"}
     create_mapping("AddOn", add_on.id, billing_entity: nil, settings:)
   end
+  let(:fixed_charge_add_on_mapping_on_organization) do
+    settings = {external_id: "fixed_charge_on_organization", external_account_code: "121", external_name: "fixed_charge_on_organization"}
+    create_mapping("AddOn", fixed_charge_add_on.id, billing_entity: nil, settings:)
+  end
   let(:billable_metric_mapping_on_organization) do
     settings = {external_id: "billable_metric_on_organization", external_account_code: "112", external_name: "billable_metric_on_organization"}
     create_mapping("BillableMetric", billable_metric.id, billing_entity: nil, settings:)
@@ -160,6 +172,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
   let(:default_mapping_codes) do
     {
       add_on: {external_id: "add_on_on_billing_entity", external_account_code: "11", external_name: "add_on_on_billing_entity"},
+      fixed_charge: {external_id: "fixed_charge_on_billing_entity", external_account_code: "21", external_name: "fixed_charge_on_billing_entity"},
       billable_metric: {external_id: "billable_metric_on_billing_entity", external_account_code: "12", external_name: "billable_metric_on_billing_entity"},
       minimum_commitment: {external_id: "commitment_on_billing_entity", external_account_code: "13", external_name: "commitment_on_billing_entity"},
       subscription: {external_id: "subscription_on_billing_entity", external_account_code: "14", external_name: "subscription_on_billing_entity"},
@@ -174,6 +187,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
 
   before do
     add_on_mapping_on_billing_entity
+    fixed_charge_add_on_mapping_on_billing_entity
     billable_metric_mapping_on_billing_entity
     commitment_mapping_on_billing_entity
     subscription_mapping_on_billing_entity
@@ -184,6 +198,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
     coupon_mapping_on_billing_entity
 
     add_on_mapping_on_organization
+    fixed_charge_add_on_mapping_on_organization
     billable_metric_mapping_on_organization
     commitment_mapping_on_organization
     subscription_mapping_on_organization
@@ -199,6 +214,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
 
     integration_customer
     add_on_credit_note_item
+    fixed_charge_credit_note_item
     billable_metric_credit_note_item
     minimum_commitment_credit_note_item
     subscription_credit_note_item
@@ -246,6 +262,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
       fallback = {external_id: "fallback_item_on_billing_entity", external_account_code: "20", external_name: "fallback_item_on_billing_entity"}
       expect(payload).to match build_expected_payload({
         add_on: fallback,
+        fixed_charge: fallback,
         billable_metric: fallback,
         minimum_commitment: fallback,
         subscription: fallback,
@@ -265,6 +282,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
     it "returns the payload body" do
       expect(payload).to match build_expected_payload({
         add_on: {external_id: "add_on_on_organization", external_account_code: "111", external_name: "add_on_on_organization"},
+        fixed_charge: {external_id: "fixed_charge_on_organization", external_account_code: "121", external_name: "fixed_charge_on_organization"},
         billable_metric: {external_id: "billable_metric_on_organization", external_account_code: "112", external_name: "billable_metric_on_organization"},
         minimum_commitment: {external_id: "commitment_on_organization", external_account_code: "113", external_name: "commitment_on_organization"},
         subscription: {external_id: "subscription_on_organization", external_account_code: "114", external_name: "subscription_on_organization"},
@@ -285,6 +303,7 @@ RSpec.shared_examples "an integration payload" do |integration_type|
       fallback = {external_id: "fallback_item_on_organization", external_account_code: "120", external_name: "fallback_item_on_organization"}
       expect(payload).to match build_expected_payload({
         add_on: fallback,
+        fixed_charge: fallback,
         billable_metric: fallback,
         minimum_commitment: fallback,
         subscription: fallback,

@@ -394,12 +394,10 @@ Rspec.describe Credits::ProgressiveBillingService do
       it "creates credit notes for the remainder of the progressive billed invoices" do
         expect { credit_service.call }.to change(CreditNote, :count).by(1)
         # we were able to credit 1000 from the invoice, this means we've got 20 and 200 remaining respectively
-        aggregate_failures do
-          expect(progressive_billing_invoice3.credit_notes.size).to eq(1)
+        expect(progressive_billing_invoice3.credit_notes.size).to eq(1)
 
-          first = progressive_billing_invoice3.credit_notes.sole
-          expect(first.credit_amount_cents).to eq(1_500) # 2000 - 500 - targeting specific fee
-        end
+        first = progressive_billing_invoice3.credit_notes.sole
+        expect(first.credit_amount_cents).to eq(1_500) # 2000 - 500 - targeting specific fee
       end
     end
   end

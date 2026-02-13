@@ -33,24 +33,22 @@ RSpec.describe Subscriptions::CreateService do
     it "creates a subscription with subscription date set to current date" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        subscription = result.subscription
-        expect(subscription.customer_id).to eq(customer.id)
-        expect(subscription.plan_id).to eq(plan.id)
-        expect(subscription.started_at).to be_present
-        expect(subscription.subscription_at).to be_present
-        expect(subscription.name).to eq("invoice display name")
-        expect(subscription).to be_active
-        expect(subscription.external_id).to eq(external_id)
-        expect(subscription).to be_anniversary
-        expect(subscription.lifetime_usage).to be_present
-        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
-        expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
-        expect(subscription.payment_method_id).to eq(nil)
-        expect(subscription.payment_method_type).to eq("provider")
-      end
+      subscription = result.subscription
+      expect(subscription.customer_id).to eq(customer.id)
+      expect(subscription.plan_id).to eq(plan.id)
+      expect(subscription.started_at).to be_present
+      expect(subscription.subscription_at).to be_present
+      expect(subscription.name).to eq("invoice display name")
+      expect(subscription).to be_active
+      expect(subscription.external_id).to eq(external_id)
+      expect(subscription).to be_anniversary
+      expect(subscription.lifetime_usage).to be_present
+      expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
+      expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
+      expect(subscription.payment_method_id).to eq(nil)
+      expect(subscription.payment_method_type).to eq("provider")
     end
 
     context "when payment method is attached" do
@@ -74,17 +72,15 @@ RSpec.describe Subscriptions::CreateService do
       it "creates a subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          subscription = result.subscription
-          expect(subscription.customer_id).to eq(customer.id)
-          expect(subscription.plan_id).to eq(plan.id)
-          expect(subscription).to be_active
-          expect(subscription.external_id).to eq(external_id)
-          expect(subscription.payment_method_id).to eq(payment_method.id)
-          expect(subscription.payment_method_type).to eq("provider")
-        end
+        subscription = result.subscription
+        expect(subscription.customer_id).to eq(customer.id)
+        expect(subscription.plan_id).to eq(plan.id)
+        expect(subscription).to be_active
+        expect(subscription.external_id).to eq(external_id)
+        expect(subscription.payment_method_id).to eq(payment_method.id)
+        expect(subscription.payment_method_type).to eq("provider")
       end
     end
 
@@ -162,12 +158,10 @@ RSpec.describe Subscriptions::CreateService do
       it "creates a subscription with ending_at correctly set" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          subscription = result.subscription
-          expect(subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
-        end
+        subscription = result.subscription
+        expect(subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
       end
     end
 
@@ -192,11 +186,9 @@ RSpec.describe Subscriptions::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:external_customer_id]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:external_customer_id]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -208,11 +200,9 @@ RSpec.describe Subscriptions::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:external_id]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:external_id]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -222,10 +212,8 @@ RSpec.describe Subscriptions::CreateService do
       it "creates a calendar subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.subscription).to be_calendar
-        end
+        expect(result).to be_success
+        expect(result.subscription).to be_calendar
       end
 
       context "when billing time is empty" do
@@ -234,11 +222,9 @@ RSpec.describe Subscriptions::CreateService do
         it "creates a calendar subscription" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:billing_time]).to eq(["value_is_mandatory"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:billing_time]).to eq(["value_is_mandatory"])
         end
       end
     end
@@ -267,9 +253,7 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
-    context "when License is premium and plan_overrides is passed" do
-      around { |test| lago_premium!(&test) }
-
+    context "when License is premium and plan_overrides is passed", :premium do
       let(:params) do
         {
           external_customer_id:,
@@ -405,16 +389,14 @@ RSpec.describe Subscriptions::CreateService do
       it "creates the customer" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          subscription = result.subscription
-          expect(subscription.customer.external_id).to eq(customer.external_id)
-          expect(subscription.plan_id).to eq(plan.id)
-          expect(subscription.started_at).to be_present
-          expect(subscription.subscription_at).to be_present
-          expect(subscription).to be_active
-        end
+        subscription = result.subscription
+        expect(subscription.customer.external_id).to eq(customer.external_id)
+        expect(subscription.plan_id).to eq(plan.id)
+        expect(subscription.started_at).to be_present
+        expect(subscription.subscription_at).to be_present
+        expect(subscription).to be_active
       end
 
       context "when in graphql context" do
@@ -426,11 +408,9 @@ RSpec.describe Subscriptions::CreateService do
         it "returns a customer_not_found error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("customer_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("customer_not_found")
         end
       end
     end
@@ -466,6 +446,34 @@ RSpec.describe Subscriptions::CreateService do
         it "does not enqueue a job to bill the subscription" do
           expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
         end
+
+        context "when plan has pay in advance fixed charges" do
+          let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+          before { fixed_charge }
+
+          it "does not enqueue a job to bill the subscription" do
+            expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          it "enqueues a job to bill the pay in advance fixed charges even during trial" do
+            expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
+        end
+      end
+
+      context "when plan has pay in advance fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        before { fixed_charge }
+
+        it "enqueues a job to bill the subscription" do
+          expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        it "does not enqueue a job to bill the pay in advance fixed charges" do
+          expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
       end
     end
 
@@ -480,8 +488,24 @@ RSpec.describe Subscriptions::CreateService do
       context "when at least one fixed charge is pay_in_advance" do
         let(:pay_in_advance) { true }
 
-        it "enqueues a job to bill the subscription" do
+        it "does not queue a job to bill the subscription" do
+          expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        it "enqueues a job to bill the the pay in advance fixed charges" do
           expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+        end
+
+        context "when plan has a trial period" do
+          let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+
+          it "does not queue a job to bill the subscription" do
+            expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+
+          it "enqueues a job to bill the pay in advance fixed charges even during trial" do
+            expect { create_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
+          end
         end
       end
 
@@ -490,6 +514,10 @@ RSpec.describe Subscriptions::CreateService do
 
         it "does not enqueue a job to bill the subscription" do
           expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        it "does not enqueue a job to bill fixed charges" do
+          expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
@@ -501,11 +529,9 @@ RSpec.describe Subscriptions::CreateService do
       it "returns a customer_not_found error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("customer_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("customer_not_found")
       end
     end
 
@@ -516,11 +542,9 @@ RSpec.describe Subscriptions::CreateService do
       it "returns a plan_not_found error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("plan_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("plan_not_found")
       end
     end
 
@@ -530,11 +554,9 @@ RSpec.describe Subscriptions::CreateService do
       it "returns invalid_at error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:subscription_at]).to eq(["invalid_date"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:subscription_at]).to eq(["invalid_date"])
       end
     end
 
@@ -544,20 +566,18 @@ RSpec.describe Subscriptions::CreateService do
       it "creates a pending subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          subscription = result.subscription
-          expect(subscription.customer_id).to eq(customer.id)
-          expect(subscription.plan_id).to eq(plan.id)
-          expect(subscription.started_at).not_to be_present
-          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
-          expect(subscription.name).to eq("invoice display name")
-          expect(subscription).to be_pending
-          expect(subscription.external_id).to eq(external_id)
-          expect(subscription).to be_anniversary
-          expect(subscription.lifetime_usage).not_to be_present
-        end
+        subscription = result.subscription
+        expect(subscription.customer_id).to eq(customer.id)
+        expect(subscription.plan_id).to eq(plan.id)
+        expect(subscription.started_at).not_to be_present
+        expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
+        expect(subscription.name).to eq("invoice display name")
+        expect(subscription).to be_pending
+        expect(subscription.external_id).to eq(external_id)
+        expect(subscription).to be_anniversary
+        expect(subscription.lifetime_usage).not_to be_present
       end
 
       context "when plan has fixed charges" do
@@ -585,21 +605,29 @@ RSpec.describe Subscriptions::CreateService do
       it "creates a active subscription" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          subscription = result.subscription
-          expect(subscription.customer_id).to eq(customer.id)
-          expect(subscription.plan_id).to eq(plan.id)
-          expect(subscription.started_at.to_s).to eq(subscription_at.to_s)
-          expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
-          expect(subscription.name).to eq("invoice display name")
-          expect(subscription).to be_active
-          expect(subscription.external_id).to eq(external_id)
-          expect(subscription).to be_anniversary
-          expect(subscription.lifetime_usage).to be_present
-          expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
-          expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
+        subscription = result.subscription
+        expect(subscription.customer_id).to eq(customer.id)
+        expect(subscription.plan_id).to eq(plan.id)
+        expect(subscription.started_at.to_s).to eq(subscription_at.to_s)
+        expect(subscription.subscription_at.to_s).to eq(subscription_at.to_s)
+        expect(subscription.name).to eq("invoice display name")
+        expect(subscription).to be_active
+        expect(subscription.external_id).to eq(external_id)
+        expect(subscription).to be_anniversary
+        expect(subscription.lifetime_usage).to be_present
+        expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(true)
+        expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
+      end
+
+      context "when plan has pay in advance fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
+
+        before { fixed_charge }
+
+        it "does not enqueue a job to bill the pay in advance fixed charges" do
+          expect { create_service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
         end
       end
     end
@@ -610,11 +638,9 @@ RSpec.describe Subscriptions::CreateService do
       it "fails" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:billing_time])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:billing_time])
       end
     end
 
@@ -646,11 +672,9 @@ RSpec.describe Subscriptions::CreateService do
         it "fails" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
 
@@ -665,11 +689,9 @@ RSpec.describe Subscriptions::CreateService do
         it "fails" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
         end
       end
     end
@@ -698,10 +720,8 @@ RSpec.describe Subscriptions::CreateService do
         it "returns existing subscription" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.subscription.id).to eq(subscription.id)
-          end
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
         end
       end
 
@@ -713,10 +733,8 @@ RSpec.describe Subscriptions::CreateService do
         it "returns existing subscription" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.subscription.id).to eq(subscription.id)
-          end
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
         end
       end
 
@@ -726,12 +744,10 @@ RSpec.describe Subscriptions::CreateService do
         it "fails" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:currency)
-            expect(result.error.messages[:currency]).to include("currencies_does_not_match")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:currency)
+          expect(result.error.messages[:currency]).to include("currencies_does_not_match")
         end
       end
 
@@ -757,13 +773,13 @@ RSpec.describe Subscriptions::CreateService do
             expect(subscription.reload.lifetime_usage).to be_nil
           end
 
-          it "sends terminated and started subscription webhooks", :aggregate_failures do
+          it "sends terminated and started subscription webhooks" do
             result = create_service.call
             expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription)
             expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", result.subscription)
           end
 
-          it "enqueues the Hubspot update job", :aggregate_failures do
+          it "enqueues the Hubspot update job" do
             create_service.call
             expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to have_been_enqueued.twice.with(subscription:)
           end
@@ -771,17 +787,15 @@ RSpec.describe Subscriptions::CreateService do
           it "creates a new subscription" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.subscription.id).not_to eq(subscription.id)
-              expect(result.subscription).to be_active
-              expect(result.subscription.name).to eq("invoice display name new")
-              expect(result.subscription.plan.id).to eq(plan.id)
-              expect(result.subscription.previous_subscription_id).to eq(subscription.id)
-              expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
-              expect(result.subscription.payment_method_id).to eq(nil)
-              expect(result.subscription.payment_method_type).to eq("provider")
-            end
+            expect(result).to be_success
+            expect(result.subscription.id).not_to eq(subscription.id)
+            expect(result.subscription).to be_active
+            expect(result.subscription.name).to eq("invoice display name new")
+            expect(result.subscription.plan.id).to eq(plan.id)
+            expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+            expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+            expect(result.subscription.payment_method_id).to eq(nil)
+            expect(result.subscription.payment_method_type).to eq("provider")
           end
 
           context "when plan has fixed charges" do
@@ -831,17 +845,15 @@ RSpec.describe Subscriptions::CreateService do
             it "creates a new subscription" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.subscription.id).not_to eq(subscription.id)
-                expect(result.subscription).to be_active
-                expect(result.subscription.name).to eq("invoice display name new")
-                expect(result.subscription.plan.id).to eq(plan.id)
-                expect(result.subscription.previous_subscription_id).to eq(subscription.id)
-                expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
-                expect(result.subscription.payment_method_id).to eq(payment_method.id)
-                expect(result.subscription.payment_method_type).to eq("provider")
-              end
+              expect(result).to be_success
+              expect(result.subscription.id).not_to eq(subscription.id)
+              expect(result.subscription).to be_active
+              expect(result.subscription.name).to eq("invoice display name new")
+              expect(result.subscription.plan.id).to eq(plan.id)
+              expect(result.subscription.previous_subscription_id).to eq(subscription.id)
+              expect(result.subscription.subscription_at).to eq(subscription.subscription_at)
+              expect(result.subscription.payment_method_id).to eq(payment_method.id)
+              expect(result.subscription.payment_method_type).to eq("provider")
             end
           end
 
@@ -858,7 +870,7 @@ RSpec.describe Subscriptions::CreateService do
                 .and_return(result_failure)
             end
 
-            it "returns an error", :aggregate_failures do
+            it "returns an error" do
               result = create_service.call
 
               expect(result).not_to be_success
@@ -873,12 +885,10 @@ RSpec.describe Subscriptions::CreateService do
             it "returns existing subscription with updated attributes" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.subscription.id).to eq(subscription.id)
-                expect(result.subscription.plan_id).to eq(plan.id)
-                expect(result.subscription.name).to eq("invoice display name new")
-              end
+              expect(result).to be_success
+              expect(result.subscription.id).to eq(subscription.id)
+              expect(result.subscription.plan_id).to eq(plan.id)
+              expect(result.subscription.name).to eq("invoice display name new")
             end
 
             context "when plan has fixed charges" do
@@ -1004,10 +1014,8 @@ RSpec.describe Subscriptions::CreateService do
             it "canceled the next subscription" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(next_subscription.reload).to be_canceled
-              end
+              expect(result).to be_success
+              expect(next_subscription.reload).to be_canceled
             end
           end
         end
@@ -1024,21 +1032,19 @@ RSpec.describe Subscriptions::CreateService do
           it "creates a new subscription" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
+            expect(result).to be_success
 
-              next_subscription = result.subscription.next_subscription
-              expect(next_subscription.id).not_to eq(subscription.id)
-              expect(next_subscription).to be_pending
-              expect(next_subscription.name).to eq("invoice display name new")
-              expect(next_subscription.plan_id).to eq(plan.id)
-              expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
-              expect(next_subscription.previous_subscription).to eq(subscription)
-              expect(next_subscription.ending_at).to eq(subscription.ending_at)
-              expect(next_subscription.lifetime_usage).to be_nil
-              expect(next_subscription.payment_method_id).to be_nil
-              expect(next_subscription.payment_method_type).to eq("provider")
-            end
+            next_subscription = result.subscription.next_subscription
+            expect(next_subscription.id).not_to eq(subscription.id)
+            expect(next_subscription).to be_pending
+            expect(next_subscription.name).to eq("invoice display name new")
+            expect(next_subscription.plan_id).to eq(plan.id)
+            expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
+            expect(next_subscription.previous_subscription).to eq(subscription)
+            expect(next_subscription.ending_at).to eq(subscription.ending_at)
+            expect(next_subscription.lifetime_usage).to be_nil
+            expect(next_subscription.payment_method_id).to be_nil
+            expect(next_subscription.payment_method_type).to eq("provider")
           end
 
           it "sends updated subscription webhook" do
@@ -1054,12 +1060,10 @@ RSpec.describe Subscriptions::CreateService do
           it "keeps the current subscription" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result.subscription.id).to eq(subscription.id)
-              expect(result.subscription).to be_active
-              expect(result.subscription.next_subscription).to be_present
-              expect(result.subscription.lifetime_usage).to be_present
-            end
+            expect(result.subscription.id).to eq(subscription.id)
+            expect(result.subscription).to be_active
+            expect(result.subscription.next_subscription).to be_present
+            expect(result.subscription.lifetime_usage).to be_present
           end
 
           context "with invoice custom sections" do
@@ -1132,21 +1136,19 @@ RSpec.describe Subscriptions::CreateService do
             it "creates a new subscription" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
+              expect(result).to be_success
 
-                next_subscription = result.subscription.next_subscription
-                expect(next_subscription.id).not_to eq(subscription.id)
-                expect(next_subscription).to be_pending
-                expect(next_subscription.name).to eq("invoice display name new")
-                expect(next_subscription.plan_id).to eq(plan.id)
-                expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
-                expect(next_subscription.previous_subscription).to eq(subscription)
-                expect(next_subscription.ending_at).to eq(subscription.ending_at)
-                expect(next_subscription.lifetime_usage).to be_nil
-                expect(next_subscription.payment_method_id).to eq(payment_method.id)
-                expect(next_subscription.payment_method_type).to eq("provider")
-              end
+              next_subscription = result.subscription.next_subscription
+              expect(next_subscription.id).not_to eq(subscription.id)
+              expect(next_subscription).to be_pending
+              expect(next_subscription.name).to eq("invoice display name new")
+              expect(next_subscription.plan_id).to eq(plan.id)
+              expect(next_subscription.subscription_at).to eq(subscription.subscription_at)
+              expect(next_subscription.previous_subscription).to eq(subscription)
+              expect(next_subscription.ending_at).to eq(subscription.ending_at)
+              expect(next_subscription.lifetime_usage).to be_nil
+              expect(next_subscription.payment_method_id).to eq(payment_method.id)
+              expect(next_subscription.payment_method_type).to eq("provider")
             end
           end
 
@@ -1167,12 +1169,10 @@ RSpec.describe Subscriptions::CreateService do
             it "creates a new subscription with correctly set ending_at" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
+              expect(result).to be_success
 
-                next_subscription = result.subscription.next_subscription
-                expect(next_subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
-              end
+              next_subscription = result.subscription.next_subscription
+              expect(next_subscription.ending_at).to eq(Time.current.beginning_of_day + 3.months)
             end
           end
 
@@ -1182,12 +1182,10 @@ RSpec.describe Subscriptions::CreateService do
             it "returns existing subscription with updated attributes" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.subscription.id).to eq(subscription.id)
-                expect(result.subscription.plan_id).to eq(plan.id)
-                expect(result.subscription.name).to eq("invoice display name new")
-              end
+              expect(result).to be_success
+              expect(result.subscription.id).to eq(subscription.id)
+              expect(result.subscription.plan_id).to eq(plan.id)
+              expect(result.subscription.name).to eq("invoice display name new")
             end
           end
 
@@ -1206,10 +1204,8 @@ RSpec.describe Subscriptions::CreateService do
             it "canceled the next subscription" do
               result = create_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(next_subscription.reload).to be_canceled
-              end
+              expect(result).to be_success
+              expect(next_subscription.reload).to be_canceled
             end
           end
         end

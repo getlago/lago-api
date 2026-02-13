@@ -20,7 +20,8 @@ class InvoicesQuery < BaseQuery
     :partially_paid,
     :positive_due_amount,
     :self_billed,
-    :subscription_id
+    :subscription_id,
+    :settlements
   ]
 
   def call
@@ -49,6 +50,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_positive_due_amount(invoices) unless filters.positive_due_amount.nil?
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
     invoices = with_subscription_id(invoices) if filters.subscription_id.present?
+    invoices = with_settlements(invoices) if valid_settlements.present?
 
     result.invoices = invoices
     result
@@ -195,11 +197,25 @@ class InvoicesQuery < BaseQuery
     scope.where(self_billed: ActiveModel::Type::Boolean.new.cast(filters.self_billed))
   end
 
+  def with_settlements(scope)
+    scope.where(
+      "EXISTS (
+          SELECT 1 FROM invoice_settlements
+          WHERE invoice_settlements.target_invoice_id = invoices.id
+          AND invoice_settlements.settlement_type IN (?))", valid_settlements
+    )
+  end
+
   def issuing_date_from
     @issuing_date_from ||= parse_datetime_filter(:issuing_date_from)
   end
 
   def issuing_date_to
     @issuing_date_to ||= parse_datetime_filter(:issuing_date_to)
+  end
+
+  def valid_settlements
+    @valid_settlements ||= Array(filters.settlements)
+      .select { |settlement| InvoiceSettlement.settlement_types.key?(settlement) }
   end
 end

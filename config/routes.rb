@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web, at: "/sidekiq" if ENV["LAGO_SIDEKIQ_WEB"] == "true" && defined? Sidekiq::Web
+  if ENV["LAGO_SIDEKIQ_WEB"] == "true"
+    mount Sidekiq::Web, at: "/sidekiq" if defined?(Sidekiq::Web)
+    mount Sidekiq::Prometheus::Exporter, at: "/sidekiq/prometheus/metrics" if defined? Sidekiq::Prometheus::Exporter
+  end
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
   mount Yabeda::Prometheus::Exporter, at: "/metrics"
@@ -64,12 +67,19 @@ Rails.application.routes.draw do
 
       resources :subscriptions, only: %i[create update show index], param: :external_id do
         resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
-        resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
+        resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts" do
+          collection do
+            delete "/", action: :destroy_all
+          end
+        end
         resources :entitlements, only: %i[index destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements" do
           resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements/privileges"
         end
         patch :entitlements, to: "subscriptions/entitlements#update"
-        resources :fixed_charges, only: %i[index], controller: "subscriptions/fixed_charges"
+        resources :fixed_charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/fixed_charges"
+        resources :charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/charges" do
+          resources :filters, only: %i[index show create update destroy], controller: "subscriptions/charges/filters"
+        end
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 
@@ -144,9 +154,17 @@ Rails.application.routes.draw do
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
         post :payment_url, on: :member
+        get :consumptions, on: :member
+        get :fundings, on: :member
       end
       get "/wallets/:id/wallet_transactions", to: "wallet_transactions#index"
-      resources :wallets, only: %i[create update show index]
+      resources :wallets, only: %i[create update show index] do
+        scope module: :wallets do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
+      end
       delete "/wallets/:id", to: "wallets#terminate"
       post "/events/batch", to: "events#batch"
 

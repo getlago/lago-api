@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::RegisterUser do
+  before { create(:role, :admin) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: RegisterUserInput!) {
@@ -36,12 +38,10 @@ RSpec.describe Mutations::RegisterUser do
       }
     )
 
-    aggregate_failures do
-      expect(result["data"]["registerUser"]["membership"]["id"]).to be_present
-      expect(result["data"]["registerUser"]["user"]["email"]).to eq("foo@bar.com")
-      expect(result["data"]["registerUser"]["organization"]["name"]).to eq("FooBar")
-      expect(result["data"]["registerUser"]["token"]).to be_present
-    end
+    expect(result["data"]["registerUser"]["membership"]["id"]).to be_present
+    expect(result["data"]["registerUser"]["user"]["email"]).to eq("foo@bar.com")
+    expect(result["data"]["registerUser"]["organization"]["name"]).to eq("FooBar")
+    expect(result["data"]["registerUser"]["token"]).to be_present
   end
 
   context "with already existing user" do
@@ -59,11 +59,9 @@ RSpec.describe Mutations::RegisterUser do
         }
       )
 
-      aggregate_failures do
-        expect_unprocessable_entity(result)
-        expect(result["errors"].first.dig("extensions", "details").keys).to include("email")
-        expect(result["errors"].first.dig("extensions", "details", "email")).to include("user_already_exists")
-      end
+      expect_unprocessable_entity(result)
+      expect(result["errors"].first.dig("extensions", "details").keys).to include("email")
+      expect(result["errors"].first.dig("extensions", "details", "email")).to include("user_already_exists")
     end
   end
 end

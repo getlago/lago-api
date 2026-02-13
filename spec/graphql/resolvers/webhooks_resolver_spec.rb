@@ -38,12 +38,10 @@ RSpec.describe Resolvers::WebhooksResolver do
     webhooks_response = result["data"]["webhooks"]
     webhook = webhooks_response["collection"].first
 
-    aggregate_failures do
-      expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
-      expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
-      expect(webhook["payload"]).to be_a String
-      expect(JSON.parse(webhook["payload"])).to be_a Hash
-    end
+    expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
+    expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
+    expect(webhook["payload"]).to be_a String
+    expect(JSON.parse(webhook["payload"])).to be_a Hash
   end
 
   context "when the webhook payload is json-serialized in the database" do
@@ -62,12 +60,10 @@ RSpec.describe Resolvers::WebhooksResolver do
       webhooks_response = result["data"]["webhooks"]
       webhook = webhooks_response["collection"].first
 
-      aggregate_failures do
-        expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
-        expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
-        expect(webhook["payload"]).to be_a String
-        expect(JSON.parse(webhook["payload"])).to be_a Hash
-      end
+      expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
+      expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
+      expect(webhook["payload"]).to be_a String
+      expect(JSON.parse(webhook["payload"])).to be_a Hash
     end
   end
 end

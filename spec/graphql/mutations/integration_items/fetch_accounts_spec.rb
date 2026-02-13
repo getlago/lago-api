@@ -56,9 +56,7 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
 
     ids = result_data["collection"].map { |value| value["externalId"] }
 
-    aggregate_failures do
-      expect(ids).to eq(account_ids)
-      expect(integration.integration_items.where(item_type: :account).count).to eq(3)
-    end
+    expect(ids).to eq(account_ids)
+    expect(integration.integration_items.where(item_type: :account).count).to eq(3)
   end
 end

@@ -95,11 +95,9 @@ RSpec.describe Organizations::CreateService do
       end
 
       it "returns an error" do
-        aggregate_failures do
-          expect(service_result).not_to be_success
-          expect(service_result.error).to be_a(BaseService::ValidationFailure)
-          expect(service_result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(service_result).not_to be_success
+        expect(service_result.error).to be_a(BaseService::ValidationFailure)
+        expect(service_result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
   end

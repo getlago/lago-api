@@ -57,15 +57,13 @@ RSpec.describe Mutations::PaymentProviders::Adyen::Create do
 
     result_data = result["data"]["addAdyenPaymentProvider"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["apiKey"]).to eq("••••••••…abc")
-      expect(result_data["hmacKey"]).to eq("••••••••…124")
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["livePrefix"]).to eq(live_prefix)
-      expect(result_data["merchantAccount"]).to eq(merchant_account)
-      expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["apiKey"]).to eq("••••••••…abc")
+    expect(result_data["hmacKey"]).to eq("••••••••…124")
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["livePrefix"]).to eq(live_prefix)
+    expect(result_data["merchantAccount"]).to eq(merchant_account)
+    expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
   end
 end

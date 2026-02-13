@@ -49,15 +49,13 @@ RSpec.describe Mutations::AddOns::Create do
 
     result_data = result["data"]["createAddOn"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("Test Add-on")
-      expect(result_data["invoiceDisplayName"]).to eq("Test Add-on Invoice")
-      expect(result_data["code"]).to eq("free-beer-for-us")
-      expect(result_data["description"]).to eq("some text")
-      expect(result_data["amountCents"]).to eq("5000")
-      expect(result_data["amountCurrency"]).to eq("EUR")
-      expect(result_data["taxes"].map { |t| t["code"] }).to contain_exactly(tax.code)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("Test Add-on")
+    expect(result_data["invoiceDisplayName"]).to eq("Test Add-on Invoice")
+    expect(result_data["code"]).to eq("free-beer-for-us")
+    expect(result_data["description"]).to eq("some text")
+    expect(result_data["amountCents"]).to eq("5000")
+    expect(result_data["amountCurrency"]).to eq("EUR")
+    expect(result_data["taxes"].map { |t| t["code"] }).to contain_exactly(tax.code)
   end
 end

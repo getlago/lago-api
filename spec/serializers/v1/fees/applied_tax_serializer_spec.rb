@@ -12,17 +12,15 @@ RSpec.describe ::V1::Fees::AppliedTaxSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["applied_tax"]["lago_id"]).to eq(applied_tax.id)
-      expect(result["applied_tax"]["lago_fee_id"]).to eq(applied_tax.fee_id)
-      expect(result["applied_tax"]["lago_tax_id"]).to eq(applied_tax.tax_id)
-      expect(result["applied_tax"]["tax_name"]).to eq(applied_tax.tax_name)
-      expect(result["applied_tax"]["tax_code"]).to eq(applied_tax.tax_code)
-      expect(result["applied_tax"]["tax_rate"]).to eq(applied_tax.tax_rate)
-      expect(result["applied_tax"]["tax_description"]).to eq(applied_tax.tax_description)
-      expect(result["applied_tax"]["amount_cents"]).to eq(applied_tax.amount_cents)
-      expect(result["applied_tax"]["amount_currency"]).to eq(applied_tax.amount_currency)
-      expect(result["applied_tax"]["created_at"]).to eq(applied_tax.created_at.iso8601)
-    end
+    expect(result["applied_tax"]["lago_id"]).to eq(applied_tax.id)
+    expect(result["applied_tax"]["lago_fee_id"]).to eq(applied_tax.fee_id)
+    expect(result["applied_tax"]["lago_tax_id"]).to eq(applied_tax.tax_id)
+    expect(result["applied_tax"]["tax_name"]).to eq(applied_tax.tax_name)
+    expect(result["applied_tax"]["tax_code"]).to eq(applied_tax.tax_code)
+    expect(result["applied_tax"]["tax_rate"]).to eq(applied_tax.tax_rate)
+    expect(result["applied_tax"]["tax_description"]).to eq(applied_tax.tax_description)
+    expect(result["applied_tax"]["amount_cents"]).to eq(applied_tax.amount_cents)
+    expect(result["applied_tax"]["amount_currency"]).to eq(applied_tax.amount_currency)
+    expect(result["applied_tax"]["created_at"]).to eq(applied_tax.created_at.iso8601)
   end
 end

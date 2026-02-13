@@ -81,7 +81,39 @@ module Api
         end
       end
 
+      def consumptions
+        wallet_transaction_consumptions(direction: :consumptions)
+      end
+
+      def fundings
+        wallet_transaction_consumptions(direction: :fundings)
+      end
+
       private
+
+      def wallet_transaction_consumptions(direction:)
+        result = WalletTransactionConsumptionsQuery.call(
+          organization: current_organization,
+          wallet_transaction_id: params[:id],
+          direction:,
+          pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE}
+        )
+
+        return render_error_response(result) unless result.success?
+
+        includes = (direction == :consumptions) ? %i[outbound_wallet_transaction] : %i[inbound_wallet_transaction]
+        collection_name = (direction == :consumptions) ? "wallet_transaction_consumptions" : "wallet_transaction_fundings"
+
+        render(
+          json: ::CollectionSerializer.new(
+            result.wallet_transaction_consumptions.includes(includes),
+            ::V1::WalletTransactionConsumptionSerializer,
+            collection_name:,
+            meta: pagination_metadata(result.wallet_transaction_consumptions),
+            includes:
+          )
+        )
+      end
 
       def input_params
         @input_params ||= params.require(:wallet_transaction).permit(
@@ -92,6 +124,7 @@ module Api
           :invoice_requires_successful_payment,
           :name,
           :ignore_paid_top_up_limits,
+          :priority,
           payment_method: [
             :payment_method_type,
             :payment_method_id

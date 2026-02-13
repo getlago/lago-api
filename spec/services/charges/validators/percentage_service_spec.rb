@@ -28,12 +28,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:billable_metric)
-          expect(validation_service.result.error.messages[:billable_metric]).to include("invalid_value")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:billable_metric)
+        expect(validation_service.result.error.messages[:billable_metric]).to include("invalid_value")
       end
     end
 
@@ -45,12 +43,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:rate)
-          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:rate)
+        expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
       end
     end
 
@@ -63,12 +59,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:rate)
-          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:rate)
+        expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
       end
     end
 
@@ -81,12 +75,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:rate)
-          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:rate)
+        expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
       end
     end
 
@@ -99,12 +91,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:rate)
-          expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:rate)
+        expect(validation_service.result.error.messages[:rate]).to include("invalid_rate")
       end
     end
 
@@ -125,13 +115,11 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:free_units_per_events)
-          expect(validation_service.result.error.messages[:free_units_per_events])
-            .to include("invalid_free_units_per_events")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:free_units_per_events)
+        expect(validation_service.result.error.messages[:free_units_per_events])
+          .to include("invalid_free_units_per_events")
       end
     end
 
@@ -144,13 +132,11 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:free_units_per_events)
-          expect(validation_service.result.error.messages[:free_units_per_events])
-            .to include("invalid_free_units_per_events")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:free_units_per_events)
+        expect(validation_service.result.error.messages[:free_units_per_events])
+          .to include("invalid_free_units_per_events")
       end
     end
 
@@ -164,20 +150,18 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to eq(
-            [
-              :fixed_amount,
-              :free_units_per_total_aggregation
-            ]
-          )
-          expect(validation_service.result.error.messages[:fixed_amount])
-            .to include("invalid_fixed_amount")
-          expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
-            .to include("invalid_free_units_per_total_aggregation")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to eq(
+          [
+            :fixed_amount,
+            :free_units_per_total_aggregation
+          ]
+        )
+        expect(validation_service.result.error.messages[:fixed_amount])
+          .to include("invalid_fixed_amount")
+        expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
+          .to include("invalid_free_units_per_total_aggregation")
       end
     end
 
@@ -191,20 +175,18 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to eq(
-            [
-              :fixed_amount,
-              :free_units_per_total_aggregation
-            ]
-          )
-          expect(validation_service.result.error.messages[:fixed_amount])
-            .to include("invalid_fixed_amount")
-          expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
-            .to include("invalid_free_units_per_total_aggregation")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to eq(
+          [
+            :fixed_amount,
+            :free_units_per_total_aggregation
+          ]
+        )
+        expect(validation_service.result.error.messages[:fixed_amount])
+          .to include("invalid_fixed_amount")
+        expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
+          .to include("invalid_free_units_per_total_aggregation")
       end
     end
 
@@ -217,12 +199,10 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:fixed_amount)
-          expect(validation_service.result.error.messages[:fixed_amount]).to include("invalid_fixed_amount")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:fixed_amount)
+        expect(validation_service.result.error.messages[:fixed_amount]).to include("invalid_fixed_amount")
       end
     end
 
@@ -237,23 +217,21 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "is invalid" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to eq(
-            [
-              :fixed_amount,
-              :free_units_per_events,
-              :free_units_per_total_aggregation
-            ]
-          )
-          expect(validation_service.result.error.messages[:fixed_amount])
-            .to include("invalid_fixed_amount")
-          expect(validation_service.result.error.messages[:free_units_per_events])
-            .to include("invalid_free_units_per_events")
-          expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
-            .to include("invalid_free_units_per_total_aggregation")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to eq(
+          [
+            :fixed_amount,
+            :free_units_per_events,
+            :free_units_per_total_aggregation
+          ]
+        )
+        expect(validation_service.result.error.messages[:fixed_amount])
+          .to include("invalid_fixed_amount")
+        expect(validation_service.result.error.messages[:free_units_per_events])
+          .to include("invalid_free_units_per_events")
+        expect(validation_service.result.error.messages[:free_units_per_total_aggregation])
+          .to include("invalid_free_units_per_total_aggregation")
       end
     end
 
@@ -267,9 +245,7 @@ RSpec.describe Charges::Validators::PercentageService do
       it { expect(validation_service).to be_valid }
     end
 
-    context "with per_transaction_min_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with per_transaction_min_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",
@@ -282,13 +258,11 @@ RSpec.describe Charges::Validators::PercentageService do
         let(:per_transaction_min_amount) { 2 }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:per_transaction_min_amount)
-            expect(validation_service.result.error.messages[:per_transaction_min_amount])
-              .to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_transaction_min_amount)
+          expect(validation_service.result.error.messages[:per_transaction_min_amount])
+            .to include("invalid_amount")
         end
       end
 
@@ -296,20 +270,16 @@ RSpec.describe Charges::Validators::PercentageService do
         let(:per_transaction_min_amount) { "-3" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:per_transaction_min_amount)
-            expect(validation_service.result.error.messages[:per_transaction_min_amount])
-              .to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_transaction_min_amount)
+          expect(validation_service.result.error.messages[:per_transaction_min_amount])
+            .to include("invalid_amount")
         end
       end
     end
 
-    context "with per_transaction_max_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with per_transaction_max_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",
@@ -322,13 +292,11 @@ RSpec.describe Charges::Validators::PercentageService do
         let(:per_transaction_max_amount) { 2 }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
-            expect(validation_service.result.error.messages[:per_transaction_max_amount])
-              .to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+          expect(validation_service.result.error.messages[:per_transaction_max_amount])
+            .to include("invalid_amount")
         end
       end
 
@@ -336,20 +304,16 @@ RSpec.describe Charges::Validators::PercentageService do
         let(:per_transaction_max_amount) { "-3" }
 
         it "is invalid" do
-          aggregate_failures do
-            expect(validation_service).not_to be_valid
-            expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-            expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
-            expect(validation_service.result.error.messages[:per_transaction_max_amount])
-              .to include("invalid_amount")
-          end
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+          expect(validation_service.result.error.messages[:per_transaction_max_amount])
+            .to include("invalid_amount")
         end
       end
     end
 
-    context "with both per_transaction_min_amount and per_transaction_max_amount" do
-      around { |test| lago_premium!(&test) }
-
+    context "with both per_transaction_min_amount and per_transaction_max_amount", :premium do
       let(:percentage_properties) do
         {
           rate: "0.25",
@@ -360,13 +324,11 @@ RSpec.describe Charges::Validators::PercentageService do
       end
 
       it "ensures that max is higher than min" do
-        aggregate_failures do
-          expect(validation_service).not_to be_valid
-          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
-          expect(validation_service.result.error.messages[:per_transaction_max_amount])
-            .to include("per_transaction_max_lower_than_per_transaction_min")
-        end
+        expect(validation_service).not_to be_valid
+        expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+        expect(validation_service.result.error.messages.keys).to include(:per_transaction_max_amount)
+        expect(validation_service.result.error.messages[:per_transaction_max_amount])
+          .to include("per_transaction_max_lower_than_per_transaction_min")
       end
     end
 

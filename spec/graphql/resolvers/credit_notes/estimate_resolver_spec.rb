@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CreditNotes::EstimateResolver do
+RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
   let(:query) do
     <<~GQL
       query($invoiceId: ID!, $items: [CreditNoteItemInput!]!) {
@@ -51,8 +51,6 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver do
 
   let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
 
-  around { |test| lago_premium!(&test) }
-
   before { credit }
 
   it_behaves_like "requires current user"
@@ -71,16 +69,14 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver do
 
     estimate_response = result["data"]["creditNoteEstimate"]
 
-    aggregate_failures do
-      expect(estimate_response["currency"]).to eq("EUR")
-      expect(estimate_response["taxesAmountCents"]).to eq("0")
-      expect(estimate_response["subTotalExcludingTaxesAmountCents"]).to eq("50")
-      expect(estimate_response["maxCreditableAmountCents"]).to eq("50")
-      expect(estimate_response["maxRefundableAmountCents"]).to eq("0")
-      expect(estimate_response["couponsAdjustmentAmountCents"]).to eq("50")
-      expect(estimate_response["items"].first["amountCents"]).to eq("50")
-      expect(estimate_response["appliedTaxes"]).to be_blank
-    end
+    expect(estimate_response["currency"]).to eq("EUR")
+    expect(estimate_response["taxesAmountCents"]).to eq("0")
+    expect(estimate_response["subTotalExcludingTaxesAmountCents"]).to eq("50")
+    expect(estimate_response["maxCreditableAmountCents"]).to eq("50")
+    expect(estimate_response["maxRefundableAmountCents"]).to eq("0")
+    expect(estimate_response["couponsAdjustmentAmountCents"]).to eq("50")
+    expect(estimate_response["items"].first["amountCents"]).to eq("50")
+    expect(estimate_response["appliedTaxes"]).to be_blank
   end
 
   context "with invalid invoice" do

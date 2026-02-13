@@ -56,10 +56,8 @@ RSpec.describe Invoices::RetryBatchService do
     it "returns processed invoices that have correct status" do
       result = retry_batch_service.call(invoice_ids)
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoices.count).to eq(2)
-      end
+      expect(result).to be_success
+      expect(result.invoices.count).to eq(2)
     end
 
     context "when inner service passes error result" do
@@ -70,11 +68,9 @@ RSpec.describe Invoices::RetryBatchService do
       it "returns an error" do
         result = retry_batch_service.call(invoice_ids)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("error")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("error")
       end
     end
   end

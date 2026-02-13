@@ -38,16 +38,12 @@ RSpec.describe Mutations::Invoices::Void do
 
       result_data = result["data"]["voidInvoice"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["status"]).to eq("voided")
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["status"]).to eq("voided")
     end
   end
 
-  context "when passing credit note parameters" do
-    around { |test| lago_premium!(&test) }
-
+  context "when passing credit note parameters", :premium do
     let(:credit_amount) { 0 }
     let(:refund_amount) { 0 }
 

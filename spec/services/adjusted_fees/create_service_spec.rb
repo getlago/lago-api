@@ -32,9 +32,7 @@ RSpec.describe AdjustedFees::CreateService do
         .and_return(BaseService::Result.new)
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :premium do
       it "creates an adjusted fee" do
         expect { create_service.call }.to change(AdjustedFee, :count).by(1)
       end
@@ -70,11 +68,9 @@ RSpec.describe AdjustedFees::CreateService do
         it "returns forbidden status" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ForbiddenFailure)
-            expect(result.error.code).to eq("feature_unavailable")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("feature_unavailable")
         end
       end
 
@@ -120,11 +116,9 @@ RSpec.describe AdjustedFees::CreateService do
         it "returns error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:charge]).to eq(["invalid_charge_model"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:charge]).to eq(["invalid_charge_model"])
         end
       end
 
@@ -134,11 +128,9 @@ RSpec.describe AdjustedFees::CreateService do
         it "returns error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("fee_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("fee_not_found")
         end
       end
 
@@ -150,11 +142,9 @@ RSpec.describe AdjustedFees::CreateService do
         it "returns validation error" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:adjusted_fee]).to eq(["already_exists"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:adjusted_fee]).to eq(["already_exists"])
         end
       end
 
@@ -281,11 +271,9 @@ RSpec.describe AdjustedFees::CreateService do
           it "returns a not found error" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::NotFoundFailure)
-              expect(result.error.message).to eq("subscription_not_found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("subscription_not_found")
           end
         end
 
@@ -305,11 +293,9 @@ RSpec.describe AdjustedFees::CreateService do
           it "returns a not found error" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::NotFoundFailure)
-              expect(result.error.message).to eq("charge_not_found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("charge_not_found")
           end
         end
 
@@ -329,11 +315,9 @@ RSpec.describe AdjustedFees::CreateService do
           it "returns a not found error" do
             result = create_service.call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::NotFoundFailure)
-              expect(result.error.message).to eq("charge_filter_not_found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("charge_filter_not_found")
           end
         end
       end
@@ -555,11 +539,9 @@ RSpec.describe AdjustedFees::CreateService do
       it "returns forbidden status" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("feature_unavailable")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
       end
 
       it "returns the estimated adjusted fee" do

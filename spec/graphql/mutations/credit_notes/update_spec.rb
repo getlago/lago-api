@@ -39,10 +39,8 @@ RSpec.describe Mutations::CreditNotes::Update do
 
     result_data = result["data"]["updateCreditNote"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to eq(credit_note.id)
-      expect(result_data["refundStatus"]).to eq("succeeded")
-    end
+    expect(result_data["id"]).to eq(credit_note.id)
+    expect(result_data["refundStatus"]).to eq("succeeded")
   end
 
   context "when credit note is not found" do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Anrok::Create do
+RSpec.describe Mutations::Integrations::Anrok::Create, :premium do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "anrok1" }
@@ -21,8 +21,6 @@ RSpec.describe Mutations::Integrations::Anrok::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -46,13 +44,11 @@ RSpec.describe Mutations::Integrations::Anrok::Create do
 
     result_data = result["data"]["createAnrokIntegration"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["code"]).to eq(code)
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["apiKey"]).to eq("••••••••…789")
-      expect(result_data["externalAccountId"]).to eq("123")
-      expect(Integrations::AnrokIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq(code)
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["apiKey"]).to eq("••••••••…789")
+    expect(result_data["externalAccountId"]).to eq("123")
+    expect(Integrations::AnrokIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
   end
 end

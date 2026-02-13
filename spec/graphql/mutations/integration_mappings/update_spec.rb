@@ -54,13 +54,11 @@ RSpec.describe Mutations::IntegrationMappings::Update do
 
     result_data = result["data"]["updateIntegrationMapping"]
 
-    aggregate_failures do
-      expect(result_data["integrationId"]).to eq(integration.id)
-      expect(result_data["mappableId"]).to eq(mappable.id)
-      expect(result_data["mappableType"]).to eq("AddOn")
-      expect(result_data["externalAccountCode"]).to eq(external_account_code)
-      expect(result_data["externalId"]).to eq(external_id)
-      expect(result_data["externalName"]).to eq(external_name)
-    end
+    expect(result_data["integrationId"]).to eq(integration.id)
+    expect(result_data["mappableId"]).to eq(mappable.id)
+    expect(result_data["mappableType"]).to eq("AddOn")
+    expect(result_data["externalAccountCode"]).to eq(external_account_code)
+    expect(result_data["externalId"]).to eq(external_id)
+    expect(result_data["externalName"]).to eq(external_name)
   end
 end

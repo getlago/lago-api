@@ -71,8 +71,8 @@ module CreditNotes
 
       (
         amount.truncate(CreditNote::DB_PRECISION_SCALE) -
-        taxes_result.coupons_adjustment_amount_cents +
-        taxes_result.taxes_amount_cents
+        taxes_result.coupons_adjustment_amount_cents.truncate(CreditNote::DB_PRECISION_SCALE) +
+        taxes_result.taxes_amount_cents.truncate(CreditNote::DB_PRECISION_SCALE)
       ).round
     end
   end

@@ -20,11 +20,6 @@ module Subscriptions
               invoicing_reason: :subscription_starting,
               skip_charges: true
             )
-          elsif subscription.fixed_charges.pay_in_advance.any?
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
-              subscription,
-              timestamp
-            )
           end
         end
 

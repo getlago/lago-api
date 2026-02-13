@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:disable RSpec/FilePath
+RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:disable Rails/FilePath
   describe "GET /analytics/invoice_collection" do
     subject { get_with_token(organization, "/api/v1/analytics/invoice_collection", params) }
 
@@ -15,9 +15,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
       allow(Analytics::InvoiceCollectionsService).to receive(:call).and_call_original
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when licence is premium", :premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the gross revenue" do

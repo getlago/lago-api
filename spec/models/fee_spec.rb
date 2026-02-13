@@ -129,6 +129,14 @@ RSpec.describe Fee do
         end
       end
 
+      context "when it is a commitment fee" do
+        let(:fee) { build(:minimum_commitment_fee, invoice_display_name:) }
+
+        it "returns related subscription name" do
+          expect(fee_invoice_name).to eq(fee.subscription.plan.invoice_name)
+        end
+      end
+
       context "when it is a charge fee" do
         let(:fee) { build(:fee, charge:, fee_type: "charge", invoice_display_name:) }
         let(:charge) { create(:standard_charge, invoice_display_name: charge_invoice_display_name) }
@@ -193,6 +201,14 @@ RSpec.describe Fee do
 
         context "when wallet transaction has no name" do
           let(:name) { nil }
+
+          it "returns 'credit'" do
+            expect(fee_invoice_name).to eq("credit")
+          end
+        end
+
+        context "when invoiceable is nil" do
+          let(:fee) { build(:fee, fee_type: "credit", invoice_display_name:, invoiceable: nil) }
 
           it "returns 'credit'" do
             expect(fee_invoice_name).to eq("credit")
@@ -273,6 +289,14 @@ RSpec.describe Fee do
 
       context "when wallet transaction has no name" do
         let(:name) { nil }
+
+        it "returns 'credit'" do
+          expect(fee.item_name).to eq("credit")
+        end
+      end
+
+      context "when invoiceable is nil" do
+        let(:fee) { described_class.new(fee_type: "credit", invoiceable: nil) }
 
         it "returns 'credit'" do
           expect(fee.item_name).to eq("credit")
@@ -664,6 +688,63 @@ RSpec.describe Fee do
             expect(subject).to eq(0)
           end
         end
+      end
+    end
+  end
+
+  describe "#offsettable_amount_cents" do
+    subject { fee.offsettable_amount_cents }
+
+    let(:fee) { create(:fee, fee_type:, amount_cents: 1000, invoice:) }
+
+    context "with credit invoices" do
+      let(:fee_type) { "credit" }
+
+      context "when payment is pending" do
+        let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :pending) }
+
+        it "returns full amount" do
+          expect(subject).to eq(1000)
+        end
+      end
+
+      context "when payment succeeded" do
+        let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :succeeded) }
+        let(:wallet) { create(:wallet, balance_cents: 500, customer: invoice.customer) }
+
+        before { fee.update(invoiceable: create(:wallet_transaction, wallet:)) }
+
+        it "returns wallet balance" do
+          expect(subject).to eq(500)
+        end
+      end
+
+      context "when payment failed" do
+        let(:invoice) { create(:invoice, invoice_type: :credit, payment_status: :failed) }
+
+        it "returns full amount" do
+          expect(subject).to eq(1000)
+        end
+      end
+    end
+
+    context "with regular invoices" do
+      let(:invoice) { create(:invoice, invoice_type: :subscription) }
+      let(:fee_type) { "subscription" }
+
+      it "returns full amount when no credit notes" do
+        expect(subject).to eq(1000)
+      end
+
+      it "deducts credit note items from amount" do
+        create(:credit_note_item, fee:, amount_cents: 300)
+        expect(subject).to eq(700) # 1000 - 300
+      end
+
+      it "deducts multiple credit note items" do
+        create(:credit_note_item, fee:, amount_cents: 200)
+        create(:credit_note_item, fee:, amount_cents: 150)
+        expect(subject).to eq(650) # 1000 - 200 - 150
       end
     end
   end

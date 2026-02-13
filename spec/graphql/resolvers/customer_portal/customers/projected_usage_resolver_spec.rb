@@ -152,45 +152,43 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       # debugger
       usage_response = result["data"]["customerPortalCustomerProjectedUsage"]
 
-      aggregate_failures do
-        expect(usage_response["fromDatetime"]).to eq(Time.current.beginning_of_month.iso8601)
-        expect(usage_response["toDatetime"]).to eq(Time.current.end_of_month.iso8601)
-        expect(usage_response["currency"]).to eq("EUR")
-        expect(usage_response["issuingDate"]).to eq(Time.zone.today.end_of_month.iso8601)
-        expect(usage_response["amountCents"]).to eq("105")
-        expect(usage_response["projectedAmountCents"]).to eq("836")
-        expect(usage_response["totalAmountCents"]).to eq("105")
-        expect(usage_response["taxesAmountCents"]).to eq("0")
+      expect(usage_response["fromDatetime"]).to eq(Time.current.beginning_of_month.iso8601)
+      expect(usage_response["toDatetime"]).to eq(Time.current.end_of_month.iso8601)
+      expect(usage_response["currency"]).to eq("EUR")
+      expect(usage_response["issuingDate"]).to eq(Time.zone.today.end_of_month.iso8601)
+      expect(usage_response["amountCents"]).to eq("105")
+      expect(usage_response["projectedAmountCents"]).to eq("836")
+      expect(usage_response["totalAmountCents"]).to eq("105")
+      expect(usage_response["taxesAmountCents"]).to eq("0")
 
-        charge_usage = usage_response["chargesUsage"].find { it["billableMetric"]["code"] == metric.code }
-        expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
-        expect(charge_usage["pricingUnitAmountCents"]).to eq(nil)
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["amountCents"]).to eq("5")
-        expect(charge_usage["projectedAmountCents"]).to eq("9")
+      charge_usage = usage_response["chargesUsage"].find { it["billableMetric"]["code"] == metric.code }
+      expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
+      expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
+      expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
+      expect(charge_usage["pricingUnitAmountCents"]).to eq(nil)
+      expect(charge_usage["units"]).to eq(4.0)
+      expect(charge_usage["projectedUnits"]).to eq(8.27)
+      expect(charge_usage["amountCents"]).to eq("5")
+      expect(charge_usage["projectedAmountCents"]).to eq("9")
 
-        charge_usage = usage_response["chargesUsage"].find { it["billableMetric"]["code"] == sum_metric.code }
-        expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
-        expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
-        expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
-        expect(charge_usage["pricingUnitAmountCents"]).to eq("400")
-        expect(charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
-        expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["amountCents"]).to eq("100")
-        expect(charge_usage["projectedAmountCents"]).to eq("827")
+      charge_usage = usage_response["chargesUsage"].find { it["billableMetric"]["code"] == sum_metric.code }
+      expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
+      expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
+      expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
+      expect(charge_usage["pricingUnitAmountCents"]).to eq("400")
+      expect(charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
+      expect(charge_usage["units"]).to eq(4.0)
+      expect(charge_usage["projectedUnits"]).to eq(8.27)
+      expect(charge_usage["amountCents"]).to eq("100")
+      expect(charge_usage["projectedAmountCents"]).to eq("827")
 
-        grouped_usage = charge_usage["groupedUsage"].first
-        expect(grouped_usage["amountCents"]).to eq("100")
-        expect(grouped_usage["projectedAmountCents"]).to eq("827")
-        expect(grouped_usage["units"]).to eq(4.0)
-        expect(grouped_usage["projectedUnits"]).to eq(8.27)
-        expect(grouped_usage["eventsCount"]).to eq(4)
-        expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
-      end
+      grouped_usage = charge_usage["groupedUsage"].first
+      expect(grouped_usage["amountCents"]).to eq("100")
+      expect(grouped_usage["projectedAmountCents"]).to eq("827")
+      expect(grouped_usage["units"]).to eq(4.0)
+      expect(grouped_usage["projectedUnits"]).to eq(8.27)
+      expect(grouped_usage["eventsCount"]).to eq(4)
+      expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
     end
   end
 
@@ -282,22 +280,20 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
 
         filters_usage = charge_usage["filters"]
 
-        aggregate_failures do
-          expect(charge_usage["units"]).to eq(4)
-          expect(charge_usage["amountCents"]).to eq("1000")
-          expect(charge_usage["projectedUnits"]).to eq(8.27)
-          expect(charge_usage["projectedAmountCents"]).to eq("10340")
+        expect(charge_usage["units"]).to eq(4)
+        expect(charge_usage["amountCents"]).to eq("1000")
+        expect(charge_usage["projectedUnits"]).to eq(8.27)
+        expect(charge_usage["projectedAmountCents"]).to eq("10340")
 
-          aws_filter_data = filters_usage.find { |f| f["id"] == aws_filter.id }
-          expect(aws_filter_data["units"]).to eq(3)
-          expect(aws_filter_data["amountCents"]).to eq("600")
-          expect(aws_filter_data["pricingUnitAmountCents"]).to eq("3000")
+        aws_filter_data = filters_usage.find { |f| f["id"] == aws_filter.id }
+        expect(aws_filter_data["units"]).to eq(3)
+        expect(aws_filter_data["amountCents"]).to eq("600")
+        expect(aws_filter_data["pricingUnitAmountCents"]).to eq("3000")
 
-          google_filter_data = filters_usage.find { |f| f["id"] == google_filter.id }
-          expect(google_filter_data["units"]).to eq(1)
-          expect(google_filter_data["amountCents"]).to eq("400")
-          expect(google_filter_data["pricingUnitAmountCents"]).to eq("2000")
-        end
+        google_filter_data = filters_usage.find { |f| f["id"] == google_filter.id }
+        expect(google_filter_data["units"]).to eq(1)
+        expect(google_filter_data["amountCents"]).to eq("400")
+        expect(google_filter_data["pricingUnitAmountCents"]).to eq("2000")
       end
     end
   end

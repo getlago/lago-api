@@ -47,13 +47,11 @@ RSpec.describe Credit do
       end
 
       it "returns coupon details" do
-        aggregate_failures do
-          expect(credit.item_id).to eq(coupon.id)
-          expect(credit.item_type).to eq("coupon")
-          expect(credit.item_code).to eq("coupon_code")
-          expect(credit.item_name).to eq("Coupon name")
-          expect(credit.item_description).to eq("Coupon desc")
-        end
+        expect(credit.item_id).to eq(coupon.id)
+        expect(credit.item_type).to eq("coupon")
+        expect(credit.item_code).to eq("coupon_code")
+        expect(credit.item_name).to eq("Coupon name")
+        expect(credit.item_description).to eq("Coupon desc")
       end
 
       context "when coupon is deleted" do
@@ -70,14 +68,12 @@ RSpec.describe Credit do
         end
 
         it "returns coupon details" do
-          aggregate_failures do
-            expect(credit.item_id).to eq(coupon.id)
-            expect(credit.item_type).to eq("coupon")
-            expect(credit.item_code).to eq("coupon_code")
-            expect(credit.item_name).to eq("Coupon name")
-            expect(credit.item_description).to eq("Coupon desc")
-            expect(credit.invoice_coupon_display_name).to eq("Coupon name (€2.00)")
-          end
+          expect(credit.item_id).to eq(coupon.id)
+          expect(credit.item_type).to eq("coupon")
+          expect(credit.item_code).to eq("coupon_code")
+          expect(credit.item_name).to eq("Coupon name")
+          expect(credit.item_description).to eq("Coupon desc")
+          expect(credit.invoice_coupon_display_name).to eq("Coupon name (€2.00)")
         end
       end
     end
@@ -92,13 +88,11 @@ RSpec.describe Credit do
       end
 
       it "returns credit note details" do
-        aggregate_failures do
-          expect(credit.item_id).to eq(credit_note.id)
-          expect(credit.item_type).to eq("credit_note")
-          expect(credit.item_code).to eq(credit_note.number)
-          expect(credit.item_name).to eq(credit_note.invoice.number)
-          expect(credit.item_description).to eq("Credit note description")
-        end
+        expect(credit.item_id).to eq(credit_note.id)
+        expect(credit.item_type).to eq("credit_note")
+        expect(credit.item_code).to eq(credit_note.number)
+        expect(credit.item_name).to eq(credit_note.invoice.number)
+        expect(credit.item_description).to eq("Credit note description")
       end
     end
 
@@ -107,14 +101,12 @@ RSpec.describe Credit do
 
       let(:progressive_billing_invoice) { create(:invoice, invoice_type: :progressive_billing) }
 
-      it "returns invoice details", aggregate_failures: true do
-        aggregate_failures do
-          expect(credit.item_id).to eq(progressive_billing_invoice.id)
-          expect(credit.item_type).to eq("invoice")
-          expect(credit.item_code).to eq(progressive_billing_invoice.number)
-          expect(credit.item_name).to eq(progressive_billing_invoice.number)
-          expect(credit.item_description).to be_nil
-        end
+      it "returns invoice details" do
+        expect(credit.item_id).to eq(progressive_billing_invoice.id)
+        expect(credit.item_type).to eq("invoice")
+        expect(credit.item_code).to eq(progressive_billing_invoice.number)
+        expect(credit.item_name).to eq(progressive_billing_invoice.number)
+        expect(credit.item_description).to be_nil
       end
     end
   end

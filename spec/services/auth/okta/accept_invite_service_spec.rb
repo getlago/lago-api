@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
+RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code:, state:) }
 
   let(:organization) { create(:organization, premium_integrations: ["okta"]) }
@@ -14,8 +14,6 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
   let(:code) { "code" }
   let(:state) { SecureRandom.uuid }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     okta_integration
@@ -34,15 +32,13 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
     it "creates user, membership, authenticate user and mark invite as accepted" do
       result = service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.user.email).to eq("foo@bar.com")
-        expect(result.token).to be_present
-        expect(invite.reload).to be_accepted
+      expect(result).to be_success
+      expect(result.user.email).to eq("foo@bar.com")
+      expect(result.token).to be_present
+      expect(invite.reload).to be_accepted
 
-        decoded = Auth::TokenService.decode(token: result.token)
-        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
-      end
+      decoded = Auth::TokenService.decode(token: result.token)
+      expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
     end
 
     context "when code is not provided" do
@@ -75,10 +71,8 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("state_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("state_not_found")
       end
     end
 
@@ -88,10 +82,8 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("domain_not_configured")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("domain_not_configured")
       end
     end
 
@@ -101,10 +93,8 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
       it "returns a failure result" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("invite_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("invite_not_found")
       end
     end
 
@@ -114,10 +104,8 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
       it "returns error" do
         result = service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
-        end
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
       end
     end
   end

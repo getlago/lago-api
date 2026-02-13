@@ -40,6 +40,10 @@ module PaymentProviders
             generate_checkout_url(async)
           end
 
+          if should_fetch_payment_method?
+            FetchDefaultPaymentMethodJob.perform_later(provider_customer)
+          end
+
           result
         rescue ActiveRecord::RecordInvalid => e
           result.record_validation_failure!(record: e.record)
@@ -90,6 +94,13 @@ module PaymentProviders
             result.provider_customer.provider_customer_id? &&
             result.provider_customer.sync_with_provider.blank? &&
             result.provider_customer.provider_payment_methods_require_setup?
+        end
+
+        def should_fetch_payment_method?
+          !should_create_provider_customer? &&
+            customer.organization.feature_flag_enabled?(:multiple_payment_methods) &&
+            customer.payment_methods.empty? &&
+            result.provider_customer.provider_customer_id?
         end
       end
     end

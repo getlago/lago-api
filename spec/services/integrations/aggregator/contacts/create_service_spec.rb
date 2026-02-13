@@ -96,10 +96,8 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         it "returns contact id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.contact_id).to eq("1")
-          end
+          expect(result).to be_success
+          expect(result.contact_id).to eq("1")
         end
 
         it "delivers a success webhook" do
@@ -143,10 +141,8 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           it "returns contact id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
-            end
+            expect(result).to be_success
+            expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
           end
 
           it "delivers a success webhook" do
@@ -169,10 +165,8 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           it "does not return contact id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.contact).to be(nil)
-            end
+            expect(result).to be_success
+            expect(result.contact).to be(nil)
           end
 
           it "does not create integration resource object" do
@@ -239,39 +233,93 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
       context "when it is a server error" do
         let(:error_code) { Faker::Number.between(from: 500, to: 599) }
-        let(:code) { "action_script_runtime_error" }
-        let(:message) { "submitFields: Missing a required argument: type" }
 
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
           File.read(path)
         end
 
-        it "returns an error" do
-          result = service_call
+        it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
+        [
+          {
+            ctx: "when the error is not handled specifically",
+            payload: {
+              error: "An unexpected error occurred"
+            },
+            code: "unexpected_error",
+            message: "{\"error\":\"An unexpected error occurred\"}"
+          },
+          {
+            ctx: "when error is nested in `error.payload`",
+            payload: {
+              error: {
+                message: "The action script failed with an error: {}",
+                code: "action_script_failure",
+                payload: {
+                  error: "Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}"
+                }
+              }
+            },
+            code: "action_script_failure",
+            message: "Error starting integration 'netsuite-customer-create': {\n  \"name\": \"TRPCClientError\",\n  \"message\": \"fetch failed\"\n}"
+          },
+          {
+            ctx: "when error is nested in `error.payload.error`",
+            payload: {
+              integration: "netsuite-tba",
+              action: "netsuite-create-contact",
+              connection: "netsuite-tba-xyz",
+              error: {
+                message: "An error occurred during an HTTP call",
+                payload: {
+                  error: {
+                    code: "INVALID_LOGIN_ATTEMPT",
+                    message: "Invalid login attempt."
+                  }
+                }
+              }
+            },
+            code: "INVALID_LOGIN_ATTEMPT",
+            message: "Invalid login attempt."
+          },
+          {
+            ctx: "when error is nested in `payload.message`",
+            payload: {
+              type: "action_script_runtime_error",
+              payload: {
+                message: "submitFields: Missing a required argument: type"
+              }
+            },
+            code: "action_script_runtime_error",
+            message: "submitFields: Missing a required argument: type"
+          }
+        ].each do |test_case|
+          ctx, payload, code, message = test_case.values_at(:ctx, :payload, :code, :message)
+          context ctx do
+            let(:body) { payload.to_json }
+            let(:error_code) { 500 }
+            let(:result) { service_call }
+
+            it "returns an error" do
+              expect { result }.to enqueue_job(SendWebhookJob)
+                .with(
+                  "customer.accounting_provider_error",
+                  customer,
+                  provider: "netsuite",
+                  provider_code: integration.code,
+                  provider_error: {
+                    message:,
+                    error_code: code
+                  }
+                )
+
+              expect(result).not_to be_success
+              expect(result.error.code).to eq(code)
+              expect(result.error.message).to eq("#{code}: #{message}")
+            end
           end
         end
-
-        it "delivers an error webhook" do
-          expect { service_call }.to enqueue_job(SendWebhookJob)
-            .with(
-              "customer.accounting_provider_error",
-              customer,
-              provider: "netsuite",
-              provider_code: integration.code,
-              provider_error: {
-                message:,
-                error_code: code
-              }
-            )
-        end
-
-        it_behaves_like "throttles!", :anrok, :hubspot, :netsuite, :xero
       end
 
       context "when it is a server payload error" do
@@ -287,11 +335,9 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do
@@ -324,11 +370,9 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq(code)
-            expect(result.error.message).to eq("#{code}: #{message}")
-          end
+          expect(result).not_to be_success
+          expect(result.error.code).to eq(code)
+          expect(result.error.message).to eq("#{code}: #{message}")
         end
 
         it "delivers an error webhook" do

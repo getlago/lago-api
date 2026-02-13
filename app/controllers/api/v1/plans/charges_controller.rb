@@ -3,8 +3,7 @@
 module Api
   module V1
     module Plans
-      class ChargesController < Api::BaseController
-        before_action :find_plan
+      class ChargesController < BaseController
         before_action :find_charge, only: %i[show update destroy]
 
         def index
@@ -53,7 +52,11 @@ module Api
         end
 
         def update
-          result = ::Charges::UpdateService.call(charge:, params: input_params.to_h.deep_symbolize_keys)
+          result = ::Charges::UpdateService.call(
+            charge:,
+            params: input_params.to_h.deep_symbolize_keys,
+            cascade_updates: cascade_updates?
+          )
 
           if result.success?
             render(
@@ -69,7 +72,7 @@ module Api
         end
 
         def destroy
-          result = ::Charges::DestroyService.call(charge:)
+          result = ::Charges::DestroyService.call(charge:, cascade_updates: cascade_updates?)
 
           if result.success?
             render(
@@ -86,7 +89,7 @@ module Api
 
         private
 
-        attr_reader :plan, :charge
+        attr_reader :charge
 
         def input_params
           params.require(:charge).permit(
@@ -99,6 +102,7 @@ module Api
             :invoiceable,
             :regroup_paid_fees,
             :min_amount_cents,
+            :accepts_target_wallet,
             properties: {},
             filters: [
               :invoice_display_name,
@@ -112,10 +116,8 @@ module Api
           )
         end
 
-        def find_plan
-          @plan = current_organization.plans.parents.find_by!(code: params[:plan_code])
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "plan")
+        def cascade_updates?
+          ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
         end
 
         def find_charge

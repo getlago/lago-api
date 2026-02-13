@@ -122,14 +122,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         it "returns fees" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.first["tax_breakdown"].first["rate"]).to eq("0.10")
-            expect(result.fees.first["tax_breakdown"].first["name"]).to eq("GST/HST")
-            expect(result.fees.first["tax_breakdown"].last["name"]).to eq("Reverse charge")
-            expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
-            expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
-          end
+          expect(result).to be_success
+          expect(result.fees.first["tax_breakdown"].first["rate"]).to eq("0.10")
+          expect(result.fees.first["tax_breakdown"].first["name"]).to eq("GST/HST")
+          expect(result.fees.first["tax_breakdown"].last["name"]).to eq("Reverse charge")
+          expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
+          expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
         end
 
         it "sets integration customer external id" do
@@ -206,14 +204,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         it "returns fees" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.first["tax_breakdown"].first["rate"]).to eq("0.10")
-            expect(result.fees.first["tax_breakdown"].first["name"]).to eq("GST/HST")
-            expect(result.fees.first["tax_breakdown"].last["name"]).to eq("Reverse charge")
-            expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
-            expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
-          end
+          expect(result).to be_success
+          expect(result.fees.first["tax_breakdown"].first["rate"]).to eq("0.10")
+          expect(result.fees.first["tax_breakdown"].first["name"]).to eq("GST/HST")
+          expect(result.fees.first["tax_breakdown"].last["name"]).to eq("Reverse charge")
+          expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
+          expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
         end
 
         it "creates integration resource" do
@@ -285,12 +281,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         it "does not return fees" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.fees).to be(nil)
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("taxDateTooFarInFuture")
-          end
+          expect(result).not_to be_success
+          expect(result.fees).to be(nil)
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("taxDateTooFarInFuture")
         end
 
         it "delivers an error webhook" do
@@ -346,12 +340,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.fees).to be(nil)
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
+          expect(result).not_to be_success
+          expect(result.fees).to be(nil)
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
       end
     end

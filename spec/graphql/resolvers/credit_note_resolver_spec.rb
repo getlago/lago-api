@@ -69,8 +69,6 @@ RSpec.describe Resolvers::CreditNoteResolver do
 
     credit_note_response = result["data"]["creditNote"]
 
-    aggregate_failures do
-      expect(credit_note_response["id"]).to eq(credit_note.id)
-    end
+    expect(credit_note_response["id"]).to eq(credit_note.id)
   end
 end

@@ -46,11 +46,9 @@ RSpec.describe Mutations::PaymentProviders::Destroy do
         }
       )
 
-      aggregate_failures do
-        expect(result["errors"].first["message"]).to eq("Resource not found")
-        expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
-        expect(result["errors"].first["extensions"]["status"]).to eq(404)
-      end
+      expect(result["errors"].first["message"]).to eq("Resource not found")
+      expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
+      expect(result["errors"].first["extensions"]["status"]).to eq(404)
     end
   end
 end

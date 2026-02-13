@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Dunning Campaign v1" do
+describe "Dunning Campaign v1", :premium do
   let(:organization) do
     create(:organization, name: "JC AI", premium_integrations: %w[auto_dunning])
   end
@@ -42,8 +42,6 @@ describe "Dunning Campaign v1" do
   let(:webhooks_sent) { [] }
 
   include_context "with webhook tracking"
-
-  around { |test| lago_premium!(&test) }
 
   before do
     stub_pdf_generation

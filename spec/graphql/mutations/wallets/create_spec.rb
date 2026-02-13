@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Create do
+RSpec.describe Mutations::Wallets::Create, :premium do
   let(:required_permission) { "wallets:create" }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization, currency: "EUR") }
@@ -14,6 +14,7 @@ RSpec.describe Mutations::Wallets::Create do
       mutation($input: CreateCustomerWalletInput!) {
         createCustomerWallet(input: $input) {
           id
+          code
           name
           priority
           rateAmount
@@ -23,6 +24,10 @@ RSpec.describe Mutations::Wallets::Create do
           invoiceRequiresSuccessfulPayment
           paidTopUpMinAmountCents
           paidTopUpMaxAmountCents
+          metadata {
+            key
+            value
+          }
           recurringTransactionRules {
             lagoId
             method
@@ -51,8 +56,6 @@ RSpec.describe Mutations::Wallets::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -105,6 +108,7 @@ RSpec.describe Mutations::Wallets::Create do
     result_data = result["data"]["createCustomerWallet"]
 
     expect(result_data["id"]).to be_present
+    expect(result_data["code"]).to eq("first_wallet")
     expect(result_data["name"]).to eq("First Wallet")
     expect(result_data["priority"]).to eq(9)
     expect(result_data["invoiceRequiresSuccessfulPayment"]).to eq(true)
@@ -130,13 +134,22 @@ RSpec.describe Mutations::Wallets::Create do
 
     expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
       organization_id: membership.organization.id,
-      params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: "Initial Credits Purchase", ignore_paid_top_up_limits: nil}
+      params: {
+        wallet_id: Regex::UUID,
+        paid_credits: "10.00",
+        granted_credits: "0.00",
+        source: :manual,
+        metadata: nil,
+        priority: nil,
+        name: "Initial Credits Purchase",
+        ignore_paid_top_up_limits: nil
+      }
     )
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.created", Wallet)
   end
 
   context "when name is not present" do
-    it "creates a wallet" do
+    it "creates a wallet with default code" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -160,6 +173,67 @@ RSpec.describe Mutations::Wallets::Create do
 
       expect(result_data["id"]).to be_present
       expect(result_data["name"]).to be_nil
+      expect(result_data["code"]).to eq("default")
+    end
+  end
+
+  context "when code is provided" do
+    it "creates a wallet with the provided code" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "My Wallet",
+            code: "custom_code",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR"
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomerWallet"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq("custom_code")
+      expect(result_data["name"]).to eq("My Wallet")
+    end
+  end
+
+  context "when code is already taken for the customer" do
+    before do
+      create(:wallet, customer:, code: "existing_code")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "My Wallet",
+            code: "existing_code",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR"
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result, details: {code: ["value_already_exist"]})
     end
   end
 
@@ -201,7 +275,52 @@ RSpec.describe Mutations::Wallets::Create do
 
       expect(WalletTransactions::CreateJob).to have_been_enqueued.with(
         organization_id: membership.organization.id,
-        params: {wallet_id: Regex::UUID, paid_credits: "10.00", granted_credits: "0.00", source: :manual, metadata: nil, name: nil, ignore_paid_top_up_limits: nil}
+        params: {
+          wallet_id: Regex::UUID,
+          paid_credits: "10.00",
+          granted_credits: "0.00",
+          source: :manual,
+          metadata: nil,
+          priority: nil,
+          name: nil,
+          ignore_paid_top_up_limits: nil
+        }
+      )
+    end
+  end
+
+  context "with metadata" do
+    it "creates a wallet with metadata" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            name: "Wallet with Metadata",
+            priority: 9,
+            rateAmount: "1",
+            paidCredits: "0.00",
+            grantedCredits: "0.00",
+            expirationAt: expiration_at.iso8601,
+            currency: "EUR",
+            metadata: [
+              {key: "env", value: "production"},
+              {key: "team", value: "engineering"}
+            ]
+          }
+        }
+      )
+
+      result_data = result["data"]["createCustomerWallet"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["name"]).to eq("Wallet with Metadata")
+      expect(result_data["metadata"]).to contain_exactly(
+        {"key" => "env", "value" => "production"},
+        {"key" => "team", "value" => "engineering"}
       )
     end
   end

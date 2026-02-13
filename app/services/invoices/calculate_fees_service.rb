@@ -101,6 +101,8 @@ module Invoices
 
     def charge_boundaries_valid?(boundaries)
       # TODO: Investigate why invalid boundaries are even possible
+      return false if boundaries.charges_from_datetime.blank? || boundaries.charges_to_datetime.blank?
+
       boundaries.charges_from_datetime < boundaries.charges_to_datetime
     end
 
@@ -217,18 +219,18 @@ module Invoices
           }
         )
         .find_each do |charge|
-        next if should_not_create_charge_fee?(charge, subscription)
+          next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.call!(
-          invoice: nil,
-          charge:,
-          subscription:,
-          context: :recurring,
-          boundaries:,
-          apply_taxes: invoice.customer.tax_customer.blank?
-        )
+          fee_result = Fees::ChargeService.call!(
+            invoice: nil,
+            charge:,
+            subscription:,
+            context: :recurring,
+            boundaries:,
+            apply_taxes: invoice.customer.tax_customer.blank?
+          )
 
-        result.non_invoiceable_fees.concat(fee_result.fees)
+          result.non_invoiceable_fees.concat(fee_result.fees)
       end
     end
 
@@ -341,8 +343,6 @@ module Invoices
     end
 
     def should_create_fixed_charge_fees?(subscription, boundaries)
-      return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
-
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
       #       fee if the fixed_charge is pay in arrears, otherwise this fee will never
       #       be created.

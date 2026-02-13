@@ -16,14 +16,12 @@ RSpec.describe Fees::UpdateService do
     it "updates the fee" do
       result = update_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.fee.payment_status).to eq("succeeded")
-        expect(result.fee.succeeded_at).to be_within(1.minute).of(Time.current)
-        expect(result.fee.failed_at).to be_nil
-        expect(result.fee.refunded_at).to be_nil
-      end
+      expect(result.fee.payment_status).to eq("succeeded")
+      expect(result.fee.succeeded_at).to be_within(1.minute).of(Time.current)
+      expect(result.fee.failed_at).to be_nil
+      expect(result.fee.refunded_at).to be_nil
     end
 
     context "when fee is nil" do
@@ -32,11 +30,9 @@ RSpec.describe Fees::UpdateService do
       it "returns a not found failure" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("fee_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("fee_not_found")
       end
     end
 
@@ -46,11 +42,9 @@ RSpec.describe Fees::UpdateService do
       it "returns a not allowed failure" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("invoiced_fee")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("invoiced_fee")
       end
     end
 
@@ -60,11 +54,9 @@ RSpec.describe Fees::UpdateService do
       it "returns a validation failure" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:payment_status]).to eq(["value_is_invalid"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:payment_status]).to eq(["value_is_invalid"])
       end
     end
 
@@ -74,14 +66,12 @@ RSpec.describe Fees::UpdateService do
       it "updates the fee" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.fee.payment_status).to eq("failed")
-          expect(result.fee.failed_at).to be_within(1.minute).of(Time.current)
-          expect(result.fee.refunded_at).to be_nil
-          expect(result.fee.succeeded_at).to be_nil
-        end
+        expect(result.fee.payment_status).to eq("failed")
+        expect(result.fee.failed_at).to be_within(1.minute).of(Time.current)
+        expect(result.fee.refunded_at).to be_nil
+        expect(result.fee.succeeded_at).to be_nil
       end
     end
 
@@ -91,14 +81,12 @@ RSpec.describe Fees::UpdateService do
       it "updates the fee" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.fee.payment_status).to eq("refunded")
-          expect(result.fee.refunded_at).to be_within(1.minute).of(Time.current)
-          expect(result.fee.succeeded_at).to be_nil
-          expect(result.fee.failed_at).to be_nil
-        end
+        expect(result.fee.payment_status).to eq("refunded")
+        expect(result.fee.refunded_at).to be_within(1.minute).of(Time.current)
+        expect(result.fee.succeeded_at).to be_nil
+        expect(result.fee.failed_at).to be_nil
       end
     end
   end

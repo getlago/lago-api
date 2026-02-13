@@ -87,13 +87,13 @@ RSpec.describe Metadata::ItemMetadata do
         end
       end
 
-      context "when key length is more than 40" do
-        let(:value) { {("a" * 41) => "value"} }
+      context "when key length is more than 100" do
+        let(:value) { {("a" * 101) => "value"} }
 
         it "adds an error" do
-          key = "a" * 41
+          key = "a" * 101
           expect(item_metadata).not_to be_valid
-          expect(item_metadata.errors[:value]).to include("key '#{key}' must be a String up to 40 characters")
+          expect(item_metadata.errors[:value]).to include("key '#{key}' must be a String up to 100 characters")
         end
       end
 

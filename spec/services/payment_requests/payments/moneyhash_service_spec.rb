@@ -45,11 +45,16 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
   let(:payment_response_json) { JSON.parse(File.read(Rails.root.join("spec/fixtures/moneyhash/recurring_mit_payment_success_response.json"))) }
   let(:provider_payment_id) { payment_response_json.dig("data", "id") }
 
+  let(:lago_client) { instance_double(LagoHttpClient::Client) }
+  let(:response) { instance_double(Net::HTTPOK) }
+  let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
+
   describe "#create" do
     before do
       moneyhash_provider
       moneyhash_customer
       moneyhash_customer.update!(payment_method_id: "test_payment_method")
+      allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
     end
 
     context "when moneyhash customer is missing provider customer id" do
@@ -114,8 +119,8 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
 
     context "when payment should be processed" do
       before do
-        allow_any_instance_of(LagoHttpClient::Client).to receive(:post_with_response) # rubocop:disable RSpec/AnyInstance
-          .and_return(OpenStruct.new(body: payment_response_json.to_json))
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(payment_response_json.to_json)
       end
 
       it "increments payment attempts, creates a payment and updates payment statuses for payable and invoices" do
@@ -133,7 +138,7 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
 
       context "when API request fails" do
         before do
-          allow_any_instance_of(LagoHttpClient::Client).to receive(:post_with_response) # rubocop:disable RSpec/AnyInstance
+          allow(lago_client).to receive(:post_with_response)
             .and_raise(LagoHttpClient::HttpError.new(422, "error", "error_code"))
         end
 
@@ -149,10 +154,69 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
         end
       end
     end
+
+    context "when multiple_payment_methods feature flag is enabled" do
+      let(:payment_method) do
+        create(:payment_method,
+          customer:,
+          payment_provider_customer: moneyhash_customer,
+          provider_method_id: "pm_test_123")
+      end
+
+      before do
+        organization.update!(feature_flags: ["multiple_payment_methods"])
+        payment_method
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(payment_response_json.to_json)
+      end
+
+      it "uses customer default payment_method provider_method_id as card_token" do
+        moneyhash_service.create
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:card_token]).to eq("pm_test_123")
+        end
+      end
+
+      context "when customer has no default payment method" do
+        before { payment_method.update!(is_default: false) }
+
+        it "returns not found failure" do
+          result = moneyhash_service.create
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("payment_method")
+        end
+      end
+    end
+
+    context "when multiple_payment_methods feature flag is disabled" do
+      before do
+        moneyhash_customer.update!(payment_method_id: "legacy_pm_456")
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(payment_response_json.to_json)
+      end
+
+      it "uses provider_customer payment_method_id as card_token" do
+        moneyhash_service.create
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:card_token]).to eq("legacy_pm_456")
+        end
+      end
+    end
   end
 
   describe "#update_payment_status" do
-    let(:payment) { create(:payment, payment_provider: moneyhash_provider, provider_payment_id:, payable:, amount_cents: payable.total_amount_cents, amount_currency: payable.currency) }
+    let(:payment) do
+      create(:payment,
+        payment_provider: moneyhash_provider,
+        provider_payment_id:,
+        payable:,
+        amount_cents: payable.total_amount_cents,
+        amount_currency: payable.currency)
+    end
 
     before do
       moneyhash_provider

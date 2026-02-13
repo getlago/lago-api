@@ -35,10 +35,8 @@ RSpec.describe AdjustedFees::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("adjusted_fee_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("adjusted_fee_not_found")
       end
     end
 
@@ -48,10 +46,8 @@ RSpec.describe AdjustedFees::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("fee_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("fee_not_found")
       end
     end
   end

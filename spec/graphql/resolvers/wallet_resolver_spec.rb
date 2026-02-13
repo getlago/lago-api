@@ -8,6 +8,7 @@ RSpec.describe Resolvers::WalletResolver do
       query($id: ID!) {
         wallet(id: $id) {
           id name status creditsBalance
+          metadata { key value }
           recurringTransactionRules {
             transactionName
           }
@@ -31,13 +32,45 @@ RSpec.describe Resolvers::WalletResolver do
       variables: {id: wallet.id}
     )
 
-    coupon_response = result["data"]["wallet"]
+    wallet_response = result["data"]["wallet"]
 
-    expect(coupon_response).to eq(
+    expect(wallet_response).to eq(
       {
-        "creditsBalance" => 0.0, "id" => wallet.id, "name" => wallet.name, "recurringTransactionRules" => [{"transactionName" => "Recurring Transaction Rule"}], "status" => "active"
+        "creditsBalance" => 0.0,
+        "id" => wallet.id,
+        "name" => wallet.name,
+        "metadata" => nil,
+        "recurringTransactionRules" => [{"transactionName" => "Recurring Transaction Rule"}],
+        "status" => "active"
       }
     )
+  end
+
+  context "when wallet has metadata" do
+    let(:metadata) { create(:item_metadata, owner: wallet, value: {"key1" => "value_1", "key2" => "value_2"}) }
+
+    before { metadata }
+
+    it "returns wallet with metadata" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {id: wallet.id}
+      )
+
+      wallet_response = result["data"]["wallet"]
+
+      expect(wallet_response).to include(
+        "id" => wallet.id,
+        "name" => wallet.name,
+        "status" => "active",
+        "metadata" => [
+          {"key" => "key1", "value" => "value_1"},
+          {"key" => "key2", "value" => "value_2"}
+        ]
+      )
+    end
   end
 
   context "without current organization" do

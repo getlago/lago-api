@@ -13,7 +13,6 @@ class Invite < ApplicationRecord
   ].freeze
 
   enum :status, INVITE_STATUS
-  enum :role, Membership::ROLES
 
   validates :email, email: true
   validates :token, uniqueness: true
@@ -38,7 +37,7 @@ end
 #  accepted_at     :datetime
 #  email           :string           not null
 #  revoked_at      :datetime
-#  role            :integer          default("admin"), not null
+#  roles           :string           default([]), not null, is an Array
 #  status          :integer          default("pending"), not null
 #  token           :string           not null
 #  created_at      :datetime         not null

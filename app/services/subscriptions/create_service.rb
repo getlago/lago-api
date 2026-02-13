@@ -102,6 +102,13 @@ module Subscriptions
       sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
     end
 
+    def fixed_charges_billed_today?(sub)
+      return false if !(sub.active? && sub.started_at.today?)
+      return false if sub.fixed_charges.pay_in_advance.none?
+
+      !sub.plan.pay_in_advance? || sub.in_trial_period?
+    end
+
     def create_subscription
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
@@ -134,7 +141,7 @@ module Subscriptions
         )
 
         after_commit do
-          if plan.fixed_charges.pay_in_advance.any? && !should_be_billed_today?(new_subscription)
+          if fixed_charges_billed_today?(new_subscription)
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
               new_subscription,
               new_subscription.started_at + 1.second

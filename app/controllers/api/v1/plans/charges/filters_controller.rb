@@ -4,8 +4,7 @@ module Api
   module V1
     module Plans
       module Charges
-        class FiltersController < Api::BaseController
-          before_action :find_plan
+        class FiltersController < Plans::BaseController
           before_action :find_charge
           before_action :find_charge_filter, only: %i[show update destroy]
 
@@ -80,27 +79,18 @@ module Api
 
           private
 
-          attr_reader :plan, :charge, :charge_filter
+          attr_reader :charge, :charge_filter
 
           def input_params
             params.require(:filter).permit(
               :invoice_display_name,
-              :cascade_updates,
               properties: {},
               values: {}
             )
           end
 
           def cascade_updates?
-            return false unless params[:filter]
-
-            ActiveModel::Type::Boolean.new.cast(params[:filter][:cascade_updates])
-          end
-
-          def find_plan
-            @plan = current_organization.plans.parents.find_by!(code: params[:plan_code])
-          rescue ActiveRecord::RecordNotFound
-            not_found_error(resource: "plan")
+            ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
           end
 
           def find_charge

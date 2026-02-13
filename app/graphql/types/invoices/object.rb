@@ -40,6 +40,7 @@ module Types
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_due_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_paid_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_settled_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :expected_finalization_date, GraphQL::Types::ISO8601Date, null: false
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
@@ -55,6 +56,7 @@ module Types
       field :associated_active_wallet_present, Boolean, null: false
       field :available_to_credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :creditable_amount_cents, GraphQL::Types::BigInt, null: false
+      field :offsettable_amount_cents, GraphQL::Types::BigInt, null: false
       field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :file_url, String, null: true
@@ -67,8 +69,8 @@ module Types
       field :credit_notes, [Types::CreditNotes::Object], null: true
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :fees, [Types::Fees::Object], null: true
-      field :invoice_subscriptions, [Types::InvoiceSubscriptions::Object]
-      field :subscriptions, [Types::Subscriptions::Object]
+      field :invoice_subscriptions, [Types::InvoiceSubscriptions::Object], method: :sorted_invoice_subscriptions
+      field :subscriptions, [Types::Subscriptions::Object], method: :sorted_subscriptions
 
       field :external_hubspot_integration_id, String, null: true
       field :external_integration_id, String, null: true

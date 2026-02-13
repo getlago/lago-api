@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Charge Models - Prorated Graduated Scenarios", transaction: false, clickhouse: true do
+describe "Charge Models - Prorated Graduated Scenarios", clickhouse: true, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
   let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }
@@ -179,10 +179,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(18_700)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(18_700)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 10, 5)) do
@@ -286,10 +284,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
             subscription = customer.subscriptions.first
             invoice = subscription.invoices.first
 
-            aggregate_failures do
-              expect(invoice.total_amount_cents).to eq(6_000)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            expect(invoice.total_amount_cents).to eq(6_000)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2024, 1, 5)) do
@@ -422,12 +418,10 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
             perform_all_enqueued_jobs
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(258)
-              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(258)
+            expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
           end
         end
       end
@@ -567,10 +561,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
             subscription = customer.subscriptions.first
             invoice = subscription.invoices.first
 
-            aggregate_failures do
-              expect(invoice.total_amount_cents).to eq(18_700)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            expect(invoice.total_amount_cents).to eq(18_700)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2023, 10, 5)) do
@@ -653,12 +645,10 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
             subscription = customer.subscriptions.order(created_at: :desc).first
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              # (95 units * 14/31) -> 26_742 - charge fee
-              # 100 * 14/31 -> 45 -> subscription fee
-              expect(invoice.total_amount_cents).to eq(26_742 + 45)
-              expect(subscription.reload.invoices.count).to eq(1)
-            end
+            # (95 units * 14/31) -> 26_742 - charge fee
+            # 100 * 14/31 -> 45 -> subscription fee
+            expect(invoice.total_amount_cents).to eq(26_742 + 45)
+            expect(subscription.reload.invoices.count).to eq(1)
           end
 
           travel_to(DateTime.new(2023, 11, 5)) do
@@ -834,10 +824,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(16_117)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(16_117)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2025, 10, 5)) do
@@ -938,10 +926,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(10_700)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(10_700)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 10, 5)) do
@@ -995,10 +981,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.order(created_at: :desc).first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(10_968)
-            expect(subscription.reload.invoices.count).to eq(2)
-          end
+          expect(invoice.total_amount_cents).to eq(10_968)
+          expect(subscription.reload.invoices.count).to eq(2)
         end
 
         travel_to(DateTime.new(2023, 11, 5)) do
@@ -1168,10 +1152,8 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
           subscription = customer.subscriptions.first
           invoice = subscription.invoices.first
 
-          aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(17_371)
-            expect(subscription.reload.invoices.count).to eq(1)
-          end
+          expect(invoice.total_amount_cents).to eq(17_371)
+          expect(subscription.reload.invoices.count).to eq(1)
         end
 
         travel_to(DateTime.new(2023, 11, 5)) do
@@ -1263,13 +1245,119 @@ describe "Charge Models - Prorated Graduated Scenarios", transaction: false, cli
             perform_all_enqueued_jobs
             invoice = subscription.invoices.order(created_at: :desc).first
 
-            aggregate_failures do
-              expect(subscription.reload).to be_terminated
-              expect(subscription.reload.invoices.count).to eq(1)
-              expect(invoice.total_amount_cents).to eq(4_161)
-              expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
-            end
+            expect(subscription.reload).to be_terminated
+            expect(subscription.reload.invoices.count).to eq(1)
+            expect(invoice.total_amount_cents).to eq(4_161)
+            expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
           end
+        end
+      end
+    end
+
+    context "when item is removed before billing period" do
+      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
+      let(:field_name) { "user_id" }
+
+      let(:charge) do
+        create(
+          :graduated_charge,
+          billable_metric:,
+          prorated: true,
+          plan:,
+          properties: {
+            graduated_ranges: [
+              {from_value: 0, to_value: 1, per_unit_amount: "0", flat_amount: "0"},
+              {from_value: 2, to_value: nil, per_unit_amount: "10", flat_amount: "0"}
+            ]
+          }
+        )
+      end
+
+      before { charge }
+
+      it "does not count removed user in tier assignment" do
+        travel_to(DateTime.new(2024, 10, 1)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code
+            }
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 5)) do
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {user_id: "73283", operation_type: "add"},
+            value: "73283",
+            timestamp: Time.zone.parse("2024-10-05 10:00:00.000")
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 6)) do
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {user_id: "73290", operation_type: "add"},
+            value: "73290",
+            timestamp: Time.zone.parse("2024-10-06 10:00:00.000")
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 7)) do
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {user_id: "78924", operation_type: "add"},
+            value: "78924",
+            timestamp: Time.zone.parse("2024-10-07 10:00:00.000")
+          )
+        end
+
+        travel_to(DateTime.new(2024, 10, 25)) do
+          Clickhouse::EventsEnriched.create!(
+            organization_id: organization.id,
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: customer.external_id,
+            properties: {user_id: "73290", operation_type: "remove"},
+            value: "73290",
+            timestamp: Time.zone.parse("2024-10-25 10:00:00.000")
+          )
+        end
+
+        travel_to(DateTime.new(2024, 11, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.first
+
+          expect(subscription.invoices.count).to eq(1)
+          expect(invoice).to be_present
+        end
+
+        travel_to(DateTime.new(2024, 11, 15)) do
+          fetch_current_usage(customer:)
+
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
+          expect(json[:customer_usage][:amount_cents]).to eq(1000)
+        end
+
+        travel_to(DateTime.new(2024, 12, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.order(created_at: :desc).first
+
+          expect(invoice.total_amount_cents).to eq(1000)
         end
       end
     end

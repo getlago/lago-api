@@ -46,14 +46,12 @@ RSpec.describe Resolvers::InvoicesResolver do
     invoices_response = result["data"]["invoices"]
     returned_ids = invoices_response["collection"].map { |hash| hash["id"] }
 
-    aggregate_failures do
-      expect(invoices_response["collection"].count).to eq(2)
-      expect(returned_ids).to include(invoice_first.id)
-      expect(returned_ids).to include(invoice_second.id)
+    expect(invoices_response["collection"].count).to eq(2)
+    expect(returned_ids).to include(invoice_first.id)
+    expect(returned_ids).to include(invoice_second.id)
 
-      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-      expect(invoices_response["metadata"]["totalCount"]).to eq(2)
-    end
+    expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+    expect(invoices_response["metadata"]["totalCount"]).to eq(2)
   end
 
   context "when filtering by succeeded payment status" do
@@ -79,14 +77,12 @@ RSpec.describe Resolvers::InvoicesResolver do
       invoices_response = result["data"]["invoices"]
       returned_ids = invoices_response["collection"].map { |hash| hash["id"] }
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -115,13 +111,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -171,13 +165,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_fourth.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_fourth.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -216,13 +208,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -261,13 +251,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -307,13 +295,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -353,13 +339,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -467,13 +451,11 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_third.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
@@ -644,6 +626,57 @@ RSpec.describe Resolvers::InvoicesResolver do
 
       expect(invoices_response["metadata"]["currentPage"]).to eq(1)
       expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
+  context "when filtering by settlements" do
+    let(:credit_note) { create(:credit_note, invoice: invoice_first, customer: invoice_first.customer, organization:) }
+
+    before do
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_first.billing_entity,
+        target_invoice: invoice_first,
+        settlement_type: :credit_note,
+        source_credit_note: credit_note
+      )
+
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_second.billing_entity,
+        target_invoice: invoice_second,
+        settlement_type: :payment,
+        source_payment: create(:payment)
+      )
+    end
+
+    context "when settlements contains credit_note" do
+      let(:query) do
+        <<~GQL
+          query {
+            invoices(limit: 5, settlements: [credit_note]) {
+              collection { id }
+              metadata { currentPage, totalCount }
+            }
+          }
+        GQL
+      end
+
+      it "returns invoices with a credit note settlement" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:
+        )
+
+        invoices_response = result["data"]["invoices"]
+
+        expect(invoices_response["collection"].pluck("id")).to eq([invoice_first.id])
+        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+      end
     end
   end
 end

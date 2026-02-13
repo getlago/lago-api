@@ -26,6 +26,18 @@ module Types
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
 
+    field :create_charge, mutation: Mutations::Charges::Create
+    field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :update_charge, mutation: Mutations::Charges::Update
+
+    field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
+    field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy
+    field :update_charge_filter, mutation: Mutations::ChargeFilters::Update
+
+    field :create_fixed_charge, mutation: Mutations::FixedCharges::Create
+    field :destroy_fixed_charge, mutation: Mutations::FixedCharges::Destroy
+    field :update_fixed_charge, mutation: Mutations::FixedCharges::Update
+
     field :create_customer, mutation: Mutations::Customers::Create
     field :destroy_customer, mutation: Mutations::Customers::Destroy
     field :update_customer, mutation: Mutations::Customers::Update
@@ -42,6 +54,12 @@ module Types
     field :create_subscription, mutation: Mutations::Subscriptions::Create
     field :terminate_subscription, mutation: Mutations::Subscriptions::Terminate
     field :update_subscription, mutation: Mutations::Subscriptions::Update
+    field :update_subscription_charge, mutation: Mutations::Subscriptions::UpdateCharge
+    field :update_subscription_fixed_charge, mutation: Mutations::Subscriptions::UpdateFixedCharge
+
+    field :create_subscription_charge_filter, mutation: Mutations::Subscriptions::CreateChargeFilter
+    field :destroy_subscription_charge_filter, mutation: Mutations::Subscriptions::DestroyChargeFilter
+    field :update_subscription_charge_filter, mutation: Mutations::Subscriptions::UpdateChargeFilter
 
     field :create_coupon, mutation: Mutations::Coupons::Create
     field :destroy_coupon, mutation: Mutations::Coupons::Destroy
@@ -195,6 +213,10 @@ module Types
 
     field :create_pricing_unit, mutation: Mutations::PricingUnits::Create
     field :update_pricing_unit, mutation: Mutations::PricingUnits::Update
+
+    field :create_role, mutation: Mutations::Roles::Create
+    field :destroy_role, mutation: Mutations::Roles::Destroy
+    field :update_role, mutation: Mutations::Roles::Update
 
     field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
     field :destroy_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Destroy

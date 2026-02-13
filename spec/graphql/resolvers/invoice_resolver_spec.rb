@@ -170,31 +170,29 @@ RSpec.describe Resolvers::InvoiceResolver do
 
     data = result["data"]["invoice"]
 
-    aggregate_failures do
-      expect(data["id"]).to eq(invoice.id)
-      expect(data["number"]).to eq(invoice.number)
-      expect(data["paymentStatus"]).to eq(invoice.payment_status)
-      expect(data["paymentDisputeLosable"]).to eq(true)
-      expect(data["status"]).to eq(invoice.status)
-      expect(data["customer"]["id"]).to eq(customer.id)
-      expect(data["customer"]["name"]).to eq(customer.name)
-      expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
+    expect(data["id"]).to eq(invoice.id)
+    expect(data["number"]).to eq(invoice.number)
+    expect(data["paymentStatus"]).to eq(invoice.payment_status)
+    expect(data["paymentDisputeLosable"]).to eq(true)
+    expect(data["status"]).to eq(invoice.status)
+    expect(data["customer"]["id"]).to eq(customer.id)
+    expect(data["customer"]["name"]).to eq(customer.name)
+    expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
 
-      subscription_fee = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "subscription" }
-      expect(subscription_fee["id"]).to eq(fee.id)
-      expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
-      expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
+    subscription_fee = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "subscription" }
+    expect(subscription_fee["id"]).to eq(fee.id)
+    expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
+    expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
 
-      charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
-      expect(charge_fee_result["id"]).to eq(charge_fee.id)
-      expect(charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month - 1.month).to_datetime.iso8601)
-      expect(charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month - 1.month).to_datetime.iso8601)
+    charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
+    expect(charge_fee_result["id"]).to eq(charge_fee.id)
+    expect(charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month - 1.month).to_datetime.iso8601)
+    expect(charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month - 1.month).to_datetime.iso8601)
 
-      fixed_charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "fixed_charge" }
-      expect(fixed_charge_fee_result["id"]).to eq(fixed_charge_fee.id)
-      expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
-      expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
-    end
+    fixed_charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "fixed_charge" }
+    expect(fixed_charge_fee_result["id"]).to eq(fixed_charge_fee.id)
+    expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
+    expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
   end
 
   it "includes filters for the fee" do
@@ -306,16 +304,14 @@ RSpec.describe Resolvers::InvoiceResolver do
 
       data = result["data"]["invoice"]
 
-      aggregate_failures do
-        expect(data["id"]).to eq(invoice.id)
-        expect(data["number"]).to eq(invoice.number)
-        expect(data["paymentStatus"]).to eq(invoice.payment_status)
-        expect(data["status"]).to eq(invoice.status)
-        expect(data["customer"]["id"]).to eq(customer.id)
-        expect(data["customer"]["name"]).to eq(customer.name)
-        expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
-        expect(data["invoiceSubscriptions"][0]["fees"][0]["id"]).to eq(fee.id)
-      end
+      expect(data["id"]).to eq(invoice.id)
+      expect(data["number"]).to eq(invoice.number)
+      expect(data["paymentStatus"]).to eq(invoice.payment_status)
+      expect(data["status"]).to eq(invoice.status)
+      expect(data["customer"]["id"]).to eq(customer.id)
+      expect(data["customer"]["name"]).to eq(customer.name)
+      expect(data["invoiceSubscriptions"][0]["subscription"]["id"]).to eq(subscription.id)
+      expect(data["invoiceSubscriptions"][0]["fees"][0]["id"]).to eq(fee.id)
     end
   end
 
@@ -338,18 +334,16 @@ RSpec.describe Resolvers::InvoiceResolver do
 
       data = result["data"]["invoice"]
 
-      aggregate_failures do
-        expect(data["id"]).to eq(invoice.id)
-        expect(data["number"]).to eq(invoice.number)
-        expect(data["paymentStatus"]).to eq(invoice.payment_status)
-        expect(data["status"]).to eq(invoice.status)
-        expect(data["customer"]["id"]).to eq(customer.id)
-        expect(data["customer"]["name"]).to eq(customer.name)
-        expect(data["fees"].first).to include(
-          "itemCode" => add_on.code,
-          "itemName" => add_on.name
-        )
-      end
+      expect(data["id"]).to eq(invoice.id)
+      expect(data["number"]).to eq(invoice.number)
+      expect(data["paymentStatus"]).to eq(invoice.payment_status)
+      expect(data["status"]).to eq(invoice.status)
+      expect(data["customer"]["id"]).to eq(customer.id)
+      expect(data["customer"]["name"]).to eq(customer.name)
+      expect(data["fees"].first).to include(
+        "itemCode" => add_on.code,
+        "itemName" => add_on.name
+      )
     end
 
     context "with a deleted add_on" do
@@ -368,19 +362,17 @@ RSpec.describe Resolvers::InvoiceResolver do
 
         data = result["data"]["invoice"]
 
-        aggregate_failures do
-          expect(data["id"]).to eq(invoice.id)
-          expect(data["number"]).to eq(invoice.number)
-          expect(data["paymentStatus"]).to eq(invoice.payment_status)
-          expect(data["status"]).to eq(invoice.status)
-          expect(data["customer"]["id"]).to eq(customer.id)
-          expect(data["customer"]["name"]).to eq(customer.name)
-          expect(data["fees"].first).to include(
-            "itemType" => "add_on",
-            "itemCode" => add_on.code,
-            "itemName" => add_on.name
-          )
-        end
+        expect(data["id"]).to eq(invoice.id)
+        expect(data["number"]).to eq(invoice.number)
+        expect(data["paymentStatus"]).to eq(invoice.payment_status)
+        expect(data["status"]).to eq(invoice.status)
+        expect(data["customer"]["id"]).to eq(customer.id)
+        expect(data["customer"]["name"]).to eq(customer.name)
+        expect(data["fees"].first).to include(
+          "itemType" => "add_on",
+          "itemCode" => add_on.code,
+          "itemName" => add_on.name
+        )
       end
     end
   end
@@ -401,15 +393,13 @@ RSpec.describe Resolvers::InvoiceResolver do
 
       data = result["data"]["invoice"]
 
-      aggregate_failures do
-        expect(data["id"]).to eq(invoice.id)
-        expect(data["number"]).to eq(invoice.number)
-        expect(data["paymentStatus"]).to eq(invoice.payment_status)
-        expect(data["status"]).to eq(invoice.status)
-        expect(data["customer"]["id"]).to eq(customer.id)
-        expect(data["customer"]["name"]).to eq(customer.name)
-        expect(data["customer"]["deletedAt"]).to eq(customer.deleted_at.iso8601)
-      end
+      expect(data["id"]).to eq(invoice.id)
+      expect(data["number"]).to eq(invoice.number)
+      expect(data["paymentStatus"]).to eq(invoice.payment_status)
+      expect(data["status"]).to eq(invoice.status)
+      expect(data["customer"]["id"]).to eq(customer.id)
+      expect(data["customer"]["name"]).to eq(customer.name)
+      expect(data["customer"]["deletedAt"]).to eq(customer.deleted_at.iso8601)
     end
   end
 

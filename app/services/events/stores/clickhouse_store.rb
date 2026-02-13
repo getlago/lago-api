@@ -141,7 +141,7 @@ module Events
             .where(organization_id: subscription.organization_id)
             .where(timestamp: from_datetime..to_datetime)
             .distinct
-            .pluck("charge_filter_id", "charge_id").map(&:reverse)
+            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
         end
       end
 
@@ -673,7 +673,7 @@ module Events
 
       def filters_scope(scope)
         matching_filters.each do |key, values|
-          scope = scope.where("events_enriched.properties[?] IN ?", key.to_s, values)
+          scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
         conditions = ignored_filters.map do |filters|

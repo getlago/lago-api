@@ -111,6 +111,7 @@ class Customer < ApplicationRecord
   has_one :moneyhash_customer, class_name: "PaymentProviderCustomers::MoneyhashCustomer"
 
   has_one :default_payment_method, -> { where(is_default: true) }, class_name: "PaymentMethod"
+  has_one :pending_vies_check
 
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
@@ -233,6 +234,12 @@ class Customer < ApplicationRecord
       invoices.none? &&
       applied_coupons.where.not(amount_currency: nil).none? &&
       wallets.none?
+  end
+
+  def vies_check_in_progress?
+    return false unless billing_entity.eu_tax_management?
+
+    pending_vies_check.present?
   end
 
   def preferred_document_locale
@@ -382,13 +389,16 @@ end
 #
 # Indexes
 #
-#  index_customers_on_account_type                     (account_type)
-#  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
-#  index_customers_on_awaiting_wallet_refresh          (awaiting_wallet_refresh)
-#  index_customers_on_billing_entity_id                (billing_entity_id)
-#  index_customers_on_deleted_at                       (deleted_at)
-#  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
-#  index_customers_on_organization_id                  (organization_id)
+#  index_customers_on_account_type                       (account_type)
+#  index_customers_on_applied_dunning_campaign_id        (applied_dunning_campaign_id)
+#  index_customers_on_awaiting_wallet_refresh            (awaiting_wallet_refresh)
+#  index_customers_on_billing_entity_id                  (billing_entity_id)
+#  index_customers_on_deleted_at                         (deleted_at)
+#  index_customers_on_external_id                        (organization_id,external_id)
+#  index_customers_on_external_id_and_organization_id    (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_customers_on_organization_id                    (organization_id)
+#  index_customers_on_organization_id_and_sequential_id  (organization_id,sequential_id)
+#  index_customers_on_sequential_id                      (sequential_id)
 #
 # Foreign Keys
 #

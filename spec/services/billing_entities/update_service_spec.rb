@@ -107,8 +107,6 @@ RSpec.describe BillingEntities::UpdateService do
     end
 
     context "with premium features", :premium do
-      around { |test| lago_premium!(&test) }
-
       let(:timezone) { "Europe/Paris" }
       let(:email_settings) { ["invoice.finalized"] }
 

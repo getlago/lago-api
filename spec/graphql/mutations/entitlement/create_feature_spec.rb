@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::CreateFeature do
+RSpec.describe Mutations::Entitlement::CreateFeature, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:create" }
@@ -34,8 +34,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature do
       privileges: []
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

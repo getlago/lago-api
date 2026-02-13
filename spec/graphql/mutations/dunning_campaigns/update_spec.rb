@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::DunningCampaigns::Update do
+RSpec.describe Mutations::DunningCampaigns::Update, :premium do
   let(:required_permission) { "dunning_campaigns:update" }
   let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
   let(:membership) { create(:membership, organization:) }
@@ -44,8 +44,6 @@ RSpec.describe Mutations::DunningCampaigns::Update do
       ]
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign)

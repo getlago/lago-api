@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Hubspot::Update do
+RSpec.describe Mutations::Integrations::Hubspot::Update, :premium do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:hubspot_integration, organization:) }
   let(:organization) { membership.organization }
@@ -25,8 +25,6 @@ RSpec.describe Mutations::Integrations::Hubspot::Update do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     integration
@@ -54,9 +52,7 @@ RSpec.describe Mutations::Integrations::Hubspot::Update do
 
     result_data = result["data"]["updateHubspotIntegration"]
 
-    aggregate_failures do
-      expect(result_data["name"]).to eq(name)
-      expect(result_data["code"]).to eq(code)
-    end
+    expect(result_data["name"]).to eq(name)
+    expect(result_data["code"]).to eq(code)
   end
 end

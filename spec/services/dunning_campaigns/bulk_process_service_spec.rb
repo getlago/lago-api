@@ -2,12 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::BulkProcessService, aggregate_failures: true do
+RSpec.describe DunningCampaigns::BulkProcessService do
   subject(:result) { described_class.call }
 
   let(:currency) { "EUR" }
 
-  context "when premium features are enabled" do
+  context "when premium features are enabled", :premium do
     let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
     let(:billing_entity) { organization.default_billing_entity }
     let(:customer) { create :customer, organization:, billing_entity:, currency: }
@@ -33,8 +33,6 @@ RSpec.describe DunningCampaigns::BulkProcessService, aggregate_failures: true do
         total_amount_cents: 1_00
       )
     end
-
-    around { |test| lago_premium!(&test) }
 
     context "when billing_entity has an applied dunning campaign" do
       let(:dunning_campaign) { create :dunning_campaign, organization: }

@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "payment_requests:create"
+      REQUIRED_PERMISSION = "payments:create"
 
       graphql_name "CreatePaymentRequest"
       description "Creates a payment request"

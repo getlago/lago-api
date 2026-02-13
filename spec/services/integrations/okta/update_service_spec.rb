@@ -27,24 +27,18 @@ RSpec.describe Integrations::Okta::UpdateService do
       it "returns an error" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "with okta premium integration not present" do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         end
       end
 
@@ -57,10 +51,8 @@ RSpec.describe Integrations::Okta::UpdateService do
 
             integration = Integrations::OktaIntegration.order(:updated_at).last
 
-            aggregate_failures do
-              expect(integration.domain).to eq(domain)
-              expect(integration.organization_name).to eq(organization_name)
-            end
+            expect(integration.domain).to eq(domain)
+            expect(integration.organization_name).to eq(organization_name)
           end
         end
 
@@ -70,11 +62,9 @@ RSpec.describe Integrations::Okta::UpdateService do
           it "returns an error" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:domain]).to eq(["value_is_mandatory"])
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:domain]).to eq(["value_is_mandatory"])
           end
         end
       end

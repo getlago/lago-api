@@ -151,9 +151,10 @@ module Invoices
 
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+      plan = subscription.plan
 
       invoice.fees.each do |fee|
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result = Fees::ApplyTaxesService.call(fee:, customer:, plan:)
         taxes_result.raise_if_error!
       end
 
@@ -175,7 +176,7 @@ module Invoices
 
       taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
-      return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]}) unless taxes_result.success?
+      return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
       result.fees_taxes = taxes_result.fees
 

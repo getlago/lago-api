@@ -18,7 +18,7 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
       allow(Subscriptions::TerminateService).to receive(:call)
     end
 
-    it "terminates the subscriptions where ending_at matches current data " do
+    it "terminates the subscriptions where ending_at matches current data" do
       current_date = Time.current + 2.months
 
       travel_to(current_date) do

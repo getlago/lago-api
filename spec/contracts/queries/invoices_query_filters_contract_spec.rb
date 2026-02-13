@@ -7,6 +7,38 @@ RSpec.describe Queries::InvoicesQueryFiltersContract do
 
   let(:filters) { {} }
 
+  context "when filtering by settlements" do
+    let(:filters) { {settlements: "credit_note"} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+
+    context "when settlement is payment" do
+      let(:filters) { {settlements: "payment"} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+    end
+
+    context "when filter is an array" do
+      let(:filters) { {settlements: ["credit_note"]} }
+
+      it "is valid" do
+        expect(result.success?).to be(true)
+      end
+
+      context "when settlement is payment" do
+        let(:filters) { {settlements: ["payment"]} }
+
+        it "is valid" do
+          expect(result.success?).to be(true)
+        end
+      end
+    end
+  end
+
   context "when filtering by payment status" do
     let(:filters) { {payment_status: "succeeded"} }
 
@@ -64,6 +96,8 @@ RSpec.describe Queries::InvoicesQueryFiltersContract do
   end
 
   context "when filters are invalid" do
+    it_behaves_like "an invalid filter", :settlements, "random", ["must be one of: payment, credit_note or must be an array"]
+    it_behaves_like "an invalid filter", :settlements, ["credit_note", "random"], {1 => ["must be one of: payment, credit_note"]}
     it_behaves_like "an invalid filter", :payment_status, "random", ["must be one of: pending, succeeded, failed or must be an array"]
     it_behaves_like "an invalid filter", :payment_status, ["succeeded", "random"], {1 => ["must be one of: pending, succeeded, failed"]}
     it_behaves_like "an invalid filter", :status, "random", ["must be one of: draft, finalized, voided, failed, pending or must be an array"]

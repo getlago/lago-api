@@ -29,11 +29,22 @@ class Organization < ApplicationRecord
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
   has_many :active_memberships, -> { active }, class_name: "Membership"
-  has_many :admins_memberships, -> { active.admin }, class_name: "Membership"
   has_many :users, through: :memberships
+
+  # TODO: Remove in favor of admins through admin_membership_roles
+  has_many :admins_memberships, -> { active.admins }, class_name: "Membership"
   has_many :admins, through: :admins_memberships, source: :user
+  # New way to access admin users
+  has_many :membership_roles, through: :active_memberships
+  has_many :admin_membership_roles, -> { admins }, through: :active_memberships, source: :membership_roles
+  has_many :admin_memberships, through: :admin_membership_roles, source: :membership
+  has_many :admin_users, through: :admin_memberships, source: :user
+
   has_many :billable_metrics
   has_many :plans
+  has_many :charges
+  has_many :fixed_charges
+  has_many :charge_filters
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
@@ -59,6 +70,7 @@ class Organization < ApplicationRecord
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
+  has_many :roles
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :features, class_name: "Entitlement::Feature"
   has_many :privileges, class_name: "Entitlement::Privilege"
@@ -69,6 +81,7 @@ class Organization < ApplicationRecord
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :pending_vies_checks
 
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
@@ -112,7 +125,6 @@ class Organization < ApplicationRecord
     salesforce
     api_permissions
     revenue_share
-    zero_amount_fees
     remove_branding_watermark
     manual_payments
     from_email
@@ -123,6 +135,8 @@ class Organization < ApplicationRecord
     analytics_dashboards
     forecasted_usage
     projected_usage
+    custom_roles
+    events_targeting_wallets
   ].freeze
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
@@ -240,6 +254,10 @@ class Organization < ApplicationRecord
     self
   end
 
+  def maximum_wallets_per_customer
+    max_wallets if events_targeting_wallets_enabled?
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -306,6 +324,7 @@ end
 #  legal_name                       :string
 #  legal_number                     :string
 #  logo                             :string
+#  max_wallets                      :integer
 #  name                             :string           not null
 #  net_payment_term                 :integer          default(0), not null
 #  pre_filter_events                :boolean          default(FALSE), not null

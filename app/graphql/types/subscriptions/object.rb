@@ -39,7 +39,9 @@ module Types
       field :next_subscription_type, Types::Subscriptions::NextSubscriptionTypeEnum
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :charges, [Types::Charges::Object], null: true
       field :fees, [Types::Fees::Object], null: true
+      field :fixed_charges, [Types::FixedCharges::Object], null: true
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
 
@@ -83,6 +85,18 @@ module Types
 
       def current_billing_period_ending_at
         dates_service.charges_to_datetime
+      end
+
+      def charges
+        object.plan.charges
+          .includes(:billable_metric, :taxes, :applied_pricing_unit, filters: :billable_metric_filters)
+          .order(created_at: :asc)
+      end
+
+      def fixed_charges
+        object.plan.fixed_charges
+          .includes(:add_on, :taxes)
+          .order(created_at: :asc)
       end
 
       def dates_service

@@ -43,14 +43,12 @@ RSpec.describe Resolvers::WalletsResolver do
 
     wallets_response = result["data"]["wallets"]
 
-    aggregate_failures do
-      expect(wallets_response["collection"].count).to eq(customer.wallets.active.count)
-      expect(wallets_response["collection"].first["id"]).to eq(wallet.id)
+    expect(wallets_response["collection"].count).to eq(customer.wallets.active.count)
+    expect(wallets_response["collection"].first["id"]).to eq(wallet.id)
 
-      expect(wallets_response["metadata"]["customerActiveWalletsCount"]).to eq(1)
-      expect(wallets_response["metadata"]["currentPage"]).to eq(1)
-      expect(wallets_response["metadata"]["totalCount"]).to eq(1)
-    end
+    expect(wallets_response["metadata"]["customerActiveWalletsCount"]).to eq(1)
+    expect(wallets_response["metadata"]["currentPage"]).to eq(1)
+    expect(wallets_response["metadata"]["totalCount"]).to eq(1)
   end
 
   context "without current organization" do

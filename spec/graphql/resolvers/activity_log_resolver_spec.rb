@@ -9,6 +9,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       query($activityLogId: ID!) {
         activityLog(activityId: $activityLogId) {
           activityId
+          activityObjectChanges
         }
       }
     GQL
@@ -40,9 +41,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
     it_behaves_like "blocked feature", "unauthorized"
   end
 
-  context "without database configuration" do
-    around { |test| lago_premium!(&test) }
-
+  context "without database configuration", :premium do
     before do
       ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
       ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"] = nil
@@ -52,10 +51,8 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
     it_behaves_like "blocked feature", "feature_unavailable"
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
-    it "returns a single activity log" do
+  context "with premium feature", :premium do
+    it "returns a single activity log with parsed object changes" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -67,6 +64,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       activity_log_response = result["data"]["activityLog"]
 
       expect(activity_log_response["activityId"]).to eq(clickhouse_activity_log.activity_id)
+      expect(activity_log_response["activityObjectChanges"]).to eq("foo" => {"old" => "bar", "new" => "baz"})
     end
 
     context "when activity log is not found" do

@@ -244,12 +244,10 @@ RSpec.describe Invoices::Payments::StripeService do
           stripe_payment:
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:payable_payment_status)
-          expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:payable_payment_status)
+        expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
       end
     end
 
@@ -277,16 +275,14 @@ RSpec.describe Invoices::Payments::StripeService do
           stripe_payment:
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.payment.organization).to eq(organization)
-          expect(result.payment.status).to eq("succeeded")
-          expect(result.payment.payable_payment_status).to eq("succeeded")
-          expect(result.invoice.reload).to have_attributes(
-            payment_status: "succeeded",
-            ready_for_payment_processing: false
-          )
-        end
+        expect(result).to be_success
+        expect(result.payment.organization).to eq(organization)
+        expect(result.payment.status).to eq("succeeded")
+        expect(result.payment.payable_payment_status).to eq("succeeded")
+        expect(result.invoice.reload).to have_attributes(
+          payment_status: "succeeded",
+          ready_for_payment_processing: false
+        )
       end
 
       context "when invoice is not found" do
@@ -306,11 +302,9 @@ RSpec.describe Invoices::Payments::StripeService do
             stripe_payment:
           )
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("invoice_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("invoice_not_found")
         end
       end
     end
@@ -325,10 +319,8 @@ RSpec.describe Invoices::Payments::StripeService do
           stripe_payment:
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.payment).to be_nil
-        end
+        expect(result).to be_success
+        expect(result.payment).to be_nil
       end
 
       context "with invoice id in metadata" do
@@ -348,10 +340,8 @@ RSpec.describe Invoices::Payments::StripeService do
             stripe_payment:
           )
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.payment).to be_nil
-          end
+          expect(result).to be_success
+          expect(result.payment).to be_nil
         end
 
         context "when the invoice is found for organization" do

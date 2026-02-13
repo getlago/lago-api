@@ -337,11 +337,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     it "ignores the event" do
       result = sum_service.aggregate
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.aggregation).to eq(48)
-        expect(result.count).to eq(4)
-      end
+      expect(result).to be_success
+      expect(result.aggregation).to eq(48)
+      expect(result.count).to eq(4)
     end
   end
 

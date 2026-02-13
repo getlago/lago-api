@@ -214,9 +214,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
       end
     end
 
-    context "with applied_pricing_unit" do
-      around { |test| lago_premium!(&test) }
-
+    context "with applied_pricing_unit", :premium do
       let(:pricing_unit) { create(:pricing_unit, organization:) }
       let(:create_params) do
         {
@@ -235,6 +233,51 @@ RSpec.describe Api::V1::Plans::ChargesController do
         expect(json[:charge][:applied_pricing_unit]).to be_present
         expect(json[:charge][:applied_pricing_unit][:code]).to eq(pricing_unit.code)
         expect(json[:charge][:applied_pricing_unit][:conversion_rate]).to eq("2.5")
+      end
+    end
+
+    context "with accepts_target_wallet" do
+      let(:create_params) do
+        {
+          billable_metric_id: billable_metric.id,
+          code: "wallet_target_charge",
+          charge_model: "standard",
+          properties: {amount: "100"},
+          accepts_target_wallet: true
+        }
+      end
+
+      context "when license is not premium" do
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:accepts_target_wallet]).to be false
+        end
+      end
+
+      context "when license is premium", :premium do
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be false
+          end
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be true
+          end
+        end
       end
     end
   end
@@ -291,6 +334,69 @@ RSpec.describe Api::V1::Plans::ChargesController do
         expect(json[:charge][:invoice_display_name]).to eq("Updated Charge Name")
       end
     end
+
+    context "with cascade_updates" do
+      subject { put_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}?cascade_updates=true", {charge: update_params}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "passes cascade_updates to the service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
+
+    context "with accepts_target_wallet" do
+      let(:update_params) do
+        {
+          charge_model: "standard",
+          properties: {amount: "200"},
+          accepts_target_wallet: true
+        }
+      end
+
+      context "when license is not premium" do
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:charge][:accepts_target_wallet]).to be false
+        end
+      end
+
+      context "when license is premium", :premium do
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be false
+          end
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:charge][:accepts_target_wallet]).to be true
+          end
+        end
+      end
+    end
   end
 
   describe "DELETE /api/v1/plans/:plan_code/charges/:code" do
@@ -323,6 +429,25 @@ RSpec.describe Api::V1::Plans::ChargesController do
         subject
 
         expect(response).to be_not_found_error("charge")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}?cascade_updates=true") }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        child_charge
+        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "cascades the deletion to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
       end
     end
   end

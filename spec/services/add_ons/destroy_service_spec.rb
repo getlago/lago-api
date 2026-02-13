@@ -13,10 +13,8 @@ RSpec.describe AddOns::DestroyService do
     before { add_on }
 
     it "soft deletes the add-on" do
-      aggregate_failures do
-        expect { destroy_service.call }.to change(AddOn, :count).by(-1)
-          .and change { add_on.reload.deleted_at }.from(nil)
-      end
+      expect { destroy_service.call }.to change(AddOn, :count).by(-1)
+        .and change { add_on.reload.deleted_at }.from(nil)
     end
 
     context "when there are fixed charges associated with the add-on" do
@@ -51,10 +49,8 @@ RSpec.describe AddOns::DestroyService do
       it "returns an error" do
         result = destroy_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("add_on_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("add_on_not_found")
       end
     end
   end

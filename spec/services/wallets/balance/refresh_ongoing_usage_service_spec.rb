@@ -44,111 +44,48 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
     )
   end
 
-  let(:events) do
-    create_list(
-      :event,
-      2,
-      organization: wallet.organization,
-      subscription: first_subscription,
-      customer: first_subscription.customer,
-      code: billable_metric.code,
-      timestamp:
-    ).push(
-      create(
-        :event,
-        organization: wallet.organization,
-        subscription: second_subscription,
-        customer: second_subscription.customer,
-        code: billable_metric.code,
-        timestamp:
-      )
-    )
-  end
-
-  let(:usage_amount_cents) do
-    customer.active_subscriptions.map do |subscription|
-      invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:).invoice
-
-      billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
-        .call(subscription:, include_generating_invoices:)
-        .invoice_subscriptions
-
-      {
-        billed_progressive_invoice_subscriptions:,
-        invoice:,
-        subscription:
-      }
-    end
-  end
-
-  let(:allocation_rules) do
-    Wallets::BuildAllocationRulesService.call!(customer:).allocation_rules
-  end
-
-  let(:include_generating_invoices) { false }
+  let(:usage_amount_cents) { 1100 }
+  let(:current_usage_fees) { [] }
+  let(:draft_invoices_fees) { [] }
+  let(:progressive_billing_fees) { [] }
+  let(:pay_in_advance_fees) { [] }
 
   before do
     first_charge
     second_charge
     wallet
-    events
   end
 
   describe ".call" do
-    subject(:result) { described_class.call(wallet:, usage_amount_cents:, allocation_rules:) }
-
-    it "updates wallet ongoing balance" do
-      expect { subject }
-        .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
-        .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
-        .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
-        .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
+    subject(:result) do
+      described_class.call(
+        wallet:,
+        usage_amount_cents:,
+        current_usage_fees:,
+        draft_invoices_fees:,
+        progressive_billing_fees:,
+        pay_in_advance_fees:
+      )
     end
 
-    it "returns the wallet" do
-      expect(result.wallet).to eq(wallet)
-    end
-
-    context "when there are wallet billable metric limitations" do
-      let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
-      let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
-      let(:second_charge) do
-        create(
-          :standard_charge,
-          plan: second_subscription.plan,
-          billable_metric: billable_metric2,
-          properties: {amount: "5"}
-        )
+    context "when there are current usage fees" do
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:first_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 600, taxes_amount_cents: 0)
       end
-      let(:events) do
-        create_list(
-          :event,
-          2,
-          organization: wallet.organization,
-          subscription: first_subscription,
-          customer: first_subscription.customer,
-          code: billable_metric.code,
-          timestamp:
-        ).push(
-          create(
-            :event,
-            organization: wallet.organization,
-            subscription: second_subscription,
-            customer: second_subscription.customer,
-            code: billable_metric2.code,
-            timestamp:
-          )
-        )
+      let(:second_fee) do
+        create(:charge_fee, charge: second_charge, subscription: second_subscription,
+          organization:, invoice:, amount_cents: 500, taxes_amount_cents: 0)
       end
-
-      before { wallet_target }
+      let(:current_usage_fees) { [first_fee, second_fee] }
 
       it "updates wallet ongoing balance" do
         expect { subject }
-          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(600)
-          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(6.0)
-          .and change(wallet, :ongoing_balance_cents).from(800).to(400)
-          .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.0)
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
       end
 
       it "returns the wallet" do
@@ -157,44 +94,46 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
     end
 
     context "when there are paid in advance fees" do
-      let(:third_charge) { create(:standard_charge, :pay_in_advance, plan: first_subscription.plan, billable_metric:, properties: {amount: "7"}) }
-      let(:pay_in_advance_invoice) { create(:invoice, :subscription, subscriptions: [first_subscription], organization: organization, customer: customer) }
-      let(:fee) do
-        create(:charge_fee, charge: third_charge, subscription: first_subscription,
-          organization: wallet.organization, invoice: pay_in_advance_invoice, amount_cents: 700)
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:current_usage_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 1100, taxes_amount_cents: 0)
       end
+      let(:pay_in_advance_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 700, taxes_amount_cents: 0)
+      end
+      let(:current_usage_fees) { [current_usage_fee] }
+      let(:pay_in_advance_fees) { [pay_in_advance_fee] }
 
-      before { fee }
-
-      it "updates wallet ongoing balance" do
-        # we've added one more fee to the first subscription, but the total usage is not changed
+      it "updates wallet ongoing balance by deducting pay in advance fees" do
+        # total_usage = 1100, billed_pay_in_advance = 700
+        # ongoing_usage = 1100 - 700 = 400
         expect { subject }
-          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
-          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
-          .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
-          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(400)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(4.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(600)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(6.0)
       end
     end
 
     context "when there is a progressive billing invoice" do
-      let(:invoice_type) { :progressive_billing }
-      let(:timestamp) { Time.current }
-      let(:charges_to_datetime) { timestamp + 1.week }
-      let(:charges_from_datetime) { timestamp - 1.week }
-      let(:invoice_subscription) { create(:invoice_subscription, subscription: first_subscription, charges_from_datetime:, charges_to_datetime:) }
-      let(:invoice) { invoice_subscription.invoice }
-
-      let(:fee) do
-        create(:charge_fee, subscription: first_subscription, precise_coupons_amount_cents: 0,
-          invoice: invoice, amount_cents: 100, taxes_amount_cents: 10)
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:current_usage_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 1100, taxes_amount_cents: 0)
       end
-
-      before do
-        fee
-        invoice.update!(invoice_type:, fees_amount_cents: 110, total_amount_cents: 110)
+      let(:progressive_billing_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 100, taxes_amount_cents: 10,
+          precise_coupons_amount_cents: 0)
       end
+      let(:current_usage_fees) { [current_usage_fee] }
+      let(:progressive_billing_fees) { [progressive_billing_fee] }
 
       it "deducts progressively_billed amount from the ongoing usage" do
+        # total_usage = 1100, billed_progressive = 110 (100 + 10 taxes)
+        # ongoing_usage = 1100 - 110 = 990
         expect { subject }
           .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(990)
           .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(9.9)
@@ -203,7 +142,39 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
       end
     end
 
+    context "when there are draft invoices fees" do
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:current_usage_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 1000, taxes_amount_cents: 0)
+      end
+      let(:draft_invoice_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 100, taxes_amount_cents: 10,
+          precise_coupons_amount_cents: 10)
+      end
+      let(:current_usage_fees) { [current_usage_fee] }
+      let(:draft_invoices_fees) { [draft_invoice_fee] }
+
+      it "adds draft invoices amount to the ongoing usage" do
+        # total_usage = 1000, draft_invoices = 100 (amount) + 10 (taxes) - 10 (coupons) = 100
+        # ongoing_usage = 1000 + 100 = 1100
+        expect { subject }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
+      end
+    end
+
     context "when recalculated ongoing balance is less than 0" do
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:current_usage_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 1100, taxes_amount_cents: 0)
+      end
+      let(:current_usage_fees) { [current_usage_fee] }
+
       before do
         allow(Wallets::Balance::UpdateOngoingService).to receive(:call).and_call_original
       end
@@ -213,7 +184,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
           subject
 
           expect(Wallets::Balance::UpdateOngoingService).to have_received(:call)
-            .with(wallet: wallet, update_params: hash_including(depleted_ongoing_balance: true))
+            .with(wallet: wallet, update_params: hash_including(depleted_ongoing_balance: true), skip_single_wallet_update: false)
         end
       end
 
@@ -224,8 +195,29 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
           subject
 
           expect(Wallets::Balance::UpdateOngoingService).to have_received(:call)
-            .with(wallet: wallet, update_params: hash_excluding(:depleted_ongoing_balance))
+            .with(wallet: wallet, update_params: hash_excluding(:depleted_ongoing_balance), skip_single_wallet_update: false)
         end
+      end
+    end
+
+    context "when ongoing balance becomes positive after being depleted" do
+      let(:depleted_ongoing_balance) { true }
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:current_usage_fee) do
+        create(:charge_fee, charge: first_charge, subscription: first_subscription,
+          organization:, invoice:, amount_cents: 500, taxes_amount_cents: 0)
+      end
+      let(:current_usage_fees) { [current_usage_fee] }
+
+      before do
+        allow(Wallets::Balance::UpdateOngoingService).to receive(:call).and_call_original
+      end
+
+      it "sends update params with depleted_ongoing_balance set to false" do
+        subject
+
+        expect(Wallets::Balance::UpdateOngoingService).to have_received(:call)
+          .with(wallet: wallet, update_params: hash_including(depleted_ongoing_balance: false), skip_single_wallet_update: false)
       end
     end
   end

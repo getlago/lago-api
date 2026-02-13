@@ -8,6 +8,7 @@ RSpec.describe Types::Wallets::Object do
   it do
     expect(subject).to have_field(:customer).of_type("Customer")
 
+    expect(subject).to have_field(:code).of_type("String")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:name).of_type("String")
     expect(subject).to have_field(:priority).of_type("Int!")
@@ -46,6 +47,8 @@ RSpec.describe Types::Wallets::Object do
     expect(subject).to have_field(:payment_method_type).of_type("PaymentMethodTypeEnum")
 
     expect(subject).to have_field(:applies_to).of_type("WalletAppliesTo")
+
+    expect(subject).to have_field(:metadata).of_type("[ItemMetadata!]")
 
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:expiration_at).of_type("ISO8601DateTime")

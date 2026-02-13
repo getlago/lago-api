@@ -25,7 +25,7 @@ describe Clock::RetryGeneratingSubscriptionInvoicesJob, job: true do
         old_generating_invoice.update(status: :generating)
       end
 
-      it "does enqueue a BillSubscriptionJob for this invoice " do
+      it "does enqueue a BillSubscriptionJob for this invoice" do
         expect do
           described_class.perform_now
         end.to have_enqueued_job(BillSubscriptionJob)

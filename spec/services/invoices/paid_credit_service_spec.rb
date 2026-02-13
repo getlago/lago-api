@@ -31,26 +31,24 @@ RSpec.describe Invoices::PaidCreditService do
     it "creates an invoice" do
       result = invoice_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice).to have_attributes(
-          issuing_date: Time.zone.at(timestamp).to_date,
-          invoice_type: "credit",
-          payment_status: "pending",
-          currency: "EUR",
-          fees_amount_cents: 1500,
-          sub_total_excluding_taxes_amount_cents: 1500,
-          taxes_amount_cents: 0,
-          taxes_rate: 0,
-          sub_total_including_taxes_amount_cents: 1500,
-          total_amount_cents: 1500
-        )
+      expect(result.invoice).to have_attributes(
+        issuing_date: Time.zone.at(timestamp).to_date,
+        invoice_type: "credit",
+        payment_status: "pending",
+        currency: "EUR",
+        fees_amount_cents: 1500,
+        sub_total_excluding_taxes_amount_cents: 1500,
+        taxes_amount_cents: 0,
+        taxes_rate: 0,
+        sub_total_including_taxes_amount_cents: 1500,
+        total_amount_cents: 1500
+      )
 
-        expect(result.invoice.applied_taxes.count).to eq(0)
+      expect(result.invoice.applied_taxes.count).to eq(0)
 
-        expect(result.invoice).to be_finalized
-      end
+      expect(result.invoice).to be_finalized
     end
 
     it "assigns invoice to the wallet transaction" do
@@ -84,9 +82,7 @@ RSpec.describe Invoices::PaidCreditService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues an SendEmailJob" do
         expect do
           invoice_service.call
@@ -157,10 +153,8 @@ RSpec.describe Invoices::PaidCreditService do
       end
     end
 
-    context "with wallet_transaction.invoice_requires_successful_payment" do
+    context "with wallet_transaction.invoice_requires_successful_payment", :premium do
       let(:invoice_requires_successful_payment) { true }
-
-      around { |test| lago_premium!(&test) }
 
       it "creates an open invoice" do
         result = invoice_service.call

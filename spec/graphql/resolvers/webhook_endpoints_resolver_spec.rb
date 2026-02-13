@@ -32,16 +32,14 @@ RSpec.describe Resolvers::WebhookEndpointsResolver do
 
     webhook_endpoints_response = result["data"]["webhookEndpoints"]
 
-    aggregate_failures do
-      expect(webhook_endpoints_response["collection"].first).to include(
-        "id" => organization.webhook_endpoints.first.id,
-        "webhookUrl" => organization.webhook_endpoints.first.webhook_url
-      )
+    expect(webhook_endpoints_response["collection"].first).to include(
+      "id" => organization.webhook_endpoints.first.id,
+      "webhookUrl" => organization.webhook_endpoints.first.webhook_url
+    )
 
-      expect(webhook_endpoints_response["metadata"]).to include(
-        "currentPage" => 1,
-        "totalCount" => 1
-      )
-    end
+    expect(webhook_endpoints_response["metadata"]).to include(
+      "currentPage" => 1,
+      "totalCount" => 1
+    )
   end
 end

@@ -18,7 +18,12 @@ module Charges
         # skip touching to avoid deadlocks
         Plan.no_touching do
           plan.children.where(id: child_ids).find_each do |child|
-            Charges::CreateService.call!(plan: child, params: payload.merge(parent_id: charge.id))
+            create_params = if payload[:code].present?
+              payload
+            else
+              payload.merge(code: charge.code)
+            end
+            Charges::CreateService.call!(plan: child, params: create_params.merge(parent_id: charge.id))
           end
         end
       end

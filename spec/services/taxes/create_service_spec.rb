@@ -64,11 +64,9 @@ RSpec.describe Taxes::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:code]).to eq(["value_already_exist"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
       end
     end
   end

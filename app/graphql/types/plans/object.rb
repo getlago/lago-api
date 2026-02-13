@@ -130,7 +130,7 @@ module Types
       end
 
       def metadata
-        object.metadata&.value&.map { |key, value| {key:, value:} }
+        object.metadata&.value
       end
     end
   end

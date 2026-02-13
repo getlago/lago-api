@@ -4,8 +4,9 @@ module FixedCharges
   class DestroyService < BaseService
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:)
+    def initialize(fixed_charge:, cascade_updates: false)
       @fixed_charge = fixed_charge
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -15,6 +16,10 @@ module FixedCharges
 
       fixed_charge.discard!
       result.fixed_charge = fixed_charge
+
+      if cascade_updates && fixed_charge.children.exists?
+        FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
+      end
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -27,6 +32,6 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge
+    attr_reader :fixed_charge, :cascade_updates
   end
 end

@@ -18,6 +18,7 @@ RSpec.describe Invoice do
   it { is_expected.to have_many(:payment_requests).through(:applied_payment_requests) }
   it { is_expected.to have_many(:payments) }
   it { is_expected.to have_many(:payment_receipts).through(:payments) }
+  it { is_expected.to have_many(:invoice_settlements).with_foreign_key(:target_invoice_id) }
 
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }
@@ -763,6 +764,34 @@ RSpec.describe Invoice do
     it { expect(invoice.currency).to eq("JPY") }
   end
 
+  describe "#prepaid_granted_credit_amount" do
+    let(:invoice) { build(:invoice, currency: "USD", prepaid_granted_credit_amount_cents: 500) }
+
+    it "returns the granted credit amount as Money" do
+      expect(invoice.prepaid_granted_credit_amount).to eq(Money.new(500, "USD"))
+    end
+
+    context "when nil" do
+      let(:invoice) { build(:invoice, currency: "USD", prepaid_granted_credit_amount_cents: nil) }
+
+      it { expect(invoice.prepaid_granted_credit_amount).to be_nil }
+    end
+  end
+
+  describe "#prepaid_purchased_credit_amount" do
+    let(:invoice) { build(:invoice, currency: "USD", prepaid_purchased_credit_amount_cents: 300) }
+
+    it "returns the purchased credit amount as Money" do
+      expect(invoice.prepaid_purchased_credit_amount).to eq(Money.new(300, "USD"))
+    end
+
+    context "when nil" do
+      let(:invoice) { build(:invoice, currency: "USD", prepaid_purchased_credit_amount_cents: nil) }
+
+      it { expect(invoice.prepaid_purchased_credit_amount).to be_nil }
+    end
+  end
+
   describe "#charge_amount" do
     let(:organization) { create(:organization, name: "LAGO") }
     let(:customer) { create(:customer, organization:) }
@@ -972,44 +1001,6 @@ RSpec.describe Invoice do
       fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
 
       expect(invoice.subscription_fees(subscription.id)).to eq([fee])
-    end
-  end
-
-  describe "#existing_fees_in_interval?" do
-    let(:invoice_subscription) { create(:invoice_subscription) }
-    let(:invoice) { invoice_subscription.invoice }
-    let(:subscription) { invoice_subscription.subscription }
-    let(:billable_metric) { create(:sum_billable_metric, organization: subscription.organization) }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: false) }
-    let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, units: 1) }
-
-    before { fee }
-
-    it "returns true" do
-      expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(true)
-    end
-
-    context "when charges are in advance" do
-      let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true) }
-
-      it "returns false" do
-        expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
-      end
-
-      context "with charge_in_advance set to true" do
-        it "returns true" do
-          expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id, charge_in_advance: true))
-            .to eq(true)
-        end
-      end
-    end
-
-    context "when unit number iz zero" do
-      let(:fee) { create(:charge_fee, subscription:, invoice:, charge:, units: 0) }
-
-      it "returns false" do
-        expect(invoice.existing_fees_in_interval?(subscription_id: subscription.id)).to eq(false)
-      end
     end
   end
 
@@ -1936,6 +1927,119 @@ RSpec.describe Invoice do
         it "returns zero" do
           expect(invoice.refundable_amount_cents).to eq(0)
         end
+      end
+    end
+  end
+
+  describe "#offset_amount_cents" do
+    let(:invoice) { create(:invoice) }
+
+    it "returns 0 when no credit notes" do
+      expect(invoice.offset_amount_cents).to eq(0)
+    end
+
+    it "sums offset amounts from finalized credit notes" do
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 300)
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 150)
+      expect(invoice.offset_amount_cents).to eq(450)
+    end
+
+    it "excludes draft credit notes" do
+      create(:credit_note, invoice:, status: :draft, offset_amount_cents: 200)
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 400)
+      expect(invoice.offset_amount_cents).to eq(400)
+    end
+  end
+
+  describe "#total_due_amount_cents" do
+    let(:invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 300) }
+
+    it "returns total minus paid amount" do
+      expect(invoice.total_due_amount_cents).to eq(700)
+    end
+
+    it "returns 0 when invoice is voided" do
+      invoice.update!(status: :voided)
+      expect(invoice.total_due_amount_cents).to eq(0)
+    end
+
+    it "deducts offset amount from total due" do
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 200)
+      expect(invoice.total_due_amount_cents).to eq(500) # 1000 - 300 - 200
+    end
+
+    it "returns 0 when fully settled" do
+      invoice.update!(total_paid_amount_cents: 600)
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 400)
+      expect(invoice.total_due_amount_cents).to eq(0) # 1000 - 600 - 400
+    end
+  end
+
+  describe "#total_settled_amount_cents" do
+    let(:invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 600) }
+
+    it "returns only the paid amount when no offsets" do
+      expect(invoice.total_settled_amount_cents).to eq(600)
+    end
+
+    it "returns sum of paid and offset amounts" do
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 250)
+      expect(invoice.total_settled_amount_cents).to eq(850) # 600 + 250
+    end
+
+    it "returns full settlement amount when fully settled" do
+      invoice.update!(total_paid_amount_cents: 700)
+      create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 300)
+      expect(invoice.total_settled_amount_cents).to eq(1000) # 700 + 300
+    end
+  end
+
+  describe "#offsettable_amount_cents" do
+    context "with credit invoices" do
+      it "returns full amount for pending payments" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :pending, total_amount_cents: 1000)
+        expect(invoice.offsettable_amount_cents).to eq(1000)
+      end
+
+      it "returns full amount for failed payments" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :failed, total_amount_cents: 1000)
+        expect(invoice.offsettable_amount_cents).to eq(1000)
+      end
+
+      it "returns 0 for succeeded payments when fully paid" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :succeeded,
+          total_amount_cents: 1000, total_paid_amount_cents: 1000)
+        allow(invoice).to receive(:creditable_amount_cents).and_return(800)
+        expect(invoice.offsettable_amount_cents).to eq(0) # total_due is 0
+      end
+
+      it "returns 0 when failed but fully offsetted by credit note" do
+        invoice = create(:invoice, invoice_type: :credit, payment_status: :failed,
+          total_amount_cents: 1000, total_paid_amount_cents: 0)
+        create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 1000)
+        expect(invoice.offsettable_amount_cents).to eq(0)
+      end
+    end
+
+    context "with regular invoices" do
+      it "returns minimum of total_due and creditable amounts" do
+        invoice = create(:invoice, invoice_type: :subscription, total_amount_cents: 1000, total_paid_amount_cents: 300)
+        allow(invoice).to receive(:creditable_amount_cents).and_return(900)
+        expect(invoice.offsettable_amount_cents).to eq(700) # min(700, 900)
+      end
+
+      it "returns creditable amount when less than total due" do
+        invoice = create(:invoice, invoice_type: :subscription, total_amount_cents: 1000, total_paid_amount_cents: 300)
+        allow(invoice).to receive(:creditable_amount_cents).and_return(500)
+        expect(invoice.offsettable_amount_cents).to eq(500) # min(700, 500)
+      end
+
+      it "calculates based on remaining due after offsets" do
+        invoice = create(:invoice, invoice_type: :subscription, total_amount_cents: 1000, total_paid_amount_cents: 200)
+        create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 300)
+        allow(invoice).to receive(:creditable_amount_cents).and_return(700)
+        # total_due = 1000 - 200 - 300 = 500, creditable = 700, min(500, 700) = 500
+        expect(invoice.offsettable_amount_cents).to eq(500)
       end
     end
   end

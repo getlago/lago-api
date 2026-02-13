@@ -19,8 +19,7 @@ RSpec.describe PaymentReceipts::CreateService do
       end
     end
 
-    context "when issuing receipts is enabled" do
-      around { |test| lago_premium!(&test) }
+    context "when issuing receipts is enabled", :premium do
       before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
       context "when customer is a partner account" do

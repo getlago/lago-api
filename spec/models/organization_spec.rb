@@ -53,6 +53,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:subscription_feature_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
+      expect(subject).to have_many(:pending_vies_checks)
     end
   end
 
@@ -288,10 +289,8 @@ RSpec.describe Organization do
     end
   end
 
-  describe "#can_create_billing_entity?" do
+  describe "#can_create_billing_entity?", :premium do
     subject { organization.can_create_billing_entity? }
-
-    around { |test| lago_premium!(&test) }
 
     context "when no premium multi entities integration is enabled" do
       it { is_expected.to eq(true) }
@@ -346,9 +345,7 @@ RSpec.describe Organization do
     end
   end
 
-  describe "#using_lifetime_usage?" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#using_lifetime_usage?", :premium do
     it do
       expect(build(:organization, premium_integrations: ["lifetime_usage"])).to be_using_lifetime_usage
       expect(build(:organization, premium_integrations: ["progressive_billing"])).to be_using_lifetime_usage
@@ -362,17 +359,24 @@ RSpec.describe Organization do
     subject { organization.admins }
 
     let(:organization) { create(:organization) }
-    let(:scoped) { create(:membership, organization:).user }
+    let(:admin_role) { create(:role, :admin) }
+    let(:finance_role) { create(:role, :finance) }
+    let(:admin_membership) { create(:membership, organization:) }
+    let(:admin_user) { admin_membership.user }
 
     before do
-      scoped
+      create(:membership_role, membership: admin_membership, role: admin_role)
       create(:membership)
-      create(:membership, organization:, role: [:manager, :finance].sample)
-      create(:membership, organization:, role: :admin, status: :revoked)
+
+      non_admin = create(:membership, organization:)
+      create(:membership_role, membership: non_admin, role: finance_role)
+
+      revoked_admin = create(:membership, :revoked, organization:)
+      create(:membership_role, membership: revoked_admin, role: admin_role)
     end
 
     it "returns admins of the organization" do
-      expect(subject).to contain_exactly scoped
+      expect(subject).to contain_exactly(admin_user)
     end
   end
 
@@ -381,9 +385,7 @@ RSpec.describe Organization do
       expect(organization.from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
-      around { |test| lago_premium!(&test) }
-
+    context "when organization from_email integration is enabled", :premium do
       it "returns the organization email" do
         organization.update!(premium_integrations: ["from_email"])
         expect(organization.from_email_address).to eq(organization.email)
@@ -517,6 +519,49 @@ RSpec.describe Organization do
   describe "#organization" do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)
+    end
+  end
+
+  # this requires double confirmation: value on the org + premium integration
+  describe "#maximum_wallets_per_customer", :premium do
+    subject { organization.maximum_wallets_per_customer }
+
+    let(:organization) { create(:organization, max_wallets:, premium_integrations:) }
+    let(:max_wallets) { nil }
+    let(:premium_integrations) { [] }
+
+    context "when no events_targeting_wallets premium integration is enabled" do
+      context "when org has max_wallets set" do
+        let(:max_wallets) { 15 }
+
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
+
+      context "when org has no max_wallets set" do
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
+    end
+
+    context "when events_targeting_wallets premium integration is enabled" do
+      let(:premium_integrations) { ["events_targeting_wallets"] }
+
+      context "when org has max_wallets set" do
+        let(:max_wallets) { 15 }
+
+        it "returns max value" do
+          expect(subject).to eq(15)
+        end
+      end
+
+      context "when org has no max_wallets set" do
+        it "returns nil" do
+          expect(subject).to eq(nil)
+        end
+      end
     end
   end
 end

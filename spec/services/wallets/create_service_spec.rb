@@ -36,23 +36,21 @@ RSpec.describe Wallets::CreateService do
     let(:service_result) { create_service.call }
 
     it "creates a wallet" do
-      aggregate_failures do
-        expect { service_result }.to change(Wallet, :count).by(1)
+      expect { service_result }.to change(Wallet, :count).by(1)
 
-        expect(service_result).to be_success
+      expect(service_result).to be_success
 
-        wallet = service_result.wallet
-        expect(wallet.customer_id).to eq(customer.id)
-        expect(wallet.name).to eq("New Wallet")
-        expect(wallet.priority).to eq(5)
-        expect(wallet.currency).to eq("EUR")
-        expect(wallet.rate_amount).to eq(5.0)
-        expect(wallet.expiration_at.iso8601).to eq(expiration_at)
-        expect(wallet.recurring_transaction_rules.count).to eq(0)
-        expect(wallet.invoice_requires_successful_payment).to eq(false)
-        expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
-        expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
-      end
+      wallet = service_result.wallet
+      expect(wallet.customer_id).to eq(customer.id)
+      expect(wallet.name).to eq("New Wallet")
+      expect(wallet.priority).to eq(5)
+      expect(wallet.currency).to eq("EUR")
+      expect(wallet.rate_amount).to eq(5.0)
+      expect(wallet.expiration_at.iso8601).to eq(expiration_at)
+      expect(wallet.recurring_transaction_rules.count).to eq(0)
+      expect(wallet.invoice_requires_successful_payment).to eq(false)
+      expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
+      expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
     end
 
     it "sends `wallet.created` webhook" do
@@ -75,6 +73,7 @@ RSpec.describe Wallets::CreateService do
           source: :manual,
           metadata: nil,
           name: nil,
+          priority: nil,
           ignore_paid_top_up_limits: ignore_paid_top_up_limits_on_creation
         }
       })
@@ -202,6 +201,26 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when priority is nil" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          priority: nil
+        }
+      end
+
+      it "defaults to 50" do
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.priority).to eq(50)
+      end
+    end
+
     context "when invoice_requires_successful_payment is set" do
       let(:params) do
         {
@@ -316,9 +335,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:rules) do
         [
           {
@@ -347,14 +364,12 @@ RSpec.describe Wallets::CreateService do
       end
 
       it "creates a wallet with recurring transaction rules" do
-        aggregate_failures do
-          expect { service_result }.to change(Wallet, :count).by(1)
+        expect { service_result }.to change(Wallet, :count).by(1)
 
-          expect(service_result).to be_success
-          wallet = service_result.wallet
-          expect(wallet.name).to eq("New Wallet")
-          expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
-        end
+        expect(service_result).to be_success
+        wallet = service_result.wallet
+        expect(wallet.name).to eq("New Wallet")
+        expect(wallet.reload.recurring_transaction_rules.count).to eq(1)
       end
 
       context "when recurring transaction rule has transaction_name" do
@@ -670,6 +685,199 @@ RSpec.describe Wallets::CreateService do
       it "returns an error" do
         expect(service_result).not_to be_success
         expect(service_result.error.messages[:organization_id]).to eq(["invalid"])
+      end
+    end
+
+    context "with metadata" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          metadata: {"foo" => "bar", "baz" => "qux"}
+        }
+      end
+
+      it "creates a wallet with metadata" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.metadata).to be_present
+        expect(wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+    end
+
+    context "when metadata is nil" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          metadata: nil
+        }
+      end
+
+      it "creates a wallet without metadata" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.metadata).to be_nil
+      end
+    end
+
+    context "when code is provided" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          code: "custom_code",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with the provided code" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("custom_code")
+      end
+
+      context "when code is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, code: "existing_code")
+        end
+
+        let(:params) do
+          {
+            name: "New Wallet",
+            code: "existing_code",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "returns an error" do
+          expect { service_result }.not_to change(Wallet, :count)
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+      end
+    end
+
+    context "when code is not provided but name is" do
+      let(:params) do
+        {
+          name: "My Premium Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with code derived from name" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("my_premium_wallet")
+      end
+
+      context "when name is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, name: "Existing Name")
+        end
+
+        let(:params) do
+          {
+            name: "existing name",
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "creates a wallet with timestamp in the code" do
+          expect { service_result }.to change(Wallet, :count).by(1)
+          expect(service_result).to be_success
+
+          wallet = service_result.wallet
+          expect(wallet.code).to eq("existing_name_#{wallet.created_at.to_i}")
+        end
+      end
+    end
+
+    context "when neither code nor name is provided" do
+      let(:params) do
+        {
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          granted_credits:
+        }
+      end
+
+      it "creates a wallet with default code" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.code).to eq("default")
+      end
+
+      context "when default code is already taken for the customer" do
+        before do
+          create(:wallet, customer:, organization:, name: nil, code: "default")
+        end
+
+        let(:params) do
+          {
+            customer:,
+            organization_id: organization.id,
+            currency: "EUR",
+            rate_amount: "1.00",
+            paid_credits:,
+            granted_credits:
+          }
+        end
+
+        it "creates a wallet with timestamp in the code" do
+          Timecop.freeze do
+            expect { service_result }.to change(Wallet, :count).by(1)
+            expect(service_result).to be_success
+
+            wallet = service_result.wallet
+            expect(wallet.code).to eq("default_#{wallet.created_at.to_i}")
+          end
+        end
       end
     end
   end

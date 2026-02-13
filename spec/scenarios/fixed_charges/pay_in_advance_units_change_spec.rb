@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-describe "Pay in advance fixed charge units change mid-period" do
-  around { |test| lago_premium!(&test) }
-
+describe "Pay in advance fixed charge units change mid-period", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:add_on) { create(:add_on, organization:) }
@@ -103,7 +101,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(subscription.reload.invoices.count).to eq(2)
 
         adjustment_invoice = subscription.invoices.order(:created_at).last
-        expect(adjustment_invoice.fees.count).to eq(0)
+        expect(adjustment_invoice.fees.count).to eq(1)
         expect(adjustment_invoice.fees_amount_cents).to eq(0)
       end
     end
@@ -211,7 +209,7 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(initial_invoice.fees_amount_cents).to eq(10_000)
 
         decrease_invoice = invoices.second
-        expect(decrease_invoice.fees.count).to eq(0)
+        expect(decrease_invoice.fees.count).to eq(1)
         expect(decrease_invoice.fees_amount_cents).to eq(0)
 
         increase_invoice = invoices.last
@@ -1178,7 +1176,6 @@ describe "Pay in advance fixed charge units change mid-period" do
     # The delta billing should correctly find the previous fee from the parent
     # fixed charge, not just by the new fixed charge ID.
     let(:subscription_date) { DateTime.new(2024, 12, 1) }
-    let(:current_date) { DateTime.new(2024, 12, 3) }
     let(:subscription) { customer.subscriptions.first }
 
     # Fixed charge: $10 per unit, 5 units, pay in advance
@@ -1187,8 +1184,7 @@ describe "Pay in advance fixed charge units change mid-period" do
     before do
       parent_fixed_charge
 
-      # Create subscription on Dec 3rd with subscription_at Dec 1st (in the past)
-      travel_to current_date do
+      travel_to subscription_date do
         create_subscription(
           {
             external_customer_id: customer.external_id,
@@ -1220,7 +1216,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
     context "when subscription is updated with plan_overrides to increase units to 15 with apply_units_immediately" do
       before do
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1292,7 +1288,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
     context "when subscription is updated to decrease units (10 -> 3) via plan_overrides" do
       before do
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1326,16 +1322,15 @@ describe "Pay in advance fixed charge units change mid-period" do
         # The decrease invoice should NOT have any fees with positive units
         # because we already paid for 10 units and are decreasing to 3
         decrease_invoice = invoices.last
-        # Bug: the code incorrectly creates a fee with 3 units (the new child fixed charge units)
-        # because it can't find the previous parent fee to calculate delta
-        expect(decrease_invoice.fees.fixed_charge.count).to eq(0)
+        expect(decrease_invoice.fees.fixed_charge.count).to eq(1)
+        expect(decrease_invoice.fees.fixed_charge.first.units).to eq(0)
       end
     end
 
     context "when subscription is updated twice via plan_overrides (10 -> 3 -> 15)" do
       before do
         # First update: decrease from 10 to 3 (no refund expected)
-        travel_to current_date + 1.hour do
+        travel_to subscription_date + 1.hour do
           update_subscription(
             subscription,
             {
@@ -1356,7 +1351,7 @@ describe "Pay in advance fixed charge units change mid-period" do
 
         # Second update: increase from 3 to 15
         # Should only charge for delta from max paid (10), not from current (3)
-        travel_to current_date + 2.hours do
+        travel_to subscription_date + 2.hours do
           # After first override, the subscription has a child plan
           child_fixed_charge = subscription.reload.plan.fixed_charges.first
 
@@ -1395,9 +1390,9 @@ describe "Pay in advance fixed charge units change mid-period" do
         expect(initial_invoice.fees.fixed_charge.first.units).to eq(10)
         expect(initial_invoice.fees.fixed_charge.first.amount_cents).to eq(10_000)
 
-        # Decrease invoice should have no fees (no refund)
         decrease_invoice = invoices.second
-        expect(decrease_invoice.fees.count).to eq(0)
+        expect(decrease_invoice.fees.count).to eq(1)
+        expect(decrease_invoice.fees.first.units).to eq(0)
 
         # Increase invoice: should charge for 5 units only (15 - 10)
         # NOT 12 units (15 - 3), because we already paid for 10 units

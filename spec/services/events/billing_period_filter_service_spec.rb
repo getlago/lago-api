@@ -495,5 +495,302 @@ RSpec.describe Events::BillingPeriodFilterService do
         end
       end
     end
+
+    context "when relying on Postgres enriched events" do
+      let(:organization) do
+        create(:organization, pre_filter_events: true)
+      end
+
+      it "returns filtered charges" do
+        result = filter_service.call
+
+        expect(result).to be_success
+        expect(result.charges).to eq({})
+      end
+
+      context "with events matching the boundaries" do
+        let(:events) do
+          [
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: boundaries.charges_from_datetime + 5.days,
+              properties: {"region" => charge_filter_value&.values&.first}
+            ),
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: boundaries.charges_from_datetime + 5.days,
+              properties: {"region" => charge_filter_value&.values&.last}
+            )
+          ]
+        end
+
+        let(:enriched_events) do
+          events.map do |event|
+            create(
+              :enriched_event,
+              event:,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge:,
+              charge_filter_id: charge_filter&.id
+            )
+          end
+        end
+
+        before { enriched_events }
+
+        it "returns filtered charges" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({charge.id => [nil]})
+        end
+
+        context "with multiple charges for the same billable_metric" do
+          let(:charge_2) { create(:standard_charge, plan:, billable_metric:) }
+
+          let(:enriched_events) do
+            [
+              create(
+                :enriched_event,
+                event: events.first,
+                subscription:,
+                value: 12,
+                decimal_value: 12.0,
+                charge:
+              ),
+              create(
+                :enriched_event,
+                event: events.last,
+                subscription:,
+                value: 12,
+                decimal_value: 12.0,
+                charge: charge_2
+              )
+            ]
+          end
+
+          it "returns filtered charges" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+          end
+        end
+
+        context "with multiple billable metrics" do
+          let(:billable_metric_2) { create(:billable_metric, organization:) }
+          let(:charge_2) { create(:standard_charge, plan:, billable_metric: billable_metric_2) }
+
+          let(:events) do
+            [
+              create(
+                :event,
+                organization_id: organization.id,
+                external_subscription_id: subscription.external_id,
+                code: billable_metric.code,
+                timestamp: boundaries.charges_from_datetime + 5.days,
+                properties: {"region" => charge_filter_value&.values&.first}
+              ),
+              create(
+                :event,
+                organization_id: organization.id,
+                external_subscription_id: subscription.external_id,
+                code: billable_metric_2.code,
+                timestamp: boundaries.charges_from_datetime + 5.days,
+                properties: {"region" => charge_filter_value&.values&.last}
+              )
+            ]
+          end
+
+          let(:enriched_events) do
+            [
+              create(
+                :enriched_event,
+                event: events.first,
+                subscription:,
+                value: 12,
+                decimal_value: 12.0,
+                charge:
+              ),
+              create(
+                :enriched_event,
+                event: events.last,
+                subscription:,
+                value: 12,
+                decimal_value: 12.0,
+                charge: charge_2
+              )
+            ]
+          end
+
+          it "returns charges and filters for all billable metrics with matching events" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to eq({charge.id => [nil], charge_2.id => [nil]})
+          end
+        end
+
+        context "with charge filters" do
+          let(:charge_filter) { create(:charge_filter, charge:) }
+          let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: ["eu", "us"]) }
+
+          let(:charge_filter_value) do
+            create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+          end
+
+          let(:charge_filter2) { create(:charge_filter, charge:) }
+
+          before { charge_filter2 }
+
+          it "returns charges and filters for all billable metrics with matching events" do
+            result = filter_service.call
+
+            expect(result).to be_success
+            expect(result.charges).to match({charge.id => contain_exactly(charge_filter.id)})
+          end
+
+          context "when events matches the default bucket" do
+            let(:enriched_events) do
+              [
+                create(
+                  :enriched_event,
+                  event: events.first,
+                  subscription:,
+                  value: 12,
+                  decimal_value: 12.0,
+                  charge:
+                ),
+                create(
+                  :enriched_event,
+                  event: events.last,
+                  subscription:,
+                  value: 12,
+                  decimal_value: 12.0,
+                  charge:
+                )
+              ]
+            end
+
+            before { charge_filter }
+
+            it "returns charges and filters for all billable metrics with matching events" do
+              result = filter_service.call
+
+              expect(result).to be_success
+              expect(result.charges).to match({charge.id => [nil]})
+            end
+          end
+        end
+      end
+
+      context "with recurring billable metric" do
+        let(:recurring_billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+        let(:recurring_charge) { create(:standard_charge, plan:, billable_metric: recurring_billable_metric) }
+
+        let(:charge_filter) { create(:charge_filter, charge: recurring_charge) }
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: recurring_billable_metric, key: "region", values: ["eu", "us"]) }
+
+        let(:charge_filter_value) do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        end
+
+        before do
+          recurring_charge
+          charge_filter_value
+        end
+
+        it "returns recurring charge_ids even without events" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({recurring_charge.id => [charge_filter.id, nil]})
+        end
+      end
+
+      context "with unknown charges" do
+        let(:events) do
+          [
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: boundaries.charges_from_datetime + 5.days,
+              properties: {"region" => charge_filter_value&.values&.first}
+            )
+          ]
+        end
+
+        let(:enriched_events) do
+          events.map do |event|
+            create(
+              :enriched_event,
+              event:,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge: create(:standard_charge)
+            )
+          end
+        end
+
+        before do
+          enriched_events
+        end
+
+        it "returns filtered charges" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({})
+        end
+      end
+
+      context "with events that does not match the boundaries" do
+        let(:events) do
+          [
+            create(
+              :event,
+              organization_id: organization.id,
+              external_subscription_id: subscription.external_id,
+              code: billable_metric.code,
+              timestamp: boundaries.charges_from_datetime - 5.days,
+              properties: {"region" => charge_filter_value&.values&.first}
+            )
+          ]
+        end
+
+        let(:enriched_events) do
+          events.map do |event|
+            create(
+              :enriched_event,
+              event:,
+              subscription:,
+              value: 12,
+              decimal_value: 12.0,
+              charge:
+            )
+          end
+        end
+
+        before { enriched_events }
+
+        it "returns filtered charges" do
+          result = filter_service.call
+
+          expect(result).to be_success
+          expect(result.charges).to eq({})
+        end
+      end
+    end
   end
 end

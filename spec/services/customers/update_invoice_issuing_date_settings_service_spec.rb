@@ -37,8 +37,6 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
     end
 
     context "with premium feature", :premium do
-      around { |test| lago_premium!(&test) }
-
       it "updates invoice issuing date settings on customer" do
         update_service.call
 
@@ -136,9 +134,7 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
       end
     end
 
-    context "with issuing date preferences" do
-      around { |test| lago_premium!(&test) }
-
+    context "with issuing date preferences", :premium do
       let(:recurring) { true }
 
       before do
@@ -245,7 +241,7 @@ RSpec.describe Customers::UpdateInvoiceIssuingDateSettingsService do
         end
       end
 
-      context "with no preferences set on the customer level " do
+      context "with no preferences set on the customer level" do
         let(:billing_entity) do
           create(
             :billing_entity,

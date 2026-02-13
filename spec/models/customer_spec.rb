@@ -25,6 +25,7 @@ RSpec.describe Customer do
   it { is_expected.to have_one(:salesforce_customer) }
 
   it { is_expected.to have_one(:default_payment_method) }
+  it { is_expected.to have_one(:pending_vies_check) }
 
   it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Customer::AppliedInvoiceCustomSection").dependent(:destroy) }
   it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
@@ -395,10 +396,8 @@ RSpec.describe Customer do
       let(:legal_name) { nil }
 
       it "returns name with firstname and lastname" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME Inc - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME Inc - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
       end
     end
 
@@ -406,19 +405,15 @@ RSpec.describe Customer do
       let(:name) { nil }
 
       it "returns legal_name with firstname and lastname" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("Thomas Anderson")
       end
     end
 
     context "when all fields are present" do
       it "returns display name" do
-        aggregate_failures do
-          expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
-          expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
-        end
+        expect(customer.display_name).to eq("ACME International Corporation - Thomas Anderson")
+        expect(customer.display_name(prefer_legal_name: false)).to eq("ACME Inc - Thomas Anderson")
       end
     end
   end
@@ -561,6 +556,36 @@ RSpec.describe Customer do
     context "when customer has no record that prevents editing" do
       it "returns true" do
         expect(editable).to eq(true)
+      end
+    end
+  end
+
+  describe "#vies_check_in_progress?" do
+    subject(:vies_check_in_progress) { customer.vies_check_in_progress? }
+
+    context "when billing entity does not have eu_tax_management enabled" do
+      before { customer.billing_entity.update!(eu_tax_management: false) }
+
+      it "returns false" do
+        expect(vies_check_in_progress).to eq(false)
+      end
+    end
+
+    context "when billing entity has eu_tax_management enabled" do
+      before { customer.billing_entity.update!(eu_tax_management: true) }
+
+      context "when customer has no pending_vies_check" do
+        it "returns false" do
+          expect(vies_check_in_progress).to eq(false)
+        end
+      end
+
+      context "when customer has a pending_vies_check" do
+        before { create(:pending_vies_check, customer:) }
+
+        it "returns true" do
+          expect(vies_check_in_progress).to eq(true)
+        end
       end
     end
   end
@@ -906,11 +931,9 @@ RSpec.describe Customer do
       customer.save
       organization_id_substring = organization.id.last(4).upcase
 
-      aggregate_failures do
-        expect(customer).to be_valid
-        expect(customer.sequential_id).to eq(1)
-        expect(customer.slug).to eq("LAG-#{organization_id_substring}-001")
-      end
+      expect(customer).to be_valid
+      expect(customer.sequential_id).to eq(1)
+      expect(customer.slug).to eq("LAG-#{organization_id_substring}-001")
     end
 
     context "with custom document_number_prefix" do
@@ -924,11 +947,9 @@ RSpec.describe Customer do
       it "assigns a sequential id and a slug to a new customer" do
         customer.save
 
-        aggregate_failures do
-          expect(customer).to be_valid
-          expect(customer.sequential_id).to eq(6)
-          expect(customer.slug).to eq("ORG-55-006")
-        end
+        expect(customer).to be_valid
+        expect(customer.sequential_id).to eq(6)
+        expect(customer.slug).to eq("ORG-55-006")
       end
     end
   end

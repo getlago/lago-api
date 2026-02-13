@@ -12,12 +12,16 @@ module Mutations
       description "Creates a new Invite"
 
       argument :email, String, required: true
-      argument :role, Types::Memberships::RoleEnum, required: true
+      argument :roles, [String], required: true
 
       type Types::Invites::Object
 
       def resolve(**args)
-        result = ::Invites::CreateService.call(args.merge(current_organization:))
+        result = ::Invites::CreateService.call(
+          current_organization:,
+          email: args[:email],
+          roles: args[:roles]
+        )
 
         result.success? ? result.invite : result_error(result)
       end

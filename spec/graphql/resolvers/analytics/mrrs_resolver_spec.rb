@@ -41,9 +41,7 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
     end
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "returns a list of mrrs" do
       result = execute_graphql(
         current_user: membership.user,
@@ -55,11 +53,9 @@ RSpec.describe Resolvers::Analytics::MrrsResolver do
       mrrs_response = result["data"]["mrrs"]
       month = DateTime.parse mrrs_response["collection"].first["month"]
 
-      aggregate_failures do
-        expect(month).to eq(DateTime.current.beginning_of_month)
-        expect(mrrs_response["collection"].first["amountCents"]).to eq(nil)
-        expect(mrrs_response["collection"].first["currency"]).to eq(nil)
-      end
+      expect(month).to eq(DateTime.current.beginning_of_month)
+      expect(mrrs_response["collection"].first["amountCents"]).to eq(nil)
+      expect(mrrs_response["collection"].first["currency"]).to eq(nil)
     end
   end
 end

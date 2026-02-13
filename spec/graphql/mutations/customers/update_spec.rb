@@ -98,15 +98,7 @@ RSpec.describe Mutations::Customers::Update do
   end
 
   it_behaves_like "requires current user"
-  it_behaves_like "requires permission", %w[
-    customers:update
-    customer_settings:update:tax_rates
-    customer_settings:update:payment_terms
-    customer_settings:update:grace_period
-    customer_settings:update:lang
-    customer_settings:update:issuing_date_anchor
-    customer_settings:update:issuing_date_adjustment
-  ]
+  it_behaves_like "requires permission", %w[customers:update]
 
   it "updates a customer" do
     stripe_provider
@@ -122,38 +114,34 @@ RSpec.describe Mutations::Customers::Update do
 
     result_data = result["data"]["updateCustomer"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("Updated customer")
-      expect(result_data["firstname"]).to eq("Updated firstname")
-      expect(result_data["lastname"]).to eq("Updated lastname")
-      expect(result_data["displayName"]).to eq("Updated customer - Updated firstname Updated lastname")
-      expect(result_data["customerType"]).to eq("individual")
-      expect(result_data["taxIdentificationNumber"]).to eq("2246")
-      expect(result_data["externalId"]).to eq(external_id)
-      expect(result_data["paymentProvider"]).to eq("stripe")
-      expect(result_data["currency"]).to eq("USD")
-      expect(result_data["timezone"]).to be_nil
-      expect(result_data["netPaymentTerm"]).to eq(3)
-      expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
-      expect(result_data["providerCustomer"]["id"]).to be_present
-      expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
-      expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(%w[card sepa_debit])
-      expect(result_data["invoiceGracePeriod"]).to be_nil
-      expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
-      expect(result_data["billingConfiguration"]["id"]).to eq("#{customer.id}-c0nf")
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
-      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
-      expect(result_data["metadata"][0]["key"]).to eq("test-key")
-      expect(result_data["taxes"][0]["code"]).to eq(tax.code)
-      expect(result_data["configurableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
-      expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("Updated customer")
+    expect(result_data["firstname"]).to eq("Updated firstname")
+    expect(result_data["lastname"]).to eq("Updated lastname")
+    expect(result_data["displayName"]).to eq("Updated customer - Updated firstname Updated lastname")
+    expect(result_data["customerType"]).to eq("individual")
+    expect(result_data["taxIdentificationNumber"]).to eq("2246")
+    expect(result_data["externalId"]).to eq(external_id)
+    expect(result_data["paymentProvider"]).to eq("stripe")
+    expect(result_data["currency"]).to eq("USD")
+    expect(result_data["timezone"]).to be_nil
+    expect(result_data["netPaymentTerm"]).to eq(3)
+    expect(result_data["finalizeZeroAmountInvoice"]).to eq("skip")
+    expect(result_data["providerCustomer"]["id"]).to be_present
+    expect(result_data["providerCustomer"]["providerCustomerId"]).to eq("cu_12345")
+    expect(result_data["providerCustomer"]["providerPaymentMethods"]).to eq(%w[card sepa_debit])
+    expect(result_data["invoiceGracePeriod"]).to be_nil
+    expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
+    expect(result_data["billingConfiguration"]["id"]).to eq("#{customer.id}-c0nf")
+    expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+    expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
+    expect(result_data["metadata"][0]["key"]).to eq("test-key")
+    expect(result_data["taxes"][0]["code"]).to eq(tax.code)
+    expect(result_data["configurableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
+    expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "updates a customer" do
       result = execute_graphql(
         current_user: membership.user,
@@ -172,25 +160,16 @@ RSpec.describe Mutations::Customers::Update do
 
       result_data = result["data"]["updateCustomer"]
 
-      aggregate_failures do
-        expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
-        expect(result_data["invoiceGracePeriod"]).to eq(2)
-      end
+      expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
+      expect(result_data["invoiceGracePeriod"]).to eq(2)
     end
   end
 
-  context "when user can only update customer settings" do
-    around { |test| lago_premium!(&test) }
-
+  context "when user can update customers", :premium do
     it "updates a customer" do
       result = execute_graphql(
         current_user: membership.user,
-        permissions: %w[
-          customer_settings:update:tax_rates
-          customer_settings:update:payment_terms
-          customer_settings:update:grace_period
-          customer_settings:update:lang
-        ],
+        permissions: %w[customers:update],
         query: mutation,
         variables: {
           input: input.merge({
@@ -202,24 +181,20 @@ RSpec.describe Mutations::Customers::Update do
 
       result_data = result["data"]["updateCustomer"]
 
-      aggregate_failures do
-        # What should have changed
-        expect(result_data["id"]).to be_present
-        expect(result_data["taxes"][0]["code"]).to eq(tax.code)
-        expect(result_data["netPaymentTerm"]).to eq(3)
-        expect(result_data["invoiceGracePeriod"]).to eq 2
-        expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
-
-        # What should not have changed
-        expect(result_data["name"]).not_to eq("Updated customer")
-        expect(result_data["taxIdentificationNumber"]).to be_nil
-        expect(result_data["externalId"]).not_to eq(external_id)
-        expect(result_data["paymentProvider"]).to be_nil
-        expect(result_data["currency"]).to eq("EUR")
-        expect(result_data["timezone"]).to be_nil
-        expect(result_data["providerCustomer"]).to be_nil
-        expect(result_data["metadata"]).to be_empty
-      end
+      # What should have changed
+      expect(result_data["id"]).to be_present
+      expect(result_data["taxes"][0]["code"]).to eq(tax.code)
+      expect(result_data["netPaymentTerm"]).to eq(3)
+      expect(result_data["invoiceGracePeriod"]).to eq 2
+      expect(result_data["billingConfiguration"]["documentLocale"]).to eq("fr")
+      expect(result_data["name"]).to eq("Updated customer")
+      expect(result_data["taxIdentificationNumber"]).to eq("2246")
+      expect(result_data["externalId"]).to eq(external_id)
+      expect(result_data["paymentProvider"]).to eq("stripe")
+      expect(result_data["currency"]).to eq("USD")
+      expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
+      expect(result_data["providerCustomer"]).to be_present
+      expect(result_data["metadata"]).to be_present
     end
   end
 end

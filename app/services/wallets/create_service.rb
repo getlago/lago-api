@@ -19,10 +19,20 @@ module Wallets
 
       return result unless valid?
 
+      code = params[:code]
+
+      # only adjust generated code if it's taken
+      if code.blank?
+        code = params[:name].to_s.parameterize(separator: "_").presence || "default"
+        code_taken = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
+        code += "_#{Time.current.to_i}" if code_taken
+      end
+
       attributes = {
         organization_id:,
         customer_id: customer.id,
         name: params[:name],
+        code: code,
         rate_amount: params[:rate_amount],
         expiration_at: params[:expiration_at],
         status: :active,
@@ -30,7 +40,7 @@ module Wallets
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents]
       }
 
-      attributes[:priority] = params[:priority] if params.key?(:priority)
+      attributes[:priority] = params[:priority] if params[:priority]
 
       if params.key?(:invoice_requires_successful_payment)
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
@@ -68,6 +78,8 @@ module Wallets
         billable_metrics.each do |bm|
           WalletTarget.create!(wallet:, billable_metric: bm, organization_id:)
         end
+
+        create_metadata(wallet, params[:metadata]) if !params[:metadata].nil?
       end
 
       result.wallet = wallet
@@ -99,6 +111,7 @@ module Wallets
           source: :manual,
           metadata: params[:transaction_metadata],
           name: params[:transaction_name],
+          priority: params[:transaction_priority],
           ignore_paid_top_up_limits: params[:ignore_paid_top_up_limits_on_creation]
         }
       )
@@ -171,6 +184,14 @@ module Wallets
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id:)
+    end
+
+    def create_metadata(wallet, metadata_value)
+      Metadata::UpdateItemService.new(
+        owner: wallet,
+        value: metadata_value,
+        partial: false
+      ).call
     end
   end
 end

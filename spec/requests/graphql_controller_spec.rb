@@ -75,7 +75,6 @@ RSpec.describe GraphqlController do
               id
               premium
               memberships {
-                role
                 status
                 organization {
                   id
@@ -121,8 +120,11 @@ RSpec.describe GraphqlController do
         end
 
         context "when user is part of organization" do
+          let(:admin_role) { create(:role, :admin) }
           let(:membership) { create(:membership, user:) }
           let(:organization) { membership.organization }
+
+          before { create(:membership_role, membership:, role: admin_role) }
 
           it "returns the membership" do
             post "/graphql",
@@ -239,7 +241,6 @@ RSpec.describe GraphqlController do
               id
               premium
               memberships {
-                role
                 status
                 organization {
                   id

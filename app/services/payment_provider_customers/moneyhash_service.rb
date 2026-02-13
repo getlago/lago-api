@@ -62,14 +62,52 @@ module PaymentProviderCustomers
       result.service_failure!(code: e.error_code, message: e.message)
     end
 
-    def update_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {})
-      customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
-      return handle_missing_customer(organization_id, metadata) unless customer
+    def update_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {}, card_details: {})
+      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
+      return handle_missing_customer(organization_id, metadata) unless moneyhash_customer
 
-      customer.payment_method_id = payment_method_id
-      customer.save!
+      moneyhash_customer.payment_method_id = payment_method_id
+      moneyhash_customer.save!
 
-      result.moneyhash_customer = customer
+      if moneyhash_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+        find_or_create_result = PaymentMethods::FindOrCreateFromProviderService.call(
+          customer: moneyhash_customer.customer,
+          payment_provider_customer: moneyhash_customer,
+          provider_method_id: payment_method_id,
+          params: {provider_payment_methods: ["card"]},
+          set_as_default: true
+        )
+        result.payment_method = find_or_create_result.payment_method
+
+        if card_details.present? && result.payment_method.present?
+          PaymentMethods::UpdateDetailsService.call(
+            payment_method: result.payment_method,
+            insert: card_details
+          )
+        end
+      end
+
+      result.moneyhash_customer = moneyhash_customer
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    end
+
+    def delete_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {})
+      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
+      return handle_missing_customer(organization_id, metadata) unless moneyhash_customer
+
+      if moneyhash_customer.payment_method_id == payment_method_id
+        moneyhash_customer.payment_method_id = nil
+        moneyhash_customer.save!
+      end
+
+      if moneyhash_customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+        payment_method = moneyhash_customer.customer.payment_methods.find_by(provider_method_id: payment_method_id)
+        PaymentMethods::DestroyService.call(payment_method:) if payment_method
+      end
+
+      result.moneyhash_customer = moneyhash_customer
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

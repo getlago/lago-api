@@ -10,6 +10,7 @@ module V1
         status: model.status,
         currency: model.currency,
         name: model.name,
+        code: model.code,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
         credits_ongoing_balance: model.credits_ongoing_balance,
@@ -33,6 +34,7 @@ module V1
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
       payload.merge!(payment_method)
+      payload.merge!(metadata) if model.metadata.present?
 
       payload
     end
@@ -71,6 +73,12 @@ module V1
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize
+    end
+
+    def metadata
+      {
+        metadata: ::V1::MetadataSerializer.new(model.metadata).serialize
+      }
     end
   end
 end

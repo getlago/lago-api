@@ -68,10 +68,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
       it "returns an error" do
         result = service_call_async
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("invoice_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
   end
@@ -88,10 +86,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
       it "does not return external id" do
         result = service_call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.external_id).to be(nil)
-        end
+        expect(result).to be_success
+        expect(result.external_id).to be(nil)
       end
     end
 
@@ -113,10 +109,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
           it "returns external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to eq("123456789")
-            end
+            expect(result).to be_success
+            expect(result.external_id).to eq("123456789")
           end
 
           it_behaves_like "throttles!", :hubspot
@@ -131,10 +125,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::UpdateService do
           it "does not return external id" do
             result = service_call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.external_id).to be(nil)
-            end
+            expect(result).to be_success
+            expect(result.external_id).to be(nil)
           end
 
           it_behaves_like "throttles!", :hubspot

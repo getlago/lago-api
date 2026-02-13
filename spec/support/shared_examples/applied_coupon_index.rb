@@ -36,20 +36,18 @@ RSpec.shared_examples "a applied coupon index endpoint" do
   it "returns applied coupons" do
     subject
 
-    aggregate_failures do
-      expect(response).to have_http_status(:success)
-      expect(json[:applied_coupons].count).to eq(2)
-      expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_2.id)
-      expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
-      expect(json[:applied_coupons].last[:amount_cents]).to eq(applied_coupon_1.amount_cents)
-      expect(json[:applied_coupons].last[:amount_cents_remaining]).to eq(8)
+    expect(response).to have_http_status(:success)
+    expect(json[:applied_coupons].count).to eq(2)
+    expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_2.id)
+    expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
+    expect(json[:applied_coupons].last[:amount_cents]).to eq(applied_coupon_1.amount_cents)
+    expect(json[:applied_coupons].last[:amount_cents_remaining]).to eq(8)
 
-      expect(json[:meta][:current_page]).to eq(1)
-      expect(json[:meta][:next_page]).to eq(nil)
-      expect(json[:meta][:prev_page]).to eq(nil)
-      expect(json[:meta][:total_pages]).to eq(1)
-      expect(json[:meta][:total_count]).to eq(2)
-    end
+    expect(json[:meta][:current_page]).to eq(1)
+    expect(json[:meta][:next_page]).to eq(nil)
+    expect(json[:meta][:prev_page]).to eq(nil)
+    expect(json[:meta][:total_pages]).to eq(1)
+    expect(json[:meta][:total_count]).to eq(2)
   end
 
   context "with pagination" do
@@ -58,17 +56,15 @@ RSpec.shared_examples "a applied coupon index endpoint" do
     it "returns paginated applied coupons" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:applied_coupons].count).to eq(1)
-        expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_coupons].count).to eq(1)
+      expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
 
-        expect(json[:meta][:current_page]).to eq(2)
-        expect(json[:meta][:next_page]).to eq(nil)
-        expect(json[:meta][:prev_page]).to eq(1)
-        expect(json[:meta][:total_pages]).to eq(2)
-        expect(json[:meta][:total_count]).to eq(2)
-      end
+      expect(json[:meta][:current_page]).to eq(2)
+      expect(json[:meta][:next_page]).to eq(nil)
+      expect(json[:meta][:prev_page]).to eq(1)
+      expect(json[:meta][:total_pages]).to eq(2)
+      expect(json[:meta][:total_count]).to eq(2)
     end
   end
 
@@ -78,12 +74,10 @@ RSpec.shared_examples "a applied coupon index endpoint" do
     it "returns only the applied coupons with the specified status" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:applied_coupons].count).to eq(2)
-        expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_2.id)
-        expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_coupons].count).to eq(2)
+      expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_2.id)
+      expect(json[:applied_coupons].last[:lago_id]).to eq(applied_coupon_1.id)
     end
 
     context "when no applied coupons match the status" do
@@ -92,10 +86,8 @@ RSpec.shared_examples "a applied coupon index endpoint" do
       it "returns an empty array" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons]).to be_empty
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_coupons]).to be_empty
       end
     end
   end
@@ -107,11 +99,9 @@ RSpec.shared_examples "a applied coupon index endpoint" do
       it "returns only the applied coupons for the specified coupon code" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons].count).to eq(1)
-          expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_coupons].count).to eq(1)
+        expect(json[:applied_coupons].first[:lago_id]).to eq(applied_coupon_1.id)
       end
 
       context "when the coupon is deleted" do
@@ -143,10 +133,8 @@ RSpec.shared_examples "a applied coupon index endpoint" do
       it "returns an empty array" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          expect(json[:applied_coupons]).to be_empty
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_coupons]).to be_empty
       end
     end
   end

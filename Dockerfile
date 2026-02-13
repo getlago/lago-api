@@ -1,6 +1,9 @@
-FROM ruby:3.4.7-slim AS build
+ARG PDFCPU_VERSION=0.11.1
+
+FROM ruby:3.4.8-slim AS build
 
 ARG BUNDLE_WITH
+ARG PDFCPU_VERSION
 
 WORKDIR /app
 
@@ -8,10 +11,12 @@ RUN apt update && apt upgrade -y
 RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_x86_64.tar.xz -o pdfcpu.tar.xz \
+ARG TARGETARCH
+RUN PDFCPU_ARCH=$(case "${TARGETARCH}" in arm64) echo "arm64" ;; *) echo "x86_64" ;; esac) \
+  && curl -L "https://github.com/pdfcpu/pdfcpu/releases/download/v${PDFCPU_VERSION}/pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}.tar.xz" -o pdfcpu.tar.xz \
   && tar -xf pdfcpu.tar.xz \
-  && install -m 755 pdfcpu_0.11.0_Linux_x86_64/pdfcpu /usr/local/bin/ \
-  && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_x86_64
+  && install -m 755 "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}/pdfcpu" /usr/local/bin/ \
+  && rm -rf pdfcpu.tar.xz "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}"
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
@@ -26,7 +31,7 @@ RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIB
   bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3
 
-FROM ruby:3.4.7-slim
+FROM ruby:3.4.8-slim
 
 ARG BUNDLE_WITH
 

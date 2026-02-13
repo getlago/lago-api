@@ -70,51 +70,49 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
     it "creates an invoice" do
       result = invoice_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice.issuing_date.to_date).to eq(timestamp)
-        expect(result.invoice.payment_due_date.to_date).to eq(timestamp)
-        expect(result.invoice.organization_id).to eq(organization.id)
-        expect(result.invoice.customer_id).to eq(customer.id)
-        expect(result.invoice.invoice_type).to eq("subscription")
-        expect(result.invoice.payment_status).to eq("pending")
+      expect(result.invoice.issuing_date.to_date).to eq(timestamp)
+      expect(result.invoice.payment_due_date.to_date).to eq(timestamp)
+      expect(result.invoice.organization_id).to eq(organization.id)
+      expect(result.invoice.customer_id).to eq(customer.id)
+      expect(result.invoice.invoice_type).to eq("subscription")
+      expect(result.invoice.payment_status).to eq("pending")
 
-        expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)
-        expect(result.invoice.fees.first).to have_attributes(
-          subscription:,
-          charge:,
-          amount_cents: 10,
-          precise_amount_cents: 10.0,
-          amount_currency: "EUR",
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
-          taxes_precise_amount_cents: 2.0,
-          fee_type: "charge",
-          pay_in_advance: true,
-          invoiceable: charge,
-          units: 9,
-          properties: Hash,
-          events_count: 1,
-          charge_filter: nil,
-          pay_in_advance_event_id: event.id,
-          payment_status: "pending",
-          unit_amount_cents: 1,
-          precise_unit_amount: 0.01111111111
-        )
+      expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)
+      expect(result.invoice.fees.first).to have_attributes(
+        subscription:,
+        charge:,
+        amount_cents: 10,
+        precise_amount_cents: 10.0,
+        amount_currency: "EUR",
+        taxes_rate: 20.0,
+        taxes_amount_cents: 2,
+        taxes_precise_amount_cents: 2.0,
+        fee_type: "charge",
+        pay_in_advance: true,
+        invoiceable: charge,
+        units: 9,
+        properties: Hash,
+        events_count: 1,
+        charge_filter: nil,
+        pay_in_advance_event_id: event.id,
+        payment_status: "pending",
+        unit_amount_cents: 1,
+        precise_unit_amount: 0.01111111111
+      )
 
-        expect(result.invoice.currency).to eq(customer.currency)
-        expect(result.invoice.fees_amount_cents).to eq(10)
+      expect(result.invoice.currency).to eq(customer.currency)
+      expect(result.invoice.fees_amount_cents).to eq(10)
 
-        expect(result.invoice.taxes_amount_cents).to eq(2)
-        expect(result.invoice.taxes_rate).to eq(20)
-        expect(result.invoice.applied_taxes.count).to eq(1)
+      expect(result.invoice.taxes_amount_cents).to eq(2)
+      expect(result.invoice.taxes_rate).to eq(20)
+      expect(result.invoice.applied_taxes.count).to eq(1)
 
-        expect(result.invoice.total_amount_cents).to eq(12)
+      expect(result.invoice.total_amount_cents).to eq(12)
 
-        expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
-        expect(result.invoice).to be_finalized
-      end
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      expect(result.invoice).to be_finalized
     end
 
     it "creates InvoiceSubscription object" do
@@ -167,9 +165,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do
           invoice_service.call
@@ -253,18 +249,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         it "returns tax error" do
           result = described_class.call(charge:, event:, timestamp: timestamp.to_i)
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
 
-            invoice = customer.invoices.order(created_at: :desc).first
+          invoice = customer.invoices.order(created_at: :desc).first
 
-            expect(invoice.status).to eq("failed")
-            expect(invoice.error_details.count).to eq(1)
-            expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-            expect(Utils::ActivityLog).to have_produced("invoice.failed").with(invoice)
-          end
+          expect(invoice.status).to eq("failed")
+          expect(invoice.error_details.count).to eq(1)
+          expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+          expect(Utils::ActivityLog).to have_produced("invoice.failed").with(invoice)
         end
       end
     end
@@ -319,41 +313,20 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       let(:lock_released_after) { 0.1.seconds }
 
       before do
-        stub_const("Invoices::CreatePayInAdvanceChargeService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
       end
 
       around do |test|
-        customer_id = customer.id
-        queue = Queue.new
-        thread = start_lock_thread(queue, customer_id)
-        test.run
-      ensure
-        stop_thread(thread, queue) if thread
-      end
-
-      def start_lock_thread(queue, customer_id)
-        Thread.start do
-          start_time = Time.zone.now
-          ApplicationRecord.transaction do
-            ApplicationRecord.with_advisory_lock!("customer-#{customer_id}", transaction: true) do
-              until queue.size > 0 || Time.zone.now - start_time > lock_released_after
-                sleep 0.01
-              end
-            end
-          end
+        with_advisory_lock("customer-#{customer.id}", lock_released_after:) do
+          test.run
         end
-      end
-
-      def stop_thread(thread, queue)
-        queue.push(true)
-        thread.join
       end
 
       context "when it fails to acquire the lock" do
         let(:lock_released_after) { 2.seconds }
 
-        it "raises a WithAdvisoryLock::FailedToAcquireLock error" do
-          expect { invoice_service.call }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+        it "raises a Customers::FailedToAcquireLock error" do
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
 
           expect(customer.invoices.count).to eq(0)
         end

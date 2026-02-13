@@ -23,12 +23,10 @@ RSpec.describe PaymentProviderCustomers::UpdateService do
     before { payment_provider }
 
     it "updates the provider customer" do
-      aggregate_failures do
-        described_class.call(customer)
+      described_class.call(customer)
 
-        expect(provider_service_class).to have_received(:new).with(provider_customer)
-        expect(provider_service).to have_received(:update)
-      end
+      expect(provider_service_class).to have_received(:new).with(provider_customer)
+      expect(provider_service).to have_received(:update)
     end
   end
 end

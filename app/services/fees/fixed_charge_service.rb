@@ -51,7 +51,26 @@ module Fees
     attr_reader :invoice, :fixed_charge, :subscription, :boundaries, :apply_taxes, :context, :current_usage, :currency, :organization
 
     def already_billed?
-      invoice.fees.fixed_charge.exists?(fixed_charge_id: fixed_charge.id)
+      # Check if fee exists on current invoice
+      return true if invoice.fees.fixed_charge.exists?(fixed_charge_id: fixed_charge.id)
+
+      # For pay_in_advance fixed charges, check if already billed in a previous invoice
+      # for the same billing period (prevents double-billing when trial ends)
+      return false unless fixed_charge.pay_in_advance?
+
+      fixed_charge
+        .fees
+        .where(subscription:)
+        .joins(:invoice).where.not(invoices: {status: :voided})
+        .where(
+          "date_trunc('second', (properties->>'fixed_charges_from_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
+          boundaries[:fixed_charges_from_datetime]&.iso8601(3)
+        )
+        .where(
+          "date_trunc('second', (properties->>'fixed_charges_to_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
+          boundaries[:fixed_charges_to_datetime]&.iso8601(3)
+        )
+        .exists?
     end
 
     def init_fee
@@ -196,7 +215,6 @@ module Fees
 
     def should_persist_fee?
       return true if context == :recurring
-      return true if organization.zero_amount_fees_enabled?
       return true if result.fee.units != 0 || result.fee.amount_cents != 0
       return true if adjusted_fee.present?
 

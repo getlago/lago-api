@@ -2,15 +2,13 @@
 
 require "rails_helper"
 
-describe "Taxes on Invoice Scenarios" do
+describe "Taxes on Invoice Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do
     stub_pdf_generation
     organization
   end
-
-  around { |test| lago_premium!(&test) }
 
   context "when timezone is negative and not the same day as UTC" do
     it "creates an invoice for the expected period" do

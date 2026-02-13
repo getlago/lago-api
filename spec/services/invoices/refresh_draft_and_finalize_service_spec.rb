@@ -139,11 +139,9 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
     it "generates expected fees" do
       result = finalize_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice.fees.charge.count).to eq(1)
-        expect(result.invoice.fees.subscription.count).to eq(1)
-      end
+      expect(result).to be_success
+      expect(result.invoice.fees.charge.count).to eq(1)
+      expect(result.invoice.fees.subscription.count).to eq(1)
     end
 
     it_behaves_like "syncs invoice" do
@@ -180,9 +178,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do
           finalize_service.call
@@ -234,11 +230,9 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         create(:fee, invoice:)
         result = finalize_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.fees.charge.count).to eq(1)
-          expect(result.invoice.fees.subscription.count).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.invoice.fees.charge.count).to eq(1)
+        expect(result.invoice.fees.subscription.count).to eq(1)
       end
     end
 
@@ -306,10 +300,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       context "when taxes are unknown" do
         it "returns pending invoice" do
           result = finalize_service.call
-          aggregate_failures do
-            expect(invoice.reload.status).to eql("pending")
-            expect(result.success?).to be(true)
-          end
+          expect(invoice.reload.status).to eql("pending")
+          expect(result.success?).to be(true)
         end
 
         it "moves invoice to pending tax state" do
@@ -323,13 +315,11 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
         it "does not send any updates" do
           finalize_service.call
-          aggregate_failures do
-            expect(SendWebhookJob).not_to have_received(:perform_later).with("invoice.created", invoice)
-            expect(Invoices::GenerateDocumentsJob).not_to have_received(:perform_later)
-            expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
-            expect(Invoices::Payments::CreateService).not_to have_received(:new)
-            expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
-          end
+          expect(SendWebhookJob).not_to have_received(:perform_later).with("invoice.created", invoice)
+          expect(Invoices::GenerateDocumentsJob).not_to have_received(:perform_later)
+          expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_received(:perform_later)
+          expect(Invoices::Payments::CreateService).not_to have_received(:new)
+          expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
         end
 
         it "does not change issuing_date on the invoice" do

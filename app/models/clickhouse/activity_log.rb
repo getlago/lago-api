@@ -34,6 +34,7 @@ module Clickhouse
       subscription: "Subscription",
       wallet: "Wallet",
       coupon: "Coupon",
+      payment_receipt: "PaymentReceipt",
       payment_request: "PaymentRequest",
       feature: "Entitlement::Feature"
     }.freeze
@@ -82,6 +83,7 @@ module Clickhouse
       applied_coupon_created: "applied_coupon.created",
       applied_coupon_deleted: "applied_coupon.deleted",
       payment_request_created: "payment_request.created",
+      email_sent: "email.sent",
       feature_created: "feature.created",
       feature_deleted: "feature.deleted",
       feature_updated: "feature.updated"

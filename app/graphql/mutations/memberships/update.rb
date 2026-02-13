@@ -12,7 +12,7 @@ module Mutations
       description "Update a membership"
 
       argument :id, ID, required: true
-      argument :role, Types::Memberships::RoleEnum, required: true
+      argument :roles, [String], required: true
 
       type Types::MembershipType
 

@@ -20,11 +20,9 @@ RSpec.describe ::V1::Integrations::Taxes::FeeErrorSerializer do
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
 
-    aggregate_failures do
-      expect(result["data"]["tax_provider_code"]).to eq(integration.code)
-      expect(result["data"]["lago_charge_id"]).to eq("456")
-      expect(result["data"]["event_transaction_id"]).to eq("123")
-      expect(result["data"]["provider_error"]).to eq(options[:provider_error])
-    end
+    expect(result["data"]["tax_provider_code"]).to eq(integration.code)
+    expect(result["data"]["lago_charge_id"]).to eq("456")
+    expect(result["data"]["event_transaction_id"]).to eq("123")
+    expect(result["data"]["provider_error"]).to eq(options[:provider_error])
   end
 end

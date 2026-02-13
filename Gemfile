@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.4.7"
+ruby "3.4.8"
 
 # Core
 gem "aasm"
@@ -17,6 +17,7 @@ gem "puma", "~> 6.5"
 gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
+gem "sidekiq-prometheus-exporter"
 group :"sidekiq-pro", optional: true do
   source "https://gems.contribsys.com/" do
     gem "sidekiq-pro"
@@ -144,6 +145,8 @@ group :development, :test do
   gem "rubocop-graphql", require: false
   gem "rubocop-performance", require: false
   gem "rubocop-rspec", require: false
+  gem "rubocop-rspec_rails", require: false
+  gem "rubocop-factory_bot", require: false
   gem "rubocop-thread_safety", require: false
 
   gem "vernier", "~> 1.0", require: false

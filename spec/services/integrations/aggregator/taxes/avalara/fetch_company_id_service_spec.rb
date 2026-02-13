@@ -49,10 +49,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
         it "returns company id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.company["id"]).to eq("DEFAULT-12345")
-          end
+          expect(result).to be_success
+          expect(result.company["id"]).to eq("DEFAULT-12345")
         end
       end
 
@@ -65,11 +63,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
         it "returns errors" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("company_not_found")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("company_not_found")
         end
 
         it "delivers an error webhook" do
@@ -106,11 +102,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
 
         it "delivers an error webhook" do

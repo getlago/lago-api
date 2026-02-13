@@ -14,12 +14,10 @@ RSpec.describe Invoices::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("invoice")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("invoice")
       end
     end
 
@@ -29,11 +27,9 @@ RSpec.describe Invoices::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_voidable")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("not_voidable")
       end
     end
 
@@ -43,11 +39,9 @@ RSpec.describe Invoices::VoidService do
       it "returns a failure" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_voidable")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("not_voidable")
       end
     end
 
@@ -61,11 +55,9 @@ RSpec.describe Invoices::VoidService do
         it "voids the invoice" do
           result = void_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice).to be_voided
-            expect(result.invoice.voided_at).to be_present
-          end
+          expect(result).to be_success
+          expect(result.invoice).to be_voided
+          expect(result.invoice.voided_at).to be_present
         end
       end
 
@@ -75,12 +67,10 @@ RSpec.describe Invoices::VoidService do
         it "voids the invoice" do
           result = void_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice).to be_voided
-            expect(result.invoice.voided_at).to be_present
-            # expect(result.invoice.balance_amount_cents).to eq(0)
-          end
+          expect(result).to be_success
+          expect(result.invoice).to be_voided
+          expect(result.invoice.voided_at).to be_present
+          # expect(result.invoice.balance_amount_cents).to eq(0)
         end
 
         it "enqueues a sync void invoice job" do
@@ -216,9 +206,7 @@ RSpec.describe Invoices::VoidService do
         end
       end
 
-      context "when the invoice is voided" do
-        around { |test| lago_premium!(&test) }
-
+      context "when the invoice is voided", :premium do
         let(:invoice) { create(:invoice, status: :voided) }
 
         it "returns a failure" do

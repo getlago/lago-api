@@ -11,12 +11,12 @@ module Types
       field :id, ID, null: false
 
       field :email, String, null: false
-      field :role, Types::Memberships::RoleEnum, null: false
+      field :roles, [String], null: false
       field :status, Types::Invites::StatusTypeEnum, null: false
       field :token, String, null: false
 
-      field :accepted_at, GraphQL::Types::ISO8601DateTime, null: false
-      field :revoked_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :accepted_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :revoked_at, GraphQL::Types::ISO8601DateTime, null: true
     end
   end
 end

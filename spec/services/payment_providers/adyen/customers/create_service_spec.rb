@@ -49,11 +49,9 @@ RSpec.describe PaymentProviders::Adyen::Customers::CreateService do
         expect do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(result.provider_customer.provider_customer_id).to be_nil
-          end
+          expect(result.provider_customer.provider_customer_id).to be_nil
         end.not_to have_enqueued_job(PaymentProviderCustomers::AdyenCreateJob)
       end
     end

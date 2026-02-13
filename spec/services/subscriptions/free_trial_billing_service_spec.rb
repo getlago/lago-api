@@ -21,7 +21,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     end
 
     context "without any ending trial subscriptions" do
-      it "does not set trial_ended_at", :aggregate_failures do
+      it "does not set trial_ended_at" do
         sub1 = create(:subscription, plan:, started_at: 2.days.ago)
 
         expect { service.call }.not_to change { sub1.reload.trial_ended_at }.from(nil)
@@ -53,7 +53,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2024-03-11 13:03:00 UTC") }
 
-      it "sets trial_ended_at to the expected subscription (timezone is irrelevant)", :aggregate_failures do
+      it "sets trial_ended_at to the expected subscription (timezone is irrelevant)" do
         started_at = DateTime.parse("2024-03-01 12:00:00 UTC")
         customer = create(:customer, timezone: "America/Los_Angeles")
         sub = create(:subscription, plan:, customer:, started_at:)
@@ -90,10 +90,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           it "does not enqueue a job to bill the subscription" do
             expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
-
-          it "does not enqueue a job to bill the pay in advance fixed charges" do
-            expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
-          end
         end
 
         context "when fixed_charges are pay in advance" do
@@ -107,10 +103,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
 
           it "does not enqueue a job to bill the subscription" do
             expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-          end
-
-          it "enqueues a job to bill the pay in advance fixed charges" do
-            expect { service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           end
         end
       end
@@ -131,28 +123,6 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
 
           it "enqueues a job to bill the subscription" do
             expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
-          end
-
-          it "does not enqueue a job to bill the pay in advance fixed charges" do
-            expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
-          end
-        end
-
-        context "when fixed_charges are pay in advance" do
-          let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: true) }
-          let(:subscription) { create(:subscription, plan:, started_at: 11.days.ago) }
-
-          before do
-            fixed_charge
-            subscription
-          end
-
-          it "enqueues a job to bill the subscription" do
-            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
-          end
-
-          it "does not enqueue a job to bill the pay in advance fixed charges" do
-            expect { service.call }.not_to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob)
           end
         end
       end

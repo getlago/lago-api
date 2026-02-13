@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ChargeService do
+RSpec.describe Fees::ChargeService, :premium do
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
@@ -14,8 +14,6 @@ RSpec.describe Fees::ChargeService do
       filtered_aggregations:
     )
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
@@ -153,18 +151,6 @@ RSpec.describe Fees::ChargeService do
             result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
-          end
-
-          context "when organization as zero_amount_fees premium integration" do
-            before do
-              organization.update!(premium_integrations: ["zero_amount_fees"])
-            end
-
-            it "creates a fee" do
-              result = charge_subscription_service.call
-              expect(result).to be_success
-              expect(result.fees.count).to eq(1)
-            end
           end
         end
 
@@ -499,18 +485,6 @@ RSpec.describe Fees::ChargeService do
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
           end
-
-          context "when organization as zero_amount_fees premium integration" do
-            before do
-              organization.update!(premium_integrations: ["zero_amount_fees"])
-            end
-
-            it "creates a fee" do
-              result = charge_subscription_service.call
-              expect(result).to be_success
-              expect(result.fees.count).to eq(1)
-            end
-          end
         end
 
         context "with events" do
@@ -669,6 +643,82 @@ RSpec.describe Fees::ChargeService do
               expect(result.cached_aggregations.count).to eq(2)
             end
           end
+        end
+      end
+
+      context "with accepts_target_wallet enabled" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan,
+            billable_metric:,
+            accepts_target_wallet: true,
+            properties: {
+              amount: "20"
+            }
+          )
+        end
+
+        let(:billable_metric) do
+          create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+        end
+
+        let(:event_wallet_1) do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {target_wallet_code: "wallet_1", value: 10}
+          )
+        end
+
+        let(:event_wallet_2) do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: charge.billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"),
+            properties: {target_wallet_code: "wallet_2", value: 5}
+          )
+        end
+
+        before do
+          organization.update!(premium_integrations: ["events_targeting_wallets"])
+          event_wallet_1
+          event_wallet_2
+        end
+
+        it "creates a fee for each target_wallet_code" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
+
+          fee1 = result.fees.find { |f| f.grouped_by["target_wallet_code"] == "wallet_1" }
+          expect(fee1).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 20_000,
+            precise_amount_cents: 20_000.0,
+            amount_currency: "EUR",
+            units: 10,
+            grouped_by: {"target_wallet_code" => "wallet_1"}
+          )
+
+          fee2 = result.fees.find { |f| f.grouped_by["target_wallet_code"] == "wallet_2" }
+          expect(fee2).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 10_000,
+            precise_amount_cents: 10_000.0,
+            amount_currency: "EUR",
+            units: 5,
+            grouped_by: {"target_wallet_code" => "wallet_2"}
+          )
         end
       end
 
@@ -920,15 +970,13 @@ RSpec.describe Fees::ChargeService do
             it "creates two fees" do
               result = charge_subscription_service.call
 
-              aggregate_failures do
-                expect(result).to be_success
-                expect(result.fees.count).to eq(2)
-                expect(result.fees.pluck(:amount_cents)).to contain_exactly(6_000, 4_968)
-                expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(6_000.0, 4_967.74193548387)
-                expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
-                expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(2_000, 4_968)
-                expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(20, 49.6774193548387)
-              end
+              expect(result).to be_success
+              expect(result.fees.count).to eq(2)
+              expect(result.fees.pluck(:amount_cents)).to contain_exactly(6_000, 4_968)
+              expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(6_000.0, 4_967.74193548387)
+              expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
+              expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(2_000, 4_968)
+              expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(20, 49.6774193548387)
             end
           end
 
@@ -1015,71 +1063,69 @@ RSpec.describe Fees::ChargeService do
               expect(result).to be_success
               created_fees = result.fees
 
-              aggregate_failures do
-                expect(created_fees.count).to eq(5)
-                expect(created_fees).to all(
-                  have_attributes(
-                    invoice_id: invoice.id,
-                    charge_id: charge.id,
-                    amount_currency: "EUR"
-                  )
+              expect(created_fees.count).to eq(5)
+              expect(created_fees).to all(
+                have_attributes(
+                  invoice_id: invoice.id,
+                  charge_id: charge.id,
+                  amount_currency: "EUR"
                 )
+              )
 
-                usa_fee = created_fees.find { |f| f.charge_filter == usa_filter }
-                expect(usa_fee).to have_attributes(
-                  charge_filter: usa_filter,
-                  amount_cents: 9_000,
-                  precise_amount_cents: 9_000.0,
-                  taxes_precise_amount_cents: 0.0,
-                  units: 3,
-                  unit_amount_cents: 3000,
-                  precise_unit_amount: 30
-                )
+              usa_fee = created_fees.find { |f| f.charge_filter == usa_filter }
+              expect(usa_fee).to have_attributes(
+                charge_filter: usa_filter,
+                amount_cents: 9_000,
+                precise_amount_cents: 9_000.0,
+                taxes_precise_amount_cents: 0.0,
+                units: 3,
+                unit_amount_cents: 3000,
+                precise_unit_amount: 30
+              )
 
-                europe_fee = created_fees.find { |f| f.charge_filter == europe_filter }
-                expect(europe_fee).to have_attributes(
-                  charge_filter: europe_filter,
-                  amount_cents: 30_000,
-                  precise_amount_cents: 30_000.0,
-                  taxes_precise_amount_cents: 0.0,
-                  units: 15,
-                  unit_amount_cents: 2000,
-                  precise_unit_amount: 20
-                )
+              europe_fee = created_fees.find { |f| f.charge_filter == europe_filter }
+              expect(europe_fee).to have_attributes(
+                charge_filter: europe_filter,
+                amount_cents: 30_000,
+                precise_amount_cents: 30_000.0,
+                taxes_precise_amount_cents: 0.0,
+                units: 15,
+                unit_amount_cents: 2000,
+                precise_unit_amount: 20
+              )
 
-                france_fee = created_fees.find { |f| f.charge_filter == france_filter }
-                expect(france_fee).to have_attributes(
-                  charge_filter: france_filter,
-                  amount_cents: 20062,
-                  precise_amount_cents: 20061.725,
-                  taxes_precise_amount_cents: 0.0,
-                  units: 5,
-                  unit_amount_cents: 4012,
-                  precise_unit_amount: 40.12345
-                )
+              france_fee = created_fees.find { |f| f.charge_filter == france_filter }
+              expect(france_fee).to have_attributes(
+                charge_filter: france_filter,
+                amount_cents: 20062,
+                precise_amount_cents: 20061.725,
+                taxes_precise_amount_cents: 0.0,
+                units: 5,
+                unit_amount_cents: 4012,
+                precise_unit_amount: 40.12345
+              )
 
-                all_filter_fee = created_fees.find { |f| f.charge_filter == all_values_filter }
-                expect(all_filter_fee).to have_attributes(
-                  charge_filter: all_values_filter,
-                  amount_cents: 50000,
-                  precise_amount_cents: 50000.0,
-                  taxes_precise_amount_cents: 0.0,
-                  units: 10,
-                  unit_amount_cents: 5000,
-                  precise_unit_amount: 50.0
-                )
+              all_filter_fee = created_fees.find { |f| f.charge_filter == all_values_filter }
+              expect(all_filter_fee).to have_attributes(
+                charge_filter: all_values_filter,
+                amount_cents: 50000,
+                precise_amount_cents: 50000.0,
+                taxes_precise_amount_cents: 0.0,
+                units: 10,
+                unit_amount_cents: 5000,
+                precise_unit_amount: 50.0
+              )
 
-                no_filter_fee = created_fees.find { |f| f.charge_filter.blank? }
-                expect(no_filter_fee).to have_attributes(
-                  charge_filter: nil,
-                  amount_cents: 5000,
-                  precise_amount_cents: 5000.0,
-                  taxes_precise_amount_cents: 0.0,
-                  units: 5,
-                  unit_amount_cents: 1000,
-                  precise_unit_amount: 10.0
-                )
-              end
+              no_filter_fee = created_fees.find { |f| f.charge_filter.blank? }
+              expect(no_filter_fee).to have_attributes(
+                charge_filter: nil,
+                amount_cents: 5000,
+                precise_amount_cents: 5000.0,
+                taxes_precise_amount_cents: 0.0,
+                units: 5,
+                unit_amount_cents: 1000,
+                precise_unit_amount: 10.0
+              )
             end
           end
         end
@@ -1375,7 +1421,142 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         created_fees = result.fees
 
-        aggregate_failures do
+        expect(created_fees.count).to eq(4)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
+          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 4000,
+          precise_amount_cents: 4000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 2,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20
+        )
+
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 5000,
+          precise_amount_cents: 5000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 5000,
+          precise_unit_amount: 50
+        )
+
+        expect(created_fees.third).to have_attributes(
+          charge_filter: france_filter,
+          amount_cents: 1012,
+          precise_amount_cents: 1012.345,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 1012,
+          precise_unit_amount: 10.12345
+        )
+      end
+
+      it "creates expected fees for sum_agg aggregation type" do
+        billable_metric.update!(aggregation_type: :sum_agg, field_name: "foo_bar")
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        created_fees = result.fees
+
+        expect(created_fees.count).to eq(4)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
+          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 30_000,
+          precise_amount_cents: 30_000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 15,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20
+        )
+
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 60_000,
+          precise_amount_cents: 60_000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 12,
+          unit_amount_cents: 5000,
+          precise_unit_amount: 50
+        )
+
+        expect(created_fees.third).to have_attributes(
+          charge_filter: france_filter,
+          amount_cents: 5062,
+          precise_amount_cents: 5061.725,
+          taxes_precise_amount_cents: 0.0,
+          units: 5,
+          unit_amount_cents: 1012,
+          precise_unit_amount: 10.12345
+        )
+      end
+
+      it "creates expected fees for max_agg aggregation type" do
+        billable_metric.update!(aggregation_type: :max_agg, field_name: "foo_bar")
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        created_fees = result.fees
+
+        expect(created_fees.count).to eq(4)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
+          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 20_000,
+          precise_amount_cents: 20_000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 10,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20
+        )
+
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 60_000,
+          precise_amount_cents: 60_000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 12,
+          unit_amount_cents: 5000,
+          precise_unit_amount: 50
+        )
+
+        expect(created_fees.third).to have_attributes(
+          charge_filter: france_filter,
+          amount_cents: 5062,
+          precise_amount_cents: 5061.725,
+          taxes_precise_amount_cents: 0.0,
+          units: 5,
+          unit_amount_cents: 1012,
+          precise_unit_amount: 10.12345
+        )
+      end
+
+      context "when unique_count_agg" do
+        it "creates expected fees for unique_count_agg aggregation type", transaction: false do
+          billable_metric.update!(aggregation_type: :unique_count_agg, field_name: "foo_bar")
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          created_fees = result.fees
+
           expect(created_fees.count).to eq(4)
           expect(created_fees).to all(
             have_attributes(
@@ -1387,21 +1568,17 @@ RSpec.describe Fees::ChargeService do
           expect(created_fees.first).to have_attributes(
             charge_filter: europe_filter,
             amount_cents: 4000,
-            precise_amount_cents: 4000.0,
+            precise_amount_cents: 4_000.0,
             taxes_precise_amount_cents: 0.0,
-            units: 2,
-            unit_amount_cents: 2000,
-            precise_unit_amount: 20
+            units: 2
           )
 
           expect(created_fees.second).to have_attributes(
             charge_filter: usa_filter,
             amount_cents: 5000,
-            precise_amount_cents: 5000.0,
+            precise_amount_cents: 5_000.0,
             taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 5000,
-            precise_unit_amount: 50
+            units: 1
           )
 
           expect(created_fees.third).to have_attributes(
@@ -1413,145 +1590,6 @@ RSpec.describe Fees::ChargeService do
             unit_amount_cents: 1012,
             precise_unit_amount: 10.12345
           )
-        end
-      end
-
-      it "creates expected fees for sum_agg aggregation type" do
-        billable_metric.update!(aggregation_type: :sum_agg, field_name: "foo_bar")
-        result = charge_subscription_service.call
-        expect(result).to be_success
-        created_fees = result.fees
-
-        aggregate_failures do
-          expect(created_fees.count).to eq(4)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
-          )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            amount_cents: 30_000,
-            precise_amount_cents: 30_000.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 15,
-            unit_amount_cents: 2000,
-            precise_unit_amount: 20
-          )
-
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 60_000,
-            precise_amount_cents: 60_000.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 12,
-            unit_amount_cents: 5000,
-            precise_unit_amount: 50
-          )
-
-          expect(created_fees.third).to have_attributes(
-            charge_filter: france_filter,
-            amount_cents: 5062,
-            precise_amount_cents: 5061.725,
-            taxes_precise_amount_cents: 0.0,
-            units: 5,
-            unit_amount_cents: 1012,
-            precise_unit_amount: 10.12345
-          )
-        end
-      end
-
-      it "creates expected fees for max_agg aggregation type" do
-        billable_metric.update!(aggregation_type: :max_agg, field_name: "foo_bar")
-        result = charge_subscription_service.call
-        expect(result).to be_success
-        created_fees = result.fees
-
-        aggregate_failures do
-          expect(created_fees.count).to eq(4)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
-          )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            amount_cents: 20_000,
-            precise_amount_cents: 20_000.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 10,
-            unit_amount_cents: 2000,
-            precise_unit_amount: 20
-          )
-
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 60_000,
-            precise_amount_cents: 60_000.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 12,
-            unit_amount_cents: 5000,
-            precise_unit_amount: 50
-          )
-
-          expect(created_fees.third).to have_attributes(
-            charge_filter: france_filter,
-            amount_cents: 5062,
-            precise_amount_cents: 5061.725,
-            taxes_precise_amount_cents: 0.0,
-            units: 5,
-            unit_amount_cents: 1012,
-            precise_unit_amount: 10.12345
-          )
-        end
-      end
-
-      context "when unique_count_agg" do
-        it "creates expected fees for unique_count_agg aggregation type", transaction: false do
-          billable_metric.update!(aggregation_type: :unique_count_agg, field_name: "foo_bar")
-          result = charge_subscription_service.call
-          expect(result).to be_success
-          created_fees = result.fees
-
-          aggregate_failures do
-            expect(created_fees.count).to eq(4)
-            expect(created_fees).to all(
-              have_attributes(
-                invoice_id: invoice.id,
-                charge_id: charge.id,
-                amount_currency: "EUR"
-              )
-            )
-            expect(created_fees.first).to have_attributes(
-              charge_filter: europe_filter,
-              amount_cents: 4000,
-              precise_amount_cents: 4_000.0,
-              taxes_precise_amount_cents: 0.0,
-              units: 2
-            )
-
-            expect(created_fees.second).to have_attributes(
-              charge_filter: usa_filter,
-              amount_cents: 5000,
-              precise_amount_cents: 5_000.0,
-              taxes_precise_amount_cents: 0.0,
-              units: 1
-            )
-
-            expect(created_fees.third).to have_attributes(
-              charge_filter: france_filter,
-              amount_cents: 1012,
-              precise_amount_cents: 1012.345,
-              taxes_precise_amount_cents: 0.0,
-              units: 1,
-              unit_amount_cents: 1012,
-              precise_unit_amount: 10.12345
-            )
-          end
         end
       end
     end
@@ -1686,45 +1724,43 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         created_fees = result.fees
 
-        aggregate_failures do
-          expect(created_fees.count).to eq(4)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
+        expect(created_fees.count).to eq(4)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
           )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            units: 2,
-            amount_cents: 10_000,
-            precise_amount_cents: 10_000.0,
-            taxes_precise_amount_cents: 0.0,
-            unit_amount_cents: 10_000,
-            precise_unit_amount: 100
-          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          units: 2,
+          amount_cents: 10_000,
+          precise_amount_cents: 10_000.0,
+          taxes_precise_amount_cents: 0.0,
+          unit_amount_cents: 10_000,
+          precise_unit_amount: 100
+        )
 
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 5000,
-            precise_amount_cents: 5_000.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 5000,
-            precise_unit_amount: 50
-          )
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 5000,
+          precise_amount_cents: 5_000.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 5000,
+          precise_unit_amount: 50
+        )
 
-          expect(created_fees.third).to have_attributes(
-            charge_filter: france_filter,
-            amount_cents: 0,
-            precise_amount_cents: 0.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 0,
-            precise_unit_amount: 0
-          )
-        end
+        expect(created_fees.third).to have_attributes(
+          charge_filter: france_filter,
+          amount_cents: 0,
+          precise_amount_cents: 0.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0
+        )
       end
     end
 
@@ -1842,45 +1878,43 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         created_fees = result.fees
 
-        aggregate_failures do
-          expect(created_fees.count).to eq(4)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
+        expect(created_fees.count).to eq(4)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
           )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            amount_cents: 200 + 2 * 2,
-            precise_amount_cents: 200.0 + 2 * 2,
-            taxes_precise_amount_cents: 0.0,
-            units: 2,
-            unit_amount_cents: 102,
-            precise_unit_amount: 1.02
-          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 200 + 2 * 2,
+          precise_amount_cents: 200.0 + 2 * 2,
+          taxes_precise_amount_cents: 0.0,
+          units: 2,
+          unit_amount_cents: 102,
+          precise_unit_amount: 1.02
+        )
 
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 1 * 1,
-            precise_amount_cents: 1.0 * 1,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01
-          )
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 1 * 1,
+          precise_amount_cents: 1.0 * 1,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01
+        )
 
-          expect(created_fees.third).to have_attributes(
-            charge_filter: france_filter,
-            amount_cents: 100 + 5 * 1,
-            precise_amount_cents: 100.0 + 5.0 * 1,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 105,
-            precise_unit_amount: 1.05
-          )
-        end
+        expect(created_fees.third).to have_attributes(
+          charge_filter: france_filter,
+          amount_cents: 100 + 5 * 1,
+          precise_amount_cents: 100.0 + 5.0 * 1,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 105,
+          precise_unit_amount: 1.05
+        )
       end
     end
 
@@ -2192,35 +2226,33 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         created_fees = result.fees
 
-        aggregate_failures do
-          expect(created_fees.count).to eq(3)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
+        expect(created_fees.count).to eq(3)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
           )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            amount_cents: 1400,
-            precise_amount_cents: 1_400.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 2,
-            unit_amount_cents: 700,
-            precise_unit_amount: 7
-          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 1400,
+          precise_amount_cents: 1_400.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 2,
+          unit_amount_cents: 700,
+          precise_unit_amount: 7
+        )
 
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 1100,
-            precise_amount_cents: 1_100.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 1100,
-            precise_unit_amount: 11
-          )
-        end
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 1100,
+          precise_amount_cents: 1_100.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 1100,
+          precise_unit_amount: 11
+        )
       end
     end
 
@@ -2336,35 +2368,33 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         created_fees = result.fees
 
-        aggregate_failures do
-          expect(created_fees.count).to eq(3)
-          expect(created_fees).to all(
-            have_attributes(
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_currency: "EUR"
-            )
+        expect(created_fees.count).to eq(3)
+        expect(created_fees).to all(
+          have_attributes(
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_currency: "EUR"
           )
-          expect(created_fees.first).to have_attributes(
-            charge_filter: europe_filter,
-            amount_cents: 5, # 2 × 0.02 + 0.01
-            precise_amount_cents: 5.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 2,
-            unit_amount_cents: 2,
-            precise_unit_amount: 0.025
-          )
+        )
+        expect(created_fees.first).to have_attributes(
+          charge_filter: europe_filter,
+          amount_cents: 5, # 2 × 0.02 + 0.01
+          precise_amount_cents: 5.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 2,
+          unit_amount_cents: 2,
+          precise_unit_amount: 0.025
+        )
 
-          expect(created_fees.second).to have_attributes(
-            charge_filter: usa_filter,
-            amount_cents: 4, # 1 × 0.03 + 0.01
-            precise_amount_cents: 4.0,
-            taxes_precise_amount_cents: 0.0,
-            units: 1,
-            unit_amount_cents: 4,
-            precise_unit_amount: 0.04
-          )
-        end
+        expect(created_fees.second).to have_attributes(
+          charge_filter: usa_filter,
+          amount_cents: 4, # 1 × 0.03 + 0.01
+          precise_amount_cents: 4.0,
+          taxes_precise_amount_cents: 0.0,
+          units: 1,
+          unit_amount_cents: 4,
+          precise_unit_amount: 0.04
+        )
       end
     end
 
@@ -2419,15 +2449,13 @@ RSpec.describe Fees::ChargeService do
         travel_to(Time.zone.parse("2023-04-01")) do
           result = charge_subscription_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.fees.count).to eq(2)
+          expect(result).to be_success
+          expect(result.fees.count).to eq(2)
 
-            # 548 is 1000 prorated for 17 days.
-            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548)
-            expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0, 548.3870967741935)
-            expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
-          end
+          # 548 is 1000 prorated for 17 days.
+          expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548)
+          expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0, 548.3870967741935)
+          expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
         end
       end
     end
@@ -2442,27 +2470,25 @@ RSpec.describe Fees::ChargeService do
         created_fee = result.fees.first
         cached_aggregation = result.cached_aggregations.first
 
-        aggregate_failures do
-          expect(created_fee.id).not_to be_nil
-          expect(created_fee.invoice_id).to eq(invoice.id)
-          expect(created_fee.charge_id).to eq(charge.id)
-          expect(created_fee.amount_cents).to eq(0)
-          expect(created_fee.precise_amount_cents).to eq(0.0)
-          expect(created_fee.taxes_precise_amount_cents).to eq(0.0)
-          expect(created_fee.amount_currency).to eq("EUR")
-          expect(created_fee.units).to eq(0)
-          expect(created_fee.total_aggregated_units).to eq(0)
-          expect(created_fee.events_count).to eq(0)
-          expect(created_fee.payment_status).to eq("pending")
+        expect(created_fee.id).not_to be_nil
+        expect(created_fee.invoice_id).to eq(invoice.id)
+        expect(created_fee.charge_id).to eq(charge.id)
+        expect(created_fee.amount_cents).to eq(0)
+        expect(created_fee.precise_amount_cents).to eq(0.0)
+        expect(created_fee.taxes_precise_amount_cents).to eq(0.0)
+        expect(created_fee.amount_currency).to eq("EUR")
+        expect(created_fee.units).to eq(0)
+        expect(created_fee.total_aggregated_units).to eq(0)
+        expect(created_fee.events_count).to eq(0)
+        expect(created_fee.payment_status).to eq("pending")
 
-          expect(cached_aggregation.id).not_to be_nil
-          expect(cached_aggregation.organization).to eq(organization)
-          expect(cached_aggregation.external_subscription_id).to eq(subscription.external_id)
-          expect(cached_aggregation.charge_filter_id).to be_nil
-          expect(cached_aggregation.charge_id).to eq(charge.id)
-          expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
-          expect(cached_aggregation.current_aggregation).to eq(0.0)
-        end
+        expect(cached_aggregation.id).not_to be_nil
+        expect(cached_aggregation.organization).to eq(organization)
+        expect(cached_aggregation.external_subscription_id).to eq(subscription.external_id)
+        expect(cached_aggregation.charge_filter_id).to be_nil
+        expect(cached_aggregation.charge_id).to eq(charge.id)
+        expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
+        expect(cached_aggregation.current_aggregation).to eq(0.0)
       end
     end
 
@@ -2520,17 +2546,15 @@ RSpec.describe Fees::ChargeService do
 
             usage_fee = result.fees.first
 
-            aggregate_failures do
-              expect(result.fees.count).to eq(1)
-              expect(usage_fee.id).to be_nil
-              expect(usage_fee.invoice_id).to eq(invoice.id)
-              expect(usage_fee.charge_id).to eq(charge.id)
-              expect(usage_fee.amount_cents).to eq(0)
-              expect(usage_fee.precise_amount_cents).to eq(0.0)
-              expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
-              expect(usage_fee.amount_currency).to eq("EUR")
-              expect(usage_fee.units).to eq(0)
-            end
+            expect(result.fees.count).to eq(1)
+            expect(usage_fee.id).to be_nil
+            expect(usage_fee.invoice_id).to eq(invoice.id)
+            expect(usage_fee.charge_id).to eq(charge.id)
+            expect(usage_fee.amount_cents).to eq(0)
+            expect(usage_fee.precise_amount_cents).to eq(0.0)
+            expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
+            expect(usage_fee.amount_currency).to eq("EUR")
+            expect(usage_fee.units).to eq(0)
           end
         end
       end
@@ -2573,16 +2597,14 @@ RSpec.describe Fees::ChargeService do
 
           usage_fee = result.fees.first
 
-          aggregate_failures do
-            expect(usage_fee.id).to be_nil
-            expect(usage_fee.invoice_id).to eq(invoice.id)
-            expect(usage_fee.charge_id).to eq(charge.id)
-            expect(usage_fee.amount_cents).to eq(5)
-            expect(usage_fee.precise_amount_cents).to eq(5.0)
-            expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
-            expect(usage_fee.amount_currency).to eq("EUR")
-            expect(usage_fee.units.to_s).to eq("4.0")
-          end
+          expect(usage_fee.id).to be_nil
+          expect(usage_fee.invoice_id).to eq(invoice.id)
+          expect(usage_fee.charge_id).to eq(charge.id)
+          expect(usage_fee.amount_cents).to eq(5)
+          expect(usage_fee.precise_amount_cents).to eq(5.0)
+          expect(usage_fee.taxes_precise_amount_cents).to eq(0.0)
+          expect(usage_fee.amount_currency).to eq("EUR")
+          expect(usage_fee.units.to_s).to eq("4.0")
         end
       end
 
@@ -2658,7 +2680,6 @@ RSpec.describe Fees::ChargeService do
     end
 
     context "with filtered_aggregations" do
-      let(:organization) { create(:organization, premium_integrations: ["zero_amount_fees"]) }
       let(:filtered_aggregations) { [] }
 
       let(:region_filter) do
@@ -2724,18 +2745,20 @@ RSpec.describe Fees::ChargeService do
 
           expect(eu_fee).to have_attributes(units: 1, amount_cents: 2_000)
           expect(us_fee).to have_attributes(units: 1, amount_cents: 3_000)
-          expect(asia_fee).to have_attributes(units: 0, amount_cents: 0)
-          expect(default_fee).to have_attributes(units: 0, amount_cents: 0)
+          # Zero-amount fees are filtered out by default
+          expect(asia_fee).to be_nil
+          expect(default_fee).to be_nil
         end
       end
 
       context "when filtered_aggregations is an empty array" do
         let(:filtered_aggregations) { [] }
 
-        it "bypasses aggregation for all filters" do
+        it "bypasses aggregation for all filters and returns no fees" do
           result = charge_subscription_service.call
           expect(result).to be_success
-          expect(result.fees).to all(have_attributes(units: 0, amount_cents: 0))
+          # All fees have zero amounts, so none are persisted
+          expect(result.fees).to be_empty
         end
       end
 
@@ -2750,7 +2773,8 @@ RSpec.describe Fees::ChargeService do
           eu_fee = result.fees.find { |f| f.charge_filter_id == eu_charge_filter.id }
 
           expect(default_fee).to have_attributes(units: 1, amount_cents: 2_000)
-          expect(eu_fee).to have_attributes(units: 0, amount_cents: 0)
+          # Zero-amount fees are filtered out by default
+          expect(eu_fee).to be_nil
         end
       end
 

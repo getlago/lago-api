@@ -89,7 +89,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   describe "for f1" do
     let(:current_filter) { f1 }
 
-    it "returns a formatted hash", :aggregate_failures do
+    it "returns a formatted hash" do
       expect(service_result.matching_filters).to eq({"size" => %w[512], "steps" => %w[25], "model" => %w[llama-2]})
       expect(service_result.ignored_filters).to eq([])
     end
@@ -98,7 +98,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   describe "for f2" do
     let(:current_filter) { f2 }
 
-    it "returns a formatted hash", :aggregate_failures do
+    it "returns a formatted hash" do
       expect(service_result.matching_filters).to eq({"size" => %w[512], "steps" => %w[25]})
       expect(service_result.ignored_filters).to eq(
         [
@@ -112,7 +112,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   describe "for f3" do
     let(:current_filter) { f3 }
 
-    it "returns a formatted hash", :aggregate_failures do
+    it "returns a formatted hash" do
       expect(service_result.matching_filters).to eq({"size" => %w[512 1024], "steps" => %w[25 50 75 100]})
       expect(service_result.ignored_filters).to eq(
         [
@@ -126,7 +126,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   describe "for f4" do
     let(:current_filter) { f4 }
 
-    it "returns a formatted hash", :aggregate_failures do
+    it "returns a formatted hash" do
       expect(service_result.matching_filters).to eq({"size" => %w[512 1024]})
       expect(service_result.ignored_filters).to eq(
         [
@@ -142,7 +142,7 @@ RSpec.describe ChargeFilters::MatchingAndIgnoredService do
   describe "for f5" do
     let(:current_filter) { f5 }
 
-    it "returns a formatted hash", :aggregate_failures do
+    it "returns a formatted hash" do
       expect(service_result.matching_filters).to eq({"size" => %w[512]})
       expect(service_result.ignored_filters).to eq(
         [

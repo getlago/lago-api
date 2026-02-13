@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataExports::Csv::Invoices do
+RSpec.describe DataExports::Csv::Invoices, :premium do
   let(:data_export) { create :data_export, :processing, resource_query:, organization: }
 
   let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
@@ -72,15 +72,17 @@ RSpec.describe DataExports::Csv::Invoices do
       payment_due_date: "2023-02-01",
       payment_dispute_lost_at: "2023-12-22",
       payment_overdue: false,
+      total_due_amount_cents: 27511,
+      total_paid_amount_cents: 50000,
+      total_offsetted_credit_note_amount_cents: 334,
       progressive_billing_credit_amount_cents: 999,
       billing_entity_code: "the-test-bil-ent"
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     invoice
+    create(:credit_note, offset_amount_cents: 334, invoice:)
 
     allow(serializer_klass)
       .to receive(:new)
@@ -94,7 +96,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,999
+        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999
       CSV
 
       expect(result).to be_success
@@ -113,7 +115,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
       it "adds billing_entity_code to the csv" do
         expected_csv = <<~CSV
-          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,999,the-test-bil-ent
+          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999,the-test-bil-ent
         CSV
 
         expect(result).to be_success
@@ -124,6 +126,44 @@ RSpec.describe DataExports::Csv::Invoices do
         File.unlink(file.path)
         expect(generated_csv).to eq(expected_csv)
       end
+    end
+  end
+
+  describe "offset amount preloading" do
+    let(:invoice1) { create(:invoice, organization:) }
+    let(:invoice2) { create(:invoice, organization:) }
+    let(:data_export_part) do
+      data_export.data_export_parts.create(
+        object_ids: [invoice1.id, invoice2.id],
+        index: 1,
+        organization:
+      )
+    end
+
+    before do
+      create(:credit_note, invoice: invoice1, offset_amount_cents: 100)
+      create(:credit_note, invoice: invoice2, offset_amount_cents: 200)
+    end
+
+    it "uses preloaded offset amounts without additional queries during CSV generation" do
+      service = described_class.new(data_export_part:)
+
+      # Preloading should result in only ONE query to credit_notes (the GROUP BY SUM query)
+      query_count = 0
+      counter = ->(_name, _start, _finish, _id, payload) {
+        query_count += 1 if /SELECT SUM.*offset_amount_cents.*FROM.*credit_notes/i.match?(payload[:sql])
+      }
+
+      result = nil
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+        result = service.call
+        expect(result).to be_success
+      end
+
+      expect(query_count).to eq(1), "Expected single query to credit_notes table, but got #{query_count}"
+
+      result.csv_file.close
+      File.unlink(result.csv_file.path)
     end
   end
 end

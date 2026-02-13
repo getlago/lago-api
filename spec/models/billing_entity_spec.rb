@@ -13,6 +13,7 @@ RSpec.describe BillingEntity do
   it { is_expected.to have_many(:customers) }
   it { is_expected.to have_many(:invoices) }
   it { is_expected.to have_many(:fees) }
+  it { is_expected.to have_many(:pending_vies_checks) }
   it { is_expected.to have_many(:payment_receipts) }
   it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("BillingEntity::AppliedInvoiceCustomSection").dependent(:destroy) }
   it { is_expected.to have_many(:integration_collection_mappings).class_name("IntegrationCollectionMappings::BaseCollectionMapping").dependent(:destroy) }
@@ -358,11 +359,9 @@ RSpec.describe BillingEntity do
       expect(from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
+    context "when organization from_email integration is enabled", :premium do
       let(:organization) { create(:organization, premium_integrations: ["from_email"]) }
       let(:billing_entity) { build(:billing_entity, organization:) }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns the billing_entity email" do
         expect(from_email_address).to eq(billing_entity.email)

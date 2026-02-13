@@ -19,6 +19,11 @@ class Wallet < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
+  has_one :metadata,
+    class_name: "Metadata::ItemMetadata",
+    as: :owner,
+    dependent: :destroy
+
   has_many :applied_invoice_custom_sections,
     class_name: "Wallet::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -39,6 +44,7 @@ class Wallet < ApplicationRecord
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
   validate :paid_top_up_max_greater_than_or_equal_min
+  validate :unique_code_per_customer, if: :code_changed?
 
   STATUSES = [
     :active,
@@ -99,6 +105,12 @@ class Wallet < ApplicationRecord
       errors.add(:paid_top_up_max_amount_cents, :must_be_greater_than_or_equal_min)
     end
   end
+
+  def unique_code_per_customer
+    if code && Wallet.where(customer_id: customer_id, code: code).where.not(id: id).exists?
+      errors.add(:code, :taken)
+    end
+  end
 end
 
 # == Schema Information
@@ -110,6 +122,7 @@ end
 #  allowed_fee_types                   :string           default([]), not null, is an Array
 #  balance_cents                       :bigint           default(0), not null
 #  balance_currency                    :string           not null
+#  code                                :string
 #  consumed_amount_cents               :bigint           default(0), not null
 #  consumed_amount_currency            :string           not null
 #  consumed_credits                    :decimal(30, 5)   default(0.0), not null
@@ -135,6 +148,7 @@ end
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  status                              :integer          not null
 #  terminated_at                       :datetime
+#  traceable                           :boolean          default(FALSE), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
 #  customer_id                         :uuid             not null
@@ -143,10 +157,12 @@ end
 #
 # Indexes
 #
-#  index_wallets_on_customer_id            (customer_id)
-#  index_wallets_on_organization_id        (organization_id)
-#  index_wallets_on_payment_method_id      (payment_method_id)
-#  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
+#  index_uniq_wallet_code_per_customer               (customer_id,code) UNIQUE
+#  index_wallets_on_customer_id                      (customer_id)
+#  index_wallets_on_organization_id                  (organization_id)
+#  index_wallets_on_organization_id_and_customer_id  (organization_id,customer_id)
+#  index_wallets_on_payment_method_id                (payment_method_id)
+#  index_wallets_on_ready_to_be_refreshed            (ready_to_be_refreshed) WHERE ready_to_be_refreshed
 #
 # Foreign Keys
 #

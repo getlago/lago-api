@@ -56,22 +56,20 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     it "creates a gocardless refund" do
       result = gocardless_service.create
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.refund.id).to be_present
+      expect(result.refund.id).to be_present
 
-        expect(result.refund.credit_note).to eq(credit_note)
-        expect(result.refund.payment).to eq(payment)
-        expect(result.refund.payment_provider).to eq(gocardless_payment_provider)
-        expect(result.refund.payment_provider_customer).to eq(gocardless_customer)
-        expect(result.refund.amount_cents).to eq(134)
-        expect(result.refund.amount_currency).to eq("CHF")
-        expect(result.refund.status).to eq("paid")
-        expect(result.refund.provider_refund_id).to eq("re_123456")
+      expect(result.refund.credit_note).to eq(credit_note)
+      expect(result.refund.payment).to eq(payment)
+      expect(result.refund.payment_provider).to eq(gocardless_payment_provider)
+      expect(result.refund.payment_provider_customer).to eq(gocardless_customer)
+      expect(result.refund.amount_cents).to eq(134)
+      expect(result.refund.amount_currency).to eq("CHF")
+      expect(result.refund.status).to eq("paid")
+      expect(result.refund.provider_refund_id).to eq("re_123456")
 
-        expect(result.credit_note).to be_succeeded
-      end
+      expect(result.credit_note).to be_succeeded
     end
 
     it "call SegmentTrackJob" do
@@ -153,14 +151,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       it "does not create a refund" do
         result = gocardless_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(gocardless_refunds_service).not_to have_received(:create)
-        end
+        expect(gocardless_refunds_service).not_to have_received(:create)
       end
     end
 
@@ -170,14 +166,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       it "does not create a refund" do
         result = gocardless_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(gocardless_refunds_service).not_to have_received(:create)
-        end
+        expect(gocardless_refunds_service).not_to have_received(:create)
       end
     end
 
@@ -187,14 +181,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       it "does not create a refund" do
         result = gocardless_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(gocardless_refunds_service).not_to have_received(:create)
-        end
+        expect(gocardless_refunds_service).not_to have_received(:create)
       end
     end
 
@@ -204,22 +196,20 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
       it "creates a gocardless refund" do
         result = gocardless_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.refund.id).to be_present
+        expect(result.refund.id).to be_present
 
-          expect(result.refund.credit_note).to eq(credit_note)
-          expect(result.refund.payment).to eq(payment)
-          expect(result.refund.payment_provider).to eq(gocardless_payment_provider)
-          expect(result.refund.payment_provider_customer).to eq(gocardless_customer)
-          expect(result.refund.amount_cents).to eq(134)
-          expect(result.refund.amount_currency).to eq("CHF")
-          expect(result.refund.status).to eq("paid")
-          expect(result.refund.provider_refund_id).to eq("re_123456")
+        expect(result.refund.credit_note).to eq(credit_note)
+        expect(result.refund.payment).to eq(payment)
+        expect(result.refund.payment_provider).to eq(gocardless_payment_provider)
+        expect(result.refund.payment_provider_customer).to eq(gocardless_customer)
+        expect(result.refund.amount_cents).to eq(134)
+        expect(result.refund.amount_currency).to eq("CHF")
+        expect(result.refund.status).to eq("paid")
+        expect(result.refund.provider_refund_id).to eq("re_123456")
 
-          expect(result.credit_note).to be_succeeded
-        end
+        expect(result.credit_note).to be_succeeded
       end
     end
   end
@@ -241,14 +231,12 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
         status: "paid"
       )
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.refund).to eq(refund)
-        expect(result.refund.status).to eq("paid")
+      expect(result.refund).to eq(refund)
+      expect(result.refund.status).to eq("paid")
 
-        expect(result.credit_note).to be_succeeded
-      end
+      expect(result.credit_note).to be_succeeded
     end
 
     it "calls SegmentTrackJob" do
@@ -277,10 +265,8 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           status: "paid"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.refund).to be_nil
-        end
+        expect(result).to be_success
+        expect(result.refund).to be_nil
       end
     end
 
@@ -291,12 +277,10 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           status: "invalid"
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:refund_status]).to include("value_is_invalid")
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_status]).to include("value_is_invalid")
       end
     end
 
@@ -311,24 +295,22 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
           status: "failed"
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("refund_failed")
-          expect(result.error.error_message).to eq("Refund failed to perform")
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("refund_failed")
+        expect(result.error.error_message).to eq("Refund failed to perform")
 
-          expect(SendWebhookJob).to have_been_enqueued
-            .with(
-              "credit_note.provider_refund_failure",
-              credit_note,
-              provider_customer_id: gocardless_customer.provider_customer_id,
-              provider_error: {
-                message: "Payment refund failed",
-                error_code: nil
-              }
-            )
-        end
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: gocardless_customer.provider_customer_id,
+            provider_error: {
+              message: "Payment refund failed",
+              error_code: nil
+            }
+          )
       end
 
       it "produces an activity log" do

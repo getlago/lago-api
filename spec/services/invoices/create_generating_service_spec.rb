@@ -126,10 +126,8 @@ RSpec.describe Invoices::CreateGeneratingService do
       end
     end
 
-    context "when customer is a partner account" do
+    context "when customer is a partner account", :premium do
       let(:customer) { create(:customer, account_type: "partner") }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns a failure" do
         result = create_service.call
@@ -259,7 +257,7 @@ RSpec.describe Invoices::CreateGeneratingService do
         end
       end
 
-      context "with no preferences set on the customer level " do
+      context "with no preferences set on the customer level" do
         let(:billing_entity) do
           create(
             :billing_entity,

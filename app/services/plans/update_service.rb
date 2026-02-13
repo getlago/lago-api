@@ -230,7 +230,7 @@ module Plans
             old_parent_attrs: fixed_charge.attributes,
             action: :update
           )
-          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:)
+          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:, trigger_billing: false)
 
           next
         end
@@ -239,6 +239,7 @@ module Plans
 
         cascade_fixed_charges_payload << payload_fixed_charge.merge(
           parent_id: create_fixed_charge_result.fixed_charge.id,
+          code: create_fixed_charge_result.fixed_charge.code,
           action: :create
         )
 

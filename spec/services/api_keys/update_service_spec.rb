@@ -2,10 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe ApiKeys::UpdateService do
+RSpec.describe ApiKeys::UpdateService, :premium do
   subject(:service_result) { described_class.call(api_key:, params:) }
-
-  around { |test| lago_premium!(&test) }
 
   let(:name) { Faker::Lorem.words.join(" ") }
 
@@ -35,11 +33,9 @@ RSpec.describe ApiKeys::UpdateService do
         end
 
         it "returns an error" do
-          aggregate_failures do
-            expect(service_result).not_to be_success
-            expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
-            expect(service_result.error.code).to eq("premium_integration_missing")
-          end
+          expect(service_result).not_to be_success
+          expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(service_result.error.code).to eq("premium_integration_missing")
         end
       end
     end
@@ -72,11 +68,9 @@ RSpec.describe ApiKeys::UpdateService do
     let(:params) { {name:} }
 
     it "returns an error" do
-      aggregate_failures do
-        expect(service_result).not_to be_success
-        expect(service_result.error).to be_a(BaseService::NotFoundFailure)
-        expect(service_result.error.error_code).to eq("api_key_not_found")
-      end
+      expect(service_result).not_to be_success
+      expect(service_result.error).to be_a(BaseService::NotFoundFailure)
+      expect(service_result.error.error_code).to eq("api_key_not_found")
     end
   end
 end

@@ -46,9 +46,7 @@ RSpec.describe Organizations::AuthenticationMethods do
           end
         end
 
-        context "with premium organization" do
-          around { |test| lago_premium!(&test) }
-
+        context "with premium organization", :premium do
           before do
             organization.premium_integrations << auth
           end

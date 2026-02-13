@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
-  let(:required_permissions) { "customer_settings:update:grace_period" }
+RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, :premium do
+  let(:required_permissions) { "customers:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -21,10 +21,8 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
-  it_behaves_like "requires permission", %w[customers:update customer_settings:update:grace_period]
+  it_behaves_like "requires permission", %w[customers:update]
 
   it "updates a customer" do
     result = execute_graphql(
@@ -41,9 +39,7 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod do
 
     result_data = result["data"]["updateCustomerInvoiceGracePeriod"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["invoiceGracePeriod"]).to eq(12)
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["invoiceGracePeriod"]).to eq(12)
   end
 end

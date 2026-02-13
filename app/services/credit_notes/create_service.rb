@@ -12,6 +12,7 @@ module CreditNotes
       @description = args[:description]
       @credit_amount_cents = args[:credit_amount_cents] || 0
       @refund_amount_cents = args[:refund_amount_cents] || 0
+      @offset_amount_cents = args[:offset_amount_cents] || 0
       @metadata_value = args[:metadata]
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
@@ -34,9 +35,11 @@ module CreditNotes
           total_amount_currency: invoice.currency,
           credit_amount_currency: invoice.currency,
           refund_amount_currency: invoice.currency,
+          offset_amount_currency: invoice.currency,
           balance_amount_currency: invoice.currency,
           credit_amount_cents:,
           refund_amount_cents:,
+          offset_amount_cents:,
           reason:,
           description:,
           credit_status: "available",
@@ -65,7 +68,9 @@ module CreditNotes
         credit_note.refund_status = "pending" if credit_note.refunded?
 
         credit_note.assign_attributes(
-          total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
+          total_amount_cents: credit_note.credit_amount_cents +
+            credit_note.refund_amount_cents +
+            credit_note.offset_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
         CreditNotes::AdjustAmountsWithRoundingService.call!(credit_note:)
@@ -73,6 +78,15 @@ module CreditNotes
         next if context == :preview
 
         credit_note.save!
+
+        if offset_amount_cents.positive?
+          InvoiceSettlements::CreateService.call!(
+            invoice: invoice,
+            source_credit_note: credit_note,
+            amount_cents: offset_amount_cents,
+            amount_currency: invoice.currency
+          )
+        end
 
         if wallet_credit
           WalletTransactions::VoidService.call(
@@ -115,6 +129,7 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
+      :offset_amount_cents,
       :metadata_value,
       :automatic,
       :context
@@ -136,9 +151,22 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.credit? && (invoice.payment_status != "succeeded" || associated_wallet.nil?)
+
+      if invoice.credit?
+        return false if associated_wallet.nil?
+
+        if invoice.payment_pending? || invoice.payment_failed?
+          return false if non_offset_amounts_present?
+        else
+          return false unless invoice.payment_succeeded?
+        end
+      end
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
+    end
+
+    def non_offset_amounts_present?
+      credit_amount_cents.positive? || refund_amount_cents.positive?
     end
 
     # NOTE: issuing_date must be in customer time zone (accounting date)

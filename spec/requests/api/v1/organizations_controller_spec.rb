@@ -51,40 +51,34 @@ RSpec.describe Api::V1::OrganizationsController do
 
       expect(response).to have_http_status(:success)
 
-      aggregate_failures do
-        expect(json[:organization][:name]).to eq(organization.name)
-        expect(json[:organization][:default_currency]).to eq("EUR")
-        expect(json[:organization][:webhook_url]).to eq(webhook_url)
-        expect(json[:organization][:webhook_urls]).to eq([webhook_url])
-        expect(json[:organization][:document_numbering]).to eq("per_customer")
-        expect(json[:organization][:document_number_prefix]).to eq("ORG-2")
-        expect(json[:organization][:finalize_zero_amount_invoice]).to eq(false)
-        # TODO(:timezone): Timezone update is turned off for now
-        # expect(json[:organization][:timezone]).to eq(update_params[:timezone])
+      expect(json[:organization][:name]).to eq(organization.name)
+      expect(json[:organization][:default_currency]).to eq("EUR")
+      expect(json[:organization][:webhook_url]).to eq(webhook_url)
+      expect(json[:organization][:webhook_urls]).to eq([webhook_url])
+      expect(json[:organization][:document_numbering]).to eq("per_customer")
+      expect(json[:organization][:document_number_prefix]).to eq("ORG-2")
+      expect(json[:organization][:finalize_zero_amount_invoice]).to eq(false)
+      # TODO(:timezone): Timezone update is turned off for now
+      # expect(json[:organization][:timezone]).to eq(update_params[:timezone])
 
-        billing = json[:organization][:billing_configuration]
-        expect(billing[:invoice_footer]).to eq("footer")
-        expect(billing[:document_locale]).to eq("fr")
+      billing = json[:organization][:billing_configuration]
+      expect(billing[:invoice_footer]).to eq("footer")
+      expect(billing[:document_locale]).to eq("fr")
 
-        expect(json[:organization][:taxes]).not_to be_nil
-      end
+      expect(json[:organization][:taxes]).not_to be_nil
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium features", :premium do
       it "updates an organization" do
         subject
 
         expect(response).to have_http_status(:success)
 
-        aggregate_failures do
-          expect(json[:organization][:timezone]).to eq(update_params[:timezone])
-          expect(json[:organization][:email_settings]).to eq(update_params[:email_settings])
+        expect(json[:organization][:timezone]).to eq(update_params[:timezone])
+        expect(json[:organization][:email_settings]).to eq(update_params[:email_settings])
 
-          billing = json[:organization][:billing_configuration]
-          expect(billing[:invoice_grace_period]).to eq(3)
-        end
+        billing = json[:organization][:billing_configuration]
+        expect(billing[:invoice_grace_period]).to eq(3)
       end
     end
   end

@@ -15,6 +15,7 @@ class Payment < ApplicationRecord
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
+  has_one :invoice_settlement, foreign_key: :source_payment_id
   has_one :payment_receipt, dependent: :destroy
 
   alias_attribute :currency, :amount_currency
@@ -80,7 +81,7 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
-  def payment_method
+  def method_display_name
     return nil if provider_payment_method_data.blank?
 
     type = provider_payment_method_data["type"]
@@ -111,7 +112,7 @@ class Payment < ApplicationRecord
 
   def max_invoice_paid_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider?
-    return if amount_cents + payable.total_paid_amount_cents <= payable.total_amount_cents
+    return if amount_cents <= payable.total_due_amount_cents
 
     errors.add(:amount_cents, :greater_than)
   end

@@ -106,6 +106,9 @@ module Fees
         end.compact
       end
 
+      # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
+      fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
+
       result.fees.concat(fees.compact)
     end
 
@@ -207,7 +210,6 @@ module Fees
 
     def should_persist_fee?(fee, fees)
       return true if context == :recurring
-      return true if organization.zero_amount_fees_enabled?
       return true if fee.units != 0 || fee.amount_cents != 0 || fee.events_count != 0
       return true if adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).present?
       return true if fee.true_up_parent_fee.present?
@@ -353,7 +355,11 @@ module Fees
       filters = {charge_id: charge.id}
 
       model = charge_filter.presence || charge
-      filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
+      grouped_by_keys = model.pricing_group_keys&.dup || []
+      if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
+        grouped_by_keys << "target_wallet_code"
+      end
+      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

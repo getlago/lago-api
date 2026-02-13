@@ -2,10 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService do
+RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, :premium do
   subject(:flag_service) { described_class.new(invoice:) }
-
-  around { |test| lago_premium!(&test) }
 
   let(:invoice) { create(:invoice, :subscription, subscriptions:, organization: customer.organization) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription: invoice.subscriptions.first) }

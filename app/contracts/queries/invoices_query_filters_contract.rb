@@ -5,6 +5,11 @@ module Queries
     params do
       optional(:billing_entity_ids).maybe { array(:string, format?: Regex::UUID) }
 
+      optional(:settlements).maybe do
+        value(:string, included_in?: InvoiceSettlement.settlement_types.keys) |
+          array(:string, included_in?: InvoiceSettlement.settlement_types.keys)
+      end
+
       optional(:payment_status).maybe do
         value(:string, included_in?: Invoice.payment_statuses.keys) |
           array(:string, included_in?: Invoice.payment_statuses.keys)

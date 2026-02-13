@@ -75,10 +75,8 @@ RSpec.describe Api::V1::PlansController do
       it "returns an error" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq({interval: %w[value_is_invalid]})
-        end
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({interval: %w[value_is_invalid]})
       end
     end
 
@@ -114,11 +112,22 @@ RSpec.describe Api::V1::PlansController do
           expect(charge[:regroup_paid_fees]).to be_nil
           expect(charge[:applied_pricing_unit]).to be_nil
         end
+
+        context "with accepts_target_wallet on charge" do
+          before do
+            create_params[:charges].first[:accepts_target_wallet] = true
+          end
+
+          it "ignores accepts_target_wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+          end
+        end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         it "updates premium fields" do
           subject
 
@@ -132,12 +141,38 @@ RSpec.describe Api::V1::PlansController do
             code: pricing_unit.code
           })
         end
+
+        context "with accepts_target_wallet on charge" do
+          before do
+            create_params[:charges].first[:accepts_target_wallet] = true
+          end
+
+          context "when events_targeting_wallets is enabled" do
+            before do
+              organization.update!(premium_integrations: ["events_targeting_wallets"])
+            end
+
+            it "sets accepts_target_wallet on charge" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:charges].first[:accepts_target_wallet]).to be true
+            end
+          end
+
+          context "when events_targeting_wallets is not enabled" do
+            it "does not set accepts_target_wallet on charge" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+            end
+          end
+        end
       end
 
       context "with minimum commitment" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "creates a plan with minimum commitment" do
             subject
 
@@ -157,9 +192,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "with usage thresholds" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           context "when progressive billing premium integration is present" do
             before do
               organization.update!(premium_integrations: ["progressive_billing"])
@@ -492,9 +525,22 @@ RSpec.describe Api::V1::PlansController do
         expect(charge[:invoiceable]).to be true
         expect(charge[:regroup_paid_fees]).to be_nil
       end
+
+      context "with accepts_target_wallet on charge" do
+        before do
+          charges_params.first[:accepts_target_wallet] = true
+        end
+
+        it "ignores accepts_target_wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+        end
+      end
     end
 
-    context "when license is premium" do
+    context "when license is premium", :premium do
       let(:charges_params) do
         [
           {
@@ -511,8 +557,6 @@ RSpec.describe Api::V1::PlansController do
           }
         ]
       end
-
-      around { |test| lago_premium!(&test) }
 
       before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
@@ -533,15 +577,41 @@ RSpec.describe Api::V1::PlansController do
         expect(applicable_usage_threshold[:amount_cents]).to eq(7_000)
         expect(applicable_usage_threshold[:threshold_display_name]).to eq("Updated threshold")
       end
+
+      context "with accepts_target_wallet on charge" do
+        before do
+          charges_params.first[:accepts_target_wallet] = true
+        end
+
+        context "when events_targeting_wallets is enabled" do
+          before do
+            organization.update!(premium_integrations: ["events_targeting_wallets"])
+          end
+
+          it "sets accepts_target_wallet on charge" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be true
+          end
+        end
+
+        context "when events_targeting_wallets is not enabled" do
+          it "does not set accepts_target_wallet on charge" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:plan][:charges].first[:accepts_target_wallet]).to be false
+          end
+        end
+      end
     end
 
     context "when plan has no minimum commitment" do
       context "when request contains minimum commitment params" do
         before { update_params.merge!(minimum_commitment_params) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "creates minimum commitment" do
             subject
 
@@ -562,9 +632,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "does not create minimum commitment" do
             subject
 
@@ -593,9 +661,7 @@ RSpec.describe Api::V1::PlansController do
         context "when minimum commitment params are an empty hash" do
           let(:minimum_commitment_params) { {minimum_commitment: {}} }
 
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
-
+          context "when license is premium", :premium do
             it "deletes minimum commitment" do
               subject
 
@@ -615,9 +681,7 @@ RSpec.describe Api::V1::PlansController do
         end
 
         context "when minimum commitment params are not an empty hash" do
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
-
+          context "when license is premium", :premium do
             it "updates minimum commitment" do
               subject
 
@@ -639,9 +703,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "does not update minimum commitment" do
             subject
 
@@ -820,7 +882,7 @@ RSpec.describe Api::V1::PlansController do
             subscription:,
             fixed_charge:,
             units: 25,
-            timestamp: be_within(1.second).of(Time.current)
+            timestamp: be_within(5.seconds).of(Time.current)
           )
         end
       end
@@ -858,7 +920,7 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
-    describe "update conversion rate on charges" do
+    describe "update conversion rate on charges", :premium do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
       let!(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: charge) }
 
@@ -874,8 +936,6 @@ RSpec.describe Api::V1::PlansController do
           }
         ]
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "updates conversion rate on charge's applied pricing unit" do
         expect { subject }.to change { applied_pricing_unit.reload.conversion_rate }.to(3.9)

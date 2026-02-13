@@ -14,7 +14,7 @@ RSpec.describe Mutations::Invites::Create do
   end
   let(:organization) { membership.organization }
   let(:email) { Faker::Internet.email }
-  let(:role) { "finance" }
+  let(:roles) { %w[finance] }
 
   let(:mutation) do
     <<~GQL
@@ -23,11 +23,13 @@ RSpec.describe Mutations::Invites::Create do
           id
           token
           email
-          role
+          roles
         }
       }
     GQL
   end
+
+  before { create(:role, :finance) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -42,7 +44,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -50,8 +52,74 @@ RSpec.describe Mutations::Invites::Create do
     data = result["data"]["createInvite"]
 
     expect(data["email"]).to eq(email)
-    expect(data["role"]).to eq(role)
+    expect(data["roles"]).to eq(roles)
     expect(data["token"]).to be_present
+  end
+
+  it "creates an invite with admin role using roles param" do
+    create(:role, :admin)
+
+    roles_mutation = <<~GQL
+      mutation($input: CreateInviteInput!) {
+        createInvite(input: $input) {
+          id
+          token
+          email
+          roles
+        }
+      }
+    GQL
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: roles_mutation,
+      variables: {
+        input: {
+          email:,
+          roles: ["admin"]
+        }
+      }
+    )
+
+    data = result["data"]["createInvite"]
+
+    expect(data["email"]).to eq(email)
+    expect(data["roles"]).to eq(["admin"])
+  end
+
+  it "creates an invite with custom role" do
+    create(:role, code: "developer", name: "Developer", organization:, permissions: %w[organization:view])
+
+    roles_mutation = <<~GQL
+      mutation($input: CreateInviteInput!) {
+        createInvite(input: $input) {
+          id
+          token
+          email
+          roles
+        }
+      }
+    GQL
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: roles_mutation,
+      variables: {
+        input: {
+          email:,
+          roles: ["developer"]
+        }
+      }
+    )
+
+    data = result["data"]["createInvite"]
+
+    expect(data["email"]).to eq(email)
+    expect(data["roles"]).to eq(["developer"])
   end
 
   it "creates an invite for a revoked user" do
@@ -63,7 +131,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: revoked_membership.user.email,
-          role:
+          roles:
         }
       }
     )
@@ -85,7 +153,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email:,
-          role:
+          roles:
         }
       }
     )
@@ -104,7 +172,7 @@ RSpec.describe Mutations::Invites::Create do
       variables: {
         input: {
           email: membership.user.email,
-          role:
+          roles:
         }
       }
     )

@@ -10,6 +10,18 @@ class WalletTransaction < ApplicationRecord
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
 
+  has_many :consumptions,
+    class_name: "WalletTransactionConsumption",
+    foreign_key: :inbound_wallet_transaction_id,
+    inverse_of: :inbound_wallet_transaction,
+    dependent: :destroy
+
+  has_many :fundings,
+    class_name: "WalletTransactionConsumption",
+    foreign_key: :outbound_wallet_transaction_id,
+    inverse_of: :outbound_wallet_transaction,
+    dependent: :destroy
+
   has_many :applied_invoice_custom_sections,
     class_name: "WalletTransaction::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -50,10 +62,24 @@ class WalletTransaction < ApplicationRecord
   validates :priority, presence: true, inclusion: {in: 1..50}
   validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
   validates :invoice_requires_successful_payment, exclusion: [nil]
+  validates :remaining_amount_cents,
+    numericality: {greater_than_or_equal_to: 0},
+    allow_nil: true,
+    if: :inbound?
+  validates :remaining_amount_cents, absence: true, if: :outbound?
 
   delegate :customer, to: :wallet
 
   scope :pending, -> { where(status: :pending) }
+  scope :available_inbound, -> { inbound.settled.where("remaining_amount_cents > 0") }
+  scope :in_consumption_order, -> {
+    granted_status = transaction_statuses[:granted]
+    order(
+      :priority,
+      Arel.sql("CASE WHEN transaction_status = #{granted_status} THEN 0 ELSE 1 END") => :asc,
+      :created_at => :asc
+    )
+  }
 
   def self.order_by_priority
     order(:priority)
@@ -91,6 +117,7 @@ end
 #  name                                :string(255)
 #  payment_method_type                 :enum             default("provider"), not null
 #  priority                            :integer          default(50), not null
+#  remaining_amount_cents              :bigint
 #  settled_at                          :datetime
 #  skip_invoice_custom_sections        :boolean          default(FALSE), not null
 #  source                              :integer          default("manual"), not null
@@ -107,6 +134,7 @@ end
 #
 # Indexes
 #
+#  idx_wallet_transactions_available_inbound       (wallet_id, priority, (\nCASE\n    WHEN (transaction_status = 1) THEN 0\n    ELSE 1\nEND), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
 #  index_wallet_transactions_on_credit_note_id     (credit_note_id)
 #  index_wallet_transactions_on_invoice_id         (invoice_id)
 #  index_wallet_transactions_on_organization_id    (organization_id)

@@ -52,17 +52,15 @@ RSpec.describe Credits::AppliedCouponService do
       it "creates a credit" do
         result = credit_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(12)
-          expect(result.credit.amount_currency).to eq("EUR")
-          expect(result.credit.invoice).to eq(invoice)
-          expect(result.credit.applied_coupon).to eq(applied_coupon)
-          expect(result.credit.before_taxes).to eq(true)
+        expect(result).to be_success
+        expect(result.credit.amount_cents).to eq(12)
+        expect(result.credit.amount_currency).to eq("EUR")
+        expect(result.credit.invoice).to eq(invoice)
+        expect(result.credit.applied_coupon).to eq(applied_coupon)
+        expect(result.credit.before_taxes).to eq(true)
 
-          expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
-          expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
-        end
+        expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+        expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
       end
 
       it "terminates the applied coupon" do
@@ -133,16 +131,14 @@ RSpec.describe Credits::AppliedCouponService do
         it "applies the remaining amount" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(6)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(6)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
         end
 
         it "terminates the applied coupon" do
@@ -163,16 +159,14 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(60)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(60)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
         end
 
         it "terminates the applied coupon" do
@@ -200,18 +194,16 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(12)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.applied_coupon.frequency_duration).to eq(3)
-            expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+          expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
         end
 
         it "does not terminate the applied coupon" do
@@ -253,18 +245,16 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(12)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.applied_coupon.frequency_duration).to eq(0)
-            expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.applied_coupon.frequency_duration).to eq(0)
+          expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(8)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(4)
         end
 
         it "does not terminate the applied coupon" do
@@ -308,18 +298,16 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(60)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.applied_coupon.frequency_duration).to eq(3)
-            expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(60)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+          expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(2)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
         end
 
         it "does not terminate the applied coupon" do
@@ -344,18 +332,16 @@ RSpec.describe Credits::AppliedCouponService do
           it "creates a credit" do
             result = credit_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.credit.amount_cents).to eq(60)
-              expect(result.credit.amount_currency).to eq("EUR")
-              expect(result.credit.invoice).to eq(invoice)
-              expect(result.credit.applied_coupon).to eq(applied_coupon)
-              expect(result.credit.applied_coupon.frequency_duration).to eq(3)
-              expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
+            expect(result).to be_success
+            expect(result.credit.amount_cents).to eq(60)
+            expect(result.credit.amount_currency).to eq("EUR")
+            expect(result.credit.invoice).to eq(invoice)
+            expect(result.credit.applied_coupon).to eq(applied_coupon)
+            expect(result.credit.applied_coupon.frequency_duration).to eq(3)
+            expect(result.credit.applied_coupon.frequency_duration_remaining).to eq(0)
 
-              expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
-              expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
-            end
+            expect(fee1.reload.precise_coupons_amount_cents).to eq(40)
+            expect(fee2.reload.precise_coupons_amount_cents).to eq(20)
           end
 
           it "terminates the applied coupon" do
@@ -398,17 +384,15 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(12)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.before_taxes).to eq(true)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.before_taxes).to eq(true)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
         end
 
         context "when plan limitation does not applies" do
@@ -439,17 +423,15 @@ RSpec.describe Credits::AppliedCouponService do
         it "creates a credit" do
           result = credit_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.credit.amount_cents).to eq(12)
-            expect(result.credit.amount_currency).to eq("EUR")
-            expect(result.credit.invoice).to eq(invoice)
-            expect(result.credit.applied_coupon).to eq(applied_coupon)
-            expect(result.credit.before_taxes).to eq(true)
+          expect(result).to be_success
+          expect(result.credit.amount_cents).to eq(12)
+          expect(result.credit.amount_currency).to eq("EUR")
+          expect(result.credit.invoice).to eq(invoice)
+          expect(result.credit.applied_coupon).to eq(applied_coupon)
+          expect(result.credit.before_taxes).to eq(true)
 
-            expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
-            expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
-          end
+          expect(fee1.reload.precise_coupons_amount_cents).to eq(12)
+          expect(fee2.reload.precise_coupons_amount_cents).to eq(0)
         end
 
         context "with multiple fees and progressive billing credits already applied" do
@@ -480,18 +462,16 @@ RSpec.describe Credits::AppliedCouponService do
           it "creates a credit" do
             result = credit_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.credit.amount_cents).to eq(12)
-              expect(result.credit.amount_currency).to eq("EUR")
-              expect(result.credit.invoice).to eq(invoice)
-              expect(result.credit.applied_coupon).to eq(applied_coupon)
-              expect(result.credit.before_taxes).to eq(true)
+            expect(result).to be_success
+            expect(result.credit.amount_cents).to eq(12)
+            expect(result.credit.amount_currency).to eq("EUR")
+            expect(result.credit.invoice).to eq(invoice)
+            expect(result.credit.applied_coupon).to eq(applied_coupon)
+            expect(result.credit.before_taxes).to eq(true)
 
-              expect(fee1.reload.precise_coupons_amount_cents).to eq(18)
-              expect(fee2.reload.precise_coupons_amount_cents).to eq(54)
-              expect(fee3.reload.precise_coupons_amount_cents).to eq(0)
-            end
+            expect(fee1.reload.precise_coupons_amount_cents).to eq(18)
+            expect(fee2.reload.precise_coupons_amount_cents).to eq(54)
+            expect(fee3.reload.precise_coupons_amount_cents).to eq(0)
           end
         end
 

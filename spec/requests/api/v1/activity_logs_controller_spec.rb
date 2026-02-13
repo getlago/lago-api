@@ -39,9 +39,7 @@ RSpec.describe Api::V1::ActivityLogsController, clickhouse: true do
       end
     end
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :premium do
       include_examples "requires API permission", "activity_log", "read"
 
       it "returns activity logs" do
@@ -202,9 +200,7 @@ RSpec.describe Api::V1::ActivityLogsController, clickhouse: true do
       end
     end
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :premium do
       include_examples "requires API permission", "activity_log", "read"
 
       it "returns activity logs" do

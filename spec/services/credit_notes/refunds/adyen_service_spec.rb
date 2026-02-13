@@ -55,23 +55,21 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
     it "creates a adyen refund and a refund" do
       result = adyen_service.create
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.refund.id).to be_present
+      expect(result.refund.id).to be_present
 
-        expect(result.refund.credit_note).to eq(credit_note)
-        expect(result.refund.payment).to eq(payment)
-        expect(result.refund.payment_provider).to eq(adyen_payment_provider)
-        expect(result.refund.payment_provider_customer).to eq(adyen_customer)
-        expect(result.refund.amount_cents).to eq(134)
-        expect(result.refund.amount_currency).to eq("CHF")
-        expect(result.refund.status).to eq("pending")
-        expect(result.refund.provider_refund_id).to eq(refunds_response.response["pspReference"])
+      expect(result.refund.credit_note).to eq(credit_note)
+      expect(result.refund.payment).to eq(payment)
+      expect(result.refund.payment_provider).to eq(adyen_payment_provider)
+      expect(result.refund.payment_provider_customer).to eq(adyen_customer)
+      expect(result.refund.amount_cents).to eq(134)
+      expect(result.refund.amount_currency).to eq("CHF")
+      expect(result.refund.status).to eq("pending")
+      expect(result.refund.provider_refund_id).to eq(refunds_response.response["pspReference"])
 
-        expect(result.credit_note).not_to be_succeeded
-        expect(result.credit_note.refunded_at).not_to be_present
-      end
+      expect(result.credit_note).not_to be_succeeded
+      expect(result.credit_note.refunded_at).not_to be_present
     end
 
     it "call SegmentTrackJob" do
@@ -131,14 +129,12 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       it "does not create a refund" do
         result = adyen_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(modifications_api).not_to have_received(:refund_captured_payment)
-        end
+        expect(modifications_api).not_to have_received(:refund_captured_payment)
       end
     end
 
@@ -148,14 +144,12 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       it "does not create a refund" do
         result = adyen_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(modifications_api).not_to have_received(:refund_captured_payment)
-        end
+        expect(modifications_api).not_to have_received(:refund_captured_payment)
       end
     end
 
@@ -165,14 +159,12 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       it "does not create a refund" do
         result = adyen_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.credit_note).to eq(credit_note)
-          expect(result.refund).to be_nil
+        expect(result.credit_note).to eq(credit_note)
+        expect(result.refund).to be_nil
 
-          expect(modifications_api).not_to have_received(:refund_captured_payment)
-        end
+        expect(modifications_api).not_to have_received(:refund_captured_payment)
       end
     end
 
@@ -182,23 +174,21 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       it "creates a adyen refund and a refund" do
         result = adyen_service.create
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.refund.id).to be_present
+        expect(result.refund.id).to be_present
 
-          expect(result.refund.credit_note).to eq(credit_note)
-          expect(result.refund.payment).to eq(payment)
-          expect(result.refund.payment_provider).to eq(adyen_payment_provider)
-          expect(result.refund.payment_provider_customer).to eq(adyen_customer)
-          expect(result.refund.amount_cents).to eq(134)
-          expect(result.refund.amount_currency).to eq("CHF")
-          expect(result.refund.status).to eq("pending")
-          expect(result.refund.provider_refund_id).to eq(refunds_response.response["pspReference"])
+        expect(result.refund.credit_note).to eq(credit_note)
+        expect(result.refund.payment).to eq(payment)
+        expect(result.refund.payment_provider).to eq(adyen_payment_provider)
+        expect(result.refund.payment_provider_customer).to eq(adyen_customer)
+        expect(result.refund.amount_cents).to eq(134)
+        expect(result.refund.amount_currency).to eq("CHF")
+        expect(result.refund.status).to eq("pending")
+        expect(result.refund.provider_refund_id).to eq(refunds_response.response["pspReference"])
 
-          expect(result.credit_note).not_to be_succeeded
-          expect(result.credit_note.refunded_at).not_to be_present
-        end
+        expect(result.credit_note).not_to be_succeeded
+        expect(result.credit_note.refunded_at).not_to be_present
       end
     end
   end
@@ -216,14 +206,12 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
         status: "succeeded"
       )
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.refund).to eq(refund)
-        expect(result.refund.status).to eq("succeeded")
+      expect(result.refund).to eq(refund)
+      expect(result.refund.status).to eq("succeeded")
 
-        expect(result.credit_note).to be_succeeded
-      end
+      expect(result.credit_note).to be_succeeded
     end
 
     it "calls SegmentTrackJob" do
@@ -254,10 +242,8 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
           status: "succeeded"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.refund).to be_nil
-        end
+        expect(result).to be_success
+        expect(result.refund).to be_nil
       end
 
       context "with invoice id in metadata" do
@@ -268,10 +254,8 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
             metadata: {lago_invoice_id: SecureRandom.uuid}
           )
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.refund).to be_nil
-          end
+          expect(result).to be_success
+          expect(result.refund).to be_nil
         end
 
         context "when invoice belongs to lago" do
@@ -284,11 +268,9 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
               metadata: {lago_invoice_id: invoice.id}
             )
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::NotFoundFailure)
-              expect(result.error.message).to eq("adyen_refund_not_found")
-            end
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("adyen_refund_not_found")
           end
         end
       end
@@ -301,12 +283,10 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
           status: "invalid"
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:refund_status]).to include("value_is_invalid")
-        end
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:refund_status]).to include("value_is_invalid")
       end
     end
 
@@ -321,24 +301,22 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
           status: "failed"
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).not_to be_success
 
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("refund_failed")
-          expect(result.error.error_message).to eq("Refund failed to perform")
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("refund_failed")
+        expect(result.error.error_message).to eq("Refund failed to perform")
 
-          expect(SendWebhookJob).to have_been_enqueued
-            .with(
-              "credit_note.provider_refund_failure",
-              credit_note,
-              provider_customer_id: adyen_customer.provider_customer_id,
-              provider_error: {
-                message: "Payment refund failed",
-                error_code: nil
-              }
-            )
-        end
+        expect(SendWebhookJob).to have_been_enqueued
+          .with(
+            "credit_note.provider_refund_failure",
+            credit_note,
+            provider_customer_id: adyen_customer.provider_customer_id,
+            provider_error: {
+              message: "Payment refund failed",
+              error_code: nil
+            }
+          )
       end
 
       it "produces an activity log" do

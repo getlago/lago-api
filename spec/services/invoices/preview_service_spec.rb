@@ -41,9 +41,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
       end
     end
 
-    context "with Lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with Lago premium", :premium do
       context "when customer does not exist" do
         it "returns an error" do
           result = described_class.new(customer: nil, subscriptions: [subscription]).call
@@ -769,10 +767,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             it "returns an error" do
               result = preview_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
             end
           end
 
@@ -1416,10 +1412,8 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             it "returns an error" do
               result = preview_service.call
 
-              aggregate_failures do
-                expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              end
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
             end
           end
         end
@@ -2047,7 +2041,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
           organization.update!(premium_integrations: ["preview"])
         end
 
-        context "with no preferences set on the customer level " do
+        context "with no preferences set on the customer level" do
           let(:billing_entity) do
             create(
               :billing_entity,

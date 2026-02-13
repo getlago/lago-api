@@ -15,8 +15,6 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob do
   it "calls the aggregator create subscription hubspot service" do
     described_class.perform_now(subscription:)
 
-    aggregate_failures do
-      expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateService).to have_received(:call)
-    end
+    expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateService).to have_received(:call)
   end
 end

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillingEntities::Update do
+RSpec.describe Mutations::BillingEntities::Update, :premium do
   let(:required_permission) { "billing_entities:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -90,8 +90,6 @@ RSpec.describe Mutations::BillingEntities::Update do
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:update"
@@ -135,7 +133,7 @@ RSpec.describe Mutations::BillingEntities::Update do
 
   context "with extra view permissions" do
     let(:permissions) do
-      [required_permission].concat(%w[billing_entities:emails:view billing_entities:invoices:view])
+      [required_permission].concat(%w[billing_entities:view])
     end
 
     it "includes the email settings and billing configuration in the response" do

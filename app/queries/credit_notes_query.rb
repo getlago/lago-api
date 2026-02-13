@@ -15,7 +15,8 @@ class CreditNotesQuery < BaseQuery
     :self_billed,
     :credit_status,
     :reason,
-    :refund_status
+    :refund_status,
+    :types
   ]
 
   DEFAULT_INCLUDES = [:customer, :items].freeze
@@ -37,6 +38,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_reason(credit_notes) if valid_reasons.present?
     credit_notes = with_credit_status(credit_notes) if valid_credit_statuses.present?
     credit_notes = with_refund_status(credit_notes) if valid_refund_statuses.present?
+    credit_notes = with_types(credit_notes) if valid_types.present?
     credit_notes = with_invoice_number(credit_notes) if filters.invoice_number.present?
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
@@ -103,6 +105,26 @@ class CreditNotesQuery < BaseQuery
     scope.where(refund_status: valid_refund_statuses)
   end
 
+  def with_types(scope)
+    predicates = []
+
+    if valid_types.include?("credit")
+      predicates << "credit_notes.credit_amount_cents > 0"
+    end
+
+    if valid_types.include?("refund")
+      predicates << "credit_notes.refund_amount_cents > 0"
+    end
+
+    if valid_types.include?("offset")
+      predicates << "credit_notes.offset_amount_cents > 0"
+    end
+
+    return scope.none if predicates.empty?
+
+    scope.where(predicates.join(" OR "))
+  end
+
   def with_invoice_number(scope)
     scope.joins(:invoice).where(invoices: {number: filters.invoice_number})
   end
@@ -152,5 +174,10 @@ class CreditNotesQuery < BaseQuery
   def valid_reasons
     @valid_reasons ||= Array(filters.reason)
       .select { |reason| CreditNote.reasons.key?(reason) }
+  end
+
+  def valid_types
+    @valid_types ||= Array(filters.types)
+      .select { |type| CreditNote::TYPES.include?(type) }
   end
 end

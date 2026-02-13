@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::V1::ChargesController do # rubocop:disable RSpec/FilePath
+RSpec.describe DataApi::V1::ChargesController do # rubocop:disable Rails/FilePath
   def post_with_data_api_key(path, params = {})
     headers = {
       "Content-Type" => "application/json",
@@ -72,9 +72,7 @@ RSpec.describe DataApi::V1::ChargesController do # rubocop:disable RSpec/FilePat
       stub_const("ENV", ENV.to_hash.merge("LAGO_DATA_API_BEARER_TOKEN" => "test_api_key"))
     end
 
-    context "when authenticated and premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when authenticated and premium", :premium do
       context "when charges are found" do
         it "returns the bulk forecasted usage amounts" do
           subject

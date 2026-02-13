@@ -156,7 +156,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
         )
       end
 
-      it "updates the payment, payment_request and invoices status", :aggregate_failures do
+      it "updates the payment, payment_request and invoices status" do
         result = cashfree_service.update_payment_status(
           organization_id: organization.id,
           status: cashfree_payment.status,
@@ -234,7 +234,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
           .and not_change { payment.reload.status }
       end
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payable_payment_status)
@@ -266,7 +266,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
         cashfree_customer
       end
 
-      it "creates a payment and updates invoice payment status", aggregate_failure: true do
+      it "creates a payment and updates invoice payment status" do
         expect(result).to be_success
         expect(result.payment.status).to eq("PAID")
         expect(result.payment.payable_payment_status).to eq("succeeded")

@@ -38,10 +38,8 @@ RSpec.describe Mutations::Invoices::Finalize do
 
     result_data = result["data"]["finalizeInvoice"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["status"]).to eq("finalized")
-    end
+    expect(result_data["id"]).to be_present
+    expect(result_data["status"]).to eq("finalized")
   end
 
   context "with tax provider" do

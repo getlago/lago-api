@@ -6,8 +6,9 @@ module Types
       graphql_name "ItemMetadata"
       description "Metadata key-value pair"
 
-      field :key, String, null: false
-      field :value, String, null: true
+      # metadata is stored as a jsonb object, so when sent as array it comes as array of [key, value] pairs
+      field :key, String, null: false, method: :first
+      field :value, String, null: true, method: :last
     end
   end
 end

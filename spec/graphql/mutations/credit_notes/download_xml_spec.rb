@@ -46,9 +46,7 @@ RSpec.describe Mutations::CreditNotes::DownloadXml do
 
     result_data = result["data"]["downloadXmlCreditNote"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to eq(credit_note.id)
-      expect(result_data["xmlUrl"]).to be_present
-    end
+    expect(result_data["id"]).to eq(credit_note.id)
+    expect(result_data["xmlUrl"]).to be_present
   end
 end

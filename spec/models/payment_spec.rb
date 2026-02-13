@@ -16,6 +16,7 @@ RSpec.describe Payment do
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_one(:payment_receipt) }
+  it { is_expected.to have_one(:invoice_settlement).with_foreign_key(:source_payment_id) }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:customer).optional }
@@ -197,6 +198,48 @@ RSpec.describe Payment do
 
             it "adds an error" do
               expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+          end
+
+          context "with offset amounts from credit notes" do
+            let(:payable) { create(:invoice, total_amount_cents: 10000, total_paid_amount_cents: 3000) }
+
+            it "allows payment within remaining due amount after offset" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 5000 # total_due = 10000 - 3000 - 2000 = 5000
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+
+            it "rejects payment exceeding remaining due amount after offset" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 2000)
+              payment.amount_cents = 6000 # total_due = 10000 - 3000 - 2000 = 5000
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+
+            it "sums multiple offset amounts correctly" do
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1500)
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 1000)
+              payment.amount_cents = 4500 # total_due = 10000 - 3000 - 2500 = 4500
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
+            end
+
+            it "rejects payment when invoice is fully settled by offsets" do
+              payable.update!(total_paid_amount_cents: 6000)
+              create(:credit_note, invoice: payable, status: :finalized, offset_amount_cents: 4000)
+              payment.amount_cents = 1 # total_due = 10000 - 6000 - 4000 = 0
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).to be_present
+            end
+
+            it "ignores draft credit notes when calculating due amount" do
+              payable.update!(total_paid_amount_cents: 2000)
+              create(:credit_note, invoice: payable, status: :draft, offset_amount_cents: 1000)
+              payment.amount_cents = 8000 # total_due = 10000 - 2000 = 8000 (draft ignored)
+              payment.save
+              expect(errors.where(:amount_cents, :greater_than)).not_to be_present
             end
           end
         end
@@ -395,14 +438,14 @@ RSpec.describe Payment do
     end
   end
 
-  describe "#payment_method" do
-    subject(:payment_method) { payment.payment_method }
+  describe "#method_display_name" do
+    subject(:method_display_name) { payment.method_display_name }
 
     context "when provider_payment_method_data is empty" do
       let(:payment) { build(:payment, provider_payment_method_data: {}) }
 
       it "returns nil" do
-        expect(payment_method).to be_nil
+        expect(method_display_name).to be_nil
       end
     end
 
@@ -416,7 +459,7 @@ RSpec.describe Payment do
       end
 
       it "returns formatted card details" do
-        expect(payment_method).to eq("Visa **** 1234")
+        expect(method_display_name).to eq("Visa **** 1234")
       end
     end
 
@@ -428,7 +471,7 @@ RSpec.describe Payment do
       end
 
       it "returns the payment method type" do
-        expect(payment_method).to eq("Bank Transfer")
+        expect(method_display_name).to eq("Bank Transfer")
       end
     end
   end

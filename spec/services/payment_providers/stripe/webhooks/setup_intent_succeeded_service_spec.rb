@@ -66,9 +66,11 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
           end
         end
 
-        it "updates provider default payment method" do
+        before do
           allow(Stripe::Customer).to receive(:update).and_return(true)
+        end
 
+        it "updates provider default payment method" do
           result = webhook_service.call
 
           expect(result).to be_success
@@ -82,6 +84,14 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
             {invoice_settings: {default_payment_method: payment_method_id}},
             {api_key: stripe_provider.secret_key}
           )
+        end
+
+        context "when multiple_payment_methods feature flag" do
+          before { organization.enable_feature_flag!(:multiple_payment_methods) }
+
+          it "create a customer payment_method" do
+            expect { webhook_service.call }.to change(PaymentMethod, :count).by(1)
+          end
         end
       end
 

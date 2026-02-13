@@ -8,8 +8,13 @@ RSpec.describe Wallet do
   it_behaves_like "paper_trail traceable"
 
   describe "associations" do
-    it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy) }
-    it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+    it do
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:customer)
+      expect(subject).to have_many(:applied_invoice_custom_sections).class_name("Wallet::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(subject).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
+      expect(subject).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
+    end
   end
 
   describe "Clickhouse associations", clickhouse: true do
@@ -65,6 +70,23 @@ RSpec.describe Wallet do
       expect(subject.errors["paid_top_up_max_amount_cents"]).to eq ["must_be_greater_than_or_equal_min"]
 
       subject.paid_top_up_max_amount_cents = subject.paid_top_up_min_amount_cents
+      expect(subject).to be_valid
+      expect(subject.errors).to be_empty
+    end
+
+    it "validates uniqueness of code per customer" do
+      customer = create(:customer)
+      existing_wallet = create(:wallet, customer:, code: "unique_code")
+
+      subject.customer = customer
+      subject.code = existing_wallet.code
+
+      expect(subject).not_to be_valid
+      expect(subject.errors["code"]).to eq ["value_already_exist"]
+
+      # Same code with different customer should be valid
+      other_customer = create(:customer, organization: customer.organization)
+      subject.customer = other_customer
       expect(subject).to be_valid
       expect(subject.errors).to be_empty
     end

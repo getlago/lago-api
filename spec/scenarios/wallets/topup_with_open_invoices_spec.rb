@@ -2,11 +2,9 @@
 
 require "rails_helper"
 
-describe "Wallet Transaction with invoice after payment" do
+describe "Wallet Transaction with invoice after payment", :premium do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
-
-  around { |test| lago_premium!(&test) }
 
   context "when the wallet does not require successful payment before invoicing" do
     it "allows wallet transaction to require successful payment" do

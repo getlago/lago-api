@@ -91,7 +91,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when code is blank" do
-      let(:params) { {alert_type: "current_usage_amount", code: nil, thresholds: [{value: nil}]} }
+      let(:params) { {alert_type: "current_usage_amount", code: nil, thresholds: [{value: 100}]} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
@@ -100,7 +100,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when alert_type is blank" do
-      let(:params) { {alert_type: nil, code: "ok", thresholds: [{value: nil}]} }
+      let(:params) { {alert_type: nil, code: "ok", thresholds: [{value: 100}]} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
@@ -123,6 +123,63 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "returns a validation failure result" do
         expect(result).to be_failure
         expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
+      end
+    end
+
+    context "when thresholds have duplicate values with falsy recurring variants" do
+      [
+        [{value: 1, recurring: false}, {value: 1, recurring: "0"}],
+        [{value: 1, recurring: false}, {value: 1, recurring: 0}],
+        [{value: 1, recurring: "false"}, {value: 1, recurring: false}],
+        [{value: 1, recurring: "0"}, {value: 1, recurring: 0}],
+        [{value: 1}, {value: 1, recurring: false}]
+      ].each do |thresholds_pair|
+        context "with recurring values #{thresholds_pair.map { |t| t[:recurring].inspect }.join(" and ")}" do
+          let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: thresholds_pair} }
+
+          it "returns a validation failure result" do
+            expect(result).to be_failure
+            expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
+          end
+        end
+      end
+    end
+
+    context "when thresholds have same value but different recurring flags" do
+      let(:thresholds) { [{value: 100}, {value: 100, recurring: true}] }
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(result.alert.thresholds.pluck(:value, :recurring)).to contain_exactly(
+          [100, false], [100, true]
+        )
+      end
+    end
+
+    context "when a threshold value is nil" do
+      let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: [{value: nil}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to include("value_is_mandatory")
+      end
+    end
+
+    context "when a threshold value is not a valid number" do
+      let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: [{value: "abc"}]} }
+
+      it "returns a validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:value"]).to include("value_is_invalid")
+      end
+    end
+
+    context "when threshold values are valid numeric strings" do
+      let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: [{value: "100"}, {value: "200.5"}]} }
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(result.alert).to be_persisted
       end
     end
 
@@ -157,10 +214,8 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when creating lifetime_usage alert" do
+    context "when creating lifetime_usage alert", :premium do
       let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
-
-      around { |test| lago_premium!(&test) }
 
       context "when organization using lifetime usage" do
         let(:premium_integrations) { [] }

@@ -20,10 +20,8 @@ RSpec.describe ::V1::Invoices::PaymentDisputeLostSerializer do
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
 
-      aggregate_failures do
-        expect(result["data"]["invoice"]["lago_id"]).to eq(invoice.id)
-        expect(result["data"]["provider_error"]).to eq(options[:provider_error])
-      end
+      expect(result["data"]["invoice"]["lago_id"]).to eq(invoice.id)
+      expect(result["data"]["provider_error"]).to eq(options[:provider_error])
     end
   end
 
@@ -35,10 +33,8 @@ RSpec.describe ::V1::Invoices::PaymentDisputeLostSerializer do
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
 
-      aggregate_failures do
-        expect(result["data"]["invoice"]["lago_id"]).to eq(invoice.id)
-        expect(result["data"].key?("provider_error")).to eq(false)
-      end
+      expect(result["data"]["invoice"]["lago_id"]).to eq(invoice.id)
+      expect(result["data"].key?("provider_error")).to eq(false)
     end
   end
 end

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Invites::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
+  before { create(:role, :admin) }
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -13,7 +15,7 @@ RSpec.describe Invites::CreateService do
       {
         email: Faker::Internet.email,
         current_organization: organization,
-        role: "admin"
+        roles: %w[admin]
       }
     end
 
@@ -26,22 +28,20 @@ RSpec.describe Invites::CreateService do
       let(:create_args) do
         {
           current_organization: organization,
-          role: "admin"
+          roles: %w[admin]
         }
       end
 
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:email]).to eq(["invalid_email_format"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:email]).to eq(%w[invalid_email_format])
       end
     end
 
-    context "with missing role" do
+    context "with missing roles" do
       let(:create_args) do
         {
           email: Faker::Internet.email,
@@ -52,11 +52,27 @@ RSpec.describe Invites::CreateService do
       it "returns an error" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:role]).to eq(["invalid_role"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:roles]).to eq(%w[invalid_role])
+      end
+    end
+
+    context "with invalid roles" do
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          roles: %w[nonexistent_role]
+        }
+      end
+
+      it "returns an error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:roles]).to eq(%w[invalid_role])
       end
     end
 
@@ -65,11 +81,9 @@ RSpec.describe Invites::CreateService do
         create(:invite, organization: create_args[:current_organization], email: create_args[:email])
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:invite])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:invite])
       end
     end
 
@@ -81,11 +95,9 @@ RSpec.describe Invites::CreateService do
 
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to eq([:email])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:email])
       end
     end
   end

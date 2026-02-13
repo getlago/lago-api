@@ -400,6 +400,50 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
           end
         end
       end
+
+      context "when plan has fixed_charges monthly" do
+        let(:billing_time) { :calendar }
+        let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+        let(:plan) { create(:plan, interval: :semiannual, pay_in_advance:, bill_fixed_charges_monthly: true) }
+
+        context "when charges should be billed" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns charges_from_datetime" do
+            expect(result).to eq("2022-01-01 00:00:00 UTC")
+          end
+        end
+
+        context "when charges should not be billed" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2023") }
+
+          it "does not return charges_from_datetime" do
+            expect(result).to eq("")
+          end
+        end
+      end
+
+      context "when plan has charges monthly" do
+        let(:billing_time) { :calendar }
+        let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+        let(:plan) { create(:plan, interval: :semiannual, pay_in_advance:, bill_charges_monthly: true) }
+
+        context "when charges should be billed" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns charges_from_datetime" do
+            expect(result).to eq("2022-06-01 00:00:00 UTC")
+          end
+        end
+
+        context "when charges should billed as monthly" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2023") }
+
+          it "does return charges_from_datetime" do
+            expect(result).to eq("2023-01-01 00:00:00 UTC")
+          end
+        end
+      end
     end
 
     context "when billing_time is anniversary" do
@@ -503,6 +547,50 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
 
           it "returns the end of the current period" do
             expect(result).to eq("2022-02-28 23:59:59 UTC")
+          end
+        end
+      end
+
+      context "when plan has fixed_charges monthly" do
+        let(:billing_time) { :calendar }
+        let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+        let(:plan) { create(:plan, interval: :semiannual, pay_in_advance:, bill_fixed_charges_monthly: true) }
+
+        context "when charges should be billed" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns charges_to_datetime" do
+            expect(result).to eq("2022-06-30 23:59:59 UTC")
+          end
+        end
+
+        context "when charges should not be billed" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2023") }
+
+          it "does not return charges_to_datetime" do
+            expect(result).to eq("")
+          end
+        end
+      end
+
+      context "when plan has charges monthly" do
+        let(:billing_time) { :calendar }
+        let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+        let(:plan) { create(:plan, interval: :semiannual, pay_in_advance:, bill_charges_monthly: true) }
+
+        context "when charges should be billed" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns charges_to_datetime" do
+            expect(result).to eq("2022-06-30 23:59:59 UTC")
+          end
+        end
+
+        context "when charges should billed as monthly" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2023") }
+
+          it "does return charges_to_datetime" do
+            expect(result).to eq("2023-01-31 23:59:59 UTC")
           end
         end
       end
@@ -618,6 +706,34 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
             expect(result).to eq(subscription.started_at.utc.to_s)
           end
         end
+
+        context "when its the next month" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+          it "returns the beginnig of the previous month" do
+            expect(result.to_s).to eq("2022-01-01 00:00:00 UTC")
+          end
+        end
+      end
+
+      context "when billing charges monthly" do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        context "when fixed_charges should be billed(first period)" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns the fixed_charge date" do
+            expect(result.to_s).to eq("2022-01-01 00:00:00 UTC")
+          end
+        end
+
+        context "when fixed_charges should not be billed" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+          it "does not return the fixed_charge date" do
+            expect(date_service.fixed_charges_from_datetime).to be_nil
+          end
+        end
       end
     end
 
@@ -722,6 +838,34 @@ RSpec.describe Subscriptions::Dates::SemiannualService do
 
           it "returns the end of the current period" do
             expect(result).to eq("2022-02-28 23:59:59 UTC")
+          end
+        end
+
+        context "when its the next month" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+          it "returns the end of the previous month" do
+            expect(result.to_s).to eq("2022-01-31 23:59:59 UTC")
+          end
+        end
+      end
+
+      context "when billing charges monthly" do
+        before { plan.update!(bill_charges_monthly: true) }
+
+        context "when billing first period" do
+          let(:billing_at) { Time.zone.parse("01 Jul 2022") }
+
+          it "returns the fixed_charge date" do
+            expect(result.to_s).to eq("2022-06-30 23:59:59 UTC")
+          end
+        end
+
+        context "when billing run for charges only" do
+          let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+          it "does not return the fixed_charge date" do
+            expect(date_service.fixed_charges_to_datetime).to be_nil
           end
         end
       end

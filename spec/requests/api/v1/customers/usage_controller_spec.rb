@@ -70,25 +70,23 @@ RSpec.describe Api::V1::Customers::UsageController do
     it "returns the usage for the customer" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:customer_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
-        expect(json[:customer_usage][:to_datetime]).to eq(Time.zone.today.end_of_month.end_of_day.iso8601)
-        expect(json[:customer_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
-        expect(json[:customer_usage][:amount_cents]).to eq(5)
-        expect(json[:customer_usage][:currency]).to eq("EUR")
-        expect(json[:customer_usage][:total_amount_cents]).to eq(6)
+      expect(json[:customer_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
+      expect(json[:customer_usage][:to_datetime]).to eq(Time.zone.today.end_of_month.end_of_day.iso8601)
+      expect(json[:customer_usage][:issuing_date]).to eq(Time.zone.today.end_of_month.iso8601)
+      expect(json[:customer_usage][:amount_cents]).to eq(5)
+      expect(json[:customer_usage][:currency]).to eq("EUR")
+      expect(json[:customer_usage][:total_amount_cents]).to eq(6)
 
-        charge_usage = json[:customer_usage][:charges_usage].first
-        expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
-        expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
-        expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
-        expect(charge_usage[:charge][:charge_model]).to eq("graduated")
-        expect(charge_usage[:units]).to eq("4.0")
-        expect(charge_usage[:amount_cents]).to eq(5)
-        expect(charge_usage[:amount_currency]).to eq("EUR")
-      end
+      charge_usage = json[:customer_usage][:charges_usage].first
+      expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
+      expect(charge_usage[:billable_metric][:code]).to eq(metric.code)
+      expect(charge_usage[:billable_metric][:aggregation_type]).to eq("count_agg")
+      expect(charge_usage[:charge][:charge_model]).to eq("graduated")
+      expect(charge_usage[:units]).to eq("4.0")
+      expect(charge_usage[:amount_cents]).to eq(5)
+      expect(charge_usage[:amount_currency]).to eq("EUR")
     end
 
     context "when apply_taxes is false" do
@@ -97,13 +95,11 @@ RSpec.describe Api::V1::Customers::UsageController do
       it "returns the usage for the customer without applying taxes" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:success)
-          # With taxes disabled, fees_amount_cents remains 5 and no tax is added.
-          expect(json[:customer_usage][:amount_cents]).to eq(5)
-          expect(json[:customer_usage][:taxes_amount_cents]).to eq(0)
-          expect(json[:customer_usage][:total_amount_cents]).to eq(5)
-        end
+        expect(response).to have_http_status(:success)
+        # With taxes disabled, fees_amount_cents remains 5 and no tax is added.
+        expect(json[:customer_usage][:amount_cents]).to eq(5)
+        expect(json[:customer_usage][:taxes_amount_cents]).to eq(0)
+        expect(json[:customer_usage][:total_amount_cents]).to eq(5)
       end
     end
 
@@ -193,18 +189,16 @@ RSpec.describe Api::V1::Customers::UsageController do
         aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
         gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
 
-        aggregate_failures do
-          expect(charge_usage[:units]).to eq("4.0")
-          expect(charge_usage[:amount_cents]).to eq(5000)
+        expect(charge_usage[:units]).to eq("4.0")
+        expect(charge_usage[:amount_cents]).to eq(5000)
 
-          # Assertions for the AWS filter
-          expect(aws_filter_data[:units]).to eq("3.0")
-          expect(aws_filter_data[:amount_cents]).to eq(3000)
+        # Assertions for the AWS filter
+        expect(aws_filter_data[:units]).to eq("3.0")
+        expect(aws_filter_data[:amount_cents]).to eq(3000)
 
-          # Assertions for the GCP filter
-          expect(gcp_filter_data[:units]).to eq("1.0")
-          expect(gcp_filter_data[:amount_cents]).to eq(2000)
-        end
+        # Assertions for the GCP filter
+        expect(gcp_filter_data[:units]).to eq("1.0")
+        expect(gcp_filter_data[:amount_cents]).to eq(2000)
       end
     end
 
@@ -334,22 +328,20 @@ RSpec.describe Api::V1::Customers::UsageController do
         aws_france_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["france"] }
         google_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] && f[:values][:region] == ["usa"] }
 
-        aggregate_failures do
-          expect(charge_usage[:units]).to eq("4.0")
-          expect(charge_usage[:amount_cents]).to eq(7000)
+        expect(charge_usage[:units]).to eq("4.0")
+        expect(charge_usage[:amount_cents]).to eq(7000)
 
-          # Assertions for AWS/USA filter
-          expect(aws_usa_data[:units]).to eq("2.0")
-          expect(aws_usa_data[:amount_cents]).to eq(2000)
+        # Assertions for AWS/USA filter
+        expect(aws_usa_data[:units]).to eq("2.0")
+        expect(aws_usa_data[:amount_cents]).to eq(2000)
 
-          # Assertions for AWS/France filter
-          expect(aws_france_data[:units]).to eq("1.0")
-          expect(aws_france_data[:amount_cents]).to eq(2000)
+        # Assertions for AWS/France filter
+        expect(aws_france_data[:units]).to eq("1.0")
+        expect(aws_france_data[:amount_cents]).to eq(2000)
 
-          # Assertions for Google/USA filter
-          expect(google_usa_data[:units]).to eq("1.0")
-          expect(google_usa_data[:amount_cents]).to eq(3000)
-        end
+        # Assertions for Google/USA filter
+        expect(google_usa_data[:units]).to eq("1.0")
+        expect(google_usa_data[:amount_cents]).to eq(3000)
       end
     end
 
@@ -404,31 +396,29 @@ RSpec.describe Api::V1::Customers::UsageController do
     it "returns the past usage" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:usage_periods].count).to eq(1)
+      expect(json[:usage_periods].count).to eq(1)
 
-        usage = json[:usage_periods].first
-        expect(usage[:from_datetime]).to eq(invoice_subscription.charges_from_datetime.iso8601)
-        expect(usage[:to_datetime]).to eq(invoice_subscription.charges_to_datetime.iso8601)
-        expect(usage[:issuing_date]).to eq(invoice.issuing_date.iso8601)
-        expect(usage[:currency]).to eq(invoice.currency)
-        expect(usage[:amount_cents]).to eq(invoice.fees_amount_cents)
-        expect(usage[:total_amount_cents]).to eq(4)
-        expect(usage[:taxes_amount_cents]).to eq(4)
+      usage = json[:usage_periods].first
+      expect(usage[:from_datetime]).to eq(invoice_subscription.charges_from_datetime.iso8601)
+      expect(usage[:to_datetime]).to eq(invoice_subscription.charges_to_datetime.iso8601)
+      expect(usage[:issuing_date]).to eq(invoice.issuing_date.iso8601)
+      expect(usage[:currency]).to eq(invoice.currency)
+      expect(usage[:amount_cents]).to eq(invoice.fees_amount_cents)
+      expect(usage[:total_amount_cents]).to eq(4)
+      expect(usage[:taxes_amount_cents]).to eq(4)
 
-        expect(usage[:charges_usage].count).to eq(2)
+      expect(usage[:charges_usage].count).to eq(2)
 
-        charge_usage = usage[:charges_usage].first
-        expect(charge_usage[:billable_metric][:name]).to eq(billable_metric1.name)
-        expect(charge_usage[:billable_metric][:code]).to eq(billable_metric1.code)
-        expect(charge_usage[:billable_metric][:aggregation_type]).to eq(billable_metric1.aggregation_type)
-        expect(charge_usage[:charge][:charge_model]).to eq(charge1.charge_model)
-        expect(charge_usage[:units]).to eq(fee1.units.to_s)
-        expect(charge_usage[:amount_cents]).to eq(fee1.amount_cents)
-        expect(charge_usage[:amount_currency]).to eq(fee1.currency)
-      end
+      charge_usage = usage[:charges_usage].first
+      expect(charge_usage[:billable_metric][:name]).to eq(billable_metric1.name)
+      expect(charge_usage[:billable_metric][:code]).to eq(billable_metric1.code)
+      expect(charge_usage[:billable_metric][:aggregation_type]).to eq(billable_metric1.aggregation_type)
+      expect(charge_usage[:charge][:charge_model]).to eq(charge1.charge_model)
+      expect(charge_usage[:units]).to eq(fee1.units.to_s)
+      expect(charge_usage[:amount_cents]).to eq(fee1.amount_cents)
+      expect(charge_usage[:amount_currency]).to eq(fee1.currency)
     end
 
     context "when missing external_subscription_id" do

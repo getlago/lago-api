@@ -137,15 +137,13 @@ RSpec.describe InvoicesQuery do
     let(:pagination) { {page: 2, limit: 3} }
 
     it "applies the pagination" do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoices.count).to eq(3)
-        expect(result.invoices.current_page).to eq(2)
-        expect(result.invoices.prev_page).to eq(1)
-        expect(result.invoices.next_page).to be_nil
-        expect(result.invoices.total_pages).to eq(2)
-        expect(result.invoices.total_count).to eq(6)
-      end
+      expect(result).to be_success
+      expect(result.invoices.count).to eq(3)
+      expect(result.invoices.current_page).to eq(2)
+      expect(result.invoices.prev_page).to eq(1)
+      expect(result.invoices.next_page).to be_nil
+      expect(result.invoices.total_pages).to eq(2)
+      expect(result.invoices.total_count).to eq(6)
     end
   end
 
@@ -153,14 +151,12 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {status: "draft"} }
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
     end
   end
 
@@ -168,14 +164,12 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {payment_status: "failed"} }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -183,14 +177,12 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {payment_status: ["succeeded", "failed"]} }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -198,15 +190,13 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {payment_dispute_lost: true} }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-        expect(returned_ids).to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
   end
 
@@ -214,15 +204,13 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {payment_dispute_lost: false} }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(5)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-        expect(returned_ids).not_to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(5)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
     end
   end
 
@@ -238,15 +226,13 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {payment_overdue: false} }
 
     it "returns expected invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(5)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-        expect(returned_ids).to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(5)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
   end
 
@@ -282,11 +268,9 @@ RSpec.describe InvoicesQuery do
       let(:filters) { {partially_paid: true} }
 
       it "returns only partially paid invoices" do
-        aggregate_failures do
-          expect(returned_ids.count).to eq(1)
-          expect(returned_ids).to include(invoice_second.id)
-          expect(returned_ids).not_to include(invoice_first.id)
-        end
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_first.id)
       end
     end
 
@@ -294,11 +278,9 @@ RSpec.describe InvoicesQuery do
       let(:filters) { {partially_paid: false} }
 
       it "returns only fully paid and unpaid invoices" do
-        aggregate_failures do
-          expect(returned_ids.count).to eq(5)
-          expect(returned_ids).not_to include(invoice_second.id)
-          expect(returned_ids).to include(invoice_first.id)
-        end
+        expect(returned_ids.count).to eq(5)
+        expect(returned_ids).not_to include(invoice_second.id)
+        expect(returned_ids).to include(invoice_first.id)
       end
     end
 
@@ -306,9 +288,7 @@ RSpec.describe InvoicesQuery do
       let(:filters) { {partially_paid: nil} }
 
       it "returns all invoices" do
-        aggregate_failures do
-          expect(returned_ids.count).to eq(6)
-        end
+        expect(returned_ids.count).to eq(6)
       end
     end
   end
@@ -317,9 +297,7 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {invoice_type: "credit"} }
 
     it "returns 1 invoice" do
-      aggregate_failures do
-        expect(returned_ids).to eq [invoice_fifth.id]
-      end
+      expect(returned_ids).to eq [invoice_fifth.id]
     end
   end
 
@@ -327,9 +305,7 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {currency: "USD"} }
 
     it "returns 1 invoice" do
-      aggregate_failures do
-        expect(returned_ids).to eq [invoice_fourth.id]
-      end
+      expect(returned_ids).to eq [invoice_fourth.id]
     end
   end
 
@@ -337,28 +313,24 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {customer_external_id: customer_second.external_id} }
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-        expect(returned_ids).not_to include(invoice_sixth.id)
-      end
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
     end
 
     context "with searching for /2222/ term" do
       let(:search_term) { "2222" }
 
       it "returns 1 invoices" do
-        aggregate_failures do
-          expect(result.invoices.count).to eq(1)
-          expect(returned_ids).not_to include(invoice_first.id)
-          expect(returned_ids).to include(invoice_second.id)
-          expect(returned_ids).not_to include(invoice_third.id)
-          expect(returned_ids).not_to include(invoice_fourth.id)
-          expect(returned_ids).not_to include(invoice_fifth.id)
-        end
+        expect(result.invoices.count).to eq(1)
+        expect(returned_ids).not_to include(invoice_first.id)
+        expect(returned_ids).to include(invoice_second.id)
+        expect(returned_ids).not_to include(invoice_third.id)
+        expect(returned_ids).not_to include(invoice_fourth.id)
+        expect(returned_ids).not_to include(invoice_fifth.id)
       end
     end
   end
@@ -367,25 +339,21 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {issuing_date_from: 2.days.ago.iso8601.to_date.to_s} }
 
     it "returns 4 invoices" do
-      aggregate_failures do
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-        expect(returned_ids).to include(invoice_sixth.id)
-      end
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
 
     context "with invalid date" do
       let(:filters) { {issuing_date_from: "invalid_date_value"} }
 
       it "returns a failed result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:issuing_date_from]).to include("invalid_date")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:issuing_date_from]).to include("invalid_date")
       end
     end
   end
@@ -394,25 +362,21 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {issuing_date_to: 2.weeks.ago.iso8601.to_date.to_s} }
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-        expect(returned_ids).not_to include(invoice_sixth.id)
-      end
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
     end
 
     context "with invalid date" do
       let(:filters) { {issuing_date_to: "invalid_date_value"} }
 
       it "returns a failed result" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:issuing_date_to]).to include("invalid_date")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:issuing_date_to]).to include("invalid_date")
       end
     end
   end
@@ -426,14 +390,12 @@ RSpec.describe InvoicesQuery do
     end
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-        expect(returned_ids).not_to include(invoice_sixth.id)
-      end
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
     end
   end
 
@@ -441,14 +403,12 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { invoice_fourth.id.scan(/.{10}/).first }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -456,14 +416,12 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { invoice_first.number }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -471,14 +429,12 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { customer_second.external_id }
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -486,15 +442,13 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { "rick" }
 
     it "returns 3 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(4)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-        expect(returned_ids).to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(4)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
   end
 
@@ -502,14 +456,12 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { "gmail" }
 
     it "returns 2 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -518,14 +470,12 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {customer_id: customer_second.id} }
 
     it "returns 1 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(1)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-      end
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
     end
   end
 
@@ -533,13 +483,11 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {customer_id: create(:customer, organization:).id} }
 
     it "returns 0 invoices" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(0)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-      end
+      expect(returned_ids.count).to eq(0)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
     end
   end
 
@@ -547,15 +495,13 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { "SanchezLast" }
 
     it "returns the correct invoices for this customer" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(4)
-        expect(returned_ids).to include(invoice_first.id)
-        expect(returned_ids).not_to include(invoice_second.id)
-        expect(returned_ids).to include(invoice_third.id)
-        expect(returned_ids).not_to include(invoice_fourth.id)
-        expect(returned_ids).to include(invoice_fifth.id)
-        expect(returned_ids).to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(4)
+      expect(returned_ids).to include(invoice_first.id)
+      expect(returned_ids).not_to include(invoice_second.id)
+      expect(returned_ids).to include(invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id)
+      expect(returned_ids).to include(invoice_fifth.id)
+      expect(returned_ids).to include(invoice_sixth.id)
     end
   end
 
@@ -563,15 +509,13 @@ RSpec.describe InvoicesQuery do
     let(:search_term) { "MortyFirst" }
 
     it "returns the correct invoices for this customer" do
-      aggregate_failures do
-        expect(returned_ids.count).to eq(2)
-        expect(returned_ids).not_to include(invoice_first.id)
-        expect(returned_ids).to include(invoice_second.id)
-        expect(returned_ids).not_to include(invoice_third.id)
-        expect(returned_ids).to include(invoice_fourth.id)
-        expect(returned_ids).not_to include(invoice_fifth.id)
-        expect(returned_ids).not_to include(invoice_sixth.id)
-      end
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).not_to include(invoice_first.id)
+      expect(returned_ids).to include(invoice_second.id)
+      expect(returned_ids).not_to include(invoice_third.id)
+      expect(returned_ids).to include(invoice_fourth.id)
+      expect(returned_ids).not_to include(invoice_fifth.id)
+      expect(returned_ids).not_to include(invoice_sixth.id)
     end
   end
 
@@ -827,6 +771,86 @@ RSpec.describe InvoicesQuery do
 
     it "returns invoices for the specified subscription" do
       expect(returned_ids).to eq([invoice_with_subscription_1.id])
+    end
+  end
+
+  context "when filtering by settlements" do
+    let(:filters) { {settlements: settlements} }
+
+    let(:credit_note) { create(:credit_note, invoice: invoice_first, customer: invoice_first.customer, organization:) }
+
+    before do
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_first.billing_entity,
+        target_invoice: invoice_first,
+        settlement_type: :credit_note,
+        source_credit_note: credit_note
+      )
+
+      create(
+        :invoice_settlement,
+        organization:,
+        billing_entity: invoice_second.billing_entity,
+        target_invoice: invoice_second,
+        settlement_type: :payment,
+        source_payment: create(:payment)
+      )
+    end
+
+    context "when settlements is an array with credit_note" do
+      let(:settlements) { ["credit_note"] }
+
+      it "returns invoices with a credit note settlement" do
+        expect(returned_ids).to eq([invoice_first.id])
+      end
+    end
+
+    context "when settlements is an array with payment" do
+      let(:settlements) { ["payment"] }
+
+      it "returns invoices with a payment settlement" do
+        expect(returned_ids).to eq([invoice_second.id])
+      end
+    end
+
+    context "when settlements is a string with a single value" do
+      let(:settlements) { "credit_note" }
+
+      it "returns invoices with a credit note settlement" do
+        expect(returned_ids).to eq([invoice_first.id])
+      end
+    end
+
+    context "when settlements is an array with multiple values" do
+      let(:settlements) { %w[credit_note payment] }
+
+      it "returns invoices matching any provided settlement type" do
+        expect(returned_ids).to match_array([invoice_first.id, invoice_second.id])
+      end
+    end
+
+    context "when there are no matching settlements" do
+      let(:settlements) { ["payment"] }
+
+      before do
+        InvoiceSettlement.where(settlement_type: :payment).delete_all
+      end
+
+      it "returns no invoices" do
+        expect(returned_ids).to be_empty
+      end
+    end
+
+    context "when settlement type is invalid" do
+      let(:settlements) { ["invalid_type"] }
+
+      it "returns a validation error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:settlements]).to be_present
+      end
     end
   end
 end

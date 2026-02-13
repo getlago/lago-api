@@ -58,10 +58,8 @@ RSpec.describe PaymentProviders::StripeService do
           secret_key: "secret"
         )
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
-        end
+        expect(result).to be_success
+        expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
       end
     end
 
@@ -92,15 +90,13 @@ RSpec.describe PaymentProviders::StripeService do
 
         expect(result).to be_success
 
-        aggregate_failures do
-          expect(result.stripe_provider.id).to eq(stripe_provider.id)
-          expect(result.stripe_provider.secret_key).to eq("secret")
-          expect(result.stripe_provider.code).to eq(code)
-          expect(result.stripe_provider.name).to eq(name)
-          expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
+        expect(result.stripe_provider.id).to eq(stripe_provider.id)
+        expect(result.stripe_provider.secret_key).to eq("secret")
+        expect(result.stripe_provider.code).to eq(code)
+        expect(result.stripe_provider.name).to eq(name)
+        expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
 
-          expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
-        end
+        expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
       end
     end
 
@@ -111,11 +107,9 @@ RSpec.describe PaymentProviders::StripeService do
           secret_key: nil
         )
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:secret_key]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:secret_key]).to eq(["value_is_mandatory"])
       end
     end
   end

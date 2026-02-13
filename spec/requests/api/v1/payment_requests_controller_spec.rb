@@ -34,7 +34,7 @@ RSpec.describe Api::V1::PaymentRequestsController do
 
     include_examples "requires API permission", "payment_request", "write"
 
-    it "delegates to PaymentRequests::CreateService", :aggregate_failures do
+    it "delegates to PaymentRequests::CreateService" do
       subject
 
       expect(PaymentRequests::CreateService).to have_received(:call).with(

@@ -49,12 +49,10 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       it "returns an error" do
         result = charge_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ServiceFailure)
-          expect(result.error.code).to eq("apply_charge_model_error")
-          expect(result.error.error_message).to eq("Charge is not pay_in_advance")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("apply_charge_model_error")
+        expect(result.error.error_message).to eq("Charge is not pay_in_advance")
       end
     end
 
@@ -160,7 +158,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       it_behaves_like "a charge model"
     end
 
-    describe "when graduated percentage charge model" do
+    describe "when graduated percentage charge model", :premium do
       let(:charge) do
         create(
           :graduated_percentage_charge,
@@ -180,8 +178,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       end
 
       let(:charge_model_class) { ChargeModels::GraduatedPercentageService }
-
-      around { |test| lago_premium!(&test) }
 
       it_behaves_like "a charge model"
     end

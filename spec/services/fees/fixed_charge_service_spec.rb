@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::FixedChargeService do
+RSpec.describe Fees::FixedChargeService, :premium do
   subject(:fixed_charge_service) do
     described_class.new(invoice:, fixed_charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
@@ -289,7 +287,7 @@ RSpec.describe Fees::FixedChargeService do
       end
     end
 
-    context "with graduated charge model " do
+    context "with graduated charge model" do
       let(:fixed_charge) do
         create(
           :fixed_charge,

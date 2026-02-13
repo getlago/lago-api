@@ -114,30 +114,28 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
 
     result_data = result["data"]["fetchDraftInvoiceTaxes"]["collection"]
 
-    aggregate_failures do
-      fee = result_data.first
+    fee = result_data.first
 
-      expect(fee["itemId"]).to eq("lago_fee_id")
-      expect(fee["itemCode"]).to eq("lago_default_b2b")
-      expect(fee["amountCents"]).to eq("9900")
-      expect(fee["taxAmountCents"]).to eq("990")
+    expect(fee["itemId"]).to eq("lago_fee_id")
+    expect(fee["itemCode"]).to eq("lago_default_b2b")
+    expect(fee["amountCents"]).to eq("9900")
+    expect(fee["taxAmountCents"]).to eq("990")
 
-      breakdown1 = fee["taxBreakdown"].first
+    breakdown1 = fee["taxBreakdown"].first
 
-      expect(breakdown1["name"]).to eq("GST/HST")
-      expect(breakdown1["rate"]).to eq(0.1)
-      expect(breakdown1["taxAmount"]).to eq("990")
-      expect(breakdown1["type"]).to eq("tax_exempt")
-      expect(breakdown1["enumedTaxCode"]).to eq(nil)
+    expect(breakdown1["name"]).to eq("GST/HST")
+    expect(breakdown1["rate"]).to eq(0.1)
+    expect(breakdown1["taxAmount"]).to eq("990")
+    expect(breakdown1["type"]).to eq("tax_exempt")
+    expect(breakdown1["enumedTaxCode"]).to eq(nil)
 
-      breakdown2 = fee["taxBreakdown"].last
+    breakdown2 = fee["taxBreakdown"].last
 
-      expect(breakdown2["name"]).to eq("Reverse charge")
-      expect(breakdown2["rate"]).to eq(0.0)
-      expect(breakdown2["taxAmount"]).to eq("0")
-      expect(breakdown2["type"]).to eq("exempt")
-      expect(breakdown2["enumedTaxCode"]).to eq("reverse_charge")
-    end
+    expect(breakdown2["name"]).to eq("Reverse charge")
+    expect(breakdown2["rate"]).to eq(0.0)
+    expect(breakdown2["taxAmount"]).to eq("0")
+    expect(breakdown2["type"]).to eq("exempt")
+    expect(breakdown2["enumedTaxCode"]).to eq("reverse_charge")
   end
 
   context "when there is tax error" do
@@ -163,10 +161,8 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
 
       response = result["errors"].first["extensions"]
 
-      aggregate_failures do
-        expect(response["status"]).to eq(422)
-        expect(response["details"]["taxError"]).to include("taxDateTooFarInFuture")
-      end
+      expect(response["status"]).to eq(422)
+      expect(response["details"]["taxError"]).to include("taxDateTooFarInFuture")
     end
   end
 end

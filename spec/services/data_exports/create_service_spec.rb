@@ -28,18 +28,16 @@ RSpec.describe DataExports::CreateService do
   end
 
   it "creates a new data export record" do
-    aggregate_failures do
-      expect(result).to be_success
+    expect(result).to be_success
 
-      data_export = result.data_export
-      expect(data_export.id).to be_present
-      expect(data_export.organization_id).to eq(organization.id)
-      expect(data_export.membership_id).to eq(membership.id)
-      expect(data_export.format).to eq("csv")
-      expect(data_export.resource_type).to eq("invoices")
-      expect(data_export.resource_query).to match(resource_query)
-      expect(data_export.status).to eq("pending")
-    end
+    data_export = result.data_export
+    expect(data_export.id).to be_present
+    expect(data_export.organization_id).to eq(organization.id)
+    expect(data_export.membership_id).to eq(membership.id)
+    expect(data_export.format).to eq("csv")
+    expect(data_export.resource_type).to eq("invoices")
+    expect(data_export.resource_query).to match(resource_query)
+    expect(data_export.status).to eq("pending")
   end
 
   it "calls ExportResourcesJob" do

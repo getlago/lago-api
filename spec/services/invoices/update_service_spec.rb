@@ -22,15 +22,13 @@ RSpec.describe Invoices::UpdateService do
 
   describe "call" do
     it "updates the invoice" do
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice).to eq(invoice)
-        expect(result.invoice).to have_attributes(
-          payment_overdue: false,
-          payment_status: update_args[:payment_status],
-          total_paid_amount_cents: update_args[:total_paid_amount_cents]
-        )
-      end
+      expect(result).to be_success
+      expect(result.invoice).to eq(invoice)
+      expect(result.invoice).to have_attributes(
+        payment_overdue: false,
+        payment_status: update_args[:payment_status],
+        total_paid_amount_cents: update_args[:total_paid_amount_cents]
+      )
     end
 
     context "when invoices is included in a payment request" do
@@ -77,21 +75,17 @@ RSpec.describe Invoices::UpdateService do
         let(:invoice) { create(:invoice, :draft) }
 
         it "does not update the invoice" do
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("payment_status_update_on_draft_invoice")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("payment_status_update_on_draft_invoice")
         end
       end
 
       context "when invoice is not in draft status" do
         it "updates the invoice" do
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice).to eq(invoice)
-            expect(result.invoice.payment_status).to eq(update_args[:payment_status])
-          end
+          expect(result).to be_success
+          expect(result.invoice).to eq(invoice)
+          expect(result.invoice.payment_status).to eq(update_args[:payment_status])
         end
       end
     end
@@ -140,11 +134,9 @@ RSpec.describe Invoices::UpdateService do
         let(:invoice) { create(:invoice, status: "draft") }
 
         it "fails to update metadata" do
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("metadata_on_draft_invoice")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("metadata_on_draft_invoice")
         end
       end
 
@@ -182,11 +174,9 @@ RSpec.describe Invoices::UpdateService do
         end
 
         it "fails to update invoice with metadata" do
-          aggregate_failures do
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages.keys).to include(:metadata)
-            expect(result.error.messages[:metadata]).to include("invalid_count")
-          end
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to include(:metadata)
+          expect(result.error.messages[:metadata]).to include("invalid_count")
         end
       end
     end
@@ -303,12 +293,10 @@ RSpec.describe Invoices::UpdateService do
       end
 
       it "returns an error" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:payment_status)
-          expect(result.error.messages[:payment_status]).to include("value_is_invalid")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:payment_status)
+        expect(result.error.messages[:payment_status]).to include("value_is_invalid")
       end
     end
 
@@ -319,11 +307,9 @@ RSpec.describe Invoices::UpdateService do
       end
 
       it "returns an error" do
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:issuing_date]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:issuing_date]).to eq(["value_is_mandatory"])
       end
     end
   end

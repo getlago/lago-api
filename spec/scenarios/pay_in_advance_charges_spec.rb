@@ -752,7 +752,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
     let(:field_name) { "amount" }
 
     describe "with free_units_per_events" do
-      it "creates an pay_in_advance fee " do
+      it "creates an pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -876,7 +876,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
 
     describe "with free_units_per_total_aggregation" do
-      it "creates an pay_in_advance fee " do
+      it "creates an pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1038,10 +1038,8 @@ describe "Pay in advance charges Scenarios", transaction: false do
       end
     end
 
-    describe "with min / max per transaction" do
-      around { |test| lago_premium!(&test) }
-
-      it "creates a pay_in_advance fee " do
+    describe "with min / max per transaction", :premium do
+      it "creates a pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1319,7 +1317,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
     let(:field_name) { "amount" }
 
     describe "with free_units_per_events" do
-      it "creates an pay_in_advance fee " do
+      it "creates an pay_in_advance fee" do
         ### 24 january: Create subscription.
         jan24 = DateTime.new(2023, 1, 24)
 
@@ -1381,11 +1379,9 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
-  describe "with sum_agg / graduated_percentage" do
+  describe "with sum_agg / graduated_percentage", :premium do
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }
-
-    around { |test| lago_premium!(&test) }
 
     it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.

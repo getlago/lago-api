@@ -30,10 +30,8 @@ RSpec.describe Mutations::ApiKeys::Rotate do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
 
-  context "when api key with such ID exists in the current organization" do
+  context "when api key with such ID exists in the current organization", :premium do
     let(:api_key) { membership.organization.api_keys.first }
-
-    around { |test| lago_premium!(&test) }
 
     it "expires the api key" do
       expect { result }
@@ -45,13 +43,11 @@ RSpec.describe Mutations::ApiKeys::Rotate do
       api_key_response = result["data"]["rotateApiKey"]
       new_api_key = membership.organization.api_keys.order(:created_at).last
 
-      aggregate_failures do
-        expect(api_key_response["id"]).to eq(new_api_key.id)
-        expect(api_key_response["value"]).to eq(new_api_key.value)
-        expect(api_key_response["name"]).to eq(name)
-        expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
-        expect(api_key_response["expiresAt"]).to be_nil
-      end
+      expect(api_key_response["id"]).to eq(new_api_key.id)
+      expect(api_key_response["value"]).to eq(new_api_key.value)
+      expect(api_key_response["name"]).to eq(name)
+      expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
+      expect(api_key_response["expiresAt"]).to be_nil
     end
   end
 

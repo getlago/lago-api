@@ -5,8 +5,10 @@ require "rails_helper"
 RSpec.describe Types::FixedCharges::Object do
   subject { described_class }
 
+  it { is_expected.to have_field(:code).of_type("String") }
   it { is_expected.to have_field(:id).of_type("ID!") }
   it { is_expected.to have_field(:invoice_display_name).of_type("String") }
+  it { is_expected.to have_field(:parent_id).of_type("ID") }
 
   it { is_expected.to have_field(:add_on).of_type("AddOn!") }
   it { is_expected.to have_field(:charge_model).of_type("FixedChargeChargeModelEnum!") }

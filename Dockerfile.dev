@@ -1,17 +1,23 @@
-FROM ruby:3.4.7-slim
+ARG PDFCPU_VERSION=0.11.1
+
+FROM ruby:3.4.8-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=15
+
+ARG PDFCPU_VERSION
 
 RUN apt update -qq && \
   apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common libyaml-dev -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
-RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_arm64.tar.xz -o pdfcpu.tar.xz \
-    && tar -xf pdfcpu.tar.xz \
-    && install -m 755 pdfcpu_0.11.0_Linux_arm64/pdfcpu /usr/local/bin/ \
-    && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_arm64
+ARG TARGETARCH
+RUN PDFCPU_ARCH=$(case "${TARGETARCH}" in arm64) echo "arm64" ;; *) echo "x86_64" ;; esac) \
+  && curl -L "https://github.com/pdfcpu/pdfcpu/releases/download/v${PDFCPU_VERSION}/pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}.tar.xz" -o pdfcpu.tar.xz \
+  && tar -xf pdfcpu.tar.xz \
+  && install -m 755 "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}/pdfcpu" /usr/local/bin/ \
+  && rm -rf pdfcpu.tar.xz "pdfcpu_${PDFCPU_VERSION}_Linux_${PDFCPU_ARCH}"
 
 ENV BUNDLER_VERSION='2.6.8'
 ENV PATH="$PATH:/root/.cargo/bin/"

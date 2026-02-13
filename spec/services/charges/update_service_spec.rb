@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateService do
-  let(:update_service) { described_class.new(charge:, params:, cascade_options:) }
+  let(:update_service) { described_class.new(charge:, params:, cascade_options:, cascade_updates:) }
+  let(:cascade_updates) { false }
 
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
@@ -32,6 +33,7 @@ RSpec.describe Charges::UpdateService do
         create(
           :standard_charge,
           plan:,
+          organization:,
           billable_metric_id: sum_billable_metric.id,
           amount_currency: "USD",
           properties: {
@@ -55,6 +57,7 @@ RSpec.describe Charges::UpdateService do
           pay_in_advance: true,
           prorated: true,
           invoiceable: false,
+          accepts_target_wallet: true,
           properties: {
             amount: "400"
           }.merge(pricing_group_keys),
@@ -100,16 +103,65 @@ RSpec.describe Charges::UpdateService do
       it "does not update premium attributes" do
         subject
 
-        expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true)
+        expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true, accepts_target_wallet: false)
       end
 
-      context "when premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when premium", :premium do
         it "saves premium attributes" do
           subject
 
           expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: false)
+        end
+
+        context "with accepts_target_wallet" do
+          context "when events_targeting_wallets is enabled" do
+            before do
+              charge.organization.update!(premium_integrations: ["events_targeting_wallets"])
+            end
+
+            it "updates accepts_target_wallet to true" do
+              expect { subject }.to change { charge.reload.accepts_target_wallet }.from(false).to(true)
+            end
+
+            context "when accepts_target_wallet is false in params" do
+              let(:params) do
+                {
+                  id: charge.id,
+                  charge_model: "standard",
+                  accepts_target_wallet: false,
+                  properties: {amount: "400"}
+                }
+              end
+
+              it "updates accepts_target_wallet to false" do
+                charge.update!(accepts_target_wallet: true)
+
+                expect { subject }.to change { charge.reload.accepts_target_wallet }.from(true).to(false)
+              end
+            end
+
+            context "when accepts_target_wallet is nil in params" do
+              let(:params) do
+                {
+                  id: charge.id,
+                  charge_model: "standard",
+                  properties: {amount: "400"}
+                }
+              end
+
+              it "does not update accepts_target_wallet" do
+                charge.update!(accepts_target_wallet: true)
+
+                expect { subject }.not_to change { charge.reload.accepts_target_wallet }
+              end
+            end
+          end
+
+          context "when events_targeting_wallets is not enabled" do
+            it "does not update accepts_target_wallet" do
+              expect { subject }.not_to change { charge.reload.accepts_target_wallet }
+            end
+          end
         end
       end
 
@@ -276,6 +328,56 @@ RSpec.describe Charges::UpdateService do
           it "does not update applied pricing unit's conversion rate" do
             expect { subject }.not_to change { charge.applied_pricing_unit.reload.conversion_rate }
           end
+        end
+      end
+
+      context "with cascade_updates" do
+        let(:cascade_updates) { true }
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric: sum_billable_metric, parent: charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_charge
+          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "triggers cascade update via Charges::UpdateChildrenJob" do
+          subject
+
+          expect(Charges::UpdateChildrenJob).to have_received(:perform_later).with(
+            params: hash_including("charge_model", "properties", "filters"),
+            old_parent_attrs: hash_including("id" => charge.id),
+            old_parent_filters_attrs: array_including,
+            old_parent_applied_pricing_unit_attrs: anything
+          )
+        end
+
+        context "when charge has no children" do
+          before { child_charge.update!(parent_id: nil) }
+
+          it "does not trigger cascade update" do
+            subject
+
+            expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
+          end
+        end
+      end
+
+      context "without cascade_updates when charge has children" do
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric: sum_billable_metric, parent: charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_charge
+          allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "does not trigger cascade update" do
+          subject
+
+          expect(Charges::UpdateChildrenJob).not_to have_received(:perform_later)
         end
       end
     end

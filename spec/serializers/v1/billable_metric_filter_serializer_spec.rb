@@ -9,11 +9,9 @@ RSpec.describe ::V1::BillableMetricFilterSerializer do
   let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the object" do
-    aggregate_failures do
-      expect(result["billable_metric_filter"]).to include(
-        "key" => billable_metric_filter.key,
-        "values" => billable_metric_filter.values.sort
-      )
-    end
+    expect(result["billable_metric_filter"]).to include(
+      "key" => billable_metric_filter.key,
+      "values" => billable_metric_filter.values.sort
+    )
   end
 end

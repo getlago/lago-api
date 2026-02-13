@@ -8,15 +8,15 @@ module FixedCharges
       plan.children.joins(:subscriptions)
         .where(subscriptions: {status: %w[active pending]}).distinct
         .find_in_batches do |child_plans|
-        jobs = child_plans.map do |child_plan|
-          FixedCharges::CascadeChildPlanUpdateJob.new(
-            plan: child_plan,
-            cascade_fixed_charges_payload:,
-            timestamp:
-          )
-        end
+          jobs = child_plans.map do |child_plan|
+            FixedCharges::CascadeChildPlanUpdateJob.new(
+              plan: child_plan,
+              cascade_fixed_charges_payload:,
+              timestamp:
+            )
+          end
 
-        ActiveJob.perform_all_later(jobs)
+          ActiveJob.perform_all_later(jobs)
       end
     end
   end

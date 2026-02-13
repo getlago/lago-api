@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Utils::ActivityLog do
+RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
   subject(:activity_log) { described_class }
 
   let(:membership) { create(:membership) }
@@ -8,7 +8,6 @@ RSpec.describe Utils::ActivityLog do
 
   let(:organization) { create(:organization) }
   let(:coupon) { create(:coupon, organization:) }
-  let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
   let(:serialized_coupon) do
     {
@@ -43,9 +42,6 @@ RSpec.describe Utils::ActivityLog do
     allow(CurrentContext).to receive(:api_key_id).and_return(api_key.id)
     allow(CurrentContext).to receive(:source).and_return("api")
     travel_to(Time.zone.parse("2023-03-22 12:00:00"))
-
-    allow(Karafka).to receive(:producer).and_return(karafka_producer)
-    allow(karafka_producer).to receive(:produce_async)
   end
 
   around do |example|
@@ -141,6 +137,19 @@ RSpec.describe Utils::ActivityLog do
               external_subscription_id: nil
             }.to_json
           )
+        end
+      end
+
+      context "when the object is a payment receipt" do
+        let(:payment_receipt) { create(:payment_receipt, organization:) }
+
+        it "uses payment receipt as resource" do
+          activity_log.produce(payment_receipt, "payment_receipt.created", activity_id: "activity-id") { BaseService::Result.new }
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "PaymentReceipt", "resource_id" => payment_receipt.id)
+          end
         end
       end
 
@@ -305,6 +314,45 @@ RSpec.describe Utils::ActivityLog do
         expect(subject).to eq(serialized_object)
       end
     end
+
+    context "when the object is a plan" do
+      let(:object) { create(:plan, organization:) }
+
+      let(:serialized_object) do
+        V1::PlanSerializer.new(
+          object, root_name: :invoice, includes: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]
+        ).serialize
+      end
+
+      before do
+        stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+        create_list(:standard_charge, 3, plan: object)
+      end
+
+      it "returns the serialized plan without charges" do
+        expect(subject).to eq(serialized_object)
+      end
+    end
+
+    context "when the object is a subscription" do
+      let(:object) { create(:subscription, organization:, plan:) }
+      let(:plan) { create(:plan, organization:) }
+
+      let(:serialized_object) do
+        V1::SubscriptionSerializer.new(
+          object, root_name: :invoice, includes: [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}]
+        ).serialize
+      end
+
+      before do
+        stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+        create_list(:standard_charge, 3, plan:)
+      end
+
+      it "returns the serialized subscription with plan excluding charges" do
+        expect(subject).to eq(serialized_object)
+      end
+    end
   end
 
   describe "#serializer_includes" do
@@ -343,6 +391,59 @@ RSpec.describe Utils::ActivityLog do
         before { create_list(:fee, 25, invoice: object) }
 
         it "includes fees in the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+    end
+
+    context "when object is a plan" do
+      let(:object) { create(:plan, organization:) }
+
+      before { stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2) }
+
+      context "when plan has more charges than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges] }
+
+        before { create_list(:standard_charge, 3, plan: object) }
+
+        it "excludes charges from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when plan has fewer charges than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] }
+
+        before { create_list(:standard_charge, 2, plan: object) }
+
+        it "includes charges in the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+    end
+
+    context "when object is a subscription" do
+      let(:object) { create(:subscription, organization:, plan:) }
+      let(:plan) { create(:plan, organization:) }
+
+      before { stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2) }
+
+      context "when subscription's plan has more charges than the limit" do
+        let(:serializer_includes) { [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}] }
+
+        before { create_list(:standard_charge, 3, plan:) }
+
+        it "excludes charges from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when subscription's plan has fewer charges than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:subscription] }
+
+        before { create_list(:standard_charge, 2, plan:) }
+
+        it "includes charges in the includes" do
           expect(subject).to eq(serializer_includes)
         end
       end

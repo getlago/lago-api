@@ -16,7 +16,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: "credit_note",
-              includes: %i[items applied_taxes]
+              includes: %i[customer items applied_taxes]
             )
           )
         else
@@ -32,7 +32,7 @@ module Api
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
             root_name: "credit_note",
-            includes: %i[items applied_taxes error_details]
+            includes: %i[customer items applied_taxes error_details]
           )
         )
       end
@@ -48,7 +48,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
               root_name: "credit_note",
-              includes: %i[items applied_taxes]
+              includes: %i[customer items applied_taxes]
             )
           )
         else
@@ -103,7 +103,7 @@ module Api
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
               root_name: "credit_note",
-              includes: %i[items applied_taxes]
+              includes: %i[customer items applied_taxes]
             )
           )
         else
@@ -164,6 +164,7 @@ module Api
             :description,
             :credit_amount_cents,
             :refund_amount_cents,
+            :offset_amount_cents,
             metadata: {},
             items: [
               :fee_id,

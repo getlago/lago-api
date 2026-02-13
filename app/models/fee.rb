@@ -55,7 +55,7 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
-  scope :positive_units, -> { where("units > ?", 0) }
+  scope :positive_units, -> { where("fees.units > ?", 0) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
@@ -120,7 +120,7 @@ class Fee < ApplicationRecord
   def item_name
     return billable_metric.name if charge?
     return add_on.name if add_on?
-    return invoiceable.name.presence || fee_type if credit?
+    return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge_add_on.name if fixed_charge?
 
     subscription.plan.name
@@ -147,10 +147,10 @@ class Fee < ApplicationRecord
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
-    return invoiceable.name.presence || fee_type if credit?
+    return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
 
-    subscription.plan.invoice_display_name
+    subscription.invoice_name
   end
 
   def filter_display_name(separator: ", ")
@@ -204,6 +204,14 @@ class Fee < ApplicationRecord
     precise_amount_cents + taxes_precise_amount_cents
   end
   alias_method :precise_total_amount_currency, :currency
+
+  def offsettable_amount_cents
+    if invoice.credit? && (invoice.payment_pending? || invoice.payment_failed?)
+      return amount_cents
+    end
+
+    creditable_amount_cents
+  end
 
   def creditable_amount_cents
     remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)

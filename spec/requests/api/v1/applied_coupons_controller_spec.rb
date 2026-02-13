@@ -29,17 +29,15 @@ RSpec.describe Api::V1::AppliedCouponsController, :with_bullet do
 
       expect(response).to have_http_status(:success)
 
-      aggregate_failures do
-        expect(json[:applied_coupon][:lago_id]).to be_present
-        expect(json[:applied_coupon][:lago_coupon_id]).to eq(coupon.id)
-        expect(json[:applied_coupon][:lago_customer_id]).to eq(customer.id)
-        expect(json[:applied_coupon][:external_customer_id]).to eq(customer.external_id)
-        expect(json[:applied_coupon][:amount_cents]).to eq(coupon.amount_cents)
-        expect(json[:applied_coupon][:amount_currency]).to eq(coupon.amount_currency)
-        expect(json[:applied_coupon][:expiration_at]).to be_nil
-        expect(json[:applied_coupon][:created_at]).to be_present
-        expect(json[:applied_coupon][:terminated_at]).to be_nil
-      end
+      expect(json[:applied_coupon][:lago_id]).to be_present
+      expect(json[:applied_coupon][:lago_coupon_id]).to eq(coupon.id)
+      expect(json[:applied_coupon][:lago_customer_id]).to eq(customer.id)
+      expect(json[:applied_coupon][:external_customer_id]).to eq(customer.external_id)
+      expect(json[:applied_coupon][:amount_cents]).to eq(coupon.amount_cents)
+      expect(json[:applied_coupon][:amount_currency]).to eq(coupon.amount_currency)
+      expect(json[:applied_coupon][:expiration_at]).to be_nil
+      expect(json[:applied_coupon][:created_at]).to be_present
+      expect(json[:applied_coupon][:terminated_at]).to be_nil
     end
 
     context "with invalid params" do
@@ -71,11 +69,9 @@ RSpec.describe Api::V1::AppliedCouponsController, :with_bullet do
         it "returns only the applied coupons for the specified customer" do
           subject
 
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(json[:applied_coupons].count).to eq(2)
-            expect(json[:applied_coupons].pluck(:lago_id)).to match_array([applied_coupon_1.id, applied_coupon_2.id])
-          end
+          expect(response).to have_http_status(:success)
+          expect(json[:applied_coupons].count).to eq(2)
+          expect(json[:applied_coupons].pluck(:lago_id)).to match_array([applied_coupon_1.id, applied_coupon_2.id])
         end
 
         context "when no applied coupons match the external_customer_id" do
@@ -84,10 +80,8 @@ RSpec.describe Api::V1::AppliedCouponsController, :with_bullet do
           it "returns an empty array" do
             subject
 
-            aggregate_failures do
-              expect(response).to have_http_status(:success)
-              expect(json[:applied_coupons]).to be_empty
-            end
+            expect(response).to have_http_status(:success)
+            expect(json[:applied_coupons]).to be_empty
           end
         end
       end

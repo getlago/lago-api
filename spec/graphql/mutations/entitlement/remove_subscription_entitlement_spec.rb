@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement do
+RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
@@ -29,8 +29,6 @@ RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement do
       featureCode: feature.code
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

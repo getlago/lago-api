@@ -27,7 +27,7 @@ RSpec.describe Validators::WalletTransactionAmountLimitsValidator do
   describe "#valid?" do
     subject { described_class.new(result, wallet:, credits_amount:, ignore_validation:).valid? }
 
-    context "when  ignore_validation is true" do
+    context "when ignore_validation is true" do
       let(:ignore_validation) { true }
 
       it { is_expected.to be true }

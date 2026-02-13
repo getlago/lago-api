@@ -25,6 +25,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:creditable_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:events_count).of_type("BigInt")
     expect(subject).to have_field(:fee_type).of_type("FeeTypesEnum!")
+    expect(subject).to have_field(:offsettable_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:precise_unit_amount).of_type("Float!")
     expect(subject).to have_field(:succeeded_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:taxes_amount_cents).of_type("BigInt!")

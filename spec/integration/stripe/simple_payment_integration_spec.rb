@@ -8,7 +8,7 @@ require "rails_helper"
 # things still work when upgrading the API version.
 # This also creates logs on Stripe so you can copy past them to update the fixtures.
 
-describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :request do
+describe "Stripe Payment Integration Test", :premium, :with_pdf_generation_stub, type: :request do
   let(:api_key) { ENV["STRIPE_API_KEY"] }
 
   let(:organization) { create(:organization, :premium, name: "Stripe IRL") }
@@ -20,8 +20,6 @@ describe "Stripe Payment Integration Test", :with_pdf_generation_stub, type: :re
   let(:provider) { organization.stripe_payment_providers.sole }
 
   include_context "with webhook tracking"
-
-  around { |test| lago_premium!(&test) }
 
   before do
     raise "You need to set the SPEC_STRIPE_SECRET_KEY environment variable" unless api_key
