@@ -105,10 +105,6 @@ module Integrations
           fallback_item(:organization)
       end
 
-      def tax_item_complete?
-        tax_item&.tax_nexus.present? && tax_item&.tax_type.present? && tax_item&.tax_code.present?
-      end
-
       def formatted_date(date)
         date&.strftime("%Y-%m-%d")
       end

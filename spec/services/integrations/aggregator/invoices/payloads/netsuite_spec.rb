@@ -155,6 +155,72 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     let(:due_date) { invoice.payment_due_date.strftime("%-m/%-d/%Y") }
     let(:issuing_date) { invoice.issuing_date.strftime("%-m/%-d/%Y") }
 
+    let(:taxdetails) do
+      [
+        {
+          "sublistId" => "taxdetails",
+          "lineItems" => [
+            {
+              "taxdetailsreference" => fee_sub.id,
+              "taxamount" => 2.0,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => minimum_commitment_fee.id,
+              "taxamount" => 0.02,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => charge_fee.id,
+              "taxamount" => 0.02,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => "coupon_item",
+              "taxamount" => -0.04,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => "credit_item",
+              "taxamount" => 0,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => "credit_item_progressive_billing",
+              "taxamount" => 0,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            },
+            {
+              "taxdetailsreference" => "credit_note_item",
+              "taxamount" => 0,
+              "taxbasis" => 1,
+              "taxrate" => 0.0,
+              "taxtype" => nil,
+              "taxcode" => nil
+            }
+          ]
+        }
+      ]
+    end
+
     let(:body) do
       {
         "type" => "invoice",
@@ -244,6 +310,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
             ]
           }
         ],
+        "taxdetails" => taxdetails,
         "options" => {
           "ignoreMandatoryFields" => false
         }
@@ -373,8 +440,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               tax_type: "some_type",
               tax_code: "some_code"
             )
-
-            body["taxdetails"] = taxdetails
           end
 
           let(:taxdetails) do
@@ -638,6 +703,77 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 ]
               }
             ],
+            "taxdetails" => [
+              {
+                "sublistId" => "taxdetails",
+                "lineItems" => [
+                  {
+                    "taxdetailsreference" => fee_sub.id,
+                    "taxamount" => 2.0,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => minimum_commitment_fee.id,
+                    "taxamount" => 0.02,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => charge_fee.id,
+                    "taxamount" => 0.02,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => charge_fee_large.id,
+                    "taxamount" => 0.02,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => "coupon_item",
+                    "taxamount" => -0.06,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => "credit_item",
+                    "taxamount" => 0,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => "credit_item_progressive_billing",
+                    "taxamount" => 0,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  },
+                  {
+                    "taxdetailsreference" => "credit_note_item",
+                    "taxamount" => 0,
+                    "taxbasis" => 1,
+                    "taxrate" => 0.0,
+                    "taxtype" => nil,
+                    "taxcode" => nil
+                  }
+                ]
+              }
+            ],
             "options" => {
               "ignoreMandatoryFields" => false
             }
@@ -683,62 +819,4 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
   end
 
-  describe "#tax_item_complete?" do
-    subject(:tax_item_complete_call) { payload.__send__(:tax_item_complete?) }
-
-    let(:integration_collection_mapping) do
-      create(
-        :netsuite_collection_mapping,
-        integration:,
-        mapping_type: :tax,
-        settings:
-      )
-    end
-
-    let(:settings) do
-      {external_id: "5", external_account_code: "55", external_name: "", tax_nexus:, tax_type:, tax_code:}
-    end
-
-    before { integration_collection_mapping }
-
-    context "when tax_item has all required attributes" do
-      let(:tax_nexus) { "some_nexus" }
-      let(:tax_type) { "some_type" }
-      let(:tax_code) { "some_code" }
-
-      it "returns true" do
-        expect(subject).to be true
-      end
-    end
-
-    context "when tax_item is missing tax_nexus" do
-      let(:tax_nexus) { [nil, ""].sample }
-      let(:tax_type) { "some_type" }
-      let(:tax_code) { "some_code" }
-
-      it "returns false" do
-        expect(subject).to be false
-      end
-    end
-
-    context "when tax_item is missing tax_type" do
-      let(:tax_nexus) { "some_nexus" }
-      let(:tax_type) { [nil, ""].sample }
-      let(:tax_code) { "some_code" }
-
-      it "returns false" do
-        expect(subject).to be false
-      end
-    end
-
-    context "when tax_item is missing tax_code" do
-      let(:tax_nexus) { "some_nexus" }
-      let(:tax_type) { "some_type" }
-      let(:tax_code) { [nil, ""].sample }
-
-      it "returns false" do
-        expect(subject).to be false
-      end
-    end
-  end
 end
