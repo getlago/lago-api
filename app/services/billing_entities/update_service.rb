@@ -19,6 +19,9 @@ module BillingEntities
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
+      original_attributes = billing_entity.attributes
+      old_tax_codes = billing_entity.taxes.pluck(:code)
+
       billing_entity.name = params[:name] if params.key?(:name)
       billing_entity.einvoicing = params[:einvoicing] if params.key?(:einvoicing)
       billing_entity.email = params[:email] if params.key?(:email)
@@ -77,6 +80,8 @@ module BillingEntities
         billing_entity.save!
       end
 
+      register_security_log(billing_entity, original_attributes, old_tax_codes)
+
       result.billing_entity = billing_entity
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -88,6 +93,31 @@ module BillingEntities
     private
 
     attr_reader :billing_entity, :params
+
+    def register_security_log(billing_entity, original_attributes, old_tax_codes)
+      diff = original_attributes.except("updated_at").each_with_object({}) do |(key, old_val), hash|
+        new_val = billing_entity[key]
+        next if old_val == new_val
+        hash[key.to_sym] = {deleted: old_val, added: new_val}.compact
+      end
+
+      new_tax_codes = billing_entity.taxes.reload.pluck(:code)
+      if old_tax_codes.sort != new_tax_codes.sort
+        entry = {}
+        deleted = old_tax_codes - new_tax_codes
+        added = new_tax_codes - old_tax_codes
+        entry[:deleted] = deleted if deleted.present?
+        entry[:added] = added if added.present?
+        diff[:tax_codes] = entry if entry.present?
+      end
+
+      Utils::SecurityLog.produce(
+        organization: billing_entity.organization,
+        log_type: "billing_entity",
+        log_event: "billing_entity.updated",
+        resources: {billing_entity_name: billing_entity.name, billing_entity_code: billing_entity.code, **diff}
+      )
+    end
 
     def assign_premium_attributes
       return unless License.premium?

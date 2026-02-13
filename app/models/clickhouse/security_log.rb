@@ -27,6 +27,7 @@ module Clickhouse
       api_key.rotated
       api_key.updated
       billing_entity.created
+      billing_entity.updated
       export.created
       integration.created
       integration.deleted
