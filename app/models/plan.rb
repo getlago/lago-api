@@ -18,6 +18,7 @@ class Plan < ApplicationRecord
   has_many :commitments
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
+  has_many :charge_filters, through: :charges, source: :filters
   has_many :fixed_charges, dependent: :destroy
   has_many :add_ons, through: :fixed_charges
   has_many :subscriptions

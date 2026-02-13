@@ -6,6 +6,7 @@ module Utils
     IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
+    MAX_SERIALIZED_CHARGE_FILTERS = 100
 
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
@@ -140,13 +141,13 @@ module Utils
           SERIALIZED_INCLUDED_OBJECTS[:invoice]
         end
       when :plan
-        if object.charges.count > MAX_SERIALIZED_CHARGES
+        if has_many_charges_or_filters?(object)
           SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]
         else
           SERIALIZED_INCLUDED_OBJECTS[:plan]
         end
       when :subscription
-        if object.plan.charges.count > MAX_SERIALIZED_CHARGES
+        if has_many_charges_or_filters?(object.plan)
           [{plan: SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}]
         else
           SERIALIZED_INCLUDED_OBJECTS[:subscription]
@@ -195,6 +196,10 @@ module Utils
       return nil unless object.is_a?(Subscription)
 
       object.external_id
+    end
+
+    def has_many_charges_or_filters?(plan)
+      plan.charges.count > MAX_SERIALIZED_CHARGES || plan.charge_filters.count > MAX_SERIALIZED_CHARGE_FILTERS
     end
   end
 end
