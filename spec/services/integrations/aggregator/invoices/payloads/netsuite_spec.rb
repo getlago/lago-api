@@ -818,5 +818,4 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       end
     end
   end
-
 end
