@@ -14,18 +14,9 @@ require "sidekiq/middleware/current_attributes"
 
 LIVENESS_PORT = 8080
 
-redis_config = {
-  url: ENV["REDIS_URL"],
-  pool_timeout: 5,
-  timeout: 5,
-  ssl_params: {
-    verify_mode: OpenSSL::SSL::VERIFY_NONE
-  }
-}
-
-if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
-  redis_config = redis_config.merge({password: ENV["REDIS_PASSWORD"]})
-end
+redis_config = Lago::RedisConfigBuilder.new
+  .with_options(pool_timeout: 5, timeout: 5)
+  .sidekiq
 
 if ENV["LAGO_SIDEKIQ_WEB"] == "true"
   require "sidekiq/web"
