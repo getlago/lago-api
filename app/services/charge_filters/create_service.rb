@@ -2,11 +2,14 @@
 
 module ChargeFilters
   class CreateService < BaseService
+    include Charges::CascadeUpdatable
+
     Result = BaseResult[:charge_filter]
 
-    def initialize(charge:, params:)
+    def initialize(charge:, params:, cascade_updates: false)
       @charge = charge
       @params = params
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -14,6 +17,8 @@ module ChargeFilters
     def call
       return result.not_found_failure!(resource: "charge") unless charge
       return result.single_validation_failure!(field: :values, error_code: "value_is_mandatory") if params[:values].blank?
+
+      old_filters_attrs = capture_old_filters_attrs
 
       ActiveRecord::Base.transaction do
         charge_filter = charge.filters.create!(
@@ -27,6 +32,8 @@ module ChargeFilters
         result.charge_filter = charge_filter
       end
 
+      trigger_cascade(old_filters_attrs)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -34,7 +41,7 @@ module ChargeFilters
 
     private
 
-    attr_reader :charge, :params
+    attr_reader :charge, :params, :cascade_updates
 
     def filtered_properties
       ChargeModels::FilterPropertiesService.call(

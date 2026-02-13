@@ -19,6 +19,8 @@ module Charges
       return result if cascade && charge.charge_model != params[:charge_model]
 
       old_filters_attrs = capture_old_filters_attrs
+      old_parent_attrs = charge.attributes.deep_dup
+      old_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes&.deep_dup
 
       ActiveRecord::Base.transaction do
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
@@ -82,7 +84,7 @@ module Charges
         end
       end
 
-      trigger_cascade(old_filters_attrs)
+      trigger_cascade(old_filters_attrs, old_parent_attrs:, old_applied_pricing_unit_attrs:)
 
       result
     rescue ActiveRecord::RecordInvalid => e

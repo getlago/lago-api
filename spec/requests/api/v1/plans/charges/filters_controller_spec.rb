@@ -164,6 +164,32 @@ RSpec.describe Api::V1::Plans::Charges::FiltersController do
         expect(json[:error_details]).to include(:values)
       end
     end
+
+    context "with cascade_updates" do
+      subject do
+        post_with_token(
+          organization,
+          "/api/v1/plans/#{plan.code}/charges/#{charge.code}/filters",
+          {filter: create_params.merge(cascade_updates: true)}
+        )
+      end
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "triggers cascade to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
   end
 
   describe "PUT /api/v1/plans/:plan_code/charges/:charge_code/filters/:id" do

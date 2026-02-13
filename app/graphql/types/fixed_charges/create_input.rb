@@ -18,6 +18,7 @@ module Types
 
       argument :properties, Types::FixedCharges::PropertiesInput, required: false
 
+      argument :cascade_updates, Boolean, required: false
       argument :tax_codes, [String], required: false
     end
   end
