@@ -31,7 +31,7 @@ module Emails
       mailer_class
         .with(mailer_params)
         .created
-        .deliver_later(to: recipients_to, cc: recipients_cc, bcc: recipients_bcc)
+        .deliver_later
     end
 
     def mailer_class
@@ -44,7 +44,7 @@ module Emails
 
     def mailer_params
       param_key = resource.class.name.underscore.to_sym
-      {param_key => resource, resend: true}
+      {param_key => resource, :resend => true, :to => recipients_to, :cc => recipients_cc, :bcc => recipients_bcc}
     end
 
     def valid_status?
@@ -100,7 +100,7 @@ module Emails
 
     def validation_errors
       errors = {}
-      errors[:billing_entity] = ["must have email configured"] unless billing_entity.email.present?
+      errors[:billing_entity] = ["must have email configured"] if billing_entity.email.blank?
       errors[:to] = ["must have at least one recipient"] if recipients_to.empty?
 
       invalid_to = recipients_to.reject { |email| valid_email?(email) }

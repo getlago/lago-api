@@ -42,7 +42,7 @@ RSpec.describe Emails::ResendService do
           expect do
             result = service.call
             expect(result).to be_success
-          end.to have_enqueued_mail(InvoiceMailer, :finalized)
+          end.to have_enqueued_mail(InvoiceMailer, :created)
         end
 
         context "with custom recipients" do
@@ -54,7 +54,7 @@ RSpec.describe Emails::ResendService do
             expect do
               result = service.call
               expect(result).to be_success
-            end.to have_enqueued_mail(InvoiceMailer, :finalized)
+            end.to have_enqueued_mail(InvoiceMailer, :created)
           end
         end
       end
