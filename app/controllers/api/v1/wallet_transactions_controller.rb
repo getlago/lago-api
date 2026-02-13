@@ -94,9 +94,11 @@ module Api
       def wallet_transaction_consumptions(direction:)
         result = WalletTransactionConsumptionsQuery.call(
           organization: current_organization,
-          wallet_transaction_id: params[:id],
-          direction:,
-          pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE}
+          pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE},
+          filters: {
+            wallet_transaction_id: params[:id],
+            direction: direction.to_s
+          }
         )
 
         return render_error_response(result) unless result.success?

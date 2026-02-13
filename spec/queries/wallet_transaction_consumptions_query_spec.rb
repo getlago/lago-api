@@ -6,9 +6,11 @@ RSpec.describe WalletTransactionConsumptionsQuery do
   subject(:result) do
     described_class.call(
       organization:,
-      wallet_transaction_id:,
-      direction:,
-      pagination:
+      pagination:,
+      filters: {
+        wallet_transaction_id:,
+        direction:
+      }
     )
   end
 
@@ -19,16 +21,18 @@ RSpec.describe WalletTransactionConsumptionsQuery do
   let(:pagination) { nil }
 
   describe "with invalid direction" do
-    let(:direction) { :invalid }
+    let(:direction) { "invalid" }
     let(:wallet_transaction_id) { SecureRandom.uuid }
 
-    it "raises ArgumentError" do
-      expect { result }.to raise_error(ArgumentError, "Invalid direction: invalid")
+    it "returns validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to include(:direction)
     end
   end
 
   describe "consumptions direction" do
-    let(:direction) { :consumptions }
+    let(:direction) { "consumptions" }
     let(:wallet_transaction_id) { inbound_transaction.id }
     let(:inbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
 
@@ -106,7 +110,7 @@ RSpec.describe WalletTransactionConsumptionsQuery do
   end
 
   describe "fundings direction" do
-    let(:direction) { :fundings }
+    let(:direction) { "fundings" }
     let(:wallet_transaction_id) { outbound_transaction.id }
     let(:outbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
 
