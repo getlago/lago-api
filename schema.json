@@ -366,6 +366,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PaymentReceipt",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "PaymentRequest",
               "ofType": null
             },
@@ -678,6 +683,12 @@
             {
               "name": "payment_request_created",
               "description": "payment_request.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "email_sent",
+              "description": "email.sent",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -55337,6 +55348,12 @@
             {
               "name": "coupon",
               "description": "Coupon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt",
+              "description": "PaymentReceipt",
               "isDeprecated": false,
               "deprecationReason": null
             },
