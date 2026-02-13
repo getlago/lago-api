@@ -13,6 +13,7 @@ module Invoices
       with_zero_units_filters: true,
       filter_by_charge: nil,
       filter_by_group: nil,
+      skip_grouping: false,
       full_usage: false
     )
       super
@@ -27,6 +28,7 @@ module Invoices
 
       @filter_by_charge = filter_by_charge
       @filter_by_group = filter_by_group
+      @skip_grouping = skip_grouping
       @full_usage = full_usage
 
       # NOTE: used to force charges_to_datetime boundary
@@ -65,7 +67,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :filter_by_charge, :filter_by_group, :full_usage
+    attr_reader :filter_by_charge, :filter_by_group, :skip_grouping, :full_usage
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -108,18 +110,15 @@ module Invoices
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-
       if filter_by_charge
         charges = charges.where(id: filter_by_charge.id)
       end
 
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
-      if filter_by_charge
-        fees
-      else
-        fees.sort_by { |f| f.billable_metric.name.downcase }
-      end
+      return fees if filter_by_charge
+
+      fees.sort_by { |f| f.billable_metric.name.downcase }
     end
 
     def charge_usage(charge, applied_filters)
@@ -148,6 +147,7 @@ module Invoices
           with_zero_units_filters:,
           filtered_aggregations: applied_filters,
           filter_by_group:,
+          skip_grouping:,
           full_usage:
         )
         .fees

@@ -337,5 +337,28 @@ describe "Customer usage Scenario" do
         end
       end
     end
+
+    it "with skip_grouping returns a single aggregated fee" do
+      travel_to(DateTime.new(2024, 3, 10, 10, 0)) do
+        result = Invoices::CustomerUsageService.call(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          skip_grouping: true
+        )
+
+        expect(result).to be_success
+
+        fees = result.usage.fees
+        # All 10 events aggregated into a single fee
+        expect(fees.size).to eq(1)
+        expect(fees.first.charge_id).to eq(charge.id)
+        expect(fees.first.units).to eq(30) # 10 events * 3 units each
+        expect(fees.first.events_count).to eq(10)
+        expect(fees.first.amount_cents).to eq(30_000) # 30 units * 10 amount * 100 cents
+        expect(fees.first.grouped_by).to eq({})
+      end
+    end
   end
 end

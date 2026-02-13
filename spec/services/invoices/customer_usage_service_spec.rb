@@ -455,5 +455,48 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
     end
+
+    context "with skip_grouping" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          skip_grouping: true
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          properties: {amount: "10", pricing_group_keys: %w[cloud]}
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "gcp", value: 5})
+      end
+
+      it "returns a single fee with all events aggregated without grouping" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.size).to eq(1)
+        expect(result.usage.fees.first.units).to eq(15)
+        expect(result.usage.fees.first.grouped_by).to eq({})
+      end
+    end
   end
 end

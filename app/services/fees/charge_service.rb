@@ -14,6 +14,7 @@ module Fees
       calculate_projected_usage: false,
       with_zero_units_filters: true,
       filter_by_group: nil,
+      skip_grouping: false,
       full_usage: false
     )
       @invoice = invoice
@@ -33,6 +34,7 @@ module Fees
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
       @filter_by_group = filter_by_group
+      @skip_grouping = skip_grouping
       @full_usage = full_usage
 
       super(nil)
@@ -75,7 +77,8 @@ module Fees
     private
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
-      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :filter_by_group, :full_usage
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :filter_by_group,
+      :skip_grouping, :full_usage
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -367,7 +370,7 @@ module Fees
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
-      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
+      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !skip_grouping
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
@@ -377,7 +380,9 @@ module Fees
       end
 
       if filter_by_group.present?
-        filter_by_group.keys.each { |key| filters[:grouped_by].delete(key) }
+        # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => "A"},
+        # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
+        filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
         filters[:matching_filters] ||= {}
         filters[:matching_filters].merge!(filter_by_group)
       end

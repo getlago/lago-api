@@ -2939,5 +2939,50 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(gcp_fee).to have_attributes(units: 5)
       end
     end
+
+    context "with skip_grouping" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries:,
+          context: :current_usage,
+          apply_taxes: false,
+          filtered_aggregations: nil,
+          skip_grouping: true
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric:,
+          properties: {amount: "20", pricing_group_keys: %w[cloud]}
+        )
+      end
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {cloud: "gcp", value: 5})
+      end
+
+      it "returns a single fee with all events aggregated without grouping" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first).to have_attributes(
+          units: 15,
+          grouped_by: {}
+        )
+      end
+    end
   end
 end
