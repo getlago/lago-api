@@ -657,6 +657,33 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when updating values to nil" do
+      let(:params) do
+        {
+          id: wallet&.id,
+          name: nil,
+          priority: nil,
+          code: nil,
+          expiration_at: nil,
+          invoice_requires_successful_payment: nil,
+          paid_top_up_min_amount_cents: nil,
+          paid_top_up_max_amount_cents: nil
+        }
+      end
+
+      it "doesn't fail and only updates not required values" do
+        expect(result).to be_success
+        expect(result.wallet.priority).not_to eq(nil)
+        expect(result.wallet.code).not_to eq(nil)
+        expect(result.wallet.invoice_requires_successful_payment).not_to eq(nil)
+
+        expect(result.wallet.name).to eq(nil)
+        expect(result.wallet.expiration_at).to eq(nil)
+        expect(result.wallet.paid_top_up_min_amount_cents).to eq(nil)
+        expect(result.wallet.paid_top_up_max_amount_cents).to eq(nil)
+      end
+    end
+
     context "when updating code to a value already taken for the customer" do
       before do
         create(:wallet, customer:, code: "taken_code")

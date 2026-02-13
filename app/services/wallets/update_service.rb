@@ -24,10 +24,10 @@ module Wallets
 
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
-        wallet.code = params[:code] if params.key?(:code)
-        wallet.priority = params[:priority] if params.key?(:priority)
+        wallet.code = params[:code] if params[:code]
+        wallet.priority = params[:priority] if params[:priority]
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
-        if params.key?(:invoice_requires_successful_payment)
+        if params[:invoice_requires_successful_payment]
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
