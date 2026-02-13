@@ -428,6 +428,7 @@ DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_payment_methods_on_provider_method_type;
+DROP INDEX IF EXISTS public.index_payment_methods_on_provider_customer_and_provider_method;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_methods_on_organization_id;
@@ -8297,6 +8298,13 @@ CREATE INDEX index_payment_methods_on_payment_provider_id ON public.payment_meth
 
 
 --
+-- Name: index_payment_methods_on_provider_customer_and_provider_method; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_payment_methods_on_provider_customer_and_provider_method ON public.payment_methods USING btree (payment_provider_customer_id, provider_method_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_payment_methods_on_provider_method_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11421,6 +11429,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260209103920'),
 ('20260209103526'),
 ('20260204153734'),
+('20260204130807'),
 ('20260202155431'),
 ('20260202134958'),
 ('20260129145352'),
