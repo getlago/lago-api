@@ -108,7 +108,7 @@ Rails.application.routes.draw do
         end
       end
       get :events_enriched, to: "events#index_enriched"
-      resources :events, only: %i[create show index] do
+      resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
         post :estimate_fees, on: :collection
         post :estimate_instant_fees, on: :collection
         post :batch_estimate_instant_fees, on: :collection
