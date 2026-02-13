@@ -25,6 +25,7 @@ class Organization < ApplicationRecord
   has_many :ai_conversations
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
   has_many :api_keys
+  has_many :security_logs, class_name: "Clickhouse::SecurityLog"
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships

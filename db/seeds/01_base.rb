@@ -23,9 +23,12 @@ Role.find_or_create_by!(code: "manager", organization_id: nil) do |role|
   role.description = "The predefined manager role"
 end
 
-# NOTE: create a user and an organization
+# NOTE: create users and an organization
 user = User.create_with(password: "ILoveLago")
   .find_or_create_by(email: "gavin@hooli.com")
+
+dinesh = User.create_with(password: "ILoveLago")
+  .find_or_create_by(email: "dinesh@hooli.com")
 
 organizations_data = [
   {
@@ -64,6 +67,31 @@ organizations_data.each do |org_data|
   # Ensure the membership has an admin role in the new roles system
   admin_role = Role.find_by!(admin: true)
   MembershipRole.find_or_create_by!(membership:, organization:, role: admin_role)
+
+  # Second user with finance role
+  dinesh_membership = Membership.find_or_create_by!(user: dinesh, organization:)
+  finance_role = Role.find_by!(code: "finance")
+  MembershipRole.find_or_create_by!(membership: dinesh_membership, organization:, role: finance_role)
+
+  # Custom role combining finance and manager permissions
+  accountant_permissions = Permission::DATA
+    .select { |_, roles| roles.include?("finance") || roles.include?("manager") }.keys
+  Role.find_or_create_by!(code: "accountant", organization:) do |role|
+    role.name = "Accountant"
+    role.description = "Custom role combining finance and manager permissions"
+    role.permissions = accountant_permissions
+  end
+
+  # Anrok integration
+  unless Integrations::AnrokIntegration.exists?(organization:, code: "anrok")
+    Integrations::AnrokIntegration.create!(
+      organization:,
+      code: "anrok",
+      name: "Anrok Integration",
+      secrets: {connection_id: SecureRandom.uuid, api_key: SecureRandom.uuid}.to_json
+    )
+  end
+
   if Rails.env.development?
     # In development, we create a webhook endpoint to the local webhook-tester service.
     WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook/#{organization.id}")
