@@ -72,8 +72,14 @@ RSpec.describe Webhooks::SendHttpService do
       expect(SendHttpWebhookJob).to have_received(:set)
     end
 
+    it "does not mark the webhook endpoint as slow" do
+      service.call
+
+      expect(webhook_endpoint.reload.slow_response).to be(false)
+    end
+
     context "with a failed webhook" do
-      let(:webhook) { create(:webhook, :failed) }
+      let(:webhook) { create(:webhook, :failed, webhook_endpoint:) }
 
       it "fails the retried webhooks" do
         service.call
@@ -86,13 +92,40 @@ RSpec.describe Webhooks::SendHttpService do
       end
 
       context "when the webhook failed 3 times" do
-        let(:webhook) { create(:webhook, :failed, retries: 2) }
+        let(:webhook) { create(:webhook, :failed, webhook_endpoint:, retries: 2) }
 
         it "stops trying and notify the admins" do
           service.call
           expect(webhook.reload.retries).to eq 3
           expect(SendHttpWebhookJob).not_to have_received(:set)
         end
+      end
+    end
+  end
+
+  context "when error is a timeout" do
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).and_return(lago_client)
+      allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
+    end
+
+    context "with Net::OpenTimeout" do
+      before do
+        allow(lago_client).to receive(:post_with_response).and_raise(Net::OpenTimeout)
+      end
+
+      it "marks the webhook endpoint as slow" do
+        expect { service.call }.to change { webhook_endpoint.reload.slow_response }.from(false).to(true)
+      end
+    end
+
+    context "with Net::ReadTimeout" do
+      before do
+        allow(lago_client).to receive(:post_with_response).and_raise(Net::ReadTimeout)
+      end
+
+      it "marks the webhook endpoint as slow" do
+        expect { service.call }.to change { webhook_endpoint.reload.slow_response }.from(false).to(true)
       end
     end
   end
