@@ -74,6 +74,26 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice do
         end
       end
 
+      context "when credit_amount_cents is zero" do
+        let(:amount) { 102 }
+
+        let(:cn_ats_result) do
+          BaseService::Result.new.tap do |result|
+            result.coupons_adjustment_amount_cents = 102.0
+            result.taxes_amount_cents = 0.0
+            result.precise_taxes_amount_cents = 0.0
+          end
+        end
+
+        before do
+          allow(CreditNotes::ApplyTaxesService).to receive(:call).once.and_return(cn_ats_result)
+        end
+
+        it "does not create a credit note" do
+          expect { credit_service.call }.not_to change(CreditNote, :count)
+        end
+      end
+
       it "creates a credit note for all required fees" do
         result = credit_service.call
         credit_note = result.credit_note
