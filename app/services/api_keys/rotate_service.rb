@@ -17,6 +17,7 @@ module ApiKeys
         return result.forbidden_failure!(code: "cannot_rotate_with_provided_date")
       end
 
+      old_expires_at = api_key.expires_at
       expires_at = params[:expires_at] || Time.current
       new_api_key = api_key.organization.api_keys.new(name: params[:name])
 
@@ -28,6 +29,8 @@ module ApiKeys
       ApiKeys::CacheService.expire_cache(api_key.value)
       ApiKeyMailer.with(api_key:).rotated.deliver_later
 
+      register_security_log(new_api_key, old_expires_at:)
+
       result.api_key = new_api_key
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -37,5 +40,18 @@ module ApiKeys
     private
 
     attr_reader :api_key, :params
+
+    def register_security_log(new_api_key, old_expires_at:)
+      Utils::SecurityLog.produce(
+        organization: new_api_key.organization,
+        log_type: "api_key",
+        log_event: "api_key.rotated",
+        resources: {
+          name: new_api_key.name,
+          value_ending: {deleted: api_key.value.last(4), added: new_api_key.value.last(4)}.compact,
+          expires_at: {deleted: old_expires_at&.iso8601, added: api_key.expires_at&.iso8601}.compact
+        }
+      )
+    end
   end
 end

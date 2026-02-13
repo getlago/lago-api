@@ -34386,6 +34386,12 @@
               "deprecationReason": null
             },
             {
+              "name": "api_key_rotated",
+              "description": "api_key.rotated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "api_key_updated",
               "description": "api_key.updated",
               "isDeprecated": false,
