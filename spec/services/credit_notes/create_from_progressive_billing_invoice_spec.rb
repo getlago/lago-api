@@ -89,7 +89,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice do
           allow(CreditNotes::ApplyTaxesService).to receive(:call).once.and_return(cn_ats_result)
         end
 
-        it "does nothing" do
+        it "does not create a credit note" do
           expect { credit_service.call }.not_to change(CreditNote, :count)
         end
       end
