@@ -4,9 +4,10 @@ module Customers
   class RefreshWalletsService < BaseService
     Result = BaseResult[:usage_amount_cents, :wallets, :allocation_rules]
 
-    def initialize(customer:, include_generating_invoices: false)
+    def initialize(customer:, include_generating_invoices: false, target_wallet_ids: nil)
       @customer = customer
       @include_generating_invoices = include_generating_invoices
+      @target_wallet_ids = target_wallet_ids
 
       super
     end
@@ -43,6 +44,7 @@ module Customers
       wallets_applicable_on_adv_fees = assign_wallet_per_fee(pay_in_advance_fees) # { adv_fee_key => wallet_id }
 
       wallets_to_process = customer.wallets.active.includes(:recurring_transaction_rules)
+      wallets_to_process = wallets_to_process.where(id: target_wallet_ids) if target_wallet_ids
       wallets_to_process.find_in_batches(batch_size: 100) do |wallets|
         wallets.each do |wallet|
           Wallets::Balance::RefreshOngoingUsageService.call!(
@@ -70,7 +72,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :include_generating_invoices, :allocation_rules
+    attr_reader :customer, :include_generating_invoices, :allocation_rules, :target_wallet_ids
 
     def assign_wallet_per_fee(fees)
       fee_wallet = {}
