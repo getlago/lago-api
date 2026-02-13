@@ -2,15 +2,18 @@
 
 module FixedCharges
   class UpdateService < BaseService
+    include CascadeUpdatable
+
     Result = BaseResult[:fixed_charge]
 
-    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {}, trigger_billing: true)
+    def initialize(fixed_charge:, params:, timestamp:, cascade_options: {}, trigger_billing: true, cascade_updates: false)
       @fixed_charge = fixed_charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
       @timestamp = timestamp
       @trigger_billing = trigger_billing
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -64,6 +67,8 @@ module FixedCharges
         end
       end
 
+      trigger_cascade
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -73,7 +78,7 @@ module FixedCharges
 
     private
 
-    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp, :trigger_billing
+    attr_reader :fixed_charge, :params, :cascade_options, :cascade, :timestamp, :trigger_billing, :cascade_updates
 
     delegate :plan, to: :fixed_charge
   end

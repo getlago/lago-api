@@ -22,7 +22,8 @@ module Mutations
         params[:filters]&.map!(&:to_h)
         params[:applied_pricing_unit] = params[:applied_pricing_unit].to_h if params[:applied_pricing_unit]
 
-        result = ::Charges::UpdateService.call(charge:, params:)
+        cascade_updates = params.delete(:cascade_updates) || false
+        result = ::Charges::UpdateService.call(charge:, params:, cascade_updates:)
 
         result.success? ? result.charge : result_error(result)
       end

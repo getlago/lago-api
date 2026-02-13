@@ -2,7 +2,7 @@
 
 module ChargeFilters
   class UpdateService < BaseService
-    include CascadeUpdatable
+    include Charges::CascadeUpdatable
 
     Result = BaseResult[:charge_filter]
 

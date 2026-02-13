@@ -57,6 +57,38 @@ RSpec.describe Mutations::Charges::Update, type: :graphql do
     expect(result_data["properties"]["amount"]).to eq("25")
   end
 
+  context "with cascade_updates" do
+    let(:child_plan) { create(:plan, organization:, parent: plan) }
+    let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+    before do
+      create(:subscription, plan: child_plan, status: :active)
+      child_charge
+      allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+    end
+
+    it "passes cascade_updates to the service" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: charge.id,
+            chargeModel: "standard",
+            cascadeUpdates: true,
+            properties: {
+              amount: "25"
+            }
+          }
+        }
+      )
+
+      expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+    end
+  end
+
   context "when charge does not exist" do
     it "returns an error" do
       result = execute_graphql(

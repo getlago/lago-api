@@ -11,14 +11,15 @@ module Mutations
       graphql_name "DestroyFixedCharge"
       description "Deletes a Fixed Charge"
 
+      argument :cascade_updates, Boolean, required: false
       argument :id, ID, required: true
 
       field :id, ID, null: true
 
-      def resolve(id:)
+      def resolve(id:, cascade_updates: false)
         fixed_charge = current_organization.fixed_charges.parents.find_by(id:)
 
-        result = ::FixedCharges::DestroyService.call(fixed_charge:)
+        result = ::FixedCharges::DestroyService.call(fixed_charge:, cascade_updates:)
 
         result.success? ? result.fixed_charge : result_error(result)
       end

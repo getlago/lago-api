@@ -335,6 +335,26 @@ RSpec.describe Api::V1::Plans::ChargesController do
       end
     end
 
+    context "with cascade_updates" do
+      subject { put_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}?cascade_updates=true", {charge: update_params}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "passes cascade_updates to the service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
+
     context "with accepts_target_wallet" do
       let(:update_params) do
         {
@@ -409,6 +429,25 @@ RSpec.describe Api::V1::Plans::ChargesController do
         subject
 
         expect(response).to be_not_found_error("charge")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}?cascade_updates=true") }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        child_charge
+        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "cascades the deletion to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
       end
     end
   end

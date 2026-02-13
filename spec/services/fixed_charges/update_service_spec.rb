@@ -329,6 +329,57 @@ RSpec.describe FixedCharges::UpdateService do
             .not_to have_received(:call!)
         end
       end
+
+      context "with cascade_updates" do
+        subject(:update_service) do
+          described_class.new(fixed_charge:, params:, cascade_options:, timestamp:, cascade_updates: true)
+        end
+
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_fixed_charge
+          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "triggers cascade update via FixedCharges::UpdateChildrenJob" do
+          result
+
+          expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later).with(
+            params: hash_including("charge_model", "properties", "units"),
+            old_parent_attrs: hash_including("id" => fixed_charge.id)
+          )
+        end
+
+        context "when fixed_charge has no children" do
+          before { child_fixed_charge.update!(parent_id: nil) }
+
+          it "does not trigger cascade update" do
+            result
+
+            expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+          end
+        end
+      end
+
+      context "without cascade_updates when fixed_charge has children" do
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+        before do
+          create(:subscription, plan: child_plan, status: :active)
+          child_fixed_charge
+          allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
+        end
+
+        it "does not trigger cascade update" do
+          result
+
+          expect(FixedCharges::UpdateChildrenJob).not_to have_received(:perform_later)
+        end
+      end
     end
   end
 end

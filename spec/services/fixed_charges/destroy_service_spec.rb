@@ -80,5 +80,49 @@ RSpec.describe FixedCharges::DestroyService do
         expect(result.error.code).to eq("fixed_charge_already_deleted")
       end
     end
+
+    context "with cascade_updates" do
+      subject(:destroy_service) { described_class.new(fixed_charge:, cascade_updates: true) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, add_on:, parent: fixed_charge) }
+
+      before do
+        child_fixed_charge
+        allow(FixedCharges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "enqueues FixedCharges::DestroyChildrenJob" do
+        destroy_service.call
+
+        expect(FixedCharges::DestroyChildrenJob).to have_received(:perform_later).with(fixed_charge.id)
+      end
+
+      context "when fixed_charge has no children" do
+        before { child_fixed_charge.update!(parent_id: nil) }
+
+        it "does not enqueue FixedCharges::DestroyChildrenJob" do
+          destroy_service.call
+
+          expect(FixedCharges::DestroyChildrenJob).not_to have_received(:perform_later)
+        end
+      end
+    end
+
+    context "without cascade_updates when fixed_charge has children" do
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, add_on:, parent: fixed_charge) }
+
+      before do
+        child_fixed_charge
+        allow(FixedCharges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "does not enqueue FixedCharges::DestroyChildrenJob" do
+        destroy_service.call
+
+        expect(FixedCharges::DestroyChildrenJob).not_to have_received(:perform_later)
+      end
+    end
   end
 end

@@ -18,6 +18,7 @@ RSpec.describe Types::Charges::UpdateInput do
     expect(subject).to accept_argument(:filters).of_type("[ChargeFilterInput!]")
     expect(subject).to accept_argument(:properties).of_type("PropertiesInput")
     expect(subject).to accept_argument(:applied_pricing_unit).of_type("AppliedPricingUnitInput")
+    expect(subject).to accept_argument(:cascade_updates).of_type("Boolean")
     expect(subject).to accept_argument(:tax_codes).of_type("[String!]")
   end
 end

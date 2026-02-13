@@ -2,7 +2,7 @@
 
 module ChargeFilters
   class DestroyService < BaseService
-    include CascadeUpdatable
+    include Charges::CascadeUpdatable
 
     Result = BaseResult[:charge_filter]
 
