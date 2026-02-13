@@ -109,3 +109,11 @@ Utils::SecurityLog.produce(
   user:,
   resources: {name: "Expired Key", value_ending: "4321"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "api_key",
+  log_event: "api_key.rotated",
+  user:,
+  resources: {name: "Hooli Key", value_ending: {deleted: "7890", added: "5678"}}
+)

@@ -6536,6 +6536,11 @@ enum LogEventEnum {
   api_key_deleted
 
   """
+  api_key.rotated
+  """
+  api_key_rotated
+
+  """
   api_key.updated
   """
   api_key_updated

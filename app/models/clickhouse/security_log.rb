@@ -20,6 +20,7 @@ module Clickhouse
     LOG_EVENTS = %w[
       api_key.created
       api_key.deleted
+      api_key.rotated
       api_key.updated
       role.created
       role.deleted
