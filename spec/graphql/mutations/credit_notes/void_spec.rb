@@ -23,18 +23,13 @@ RSpec.describe Mutations::CreditNotes::Void do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "credit_notes:void"
 
   it "voids the credit note" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: credit_note.id
-        }
-      }
+      input: {id: credit_note.id}
     )
 
     result_data = result["data"]["voidCreditNote"]
@@ -45,15 +40,9 @@ RSpec.describe Mutations::CreditNotes::Void do
 
   context "when credit note is not found" do
     it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {
-            id: "foo_bar"
-          }
-        }
+        input: {id: "foo_bar"}
       )
 
       expect_not_found(result)

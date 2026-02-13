@@ -19,16 +19,13 @@ RSpec.describe Mutations::Coupons::Terminate do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "coupons:update"
 
   it "terminates a coupon" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {id: coupon.id}
-      }
+      input: {id: coupon.id}
     )
 
     data = result["data"]["terminateCoupon"]

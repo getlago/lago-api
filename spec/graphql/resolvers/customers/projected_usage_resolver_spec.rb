@@ -139,6 +139,7 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "customers:view"
 
   it "returns the projected usage for the customer" do
