@@ -22,6 +22,7 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
     Rake.application.rake_require("tasks/entitlements")
     Rake::Task.define_task(:environment)
     task.reenable
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
   end
 
   context "with a duplicate subscription entitlement (no values, feature on plan)" do
