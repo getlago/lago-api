@@ -6551,6 +6551,11 @@ enum LogEventEnum {
   billing_entity_created
 
   """
+  billing_entity.updated
+  """
+  billing_entity_updated
+
+  """
   export.created
   """
   export_created

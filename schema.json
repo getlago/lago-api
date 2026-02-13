@@ -34428,6 +34428,12 @@
               "deprecationReason": null
             },
             {
+              "name": "billing_entity_updated",
+              "description": "billing_entity.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "export_created",
               "description": "export.created",
               "isDeprecated": false,

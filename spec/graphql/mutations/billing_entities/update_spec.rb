@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::Update, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "billing_entities:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -94,57 +96,75 @@ RSpec.describe Mutations::BillingEntities::Update, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:update"
 
-  it "updates the billing entity" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {input:}
-    )
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+    end
 
-    result_data = result["data"]["updateBillingEntity"]
+    it "updates the billing entity" do
+      result_data = result["data"]["updateBillingEntity"]
 
-    expect(result_data["id"]).to be_present
-    expect(result_data["code"]).to eq(billing_entity.code)
-    expect(result_data["name"]).to eq("Updated entity")
-    expect(result_data["email"]).to eq("updated@email.com")
-    expect(result_data["legalName"]).to eq("Updated legal name")
-    expect(result_data["legalNumber"]).to eq("1234567890")
-    expect(result_data["taxIdentificationNumber"]).to eq("Tax-1234")
-    expect(result_data["addressLine1"]).to eq("Calle de la Princesa 1")
-    expect(result_data["addressLine2"]).to eq("Apt 1")
-    expect(result_data["state"]).to eq("Barcelona")
-    expect(result_data["city"]).to eq("Barcelona")
-    expect(result_data["zipcode"]).to eq("08001")
-    expect(result_data["country"]).to eq("ES")
-    expect(result_data["defaultCurrency"]).to eq("EUR")
-    expect(result_data["timezone"]).to eq("TZ_EUROPE_MADRID")
-    expect(result_data["documentNumbering"]).to eq("per_billing_entity")
-    expect(result_data["documentNumberPrefix"]).to eq("NEW-0001")
-    expect(result_data["euTaxManagement"]).to eq true
-    expect(result_data["finalizeZeroAmountInvoice"]).to eq true
-    expect(result_data["netPaymentTerm"]).to eq(15)
-    expect(result_data["logoUrl"]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
-    expect(result_data["emailSettings"]).to be_nil
-    expect(result_data["billingConfiguration"]).to be_nil
-    expect(result_data["selectedInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(billing_entity.code)
+      expect(result_data["name"]).to eq("Updated entity")
+      expect(result_data["email"]).to eq("updated@email.com")
+      expect(result_data["legalName"]).to eq("Updated legal name")
+      expect(result_data["legalNumber"]).to eq("1234567890")
+      expect(result_data["taxIdentificationNumber"]).to eq("Tax-1234")
+      expect(result_data["addressLine1"]).to eq("Calle de la Princesa 1")
+      expect(result_data["addressLine2"]).to eq("Apt 1")
+      expect(result_data["state"]).to eq("Barcelona")
+      expect(result_data["city"]).to eq("Barcelona")
+      expect(result_data["zipcode"]).to eq("08001")
+      expect(result_data["country"]).to eq("ES")
+      expect(result_data["defaultCurrency"]).to eq("EUR")
+      expect(result_data["timezone"]).to eq("TZ_EUROPE_MADRID")
+      expect(result_data["documentNumbering"]).to eq("per_billing_entity")
+      expect(result_data["documentNumberPrefix"]).to eq("NEW-0001")
+      expect(result_data["euTaxManagement"]).to eq true
+      expect(result_data["finalizeZeroAmountInvoice"]).to eq true
+      expect(result_data["netPaymentTerm"]).to eq(15)
+      expect(result_data["logoUrl"]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
+      expect(result_data["emailSettings"]).to be_nil
+      expect(result_data["billingConfiguration"]).to be_nil
+      expect(result_data["selectedInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "billing_entity",
+        log_event: "billing_entity.updated",
+        resources: hash_including(
+          billing_entity_name: "Updated entity",
+          billing_entity_code: billing_entity.code
+        )
+      )
+    end
   end
 
-  context "with extra view permissions" do
+  context "with valid input and extra view permissions" do
     let(:permissions) do
       [required_permission].concat(%w[billing_entities:view])
     end
 
-    it "includes the email settings and billing configuration in the response" do
-      result = execute_graphql(
+    let!(:result) do
+      execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
         permissions:,
         query: mutation,
         variables: {input:}
       )
+    end
 
+    it "includes the email settings and billing configuration in the response" do
       result_data = result["data"]["updateBillingEntity"]
 
       expect(result_data["emailSettings"]).to eq(["invoice_finalized", "credit_note_created"])
