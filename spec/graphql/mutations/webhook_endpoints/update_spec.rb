@@ -12,7 +12,9 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
     {
       id: webhook_endpoint.id,
       webhookUrl: webhook_url,
-      signatureAlgo: "hmac"
+      signatureAlgo: "hmac",
+      name: "Updated Webhook",
+      eventTypes: ["customer.updated"]
     }
   end
 
@@ -23,6 +25,8 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
           id,
           webhookUrl,
           signatureAlgo,
+          name,
+          eventTypes
         }
       }
     GQL
@@ -46,7 +50,9 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
     expect(result["data"]["updateWebhookEndpoint"]).to include(
       "id" => String,
       "webhookUrl" => webhook_url,
-      "signatureAlgo" => "hmac"
+      "signatureAlgo" => "hmac",
+      "name" => "Updated Webhook",
+      "eventTypes" => ["customer.updated"]
     )
   end
 end

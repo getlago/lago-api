@@ -4768,7 +4768,9 @@ CREATE TABLE public.webhook_endpoints (
     webhook_url character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    signature_algo integer DEFAULT 0 NOT NULL
+    signature_algo integer DEFAULT 0 NOT NULL,
+    event_types character varying[],
+    name character varying
 );
 
 
@@ -11422,6 +11424,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260209103526'),
 ('20260204153734'),
 ('20260202155431'),
+('20260202150723'),
 ('20260202134958'),
 ('20260129145352'),
 ('20260129105200'),
