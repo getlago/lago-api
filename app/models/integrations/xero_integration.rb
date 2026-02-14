@@ -6,6 +6,10 @@ module Integrations
 
     settings_accessors :sync_credit_notes, :sync_invoices, :sync_payments
     secrets_accessors :connection_id
+
+    def external_id_key
+      "item_code"
+    end
   end
 end
 

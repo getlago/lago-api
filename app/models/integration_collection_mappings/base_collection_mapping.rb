@@ -18,7 +18,8 @@ module IntegrationCollectionMappings
       minimum_commitment
       tax
       prepaid_credit
-      credit_note account
+      credit_note
+      account
       currencies
     ].freeze
 
