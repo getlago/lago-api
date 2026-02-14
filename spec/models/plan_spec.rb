@@ -13,6 +13,7 @@ RSpec.describe Plan do
     expect(subject).to have_many(:usage_thresholds)
     expect(subject).to have_many(:commitments)
     expect(subject).to have_many(:charges).dependent(:destroy)
+    expect(subject).to have_many(:charge_filters).through(:charges).source(:filters)
     expect(subject).to have_many(:billable_metrics).through(:charges)
     expect(subject).to have_many(:fixed_charges).dependent(:destroy)
     expect(subject).to have_many(:add_ons).through(:fixed_charges)

@@ -308,7 +308,10 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         ).serialize
       end
 
-      before { create_list(:fee, 26, invoice: object) }
+      before do
+        stub_const("Utils::ActivityLog::MAX_SERIALIZED_FEES", 2)
+        create_list(:fee, 3, invoice: object)
+      end
 
       it "returns the serialized invoice without fees" do
         expect(subject).to eq(serialized_object)
@@ -324,13 +327,27 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         ).serialize
       end
 
-      before do
-        stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
-        create_list(:standard_charge, 3, plan: object)
+      context "with many charges" do
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+          create_list(:standard_charge, 3, plan: object)
+        end
+
+        it "returns the serialized plan without charges" do
+          expect(subject).to eq(serialized_object)
+        end
       end
 
-      it "returns the serialized plan without charges" do
-        expect(subject).to eq(serialized_object)
+      context "with many charge filters" do
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGE_FILTERS", 2)
+          charge = create(:standard_charge, plan: object)
+          create_list(:charge_filter, 3, charge:)
+        end
+
+        it "returns the serialized plan without charges" do
+          expect(subject).to eq(serialized_object)
+        end
       end
     end
 
@@ -344,13 +361,27 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         ).serialize
       end
 
-      before do
-        stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
-        create_list(:standard_charge, 3, plan:)
+      context "with many charges" do
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+          create_list(:standard_charge, 3, plan:)
+        end
+
+        it "returns the serialized subscription with plan excluding charges" do
+          expect(subject).to eq(serialized_object)
+        end
       end
 
-      it "returns the serialized subscription with plan excluding charges" do
-        expect(subject).to eq(serialized_object)
+      context "with many charge filters" do
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGE_FILTERS", 2)
+          charge = create(:standard_charge, plan:)
+          create_list(:charge_filter, 3, charge:)
+        end
+
+        it "returns the serialized plan without charges" do
+          expect(subject).to eq(serialized_object)
+        end
       end
     end
   end
@@ -375,20 +406,26 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     context "when object is an invoice" do
       let(:object) { create(:invoice, organization:) }
 
-      context "when invoice has more than 25 fees" do
+      context "when invoice has more fees than the limit" do
         let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees] }
 
-        before { create_list(:fee, 26, invoice: object) }
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_FEES", 2)
+          create_list(:fee, 3, invoice: object)
+        end
 
         it "excludes fees from the includes" do
           expect(subject).to eq(serializer_includes)
         end
       end
 
-      context "when invoice has 25 or fewer fees" do
+      context "when invoice has fewer or equal fees than the limit" do
         let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:invoice] }
 
-        before { create_list(:fee, 25, invoice: object) }
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_FEES", 2)
+          create_list(:fee, 2, invoice: object)
+        end
 
         it "includes fees in the includes" do
           expect(subject).to eq(serializer_includes)
@@ -399,12 +436,13 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     context "when object is a plan" do
       let(:object) { create(:plan, organization:) }
 
-      before { stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2) }
-
       context "when plan has more charges than the limit" do
         let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges] }
 
-        before { create_list(:standard_charge, 3, plan: object) }
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+          create_list(:standard_charge, 3, plan: object)
+        end
 
         it "excludes charges from the includes" do
           expect(subject).to eq(serializer_includes)
@@ -420,18 +458,46 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           expect(subject).to eq(serializer_includes)
         end
       end
+
+      context "when plan has more charge filters than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges] }
+
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGE_FILTERS", 2)
+          charge = create(:standard_charge, plan: object)
+          create_list(:charge_filter, 3, charge:)
+        end
+
+        it "excludes charges from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when plan has fewer charge filters than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] }
+
+        before do
+          charge = create(:standard_charge, plan: object)
+          create_list(:charge_filter, 3, charge:)
+        end
+
+        it "excludes charges from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
     end
 
     context "when object is a subscription" do
       let(:object) { create(:subscription, organization:, plan:) }
       let(:plan) { create(:plan, organization:) }
 
-      before { stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2) }
-
       context "when subscription's plan has more charges than the limit" do
         let(:serializer_includes) { [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}] }
 
-        before { create_list(:standard_charge, 3, plan:) }
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGES", 2)
+          create_list(:standard_charge, 3, plan:)
+        end
 
         it "excludes charges from the includes" do
           expect(subject).to eq(serializer_includes)
@@ -442,6 +508,33 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:subscription] }
 
         before { create_list(:standard_charge, 2, plan:) }
+
+        it "includes charges in the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when subscription's plan has more charge filters than the limit" do
+        let(:serializer_includes) { [{plan: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:plan] - [:charges]}] }
+
+        before do
+          stub_const("Utils::ActivityLog::MAX_SERIALIZED_CHARGE_FILTERS", 2)
+          charge = create(:standard_charge, plan:)
+          create_list(:charge_filter, 3, charge:)
+        end
+
+        it "excludes charges from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when subscription's plan has fewer charge filters than the limit" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:subscription] }
+
+        before do
+          charge = create(:standard_charge, plan:)
+          create_list(:charge_filter, 2, charge:)
+        end
 
         it "includes charges in the includes" do
           expect(subject).to eq(serializer_includes)
