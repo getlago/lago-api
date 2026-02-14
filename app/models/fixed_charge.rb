@@ -34,12 +34,12 @@ class FixedCharge < ApplicationRecord
   enum :charge_model, CHARGE_MODELS
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
-  validates :charge_model, presence: true
+  validates :charge_model, :code, presence: true
   validates :pay_in_advance, exclusion: [nil]
   validates :prorated, exclusion: [nil]
   validates :properties, presence: true
 
-  validate :validate_code_unique, if: -> { code.present? }
+  validate :validate_code_unique
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_properties
@@ -105,7 +105,7 @@ end
 #
 #  id                   :uuid             not null, primary key
 #  charge_model         :enum             default("standard"), not null
-#  code                 :string
+#  code                 :string           not null
 #  deleted_at           :datetime
 #  invoice_display_name :string
 #  pay_in_advance       :boolean          default(FALSE), not null
