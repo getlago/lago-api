@@ -152,6 +152,25 @@ RSpec.describe Customers::EuAutoTaxesService do
           error_type: "service_unavailable"
       end
 
+      context "when VIES check raises HTTPError with 307" do
+        it_behaves_like "a VIES check error",
+          exception_class: Valvat::HTTPError,
+          error_message: "The VIES web service returned the error: 307 ",
+          error_type: "service_unavailable"
+      end
+
+      context "when VIES check raises HTTPError without 307" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::HTTPError.new("The VIES web service returned the error: 301 ", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "re-raises the error" do
+          expect { eu_tax_service.call }.to raise_error(Valvat::HTTPError, /301/)
+        end
+      end
+
       context "when VIES check raises Timeout error" do
         it_behaves_like "a VIES check error",
           exception_class: Valvat::Timeout,
