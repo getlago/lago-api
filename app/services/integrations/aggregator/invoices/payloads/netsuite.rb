@@ -24,14 +24,12 @@ module Integrations
               }
             }
 
-            if tax_item_complete?
-              result["taxdetails"] = [
-                {
-                  "sublistId" => "taxdetails",
-                  "lineItems" => tax_line_items + discount_taxes
-                }
-              ]
-            end
+            result["taxdetails"] = [
+              {
+                "sublistId" => "taxdetails",
+                "lineItems" => tax_line_items + discount_taxes
+              }
+            ]
 
             result
           end
@@ -75,8 +73,8 @@ module Integrations
               "taxamount" => amount(fee.taxes_amount_cents, resource: invoice),
               "taxbasis" => 1,
               "taxrate" => fee.taxes_rate,
-              "taxtype" => tax_item.tax_type,
-              "taxcode" => tax_item.tax_code
+              "taxtype" => tax_item&.tax_type,
+              "taxcode" => tax_item&.tax_code
             }
           end
 
@@ -211,8 +209,8 @@ module Integrations
                 "taxbasis" => 1,
                 "taxamount" => amount(tax_diff_amount_cents, resource: invoice),
                 "taxrate" => invoice.taxes_rate,
-                "taxtype" => tax_item.tax_type,
-                "taxcode" => tax_item.tax_code,
+                "taxtype" => tax_item&.tax_type,
+                "taxcode" => tax_item&.tax_code,
                 "taxdetailsreference" => "coupon_item"
               }
             end
@@ -222,8 +220,8 @@ module Integrations
                 "taxbasis" => 1,
                 "taxamount" => 0,
                 "taxrate" => invoice.taxes_rate,
-                "taxtype" => tax_item.tax_type,
-                "taxcode" => tax_item.tax_code,
+                "taxtype" => tax_item&.tax_type,
+                "taxcode" => tax_item&.tax_code,
                 "taxdetailsreference" => "credit_item"
               }
             end
@@ -233,8 +231,8 @@ module Integrations
                 "taxbasis" => 1,
                 "taxamount" => 0,
                 "taxrate" => invoice.taxes_rate,
-                "taxtype" => tax_item.tax_type,
-                "taxcode" => tax_item.tax_code,
+                "taxtype" => tax_item&.tax_type,
+                "taxcode" => tax_item&.tax_code,
                 "taxdetailsreference" => "credit_item_progressive_billing"
               }
             end
@@ -244,8 +242,8 @@ module Integrations
                 "taxbasis" => 1,
                 "taxamount" => 0,
                 "taxrate" => invoice.taxes_rate,
-                "taxtype" => tax_item.tax_type,
-                "taxcode" => tax_item.tax_code,
+                "taxtype" => tax_item&.tax_type,
+                "taxcode" => tax_item&.tax_code,
                 "taxdetailsreference" => "credit_note_item"
               }
             end
