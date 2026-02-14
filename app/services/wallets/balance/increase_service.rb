@@ -31,7 +31,7 @@ module Wallets
 
         wallet.update!(update_params)
 
-        Customers::RefreshWalletsService.call(customer: wallet.customer)
+        Customers::RefreshWalletsService.call(customer: wallet.customer, target_wallet_ids: [wallet.id])
 
         after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
 
