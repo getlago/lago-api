@@ -7717,6 +7717,36 @@ type Mutation {
   ): RemoveSubscriptionEntitlementPayload
 
   """
+  Resend credit note email with optional custom recipients
+  """
+  resendCreditNoteEmail(
+    """
+    Parameters for ResendCreditNoteEmail
+    """
+    input: ResendCreditNoteEmailInput!
+  ): CreditNote
+
+  """
+  Resend invoice email with optional custom recipients
+  """
+  resendInvoiceEmail(
+    """
+    Parameters for ResendInvoiceEmail
+    """
+    input: ResendInvoiceEmailInput!
+  ): Invoice
+
+  """
+  Resend payment receipt email with optional custom recipients
+  """
+  resendPaymentReceiptEmail(
+    """
+    Parameters for ResendPaymentReceiptEmail
+    """
+    input: ResendPaymentReceiptEmailInput!
+  ): PaymentReceipt
+
+  """
   Reset password for user and log in
   """
   resetPassword(
@@ -8725,6 +8755,7 @@ enum PermissionEnum {
   coupons_view
   credit_notes_create
   credit_notes_export
+  credit_notes_send
   credit_notes_update
   credit_notes_view
   credit_notes_void
@@ -8773,6 +8804,8 @@ enum PermissionEnum {
   payment_methods_delete
   payment_methods_update
   payment_methods_view
+  payment_receipts_send
+  payment_receipts_view
   payments_create
   payments_view
   plans_create
@@ -8828,6 +8861,7 @@ type Permissions {
   couponsView: Boolean!
   creditNotesCreate: Boolean!
   creditNotesExport: Boolean!
+  creditNotesSend: Boolean!
   creditNotesUpdate: Boolean!
   creditNotesView: Boolean!
   creditNotesVoid: Boolean!
@@ -8876,6 +8910,8 @@ type Permissions {
   paymentMethodsDelete: Boolean!
   paymentMethodsUpdate: Boolean!
   paymentMethodsView: Boolean!
+  paymentReceiptsSend: Boolean!
+  paymentReceiptsView: Boolean!
   paymentsCreate: Boolean!
   paymentsView: Boolean!
   plansCreate: Boolean!
@@ -10162,6 +10198,96 @@ type RemoveTaxesPayload {
   """
   clientMutationId: String
   removedTaxes: [Tax!]!
+}
+
+"""
+Resend email input arguments
+"""
+input ResendCreditNoteEmailInput {
+  """
+  BCC recipients
+  """
+  bcc: [String!]
+
+  """
+  CC recipients
+  """
+  cc: [String!]
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  Document ID
+  """
+  id: ID!
+
+  """
+  Custom recipients (defaults to customer email)
+  """
+  to: [String!]
+}
+
+"""
+Resend email input arguments
+"""
+input ResendInvoiceEmailInput {
+  """
+  BCC recipients
+  """
+  bcc: [String!]
+
+  """
+  CC recipients
+  """
+  cc: [String!]
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  Document ID
+  """
+  id: ID!
+
+  """
+  Custom recipients (defaults to customer email)
+  """
+  to: [String!]
+}
+
+"""
+Resend email input arguments
+"""
+input ResendPaymentReceiptEmailInput {
+  """
+  BCC recipients
+  """
+  bcc: [String!]
+
+  """
+  CC recipients
+  """
+  cc: [String!]
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  Document ID
+  """
+  id: ID!
+
+  """
+  Custom recipients (defaults to customer email)
+  """
+  to: [String!]
 }
 
 """

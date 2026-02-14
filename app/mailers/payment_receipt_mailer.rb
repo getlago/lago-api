@@ -22,8 +22,9 @@ class PaymentReceiptMailer < DocumentMailer
       document.payment.payable.total_due_amount :
       document.payment.payable.amount - document.payment.amount
 
+    recipients = params[:to].presence || [@customer.email].compact
     return if @billing_entity.email.blank?
-    return if @customer.email.blank?
+    return if recipients.empty?
 
     @invoices = if document.payment.payable.is_a?(Invoice)
       [document.payment.payable]
@@ -43,7 +44,9 @@ class PaymentReceiptMailer < DocumentMailer
 
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
-        to: @customer.email,
+        to: recipients,
+        cc: params[:cc],
+        bcc: params[:bcc],
         from: email_address_with_name(@billing_entity.from_email_address, @billing_entity.name),
         reply_to: email_address_with_name(@billing_entity.email, @billing_entity.name),
         subject: I18n.t(
