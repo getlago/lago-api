@@ -184,6 +184,8 @@ roles:
   create:
   update:
   delete:
+security_logs:
+  view:
 subscriptions:
   view:
     - finance
