@@ -7,6 +7,7 @@ class PendingViesCheck < ApplicationRecord
     Valvat::BlockedError => "blocked",
     Valvat::InvalidRequester => "invalid_requester",
     Valvat::ServiceUnavailable => "service_unavailable",
+    Valvat::HTTPError => "service_unavailable",
     Valvat::MemberStateUnavailable => "member_state_unavailable"
   }.freeze
 
