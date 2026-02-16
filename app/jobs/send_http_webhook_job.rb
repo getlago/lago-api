@@ -15,6 +15,11 @@ class SendHttpWebhookJob < ApplicationJob
   end
 
   def perform(webhook)
+    if webhook.webhook_endpoint.slow_response?
+      SendSlowHttpWebhookJob.perform_later(webhook)
+      return
+    end
+
     Webhooks::SendHttpService.call(webhook:)
   end
 end
