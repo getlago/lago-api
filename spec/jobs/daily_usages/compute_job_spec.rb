@@ -27,43 +27,73 @@ RSpec.describe DailyUsages::ComputeJob do
     let(:customer) { create(:customer, timezone: "Europe/Paris") }
     let(:subscription) { create(:subscription, customer:) }
 
-    it "normalizes the timestamp to the date in customer timezone" do
+    it "returns subscription id and date in customer timezone" do
       timestamp = Time.zone.parse("2024-01-15 10:00:00 UTC")
-
       job = described_class.new(subscription, timestamp:)
 
-      expected_date = Time.zone.parse("2024-01-15T11:00:00+01:00").to_date
-      expect(job.lock_key_arguments).to eq([subscription.id, expected_date])
+      # 10:00 UTC = 11:00 Europe/Paris -> 2024-01-15
+      expect(job.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 15)])
     end
 
-    it "returns the same lock key for different timestamps on the same day in customer timezone" do
-      morning_timestamp = Time.zone.parse("2024-01-15 23:00:00 UTC")
-      evening_timestamp = Time.zone.parse("2024-01-16 00:00:00 UTC")
+    context "when timestamps fall on the same day in customer timezone" do
+      it "returns the same lock key" do
+        # 23:00 UTC = 00:00+01:00 (Jan 16 in Paris)
+        job1 = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-15 23:00:00 UTC"))
+        # 00:00 UTC Jan 16 = 01:00+01:00 (Jan 16 in Paris)
+        job2 = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-16 00:00:00 UTC"))
 
-      morning_job = described_class.new(subscription, timestamp: morning_timestamp)
-      evening_job = described_class.new(subscription, timestamp: evening_timestamp)
-
-      expect(morning_job.lock_key_arguments).to eq(evening_job.lock_key_arguments)
+        expect(job1.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 16)])
+        expect(job2.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 16)])
+      end
     end
 
-    it "returns different lock keys for timestamps on different days in customer timezone" do
-      first_day_timestamp = Time.zone.parse("2024-01-15 00:00:00 UTC")
-      second_day_timestamp = Time.zone.parse("2024-01-15 23:00:00 UTC")
+    context "when timestamps fall on different days in customer timezone" do
+      it "returns different lock keys" do
+        # 00:00 UTC = 01:00+01:00 (Jan 15 in Paris)
+        job1 = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-15 00:00:00 UTC"))
+        # 23:00 UTC = 00:00+01:00 (Jan 16 in Paris)
+        job2 = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-15 23:00:00 UTC"))
 
-      first_job = described_class.new(subscription, timestamp: first_day_timestamp)
-      second_job = described_class.new(subscription, timestamp: second_day_timestamp)
-
-      expect(first_job.lock_key_arguments).not_to eq(second_job.lock_key_arguments)
+        expect(job1.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 15)])
+        expect(job2.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 16)])
+      end
     end
 
-    it "returns different lock keys for different subscriptions" do
-      timestamp = Time.zone.parse("2024-01-15 10:00:00 UTC")
-      other_subscription = create(:subscription, customer:)
+    context "when subscriptions are different" do
+      it "returns different lock keys" do
+        timestamp = Time.zone.parse("2024-01-15 10:00:00 UTC")
+        other_subscription = create(:subscription, customer:)
 
-      job1 = described_class.new(subscription, timestamp:)
-      job2 = described_class.new(other_subscription, timestamp:)
+        job1 = described_class.new(subscription, timestamp:)
+        job2 = described_class.new(other_subscription, timestamp:)
 
-      expect(job1.lock_key_arguments).not_to eq(job2.lock_key_arguments)
+        expect(job1.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 15)])
+        expect(job2.lock_key_arguments).to eq([other_subscription.id, Date.new(2024, 1, 15)])
+      end
+    end
+
+    context "when customer has no timezone but billing entity has one" do
+      let(:billing_entity) { create(:billing_entity, timezone: "America/New_York") }
+      let(:customer) { create(:customer, timezone: nil, billing_entity:) }
+
+      it "falls back to billing entity timezone" do
+        # 03:00 UTC = 22:00-05:00 (Jan 14 in New York)
+        job = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-15 03:00:00 UTC"))
+
+        expect(job.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 14)])
+      end
+    end
+
+    context "when customer has no timezone and billing entity uses default UTC" do
+      let(:billing_entity) { create(:billing_entity, timezone: "UTC") }
+      let(:customer) { create(:customer, timezone: nil, billing_entity:) }
+
+      it "falls back to UTC" do
+        # 23:00 UTC stays Jan 15 in UTC
+        job = described_class.new(subscription, timestamp: Time.zone.parse("2024-01-15 23:00:00 UTC"))
+
+        expect(job.lock_key_arguments).to eq([subscription.id, Date.new(2024, 1, 15)])
+      end
     end
   end
 end
