@@ -58,7 +58,14 @@ Rails.application.routes.draw do
           resources :payments, only: %i[index]
           resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
-          resources :wallets, only: %i[index]
+          resources :wallets, only: %i[create update show index], param: :code do
+            scope module: :wallets do
+              resource :metadata, only: %i[create update destroy] do
+                delete ":key", action: :destroy_key, on: :member
+              end
+            end
+          end
+          delete "/wallets/:code", to: "wallets#terminate"
           resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end
