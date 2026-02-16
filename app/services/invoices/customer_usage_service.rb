@@ -28,10 +28,11 @@ module Invoices
       @max_timestamp = max_timestamp
     end
 
-    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true, calculate_projected_usage: false)
+    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
+      calculate_projected_usage: false, filter_by_charge: nil, filter_by_group: nil, full_usage: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, filter_by_charge:, filter_by_group:, full_usage:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end

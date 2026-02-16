@@ -6,12 +6,17 @@ module Api
       class UsageController < Api::BaseController
         def current
           apply_taxes = ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true))
+          full_usage = ActiveModel::Type::Boolean.new.cast(params.fetch(:full_usage, false))
+          charge = find_charge_for_filter(params).presence
           result = ::Invoices::CustomerUsageService
             .with_external_ids(
               customer_external_id: params[:customer_external_id],
               external_subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id,
-              apply_taxes:
+              apply_taxes:,
+              filter_by_charge: charge,
+              filter_by_group: params[:filter_by_group]&.to_unsafe_h,
+              full_usage: full_usage
             ).call
 
           if result.success?
@@ -66,6 +71,14 @@ module Api
 
         def resource_name
           "customer_usage"
+        end
+
+        def find_charge_for_filter(params)
+          if params[:filter_by_charge_code].present?
+            current_organization.charges.find_by!(code: params[:filter_by_charge_code])
+          elsif params[:filter_by_charge_id].present?
+            current_organization.charges.find_by!(id: params[:filter_by_charge_id])
+          end
         end
       end
     end
