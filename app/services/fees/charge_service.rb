@@ -384,6 +384,7 @@ module Fees
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
         filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
         filters[:matching_filters] ||= {}
+        # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
         filters[:matching_filters].merge!(filter_by_group)
       end
 

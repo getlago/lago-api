@@ -91,7 +91,6 @@ describe "Customer usage Scenario" do
         properties: {amount: "10", pricing_group_keys: ["user"]}
       )
     end
-
     let(:charge_2) do
       create(
         :standard_charge,
@@ -101,12 +100,7 @@ describe "Customer usage Scenario" do
       )
     end
 
-    before do
-      charge_1
-      charge_2
-    end
-
-    let!(:subscription) do
+    let(:subscription) do
       sub = nil
       travel_to(DateTime.new(2024, 3, 1, 10, 0)) do
         create_subscription(
@@ -123,6 +117,8 @@ describe "Customer usage Scenario" do
     end
 
     before do
+      charge_1
+      charge_2
       travel_to(DateTime.new(2024, 3, 5, 10, 0)) do
         # Send 10 events for charge_1's metric with user 0..9
         10.times do |i|
@@ -220,9 +216,7 @@ describe "Customer usage Scenario" do
       )
     end
 
-    before { charge }
-
-    let!(:subscription) do
+    let(:subscription) do
       sub = nil
       travel_to(DateTime.new(2024, 3, 1, 10, 0)) do
         create_subscription(
@@ -239,11 +233,12 @@ describe "Customer usage Scenario" do
     end
 
     before do
+      charge
       travel_to(DateTime.new(2024, 3, 5, 10, 0)) do
         # Send 10 events for different users across two workspaces
         # workspace_a: users 0..4, workspace_b: users 5..9
         10.times do |i|
-          workspace = i < 5 ? "workspace_a" : "workspace_b"
+          workspace = (i < 5) ? "workspace_a" : "workspace_b"
           create_event(
             {
               code: billable_metric.code,
