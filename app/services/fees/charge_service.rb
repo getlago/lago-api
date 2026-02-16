@@ -33,7 +33,7 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
-      @filter_by_group = filter_by_group
+      @filter_by_group = filter_by_group&.transform_values { |v| Array(v) }
       @skip_grouping = skip_grouping
       @full_usage = full_usage
 
@@ -380,7 +380,7 @@ module Fees
       end
 
       if filter_by_group.present?
-        # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => "A"},
+        # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
         filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
         filters[:matching_filters] ||= {}

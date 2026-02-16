@@ -2938,6 +2938,24 @@ RSpec.describe Fees::ChargeService, :premium do
         gcp_fee = result.fees.find { |f| f.grouped_by["cloud"] == "gcp" }
         expect(gcp_fee).to have_attributes(units: 5)
       end
+
+      context "when filter_by_group is sent without array for values" do
+        let(:filter_by_group) { {"region" => "eu"} }
+
+        it "handles string values by converting them to array" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          # Only eu events, grouped by cloud (region removed from grouped_by)
+          expect(result.fees.count).to eq(2)
+
+          aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+          expect(aws_fee).to have_attributes(units: 10)
+
+          gcp_fee = result.fees.find { |f| f.grouped_by["cloud"] == "gcp" }
+          expect(gcp_fee).to have_attributes(units: 5)
+        end
+      end
     end
 
     context "with skip_grouping" do
