@@ -107,7 +107,7 @@ class Wallet < ApplicationRecord
   end
 
   def unique_code_per_customer
-    if code && Wallet.where(customer_id: customer_id, code: code).where.not(id: id).exists?
+    if code && Wallet.where(customer_id: customer_id, code: code, status: "active").where.not(id: id).exists?
       errors.add(:code, :taken)
     end
   end
@@ -157,7 +157,7 @@ end
 #
 # Indexes
 #
-#  index_uniq_wallet_code_per_customer               (customer_id,code) UNIQUE
+#  index_uniq_wallet_code_per_customer               (customer_id,code) UNIQUE WHERE (status = 0)
 #  index_wallets_on_customer_id                      (customer_id)
 #  index_wallets_on_organization_id                  (organization_id)
 #  index_wallets_on_organization_id_and_customer_id  (organization_id,customer_id)
