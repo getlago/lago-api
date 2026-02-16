@@ -107,6 +107,8 @@ class Wallet < ApplicationRecord
   end
 
   def unique_code_per_customer
+    return unless active?
+
     if code && Wallet.where(customer_id: customer_id, code: code, status: "active").where.not(id: id).exists?
       errors.add(:code, :taken)
     end
