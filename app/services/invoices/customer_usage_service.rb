@@ -54,8 +54,8 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
-      full_usage_not_allowed = (filter_by_charge.empty? && filter_by_group.empty?) || subscription.plan.charges.where(prorated: true).any?
-      return result.not_allowed_failure!(code: "full_usage_not_allowed") if full_usage && full_usage_not_allowed
+      full_usage_allowed = (filter_by_charge.present? || filter_by_group.present?) && subscription.plan.charges.where(prorated: true).none?
+      return result.not_allowed_failure!(code: "full_usage_not_allowed") if full_usage && !full_usage_allowed
 
       result.usage = compute_usage
       result.invoice = invoice

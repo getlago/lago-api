@@ -119,6 +119,7 @@ describe "Customer usage Scenario" do
     before do
       charge_1
       charge_2
+      subscription
       travel_to(DateTime.new(2024, 3, 5, 10, 0)) do
         # Send 10 events for charge_1's metric with user 0..9
         10.times do |i|
@@ -234,6 +235,7 @@ describe "Customer usage Scenario" do
 
     before do
       charge
+      subscription
       travel_to(DateTime.new(2024, 3, 5, 10, 0)) do
         # Send 10 events for different users across two workspaces
         # workspace_a: users 0..4, workspace_b: users 5..9
