@@ -45,9 +45,9 @@ class Charge < ApplicationRecord
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-  validates :charge_model, presence: true
+  validates :charge_model, :code, presence: true
 
-  validate :validate_code_unique, if: -> { code.present? }
+  validate :validate_code_unique
   validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
@@ -178,26 +178,24 @@ end
 # Table name: charges
 # Database name: primary
 #
-#  id                    :uuid             not null, primary key
-#  accepts_target_wallet :boolean          default(FALSE), not null
-#  amount_currency       :string
-#  charge_model          :integer          default("standard"), not null
-#  code                  :string
-#  deleted_at            :datetime
-#  group_by_wallet       :boolean          default(FALSE), not null
-#  invoice_display_name  :string
-#  invoiceable           :boolean          default(TRUE), not null
-#  min_amount_cents      :bigint           default(0), not null
-#  pay_in_advance        :boolean          default(FALSE), not null
-#  properties            :jsonb            not null
-#  prorated              :boolean          default(FALSE), not null
-#  regroup_paid_fees     :integer
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  billable_metric_id    :uuid
-#  organization_id       :uuid             not null
-#  parent_id             :uuid
-#  plan_id               :uuid
+#  id                   :uuid             not null, primary key
+#  amount_currency      :string
+#  charge_model         :integer          default("standard"), not null
+#  code                 :string           not null
+#  deleted_at           :datetime
+#  invoice_display_name :string
+#  invoiceable          :boolean          default(TRUE), not null
+#  min_amount_cents     :bigint           default(0), not null
+#  pay_in_advance       :boolean          default(FALSE), not null
+#  properties           :jsonb            not null
+#  prorated             :boolean          default(FALSE), not null
+#  regroup_paid_fees    :integer
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  billable_metric_id   :uuid
+#  organization_id      :uuid             not null
+#  parent_id            :uuid
+#  plan_id              :uuid
 #
 # Indexes
 #
