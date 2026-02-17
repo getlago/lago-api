@@ -2,6 +2,14 @@
 
 module Fees
   class ChargeService < BaseService
+    # optional params:
+    # | usage_filters - UsageFilters
+    #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
+    # | results_adjustments - to be implemented as a class to pass the following inside:
+    #  - with_zero_units_filters
+    #  - calculate_projected_usage
+    #  - apply_taxes
+    #  - filtered_aggregations
     def initialize(
       invoice:,
       charge:,
@@ -13,9 +21,7 @@ module Fees
       apply_taxes: false,
       calculate_projected_usage: false,
       with_zero_units_filters: true,
-      filter_by_group: nil,
-      skip_grouping: false,
-      full_usage: false
+      usage_filters: UsageFilters::NONE
     )
       @invoice = invoice
       @charge = charge
@@ -33,16 +39,12 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
-      @filter_by_group = filter_by_group&.transform_values { |v| Array(v) }
-      @skip_grouping = skip_grouping
-      @full_usage = full_usage
+      @usage_filters = usage_filters
 
       super(nil)
     end
 
     def call
-      return result.not_allowed_failure!(code: "cannot_retrieve_full_usage") if full_usage && charge.prorated?
-
       return result if !current_usage && already_billed?
 
       init_fees
@@ -77,8 +79,7 @@ module Fees
     private
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
-      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :filter_by_group,
-      :skip_grouping, :full_usage
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -319,15 +320,13 @@ module Fees
     def aggregator(charge_filter:)
       aggregate = true
       aggregate = filtered_aggregations.include?(charge_filter&.id) unless filtered_aggregations.nil?
-      from_datetime = boundaries.charges_from_datetime
-      from_datetime = subscription.started_at if full_usage
 
       BillableMetrics::AggregationFactory.new_instance(
         charge:,
         current_usage:,
         subscription:,
         boundaries: {
-          from_datetime: from_datetime,
+          from_datetime: boundaries.charges_from_datetime,
           to_datetime: boundaries.charges_to_datetime,
           charges_duration: boundaries.charges_duration,
           max_timestamp: boundaries.max_timestamp
@@ -370,7 +369,7 @@ module Fees
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
-      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !skip_grouping
+      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
@@ -379,13 +378,13 @@ module Fees
         filters[:ignored_filters] = result.ignored_filters
       end
 
-      if filter_by_group.present?
+      if usage_filters.filter_by_group.present?
         # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
         # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
-        filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
+        usage_filters.filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
         filters[:matching_filters] ||= {}
         # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
-        filters[:matching_filters].merge!(filter_by_group)
+        filters[:matching_filters].merge!(usage_filters.filter_by_group)
       end
 
       filters

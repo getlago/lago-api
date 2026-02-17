@@ -2818,75 +2818,6 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
-    context "with full_usage" do
-      subject(:charge_subscription_service) do
-        described_class.new(
-          invoice:,
-          charge:,
-          subscription:,
-          boundaries:,
-          context: :current_usage,
-          apply_taxes: false,
-          filtered_aggregations: nil,
-          full_usage:
-        )
-      end
-
-      let(:full_usage) { true }
-
-      let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
-      end
-
-      let(:charge) do
-        create(
-          :standard_charge,
-          plan: subscription.plan,
-          billable_metric:,
-          properties: {amount: "10"}
-        )
-      end
-
-      context "when charge is prorated" do
-        let(:charge) do
-          create(
-            :standard_charge,
-            plan: subscription.plan,
-            billable_metric: create(:billable_metric, :recurring, organization:, aggregation_type: "sum_agg", field_name: "value"),
-            prorated: true,
-            properties: {amount: "10"}
-          )
-        end
-
-        it "returns a not_allowed failure" do
-          result = charge_subscription_service.call
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("cannot_retrieve_full_usage")
-        end
-      end
-
-      context "when charge is not prorated" do
-        before do
-          create(
-            :event,
-            organization: subscription.organization,
-            subscription:,
-            code: billable_metric.code,
-            timestamp: subscription.started_at + 1.day,
-            properties: {value: 5}
-          )
-        end
-
-        it "aggregates from subscription start date" do
-          result = charge_subscription_service.call
-          expect(result).to be_success
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first.units).to eq(5)
-        end
-      end
-    end
-
     context "with filter_by_group" do
       subject(:charge_subscription_service) do
         described_class.new(
@@ -2897,7 +2828,7 @@ RSpec.describe Fees::ChargeService, :premium do
           context: :current_usage,
           apply_taxes: false,
           filtered_aggregations: nil,
-          filter_by_group:
+          usage_filters: UsageFilters.new(filter_by_group:)
         )
       end
 
@@ -2968,7 +2899,7 @@ RSpec.describe Fees::ChargeService, :premium do
           context: :current_usage,
           apply_taxes: false,
           filtered_aggregations: nil,
-          skip_grouping: true
+          usage_filters: UsageFilters.new(skip_grouping: true)
         )
       end
 

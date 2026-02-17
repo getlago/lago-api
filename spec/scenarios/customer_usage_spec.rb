@@ -154,7 +154,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_group: {user: ["0"]}
+          usage_filters: UsageFilters.new(filter_by_group: {user: ["0"]})
         )
 
         expect(result).to be_success
@@ -181,7 +181,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_charge: charge_1
+          usage_filters: UsageFilters.new(filter_by_charge: charge_1)
         )
 
         expect(result).to be_success
@@ -260,7 +260,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_group: {workspace: ["workspace_a"]}
+          usage_filters: UsageFilters.new(filter_by_group: {workspace: ["workspace_a"]})
         )
 
         expect(result).to be_success
@@ -289,7 +289,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_group: {workspace: ["workspace_b"]}
+          usage_filters: UsageFilters.new(filter_by_group: {workspace: ["workspace_b"]})
         )
 
         expect(result).to be_success
@@ -342,7 +342,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          skip_grouping: true
+          usage_filters: UsageFilters.new(skip_grouping: true)
         )
 
         expect(result).to be_success

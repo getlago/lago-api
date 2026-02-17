@@ -296,7 +296,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_charge: charge
+          usage_filters: UsageFilters.new(filter_by_charge: charge)
         )
       end
 
@@ -330,7 +330,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          filter_by_group: {"cloud" => ["aws"]}
+          usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]})
         )
       end
 
@@ -383,8 +383,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             subscription:,
             apply_taxes: false,
             with_cache: false,
-            filter_by_charge: charge,
-            full_usage: true
+            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
           )
         end
 
@@ -407,7 +406,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             subscription:,
             apply_taxes: false,
             with_cache: false,
-            full_usage: true
+            usage_filters: UsageFilters.new(full_usage: true)
           )
         end
 
@@ -431,8 +430,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             subscription:,
             apply_taxes: false,
             with_cache: false,
-            filter_by_charge: charge,
-            full_usage: true
+            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
           )
         end
 
@@ -463,7 +461,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          skip_grouping: true
+          usage_filters: UsageFilters.new(skip_grouping: true)
         )
       end
 
