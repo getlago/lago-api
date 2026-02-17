@@ -156,7 +156,6 @@ module UsageMonitoring
 
     def find_recurring_thresholds_crossed_decreasing(previous, current, step, initial)
       return [] unless step
-      return [] if previous > initial # Haven't entered recurring zone yet
 
       previous_steps = ((initial - previous) / step).ceil
       previous_recurring = initial - [previous_steps, 1].max * step

@@ -190,7 +190,9 @@ describe "Wallet Credits Balance Alerts", :premium, transaction: false do
       expect(wallet.credits_balance).to eq(70)
       expect(alert.triggered_alerts.count).to eq(1)
       expect(alert.triggered_alerts.sole.crossed_thresholds).to eq([
-        {"code" => "initial", "value" => "90.0", "recurring" => false}
+        {"code" => "initial", "value" => "90.0", "recurring" => false},
+        {"code" => "low", "value" => "70.0", "recurring" => true},
+        {"code" => "low", "value" => "80.0", "recurring" => true}
       ])
 
       # Third event - balance goes from 70 to 50 credits, crosses multiple recurring thresholds
