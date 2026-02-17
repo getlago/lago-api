@@ -47,8 +47,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
-      full_usage_allowed = (usage_filters.filter_by_charge.present? || usage_filters.filter_by_group.present?) && subscription.plan.charges.where(prorated: true).none?
-      return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !full_usage_allowed
+      return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !querying_full_usage_allowed
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -103,7 +102,7 @@ module Invoices
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-      if usage_filters.filter_by_charge
+      if usage_filters.filter_by_charge.present?
         charges = charges.where(id: usage_filters.filter_by_charge.id)
       end
 
@@ -124,7 +123,7 @@ module Invoices
 
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
-      if usage_filters.filter_by_group
+      if usage_filters.filter_by_group.present?
         cache_middleware = nil
       end
 
@@ -234,6 +233,15 @@ module Invoices
       Events::BillingPeriodFilterService.call!(
         subscription:, boundaries:
       )
+    end
+
+    def querying_full_usage_allowed
+      any_filter_present = usage_filters.filter_by_charge.present? || usage_filters.filter_by_group.present?
+      subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
+
+      # full usage is only allowed for subscriptions without prorated charges
+      # and only when filtering by charge or by group
+      !subscription_has_prorated_charges && any_filter_present
     end
   end
 end
