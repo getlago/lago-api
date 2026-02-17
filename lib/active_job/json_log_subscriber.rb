@@ -14,19 +14,7 @@ module ActiveJob
       ex = event.payload[:exception_object] || job.enqueue_error
 
       if ex
-        error do
-          {
-            level: "error",
-            event: "enqueue",
-            status: "error",
-            job: job.class.name,
-            queue: job.queue_name,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
-        end
+        enqueue_error(job, ex)
       elsif event.payload[:aborted]
         info do
           {
@@ -38,39 +26,32 @@ module ActiveJob
           }.to_json
         end
       else
-        info do
-          {
-            level: "info",
-            event: "enqueue",
-            status: "success",
-            job: job.class.name,
-            job_id: job.job_id,
-            queue: job.queue_name,
-            arguments: args_info(job)
-          }.to_json
-        end
+        enqueue_success(job)
       end
     end
     subscribe_log_level :enqueue, :info
+
+    def enqueue_all(event)
+      jobs = event.payload[:jobs]
+      ex = event.payload[:exception_object]
+
+      jobs.each do |job|
+        job_ex = ex || job.enqueue_error
+        if job_ex
+          enqueue_error(job, job_ex)
+        else
+          extra = job.scheduled_at ? {enqueued_at: scheduled_at(job)} : {}
+          enqueue_success(job, **extra)
+        end
+      end
+    end
 
     def enqueue_at(event)
       job = event.payload[:job]
       ex = event.payload[:exception_object] || job.enqueue_error
 
       if ex
-        error do
-          {
-            level: "error",
-            event: "enqueue",
-            status: "error",
-            job: job.class.name,
-            queue: job.queue_name,
-            exception: {
-              class: ex.class.name,
-              message: ex.message
-            }
-          }.to_json
-        end
+        enqueue_error(job, ex)
       elsif event.payload[:aborted]
         info do
           {
@@ -82,25 +63,10 @@ module ActiveJob
           }.to_json
         end
       else
-        info do
-          {
-            level: "info",
-            event: "enqueue",
-            enqueued_at: scheduled_at(event),
-            status: "success",
-            job: job.class.name,
-            job_id: job.job_id,
-            queue: job.queue_name,
-            arguments: args_info(job)
-          }.to_json
-        end
+        enqueue_success(job, enqueued_at: scheduled_at(job))
       end
     end
     subscribe_log_level :enqueue_at, :info
-
-    # NOTE: We do not use batch enqueue at LAGO
-    # this has to be added if we use it finally
-    # def enqueue_all; end
 
     def perform_start(event)
       info do
@@ -271,8 +237,39 @@ module ActiveJob
       end
     end
 
-    def scheduled_at(event)
-      Time.at(event.payload[:job].scheduled_at).utc
+    def scheduled_at(job)
+      Time.at(job.scheduled_at).utc
+    end
+
+    def enqueue_error(job, ex)
+      error do
+        {
+          level: "error",
+          event: "enqueue",
+          status: "error",
+          job: job.class.name,
+          queue: job.queue_name,
+          exception: {
+            class: ex.class.name,
+            message: ex.message
+          }
+        }.to_json
+      end
+    end
+
+    def enqueue_success(job, **extra)
+      info do
+        {
+          level: "info",
+          event: "enqueue",
+          status: "success",
+          job: job.class.name,
+          job_id: job.job_id,
+          queue: job.queue_name,
+          arguments: args_info(job),
+          **extra
+        }.to_json
+      end
     end
   end
 end
