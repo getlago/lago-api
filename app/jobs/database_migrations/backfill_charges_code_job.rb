@@ -21,11 +21,14 @@ module DatabaseMigrations
           SELECT
             c.id,
             bm.code AS base_code,
-            ROW_NUMBER() OVER (PARTITION BY c.plan_id, bm.code ORDER BY c.created_at, c.id) AS rn
+            c.code IS NULL AS needs_update,
+            ROW_NUMBER() OVER (
+              PARTITION BY c.plan_id, bm.code
+              ORDER BY CASE WHEN c.code IS NOT NULL THEN 0 ELSE 1 END, c.created_at, c.id
+            ) AS rn
           FROM charges c
           INNER JOIN plan_batch pb ON pb.plan_id = c.plan_id
           INNER JOIN billable_metrics bm ON bm.id = c.billable_metric_id
-          WHERE c.code IS NULL
         )
         UPDATE charges
         SET code = CASE
@@ -34,6 +37,7 @@ module DatabaseMigrations
         END
         FROM ranked_codes
         WHERE charges.id = ranked_codes.id
+        AND ranked_codes.needs_update = true
       SQL
 
       if result.cmd_tuples.positive?

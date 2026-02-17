@@ -21,11 +21,14 @@ module DatabaseMigrations
           SELECT
             fc.id,
             ao.code AS base_code,
-            ROW_NUMBER() OVER (PARTITION BY fc.plan_id, ao.code ORDER BY fc.created_at, fc.id) AS rn
+            fc.code IS NULL AS needs_update,
+            ROW_NUMBER() OVER (
+              PARTITION BY fc.plan_id, ao.code
+              ORDER BY CASE WHEN fc.code IS NOT NULL THEN 0 ELSE 1 END, fc.created_at, fc.id
+            ) AS rn
           FROM fixed_charges fc
           INNER JOIN plan_batch pb ON pb.plan_id = fc.plan_id
           INNER JOIN add_ons ao ON ao.id = fc.add_on_id
-          WHERE fc.code IS NULL
         )
         UPDATE fixed_charges
         SET code = CASE
@@ -34,6 +37,7 @@ module DatabaseMigrations
         END
         FROM ranked_codes
         WHERE fixed_charges.id = ranked_codes.id
+        AND ranked_codes.needs_update = true
       SQL
 
       if result.cmd_tuples.positive?
