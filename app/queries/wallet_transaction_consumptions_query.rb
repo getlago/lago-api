@@ -10,7 +10,7 @@ class WalletTransactionConsumptionsQuery < BaseQuery
     return result.single_validation_failure!(field: :wallet, error_code: "not_traceable") unless wallet_transaction.wallet.traceable?
     return result.single_validation_failure!(field: :transaction_type, error_code: "invalid_transaction_type") unless valid_transaction_type?
 
-    consumptions = wallet_transaction.public_send(filters.direction)
+    consumptions = wallet_transaction.public_send(direction).includes(eager_load_association)
     consumptions = paginate(consumptions)
     consumptions = apply_consistent_ordering(consumptions)
 
@@ -19,6 +19,10 @@ class WalletTransactionConsumptionsQuery < BaseQuery
   end
 
   private
+
+  def direction
+    filters.direction
+  end
 
   def wallet_transaction
     @wallet_transaction ||= organization.wallet_transactions.find_by(id: filters.wallet_transaction_id)
@@ -29,11 +33,20 @@ class WalletTransactionConsumptionsQuery < BaseQuery
   end
 
   def valid_transaction_type?
-    case filters.direction.to_sym
+    case direction.to_sym
     when :consumptions
       wallet_transaction.inbound?
     when :fundings
       wallet_transaction.outbound?
+    end
+  end
+
+  def eager_load_association
+    case direction.to_sym
+    when :consumptions
+      {outbound_wallet_transaction: :wallet}
+    when :fundings
+      {inbound_wallet_transaction: :wallet}
     end
   end
 end
