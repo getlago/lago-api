@@ -103,10 +103,10 @@ RSpec.describe Customers::EuAutoTaxesService do
 
         before { customer.update!(country: "DE") }
 
-        it "returns the default tax code" do
+        it "returns the billing entity country tax code" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
           expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
@@ -120,10 +120,10 @@ RSpec.describe Customers::EuAutoTaxesService do
           customer.update!(country: "DE")
         end
 
-        it "returns the default tax code" do
+        it "returns the billing entity country tax code" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
           expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
             valid: false,
             valid_format: false
@@ -347,10 +347,10 @@ RSpec.describe Customers::EuAutoTaxesService do
           customer.update(country: "DE")
         end
 
-        it "returns the customer country tax code" do
+        it "returns the billing entity country tax code" do
           result = eu_tax_service.call
 
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
       end
 
