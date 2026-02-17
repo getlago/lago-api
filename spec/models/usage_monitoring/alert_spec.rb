@@ -120,7 +120,7 @@ RSpec.describe UsageMonitoring::Alert do
         expect(alert.find_thresholds_crossed(1000)).to eq([]) # exclude previous_values
         expect(alert.find_thresholds_crossed(500)).to eq([500, 800])
         alert.previous_value = 450
-        expect(alert.find_thresholds_crossed(100)).to eq([200])
+        expect(alert.find_thresholds_crossed(100)).to eq([100, 200])
       end
 
       it "returns empty array if value increases" do
@@ -134,8 +134,8 @@ RSpec.describe UsageMonitoring::Alert do
       end
 
       it "returns recurring thresholds if crossed" do
-        alert.previous_value = 200
-        expect(alert.find_thresholds_crossed(-100)).to eq([-100, 0, 100])
+        alert.previous_value = 600
+        expect(alert.find_thresholds_crossed(-100)).to eq([-100, 0, 100, 200, 500])
       end
     end
   end
