@@ -163,6 +163,21 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       end
     end
 
+    context "with voided_invoice_id parameter" do
+      let(:voided_invoice) { create(:invoice, :voided, organization:) }
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          granted_credits: "10",
+          voided_invoice_id: voided_invoice.id
+        }
+      end
+
+      it "creates granted transaction with voided_invoice_id" do
+        expect(result.wallet_transactions.first.voided_invoice_id).to eq(voided_invoice.id)
+      end
+    end
+
     context "with name parameter" do
       let(:name) { "Custom Top-up Name" }
 

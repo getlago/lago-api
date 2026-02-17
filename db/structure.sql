@@ -21,6 +21,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
 ALTER TABLE IF EXISTS ONLY public.customer_snapshots DROP CONSTRAINT IF EXISTS fk_rails_f0bbf2291d;
@@ -327,6 +328,7 @@ DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
@@ -3808,6 +3810,7 @@ CREATE TABLE public.wallet_transactions (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     remaining_amount_cents bigint,
+    voided_invoice_id uuid,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -9004,6 +9007,13 @@ CREATE INDEX index_wallet_transactions_on_payment_method_id ON public.wallet_tra
 
 
 --
+-- Name: index_wallet_transactions_on_voided_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_on_voided_invoice_id ON public.wallet_transactions USING btree (voided_invoice_id);
+
+
+--
 -- Name: index_wallet_transactions_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11316,6 +11326,14 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
+-- Name: wallet_transactions fk_rails_f32b205d44; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_f32b205d44 FOREIGN KEY (voided_invoice_id) REFERENCES public.invoices(id);
+
+
+--
 -- Name: fees fk_rails_f375d320ad; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11422,6 +11440,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260209103920'),
 ('20260209103526'),
 ('20260204153734'),
+('20260203145809'),
+('20260203145801'),
+('20260203145512'),
 ('20260202155431'),
 ('20260202134958'),
 ('20260129145352'),

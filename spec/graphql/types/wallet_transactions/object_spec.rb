@@ -24,6 +24,7 @@ RSpec.describe Types::WalletTransactions::Object do
     expect(subject).to have_field(:remaining_amount_cents).of_type("BigInt")
     expect(subject).to have_field(:remaining_credit_amount).of_type("String")
     expect(subject).to have_field(:invoice).of_type("Invoice")
+    expect(subject).to have_field(:voided_invoice).of_type("Invoice")
     expect(subject).to have_field(:metadata).of_type("[WalletTransactionMetadataObject!]")
     expect(subject).to have_field(:settled_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
@@ -55,6 +56,27 @@ RSpec.describe Types::WalletTransactions::Object do
 
       it "returns the remaining credit amount as string" do
         expect(subject).to eq("20.0")
+      end
+    end
+  end
+
+  describe "#voided_invoice" do
+    subject { run_graphql_field("WalletTransaction.voidedInvoice", wallet_transaction) }
+
+    let(:wallet_transaction) { create(:wallet_transaction, voided_invoice:) }
+    let(:voided_invoice) { nil }
+
+    context "when voided_invoice is nil" do
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "when voided_invoice is present" do
+      let(:voided_invoice) { create(:invoice, :voided) }
+
+      it "returns the invoice" do
+        expect(subject).to eq(voided_invoice)
       end
     end
   end
