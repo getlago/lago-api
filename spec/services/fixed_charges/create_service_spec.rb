@@ -409,6 +409,7 @@ RSpec.describe FixedCharges::CreateService do
       let(:params) do
         {
           add_on_id: add_on.id,
+          code: "timestamp_fixed_charge",
           charge_model: "standard",
           units: 5,
           properties: {amount: "100"},
