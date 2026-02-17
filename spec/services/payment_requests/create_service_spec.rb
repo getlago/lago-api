@@ -124,7 +124,7 @@ RSpec.describe PaymentRequests::CreateService, :premium do
 
       result = create_service.call
 
-      expect(PaymentRequests::Payments::CreateService).to have_received(:call_async).with(payable: result.payment_request)
+      expect(PaymentRequests::Payments::CreateService).to have_received(:call_async).with(payable: result.payment_request, payment_method_params: {})
     end
 
     context "when Payments::CreateService returns an error" do
