@@ -184,7 +184,6 @@ end
 #  charge_model          :integer          default("standard"), not null
 #  code                  :string
 #  deleted_at            :datetime
-#  group_by_wallet       :boolean          default(FALSE), not null
 #  invoice_display_name  :string
 #  invoiceable           :boolean          default(TRUE), not null
 #  min_amount_cents      :bigint           default(0), not null

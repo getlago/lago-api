@@ -345,6 +345,7 @@ end
 #  customer_type                                :enum
 #  deleted_at                                   :datetime
 #  document_locale                              :string
+#  dunning_campaign_ended_at                    :datetime
 #  email                                        :string
 #  exclude_from_dunning_campaign                :boolean          default(FALSE), not null
 #  finalize_zero_amount_invoice                 :integer          default("inherit"), not null
