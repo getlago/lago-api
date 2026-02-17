@@ -41,4 +41,10 @@ RSpec.describe Integrations::XeroIntegration do
       expect(xero_integration.sync_payments).to eq(true)
     end
   end
+
+  describe "#external_id_key" do
+    it "returns item_code" do
+      expect(xero_integration.external_id_key).to eq("item_code")
+    end
+  end
 end

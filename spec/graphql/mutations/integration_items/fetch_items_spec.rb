@@ -50,9 +50,9 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
 
     result_data = result["data"]["fetchIntegrationItems"]
 
-    invoice_ids = result_data["collection"].map { |value| value["externalId"] }
+    external_ids = result_data["collection"].map { |value| value["externalId"] }
 
-    expect(invoice_ids).to eq(%w[755 745 753 484 828])
+    expect(external_ids).to eq(%w[755 745 753 484 828])
     expect(integration.integration_items.where(item_type: :standard).count).to eq(5)
   end
 end
