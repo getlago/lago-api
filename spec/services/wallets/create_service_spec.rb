@@ -760,10 +760,7 @@ RSpec.describe Wallets::CreateService do
       end
 
       context "when code is already taken for the customer" do
-        before do
-          create(:wallet, customer:, organization:, code: "existing_code")
-        end
-
+        let(:wallet) { create(:wallet, customer:, organization:, code: "existing_code") }
         let(:params) do
           {
             name: "New Wallet",
@@ -777,10 +774,24 @@ RSpec.describe Wallets::CreateService do
           }
         end
 
+        before { wallet }
+
         it "returns an error" do
           expect { service_result }.not_to change(Wallet, :count)
           expect(service_result).not_to be_success
           expect(service_result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        context "when existing wallet is terminated" do
+          let(:wallet) { create(:wallet, customer:, organization:, code: "existing_code", status: "terminated") }
+
+          it "creates the wallet successfully" do
+            expect { service_result }.to change(Wallet, :count).by(1)
+            expect(service_result).to be_success
+
+            wallet = service_result.wallet
+            expect(wallet.code).to eq("existing_code")
+          end
         end
       end
     end
@@ -807,9 +818,7 @@ RSpec.describe Wallets::CreateService do
       end
 
       context "when name is already taken for the customer" do
-        before do
-          create(:wallet, customer:, organization:, name: "Existing Name")
-        end
+        let(:wallet) { create(:wallet, customer:, organization:, name: "Existing Name", code: "existing_name") }
 
         let(:params) do
           {
@@ -823,12 +832,26 @@ RSpec.describe Wallets::CreateService do
           }
         end
 
+        before { wallet }
+
         it "creates a wallet with timestamp in the code" do
           expect { service_result }.to change(Wallet, :count).by(1)
           expect(service_result).to be_success
 
           wallet = service_result.wallet
           expect(wallet.code).to eq("existing_name_#{wallet.created_at.to_i}")
+        end
+
+        context "when name is already taken by a terminated wallet" do
+          let(:wallet) { create(:wallet, customer:, organization:, name: "Existing Name", code: "existing_name", status: "terminated") }
+
+          it "creates a wallet with code derived from name" do
+            expect { service_result }.to change(Wallet, :count).by(1)
+            expect(service_result).to be_success
+
+            wallet = service_result.wallet
+            expect(wallet.code).to eq("existing_name")
+          end
         end
       end
     end

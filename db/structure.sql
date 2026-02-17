@@ -8846,7 +8846,7 @@ CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_fixed_charges_boundaries
 -- Name: index_uniq_wallet_code_per_customer; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING btree (customer_id, code);
+CREATE UNIQUE INDEX index_uniq_wallet_code_per_customer ON public.wallets USING btree (customer_id, code) WHERE (status = 0);
 
 
 --
@@ -11418,6 +11418,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260216115709'),
 ('20260209103920'),
 ('20260209103526'),
 ('20260204153734'),

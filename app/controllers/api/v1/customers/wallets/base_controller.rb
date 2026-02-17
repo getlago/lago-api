@@ -12,7 +12,7 @@ module Api
           attr_reader :wallet
 
           def find_wallet
-            @wallet = customer.wallets.find_by!(code: params[:wallet_code])
+            @wallet = customer.wallets.order(:status).find_by!(code: params[:wallet_code])
           rescue ActiveRecord::RecordNotFound
             not_found_error(resource: "wallet")
           end

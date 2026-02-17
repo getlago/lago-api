@@ -24,7 +24,7 @@ module Wallets
       # only adjust generated code if it's taken
       if code.blank?
         code = params[:name].to_s.parameterize(separator: "_").presence || "default"
-        code_taken = Wallet.where(organization_id:, customer_id: customer.id, code: code).exists?
+        code_taken = Wallet.where(organization_id:, customer_id: customer.id, status: "active", code: code).exists?
         code += "_#{Time.current.to_i}" if code_taken
       end
 
