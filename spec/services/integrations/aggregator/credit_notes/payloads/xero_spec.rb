@@ -17,7 +17,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
              {
                "account_code" => mapping_codes.dig(:add_on, :external_account_code),
                "description" => "Add-on Fee",
-               "external_id" => mapping_codes.dig(:add_on, :external_id),
+               "item_code" => mapping_codes.dig(:add_on, :external_id),
                "precise_unit_amount" => 1.9,
                "taxes_amount_cents" => 0.0,
                "units" => 1
@@ -25,7 +25,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
              {
                "account_code" => mapping_codes.dig(:fixed_charge, :external_account_code),
                "description" => "Fixed Charge Fee",
-               "external_id" => mapping_codes.dig(:fixed_charge, :external_id),
+               "item_code" => mapping_codes.dig(:fixed_charge, :external_id),
                "precise_unit_amount" => 1.4,
                "taxes_amount_cents" => 0.0,
                "units" => 1
@@ -33,7 +33,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
              {
                "account_code" => mapping_codes.dig(:billable_metric, :external_account_code),
                "description" => "Standard Charge Fee",
-               "external_id" => mapping_codes.dig(:billable_metric, :external_id),
+               "item_code" => mapping_codes.dig(:billable_metric, :external_id),
                "precise_unit_amount" => 1.8,
                "taxes_amount_cents" => 0.0,
                "units" => 1
@@ -41,7 +41,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
              {
                "account_code" => mapping_codes.dig(:minimum_commitment, :external_account_code),
                "description" => "Minimum Commitment Fee",
-               "external_id" => mapping_codes.dig(:minimum_commitment, :external_id),
+               "item_code" => mapping_codes.dig(:minimum_commitment, :external_id),
                "precise_unit_amount" => 1.7,
                "taxes_amount_cents" => 0.0,
                "units" => 1
@@ -49,7 +49,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
              {
                "account_code" => mapping_codes.dig(:subscription, :external_account_code),
                "description" => "Subscription",
-               "external_id" => mapping_codes.dig(:subscription, :external_id),
+               "item_code" => mapping_codes.dig(:subscription, :external_id),
                "precise_unit_amount" => 1.6,
                "taxes_amount_cents" => 0.0,
                "units" => 1
@@ -61,6 +61,23 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Xero do
             "type" => "ACCRECCREDIT"
           }
         ]
+      end
+
+      context "when there are coupons" do
+        let(:credit_note) { create(:credit_note, customer:, invoice:, issuing_date: DateTime.new(2024, 7, 8), coupons_adjustment_amount_cents: 50) }
+
+        it "returns coupons with item_code instead of external_id" do
+          expect(payload.first["fees"]).to include(
+            {
+              "account_code" => default_mapping_codes.dig(:coupon, :external_account_code),
+              "description" => "Coupons",
+              "item_code" => default_mapping_codes.dig(:coupon, :external_id),
+              "precise_unit_amount" => -0.5,
+              "taxes_amount_cents" => 0,
+              "units" => 1
+            }
+          )
+        end
       end
     end
   end
