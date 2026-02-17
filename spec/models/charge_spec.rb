@@ -7,6 +7,8 @@ RSpec.describe Charge do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to validate_presence_of(:code) }
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
