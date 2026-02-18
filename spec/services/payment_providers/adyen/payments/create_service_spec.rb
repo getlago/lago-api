@@ -26,6 +26,7 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
       invoice_type: invoice.invoice_type
     }
   end
+  let(:payment_method) { nil }
 
   let(:invoice) do
     create(
@@ -46,7 +47,8 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
       payment_provider: adyen_payment_provider,
       payment_provider_customer: adyen_customer,
       amount_cents: invoice.total_amount_cents,
-      amount_currency: invoice.currency
+      amount_currency: invoice.currency,
+      payment_method:
     )
   end
 
@@ -84,6 +86,27 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
         .to eq(payment_methods_response.response["storedPaymentMethods"].first["id"])
 
       expect(payments_api).to have_received(:payments)
+    end
+
+    context "when payment has a payment method" do
+      let(:payment_method) { create(:payment_method, payment_provider_customer: adyen_customer, provider_method_id: "pm_test") }
+
+      before do
+        organization.enable_feature_flag!(:multiple_payment_methods)
+      end
+
+      it "uses payment method provider id" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment.id).to be_present
+        expect(payments_api).to have_received(:payments)
+          .with(
+            hash_including(
+              paymentMethod: hash_including(storedPaymentMethodId: "pm_test")
+            ), anything
+          )
+      end
     end
 
     context "with error response from adyen" do
