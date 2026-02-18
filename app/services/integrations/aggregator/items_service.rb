@@ -68,6 +68,13 @@ module Integrations
         }.merge(cursor.present? ? {cursor:} : {})
       end
 
+      # Nango uses incremental sync to synchronize Xero items which means it doesn't not take deleted record into
+      # account and therefore stores items with duplicate `item_code` (which is the external_id_key for xero items).
+      # This method deduplicates items based on the `item_code` and keeps the most recently modified one based on the
+      # `last_modified_at` field in `_nango_metadata`.
+      #
+      # Note that this will have no impact on other integrations as they rely on `id` field as `external_id_key`. So
+      # if Nango uses incremental sync for those integrations, we may retrieve deleted items.
       def deduplicate_items(items)
         items
           .group_by { |item| item[integration.external_id_key] }
