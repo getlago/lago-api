@@ -40,6 +40,7 @@ RSpec.describe BillingEntities::UpdateService do
       billing_configuration: {
         invoice_footer: "invoice footer",
         document_locale: "fr",
+        skip_invoice_pdf: true,
         invoice_grace_period:,
         subscription_invoice_issuing_date_anchor:,
         subscription_invoice_issuing_date_adjustment:
@@ -68,6 +69,7 @@ RSpec.describe BillingEntities::UpdateService do
 
       expect(result.billing_entity.invoice_footer).to eq("invoice footer")
       expect(result.billing_entity.document_locale).to eq("fr")
+      expect(result.billing_entity.skip_invoice_pdf).to eq(true)
     end
 
     it "produces a security log" do

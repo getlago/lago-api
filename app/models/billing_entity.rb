@@ -203,6 +203,7 @@ end
 #  logo                                         :string
 #  name                                         :string           not null
 #  net_payment_term                             :integer          default(0), not null
+#  skip_invoice_pdf                             :boolean          default(FALSE), not null
 #  state                                        :string
 #  subscription_invoice_issuing_date_adjustment :enum             default("align_with_finalization_date"), not null
 #  subscription_invoice_issuing_date_anchor     :enum             default("next_period_start"), not null
