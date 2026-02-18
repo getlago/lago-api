@@ -105,6 +105,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
             expect(payment_method.details["type"]).to eq("card")
             expect(payment_method.details["last4"]).to eq("4242")
             expect(payment_method.details["brand"]).to eq("visa")
+            expect(payment_method.details["expiration_month"]).to be_present
+            expect(payment_method.details["expiration_year"]).to be_present
           end
         end
       end

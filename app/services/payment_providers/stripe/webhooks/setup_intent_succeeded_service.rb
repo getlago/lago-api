@@ -54,16 +54,15 @@ module PaymentProviders
         end
 
         def payment_method_details
-          data = {type: stripe_payment_method.type}
-
-          if stripe_payment_method.respond_to?(:card) && stripe_payment_method.card
-            data[:last4] = stripe_payment_method.card.last4
-            data[:brand] = stripe_payment_method.card.display_brand
-            data[:expiration_month] = stripe_payment_method.card.exp_month
-            data[:expiration_year] = stripe_payment_method.card.exp_year
-          end
-
-          data
+          PaymentMethods::CardDetails.new(
+            type: stripe_payment_method.type,
+            last4: stripe_payment_method.card&.last4,
+            brand: stripe_payment_method.card&.display_brand,
+            expiration_month: stripe_payment_method.card&.exp_month,
+            expiration_year: stripe_payment_method.card&.exp_year,
+            card_holder_name: nil,
+            issuer: nil
+          ).to_h
         end
 
         def update_stripe_customer_default_payment_method
