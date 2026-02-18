@@ -359,6 +359,7 @@ DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
+DROP INDEX IF EXISTS public.index_subscriptions_on_renew_daily_usage_true;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
@@ -11448,6 +11449,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260219083335'),
+('20260218102426'),
 ('20260216115709'),
 ('20260209103920'),
 ('20260209103526'),
