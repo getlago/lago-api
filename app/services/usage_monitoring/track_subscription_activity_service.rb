@@ -15,7 +15,7 @@ module UsageMonitoring
     def call
       return result unless License.premium?
       return result unless subscription.active?
-      subscription.update(renew_daily_usage: true)
+      subscription.update(renew_daily_usage: true) unless subscription.renew_daily_usage?
 
       return result unless need_lifetime_usage? || has_alerts?
 
