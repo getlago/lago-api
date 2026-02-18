@@ -4,6 +4,7 @@ module Mutations
   module Coupons
     class Terminate < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "coupons:update"
 
@@ -15,7 +16,7 @@ module Mutations
       type Types::Coupons::Object
 
       def resolve(id:)
-        coupon = context[:current_user].coupons.find_by(id:)
+        coupon = current_organization.coupons.find_by(id:)
         result = ::Coupons::TerminateService.call(coupon)
 
         result.success? ? result.coupon : result_error(result)

@@ -4,6 +4,7 @@ module Mutations
   module Customers
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = %w[customers:update]
 
@@ -15,7 +16,7 @@ module Mutations
       type Types::Customers::Object
 
       def resolve(**args)
-        customer = context[:current_user].customers.find_by(id: args[:id])
+        customer = current_organization.customers.find_by(id: args[:id])
         result = ::Customers::UpdateService.call(customer:, args:)
 
         result.success? ? result.customer : result_error(result)

@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe Mutations::Coupons::Update do
   let(:required_permission) { "coupons:update" }
   let(:membership) { create(:membership) }
-  let(:coupon) { create(:coupon, organization: membership.organization) }
+  let(:organization) { membership.organization }
+  let(:coupon) { create(:coupon, organization:) }
   let(:expiration_at) { Time.current + 3.days }
-  let(:plan) { create(:plan, organization: membership.organization) }
-  let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateCouponInput!) {
@@ -33,29 +34,26 @@ RSpec.describe Mutations::Coupons::Update do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "coupons:update"
 
   it "updates a coupon" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: coupon.id,
-          name: "New name",
-          couponType: "fixed_amount",
-          frequency: "once",
-          code: "new_code",
-          description: "This is a description",
-          amountCents: 123,
-          amountCurrency: "USD",
-          expiration: "time_limit",
-          expirationAt: expiration_at.iso8601,
-          reusable: false,
-          appliesTo: {
-            planIds: [plan.id]
-          }
+      input: {
+        id: coupon.id,
+        name: "New name",
+        couponType: "fixed_amount",
+        frequency: "once",
+        code: "new_code",
+        description: "This is a description",
+        amountCents: 123,
+        amountCurrency: "USD",
+        expiration: "time_limit",
+        expirationAt: expiration_at.iso8601,
+        reusable: false,
+        appliesTo: {
+          planIds: [plan.id]
         }
       }
     )
@@ -99,25 +97,21 @@ RSpec.describe Mutations::Coupons::Update do
     end
 
     it "updates a coupon" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {
-            id: coupon.id,
-            name: "New name",
-            couponType: "fixed_amount",
-            frequency: "once",
-            code: "new_code",
-            amountCents: 123,
-            amountCurrency: "USD",
-            expiration: "time_limit",
-            expirationAt: expiration_at.iso8601,
-            reusable: false,
-            appliesTo: {
-              billableMetricIds: [billable_metric.id]
-            }
+        input: {
+          id: coupon.id,
+          name: "New name",
+          couponType: "fixed_amount",
+          frequency: "once",
+          code: "new_code",
+          amountCents: 123,
+          amountCurrency: "USD",
+          expiration: "time_limit",
+          expirationAt: expiration_at.iso8601,
+          reusable: false,
+          appliesTo: {
+            billableMetricIds: [billable_metric.id]
           }
         }
       )

@@ -4,6 +4,7 @@ module Mutations
   module Subscriptions
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "subscriptions:update"
 
@@ -15,7 +16,7 @@ module Mutations
       type Types::Subscriptions::Object
 
       def resolve(entitlements: nil, **args)
-        subscription = context[:current_user].subscriptions.find_by(id: args[:id])
+        subscription = current_organization.subscriptions.find_by(id: args[:id])
         result = ::Subscriptions::UpdateService.call(subscription:, params: args)
 
         result.success? ? subscription.reload : result_error(result)

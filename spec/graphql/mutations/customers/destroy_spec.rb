@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Customers::Destroy do
-  let(:required_permissions) { "customers:delete" }
+  let(:required_permission) { "customers:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -19,16 +19,13 @@ RSpec.describe Mutations::Customers::Destroy do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "customers:delete"
 
   it "deletes a customer" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permissions,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {id: customer.id}
-      }
+      input: {id: customer.id}
     )
 
     data = result["data"]["destroyCustomer"]

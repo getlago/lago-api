@@ -4,6 +4,7 @@ module Mutations
   module AddOns
     class Destroy < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "addons:delete"
 
@@ -15,7 +16,7 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        add_on = context[:current_user].add_ons.find_by(id:)
+        add_on = current_organization.add_ons.find_by(id:)
         result = ::AddOns::DestroyService.call(add_on:)
 
         result.success? ? result.add_on : result_error(result)

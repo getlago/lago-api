@@ -17,16 +17,13 @@ RSpec.describe Mutations::PaymentProviders::Destroy do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:delete"
 
   it "deletes a payment provider" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {id: payment_provider.id}
-      }
+      input: {id: payment_provider.id}
     )
 
     data = result["data"]["destroyPaymentProvider"]
@@ -37,13 +34,9 @@ RSpec.describe Mutations::PaymentProviders::Destroy do
     let(:payment_provider) { create(:stripe_provider) }
 
     it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permission,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {id: payment_provider.id}
-        }
+        input: {id: payment_provider.id}
       )
 
       expect(result["errors"].first["message"]).to eq("Resource not found")

@@ -109,6 +109,7 @@ RSpec.describe Mutations::Plans::Update do
   let(:graphql) do
     {
       current_user: membership.user,
+      current_organization: organization,
       permissions: required_permission,
       query: mutation,
       variables: {
@@ -234,6 +235,7 @@ RSpec.describe Mutations::Plans::Update do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:update"
 
   context "with premium license", :premium do

@@ -4,11 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::Plans::Destroy do
   subject(:graphql_request) do
-    execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    execute_query(
       query: mutation,
-      variables: {input: {id: plan.id}}
+      input: {id: plan.id}
     )
   end
 
@@ -28,6 +26,7 @@ RSpec.describe Mutations::Plans::Destroy do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:delete"
 
   it "marks plan as pending_deletion" do

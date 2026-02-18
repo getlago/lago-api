@@ -4,6 +4,7 @@ module Mutations
   module Customers
     class Destroy < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "customers:delete"
 
@@ -15,7 +16,7 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        customer = context[:current_user].customers.find_by(id:)
+        customer = current_organization.customers.find_by(id:)
         result = ::Customers::DestroyService.call(customer:)
 
         result.success? ? result.customer : result_error(result)

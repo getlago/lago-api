@@ -29,24 +29,21 @@ RSpec.describe Mutations::AddOns::Update do
   before { create(:add_on_applied_tax, add_on:, tax:) }
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "addons:update"
 
   it "updates an add-on" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: add_on.id,
-          name: "New name",
-          invoiceDisplayName: "New invoice name",
-          code: "new_code",
-          description: "desc",
-          amountCents: 123,
-          amountCurrency: "USD",
-          taxCodes: [tax2.code]
-        }
+      input: {
+        id: add_on.id,
+        name: "New name",
+        invoiceDisplayName: "New invoice name",
+        code: "new_code",
+        description: "desc",
+        amountCents: 123,
+        amountCurrency: "USD",
+        taxCodes: [tax2.code]
       }
     )
 
