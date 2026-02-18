@@ -9,7 +9,7 @@ RSpec.describe DailyUsages::ComputeAllService do
 
   let(:organization) { create(:organization, premium_integrations:) }
   let(:customer) { create(:customer, organization:) }
-  let(:subscriptions) { create_list(:subscription, 5, customer:) }
+  let(:subscriptions) { create_list(:subscription, 5, customer:, renew_daily_usage: true) }
 
   let(:premium_integrations) do
     ["revenue_analytics"]
@@ -133,6 +133,15 @@ RSpec.describe DailyUsages::ComputeAllService do
             expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
           end
         end
+      end
+    end
+
+    context "when renew_daily_usage is false" do
+      let(:subscriptions) { create_list(:subscription, 5, customer:, renew_daily_usage: false) }
+
+      it "does not enqueue any job" do
+        expect(compute_service.call).to be_success
+        expect(DailyUsages::ComputeJob).not_to have_been_enqueued
       end
     end
 

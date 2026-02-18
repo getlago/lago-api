@@ -15,6 +15,11 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
       expect { subject.call }.to change { organization.subscription_activities.count }.by(1)
       expect { subject.call }.not_to change { organization.subscription_activities.count }
     end
+
+    it "sets renew_daily_usage to true" do
+      create(:usage_threshold, plan: subscription.plan)
+      expect { subject.call }.to change { subscription.reload.renew_daily_usage }.from(false).to(true)
+    end
   end
 
   context "when organization does use any integration with subscription tracking" do
@@ -24,6 +29,10 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
       subject.call
       expect(organization.subscription_activities.count).to eq(0)
     end
+
+    it "still sets renew_daily_usage to true" do
+      expect { subject.call }.to change { subscription.reload.renew_daily_usage }.from(false).to(true)
+    end
   end
 
   context "when subscription isn't active" do
@@ -32,6 +41,19 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
     it "does not track activity" do
       subject.call
       expect(organization.subscription_activities.count).to eq(0)
+    end
+
+    it "does not set renew_daily_usage" do
+      subject.call
+      expect(subscription.reload.renew_daily_usage).to be(false)
+    end
+  end
+
+  context "when license is not premium" do
+    it "does not set renew_daily_usage" do
+      allow(License).to receive(:premium?).and_return(false)
+      subject.call
+      expect(subscription.reload.renew_daily_usage).to be(false)
     end
   end
 end
