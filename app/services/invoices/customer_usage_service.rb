@@ -29,10 +29,10 @@ module Invoices
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      calculate_projected_usage: false, filter_by_charge: nil, filter_by_group: nil, full_usage: false)
+      calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, filter_by_charge:, filter_by_group:, full_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -103,13 +103,15 @@ module Invoices
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-      if usage_filters.filter_by_charge.present?
-        charges = charges.where(id: usage_filters.filter_by_charge.id)
+      if usage_filters.filter_by_charge_id.present?
+        charges = charges.find(usage_filters.filter_by_charge_id)
+      elsif usage_filters.filter_by_charge_code.present?
+        charges = charges.find_by!(code: usage_filters.filter_by_charge_code)
       end
 
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
-      return fees if usage_filters.filter_by_charge
+      return fees if usage_filters.filter_by_charge_id.present? || usage_filters.filter_by_charge_code.present?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
@@ -237,7 +239,7 @@ module Invoices
     end
 
     def querying_full_usage_allowed
-      any_filter_present = usage_filters.filter_by_charge.present? || usage_filters.filter_by_group.present?
+      any_filter_present = usage_filters.filter_by_charge_id.present? || usage_filters.filter_by_charge_code.present? || usage_filters.filter_by_group.present?
       subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
 
       # full usage is only allowed for subscriptions without prorated charges
