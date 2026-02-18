@@ -36,6 +36,50 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is negative" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "-100")) }
+
+      it "falls back to the default interval" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        end
+      end
+    end
+
+    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is zero" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "0")) }
+
+      it "falls back to the default interval" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        end
+      end
+    end
+
+    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is non-numeric" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "invalid")) }
+
+      it "falls back to the default interval" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        end
+      end
+    end
+
+    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is blank" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "")) }
+
+      it "falls back to the default interval" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.minutes.from_now..30.minutes.from_now)
+        end
+      end
+    end
+
     context "when subscription usage was already computed" do
       before { create(:daily_usage, subscription: subscriptions.first, usage_date: timestamp.to_date - 1.day) }
 

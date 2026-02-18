@@ -31,7 +31,12 @@ module DailyUsages
     end
 
     def scheduling_interval
-      ENV.fetch("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS", 30.minutes).to_i
+      @scheduling_interval ||= begin
+        raw_value = ENV["LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS"]
+        parsed = Integer(raw_value, exception: false) if raw_value
+        parsed = nil if parsed && parsed <= 0
+        (parsed || 30.minutes).to_i
+      end
     end
 
     def subscriptions
