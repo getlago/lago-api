@@ -108,6 +108,30 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
             expect(payment_method.details["expiration_month"]).to be_present
             expect(payment_method.details["expiration_year"]).to be_present
           end
+
+          context "when payment method type is not card" do
+            let(:payment_method) do
+              get_stripe_fixtures("retrieve_payment_method_response.json", version:) do |h|
+                h[:type] = "sepa_debit"
+                h.delete(:card)
+                h[:sepa_debit] = {country: "FR", last4: "3000", bank_code: "1234"}
+              end
+            end
+
+            it "creates a payment method with nil card details" do
+              result = webhook_service.call
+
+              payment_method = customer.payment_methods.order(created_at: :desc).first
+
+              expect(result).to be_success
+              expect(payment_method).not_to be_nil
+              expect(payment_method.details["type"]).to eq("sepa_debit")
+              expect(payment_method.details["last4"]).to be_nil
+              expect(payment_method.details["brand"]).to be_nil
+              expect(payment_method.details["expiration_month"]).to be_nil
+              expect(payment_method.details["expiration_year"]).to be_nil
+            end
+          end
         end
       end
 
