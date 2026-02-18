@@ -175,6 +175,59 @@ RSpec.describe Customers::RefreshWalletsService do
       end
     end
 
+    context "when target_wallet_ids is provided" do
+      subject(:result) { described_class.call(customer:, include_generating_invoices:, target_wallet_ids: [target_wallet.id]) }
+
+      let!(:target_wallet) do
+        create(
+          :wallet,
+          customer:,
+          balance_cents: 1000,
+          ongoing_balance_cents: 1000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 10.0,
+          credits_ongoing_balance: 10.0,
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      let!(:other_wallet) do
+        create(
+          :wallet,
+          customer:,
+          balance_cents: 2000,
+          ongoing_balance_cents: 2000,
+          ongoing_usage_balance_cents: 0,
+          credits_balance: 20.0,
+          credits_ongoing_balance: 20.0,
+          credits_ongoing_usage_balance: 0
+        )
+      end
+
+      it "only calls RefreshOngoingUsageService for targeted wallets" do
+        allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_call_original
+
+        subject
+
+        expect(Wallets::Balance::RefreshOngoingUsageService)
+          .to have_received(:call!).once
+        expect(Wallets::Balance::RefreshOngoingUsageService)
+          .to have_received(:call!).with(hash_including(wallet: target_wallet))
+      end
+
+      it "only updates last_ongoing_balance_sync_at for targeted wallets" do
+        subject
+
+        expect(target_wallet.reload.last_ongoing_balance_sync_at).not_to be_nil
+        expect(other_wallet.reload.last_ongoing_balance_sync_at).to be_nil
+      end
+
+      it "returns all active wallets in the result" do
+        expect(result).to be_success
+        expect(result.wallets).to match_array(customer.wallets.active)
+      end
+    end
+
     context "when there are wallet billable metric limitations" do
       subject(:result) { described_class.call(customer: targeted_customer, include_generating_invoices: false) }
 
