@@ -86,7 +86,8 @@ module Events
       # NOTE: We don't eager load usage_thresholds or alerts here so it could be considered an N+1 query
       #       But there should be only one active subscription here, so it's better to not re-requery to eager load
       subscriptions.select(&:active?).each do |subscription|
-        UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:)
+        date = Time.current.in_time_zone(customer.applicable_timezone).to_date
+        UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:, date:)
       end
     end
 

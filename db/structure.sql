@@ -359,11 +359,11 @@ DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
-DROP INDEX IF EXISTS public.index_subscriptions_on_renew_daily_usage_true;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_subscriptions_invoice_custom_sections_unique;
@@ -3025,7 +3025,8 @@ CREATE TABLE public.subscriptions (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    progressive_billing_disabled boolean DEFAULT false NOT NULL
+    progressive_billing_disabled boolean DEFAULT false NOT NULL,
+    last_received_event_on date
 );
 
 

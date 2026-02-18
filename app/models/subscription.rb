@@ -280,12 +280,12 @@ end
 #  billing_time                 :integer          default("calendar"), not null
 #  canceled_at                  :datetime
 #  ending_at                    :datetime
+#  last_received_event_on       :date
 #  name                         :string
 #  on_termination_credit_note   :enum
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
 #  progressive_billing_disabled :boolean          default(FALSE), not null
-#  renew_daily_usage            :boolean          default(FALSE), not null
 #  skip_invoice_custom_sections :boolean          default(FALSE), not null
 #  started_at                   :datetime
 #  status                       :integer          not null
@@ -305,11 +305,11 @@ end
 #
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
+#  index_subscriptions_on_last_received_event_on               (last_received_event_on)
 #  index_subscriptions_on_organization_id                      (organization_id)
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
-#  index_subscriptions_on_renew_daily_usage_true               (renew_daily_usage) WHERE (renew_daily_usage = true)
 #  index_subscriptions_on_started_at                           (started_at)
 #  index_subscriptions_on_started_at_and_ending_at             (started_at,ending_at)
 #  index_subscriptions_on_status                               (status)

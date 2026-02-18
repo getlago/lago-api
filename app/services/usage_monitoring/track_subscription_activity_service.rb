@@ -6,16 +6,17 @@ module UsageMonitoring
 
     # NOTE: The organization can be passed to avoid loading it from the subscription
     #       If not passed, it's lazy loaded from the subscription
-    def initialize(subscription:, organization: nil)
+    def initialize(subscription:, date:, organization: nil)
       @subscription = subscription
       @organization = organization
+      @date = date
       super
     end
 
     def call
       return result unless License.premium?
       return result unless subscription.active?
-      subscription.update(renew_daily_usage: true) unless subscription.renew_daily_usage?
+      subscription.update(last_received_event_on: date)
 
       return result unless need_lifetime_usage? || has_alerts?
 
@@ -29,7 +30,7 @@ module UsageMonitoring
 
     private
 
-    attr_reader :subscription
+    attr_reader :subscription, :date
 
     def organization
       @organization ||= subscription.organization

@@ -10,13 +10,11 @@ module DailyUsages
 
     def call
       if subscription_billing_day?
-        subscription.update(renew_daily_usage: false)
         # Usage on billing day will be computed using the periodic invoice as we cannot rely on the caching mechanism
         return result
       end
 
       if existing_daily_usage.present?
-        subscription.update(renew_daily_usage: false)
         result.daily_usage = existing_daily_usage
         return result
       end
@@ -41,7 +39,6 @@ module DailyUsages
 
         result.daily_usage = daily_usage
       end
-      subscription.update(renew_daily_usage: false)
 
       result
     rescue ActiveRecord::RecordInvalid => e

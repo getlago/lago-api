@@ -44,8 +44,9 @@ RSpec.describe Events::PostProcessService do
 
       process_service.call
 
+      expected_date = Time.current.in_time_zone(customer.applicable_timezone).to_date
       expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
-        .with(subscription:, organization:)
+        .with(subscription:, organization:, date: expected_date)
     end
 
     context "with events enrichment" do
