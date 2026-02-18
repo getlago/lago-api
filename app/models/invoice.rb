@@ -522,6 +522,7 @@ class Invoice < ApplicationRecord
   def handle_void_transition!
     update!(
       ready_for_payment_processing: false,
+      payment_overdue: false,
       voided_at: Time.current
     )
   end

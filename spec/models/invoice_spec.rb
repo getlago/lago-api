@@ -1583,11 +1583,12 @@ RSpec.describe Invoice do
     subject(:force_void_call) { invoice.void! }
 
     context "when invoice is finalized" do
-      let(:invoice) { build(:invoice, status: :finalized, ready_for_payment_processing: true) }
+      let(:invoice) { build(:invoice, status: :finalized, ready_for_payment_processing: true, payment_overdue: true) }
 
       it "changes the status to voided and disables payment processing" do
         expect { force_void_call }.to change(invoice, :status).from("finalized").to("voided")
           .and change(invoice, :ready_for_payment_processing).from(true).to(false)
+          .and change(invoice, :payment_overdue).from(true).to(false)
       end
     end
   end
