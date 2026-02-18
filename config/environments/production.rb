@@ -65,7 +65,9 @@ Rails.application.configure do
 
         Sentry.capture_exception(exception)
       },
-      compress_threshold: 512 # 512 bytes
+      # Compress cached values larger than 512 bytes (default is 1KB).
+      # Lowered to ensure compacted charge usage payloads still get compressed.
+      compress_threshold: 512
     }
 
     if ENV["LAGO_REDIS_CACHE_PASSWORD"].present? && !ENV["LAGO_REDIS_CACHE_PASSWORD"].empty?

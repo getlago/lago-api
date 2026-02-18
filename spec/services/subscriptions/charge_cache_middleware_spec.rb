@@ -116,6 +116,88 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware, cache: :redis do
     expect(actual.map(&:attributes)).to eq(expected.map(&:attributes))
   end
 
+  describe "COMPACTABLE_PROPERTIES" do
+    it "lists all fee properties keys that can be safely compacted" do
+      # These are keys inside the `properties` jsonb column that are only set for fixed charge fees.
+      # For regular charge fees they are nil and can be safely stripped.
+      # If a new optional property key is added to fee properties, add it here if it can safely
+      # default to nil when missing.
+      expect(described_class::COMPACTABLE_PROPERTIES).to eq(Set.new(%w[
+        fixed_charges_duration
+        fixed_charges_from_datetime
+        fixed_charges_to_datetime
+      ]))
+    end
+  end
+
+  describe "COMPACTABLE_ATTRIBUTES" do
+    it "covers all Fee columns that can be safely compacted" do
+      all_fee_columns = Set.new(Fee.column_names)
+      compactable = described_class::COMPACTABLE_ATTRIBUTES
+      non_compactable = all_fee_columns - compactable
+
+      # Every attribute in COMPACTABLE_ATTRIBUTES must be a real Fee column (except pricing_unit_usage which is virtual)
+      expect(compactable - all_fee_columns).to eq(Set.new(["pricing_unit_usage"]))
+
+      # Non-compactable attributes are those whose nil value carries meaning or that should always be present.
+      # If a new column is added to fees, this test will fail — add it to COMPACTABLE_ATTRIBUTES if it can
+      # safely default to nil when missing, or add it to this list if it must always be present.
+      expect(non_compactable).to eq(Set.new(%w[
+        amount_cents
+        amount_currency
+        amount_details
+        billing_entity_id
+        charge_id
+        events_count
+        fee_type
+        grouped_by
+        invoiceable_id
+        invoiceable_type
+        organization_id
+        payment_status
+        precise_amount_cents
+        precise_coupons_amount_cents
+        precise_credit_notes_amount_cents
+        precise_unit_amount
+        properties
+        subscription_id
+        taxes_amount_cents
+        taxes_base_rate
+        taxes_precise_amount_cents
+        taxes_rate
+        total_aggregated_units
+        unit_amount_cents
+        units
+      ]))
+    end
+  end
+
+  describe "COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES" do
+    it "covers all PricingUnitUsage columns that can be safely compacted" do
+      all_columns = Set.new(PricingUnitUsage.column_names)
+      compactable = described_class::COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES
+      non_compactable = all_columns - compactable
+
+      # Every attribute in COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES must be a real PricingUnitUsage column
+      expect(compactable - all_columns).to be_empty
+
+      # Non-compactable attributes carry pricing data that must always be present.
+      # If a new column is added to pricing_unit_usages, this test will fail — add it to
+      # COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES if it can safely default to nil when missing,
+      # or add it to this list if it must always be present.
+      expect(non_compactable).to eq(Set.new(%w[
+        amount_cents
+        conversion_rate
+        organization_id
+        precise_amount_cents
+        precise_unit_amount
+        pricing_unit_id
+        short_name
+        unit_amount_cents
+      ]))
+    end
+  end
+
   describe "#call" do
     let(:fees) { [fee(amount_cents: 100), fee(amount_cents: 200)] }
     let(:other_fees) { [fee(amount_cents: 300)] }

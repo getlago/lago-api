@@ -9,6 +9,19 @@ module Subscriptions
       @cache = cache
     end
 
+    # Wraps fee computation with caching to avoid recomputing charge usage on every request.
+    #
+    # On cache miss, the block is executed to compute fees. The resulting fee attributes are
+    # compacted (nil values for known-safe attributes are stripped) to reduce Redis memory usage,
+    # then serialized to JSON and stored in the cache. The original Fee objects are returned directly
+    # to avoid an unnecessary JSON parse round-trip.
+    #
+    # On cache hit, the cached JSON is deserialized back into Fee objects (with PricingUnitUsage
+    # reconstructed if present). The compacted nil attributes default back to nil via Fee.new,
+    # producing equivalent objects.
+    #
+    # The cache is keyed per charge+subscription+filter and expires at the end of the billing period.
+    # It is invalidated when a new event is ingested (see Events::PostProcessService#expire_cached_charges).
     def call(charge_filter:)
       return yield unless cache
 
@@ -34,6 +47,14 @@ module Subscriptions
 
     attr_reader :subscription, :charge, :to_datetime, :cache
 
+    # Compaction lists: attributes that are safe to strip when nil to reduce cached JSON size.
+    # Only attributes whose nil value carries no special meaning should be listed here.
+    # Attributes like `grouped_by` are intentionally excluded because their nil values inside
+    # the hash are semantically meaningful (e.g., {region: nil} groups events without a region).
+    #
+    # IMPORTANT: When adding or removing columns from Fee or PricingUnitUsage, update these lists.
+    # A test in charge_cache_middleware_spec.rb verifies that all Fee/PricingUnitUsage columns are
+    # accounted for (either compactable or explicitly non-compactable).
     COMPACTABLE_PROPERTIES = Set.new([
       "fixed_charges_duration",
       "fixed_charges_from_datetime",
@@ -81,9 +102,9 @@ module Subscriptions
       end
     end
 
-    # This method is used to compact the fee attributes to reduce the size of the cached fees. We explicitly define
-    # which attributes are compactable and which are not to avoid losing information. For instance, the `grouped_by`
-    # should keep the `nil` values.
+    # Strips nil values for known-safe attributes from fee attributes to reduce cached JSON size.
+    # Uses an explicit allowlist (rather than compact) to avoid accidentally dropping nil values
+    # that carry meaning — e.g., `grouped_by: {region: nil}` groups events without a region.
     def compact_fee(fee_attributes)
       fee_attributes = compact_hash(fee_attributes, COMPACTABLE_ATTRIBUTES)
       if (properties = fee_attributes["properties"]).present?
