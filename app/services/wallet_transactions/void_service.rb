@@ -22,22 +22,24 @@ module WalletTransactions
       return result if wallet_credit.credit_amount.zero?
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = CreateService.call!(
-          wallet:,
-          wallet_credit:,
-          transaction_type: :outbound,
-          status: :settled,
-          settled_at: Time.current,
-          transaction_status: :voided,
-          **transaction_params
-        ).wallet_transaction
+        Customers::LockService.call(customer:, scope: :prepaid_credit) do
+          wallet_transaction = CreateService.call!(
+            wallet:,
+            wallet_credit:,
+            transaction_type: :outbound,
+            status: :settled,
+            settled_at: Time.current,
+            transaction_status: :voided,
+            **transaction_params
+          ).wallet_transaction
 
-        if wallet.traceable?
-          TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
+          if wallet.traceable?
+            TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
+          end
+
+          Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
+          result.wallet_transaction = wallet_transaction
         end
-
-        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
-        result.wallet_transaction = wallet_transaction
       end
 
       result
@@ -46,5 +48,7 @@ module WalletTransactions
     private
 
     attr_reader :wallet, :wallet_credit, :transaction_params
+
+    delegate :customer, to: :wallet
   end
 end
