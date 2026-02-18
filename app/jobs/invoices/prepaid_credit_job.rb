@@ -4,6 +4,7 @@ module Invoices
   class PrepaidCreditJob < ApplicationJob
     queue_as "high_priority"
 
+    retry_on Customers::FailedToAcquireLock, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
     unique :until_executed, on_conflict: :log
 

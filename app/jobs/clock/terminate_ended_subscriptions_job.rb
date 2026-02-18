@@ -2,6 +2,8 @@
 
 module Clock
   class TerminateEndedSubscriptionsJob < ClockJob
+    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+
     def perform
       Subscription
         .joins(customer: :billing_entity)
