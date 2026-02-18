@@ -304,7 +304,7 @@ RSpec.describe Customers::EuAutoTaxesService do
         context "when customer has a zipcode" do
           context "when zipcode has applicable exceptions" do
             before do
-              customer.update(zipcode: "97412")
+              customer.update(country: "FR", zipcode: "97412")
             end
 
             it "returns the exception tax code" do
@@ -315,7 +315,7 @@ RSpec.describe Customers::EuAutoTaxesService do
 
           context "when zipcode has no applicable exceptions" do
             before do
-              customer.update(zipcode: "12345")
+              customer.update(country: "FR", zipcode: "12345")
             end
 
             it "returns the customer counrty standard tax" do
@@ -363,6 +363,140 @@ RSpec.describe Customers::EuAutoTaxesService do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_tax_exempt")
+        end
+      end
+    end
+
+    context "when customer is in a special territory" do
+      let(:vies_response) { nil }
+
+      shared_examples "a special territory tax assignment" do |country:, zipcode:, expected_tax_code:|
+        before { customer.update(country:, zipcode:) }
+
+        it "assigns #{expected_tax_code}" do
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq(expected_tax_code)
+        end
+      end
+
+      context "when B2B customer (non-France territories apply exception regardless)" do
+        it_behaves_like "a special territory tax assignment",
+          country: "ES", zipcode: "35001", expected_tax_code: "lago_eu_es_exception_canary_islands"
+        it_behaves_like "a special territory tax assignment",
+          country: "ES", zipcode: "38314", expected_tax_code: "lago_eu_es_exception_canary_islands"
+        it_behaves_like "a special territory tax assignment",
+          country: "ES", zipcode: "51001", expected_tax_code: "lago_eu_es_exception_ceuta"
+        it_behaves_like "a special territory tax assignment",
+          country: "ES", zipcode: "52001", expected_tax_code: "lago_eu_es_exception_melilla"
+        it_behaves_like "a special territory tax assignment",
+          country: "AT", zipcode: "6691", expected_tax_code: "lago_eu_at_exception_jungholz"
+        it_behaves_like "a special territory tax assignment",
+          country: "AT", zipcode: "6992", expected_tax_code: "lago_eu_at_exception_mittelberg"
+        it_behaves_like "a special territory tax assignment",
+          country: "AT", zipcode: "6991", expected_tax_code: "lago_eu_at_exception_mittelberg"
+        it_behaves_like "a special territory tax assignment",
+          country: "IT", zipcode: "23041", expected_tax_code: "lago_eu_it_exception_livigno"
+        it_behaves_like "a special territory tax assignment",
+          country: "IT", zipcode: "22061", expected_tax_code: "lago_eu_it_exception_campione_d_italia"
+        it_behaves_like "a special territory tax assignment",
+          country: "DE", zipcode: "78266", expected_tax_code: "lago_eu_de_exception_busingen_am_hochrhein"
+        it_behaves_like "a special territory tax assignment",
+          country: "DE", zipcode: "27498", expected_tax_code: "lago_eu_de_exception_heligoland"
+        it_behaves_like "a special territory tax assignment",
+          country: "PT", zipcode: "9500", expected_tax_code: "lago_eu_pt_exception_azores"
+        it_behaves_like "a special territory tax assignment",
+          country: "PT", zipcode: "9000", expected_tax_code: "lago_eu_pt_exception_madeira"
+        it_behaves_like "a special territory tax assignment",
+          country: "GR", zipcode: "63086", expected_tax_code: "lago_eu_gr_exception_mount_athos"
+      end
+
+      context "when B2C customer (non-France territories apply exception regardless)" do
+        let(:tax_identification_number) { nil }
+
+        it_behaves_like "a special territory tax assignment",
+          country: "ES", zipcode: "35001", expected_tax_code: "lago_eu_es_exception_canary_islands"
+        it_behaves_like "a special territory tax assignment",
+          country: "AT", zipcode: "6691", expected_tax_code: "lago_eu_at_exception_jungholz"
+        it_behaves_like "a special territory tax assignment",
+          country: "IT", zipcode: "23041", expected_tax_code: "lago_eu_it_exception_livigno"
+        it_behaves_like "a special territory tax assignment",
+          country: "DE", zipcode: "78266", expected_tax_code: "lago_eu_de_exception_busingen_am_hochrhein"
+        it_behaves_like "a special territory tax assignment",
+          country: "PT", zipcode: "9500", expected_tax_code: "lago_eu_pt_exception_azores"
+        it_behaves_like "a special territory tax assignment",
+          country: "GR", zipcode: "63086", expected_tax_code: "lago_eu_gr_exception_mount_athos"
+      end
+
+      context "when B2B customer in France DOM-TOM (exception rate applies)" do
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97200", expected_tax_code: "lago_eu_fr_exception_martinique"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97100", expected_tax_code: "lago_eu_fr_exception_guadeloupe"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97412", expected_tax_code: "lago_eu_fr_exception_reunion"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97300", expected_tax_code: "lago_eu_fr_exception_guyane"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97600", expected_tax_code: "lago_eu_fr_exception_mayotte"
+      end
+
+      context "when B2C customer in France DOM-TOM (standard rate applies)" do
+        let(:tax_identification_number) { nil }
+
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97200", expected_tax_code: "lago_eu_fr_standard"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97100", expected_tax_code: "lago_eu_fr_standard"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97412", expected_tax_code: "lago_eu_fr_standard"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97300", expected_tax_code: "lago_eu_fr_standard"
+        it_behaves_like "a special territory tax assignment",
+          country: "FR", zipcode: "97600", expected_tax_code: "lago_eu_fr_standard"
+      end
+
+      context "when territory is detected" do
+        before { customer.update(country: "ES", zipcode: "35001") }
+
+        it "does not call VIES" do
+          expect_any_instance_of(Valvat).not_to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+          eu_tax_service.call
+        end
+
+        it "does not send a webhook" do
+          eu_tax_service.call
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+
+        context "when a pending VIES check exists" do
+          before { create(:pending_vies_check, customer:) }
+
+          it "destroys the pending VIES check" do
+            expect { eu_tax_service.call }.to change(PendingViesCheck, :count).by(-1)
+          end
+        end
+      end
+
+      context "when territory is not detected" do
+        let(:tax_identification_number) { nil }
+        let(:vies_response) { false }
+
+        it "falls through when zipcode does not match any exception" do
+          customer.update(country: "ES", zipcode: "28001")
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_es_standard")
+        end
+
+        it "falls through when customer has no zipcode" do
+          customer.update(country: "DE")
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+        end
+
+        it "falls through when customer has no country" do
+          customer.update(country: nil, zipcode: "35001")
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
       end
     end
