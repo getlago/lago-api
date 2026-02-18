@@ -28,7 +28,6 @@ module Invoices
       end
 
       ActiveRecord::Base.transaction do
-        invoice.payment_overdue = false if invoice.payment_overdue?
         invoice.void!
         flag_lifetime_usage_for_refresh
 
