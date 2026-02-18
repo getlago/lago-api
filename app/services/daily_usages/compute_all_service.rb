@@ -11,7 +11,7 @@ module DailyUsages
     def call
       subscriptions.find_in_batches do |subscriptions|
         subscriptions.each do |subscription|
-          DailyUsages::ComputeJob.set(wait: rand(30.minutes)).perform_later(subscription, timestamp:)
+          DailyUsages::ComputeJob.set(wait: job_wait_time).perform_later(subscription, timestamp:)
         end
       end
 
@@ -21,6 +21,18 @@ module DailyUsages
     private
 
     attr_reader :timestamp
+
+    def job_wait_time
+      # Randomize job wait time to distribute load across the system.
+      # This prevents thundering herd effect when processing large batches,
+      # and helps interleave jobs from different organizations since subscriptions
+      # within the same organization usually have very similar load profiles.
+      rand(scheduling_interval)
+    end
+
+    def scheduling_interval
+      ENV.fetch("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS", 30.minutes).to_i
+    end
 
     def subscriptions
       # NOTE(DailyUsage): For now the query filters organizations having revenue_analytics premium integrations

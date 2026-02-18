@@ -25,6 +25,17 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is set" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "60")) }
+
+      it "uses the configured interval" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:).at(0.seconds.from_now..60.seconds.from_now)
+        end
+      end
+    end
+
     context "when subscription usage was already computed" do
       before { create(:daily_usage, subscription: subscriptions.first, usage_date: timestamp.to_date - 1.day) }
 
