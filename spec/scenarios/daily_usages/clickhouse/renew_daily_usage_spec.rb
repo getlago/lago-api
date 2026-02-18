@@ -17,6 +17,11 @@ describe "Daily Usage last_received_event_on Scenario (Clickhouse)", :premium, c
     create_event({
       transaction_id: "tr_#{SecureRandom.hex(16)}"
     }.merge(params))
+
+    # In production, the Kafka consumer triggers FlagRefreshedJob.
+    # Since there's no Kafka in tests, we call it directly.
+    subscription = organization.subscriptions.find_by(external_id: params[:external_subscription_id])
+    Subscriptions::FlagRefreshedJob.perform_now(subscription.id)
   end
 
   before { charge }
