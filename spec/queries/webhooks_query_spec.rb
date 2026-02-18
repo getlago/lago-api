@@ -4,14 +4,14 @@ require "rails_helper"
 
 RSpec.describe WebhooksQuery do
   subject(:result) do
-    described_class.call(webhook_endpoint:, pagination:, search_term:, filters:)
+    described_class.call(organization:, pagination:, search_term:, filters:)
   end
 
   let(:returned_ids) { result.webhooks.pluck(:id) }
 
   let(:pagination) { nil }
   let(:search_term) { nil }
-  let(:filters) { {} }
+  let(:filters) { {webhook_endpoint_id: webhook_endpoint.id} }
 
   let(:organization) { webhook_endpoint.organization.reload }
   let(:webhook_endpoint) { create(:webhook_endpoint) }
@@ -78,11 +78,20 @@ RSpec.describe WebhooksQuery do
 
   context "when search for /created/ term and filtering by status" do
     let(:search_term) { "created" }
-    let(:filters) { {status: "succeeded"} }
+    let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, status: "succeeded"} }
 
     it "returns only one webhook" do
       expect(returned_ids.count).to eq(1)
       expect(returned_ids).to include(webhook_succeeded.id)
+    end
+  end
+
+  context "when filtering by invalid status" do
+    let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, status: "invalid_status"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
     end
   end
 end
