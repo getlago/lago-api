@@ -664,6 +664,34 @@ RSpec.describe WalletTransactions::VoidService do
       end
     end
 
+    context "when there is a concurrent lock" do
+      before do
+        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+      end
+
+      around do |test|
+        with_advisory_lock("customer-#{customer.id}-prepaid_credit", lock_released_after:) do
+          test.run
+        end
+      end
+
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 2.seconds }
+
+        it "raises a Customers::FailedToAcquireLock error" do
+          expect { subject }.to raise_error(Customers::FailedToAcquireLock)
+        end
+      end
+
+      context "when the lock is acquired" do
+        let(:lock_released_after) { 0.1.seconds }
+
+        it "voids the wallet transaction successfully" do
+          expect { subject }.not_to raise_error
+        end
+      end
+    end
+
     context "with inbound_wallet_transaction parameter" do
       let(:wallet) do
         create(
