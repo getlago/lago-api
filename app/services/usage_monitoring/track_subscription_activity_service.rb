@@ -16,7 +16,9 @@ module UsageMonitoring
     def call
       return result unless License.premium?
       return result unless subscription.active?
-      subscription.update(last_received_event_on: date)
+      if subscription.last_received_event_on != date
+        subscription.update(last_received_event_on: date)
+      end
 
       return result unless need_lifetime_usage? || has_alerts?
 

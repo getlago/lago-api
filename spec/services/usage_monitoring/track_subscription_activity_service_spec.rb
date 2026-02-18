@@ -36,6 +36,14 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
     end
   end
 
+  context "when last_received_event_on is already set to the same date" do
+    before { subscription.update(last_received_event_on: date) }
+
+    it "does not update the subscription" do
+      expect { subject.call }.not_to change { subscription.reload.updated_at }
+    end
+  end
+
   context "when subscription isn't active" do
     let(:subscription) { create(:subscription, :terminated, customer:) }
 

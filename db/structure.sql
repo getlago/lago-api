@@ -8788,6 +8788,13 @@ CREATE INDEX index_subscriptions_on_external_id ON public.subscriptions USING bt
 
 
 --
+-- Name: index_subscriptions_on_last_received_event_on; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_last_received_event_on ON public.subscriptions USING btree (last_received_event_on);
+
+
+--
 -- Name: index_subscriptions_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
