@@ -3,9 +3,19 @@
 require "rails_helper"
 
 RSpec.describe Customers::LockService do
-  let(:lock_service) { described_class.new(customer:, timeout_seconds:) }
+  let(:lock_service) { described_class.new(customer:, scope: :prepaid_credit, timeout_seconds:) }
   let(:customer) { create(:customer) }
   let(:timeout_seconds) { 5.seconds }
+
+  describe ".new" do
+    context "with invalid scope" do
+      it "raises ArgumentError" do
+        expect do
+          described_class.new(customer:, scope: :invalid_scope)
+        end.to raise_error(ArgumentError, /Invalid scope: invalid_scope/)
+      end
+    end
+  end
 
   describe "#call" do
     subject { lock_service.call }
@@ -26,7 +36,7 @@ RSpec.describe Customers::LockService do
       let(:timeout_seconds) { 0.seconds }
 
       around do |test|
-        with_advisory_lock("customer-#{customer.id}", lock_released_after: 2.seconds) do
+        with_advisory_lock("customer-#{customer.id}-prepaid_credit", lock_released_after: 2.seconds) do
           test.run
         end
       end
@@ -34,7 +44,7 @@ RSpec.describe Customers::LockService do
       it "raises a Customers::FailedToAcquireLock error" do
         expect do
           lock_service.call { nil }
-        end.to raise_error(Customers::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}")
+        end.to raise_error(Customers::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}-prepaid_credit")
       end
     end
   end

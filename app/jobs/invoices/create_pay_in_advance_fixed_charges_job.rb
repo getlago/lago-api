@@ -10,6 +10,13 @@ module Invoices
       end
     end
 
+    retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
+    retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
+
+    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+
+    unique :until_executed, on_conflict: :log
+
     def perform(subscription, timestamp)
       result = Invoices::CreatePayInAdvanceFixedChargesService.call(
         subscription:,

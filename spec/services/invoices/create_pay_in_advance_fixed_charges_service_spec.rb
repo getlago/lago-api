@@ -33,9 +33,8 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     fixed_charge_event
   end
 
-  describe "call" do
+  describe "#call" do
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
@@ -79,7 +78,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
     it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
+      expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
         event: "invoice_created",
         properties: {
@@ -533,6 +532,19 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
             .and_raise(ActiveRecord::StaleObjectError)
 
           expect { invoice_service.call }.to raise_error(ActiveRecord::StaleObjectError)
+        end
+      end
+
+      context "with a failed to acquire lock error" do
+        before do
+          create(:wallet, customer:, balance_cents: 100)
+        end
+
+        it "propagates the error" do
+          allow_any_instance_of(Credits::AppliedPrepaidCreditsService) # rubocop:disable RSpec/AnyInstance
+            .to receive(:call).and_raise(Customers::FailedToAcquireLock)
+
+          expect { invoice_service.call }.to raise_error(Customers::FailedToAcquireLock)
         end
       end
 

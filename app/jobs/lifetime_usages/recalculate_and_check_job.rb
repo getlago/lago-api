@@ -10,6 +10,8 @@ module LifetimeUsages
       end
     end
 
+    retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     # NOTE: do not pass current usage with perform_later as it will be a huge JSON

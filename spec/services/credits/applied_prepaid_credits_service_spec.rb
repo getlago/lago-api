@@ -61,34 +61,6 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     subscription
   end
 
-  describe "#initialize" do
-    subject { described_class.new(invoice:, max_wallet_decrease_attempts:) }
-
-    context "when max_wallet_decrease_attempts is less than 1" do
-      let(:max_wallet_decrease_attempts) { 0 }
-
-      it "raises an error" do
-        expect { subject }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
-      end
-    end
-
-    context "when max_wallet_decrease_attempts is greater than 6" do
-      let(:max_wallet_decrease_attempts) { 7 }
-
-      it "raises an error" do
-        expect { subject }.to raise_error(ArgumentError, "max_wallet_decrease_attempts must be between 1 and 6 (inclusive)")
-      end
-    end
-
-    context "when max_wallet_decrease_attempts is between 1 and 6" do
-      let(:max_wallet_decrease_attempts) { rand(1..6) }
-
-      it "does not raise an error" do
-        expect { subject }.not_to raise_error
-      end
-    end
-  end
-
   describe "#call" do
     subject(:result) { described_class.call(invoice:) }
 
@@ -665,66 +637,30 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
     end
 
-    context "when wallet optimistic lock fails" do
-      def mock_wallet_balance_decrease_service(succeed_on_attempt: 5)
-        attempts = 0
-        allow(Wallets::Balance::DecreaseService).to receive(:call).and_wrap_original do |m, *args, **kwargs|
-          attempts += 1
-          if attempts >= succeed_on_attempt
-            next m.call(*args, **kwargs)
-          end
+    context "when there is a concurrent lock" do
+      before do
+        stub_const("Customers::LockService::ACQUIRE_LOCK_TIMEOUT", 0.5.seconds)
+      end
 
-          raise ActiveRecord::StaleObjectError
+      around do |test|
+        with_advisory_lock("customer-#{customer.id}-prepaid_credit", lock_released_after:) do
+          test.run
         end
       end
 
-      context "when it succeeds before the max attempts" do
-        before do
-          mock_wallet_balance_decrease_service(succeed_on_attempt: 6)
-        end
+      context "when it fails to acquire the lock" do
+        let(:lock_released_after) { 2.seconds }
 
-        it "retries the operation" do
+        it "raises a Customers::FailedToAcquireLock error" do
+          expect { subject }.to raise_error(Customers::FailedToAcquireLock)
+        end
+      end
+
+      context "when the lock is acquired" do
+        let(:lock_released_after) { 0.1.seconds }
+
+        it "creates the invoice" do
           expect { subject }.not_to raise_error
-        end
-      end
-
-      context "when it fails after the max attempts" do
-        before do
-          mock_wallet_balance_decrease_service(succeed_on_attempt: 7)
-        end
-
-        it "raises an error and rolls back the transaction" do
-          expect { subject }.to raise_error(ActiveRecord::StaleObjectError)
-
-          transaction_count = customer.wallets.map { |w| w.wallet_transactions.count }.sum
-          expect(transaction_count).to eq(0)
-        end
-      end
-
-      context "when max attempts is specified" do
-        subject(:applied_prepaid_credits_service) { described_class.new(invoice:, max_wallet_decrease_attempts: 3) }
-
-        context "when decrease attempts failed" do
-          before do
-            mock_wallet_balance_decrease_service(succeed_on_attempt: 4)
-          end
-
-          it "retries the operation" do
-            expect { applied_prepaid_credits_service.call }.to raise_error(ActiveRecord::StaleObjectError)
-
-            transaction_count = customer.wallets.map { |w| w.wallet_transactions.count }.sum
-            expect(transaction_count).to eq(0)
-          end
-        end
-
-        context "when decrease attempts succeed before the max attempts" do
-          before do
-            mock_wallet_balance_decrease_service(succeed_on_attempt: 3)
-          end
-
-          it "raises an error and rolls back the transaction" do
-            expect { applied_prepaid_credits_service.call }.not_to raise_error
-          end
         end
       end
     end

@@ -18,32 +18,29 @@ module Invoices
       return result if fees.none?
 
       ApplicationRecord.transaction do
-        # We acquire a lock on the customer to prevent concurrent pay-in-advance invoice creation.
-        Customers::LockService.call(customer:) do
-          create_generating_invoice
-          fees.each { |f| f.update!(invoice:) }
+        create_generating_invoice
+        fees.each { |f| f.update!(invoice:) }
 
-          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-          Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+        Credits::AppliedCouponsService.call(invoice:) if invoice.fees_amount_cents&.positive?
 
-          if tax_error?(fee_result)
-            invoice.failed!
-            invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
-            create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
-            Utils::ActivityLog.produce(invoice, "invoice.failed")
-            next
-          end
-
-          Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
-          create_credit_note_credit
-          create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-          Invoices::TransitionToFinalStatusService.call(invoice:)
-          invoice.save!
+        if tax_error?(fee_result)
+          invoice.failed!
+          invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+          create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+          Utils::ActivityLog.produce(invoice, "invoice.failed")
+          next
         end
+
+        Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
+        create_credit_note_credit
+        create_applied_prepaid_credit if should_create_applied_prepaid_credit?
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        Invoices::TransitionToFinalStatusService.call(invoice:)
+        invoice.save!
       end
       return fee_result if tax_error?(fee_result)
 
@@ -123,8 +120,7 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      # We don't actually want to retry. We let it fail and let the job be retried through ActiveJob retry mechanism.
-      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, max_wallet_decrease_attempts: 1)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:)
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
