@@ -65,6 +65,9 @@ credit_notes:
   export:
     - finance
     - manager
+  send:
+    - finance
+    - manager
 customers:
   view:
     - finance
@@ -167,6 +170,13 @@ payment_methods:
   create:
   update:
   delete:
+payment_receipts:
+  view:
+    - finance
+    - manager
+  send:
+    - finance
+    - manager
 plans:
   view:
     - finance

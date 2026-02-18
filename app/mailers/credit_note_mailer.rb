@@ -19,8 +19,9 @@ class CreditNoteMailer < DocumentMailer
     @billing_entity = document.billing_entity
     @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
+    recipients = params[:to].presence || [@customer.email].compact
     return if @billing_entity.email.blank?
-    return if @customer.email.blank?
+    return if recipients.empty?
 
     if @pdfs_enabled
       document.file.open do |file|
@@ -30,7 +31,9 @@ class CreditNoteMailer < DocumentMailer
 
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
-        to: @customer.email,
+        to: recipients,
+        cc: params[:cc],
+        bcc: params[:bcc],
         from: email_address_with_name(@billing_entity.from_email_address, @billing_entity.name),
         reply_to: email_address_with_name(@billing_entity.email, @billing_entity.name),
         subject: I18n.t(
