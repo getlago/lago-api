@@ -240,6 +240,165 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware, cache: :redis do
           ])
         end
       end
+
+      context "with all compactable attributes set to non-nil values" do
+        let(:fee_id) { SecureRandom.uuid }
+        let(:invoice_id) { SecureRandom.uuid }
+        let(:add_on_id) { SecureRandom.uuid }
+        let(:applied_add_on_id) { SecureRandom.uuid }
+        let(:group_id) { SecureRandom.uuid }
+        let(:fixed_charge_id) { SecureRandom.uuid }
+        let(:true_up_parent_fee_id) { SecureRandom.uuid }
+        let(:pay_in_advance_event_id) { SecureRandom.uuid }
+        # Use a rounded time to avoid subsecond precision loss through JSON serialization
+        let(:now) { Time.zone.parse("2026-01-15T10:00:00Z") }
+
+        let(:fees) do
+          [build(:charge_fee,
+            id: fee_id,
+            amount_cents: 100,
+            amount_currency: "USD",
+            fee_type: "charge",
+            charge:,
+            charge_filter:,
+            organization:,
+            billing_entity:,
+            subscription:,
+            invoice_display_name: "My Display Name",
+            grouped_by: {"region" => "us", "provider" => nil},
+            description: "A fee description",
+            pay_in_advance: true,
+            pay_in_advance_event_id:,
+            pay_in_advance_event_transaction_id: "txn_123",
+            invoice_id:,
+            add_on_id:,
+            applied_add_on_id:,
+            group_id:,
+            fixed_charge_id:,
+            true_up_parent_fee_id:,
+            succeeded_at: now,
+            failed_at: now,
+            refunded_at: now,
+            deleted_at: now,
+            created_at: now,
+            updated_at: now)]
+        end
+
+        it "preserves all non-nil compactable attributes through the cache round-trip" do
+          result = middleware.call(charge_filter:) { fees }
+          expect_to_match_fees(result, fees)
+
+          cached = fetch_cache(charge_cache_key)
+          cached_fee = cached.first
+
+          # All compactable attributes should be present (not compacted) when non-nil
+          expect(cached_fee["id"]).to eq(fee_id)
+          expect(cached_fee["invoice_display_name"]).to eq("My Display Name")
+          expect(cached_fee["description"]).to eq("A fee description")
+          expect(cached_fee["pay_in_advance"]).to be(true)
+          expect(cached_fee["pay_in_advance_event_id"]).to eq(pay_in_advance_event_id)
+          expect(cached_fee["pay_in_advance_event_transaction_id"]).to eq("txn_123")
+          expect(cached_fee["invoice_id"]).to eq(invoice_id)
+          expect(cached_fee["add_on_id"]).to eq(add_on_id)
+          expect(cached_fee["applied_add_on_id"]).to eq(applied_add_on_id)
+          expect(cached_fee["group_id"]).to eq(group_id)
+          expect(cached_fee["fixed_charge_id"]).to eq(fixed_charge_id)
+          expect(cached_fee["true_up_parent_fee_id"]).to eq(true_up_parent_fee_id)
+          expect(cached_fee["succeeded_at"]).to be_present
+          expect(cached_fee["failed_at"]).to be_present
+          expect(cached_fee["refunded_at"]).to be_present
+          expect(cached_fee["deleted_at"]).to be_present
+          expect(cached_fee["created_at"]).to be_present
+          expect(cached_fee["updated_at"]).to be_present
+          expect(cached_fee["grouped_by"]).to eq({"region" => "us", "provider" => nil})
+
+          # Verify cache hit returns the same fees
+          result = middleware.call(charge_filter:) { other_fees }
+          expect_to_match_fees(result, fees)
+        end
+      end
+
+      context "with fixed charge properties" do
+        let(:fees) do
+          [build(:charge_fee,
+            amount_cents: 100,
+            amount_currency: "USD",
+            fee_type: "charge",
+            charge:,
+            charge_filter:,
+            organization:,
+            billing_entity:,
+            subscription:,
+            properties: {
+              "timestamp" => "2022-08-01",
+              "from_datetime" => "2022-08-01",
+              "to_datetime" => "2022-08-31",
+              "charges_from_datetime" => "2022-08-01",
+              "charges_to_datetime" => "2022-08-31",
+              "fixed_charges_duration" => 30,
+              "fixed_charges_from_datetime" => "2022-07-01",
+              "fixed_charges_to_datetime" => "2022-07-31"
+            })]
+        end
+
+        it "preserves fixed charge properties through the cache round-trip" do
+          result = middleware.call(charge_filter:) { fees }
+          expect_to_match_fees(result, fees)
+
+          cached = fetch_cache(charge_cache_key)
+          props = cached.first["properties"]
+
+          expect(props["fixed_charges_duration"]).to eq(30)
+          expect(props["fixed_charges_from_datetime"]).to eq("2022-07-01")
+          expect(props["fixed_charges_to_datetime"]).to eq("2022-07-31")
+
+          # Verify cache hit returns the same fees
+          result = middleware.call(charge_filter:) { other_fees }
+          expect_to_match_fees(result, fees)
+        end
+      end
+
+      context "with nil fixed charge properties" do
+        let(:fees) do
+          [build(:charge_fee,
+            amount_cents: 100,
+            amount_currency: "USD",
+            fee_type: "charge",
+            charge:,
+            charge_filter:,
+            organization:,
+            billing_entity:,
+            subscription:,
+            properties: {
+              "timestamp" => "2022-08-01",
+              "from_datetime" => "2022-08-01",
+              "to_datetime" => "2022-08-31",
+              "charges_from_datetime" => "2022-08-01",
+              "charges_to_datetime" => "2022-08-31",
+              "fixed_charges_duration" => nil,
+              "fixed_charges_from_datetime" => nil,
+              "fixed_charges_to_datetime" => nil
+            })]
+        end
+
+        it "compacts nil fixed charge properties and reconstructs equivalent fees" do
+          result = middleware.call(charge_filter:) { fees }
+
+          cached = fetch_cache(charge_cache_key)
+          props = cached.first["properties"]
+
+          # Nil fixed charge properties should be compacted
+          expect(props).not_to have_key("fixed_charges_duration")
+          expect(props).not_to have_key("fixed_charges_from_datetime")
+          expect(props).not_to have_key("fixed_charges_to_datetime")
+
+          # Reconstructed fee properties should still return nil for these keys
+          reconstructed_fee = result.first
+          expect(reconstructed_fee.properties["fixed_charges_duration"]).to be_nil
+          expect(reconstructed_fee.properties["fixed_charges_from_datetime"]).to be_nil
+          expect(reconstructed_fee.properties["fixed_charges_to_datetime"]).to be_nil
+        end
+      end
     end
   end
 end

@@ -34,13 +34,13 @@ module Subscriptions
 
     attr_reader :subscription, :charge, :to_datetime, :cache
 
-    COMPACTABLE_PROPERTIES = [
+    COMPACTABLE_PROPERTIES = Set.new([
       "fixed_charges_duration",
       "fixed_charges_from_datetime",
       "fixed_charges_to_datetime"
-    ]
+    ]).freeze
 
-    COMPACTABLE_ATTRIBUTES = [
+    COMPACTABLE_ATTRIBUTES = Set.new([
       "add_on_id",
       "applied_add_on_id",
       "charge_filter_id",
@@ -61,14 +61,14 @@ module Subscriptions
       "true_up_parent_fee_id",
       "updated_at",
       "id"
-    ]
+    ]).freeze
 
-    COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES = [
+    COMPACTABLE_PRICING_UNIT_USAGE_ATTRIBUTES = Set.new([
       "id",
       "fee_id",
       "created_at",
       "updated_at"
-    ]
+    ]).freeze
 
     def parse_cached_fees(cached_fees)
       JSON.parse(cached_fees).map do |fee_attributes|
