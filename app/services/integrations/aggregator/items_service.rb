@@ -13,21 +13,23 @@ module Integrations
       def call
         @cursor = ""
         @items = []
+        fetched_items = []
 
         ActiveRecord::Base.transaction do
           integration.integration_items.where(item_type: :standard).destroy_all
 
-          MAX_SUBSEQUENT_REQUESTS.times do |_i|
+          MAX_SUBSEQUENT_REQUESTS.times do
             response = http_client.get(headers:, params:)
-
-            handle_items(response["records"])
+            fetched_items.concat(response["records"])
             @cursor = response["next_cursor"]
 
             break if cursor.blank?
           end
-        end
-        result.items = items
 
+          handle_items(deduplicate_items(fetched_items))
+        end
+
+        result.items = items
         result
       end
 
@@ -64,6 +66,14 @@ module Integrations
         {
           limit: LIMIT
         }.merge(cursor.present? ? {cursor:} : {})
+      end
+
+      def deduplicate_items(items)
+        items
+          .group_by { |item| item[integration.external_id_key] }
+          .map do |_external_id, duplicates|
+            duplicates.max_by { |item| item.dig("_nango_metadata", "last_modified_at") || "" }
+          end
       end
     end
   end

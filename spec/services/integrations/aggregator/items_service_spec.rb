@@ -83,6 +83,75 @@ RSpec.describe Integrations::Aggregator::ItemsService do
         )
         expect(IntegrationItem.count).to eq(5)
       end
+
+      context "with duplicate item_code in response" do
+        let(:aggregator_response) do
+          {
+            "records" => [
+              {
+                "id" => "old-id",
+                "item_code" => "VM6",
+                "name" => "Old Item",
+                "account_code" => "1234",
+                "_nango_metadata" => {
+                  "last_modified_at" => "2024-01-01T00:00:00+00:00"
+                }
+              },
+              {
+                "id" => "new-id",
+                "item_code" => "VM6",
+                "name" => "New Item",
+                "account_code" => "1234",
+                "_nango_metadata" => {
+                  "last_modified_at" => "2024-06-01T00:00:00+00:00"
+                }
+              }
+            ],
+            "next_cursor" => nil
+          }
+        end
+
+        it "keeps only the most recent item based on last_modified_at" do
+          result = items_service.call
+
+          expect(result.items.count).to eq(1)
+          expect(result.items.first.external_id).to eq("VM6")
+          expect(result.items.first.external_name).to eq("New Item")
+        end
+
+        context "when metadata is not present" do
+          let(:aggregator_response) do
+            {
+              "records" => [
+                {
+                  "id" => "old-id",
+                  "item_code" => "VM6",
+                  "name" => "Old Item",
+                  "account_code" => "1234"
+                },
+                {
+                  "id" => "new-id",
+                  "item_code" => "VM6",
+                  "name" => "New Item",
+                  "account_code" => "1234",
+                  "_nango_metadata" => {
+                    "last_modified_at" => "2024-06-01T00:00:00+00:00"
+                  }
+                }
+              ],
+              "next_cursor" => nil
+            }
+          end
+
+          it "keeps the item with metadata" do
+            result = items_service.call
+
+            expect(result.items.count).to eq(1)
+            expect(result.items.first.external_id).to eq("VM6")
+            expect(result.items.first.external_name).to eq("New Item")
+          end
+        end
+      end
     end
   end
 
