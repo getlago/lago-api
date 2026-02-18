@@ -92,6 +92,22 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
           it "create a customer payment_method" do
             expect { webhook_service.call }.to change(PaymentMethod, :count).by(1)
           end
+
+          it "create a customer payment_method with details" do
+            result = webhook_service.call
+
+            payment_method = customer.payment_methods.order(created_at: :desc).first
+
+            expect(result).to be_success
+            expect(payment_method).not_to be_nil
+            expect(payment_method.customer).to eq(customer)
+            expect(payment_method.provider_method_id).to eq(payment_method_id)
+            expect(payment_method.details["type"]).to eq("card")
+            expect(payment_method.details["last4"]).to eq("4242")
+            expect(payment_method.details["brand"]).to eq("visa")
+            expect(payment_method.details["expiration_month"]).to be_present
+            expect(payment_method.details["expiration_year"]).to be_present
+          end
         end
       end
 

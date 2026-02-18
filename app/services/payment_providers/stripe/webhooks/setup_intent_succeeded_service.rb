@@ -16,7 +16,8 @@ module PaymentProviders
 
           PaymentProviderCustomers::Stripe::UpdatePaymentMethodService.call(
             stripe_customer:,
-            payment_method_id: payment_method_id
+            payment_method_id: payment_method_id,
+            payment_method_details:
           ).raise_if_error!
 
           result.stripe_customer = stripe_customer
@@ -42,10 +43,26 @@ module PaymentProviders
         end
 
         def valid_payment_method?
-          ::Stripe::PaymentMethod.retrieve(
+          stripe_payment_method.customer.present?
+        end
+
+        def stripe_payment_method
+          @stripe_payment_method ||= ::Stripe::PaymentMethod.retrieve(
             payment_method_id,
             {api_key: stripe_payment_provider.secret_key}
-          ).customer.present?
+          )
+        end
+
+        def payment_method_details
+          PaymentMethods::CardDetails.new(
+            type: stripe_payment_method.type,
+            last4: stripe_payment_method.card&.last4,
+            brand: stripe_payment_method.card&.display_brand,
+            expiration_month: stripe_payment_method.card&.exp_month,
+            expiration_year: stripe_payment_method.card&.exp_year,
+            card_holder_name: nil,
+            issuer: nil
+          ).to_h
         end
 
         def update_stripe_customer_default_payment_method

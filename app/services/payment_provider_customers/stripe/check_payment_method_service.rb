@@ -23,6 +23,11 @@ module PaymentProviderCustomers
         # NOTE: The payment method is no longer valid
         stripe_customer.update!(payment_method_id: nil)
 
+        if customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+          payment_method = customer.payment_methods.find_by(provider_method_id: payment_method_id)
+          PaymentMethods::DestroyService.call(payment_method:)
+        end
+
         result.single_validation_failure!(field: :payment_method_id, error_code: "value_is_invalid")
       end
 
@@ -32,6 +37,10 @@ module PaymentProviderCustomers
 
       def api_key
         stripe_customer.payment_provider.secret_key
+      end
+
+      def customer
+        @customer ||= stripe_customer.customer
       end
     end
   end

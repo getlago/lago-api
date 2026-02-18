@@ -41,10 +41,11 @@ module PaymentMethods
     def create_from_provider
       CreateFromProviderService.call(
         customer:,
-        params:,
+        params: {provider_payment_methods: params[:provider_payment_methods]},
         provider_method_id:,
         payment_provider_id: payment_provider_customer.payment_provider_id,
-        payment_provider_customer:
+        payment_provider_customer:,
+        details: params[:details]
       ).payment_method
     end
   end
