@@ -369,7 +369,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
-              MAX(CAST(property AS Int32))
+              MAX(property)
             FROM events
             GROUP BY #{group_names}
           SQL
@@ -411,7 +411,7 @@ module Events
           sql4 = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
-              MAX(CAST(property AS Int32))
+              MAX(property)
             FROM events
             GROUP BY #{group_names}
           SQL
