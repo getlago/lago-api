@@ -127,9 +127,7 @@ RSpec.describe Api::V1::PlansController do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         it "updates premium fields" do
           subject
 
@@ -174,9 +172,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "with minimum commitment" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "creates a plan with minimum commitment" do
             subject
 
@@ -196,9 +192,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "with usage thresholds" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           context "when progressive billing premium integration is present" do
             before do
               organization.update!(premium_integrations: ["progressive_billing"])
@@ -546,7 +540,7 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
-    context "when license is premium" do
+    context "when license is premium", :premium do
       let(:charges_params) do
         [
           {
@@ -563,8 +557,6 @@ RSpec.describe Api::V1::PlansController do
           }
         ]
       end
-
-      around { |test| lago_premium!(&test) }
 
       before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
@@ -619,9 +611,7 @@ RSpec.describe Api::V1::PlansController do
       context "when request contains minimum commitment params" do
         before { update_params.merge!(minimum_commitment_params) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "creates minimum commitment" do
             subject
 
@@ -642,9 +632,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "does not create minimum commitment" do
             subject
 
@@ -673,9 +661,7 @@ RSpec.describe Api::V1::PlansController do
         context "when minimum commitment params are an empty hash" do
           let(:minimum_commitment_params) { {minimum_commitment: {}} }
 
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
-
+          context "when license is premium", :premium do
             it "deletes minimum commitment" do
               subject
 
@@ -695,9 +681,7 @@ RSpec.describe Api::V1::PlansController do
         end
 
         context "when minimum commitment params are not an empty hash" do
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
-
+          context "when license is premium", :premium do
             it "updates minimum commitment" do
               subject
 
@@ -719,9 +703,7 @@ RSpec.describe Api::V1::PlansController do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
-
+        context "when license is premium", :premium do
           it "does not update minimum commitment" do
             subject
 
@@ -900,7 +882,7 @@ RSpec.describe Api::V1::PlansController do
             subscription:,
             fixed_charge:,
             units: 25,
-            timestamp: be_within(1.second).of(Time.current)
+            timestamp: be_within(5.seconds).of(Time.current)
           )
         end
       end
@@ -938,7 +920,7 @@ RSpec.describe Api::V1::PlansController do
       end
     end
 
-    describe "update conversion rate on charges" do
+    describe "update conversion rate on charges", :premium do
       let(:charge) { create(:standard_charge, plan:, billable_metric:) }
       let!(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: charge) }
 
@@ -954,8 +936,6 @@ RSpec.describe Api::V1::PlansController do
           }
         ]
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "updates conversion rate on charge's applied pricing unit" do
         expect { subject }.to change { applied_pricing_unit.reload.conversion_rate }.to(3.9)

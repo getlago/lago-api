@@ -43,9 +43,7 @@ RSpec.describe FixedCharges::OverrideService do
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when lago premium", :premium do
       before do
         allow(FixedCharges::EmitEventsForActiveSubscriptionsService).to receive(:call!)
       end

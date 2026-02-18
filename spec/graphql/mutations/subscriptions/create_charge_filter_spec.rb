@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::CreateChargeFilter do
+RSpec.describe Mutations::Subscriptions::CreateChargeFilter, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
@@ -38,8 +38,6 @@ RSpec.describe Mutations::Subscriptions::CreateChargeFilter do
       values: {billable_metric_filter.key => [billable_metric_filter.values.first]}
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     charge

@@ -16,6 +16,7 @@ require:
   - ./dev/cops/service_call_cop.rb
   - ./dev/cops/discard_all_cop.rb
   - ./dev/cops/no_drop_column_or_table_cop.rb
+  - ./dev/cops/lago_premium_around_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -32,6 +33,10 @@ AllCops:
     - "coverage/**/*"
     - "log/**/*"
 
+Lago/LagoPremiumAround:
+  Include:
+    - "spec/**/*.rb"
+
 Lago/NoDropColumnOrTable:
   Include:
     - "db/migrate/**/*.rb"
@@ -44,6 +49,7 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20251221174251_create_roles.rb"
     - "db/migrate/20251221174733_create_membership_roles.rb"
     - "db/migrate/20251221174938_add_roles_to_invites.rb"
+    - "db/migrate/20260109110146_create_enriched_events.rb"
     - "db/migrate/20260116121015_remove_role_from_memberships.rb"
     - "db/migrate/20260116121019_remove_role_from_invites.rb"
     - "db/migrate/20260119162712_drop_subscription_fixed_charge_units_overrides.rb"

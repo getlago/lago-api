@@ -51,6 +51,10 @@ module Integrations
         raise(NotImplementedError)
       end
     end
+
+    def external_id_key
+      "id"
+    end
   end
 end
 

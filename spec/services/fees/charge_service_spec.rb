@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ChargeService do
+RSpec.describe Fees::ChargeService, :premium do
   subject(:charge_subscription_service) do
     described_class.new(
       invoice:,
@@ -14,8 +14,6 @@ RSpec.describe Fees::ChargeService do
       filtered_aggregations:
     )
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

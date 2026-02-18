@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::UpdateFixedCharge do
+RSpec.describe Mutations::Subscriptions::UpdateFixedCharge, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
@@ -34,8 +34,6 @@ RSpec.describe Mutations::Subscriptions::UpdateFixedCharge do
       units: "20"
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     fixed_charge

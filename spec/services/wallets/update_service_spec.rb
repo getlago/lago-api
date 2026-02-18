@@ -108,9 +108,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
-
+    context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:transaction_metadata) { [] }
       let(:rules) do
@@ -406,9 +404,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "when recurring rule paid credits exceeds wallet limits" do
-      around { |test| lago_premium!(&test) }
-
+    context "when recurring rule paid credits exceeds wallet limits", :premium do
       let(:params) do
         {
           id: wallet.id,
@@ -658,6 +654,33 @@ RSpec.describe Wallets::UpdateService do
       it "keeps the existing code" do
         expect(result).to be_success
         expect(result.wallet.code).to eq("existing_code")
+      end
+    end
+
+    context "when updating values to nil" do
+      let(:params) do
+        {
+          id: wallet&.id,
+          name: nil,
+          priority: nil,
+          code: nil,
+          expiration_at: nil,
+          invoice_requires_successful_payment: nil,
+          paid_top_up_min_amount_cents: nil,
+          paid_top_up_max_amount_cents: nil
+        }
+      end
+
+      it "doesn't fail and only updates not required values" do
+        expect(result).to be_success
+        expect(result.wallet.priority).not_to eq(nil)
+        expect(result.wallet.code).not_to eq(nil)
+        expect(result.wallet.invoice_requires_successful_payment).not_to eq(nil)
+
+        expect(result.wallet.name).to eq(nil)
+        expect(result.wallet.expiration_at).to eq(nil)
+        expect(result.wallet.paid_top_up_min_amount_cents).to eq(nil)
+        expect(result.wallet.paid_top_up_max_amount_cents).to eq(nil)
       end
     end
 

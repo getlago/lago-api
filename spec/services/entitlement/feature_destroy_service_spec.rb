@@ -16,9 +16,7 @@ RSpec.describe Entitlement::FeatureDestroyService do
     feature.reload
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "discards the feature" do
       expect { subject }.to change { feature.reload.discarded? }.from(false).to(true)
     end

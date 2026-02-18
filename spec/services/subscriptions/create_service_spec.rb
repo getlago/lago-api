@@ -253,9 +253,7 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
-    context "when License is premium and plan_overrides is passed" do
-      around { |test| lago_premium!(&test) }
-
+    context "when License is premium and plan_overrides is passed", :premium do
       let(:params) do
         {
           external_customer_id:,

@@ -45,9 +45,7 @@ RSpec.describe Resolvers::AiConversationsResolver do
     it_behaves_like "blocked feature", "unauthorized"
   end
 
-  context "without mistral configuration" do
-    around { |test| lago_premium!(&test) }
-
+  context "without mistral configuration", :premium do
     before do
       ENV["MISTRAL_API_KEY"] = nil
       ENV["MISTRAL_AGENT_ID"] = nil
@@ -56,9 +54,7 @@ RSpec.describe Resolvers::AiConversationsResolver do
     it_behaves_like "blocked feature", "feature_unavailable"
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     before do
       ENV["MISTRAL_API_KEY"] = "test_api_key"
       ENV["MISTRAL_AGENT_ID"] = "test_agent_id"

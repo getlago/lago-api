@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Progressive billing invoices", transaction: false do
+describe "Progressive billing invoices", :premium, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31_00, pay_in_advance: false) }
@@ -19,8 +19,6 @@ describe "Progressive billing invoices", transaction: false do
     usage_threshold
     charge
   end
-
-  around { |test| lago_premium!(&test) }
 
   it "generates an invoice in the middle of the month and a final invoice at the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)

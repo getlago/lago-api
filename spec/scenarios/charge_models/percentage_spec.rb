@@ -328,9 +328,7 @@ describe "Charge Models - Percentage Scenarios" do
       end
     end
 
-    describe "with min and max per transaction amount" do
-      around { |test| lago_premium!(&test) }
-
+    describe "with min and max per transaction amount", :premium do
       it "returns the expected customer usage" do
         travel_to(DateTime.new(2023, 3, 5)) do
           create_subscription(
@@ -400,9 +398,7 @@ describe "Charge Models - Percentage Scenarios" do
       end
     end
 
-    describe "with min and max per transaction amount and pricing group keys" do
-      around { |test| lago_premium!(&test) }
-
+    describe "with min and max per transaction amount and pricing group keys", :premium do
       it "returns the expected customer usage" do
         travel_to(DateTime.new(2023, 3, 5)) do
           create_subscription(

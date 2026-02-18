@@ -40,9 +40,7 @@ RSpec.describe Integrations::Netsuite::CreateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "with netsuite premium integration not present" do
         it "returns an error" do
           result = service_call

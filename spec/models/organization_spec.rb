@@ -289,10 +289,8 @@ RSpec.describe Organization do
     end
   end
 
-  describe "#can_create_billing_entity?" do
+  describe "#can_create_billing_entity?", :premium do
     subject { organization.can_create_billing_entity? }
-
-    around { |test| lago_premium!(&test) }
 
     context "when no premium multi entities integration is enabled" do
       it { is_expected.to eq(true) }
@@ -347,9 +345,7 @@ RSpec.describe Organization do
     end
   end
 
-  describe "#using_lifetime_usage?" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#using_lifetime_usage?", :premium do
     it do
       expect(build(:organization, premium_integrations: ["lifetime_usage"])).to be_using_lifetime_usage
       expect(build(:organization, premium_integrations: ["progressive_billing"])).to be_using_lifetime_usage
@@ -389,9 +385,7 @@ RSpec.describe Organization do
       expect(organization.from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
-      around { |test| lago_premium!(&test) }
-
+    context "when organization from_email integration is enabled", :premium do
       it "returns the organization email" do
         organization.update!(premium_integrations: ["from_email"])
         expect(organization.from_email_address).to eq(organization.email)
@@ -529,14 +523,12 @@ RSpec.describe Organization do
   end
 
   # this requires double confirmation: value on the org + premium integration
-  describe "#maximum_wallets_per_customer" do
+  describe "#maximum_wallets_per_customer", :premium do
     subject { organization.maximum_wallets_per_customer }
 
     let(:organization) { create(:organization, max_wallets:, premium_integrations:) }
     let(:max_wallets) { nil }
     let(:premium_integrations) { [] }
-
-    around { |test| lago_premium!(&test) }
 
     context "when no events_targeting_wallets premium integration is enabled" do
       context "when org has max_wallets set" do

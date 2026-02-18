@@ -12,9 +12,7 @@ describe Clock::ProcessAllSubscriptionActivitiesJob, job: true do
       allow(matching_service).to receive(:call!)
     end
 
-    context "when premium features are enabled" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium features are enabled", :premium do
       it "calls matching service" do
         described_class.perform_now
         expect(matching_service).to have_received(:call!)

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::Usages::InvoicedResolver do
+RSpec.describe Resolvers::DataApi::Usages::InvoicedResolver, :premium do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
@@ -23,8 +23,6 @@ RSpec.describe Resolvers::DataApi::Usages::InvoicedResolver do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_invoiced.json") }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/invoiced/")

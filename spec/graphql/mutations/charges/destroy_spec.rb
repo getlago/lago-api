@@ -43,6 +43,33 @@ RSpec.describe Mutations::Charges::Destroy, type: :graphql do
     expect(charge.reload.deleted_at).to be_present
   end
 
+  context "with cascade_updates" do
+    let(:child_plan) { create(:plan, organization:, parent: plan) }
+    let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+    before do
+      child_charge
+      allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+    end
+
+    it "cascades the deletion to children" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: charge.id,
+            cascadeUpdates: true
+          }
+        }
+      )
+
+      expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
+    end
+  end
+
   context "when charge does not exist" do
     it "returns an error" do
       result = execute_graphql(

@@ -5,9 +5,7 @@ RSpec.shared_examples "organization premium feature" do |feature_name|
 
   it { is_expected.to eq(false) }
 
-  context "when premium features are enabled" do
-    around { |test| lago_premium!(&test) }
-
+  context "when premium features are enabled", :premium do
     it { is_expected.to eq(false) }
 
     context "with #{feature_name} integration enabled" do

@@ -67,7 +67,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
     end
   end
 
-  context "when charge model is graduated_percentage" do
+  context "when charge model is graduated_percentage", :premium do
     let(:charge) { create(:graduated_percentage_charge, :pay_in_advance) }
     let(:all_charges_details) do
       {
@@ -85,8 +85,6 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator do
         ]
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     it "calculates graduated percentage charge details" do
       expected_details = {

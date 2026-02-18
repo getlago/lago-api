@@ -398,8 +398,6 @@ RSpec.describe Customers::UpsertFromApiService do
   end
 
   context "with premium features", :premium do
-    around { |test| lago_premium!(&test) }
-
     let(:create_args) do
       {
         external_id:,
@@ -740,9 +738,7 @@ RSpec.describe Customers::UpsertFromApiService do
       end
     end
 
-    context "when updating invoice grace period" do
-      around { |test| lago_premium!(&test) }
-
+    context "when updating invoice grace period", :premium do
       let(:create_args) do
         {
           external_id:,

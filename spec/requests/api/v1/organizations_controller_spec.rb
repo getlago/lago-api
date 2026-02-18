@@ -68,9 +68,7 @@ RSpec.describe Api::V1::OrganizationsController do
       expect(json[:organization][:taxes]).not_to be_nil
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium features", :premium do
       it "updates an organization" do
         subject
 

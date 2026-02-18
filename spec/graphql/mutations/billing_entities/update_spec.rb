@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::BillingEntities::Update do
+RSpec.describe Mutations::BillingEntities::Update, :premium do
   let(:required_permission) { "billing_entities:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -89,8 +89,6 @@ RSpec.describe Mutations::BillingEntities::Update do
       invoiceCustomSectionIds: invoice_custom_sections.map(&:id)
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

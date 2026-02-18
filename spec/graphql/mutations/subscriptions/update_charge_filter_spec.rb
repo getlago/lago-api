@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Subscriptions::UpdateChargeFilter do
+RSpec.describe Mutations::Subscriptions::UpdateChargeFilter, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
@@ -43,8 +43,6 @@ RSpec.describe Mutations::Subscriptions::UpdateChargeFilter do
       properties: {amount: "200"}
     }
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     charge_filter

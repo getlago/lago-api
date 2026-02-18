@@ -31,9 +31,7 @@ describe Clock::RefreshWalletsOngoingBalanceJob, job: true do
       end
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium", :premium do
       it "schedules refresh job for customers with active wallet awaiting refresh" do
         subject
         expect(Customers::RefreshWalletJob).to have_been_enqueued.with(customer)

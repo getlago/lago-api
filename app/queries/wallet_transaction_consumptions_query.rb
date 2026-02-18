@@ -2,24 +2,15 @@
 
 class WalletTransactionConsumptionsQuery < BaseQuery
   Result = BaseResult[:wallet_transaction_consumptions]
-
-  DIRECTIONS = %i[consumptions fundings].freeze
-
-  def initialize(organization:, wallet_transaction_id:, direction:, pagination: DEFAULT_PAGINATION_PARAMS)
-    @wallet_transaction = organization.wallet_transactions.find_by(id: wallet_transaction_id)
-    @direction = direction.to_sym
-
-    raise ArgumentError, "Invalid direction: #{@direction}" unless DIRECTIONS.include?(@direction)
-
-    super(organization:, pagination:)
-  end
+  Filters = BaseFilters[:wallet_transaction_id, :direction]
 
   def call
+    return result unless validate_filters.success?
     return result.not_found_failure!(resource: "wallet_transaction") unless wallet_transaction
     return result.single_validation_failure!(field: :wallet, error_code: "not_traceable") unless wallet_transaction.wallet.traceable?
     return result.single_validation_failure!(field: :transaction_type, error_code: "invalid_transaction_type") unless valid_transaction_type?
 
-    consumptions = wallet_transaction.public_send(direction)
+    consumptions = wallet_transaction.public_send(direction).includes(eager_load_association)
     consumptions = paginate(consumptions)
     consumptions = apply_consistent_ordering(consumptions)
 
@@ -29,14 +20,33 @@ class WalletTransactionConsumptionsQuery < BaseQuery
 
   private
 
-  attr_reader :wallet_transaction, :direction
+  def direction
+    filters.direction
+  end
+
+  def wallet_transaction
+    @wallet_transaction ||= organization.wallet_transactions.find_by(id: filters.wallet_transaction_id)
+  end
+
+  def filters_contract
+    @filters_contract ||= Queries::WalletTransactionConsumptionsQueryFiltersContract.new
+  end
 
   def valid_transaction_type?
-    case direction
+    case direction.to_sym
     when :consumptions
       wallet_transaction.inbound?
     when :fundings
       wallet_transaction.outbound?
+    end
+  end
+
+  def eager_load_association
+    case direction.to_sym
+    when :consumptions
+      {outbound_wallet_transaction: :wallet}
+    when :fundings
+      {inbound_wallet_transaction: :wallet}
     end
   end
 end

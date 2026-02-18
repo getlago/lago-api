@@ -31,9 +31,7 @@ RSpec.describe Integrations::Anrok::UpdateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "without validation errors" do
         it "updates an integration" do
           service_call

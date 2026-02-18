@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Hubspot::Create do
+RSpec.describe Mutations::Integrations::Hubspot::Create, :premium do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "hubspot1" }
@@ -24,8 +24,6 @@ RSpec.describe Mutations::Integrations::Hubspot::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before { membership.organization.update!(premium_integrations: ["hubspot"]) }
 

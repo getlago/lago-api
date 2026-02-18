@@ -27,9 +27,7 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)
   end
 
-  describe "#call" do
-    around { |test| lago_premium!(&test) }
-
+  describe "#call", :premium do
     it "creates user, membership and authenticate user" do
       result = service.call
 

@@ -2,11 +2,14 @@
 
 module Charges
   class UpdateService < BaseService
-    def initialize(charge:, params:, cascade_options: {})
+    include CascadeUpdatable
+
+    def initialize(charge:, params:, cascade_options: {}, cascade_updates: false)
       @charge = charge
       @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -14,6 +17,10 @@ module Charges
     def call
       return result.not_found_failure!(resource: "charge") unless charge
       return result if cascade && charge.charge_model != params[:charge_model]
+
+      old_filters_attrs = capture_old_filters_attrs
+      old_parent_attrs = charge.attributes.deep_dup
+      old_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes&.deep_dup
 
       ActiveRecord::Base.transaction do
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
@@ -77,6 +84,8 @@ module Charges
         end
       end
 
+      trigger_cascade(old_filters_attrs, old_parent_attrs:, old_applied_pricing_unit_attrs:)
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -86,7 +95,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :params, :cascade_options, :cascade
+    attr_reader :charge, :params, :cascade_options, :cascade, :cascade_updates
 
     delegate :plan, to: :charge
 

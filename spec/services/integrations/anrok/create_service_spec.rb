@@ -35,9 +35,7 @@ RSpec.describe Integrations::Anrok::CreateService do
       end
     end
 
-    context "with premium license" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium license", :premium do
       context "without validation errors" do
         it "creates an integration" do
           expect { service_call }.to change(Integrations::AnrokIntegration, :count).by(1)

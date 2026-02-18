@@ -2,12 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::BuildPayInAdvanceFixedChargeService do
+RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
   subject(:result) do
     described_class.call(subscription:, fixed_charge:, fixed_charge_event:, timestamp:)
   end
-
-  around { |test| lago_premium!(&test) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Netsuite::Update do
+RSpec.describe Mutations::Integrations::Netsuite::Update, :premium do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
@@ -28,8 +28,6 @@ RSpec.describe Mutations::Integrations::Netsuite::Update do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     integration

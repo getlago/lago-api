@@ -32,9 +32,7 @@ RSpec.describe AdjustedFees::CreateService do
         .and_return(BaseService::Result.new)
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :premium do
       it "creates an adjusted fee" do
         expect { create_service.call }.to change(AdjustedFee, :count).by(1)
       end

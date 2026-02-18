@@ -208,6 +208,24 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
         expect(json[:fixed_charge][:taxes].first[:code]).to eq(tax.code)
       end
     end
+
+    context "with cascade_updates" do
+      subject { post_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges", {fixed_charge: create_params.merge(cascade_updates: true)}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        allow(FixedCharges::CreateChildrenJob).to receive(:perform_later)
+      end
+
+      it "triggers cascade creation to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(FixedCharges::CreateChildrenJob).to have_received(:perform_later)
+      end
+    end
   end
 
   describe "PUT /api/v1/plans/:plan_code/fixed_charges/:code" do
@@ -264,6 +282,26 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
         expect(json[:fixed_charge][:invoice_display_name]).to eq("Updated Fixed Charge Name")
       end
     end
+
+    context "with cascade_updates" do
+      subject { put_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges/#{fixed_charge.code}", {fixed_charge: update_params.merge(cascade_updates: true)}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_fixed_charge
+        allow(FixedCharges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "passes cascade_updates to the service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(FixedCharges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
   end
 
   describe "DELETE /api/v1/plans/:plan_code/fixed_charges/:code" do
@@ -296,6 +334,25 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
         subject
 
         expect(response).to be_not_found_error("fixed_charge")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { delete_with_token(organization, "/api/v1/plans/#{plan.code}/fixed_charges/#{fixed_charge.code}", {fixed_charge: {cascade_updates: true}}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_fixed_charge) { create(:fixed_charge, plan: child_plan, organization:, add_on:, parent: fixed_charge) }
+
+      before do
+        child_fixed_charge
+        allow(FixedCharges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "cascades the deletion to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(FixedCharges::DestroyChildrenJob).to have_received(:perform_later).with(fixed_charge.id)
       end
     end
   end

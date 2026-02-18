@@ -58,7 +58,14 @@ Rails.application.routes.draw do
           resources :payments, only: %i[index]
           resources :payment_requests, only: %i[index]
           resources :subscriptions, only: %i[index]
-          resources :wallets, only: %i[index]
+          resources :wallets, only: %i[create update show index], param: :code do
+            scope module: :wallets do
+              resource :metadata, only: %i[create update destroy] do
+                delete ":key", action: :destroy_key, on: :member
+              end
+            end
+          end
+          delete "/wallets/:code", to: "wallets#terminate"
           resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end
@@ -77,7 +84,9 @@ Rails.application.routes.draw do
         end
         patch :entitlements, to: "subscriptions/entitlements#update"
         resources :fixed_charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/fixed_charges"
-        resources :charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/charges"
+        resources :charges, only: %i[index show update], param: :code, code: /.*/, controller: "subscriptions/charges" do
+          resources :filters, only: %i[index show create update destroy], controller: "subscriptions/charges/filters"
+        end
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 
@@ -106,7 +115,7 @@ Rails.application.routes.draw do
         end
       end
       get :events_enriched, to: "events#index_enriched"
-      resources :events, only: %i[create show index] do
+      resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
         post :estimate_fees, on: :collection
         post :estimate_instant_fees, on: :collection
         post :batch_estimate_instant_fees, on: :collection

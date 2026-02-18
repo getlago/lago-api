@@ -2,9 +2,7 @@
 
 require "rails_helper"
 
-describe "Lifetime usage without progressive billing", :time_travel do
-  around { |test| lago_premium!(&test) }
-
+describe "Lifetime usage without progressive billing", :premium, :time_travel do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["lifetime_usage", "progressive_billing"]) }
   let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31_00, pay_in_advance: false) }
 

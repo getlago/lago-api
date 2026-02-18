@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::CreditNotes::EstimateResolver do
+RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
   let(:query) do
     <<~GQL
       query($invoiceId: ID!, $items: [CreditNoteItemInput!]!) {
@@ -50,8 +50,6 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver do
   let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
 
   let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
-
-  around { |test| lago_premium!(&test) }
 
   before { credit }
 

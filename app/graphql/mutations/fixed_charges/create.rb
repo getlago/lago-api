@@ -18,9 +18,10 @@ module Mutations
         plan = current_organization.plans.parents.find_by(id: args[:plan_id])
 
         params = args.except(:plan_id).to_h.deep_symbolize_keys
+        cascade_updates = params.delete(:cascade_updates) || false
         params[:properties] = params[:properties].to_h if params[:properties]
 
-        result = ::FixedCharges::CreateService.call(plan:, params:)
+        result = ::FixedCharges::CreateService.call(plan:, params:, cascade_updates:)
 
         result.success? ? result.fixed_charge : result_error(result)
       end

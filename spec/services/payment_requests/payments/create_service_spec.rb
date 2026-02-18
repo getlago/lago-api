@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::CreateService do
-  subject(:create_service) { described_class.new(payable: payment_request, payment_provider: provider) }
+  subject(:create_service) { described_class.new(payable: payment_request, payment_provider: provider, payment_method_params:) }
 
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
   let(:provider) { "stripe" }
   let(:payment_provider_code) { "stripe_1" }
+  let(:payment_method_params) { {} }
+  let(:default_payment_method) { create(:payment_method, customer:, is_default: true) }
 
   let(:payment_request) do
     create(
@@ -58,6 +60,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
 
     before do
       provider_customer
+      default_payment_method
 
       allow(provider_class)
         .to receive(:new)
@@ -122,8 +125,7 @@ RSpec.describe PaymentRequests::Payments::CreateService do
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -256,6 +258,42 @@ RSpec.describe PaymentRequests::Payments::CreateService do
           expect { create_service.call }
             .to have_enqueued_mail(PaymentRequestMailer, :requested)
             .with(params: {payment_request:}, args: [])
+        end
+      end
+
+      context "when manual payment method is passed in params" do
+        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+        let(:payment_method_params) { {payment_method_type: "manual"} }
+
+        it "does not attach payment method to payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to be_nil
+        end
+      end
+
+      context "when valid payment method is passed in params" do
+        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+        let(:payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:payment_method_params) { {payment_method_id: payment_method.id} }
+
+        it "attaches correct payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(payment_method.id)
+        end
+      end
+
+      context "when payment method is NOT passed in params" do
+        let(:organization) { create(:organization, feature_flags: %w[multiple_payment_methods]) }
+
+        it "creates payment with customer default payment method" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payment_method_id).to eq(default_payment_method.id)
         end
       end
     end

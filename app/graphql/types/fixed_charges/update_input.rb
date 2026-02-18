@@ -15,6 +15,7 @@ module Types
       argument :prorated, Boolean, required: false
       argument :units, String, required: false
 
+      argument :cascade_updates, Boolean, required: false
       argument :properties, Types::FixedCharges::PropertiesInput, required: false
 
       argument :tax_codes, [String], required: false

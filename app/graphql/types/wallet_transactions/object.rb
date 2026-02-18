@@ -23,8 +23,11 @@ module Types
       field :failed_at, GraphQL::Types::ISO8601DateTime, null: true
       field :invoice, Types::Invoices::Object, null: true
       field :metadata, [Types::WalletTransactions::MetadataObject], null: true
+      field :remaining_amount_cents, GraphQL::Types::BigInt, null: true
+      field :remaining_credit_amount, String, null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :voided_invoice, Types::Invoices::Object, null: true
 
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
@@ -32,6 +35,16 @@ module Types
       def invoice
         object.invoice&.visible? ? object.invoice : nil
       end
+
+      def remaining_credit_amount
+        return nil if object.remaining_amount_cents.nil?
+
+        wallet = object.wallet
+        currency = wallet.currency_for_balance
+        object.remaining_amount_cents.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount).to_s
+      end
+
+      delegate :voided_invoice, to: :object
 
       def wallet_name
         object.wallet.name

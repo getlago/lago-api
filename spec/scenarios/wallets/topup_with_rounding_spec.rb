@@ -2,14 +2,14 @@
 
 require "rails_helper"
 
-describe "Wallet Transaction with rounding" do
+describe "Wallet Transaction with rounding", :premium do
   let(:organization) { create(:organization, :with_static_values, webhook_url: nil) }
   let(:customer) { create(:customer, :with_static_values, organization:) }
 
   around do |test|
     # Set the time to have a fixed issue date in invoice
     travel_to Time.zone.local(2025, 1, 1, 0, 0, 0) do
-      lago_premium!(&test)
+      test.run
     end
   end
 

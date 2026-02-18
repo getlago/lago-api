@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Okta::Create do
+RSpec.describe Mutations::Integrations::Okta::Create, :premium do
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
 
@@ -20,8 +20,6 @@ RSpec.describe Mutations::Integrations::Okta::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before { membership.organization.update!(premium_integrations: ["okta"]) }
 

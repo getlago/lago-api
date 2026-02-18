@@ -297,13 +297,11 @@ RSpec.describe Wallets::ValidateService do
           end
         end
 
-        context "when events_targeting_wallets premium integration is enabled" do
+        context "when events_targeting_wallets premium integration is enabled", :premium do
           before do
             organization.update!(premium_integrations: ["events_targeting_wallets"])
             create_list(:wallet, max_wallets_limit + 1, customer:)
           end
-
-          around { |test| lago_premium!(&test) }
 
           it "returns true and result has no errors" do
             expect(validate_service).to be_valid

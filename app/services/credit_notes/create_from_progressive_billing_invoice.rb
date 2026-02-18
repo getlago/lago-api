@@ -19,9 +19,12 @@ module CreditNotes
       items = calculate_items!
       return result unless result.success?
 
+      credit_amount_cents = creditable_amount_cents(amount, items)
+      return result if credit_amount_cents.zero?
+
       credit_note_result = CreditNotes::CreateService.call!(
         invoice: progressive_billing_invoice,
-        credit_amount_cents: creditable_amount_cents(amount, items),
+        credit_amount_cents:,
         items:,
         reason:,
         automatic: true
@@ -71,8 +74,8 @@ module CreditNotes
 
       (
         amount.truncate(CreditNote::DB_PRECISION_SCALE) -
-        taxes_result.coupons_adjustment_amount_cents +
-        taxes_result.taxes_amount_cents
+        taxes_result.coupons_adjustment_amount_cents.truncate(CreditNote::DB_PRECISION_SCALE) +
+        taxes_result.taxes_amount_cents.truncate(CreditNote::DB_PRECISION_SCALE)
       ).round
     end
   end

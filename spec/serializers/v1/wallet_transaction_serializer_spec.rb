@@ -19,6 +19,7 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "lago_wallet_id" => wallet_transaction.wallet_id,
         "lago_invoice_id" => nil,
         "lago_credit_note_id" => nil,
+        "lago_voided_invoice_id" => nil,
         "status" => wallet_transaction.status,
         "source" => wallet_transaction.source,
         "transaction_status" => wallet_transaction.transaction_status,
@@ -48,6 +49,19 @@ RSpec.describe ::V1::WalletTransactionSerializer do
       expect(result["wallet_transaction"]).to include(
         "lago_invoice_id" => wallet_transaction.invoice.id,
         "lago_credit_note_id" => wallet_transaction.credit_note.id
+      )
+    end
+  end
+
+  context "when transaction has a voided_invoice" do
+    let(:voided_invoice) { create(:invoice) }
+    let(:wallet_transaction) { create(:wallet_transaction, voided_invoice:) }
+
+    it "serializes the voided_invoice_id" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]).to include(
+        "lago_voided_invoice_id" => voided_invoice.id
       )
     end
   end

@@ -20,6 +20,29 @@ RSpec.describe Events::Stores::PostgresStore do
       )
     end
 
+    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
+      event = create(
+        :event,
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        external_customer_id: customer.external_id,
+        code:,
+        timestamp:,
+        properties:
+      )
+
+      create(
+        :enriched_event,
+        subscription:,
+        event:,
+        charge:,
+        charge_filter_id: charge_filter&.id,
+        value:,
+        decimal_value: value&.to_i&.to_d
+      )
+    end
+
     def format_timestamp(timestamp, precision: nil)
       Time.zone.parse(timestamp)
     end

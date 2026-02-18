@@ -4,8 +4,9 @@ module Charges
   class DestroyService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:)
+    def initialize(charge:, cascade_updates: false)
       @charge = charge
+      @cascade_updates = cascade_updates
 
       super
     end
@@ -25,6 +26,10 @@ module Charges
         result.charge = charge
       end
 
+      if cascade_updates && charge.children.exists?
+        Charges::DestroyChildrenJob.perform_later(charge.id)
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -34,6 +39,6 @@ module Charges
 
     private
 
-    attr_reader :charge
+    attr_reader :charge, :cascade_updates
   end
 end

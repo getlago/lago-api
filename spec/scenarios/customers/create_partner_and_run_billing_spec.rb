@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Create partner and run billing Scenarios" do
+describe "Create partner and run billing Scenarios", :premium do
   let(:organization) { create(:organization, webhook_url: nil, document_numbering: "per_organization", premium_integrations: ["revenue_share"]) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:partner) { create(:customer, organization:, billing_entity:) }
@@ -12,8 +12,6 @@ describe "Create partner and run billing Scenarios" do
   let(:params) do
     {code: metric.code, transaction_id: SecureRandom.uuid}
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     billing_entity.update!(document_numbering: "per_billing_entity")

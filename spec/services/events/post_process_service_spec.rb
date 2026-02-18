@@ -74,13 +74,11 @@ RSpec.describe Events::PostProcessService do
       end
     end
 
-    describe "#check_targeted_wallets" do
+    describe "#check_targeted_wallets", :premium do
       let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:) }
       let(:accepts_target_wallet) { false }
       let(:event_properties) { {"target_wallet_code" => target_wallet_code} }
       let(:target_wallet_code) { "my_wallet" }
-
-      around { |test| lago_premium!(&test) }
 
       before do
         organization.update!(premium_integrations: ["events_targeting_wallets"])

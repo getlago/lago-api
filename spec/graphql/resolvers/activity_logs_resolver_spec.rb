@@ -52,9 +52,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, clickhouse: true do
     it_behaves_like "blocked feature", "unauthorized"
   end
 
-  context "without database configuration" do
-    around { |test| lago_premium!(&test) }
-
+  context "without database configuration", :premium do
     before do
       ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
       ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"] = nil
@@ -64,9 +62,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, clickhouse: true do
     it_behaves_like "blocked feature", "feature_unavailable"
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "returns the list of activity logs" do
       result = execute_query(query:)
       activity_logs_response = result["data"]["activityLogs"]

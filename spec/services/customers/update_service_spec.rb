@@ -141,8 +141,6 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "with premium features", :premium do
-      around { |test| lago_premium!(&test) }
-
       let(:update_args) do
         {
           id: customer.id,
@@ -449,7 +447,7 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
-    context "when partialy updating" do
+    context "when partialy updating", :premium do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
 
       let(:update_args) do
@@ -459,7 +457,6 @@ RSpec.describe Customers::UpdateService do
         }
       end
 
-      around { |test| lago_premium!(&test) }
       before { stripe_customer }
 
       it "updates only the updated args" do
@@ -641,7 +638,7 @@ RSpec.describe Customers::UpdateService do
         expect(customers_service.call).to be_success
       end
 
-      context "with auto_dunning premium integration" do
+      context "with auto_dunning premium integration", :premium do
         let(:customer) do
           create(
             :customer,
@@ -659,8 +656,6 @@ RSpec.describe Customers::UpdateService do
         let(:update_args) do
           {applied_dunning_campaign_id: dunning_campaign.id}
         end
-
-        around { |test| lago_premium!(&test) }
 
         it "updates auto dunning config" do
           expect { customers_service.call }

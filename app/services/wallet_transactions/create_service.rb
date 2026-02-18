@@ -24,7 +24,8 @@ module WalletTransactions
           :source,
           :status,
           :transaction_type,
-          :transaction_status
+          :transaction_status,
+          :voided_invoice_id
         ),
         organization_id: wallet.organization_id,
         amount:,
@@ -53,6 +54,7 @@ module WalletTransactions
     def initial_remaining_amount_cents
       return nil unless wallet.traceable?
       return nil unless transaction_params[:transaction_type]&.to_sym == :inbound
+      return nil unless transaction_params[:transaction_status]&.to_sym == :granted
 
       wallet_credit.amount_cents
     end

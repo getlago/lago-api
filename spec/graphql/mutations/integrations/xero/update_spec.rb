@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Integrations::Xero::Update do
+RSpec.describe Mutations::Integrations::Xero::Update, :premium do
   let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:xero_integration, organization:) }
   let(:organization) { membership.organization }
@@ -24,8 +24,6 @@ RSpec.describe Mutations::Integrations::Xero::Update do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   before do
     integration

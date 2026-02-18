@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::DunningCampaigns::Destroy do
+RSpec.describe Mutations::DunningCampaigns::Destroy, :premium do
   let(:required_permissions) { "dunning_campaigns:delete" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
@@ -17,8 +17,6 @@ RSpec.describe Mutations::DunningCampaigns::Destroy do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

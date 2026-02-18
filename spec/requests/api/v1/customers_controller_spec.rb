@@ -41,9 +41,7 @@ RSpec.describe Api::V1::CustomersController do
       expect(json[:customer][:billing_entity_code]).to eq(organization.default_billing_entity.code)
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium features", :premium do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -76,9 +74,7 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
-    context "with billing configuration" do
-      around { |test| lago_premium!(&test) }
-
+    context "with billing configuration", :premium do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -199,7 +195,7 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
-    context "with account_type partner" do
+    context "with account_type partner", :premium do
       let(:organization) { create(:organization, premium_integrations: ["revenue_share"]) }
 
       let(:create_params) do
@@ -209,8 +205,6 @@ RSpec.describe Api::V1::CustomersController do
           account_type: "partner"
         }
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "returns a success" do
         subject

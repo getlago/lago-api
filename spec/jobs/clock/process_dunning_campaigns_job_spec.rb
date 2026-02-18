@@ -6,9 +6,7 @@ describe Clock::ProcessDunningCampaignsJob, job: true do
   subject { described_class }
 
   describe ".perform" do
-    context "when premium features are enabled" do
-      around { |test| lago_premium!(&test) }
-
+    context "when premium features are enabled", :premium do
       it "queue a DunningCampaigns::ProcessDunningCampaignsJob" do
         described_class.perform_now
         expect(DunningCampaigns::BulkProcessJob).to have_been_enqueued

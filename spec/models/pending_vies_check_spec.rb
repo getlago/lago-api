@@ -30,6 +30,7 @@ RSpec.describe PendingViesCheck, type: :model do
       expect(described_class.error_type_for(Valvat::BlockedError.new("error", :vies))).to eq("blocked")
       expect(described_class.error_type_for(Valvat::InvalidRequester.new("error", :vies))).to eq("invalid_requester")
       expect(described_class.error_type_for(Valvat::ServiceUnavailable.new("error", :vies))).to eq("service_unavailable")
+      expect(described_class.error_type_for(Valvat::HTTPError.new("The VIES web service returned the error: 307 ", :vies))).to eq("service_unavailable")
       expect(described_class.error_type_for(Valvat::MemberStateUnavailable.new("error", :vies))).to eq("member_state_unavailable")
     end
 

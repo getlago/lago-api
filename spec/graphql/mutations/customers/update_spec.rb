@@ -141,9 +141,7 @@ RSpec.describe Mutations::Customers::Update do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :premium do
     it "updates a customer" do
       result = execute_graphql(
         current_user: membership.user,
@@ -167,9 +165,7 @@ RSpec.describe Mutations::Customers::Update do
     end
   end
 
-  context "when user can update customers" do
-    around { |test| lago_premium!(&test) }
-
+  context "when user can update customers", :premium do
     it "updates a customer" do
       result = execute_graphql(
         current_user: membership.user,

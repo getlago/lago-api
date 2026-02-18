@@ -37,6 +37,7 @@ guard :rspec, cmd: "bundle exec rspec" do
   watch(%r{^spec/.+_spec\.rb$})
   watch(%r{^app/(.+)\.rb$}) { |m| "spec/#{m[1]}_spec.rb" }
   watch(%r{^lib/(.+)\.rb$}) { |m| "spec/lib/#{m[1]}_spec.rb" }
+  watch(%r{^lib/tasks/(.+)\.rake$}) { |m| "spec/lib/tasks/#{m[1]}_rake_spec.rb" }
   watch(%r{^app/controllers/(.+)_(controller)\.rb$}) do |m|
     [
       "spec/#{m[2]}s/#{m[1]}_#{m[2]}_spec.rb",

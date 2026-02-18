@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Adjusted Subscription Fees Scenario", transaction: false do
+describe "Adjusted Subscription Fees Scenario", :premium, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: "") }
 
   let(:customer) { create(:customer, organization:, invoice_grace_period: 5) }
@@ -26,8 +26,6 @@ describe "Adjusted Subscription Fees Scenario", transaction: false do
       pay_in_advance: false
     )
   end
-
-  around { |test| lago_premium!(&test) }
 
   context "with adjusted units" do
     it "creates invoices correctly" do

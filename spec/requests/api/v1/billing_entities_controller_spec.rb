@@ -90,7 +90,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
     end
   end
 
-  describe "POST /api/v1/billing_entities" do
+  describe "POST /api/v1/billing_entities", :premium do
     subject do
       post_with_token(organization, "/api/v1/billing_entities", create_params)
     end
@@ -141,8 +141,6 @@ RSpec.describe Api::V1::BillingEntitiesController do
 
       "data:image/png;base64,#{base64_logo}"
     end
-
-    around { |test| lago_premium!(&test) }
 
     it "creates a billing entity" do
       subject
@@ -212,7 +210,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
     end
   end
 
-  describe "PUT /api/v1/billing_entities/:code" do
+  describe "PUT /api/v1/billing_entities/:code", :premium do
     subject do
       put_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}", update_params)
     end
@@ -260,8 +258,6 @@ RSpec.describe Api::V1::BillingEntitiesController do
 
       "data:image/png;base64,#{base64_logo}"
     end
-
-    around { |test| lago_premium!(&test) }
 
     it "updates the billing entity" do
       subject

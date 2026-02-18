@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver do
+RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver, :premium do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
@@ -34,8 +34,6 @@ RSpec.describe Resolvers::DataApi::Usages::ForecastedResolver do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/forecasted/")
       .to_return(status: 200, body: body_response, headers: {})
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

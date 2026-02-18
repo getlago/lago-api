@@ -111,4 +111,10 @@ RSpec.describe Integrations::BaseIntegration do
       end
     end
   end
+
+  describe "#external_id_key" do
+    it "returns id" do
+      expect(integration.external_id_key).to eq("id")
+    end
+  end
 end

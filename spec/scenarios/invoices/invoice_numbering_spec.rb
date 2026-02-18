@@ -795,10 +795,8 @@ describe "Invoice Numbering Scenario", transaction: false do
     end
   end
 
-  context "with partner customer" do
+  context "with partner customer", :premium do
     let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first, account_type: "partner") }
-
-    around { |test| lago_premium!(&test) }
 
     before { organization.update!(premium_integrations: ["revenue_share"]) }
 

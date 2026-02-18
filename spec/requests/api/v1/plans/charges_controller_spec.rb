@@ -214,9 +214,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
       end
     end
 
-    context "with applied_pricing_unit" do
-      around { |test| lago_premium!(&test) }
-
+    context "with applied_pricing_unit", :premium do
       let(:pricing_unit) { create(:pricing_unit, organization:) }
       let(:create_params) do
         {
@@ -235,6 +233,24 @@ RSpec.describe Api::V1::Plans::ChargesController do
         expect(json[:charge][:applied_pricing_unit]).to be_present
         expect(json[:charge][:applied_pricing_unit][:code]).to eq(pricing_unit.code)
         expect(json[:charge][:applied_pricing_unit][:conversion_rate]).to eq("2.5")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { post_with_token(organization, "/api/v1/plans/#{plan.code}/charges", {charge: create_params.merge(cascade_updates: true)}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        allow(Charges::CreateChildrenJob).to receive(:perform_later)
+      end
+
+      it "triggers cascade creation to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::CreateChildrenJob).to have_received(:perform_later)
       end
     end
 
@@ -258,9 +274,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject
@@ -339,6 +353,26 @@ RSpec.describe Api::V1::Plans::ChargesController do
       end
     end
 
+    context "with cascade_updates" do
+      subject { put_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}", {charge: update_params.merge(cascade_updates: true)}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        create(:subscription, plan: child_plan, status: :active)
+        child_charge
+        allow(Charges::UpdateChildrenJob).to receive(:perform_later)
+      end
+
+      it "passes cascade_updates to the service" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::UpdateChildrenJob).to have_received(:perform_later)
+      end
+    end
+
     context "with accepts_target_wallet" do
       let(:update_params) do
         {
@@ -357,9 +391,7 @@ RSpec.describe Api::V1::Plans::ChargesController do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
-
+      context "when license is premium", :premium do
         context "when events_targeting_wallets is not enabled" do
           it "does not set accepts_target_wallet" do
             subject
@@ -415,6 +447,25 @@ RSpec.describe Api::V1::Plans::ChargesController do
         subject
 
         expect(response).to be_not_found_error("charge")
+      end
+    end
+
+    context "with cascade_updates" do
+      subject { delete_with_token(organization, "/api/v1/plans/#{plan.code}/charges/#{charge.code}", {charge: {cascade_updates: true}}) }
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: charge) }
+
+      before do
+        child_charge
+        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "cascades the deletion to children" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
       end
     end
   end

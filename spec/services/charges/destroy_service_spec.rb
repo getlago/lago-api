@@ -50,5 +50,49 @@ RSpec.describe Charges::DestroyService do
         expect(result.error.error_code).to eq("charge_not_found")
       end
     end
+
+    context "with cascade_updates" do
+      subject(:destroy_service) { described_class.new(charge:, cascade_updates: true) }
+
+      let(:child_plan) { create(:plan, organization:, parent: subscription.plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: charge) }
+
+      before do
+        child_charge
+        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "enqueues Charges::DestroyChildrenJob" do
+        destroy_service.call
+
+        expect(Charges::DestroyChildrenJob).to have_received(:perform_later).with(charge.id)
+      end
+
+      context "when charge has no children" do
+        before { child_charge.update!(parent_id: nil) }
+
+        it "does not enqueue Charges::DestroyChildrenJob" do
+          destroy_service.call
+
+          expect(Charges::DestroyChildrenJob).not_to have_received(:perform_later)
+        end
+      end
+    end
+
+    context "without cascade_updates when charge has children" do
+      let(:child_plan) { create(:plan, organization:, parent: subscription.plan) }
+      let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: charge) }
+
+      before do
+        child_charge
+        allow(Charges::DestroyChildrenJob).to receive(:perform_later)
+      end
+
+      it "does not enqueue Charges::DestroyChildrenJob" do
+        destroy_service.call
+
+        expect(Charges::DestroyChildrenJob).not_to have_received(:perform_later)
+      end
+    end
   end
 end

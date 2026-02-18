@@ -214,10 +214,8 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when creating lifetime_usage alert" do
+    context "when creating lifetime_usage alert", :premium do
       let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
-
-      around { |test| lago_premium!(&test) }
 
       context "when organization using lifetime usage" do
         let(:premium_integrations) { [] }

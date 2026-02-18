@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Wallets::Create do
+RSpec.describe Mutations::Wallets::Create, :premium do
   let(:required_permission) { "wallets:create" }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization, currency: "EUR") }
@@ -56,8 +56,6 @@ RSpec.describe Mutations::Wallets::Create do
       }
     GQL
   end
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
+RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code:, state:) }
 
   let(:organization) { create(:organization, premium_integrations: ["okta"]) }
@@ -14,8 +14,6 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
   let(:code) { "code" }
   let(:state) { SecureRandom.uuid }
-
-  around { |test| lago_premium!(&test) }
 
   before do
     okta_integration

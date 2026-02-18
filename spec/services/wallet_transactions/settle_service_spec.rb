@@ -26,5 +26,59 @@ RSpec.describe WalletTransactions::SettleService do
 
       expect(Utils::ActivityLog).to have_produced("wallet_transaction.updated").after_commit.with(wallet_transaction)
     end
+
+    context "with inbound transaction on traceable wallet" do
+      let(:customer) { create(:customer) }
+      let(:wallet) { create(:wallet, customer:, traceable: true) }
+      let(:wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          status: "pending",
+          transaction_type: :inbound,
+          settled_at: nil,
+          remaining_amount_cents: nil)
+      end
+
+      it "sets remaining_amount_cents to amount_cents" do
+        service.call
+
+        expect(wallet_transaction.reload.remaining_amount_cents).to eq(wallet_transaction.amount_cents)
+      end
+    end
+
+    context "with outbound transaction" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction,
+          status: "pending",
+          transaction_type: :outbound,
+          settled_at: nil,
+          remaining_amount_cents: nil)
+      end
+
+      it "does not set remaining_amount_cents" do
+        service.call
+
+        expect(wallet_transaction.reload.remaining_amount_cents).to be_nil
+      end
+    end
+
+    context "with inbound transaction on non-traceable wallet" do
+      let(:customer) { create(:customer) }
+      let(:wallet) { create(:wallet, customer:, traceable: false) }
+      let(:wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          status: "pending",
+          transaction_type: :inbound,
+          settled_at: nil,
+          remaining_amount_cents: nil)
+      end
+
+      it "does not set remaining_amount_cents" do
+        service.call
+
+        expect(wallet_transaction.reload.remaining_amount_cents).to be_nil
+      end
+    end
   end
 end

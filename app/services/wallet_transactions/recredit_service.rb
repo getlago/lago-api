@@ -20,7 +20,8 @@ module WalletTransactions
         params: {
           wallet_id: wallet.id,
           granted_credits: wallet_transaction.credit_amount.to_s,
-          reset_consumed_credits: true
+          reset_consumed_credits: true,
+          voided_invoice_id: wallet_transaction.invoice_id
         }
       )
 

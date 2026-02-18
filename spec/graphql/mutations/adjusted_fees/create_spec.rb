@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::AdjustedFees::Create do
+RSpec.describe Mutations::AdjustedFees::Create, :premium do
   let(:required_permission) { "invoices:update" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
@@ -66,8 +66,6 @@ RSpec.describe Mutations::AdjustedFees::Create do
   end
 
   before { fee.invoice.draft! }
-
-  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -165,9 +165,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "with lago_premium", :premium do
       it "enqueues GenerateDocumentsJob with email true" do
         expect do
           invoice_service.call
