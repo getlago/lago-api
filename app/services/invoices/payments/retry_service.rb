@@ -3,8 +3,9 @@
 module Invoices
   module Payments
     class RetryService < BaseService
-      def initialize(invoice:)
+      def initialize(invoice:, payment_method_params: {})
         @invoice = invoice
+        @payment_method_params = payment_method_params
 
         super
       end
@@ -20,7 +21,7 @@ module Invoices
           return result.not_allowed_failure!(code: "payment_processor_is_currently_handling_payment")
         end
 
-        create_result = Invoices::Payments::CreateService.call_async(invoice:)
+        create_result = Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:)
         deliver_webhook if create_result.payment_provider.nil?
 
         result.invoice = invoice
@@ -30,7 +31,7 @@ module Invoices
 
       private
 
-      attr_reader :invoice
+      attr_reader :invoice, :payment_method_params
 
       delegate :customer, to: :invoice
 

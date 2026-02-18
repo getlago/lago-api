@@ -9,6 +9,7 @@ class WalletTransaction < ApplicationRecord
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
+  belongs_to :payment_method, optional: true
 
   # populated for inbound transactions created when an invoice is voided
   belongs_to :voided_invoice, class_name: "Invoice", optional: true

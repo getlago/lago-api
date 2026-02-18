@@ -116,7 +116,7 @@ RSpec.describe Invoices::PaidCreditService do
 
     it "creates a payment" do
       result = invoice_service.call
-      expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe)
+      expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe, payment_method_params: {})
     end
 
     context "with customer timezone" do
@@ -161,7 +161,7 @@ RSpec.describe Invoices::PaidCreditService do
 
         expect(result).to be_success
         expect(result.invoice).to be_open
-        expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe)
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe, payment_method_params: {})
 
         # These jobs should only be enqueued for finalized invoices
         expect(SegmentTrackJob).not_to have_been_enqueued

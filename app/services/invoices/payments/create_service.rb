@@ -5,9 +5,10 @@ module Invoices
     class CreateService < BaseService
       include Customers::PaymentProviderFinder
 
-      def initialize(invoice:, payment_provider: nil)
+      def initialize(invoice:, payment_provider: nil, payment_method_params: {})
         @invoice = invoice
         @provider = payment_provider&.to_sym
+        @payment_method_params = payment_method_params
 
         super
       end
@@ -42,6 +43,11 @@ module Invoices
           payable: invoice,
           payable_payment_status: "pending"
         )
+
+        if multiple_payment_methods_enabled?
+          payment.payment_method_id = determine_payment_method&.id
+          payment.save!
+        end
 
         result.payment = payment
 
@@ -81,7 +87,7 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider)
+        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider, payment_method_params:)
 
         result.payment_provider = provider
         result
@@ -89,7 +95,7 @@ module Invoices
 
       private
 
-      attr_reader :invoice, :payment
+      attr_reader :invoice, :payment, :payment_method_params
 
       delegate :customer, to: :invoice
 
@@ -97,12 +103,20 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
+      def multiple_payment_methods_enabled?
+        customer.organization.feature_flag_enabled?(:multiple_payment_methods)
+      end
+
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 
-        current_payment_provider_customer&.provider_customer_id
+        if multiple_payment_methods_enabled?
+          current_payment_provider_customer&.provider_customer_id && determine_payment_method.present?
+        else
+          current_payment_provider_customer&.provider_customer_id
+        end
       end
 
       def current_payment_provider
@@ -164,6 +178,15 @@ module Invoices
           amount_currency: invoice.currency,
           payable_payment_status: "processing"
         )
+      end
+
+      # NOTE: Returns PaymentMethod object or nil
+      #       nil means: skip automatic payment (manual type or no payment method configured)
+      #       payment_method_params takes precedence (used for retry with override)
+      def determine_payment_method
+        @determine_payment_method ||= PaymentMethods::DetermineService.call(
+          invoice:, customer:, payment_method_params:
+        ).payment_method
       end
     end
   end
