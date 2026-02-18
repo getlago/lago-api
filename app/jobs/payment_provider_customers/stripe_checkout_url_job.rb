@@ -13,7 +13,7 @@ module PaymentProviderCustomers
       PaymentProviderCustomers::StripeService.new(stripe_customer)
         .generate_checkout_url
         .raise_if_error!
-    rescue BaseService::UnauthorizedFailure => e
+    rescue BaseService::UnauthorizedFailure, BaseService::ThirdPartyFailure => e
       Rails.logger.warn(e.message)
     end
   end
