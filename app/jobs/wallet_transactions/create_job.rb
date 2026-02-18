@@ -5,6 +5,8 @@ module WalletTransactions
     queue_as "high_priority"
     unique :until_executed, on_conflict: :log
 
+    retry_on Customers::FailedToAcquireLock, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+
     def perform(organization_id:, params:, unique_transaction: false)
       organization = Organization.find(organization_id)
       WalletTransactions::CreateFromParamsService.call!(organization:, params:)
