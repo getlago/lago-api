@@ -34,10 +34,32 @@ module Api
         render_payment_receipt(payment_receipt)
       end
 
+      def resend_email
+        payment_receipt = PaymentReceipt.where(organization: current_organization).find_by(id: params[:id])
+        return not_found_error(resource: resource_name) unless payment_receipt
+
+        result = Emails::ResendService.call(
+          resource: payment_receipt,
+          to: resend_email_params[:to],
+          cc: resend_email_params[:cc],
+          bcc: resend_email_params[:bcc]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def index_filters
         params.permit(:invoice_id)
+      end
+
+      def resend_email_params
+        params.permit(to: [], cc: [], bcc: [])
       end
 
       def render_payment_receipt(payment_receipt)

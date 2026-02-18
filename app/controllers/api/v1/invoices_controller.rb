@@ -162,6 +162,24 @@ module Api
         end
       end
 
+      def resend_email
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = Emails::ResendService.call(
+          resource: invoice,
+          to: resend_email_params[:to],
+          cc: resend_email_params[:cc],
+          bcc: resend_email_params[:bcc]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
       def payment_url
         invoice = current_organization.invoices.visible.includes(:customer).find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
@@ -356,6 +374,10 @@ module Api
           :external_id,
           :integration_code
         )
+      end
+
+      def resend_email_params
+        params.permit(to: [], cc: [], bcc: [])
       end
 
       def render_invoice(invoice)

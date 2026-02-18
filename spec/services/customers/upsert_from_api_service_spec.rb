@@ -1130,10 +1130,10 @@ RSpec.describe Customers::UpsertFromApiService do
             )
           end
 
-          it "fails with a stripe_error" do
+          it "fails with a third party error" do
             expect(result).to be_failure
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:base]).to include("stripe_error")
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error.error_code).to include("resource_missing")
           end
         end
 

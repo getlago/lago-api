@@ -106,6 +106,7 @@ Rails.application.routes.draw do
         post :download, on: :member, action: :download_pdf
         post :download_pdf, on: :member
         post :download_xml, on: :member
+        post :resend_email, on: :member
         put :void, on: :member
         post :estimate, on: :collection
         scope module: :credit_notes do
@@ -126,6 +127,7 @@ Rails.application.routes.draw do
         post :download, on: :member, action: :download_pdf
         post :download_pdf, on: :member
         post :download_xml, on: :member
+        post :resend_email, on: :member
         post :void, on: :member
         post :lose_dispute, on: :member
         post :retry, on: :member
@@ -136,7 +138,9 @@ Rails.application.routes.draw do
         put :finalize, on: :member
         put :sync_salesforce_id, on: :member
       end
-      resources :payment_receipts, only: %i[index show]
+      resources :payment_receipts, only: %i[index show] do
+        post :resend_email, on: :member
+      end
       resources :payment_requests, only: %i[create index show]
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
