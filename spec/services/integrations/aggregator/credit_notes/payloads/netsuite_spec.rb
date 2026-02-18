@@ -108,6 +108,53 @@ RSpec.describe Integrations::Aggregator::CreditNotes::Payloads::Netsuite do
             }
           ],
           "options" => {"ignoreMandatoryFields" => false},
+          "taxdetails" => [
+            {
+              "sublistId" => "taxdetails",
+              "lineItems" => [
+                {
+                  "taxdetailsreference" => add_on_credit_note_item.id,
+                  "taxamount" => 0.0,
+                  "taxbasis" => 1,
+                  "taxrate" => 0.0,
+                  "taxtype" => nil,
+                  "taxcode" => nil
+                },
+                {
+                  "taxdetailsreference" => fixed_charge_credit_note_item.id,
+                  "taxamount" => 0.0,
+                  "taxbasis" => 1,
+                  "taxrate" => 0.0,
+                  "taxtype" => nil,
+                  "taxcode" => nil
+                },
+                {
+                  "taxdetailsreference" => billable_metric_credit_note_item.id,
+                  "taxamount" => 0.0,
+                  "taxbasis" => 1,
+                  "taxrate" => 0.0,
+                  "taxtype" => nil,
+                  "taxcode" => nil
+                },
+                {
+                  "taxdetailsreference" => minimum_commitment_credit_note_item.id,
+                  "taxamount" => 0.0,
+                  "taxbasis" => 1,
+                  "taxrate" => 0.0,
+                  "taxtype" => nil,
+                  "taxcode" => nil
+                },
+                {
+                  "taxdetailsreference" => subscription_credit_note_item.id,
+                  "taxamount" => 0.0,
+                  "taxbasis" => 1,
+                  "taxrate" => 0.0,
+                  "taxtype" => nil,
+                  "taxcode" => nil
+                }
+              ]
+            }
+          ],
           "type" => "creditmemo"
         }
       end

@@ -21,14 +21,12 @@ module Integrations
               }
             }
 
-            if tax_item_complete?
-              result["taxdetails"] = [
-                {
-                  "sublistId" => "taxdetails",
-                  "lineItems" => tax_line_items_with_adjusted_taxes + coupon_taxes
-                }
-              ]
-            end
+            result["taxdetails"] = [
+              {
+                "sublistId" => "taxdetails",
+                "lineItems" => tax_line_items_with_adjusted_taxes + coupon_taxes
+              }
+            ]
 
             result
           end
@@ -103,8 +101,8 @@ module Integrations
               "taxamount" => amount(taxes_amount(credit_note_item), resource: credit_note_item.credit_note),
               "taxbasis" => 1,
               "taxrate" => credit_note_item.fee.taxes_rate,
-              "taxtype" => tax_item.tax_type,
-              "taxcode" => tax_item.tax_code
+              "taxtype" => tax_item&.tax_type,
+              "taxcode" => tax_item&.tax_code
             }
           end
 
@@ -157,8 +155,8 @@ module Integrations
                 "taxbasis" => 1,
                 "taxamount" => 0,
                 "taxrate" => credit_note.taxes_rate,
-                "taxtype" => tax_item.tax_type,
-                "taxcode" => tax_item.tax_code,
+                "taxtype" => tax_item&.tax_type,
+                "taxcode" => tax_item&.tax_code,
                 "taxdetailsreference" => "coupon_item"
               }
             end
