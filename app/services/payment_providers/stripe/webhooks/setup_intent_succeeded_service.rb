@@ -54,12 +54,14 @@ module PaymentProviders
         end
 
         def payment_method_details
+          card = stripe_payment_method.try(:card)
+
           PaymentMethods::CardDetails.new(
             type: stripe_payment_method.type,
-            last4: stripe_payment_method.card&.last4,
-            brand: stripe_payment_method.card&.display_brand,
-            expiration_month: stripe_payment_method.card&.exp_month,
-            expiration_year: stripe_payment_method.card&.exp_year,
+            last4: card&.last4,
+            brand: card&.display_brand,
+            expiration_month: card&.exp_month,
+            expiration_year: card&.exp_year,
             card_holder_name: nil,
             issuer: nil
           ).to_h
