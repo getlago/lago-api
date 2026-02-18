@@ -477,6 +477,32 @@ RSpec.describe Customers::EuAutoTaxesService do
         end
       end
 
+      context "when zipcode contains spaces" do
+        it "normalizes the zipcode before matching" do
+          customer.update(country: "ES", zipcode: " 35 001 ")
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_es_exception_canary_islands")
+        end
+      end
+
+      context "when customer relocates from mainland to special territory" do
+        let(:new_record) { false }
+        let(:tax_attributes_changed) { true }
+        let(:tax_identification_number) { nil }
+        let(:applied_tax) { create(:customer_applied_tax, tax:, customer:) }
+        let(:tax) { create(:tax, organization:, code: "lago_eu_es_standard") }
+
+        before do
+          applied_tax
+          customer.update(country: "ES", zipcode: "35001")
+        end
+
+        it "detects the territory and assigns the exception tax code" do
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_es_exception_canary_islands")
+        end
+      end
+
       context "when territory is not detected" do
         let(:tax_identification_number) { nil }
         let(:vies_response) { false }

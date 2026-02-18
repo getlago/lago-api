@@ -86,7 +86,8 @@ module Customers
       tax_exceptions = LagoEuVat::Rate.country_rates(country_code:)[:exceptions]
       return if tax_exceptions.blank?
 
-      tax_exceptions.find { |tax_exception| customer.zipcode.match?(tax_exception["postcode"]) }
+      normalized_zip = customer.zipcode.gsub(/\s/, "")
+      tax_exceptions.find { |tax_exception| normalized_zip.match?(tax_exception["postcode"]) }
     end
 
     def territory_tax_code(country_code, tax_exception)
