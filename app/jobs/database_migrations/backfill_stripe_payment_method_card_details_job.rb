@@ -38,7 +38,6 @@ module DatabaseMigrations
             p.provider_payment_method_id,
             p.provider_payment_method_data
           FROM payments p
-          INNER JOIN invoices i ON i.id = p.payable_id AND p.payable_type = 'Invoice'
           WHERE p.provider_payment_method_data IS NOT NULL
             AND p.provider_payment_method_data != '{}'::jsonb
             AND EXISTS (
@@ -46,7 +45,7 @@ module DatabaseMigrations
               WHERE b.payment_provider_customer_id = p.payment_provider_customer_id
                 AND b.provider_method_id = p.provider_payment_method_id
             )
-          ORDER BY p.payment_provider_customer_id, p.provider_payment_method_id, i.created_at DESC
+          ORDER BY p.payment_provider_customer_id, p.provider_payment_method_id, p.created_at DESC
         )
         UPDATE payment_methods pm
         SET

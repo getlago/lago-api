@@ -130,8 +130,8 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
   end
 
   context "when customer has multiple payments for the same method" do
-    let(:old_invoice) { create(:invoice, customer:, organization:, created_at: 2.months.ago) }
-    let(:recent_invoice) { create(:invoice, customer:, organization:, created_at: 1.day.ago) }
+    let(:old_invoice) { create(:invoice, customer:, organization:) }
+    let(:recent_invoice) { create(:invoice, customer:, organization:) }
 
     it "uses card details from the most recent payment" do
       migration_payment_method
@@ -143,7 +143,8 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
         payment_provider: stripe_provider,
         payment_provider_customer: stripe_customer,
         provider_payment_method_id: "pm_123",
-        provider_payment_method_data: {type: "card", brand: "visa", last4: "1111"}
+        provider_payment_method_data: {type: "card", brand: "visa", last4: "1111"},
+        created_at: 2.months.ago
       )
       create(
         :payment,
@@ -152,7 +153,8 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
         payment_provider: stripe_provider,
         payment_provider_customer: stripe_customer,
         provider_payment_method_id: "pm_123",
-        provider_payment_method_data: {type: "card", brand: "visa", last4: "4242"}
+        provider_payment_method_data: {type: "card", brand: "visa", last4: "4242"},
+        created_at: 1.day.ago
       )
 
       perform_job

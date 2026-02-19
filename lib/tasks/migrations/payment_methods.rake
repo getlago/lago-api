@@ -5,10 +5,7 @@ namespace :migrations do
   task backfill_stripe_payment_methods: :environment do
     Rails.logger.level = Logger::Severity::ERROR
 
-    puts "##################################\nStarting payment methods backfill"
-    puts "\n#### Checking for resources to fill ####"
-
-    count = ActiveRecord::Base.connection.select_value(<<~SQL).to_i
+    count_sql = <<~SQL
       SELECT COUNT(*) FROM payment_provider_customers ppc
       WHERE ppc.type = 'PaymentProviderCustomers::StripeCustomer'
         AND ppc.settings->>'payment_method_id' IS NOT NULL
@@ -19,6 +16,11 @@ namespace :migrations do
             AND pm.provider_method_id = ppc.settings->>'payment_method_id'
         )
     SQL
+
+    puts "##################################\nStarting payment methods backfill"
+    puts "\n#### Checking for resources to fill ####"
+
+    count = ActiveRecord::Base.connection.select_value(count_sql).to_i
 
     if count > 0
       pp "  -> #{count} provider customers to migrate 🧮"
@@ -33,17 +35,7 @@ namespace :migrations do
       sleep 5
       puts "\n#### Checking status ####"
 
-      count = ActiveRecord::Base.connection.select_value(<<~SQL).to_i
-        SELECT COUNT(*) FROM payment_provider_customers ppc
-        WHERE ppc.type = 'PaymentProviderCustomers::StripeCustomer'
-          AND ppc.settings->>'payment_method_id' IS NOT NULL
-          AND ppc.deleted_at IS NULL
-          AND NOT EXISTS (
-            SELECT 1 FROM payment_methods pm
-            WHERE pm.payment_provider_customer_id = ppc.id
-              AND pm.provider_method_id = ppc.settings->>'payment_method_id'
-          )
-      SQL
+      count = ActiveRecord::Base.connection.select_value(count_sql).to_i
 
       if count > 0
         pp "  -> #{count} remaining 🧮"
