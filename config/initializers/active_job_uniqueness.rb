@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/redis_config_builder"
+
 ActiveJob::Uniqueness.configure do |config|
   config.lock_ttl = 1.hour
 
@@ -8,19 +10,15 @@ ActiveJob::Uniqueness.configure do |config|
     redis_timeout: 5
   }
 
-  redis_config = {
-    url: ENV["REDIS_URL"],
-    ssl_params: {
-      verify_mode: OpenSSL::SSL::VERIFY_NONE
-    },
-    reconnect_attempts: 4
-  }
+  redis_config = Lago::RedisConfigBuilder.new
+    .with_options(reconnect_attempts: 4)
+    .sidekiq
 
-  if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
-    redis_config = redis_config.merge({password: ENV["REDIS_PASSWORD"]})
+  client = if redis_config.key?(:sentinels)
+    RedisClient.sentinel(**redis_config).new_client
+  else
+    RedisClient.new(**redis_config)
   end
 
-  config.redlock_servers = [
-    RedisClient.new(redis_config)
-  ]
+  config.redlock_servers = [client]
 end
