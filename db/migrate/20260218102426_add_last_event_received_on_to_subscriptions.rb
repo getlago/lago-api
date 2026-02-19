@@ -9,5 +9,10 @@ class AddLastEventReceivedOnToSubscriptions < ActiveRecord::Migration[8.0]
       name: "index_subscriptions_on_last_received_event_on",
       algorithm: :concurrently,
       if_not_exists: true
+    add_index :subscriptions, :id,
+      name: "index_subscriptions_on_last_received_event_on_null",
+      where: "last_received_event_on IS NULL",
+      algorithm: :concurrently,
+      if_not_exists: true
   end
 end
