@@ -12,7 +12,7 @@ class Webhook < ApplicationRecord
   enum :status, STATUS
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[id webhook_type]
+    %w[id object_id]
   end
 
   # Up until 1.4.0, we stored the payload as a string. This method
