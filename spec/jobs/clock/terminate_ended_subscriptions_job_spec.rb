@@ -11,21 +11,18 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
   let!(:subscription3) { create(:subscription, ending_at: nil) }
 
   describe ".perform" do
-    before do
-      allow(Subscriptions::TerminateService).to receive(:call)
-    end
-
-    it "terminates the subscriptions where ending_at matches current data" do
+    it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
       current_date = Time.current + 2.months
 
       travel_to(current_date) do
         described_class.perform_now
-        expect(Subscriptions::TerminateService)
-          .to have_received(:call).with(subscription: subscription1)
-        expect(Subscriptions::TerminateService)
-          .not_to have_received(:call).with(subscription: subscription2)
-        expect(Subscriptions::TerminateService)
-          .not_to have_received(:call).with(subscription: subscription3)
+
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .to have_been_enqueued.with(subscription1)
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .not_to have_been_enqueued.with(subscription2)
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .not_to have_been_enqueued.with(subscription3)
       end
     end
 
@@ -41,63 +38,13 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
 
         travel_to(current_date) do
           described_class.perform_now
-          expect(Subscriptions::TerminateService)
-            .to have_received(:call).with(subscription: subscription1)
-          expect(Subscriptions::TerminateService)
-            .not_to have_received(:call).with(subscription: subscription2)
-          expect(Subscriptions::TerminateService)
-            .not_to have_received(:call).with(subscription: subscription3)
-        end
-      end
-    end
-  end
 
-  describe "when lock errors occur" do
-    let!(:subscription4) { create(:subscription, ending_at:) }
-
-    [
-      Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"),
-      ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet.")
-    ].each do |error|
-      error_class = error.class
-
-      context "when a #{error_class} error is raised" do
-        before do
-          allow(Subscriptions::TerminateService).to receive(:call)
-            .with(subscription: subscription1).and_raise(error)
-          allow(Subscriptions::TerminateService).to receive(:call)
-            .with(subscription: subscription4)
-        end
-
-        it "enqueues a TerminateEndedSubscriptionJob with a delay for the failed subscription" do
-          current_date = Time.current + 2.months
-
-          travel_to(current_date) do
-            described_class.perform_now
-
-            expect(Subscriptions::TerminateEndedSubscriptionJob)
-              .to have_been_enqueued
-              .with(subscription: subscription1)
-          end
-        end
-
-        it "does not raise error" do
-          current_date = Time.current + 2.months
-
-          travel_to(current_date) do
-            expect { described_class.perform_now }.not_to raise_error
-          end
-        end
-
-        it "continues processing remaining subscriptions" do
-          current_date = Time.current + 2.months
-
-          travel_to(current_date) do
-            described_class.perform_now
-
-            expect(Subscriptions::TerminateService)
-              .to have_received(:call).with(subscription: subscription4)
-          end
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .to have_been_enqueued.with(subscription1)
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription2)
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription3)
         end
       end
     end
