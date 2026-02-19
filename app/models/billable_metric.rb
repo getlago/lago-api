@@ -39,6 +39,8 @@ class BillableMetric < ApplicationRecord
 
   ROUNDING_FUNCTIONS = {round: "round", ceil: "ceil", floor: "floor"}.freeze
 
+  UNIQUE_COUNT_OPERATION_TYPES = %w[add remove].freeze
+
   WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
 
   enum :aggregation_type, AGGREGATION_TYPES

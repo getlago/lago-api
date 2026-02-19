@@ -198,6 +198,32 @@ RSpec.describe Events::EnrichService do
           expect(enriched_event.operation_type).to eq("remove")
         end
       end
+
+      context "when the event operation type is unknown" do
+        let(:event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => "foo_bar",
+              "operation_type" => "invalid"
+            }
+          )
+        end
+
+        it "creates an enriched event without the operation type" do
+          result = enrich_service.call
+
+          expect(result).to be_success
+          expect(result.enriched_events.count).to eq(1)
+
+          enriched_event = result.enriched_events.first
+          expect(enriched_event.value).to eq("foo_bar")
+          expect(enriched_event.operation_type).to be_nil
+        end
+      end
     end
 
     context "when charges defines a pricing group key" do
@@ -266,7 +292,7 @@ RSpec.describe Events::EnrichService do
             billable_metric.field_name => 12,
             "target_wallet_code" => "wallet1234"
           },
-          precise_total_amount_cents: 1200.12
+          precise_total_amount_cents: BigDecimal("1200.12")
         )
       end
 

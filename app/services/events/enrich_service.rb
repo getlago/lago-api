@@ -65,7 +65,8 @@ module Events
       enriched_event.decimal_value = decimal_value(enriched_event.value)
 
       if billable_metric.unique_count_agg?
-        enriched_event.operation_type = (event.properties || {})["operation_type"] || "add"
+        operation_type = (event.properties || {})["operation_type"] || "add"
+        enriched_event.operation_type = operation_type if BillableMetric::UNIQUE_COUNT_OPERATION_TYPES.include?(operation_type)
       end
 
       enriched_event
