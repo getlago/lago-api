@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+
 require "rake"
 
 RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # rubocop:disable RSpec/DescribeClass
@@ -86,6 +87,66 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
 
         expect(duplicate_on_standalone.reload.deleted_at).to eq(Time.current.beginning_of_hour)
       end
+    end
+  end
+
+  context "with mixed features on the same subscription (one duplicate, one unique)" do
+    let(:unique_feature) { create(:feature, organization:) }
+
+    let!(:duplicate_entitlement) do
+      create(:entitlement, :subscription, feature:, subscription:, organization:)
+    end
+
+    let!(:unique_entitlement) do
+      create(:entitlement, :subscription, feature: unique_feature, subscription:, organization:)
+    end
+
+    it "only soft-deletes the duplicate and preserves the unique one" do
+      freeze_time do
+        expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
+
+        expect(duplicate_entitlement.reload.deleted_at).to eq(Time.current.beginning_of_hour)
+        expect(unique_entitlement.reload.deleted_at).to be_nil
+      end
+    end
+  end
+
+  context "when the plan entitlement is already soft-deleted" do
+    let!(:subscription_entitlement) do
+      create(:entitlement, :subscription, feature:, subscription:, organization:)
+    end
+
+    before do
+      plan_entitlement.discard!
+    end
+
+    it "does not soft-delete the subscription entitlement" do
+      expect { task.invoke(organization.id) }.to output(/Soft-deleted 0 entitlements/).to_stdout
+
+      expect(subscription_entitlement.reload.deleted_at).to be_nil
+    end
+  end
+
+  context "when entitlement values are soft-deleted" do
+    let!(:entitlement_with_discarded_values) do
+      entitlement = create(:entitlement, :subscription, feature:, subscription:, organization:)
+      value = create(:entitlement_value, entitlement:, privilege:, organization:)
+      value.discard!
+      entitlement
+    end
+
+    it "soft-deletes the entitlement since soft-deleted values do not count" do
+      freeze_time do
+        expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
+
+        expect(entitlement_with_discarded_values.reload.deleted_at).to eq(Time.current.beginning_of_hour)
+      end
+    end
+  end
+
+  context "without an organization_id argument" do
+    it "aborts with a usage message" do
+      expect { task.invoke }.to raise_error(SystemExit).and output(/Missing organization_id argument/).to_stderr
     end
   end
 
