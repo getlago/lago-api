@@ -29,7 +29,7 @@ class AddLastEventReceivedOnToSubscriptions < ActiveRecord::Migration[8.0]
       WHERE id IN (
         SELECT DISTINCT subscription_id
         FROM events
-        WHERE DATE(timestamp) = '#{today}'
+        WHERE DATE(timestamp) >= '#{today - 1.day}'
           AND deleted_at IS NULL
       )
     SQL
