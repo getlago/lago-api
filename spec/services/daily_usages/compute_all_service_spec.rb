@@ -25,8 +25,8 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
-    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is set" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "60")) }
+    context "when LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS is set" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS" => "60")) }
 
       it "uses the configured interval" do
         expect(compute_service.call).to be_success
@@ -36,8 +36,8 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
-    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is negative" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "-100")) }
+    context "when LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS is negative" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS" => "-100")) }
 
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
@@ -47,8 +47,8 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
-    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is zero" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "0")) }
+    context "when LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS is zero" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS" => "0")) }
 
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
@@ -58,8 +58,8 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
-    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is non-numeric" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "invalid")) }
+    context "when LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS is non-numeric" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS" => "invalid")) }
 
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
@@ -69,8 +69,8 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
-    context "when LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS is blank" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGES_SCHEDULING_INTERVAL_SECONDS" => "")) }
+    context "when LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS is blank" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DAILY_USAGE_SCHEDULING_JITTER_SECONDS" => "")) }
 
       it "falls back to the default interval" do
         expect(compute_service.call).to be_success
