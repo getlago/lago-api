@@ -52,27 +52,51 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
     end
   end
 
-  describe "retry_on" do
+  describe "when lock errors occur" do
+    let!(:subscription4) { create(:subscription, ending_at:) }
+
     [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
-      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25]
-    ].each do |error, attempts|
+      Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"),
+      ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet.")
+    ].each do |error|
       error_class = error.class
 
       context "when a #{error_class} error is raised" do
         before do
-          allow(Subscriptions::TerminateService).to receive(:call).and_raise(error)
+          allow(Subscriptions::TerminateService).to receive(:call)
+            .with(subscription: subscription1).and_raise(error)
+          allow(Subscriptions::TerminateService).to receive(:call)
+            .with(subscription: subscription4)
         end
 
-        it "raises a #{error_class.class.name} error and retries" do
+        it "enqueues a TerminateEndedSubscriptionJob with a delay for the failed subscription" do
           current_date = Time.current + 2.months
 
           travel_to(current_date) do
-            assert_performed_jobs(attempts, only: [described_class]) do
-              expect do
-                described_class.perform_later
-              end.to raise_error(error_class)
-            end
+            described_class.perform_now
+
+            expect(Subscriptions::TerminateEndedSubscriptionJob)
+              .to have_been_enqueued
+              .with(subscription: subscription1)
+          end
+        end
+
+        it "does not raise error" do
+          current_date = Time.current + 2.months
+
+          travel_to(current_date) do
+            expect { described_class.perform_now }.not_to raise_error
+          end
+        end
+
+        it "continues processing remaining subscriptions" do
+          current_date = Time.current + 2.months
+
+          travel_to(current_date) do
+            described_class.perform_now
+
+            expect(Subscriptions::TerminateService)
+              .to have_received(:call).with(subscription: subscription4)
           end
         end
       end
