@@ -363,6 +363,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on_null;
 DROP INDEX IF EXISTS public.index_subscriptions_on_last_received_event_on;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
@@ -8792,6 +8793,13 @@ CREATE INDEX index_subscriptions_on_external_id ON public.subscriptions USING bt
 --
 
 CREATE INDEX index_subscriptions_on_last_received_event_on ON public.subscriptions USING btree (last_received_event_on);
+
+
+--
+-- Name: index_subscriptions_on_last_received_event_on_null; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_last_received_event_on_null ON public.subscriptions USING btree (id) WHERE (last_received_event_on IS NULL);
 
 
 --
