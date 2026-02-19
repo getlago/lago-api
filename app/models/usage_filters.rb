@@ -34,5 +34,9 @@ class UsageFilters
     @full_usage = full_usage
   end
 
+  def has_charge_filter?
+    filter_by_charge_id.present? || filter_by_charge_code.present?
+  end
+
   NONE = new.freeze
 end
