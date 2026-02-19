@@ -11,12 +11,12 @@ module Lago
   # Use `with_options` to merge consumer-specific options before calling `sidekiq`.
   #
   # @example Sidekiq initializer
-  #   Lago::RedisConfigBuilder.new(logger: Rails.logger)
+  #   Lago::RedisConfigBuilder.new
   #     .with_options(pool_timeout: 5, timeout: 5)
   #     .sidekiq
   #
   # @example ActiveJob uniqueness initializer
-  #   Lago::RedisConfigBuilder.new(logger: Rails.logger)
+  #   Lago::RedisConfigBuilder.new
   #     .with_options(reconnect_attempts: 4)
   #     .sidekiq
   class RedisConfigBuilder
@@ -53,7 +53,7 @@ module Lago
 
       config[:sentinels] = parse_sentinels(sentinels)
       config[:role] = :master
-      config[:name] = ENV.fetch("LAGO_REDIS_SIDEKIQ_MASTER_NAME", "master")
+      config[:name] = ENV.fetch("LAGO_REDIS_SIDEKIQ_MASTER_NAME", "master").presence || "master"
     end
 
     def url
@@ -70,8 +70,16 @@ module Lago
     def parse_sentinels(sentinels)
       sentinels.split(",").map do |sentinel|
         host, port = sentinel.split(":")
+        host = host&.strip
+        port = port&.strip
         config = {host:}
-        config[:port] = port.to_i if port.present?
+        if port.present?
+          begin
+            config[:port] = Integer(port)
+          rescue ArgumentError
+            raise ArgumentError, "Invalid Redis sentinel port #{port.inspect} in #{sentinel.inspect}"
+          end
+        end
         config
       end
     end

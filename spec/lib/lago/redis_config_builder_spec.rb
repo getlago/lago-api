@@ -6,6 +6,13 @@ require "lago/redis_config_builder"
 RSpec.describe Lago::RedisConfigBuilder do
   subject(:builder) { described_class.new }
 
+  around do |example|
+    original_env = ENV.to_h.slice("REDIS_URL", "REDIS_PASSWORD", "LAGO_REDIS_SIDEKIQ_SENTINELS", "LAGO_REDIS_SIDEKIQ_MASTER_NAME")
+    example.run
+    ENV.update(original_env)
+    ENV.delete_if { |k, _| ["REDIS_URL", "REDIS_PASSWORD", "LAGO_REDIS_SIDEKIQ_SENTINELS", "LAGO_REDIS_SIDEKIQ_MASTER_NAME"].include?(k) && !original_env.key?(k) }
+  end
+
   describe "#sidekiq" do
     subject(:result) { builder.sidekiq }
 
@@ -30,8 +37,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
       end
 
-      after { ENV.delete("REDIS_URL") }
-
       it "includes the url" do
         expect(result).to include(url: "redis://localhost:6379")
       end
@@ -43,8 +48,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["REDIS_PASSWORD"] = "secret"
         ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
       end
-
-      after { ENV.delete("REDIS_PASSWORD") }
 
       it "includes the password" do
         expect(result).to include(password: "secret")
@@ -58,8 +61,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
       end
 
-      after { ENV.delete("REDIS_PASSWORD") }
-
       it "does not include the password" do
         expect(result).not_to have_key(:password)
       end
@@ -70,11 +71,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV.delete("REDIS_URL")
         ENV.delete("REDIS_PASSWORD")
         ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = "sentinel1:26379,sentinel2:26380"
-      end
-
-      after do
-        ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
-        ENV.delete("LAGO_REDIS_SIDEKIQ_MASTER_NAME")
       end
 
       it "includes sentinel config with default master name" do
@@ -88,10 +84,16 @@ RSpec.describe Lago::RedisConfigBuilder do
       context "with custom master name" do
         before { ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] = "mymaster" }
 
-        after { ENV.delete("LAGO_REDIS_SIDEKIQ_MASTER_NAME") }
-
         it "uses the custom master name" do
           expect(result).to include(name: "mymaster")
+        end
+      end
+
+      context "with blank master name" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] = "" }
+
+        it "falls back to default master name" do
+          expect(result).to include(name: "master")
         end
       end
 
@@ -102,6 +104,22 @@ RSpec.describe Lago::RedisConfigBuilder do
           expect(result[:sentinels]).to eq([{host: "sentinel1"}])
         end
       end
+
+      context "with invalid sentinel port" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = "sentinel1:abc" }
+
+        it "raises an error" do
+          expect { result }.to raise_error(ArgumentError, /Invalid Redis sentinel port/)
+        end
+      end
+
+      context "with whitespace in sentinel host and port" do
+        before { ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = " sentinel1 : 26379 " }
+
+        it "strips whitespace from host and port" do
+          expect(result[:sentinels]).to eq([{host: "sentinel1", port: 26379}])
+        end
+      end
     end
 
     context "with sentinels and REDIS_URL set" do
@@ -109,11 +127,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["REDIS_URL"] = "redis://localhost:6379"
         ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = "sentinel1:26379"
         ENV.delete("REDIS_PASSWORD")
-      end
-
-      after do
-        ENV.delete("REDIS_URL")
-        ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
       end
 
       it "still includes sentinel config" do
@@ -127,13 +140,6 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["REDIS_PASSWORD"] = "secret"
         ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"] = "sentinel1:26379"
         ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"] = "mymaster"
-      end
-
-      after do
-        ENV.delete("REDIS_URL")
-        ENV.delete("REDIS_PASSWORD")
-        ENV.delete("LAGO_REDIS_SIDEKIQ_SENTINELS")
-        ENV.delete("LAGO_REDIS_SIDEKIQ_MASTER_NAME")
       end
 
       it "includes all config options" do
