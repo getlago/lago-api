@@ -39,6 +39,7 @@ module Auth
       end
 
       result.user = user
+      UserDevices::RegisterService.call!(user:)
       generate_token
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
@@ -128,6 +129,9 @@ module Auth
 
       SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
       track_organization_registered(result.organization, result.membership)
+
+      # Skip log: user.signed_up already covers signup
+      UserDevices::RegisterService.call!(user: result.user, skip_log: true)
 
       result
     end
