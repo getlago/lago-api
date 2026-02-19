@@ -104,10 +104,11 @@ module Invoices
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
       if usage_filters.filter_by_charge_id.present?
-        charges = charges.find(usage_filters.filter_by_charge_id)
+        charges = charges.where(id: usage_filters.filter_by_charge_id)
       elsif usage_filters.filter_by_charge_code.present?
-        charges = charges.find_by!(code: usage_filters.filter_by_charge_code)
+        charges = charges.where(code: usage_filters.filter_by_charge_code)
       end
+      return result.not_found_failure!(resource: "charges") if charges.empty?
 
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
 
