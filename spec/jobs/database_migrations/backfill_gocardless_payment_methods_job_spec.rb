@@ -27,7 +27,7 @@ RSpec.describe DatabaseMigrations::BackfillGocardlessPaymentMethodsJob do
 
       payment_method = customer.payment_methods.first
       expect(payment_method.provider_method_id).to eq("mandate_123")
-      expect(payment_method.provider_method_type).to eq("mandate")
+      expect(payment_method.provider_method_type).to eq("card")
       expect(payment_method.payment_provider_customer).to eq(gocardless_customer)
       expect(payment_method.payment_provider).to eq(gocardless_provider)
       expect(payment_method.organization).to eq(organization)
