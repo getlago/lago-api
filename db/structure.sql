@@ -2299,7 +2299,10 @@ CREATE TABLE public.enriched_events (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     value character varying,
     decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
-    enriched_at timestamp(6) without time zone NOT NULL
+    enriched_at timestamp(6) without time zone NOT NULL,
+    operation_type character varying,
+    precise_total_amount_cents numeric(40,15),
+    target_wallet_code character varying
 )
 PARTITION BY RANGE ("timestamp");
 
@@ -2323,7 +2326,10 @@ CREATE TABLE public.enriched_events_default (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     value character varying,
     decimal_value numeric(40,15) DEFAULT 0.0 NOT NULL,
-    enriched_at timestamp(6) without time zone NOT NULL
+    enriched_at timestamp(6) without time zone NOT NULL,
+    operation_type character varying,
+    precise_total_amount_cents numeric(40,15),
+    target_wallet_code character varying
 );
 
 
@@ -11447,6 +11453,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260219102644'),
 ('20260219083335'),
 ('20260216115709'),
 ('20260209103920'),

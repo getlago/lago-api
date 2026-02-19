@@ -19,21 +19,24 @@ end
 # Table name: enriched_events
 # Database name: events
 #
-#  id                       :uuid             not null
-#  code                     :string           not null
-#  decimal_value            :decimal(40, 15)  default(0.0), not null
-#  enriched_at              :datetime         not null
-#  grouped_by               :jsonb            not null
-#  timestamp                :datetime         not null
-#  value                    :string
-#  charge_filter_id         :uuid
-#  charge_id                :uuid             not null
-#  event_id                 :uuid             not null
-#  external_subscription_id :string           not null
-#  organization_id          :uuid             not null
-#  plan_id                  :uuid             not null
-#  subscription_id          :uuid             not null
-#  transaction_id           :string           not null
+#  id                         :uuid             not null
+#  code                       :string           not null
+#  decimal_value              :decimal(40, 15)  default(0.0), not null
+#  enriched_at                :datetime         not null
+#  grouped_by                 :jsonb            not null
+#  operation_type             :string
+#  precise_total_amount_cents :decimal(40, 15)
+#  target_wallet_code         :string
+#  timestamp                  :datetime         not null
+#  value                      :string
+#  charge_filter_id           :uuid
+#  charge_id                  :uuid             not null
+#  event_id                   :uuid             not null
+#  external_subscription_id   :string           not null
+#  organization_id            :uuid             not null
+#  plan_id                    :uuid             not null
+#  subscription_id            :uuid             not null
+#  transaction_id             :string           not null
 #
 # Indexes
 #
