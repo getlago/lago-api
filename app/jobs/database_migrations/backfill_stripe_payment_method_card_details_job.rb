@@ -27,8 +27,7 @@ module DatabaseMigrations
               SELECT 1 FROM payments p
               WHERE p.payment_provider_customer_id = pm.payment_provider_customer_id
                 AND p.provider_payment_method_id = pm.provider_method_id
-                AND p.provider_payment_method_data IS NOT NULL
-                AND p.provider_payment_method_data != '{}'::jsonb
+                AND p.provider_payment_method_data->>'last4' IS NOT NULL
             )
           LIMIT #{BATCH_SIZE}
         ),
@@ -38,8 +37,7 @@ module DatabaseMigrations
             p.provider_payment_method_id,
             p.provider_payment_method_data
           FROM payments p
-          WHERE p.provider_payment_method_data IS NOT NULL
-            AND p.provider_payment_method_data != '{}'::jsonb
+          WHERE p.provider_payment_method_data->>'last4' IS NOT NULL
             AND EXISTS (
               SELECT 1 FROM batch b
               WHERE b.payment_provider_customer_id = p.payment_provider_customer_id
@@ -87,8 +85,7 @@ module DatabaseMigrations
             SELECT 1 FROM payments p
             WHERE p.payment_provider_customer_id = payment_methods.payment_provider_customer_id
               AND p.provider_payment_method_id = payment_methods.provider_method_id
-              AND p.provider_payment_method_data IS NOT NULL
-              AND p.provider_payment_method_data != '{}'::jsonb
+              AND p.provider_payment_method_data->>'last4' IS NOT NULL
           )"
         )
       scope = scope.where(organization_id:) if organization_id
