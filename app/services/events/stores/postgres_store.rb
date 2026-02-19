@@ -435,6 +435,14 @@ module Events
           result
         end
       end
+
+      def operation_type_sql
+        "COALESCE(events.properties->>'operation_type', 'add')"
+      end
+
+      def created_at_ordering_column
+        "events.created_at"
+      end
     end
   end
 end

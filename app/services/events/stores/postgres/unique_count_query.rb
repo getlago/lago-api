@@ -239,7 +239,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_property_name, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, :operation_type_sql, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -249,7 +249,7 @@ module Events
                 .select(
                   "timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
+                  #{operation_type_sql} AS operation_type"
                 ).to_sql
             })
           SQL
@@ -267,7 +267,7 @@ module Events
                   "#{groups.join(", ")}, \
                   timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
+                  #{operation_type_sql} AS operation_type"
                 ).to_sql
             })
           SQL
