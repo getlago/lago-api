@@ -6,7 +6,6 @@ RSpec.describe WalletTransactionsQuery do
   subject(:result) do
     described_class.call(
       organization:,
-      wallet_id: wallet_id,
       pagination:,
       filters:
     )
@@ -14,9 +13,8 @@ RSpec.describe WalletTransactionsQuery do
 
   let(:returned_ids) { result.wallet_transactions.pluck(:id) }
 
-  let(:wallet_id) { wallet.id }
   let(:pagination) { nil }
-  let(:filters) { {} }
+  let(:filters) { {wallet_id: wallet.id} }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -78,7 +76,7 @@ RSpec.describe WalletTransactionsQuery do
   context "when filtering by status" do
     let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, status: "pending") }
 
-    let(:filters) { {status: "pending"} }
+    let(:filters) { {wallet_id: wallet.id, status: "pending"} }
 
     it "returns only one wallet transaction" do
       expect(returned_ids.count).to eq(1)
@@ -92,7 +90,7 @@ RSpec.describe WalletTransactionsQuery do
   context "when filtering by transaction type" do
     let(:wallet_transaction_third) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
 
-    let(:filters) { {transaction_type: "outbound"} }
+    let(:filters) { {wallet_id: wallet.id, transaction_type: "outbound"} }
 
     it "returns only one wallet transaction" do
       expect(returned_ids.count).to eq(1)
@@ -104,6 +102,8 @@ RSpec.describe WalletTransactionsQuery do
   end
 
   context "when transaction_status filter is present" do
+    let(:filters) { {wallet_id: wallet.id, transaction_status:} }
+
     # Override outer context transactions to avoid interference
     let(:wallet_transaction_first) { nil }
     let(:wallet_transaction_second) { nil }
@@ -130,7 +130,7 @@ RSpec.describe WalletTransactionsQuery do
     end
 
     context "with purchased status" do
-      let(:filters) { {transaction_status: "purchased"} }
+      let(:transaction_status) { "purchased" }
 
       it "returns only purchased transactions" do
         expect(result).to be_success
@@ -139,7 +139,7 @@ RSpec.describe WalletTransactionsQuery do
     end
 
     context "with granted status" do
-      let(:filters) { {transaction_status: "granted"} }
+      let(:transaction_status) { "granted" }
 
       it "returns only granted transactions" do
         expect(result).to be_success
@@ -148,7 +148,7 @@ RSpec.describe WalletTransactionsQuery do
     end
 
     context "with voided status" do
-      let(:filters) { {transaction_status: "voided"} }
+      let(:transaction_status) { "voided" }
 
       it "returns only voided transactions" do
         expect(result).to be_success
@@ -157,7 +157,7 @@ RSpec.describe WalletTransactionsQuery do
     end
 
     context "with invoiced status" do
-      let(:filters) { {transaction_status: "invoiced"} }
+      let(:transaction_status) { "invoiced" }
 
       it "returns only invoiced transactions" do
         expect(result).to be_success
@@ -166,22 +166,50 @@ RSpec.describe WalletTransactionsQuery do
     end
 
     context "with invalid transaction_status" do
-      let(:filters) { {transaction_status: "invalid"} }
+      let(:transaction_status) { "invalid" }
 
-      it "returns all transactions" do
-        expect(result).to be_success
-        expect(returned_ids.count).to eq(4)
+      it "returns an error" do
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.message).to include("must be one of")
       end
     end
   end
 
   context "when wallet is not found" do
-    let(:wallet_id) { "#{wallet.id}abc" }
+    let(:filters) { {wallet_id: "#{wallet.id}abc"} }
 
     it "returns not found error" do
       expect(result).not_to be_success
       expect(result.error).to be_a(BaseService::NotFoundFailure)
       expect(result.error.message).to eq("wallet_not_found")
+    end
+  end
+
+  context "when wallet_id is missing" do
+    let(:filters) { {} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+    end
+  end
+
+  context "when filtering by invalid status" do
+    let(:filters) { {wallet_id: wallet.id, status: "invalid_status"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+    end
+  end
+
+  context "when filtering by invalid transaction type" do
+    let(:filters) { {wallet_id: wallet.id, transaction_type: "invalid_type"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
     end
   end
 end

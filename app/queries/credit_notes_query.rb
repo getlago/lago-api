@@ -19,13 +19,6 @@ class CreditNotesQuery < BaseQuery
     :types
   ]
 
-  DEFAULT_INCLUDES = [:customer, :items].freeze
-
-  def initialize(includes: DEFAULT_INCLUDES, **args)
-    @includes = includes
-    super(**args)
-  end
-
   def call
     credit_notes = base_scope.result
     credit_notes = paginate(credit_notes)
@@ -54,7 +47,7 @@ class CreditNotesQuery < BaseQuery
 
   def base_scope
     CreditNote
-      .includes(*@includes)
+      .includes(:customer, :items)
       .joins(:customer)
       .where("customers.organization_id = ?", organization.id)
       .finalized
