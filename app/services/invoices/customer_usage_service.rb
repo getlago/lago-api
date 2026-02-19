@@ -10,7 +10,8 @@ module Invoices
       with_cache: true,
       max_timestamp: nil,
       calculate_projected_usage: false,
-      with_zero_units_filters: true
+      with_zero_units_filters: true,
+      usage_filters: UsageFilters::NONE
     )
       super
 
@@ -21,6 +22,7 @@ module Invoices
       @with_cache = with_cache
       @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
+      @usage_filters = usage_filters
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
@@ -45,6 +47,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
+      return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !querying_full_usage_allowed
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -56,6 +59,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
+    attr_reader :usage_filters
 
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
@@ -93,12 +97,18 @@ module Invoices
 
       filters = event_filters(subscription, boundaries).charges
 
-      subscription
+      charges = subscription
         .plan
         .charges
         .joins(:billable_metric)
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-        .find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+      if usage_filters.filter_by_charge.present?
+        charges = charges.where(id: usage_filters.filter_by_charge.id)
+      end
+
+      charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
+
+      return fees if usage_filters.filter_by_charge
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
@@ -113,6 +123,9 @@ module Invoices
 
       applied_boundaries = boundaries
       applied_boundaries = boundaries.dup.tap { it.max_timestamp = max_timestamp } if max_timestamp
+      if usage_filters.filter_by_group.present?
+        cache_middleware = nil
+      end
 
       Fees::ChargeService
         .call!(
@@ -124,7 +137,8 @@ module Invoices
           cache_middleware:,
           calculate_projected_usage:,
           with_zero_units_filters:,
-          filtered_aggregations: applied_filters
+          filtered_aggregations: applied_filters,
+          usage_filters:
         )
         .fees
     end
@@ -138,10 +152,13 @@ module Invoices
         current_usage: true
       )
 
+      from = usage_filters.full_usage ? subscription.started_at : date_service.from_datetime
+      charges_from = usage_filters.full_usage ? subscription.started_at : date_service.charges_from_datetime
+
       @boundaries = BillingPeriodBoundaries.new(
-        from_datetime: date_service.from_datetime,
+        from_datetime: from,
         to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
+        charges_from_datetime: charges_from,
         charges_to_datetime: date_service.charges_to_datetime,
         issuing_date: date_service.next_end_of_period,
         charges_duration: date_service.charges_duration_in_days,
@@ -216,6 +233,15 @@ module Invoices
       Events::BillingPeriodFilterService.call!(
         subscription:, boundaries:
       )
+    end
+
+    def querying_full_usage_allowed
+      any_filter_present = usage_filters.filter_by_charge.present? || usage_filters.filter_by_group.present?
+      subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
+
+      # full usage is only allowed for subscriptions without prorated charges
+      # and only when filtering by charge or by group
+      !subscription_has_prorated_charges && any_filter_present
     end
   end
 end

@@ -2817,5 +2817,121 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
     end
+
+    context "with filter_by_group" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries:,
+          context: :current_usage,
+          apply_taxes: false,
+          filtered_aggregations: nil,
+          usage_filters: UsageFilters.new(filter_by_group:)
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric:,
+          properties: {amount: "20", pricing_group_keys: %w[region cloud]}
+        )
+      end
+
+      let(:filter_by_group) { {"region" => ["eu"]} }
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu", cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu", cloud: "gcp", value: 5})
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {region: "us", cloud: "aws", value: 7})
+      end
+
+      it "filters by the specified group and keeps remaining group keys" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        # Only eu events, grouped by cloud (region removed from grouped_by)
+        expect(result.fees.count).to eq(2)
+
+        aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+        expect(aws_fee).to have_attributes(units: 10)
+
+        gcp_fee = result.fees.find { |f| f.grouped_by["cloud"] == "gcp" }
+        expect(gcp_fee).to have_attributes(units: 5)
+      end
+
+      context "when filter_by_group is sent without array for values" do
+        let(:filter_by_group) { {"region" => "eu"} }
+
+        it "handles string values by converting them to array" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+
+          # Only eu events, grouped by cloud (region removed from grouped_by)
+          expect(result.fees.count).to eq(2)
+
+          aws_fee = result.fees.find { |f| f.grouped_by["cloud"] == "aws" }
+          expect(aws_fee).to have_attributes(units: 10)
+
+          gcp_fee = result.fees.find { |f| f.grouped_by["cloud"] == "gcp" }
+          expect(gcp_fee).to have_attributes(units: 5)
+        end
+      end
+    end
+
+    context "with skip_grouping" do
+      subject(:charge_subscription_service) do
+        described_class.new(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries:,
+          context: :current_usage,
+          apply_taxes: false,
+          filtered_aggregations: nil,
+          usage_filters: UsageFilters.new(skip_grouping: true)
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric:,
+          properties: {amount: "20", pricing_group_keys: %w[cloud]}
+        )
+      end
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"), properties: {cloud: "gcp", value: 5})
+      end
+
+      it "returns a single fee with all events aggregated without grouping" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first).to have_attributes(
+          units: 15,
+          grouped_by: {}
+        )
+      end
+    end
   end
 end

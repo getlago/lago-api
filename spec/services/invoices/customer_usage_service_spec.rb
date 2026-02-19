@@ -288,5 +288,213 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(result.error.code).to eq("no_active_subscription")
       end
     end
+
+    context "with filter_by_charge" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(filter_by_charge: charge)
+        )
+      end
+
+      let(:billable_metric_2) { create(:billable_metric, aggregation_type: "count_agg") }
+
+      let(:charge_2) do
+        create(:standard_charge, plan:, billable_metric: billable_metric_2, properties: {amount: "5"})
+      end
+
+      let(:events_2) do
+        create_list(:event, 3, organization:, subscription:, customer:, code: billable_metric_2.code, timestamp:)
+      end
+
+      before do
+        events_2
+        charge_2
+      end
+
+      it "returns fees only for the specified charge" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.map(&:charge_id).uniq).to eq([charge.id])
+      end
+    end
+
+    context "with filter_by_group" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]})
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          properties: {amount: "10", pricing_group_keys: %w[cloud]}
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "gcp", value: 5})
+      end
+
+      it "returns fees filtered by the group" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.size).to eq(1)
+        expect(result.usage.fees.first.units).to eq(10)
+      end
+    end
+
+    context "with full_usage" do
+      let(:billable_metric) do
+        create(:billable_metric, aggregation_type: "count_agg")
+      end
+
+      let(:charge) do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+      end
+
+      let(:events) { [] }
+
+      context "when filter_by_charge is provided and no prorated charges" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
+          )
+        end
+
+        before do
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "returns usage successfully" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(result.usage.fees.size).to eq(1)
+        end
+      end
+
+      context "when no filter is provided" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(full_usage: true)
+          )
+        end
+
+        before do
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "returns a not_allowed failure" do
+          result = usage_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("full_usage_not_allowed")
+        end
+      end
+
+      context "when prorated charges exist" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
+          )
+        end
+
+        let(:prorated_metric) { create(:billable_metric, :recurring, organization:, aggregation_type: "sum_agg", field_name: "value") }
+        let(:prorated_charge) do
+          create(:standard_charge, plan:, billable_metric: prorated_metric, prorated: true, properties: {amount: "5"})
+        end
+
+        before do
+          prorated_charge
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "returns a not_allowed failure" do
+          result = usage_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("full_usage_not_allowed")
+        end
+      end
+    end
+
+    context "with skip_grouping" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(skip_grouping: true)
+        )
+      end
+
+      let(:billable_metric) do
+        create(:billable_metric, aggregation_type: "sum_agg", field_name: "value")
+      end
+
+      let(:charge) do
+        create(
+          :standard_charge,
+          plan:,
+          billable_metric:,
+          properties: {amount: "10", pricing_group_keys: %w[cloud]}
+        )
+      end
+
+      let(:events) { [] }
+
+      before do
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "aws", value: 10})
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+          timestamp:, properties: {cloud: "gcp", value: 5})
+      end
+
+      it "returns a single fee with all events aggregated without grouping" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.size).to eq(1)
+        expect(result.usage.fees.first.units).to eq(15)
+        expect(result.usage.fees.first.grouped_by).to eq({})
+      end
+    end
   end
 end

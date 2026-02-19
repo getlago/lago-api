@@ -2,6 +2,14 @@
 
 module Fees
   class ChargeService < BaseService
+    # optional params:
+    # | usage_filters - UsageFilters
+    #  - context (:current_usage, :invoice_preview, :recurring) - to be moved in usage_filters
+    # | results_adjustments - to be implemented as a class to pass the following inside:
+    #  - with_zero_units_filters
+    #  - calculate_projected_usage
+    #  - apply_taxes
+    #  - filtered_aggregations
     def initialize(
       invoice:,
       charge:,
@@ -12,7 +20,8 @@ module Fees
       filtered_aggregations: nil,
       apply_taxes: false,
       calculate_projected_usage: false,
-      with_zero_units_filters: true
+      with_zero_units_filters: true,
+      usage_filters: UsageFilters::NONE
     )
       @invoice = invoice
       @charge = charge
@@ -30,6 +39,7 @@ module Fees
 
       # Allow the service to ignore events aggregation
       @filtered_aggregations = filtered_aggregations
+      @usage_filters = usage_filters
 
       super(nil)
     end
@@ -69,7 +79,7 @@ module Fees
     private
 
     attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware,
-      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
+      :filtered_aggregations, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters, :usage_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -359,13 +369,22 @@ module Fees
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
-      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present?
+      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
         filters[:charge_filter] = charge_filter
         filters[:matching_filters] = result.matching_filters
         filters[:ignored_filters] = result.ignored_filters
+      end
+
+      if usage_filters.filter_by_group.present?
+        # when pricing group keys on a charge are "workspace" and "user", and filter_by_group is {"workspace" => ["A"]},
+        # we want to remove the grouping keys "workspace", but keep the grouping key "user", so the usage will still be granular within the workspace
+        usage_filters.filter_by_group.keys.each { |key| filters[:grouped_by]&.delete(key) }
+        filters[:matching_filters] ||= {}
+        # expected matching_filters format is { "workspace" => ["A", "B"], "user" => ["U1", "U2"] }
+        filters[:matching_filters].merge!(usage_filters.filter_by_group)
       end
 
       filters
