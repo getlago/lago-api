@@ -24,6 +24,12 @@ module Events
 
           ev.charge_filter_id = filter&.id
           ev.grouped_by = format_grouped_by(filter&.pricing_group_keys.presence || charge.pricing_group_keys)
+
+          if charge.accepts_target_wallet? && event.properties[Charge::EVENT_TARGET_WALLET_CODE].present?
+            ev.target_wallet_code = event.properties[Charge::EVENT_TARGET_WALLET_CODE]
+            ev.grouped_by[Charge::EVENT_TARGET_WALLET_CODE] = event.properties[Charge::EVENT_TARGET_WALLET_CODE]
+          end
+
           ev.save! if persist
           ev
         end
@@ -49,6 +55,7 @@ module Events
       enriched_event.plan_id = subscription.plan_id
 
       enriched_event.enriched_at = Time.current
+      enriched_event.precise_total_amount_cents = event.precise_total_amount_cents
       enriched_event.value = (event.properties || {})[billable_metric.field_name] || 0
       enriched_event.value = 1 if billable_metric.count_agg?
 
@@ -56,6 +63,11 @@ module Events
       #       The behavior is aligned with the Clickhouse implementation but differs
       #       a bit from the current PG one where we explicitly filter events with invalid values
       enriched_event.decimal_value = decimal_value(enriched_event.value)
+
+      if billable_metric.unique_count_agg?
+        enriched_event.operation_type = (event.properties || {})["operation_type"] || "add"
+      end
+
       enriched_event
     end
 

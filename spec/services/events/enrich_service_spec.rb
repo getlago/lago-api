@@ -53,6 +53,31 @@ RSpec.describe Events::EnrichService do
       )
     end
 
+    context "with a precise_total_amount_cents set on the event" do
+      let(:event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          properties: {
+            billable_metric.field_name => 12
+          },
+          precise_total_amount_cents: BigDecimal("1200.12")
+        )
+      end
+
+      it "creates an enriched event with the precise_total_amount_cents" do
+        result = enrich_service.call
+
+        expect(result).to be_success
+        expect(result.enriched_events.count).to eq(1)
+
+        enriched_event = result.enriched_events.first
+        expect(enriched_event.precise_total_amount_cents).to eq(BigDecimal("1200.12"))
+      end
+    end
+
     context "when billable metric is uses a count aggregation" do
       let(:billable_metric) { create(:billable_metric, organization:) }
 
@@ -137,7 +162,7 @@ RSpec.describe Events::EnrichService do
         )
       end
 
-      it "creates an enriched event with the right value" do
+      it "creates an enriched event with the right value and the operation type" do
         result = enrich_service.call
 
         expect(result).to be_success
@@ -145,6 +170,33 @@ RSpec.describe Events::EnrichService do
 
         enriched_event = result.enriched_events.first
         expect(enriched_event.value).to eq("foo_bar")
+        expect(enriched_event.operation_type).to eq("add")
+      end
+
+      context "when the event operation type is passed" do
+        let(:event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => "foo_bar",
+              "operation_type" => "remove"
+            }
+          )
+        end
+
+        it "creates an enriched event with the right operation type" do
+          result = enrich_service.call
+
+          expect(result).to be_success
+          expect(result.enriched_events.count).to eq(1)
+
+          enriched_event = result.enriched_events.first
+          expect(enriched_event.value).to eq("foo_bar")
+          expect(enriched_event.operation_type).to eq("remove")
+        end
       end
     end
 
@@ -196,6 +248,100 @@ RSpec.describe Events::EnrichService do
 
           enriched_event = result.enriched_events.first
           expect(enriched_event.grouped_by).to eq({"cloud" => nil, "provider" => nil})
+        end
+      end
+    end
+
+    context "when the charge has the accepts_target_wallet flag set to true", :premium do
+      let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true) }
+
+      let(:event) do
+        create(
+          :event,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          properties: {
+            billable_metric.field_name => 12,
+            "target_wallet_code" => "wallet1234"
+          },
+          precise_total_amount_cents: 1200.12
+        )
+      end
+
+      it "creates an enriched event with the target wallet code" do
+        result = enrich_service.call
+
+        expect(result).to be_success
+        expect(result.enriched_events.count).to eq(1)
+
+        enriched_event = result.enriched_events.first
+        expect(enriched_event.target_wallet_code).to eq("wallet1234")
+        expect(enriched_event.grouped_by).to eq({"target_wallet_code" => "wallet1234"})
+      end
+
+      context "when the event does not have a target wallet code" do
+        let(:event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => 12,
+              "region" => "eu"
+            }
+          )
+        end
+
+        it "creates an enriched event without the target wallet code" do
+          result = enrich_service.call
+
+          expect(result).to be_success
+          expect(result.enriched_events.count).to eq(1)
+
+          enriched_event = result.enriched_events.first
+          expect(enriched_event.target_wallet_code).to be_nil
+          expect(enriched_event.grouped_by).to eq({})
+        end
+      end
+
+      context "when charges defines a pricing group key" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan:,
+            billable_metric:,
+            properties: {amount: "120", pricing_group_keys: %w[cloud provider]},
+            accepts_target_wallet: true
+          )
+        end
+
+        let(:event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            properties: {
+              billable_metric.field_name => 12,
+              "cloud" => "aws",
+              "provider" => "visa",
+              "target_wallet_code" => "wallet123"
+            }
+          )
+        end
+
+        it "creates an enriched event with both groups and target wallet code" do
+          result = enrich_service.call
+
+          expect(result).to be_success
+          expect(result.enriched_events.count).to eq(1)
+
+          enriched_event = result.enriched_events.first
+          expect(enriched_event.target_wallet_code).to eq("wallet123")
+          expect(enriched_event.grouped_by).to eq({"cloud" => "aws", "provider" => "visa", "target_wallet_code" => "wallet123"})
         end
       end
     end

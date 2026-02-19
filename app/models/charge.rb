@@ -24,6 +24,8 @@ class Charge < ApplicationRecord
   has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  EVENT_TARGET_WALLET_CODE = "target_wallet_code"
+
   CHARGE_MODELS = %i[
     standard
     graduated
@@ -184,7 +186,6 @@ end
 #  charge_model          :integer          default("standard"), not null
 #  code                  :string
 #  deleted_at            :datetime
-#  group_by_wallet       :boolean          default(FALSE), not null
 #  invoice_display_name  :string
 #  invoiceable           :boolean          default(TRUE), not null
 #  min_amount_cents      :bigint           default(0), not null
