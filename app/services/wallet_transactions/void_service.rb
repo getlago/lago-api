@@ -23,6 +23,7 @@ module WalletTransactions
 
       ActiveRecord::Base.transaction do
         Customers::LockService.call(customer:, scope: :prepaid_credit) do
+          wallet.reload
           wallet_transaction = CreateService.call!(
             wallet:,
             wallet_credit:,
