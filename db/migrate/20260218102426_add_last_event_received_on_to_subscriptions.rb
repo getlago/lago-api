@@ -21,7 +21,7 @@ class AddLastEventReceivedOnToSubscriptions < ActiveRecord::Migration[8.0]
   private
 
   def backfill_today
-    today = Time.zone.today
+    today = Date.current
 
     execute <<~SQL
       UPDATE subscriptions
