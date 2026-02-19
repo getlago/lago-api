@@ -57,7 +57,7 @@ module FixedCharges
       end
 
       after_commit do
-        ActiveJob.perform_all_later(jobs)
+        ApplicationJob.perform_all_later(jobs)
       end
 
       result.plan = plan
