@@ -23,15 +23,17 @@ class AddLastEventReceivedOnToSubscriptions < ActiveRecord::Migration[8.0]
   def backfill_today
     today = Date.current
 
-    execute <<~SQL
-      UPDATE subscriptions
-      SET last_received_event_on = '#{today}'
-      WHERE id IN (
-        SELECT DISTINCT subscription_id
-        FROM events
-        WHERE DATE(timestamp) >= '#{today - 1.day}'
-          AND deleted_at IS NULL
-      )
-    SQL
+    safety_assured do
+      execute <<~SQL
+        UPDATE subscriptions
+        SET last_received_event_on = '#{today}'
+        WHERE id IN (
+          SELECT DISTINCT subscription_id
+          FROM events
+          WHERE DATE(timestamp) >= '#{today - 1.day}'
+            AND deleted_at IS NULL
+        )
+      SQL
+    end
   end
 end
