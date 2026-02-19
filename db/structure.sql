@@ -297,7 +297,8 @@ SELECT
     NULL::jsonb AS filters,
     NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance;
+    NULL::boolean AS pay_in_advance,
+    NULL::boolean AS accepts_target_wallet;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -4006,7 +4007,8 @@ SELECT
     NULL::jsonb AS filters,
     NULL::jsonb AS properties,
     NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance;
+    NULL::boolean AS pay_in_advance,
+    NULL::boolean AS accepts_target_wallet;
 
 
 --
@@ -9221,7 +9223,8 @@ CREATE OR REPLACE VIEW public.flat_filters AS
         END AS filters,
     COALESCE(charge_filters.properties, charges.properties) AS properties,
     (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
-    charges.pay_in_advance
+    charges.pay_in_advance,
+    charges.accepts_target_wallet
    FROM ((((public.billable_metrics
      JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
      LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
@@ -11444,6 +11447,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260219083335'),
 ('20260216115709'),
 ('20260209103920'),
 ('20260209103526'),
