@@ -95,7 +95,6 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodsJob do
 
       expect { perform_job }.to change(PaymentMethod, :count).by(2)
     end
-
   end
 
   context "with organization_id filter" do
