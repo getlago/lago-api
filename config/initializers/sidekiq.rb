@@ -11,6 +11,7 @@ end
 
 require "socket"
 require "sidekiq/middleware/current_attributes"
+require "lago/redis_config_builder"
 
 LIVENESS_PORT = 8080
 
