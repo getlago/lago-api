@@ -53,6 +53,13 @@ RSpec.describe Auth::GoogleService do
       before do
         user = create(:user, email: "foo@bar.com", password: "foobar")
         create(:membership, :active, user:)
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "registers the user device" do
+        result = service.login("code")
+
+        expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
       end
 
       it "logins the user" do
@@ -133,6 +140,13 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
       allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
+      allow(UserDevices::RegisterService).to receive(:call!)
+    end
+
+    it "registers the user device" do
+      result = service.register_user("code", "Foobar")
+
+      expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user, skip_log: true)
     end
 
     it "register the user" do

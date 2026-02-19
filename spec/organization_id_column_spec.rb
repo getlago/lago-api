@@ -21,6 +21,7 @@ Rspec.describe "All tables must have an organization_id" do
       group_properties
       groups
       password_resets
+      user_devices
       versions
     ]
   end
