@@ -34445,6 +34445,24 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "role_created",
+              "description": "role.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "role_deleted",
+              "description": "role.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "role_updated",
+              "description": "role.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "user_deleted",
               "description": "user.deleted",
               "isDeprecated": false,
@@ -34491,6 +34509,12 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
+            {
+              "name": "role",
+              "description": "role",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "user",
               "description": "user",

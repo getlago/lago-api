@@ -13,6 +13,8 @@ RSpec.describe Mutations::Roles::Update do
     )
   end
 
+  include_context "with mocked security logger"
+
   let(:query) do
     <<-GQL
       mutation($input: UpdateRoleInput!) {
@@ -52,6 +54,17 @@ RSpec.describe Mutations::Roles::Update do
         "id" => role.id,
         "name" => new_name,
         "description" => new_description
+      )
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "role",
+        log_event: "role.updated",
+        resources: hash_including(role_code: role.code)
       )
     end
 
