@@ -18,10 +18,6 @@ module DailyUsages
       diff = daily_usage.usage.deep_dup
       previous_usage = previous_daily_usage.usage
 
-      diff["amount_cents"] -= previous_usage["amount_cents"]
-      diff["taxes_amount_cents"] -= previous_usage["taxes_amount_cents"]
-      diff["total_amount_cents"] -= previous_usage["total_amount_cents"]
-
       diff["charges_usage"].each do |current_charge_usage|
         previous_charge_usage = previous_usage["charges_usage"].find { |cu| cu["charge"]["lago_id"] == current_charge_usage["charge"]["lago_id"] }
         next unless previous_charge_usage
@@ -50,6 +46,10 @@ module DailyUsages
         end
       end
 
+      diff["amount_cents"] = diff["charges_usage"].sum { |cu| cu["amount_cents"] }
+      diff["taxes_amount_cents"] -= previous_common_taxes(diff, previous_usage)
+      diff["total_amount_cents"] = diff["amount_cents"] + diff["taxes_amount_cents"]
+
       result.usage_diff = diff
       result
     end
@@ -64,6 +64,18 @@ module DailyUsages
       @previous_daily_usage ||= subscription.daily_usages
         .where(from_datetime:, to_datetime:)
         .find_by(usage_date: usage_date - 1.day)
+    end
+
+    def previous_common_taxes(diff, previous_usage)
+      return previous_usage["taxes_amount_cents"] unless previous_usage["amount_cents"].positive?
+
+      common_charge_ids = diff["charges_usage"].map { |cu| cu["charge"]["lago_id"] }
+      previous_common_amount = previous_usage["charges_usage"]
+        .select { |cu| common_charge_ids.include?(cu["charge"]["lago_id"]) }
+        .sum { |cu| cu["amount_cents"] }
+
+      common_ratio = previous_common_amount.to_f / previous_usage["amount_cents"]
+      (previous_usage["taxes_amount_cents"] * common_ratio).round
     end
 
     def apply_diff(previous_values, current_values)
