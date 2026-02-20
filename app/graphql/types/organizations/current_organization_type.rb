@@ -41,7 +41,7 @@ module Types
       #       This would enable us to use premium add_on logic on OSS version
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
 
-      field :feature_flags, [Types::Organizations::FeatureFlagEnum]
+      field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
       field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: "organization:emails:view"
@@ -59,6 +59,10 @@ module Types
       field :accessible_by_current_session, Boolean, null: false
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
+
+      def feature_flags
+        object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
+      end
 
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
