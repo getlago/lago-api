@@ -246,5 +246,30 @@ RSpec.describe Utils::SecurityLog do
         end
       end
     end
+
+    context "when device_info is not provided but CurrentContext.device_info is set" do
+      subject(:produce) do
+        security_log.produce(
+          organization:,
+          log_type: "user",
+          log_event: "user.signed_up",
+          user:,
+          api_key:,
+          resources: {}
+        )
+      end
+
+      before { CurrentContext.device_info = {browser: "Chrome", os: "Mac OS"} }
+      after { CurrentContext.device_info = nil }
+
+      it "uses device_info from CurrentContext" do
+        expect(produce).to be true
+
+        expect(karafka_producer).to have_received(:produce_async) do |args|
+          payload = JSON.parse(args[:payload])
+          expect(payload["device_info"]).to eq({"browser" => "Chrome", "os" => "Mac OS"})
+        end
+      end
+    end
   end
 end
