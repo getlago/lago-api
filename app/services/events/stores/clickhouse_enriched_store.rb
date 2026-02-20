@@ -18,8 +18,8 @@ module Events
       def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         query = arel_table.where(
           arel_table[:subscription_id].eq(subscription.id)
-          .and(arel_table[:organization_id].eq(subscription.organization_id)
-          .and(arel_table[:charge_id].eq(charge_id)))
+            .and(arel_table[:organization_id].eq(subscription.organization_id))
+            .and(arel_table[:charge_id].eq(charge_id))
         ).then { with_charge_filter_id(it) }
 
         query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
@@ -46,8 +46,8 @@ module Events
           deduplicated_columns:
         ).to_sql
 
-        query = arel_table
-        query.order(arel_table[:timestamp].desc, arel_table[:order_column]) if ordered
+        query = Arel::Table.new(:events_enriched_expanded)
+        query = query.order(arel_table[:timestamp].desc, arel_table[order_column.to_sym]) if ordered
         query = apply_arel_grouped_by_values(query) if grouped_by_values?
 
         {
@@ -63,8 +63,8 @@ module Events
       def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
         query = arel_table.where(
           arel_table[:subscription_id].eq(subscription.id)
-          .and(arel_table[:organization_id].eq(subscription.organization_id)
-          .and(arel_table[:charge_id].eq(charge_id)))
+            .and(arel_table[:organization_id].eq(subscription.organization_id))
+            .and(arel_table[:charge_id].eq(charge_id))
         ).then { with_charge_filter_id(it) }
           .then { with_timestamp_boundaries(it, from_datetime, to_datetime) }
 

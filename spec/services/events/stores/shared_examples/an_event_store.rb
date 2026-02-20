@@ -90,16 +90,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         properties: last_event.properties,
         transaction_id: last_event.transaction_id
       }
-<<<<<<< HEAD
 
       if last_event.respond_to?(:charge_filter_id)
         attributes[:charge_filter] = last_event.charge_filter_id.present? ? charge_filter : nil
-=======
-      attributes[:grouped_by] = last_event.grouped_by if last_event.respond_to?(:grouped_by)
-
-      if last_event.respond_to?(:charge_filter_id?)
-        attributes[:charge_filter] = last_event.charge_filter_id? ? charge_filter : nil
->>>>>>> 7d9203e9c (Fix specs for all stores)
       end
 
       if last_event.respond_to?(:enriched_at)
@@ -279,10 +272,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
       context "with grouped_by_values" do
         let(:grouped_by_values) { {"region" => "europe"} }
-<<<<<<< HEAD
         let(:events_grouped_by) { ["region"] }
-=======
->>>>>>> 7d9203e9c (Fix specs for all stores)
 
         it "returns the number of unique events" do
           expect(event_store.count).to eq(3)
@@ -396,10 +386,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   if include_feature?(:with_grouped_by_values)
     describe "#with_grouped_by_values" do
       let(:with_grouped_by_values) { {"region" => "europe"} }
-<<<<<<< HEAD
       let(:events_grouped_by) { ["region"] }
-=======
->>>>>>> 7d9203e9c (Fix specs for all stores)
 
       it "applies the grouped_by_values in the block" do
         event_store.with_grouped_by_values(with_grouped_by_values) do
@@ -843,10 +830,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
       context "with grouped_by_values" do
         let(:grouped_by_values) { {"region" => "europe"} }
-<<<<<<< HEAD
         let(:events_grouped_by) { ["region"] }
-=======
->>>>>>> 7d9203e9c (Fix specs for all stores)
 
         it "returns the max value" do
           expect(event_store.max).to eq(5)
