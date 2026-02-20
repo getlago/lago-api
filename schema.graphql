@@ -6526,6 +6526,21 @@ Security Log event
 """
 enum LogEventEnum {
   """
+  role.created
+  """
+  role_created
+
+  """
+  role.deleted
+  """
+  role_deleted
+
+  """
+  role.updated
+  """
+  role_updated
+
+  """
   user.deleted
   """
   user_deleted
@@ -6560,6 +6575,11 @@ enum LogEventEnum {
 Security Log type
 """
 enum LogTypeEnum {
+  """
+  role
+  """
+  role
+
   """
   user
   """
