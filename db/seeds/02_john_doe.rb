@@ -111,3 +111,28 @@ if License.premium?
     ]
   )
 end
+
+# == second subscriptions with plan override
+
+sub_2_external_id = sub_external_id + "-2"
+started_at_2 = started_at + 4.days + 1.hour + 13.minutes
+sub2 = john_doe.subscriptions.active.find_by(external_id: sub_2_external_id)
+unless sub2
+  sub = Subscriptions::CreateService.call!(
+    customer: john_doe,
+    plan:,
+    params: {
+      name: "Subscription With Plan Override",
+      billing_time: :calendar,
+      subscription_at: started_at_2,
+      started_at: started_at_2,
+      external_id: sub_2_external_id,
+      plan_overrides: {
+        name: "Premium with Override",
+        description: "This plan is used to test the override functionality",
+        amount_cents: 211_00
+      }
+    }
+  ).subscription
+  sub.update(created_at: started_at_2)
+end

@@ -63,6 +63,14 @@ class Plan < ApplicationRecord
     %w[name code]
   end
 
+  def is_parent?
+    !is_child?
+  end
+
+  def is_child?
+    parent_id.present?
+  end
+
   def applicable_usage_thresholds
     (parent || self).usage_thresholds
   end

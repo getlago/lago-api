@@ -61,6 +61,8 @@ RSpec.describe Resolvers::PlanResolver do
             invoiceDisplayName
             taxes { id rate }
           }
+          applicableUsageThresholds { amountCents thresholdDisplayName recurring }
+          usageThresholds { amountCents thresholdDisplayName recurring }
           entitlements { code name description privileges { code value name valueType } }
         }
       }
@@ -75,10 +77,12 @@ RSpec.describe Resolvers::PlanResolver do
   let(:add_on) { create(:add_on, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
 
   before do
     customer
     minimum_commitment
+    usage_threshold
   end
 
   it_behaves_like "requires current user"
@@ -95,6 +99,18 @@ RSpec.describe Resolvers::PlanResolver do
     expect(plan_response["hasFixedCharges"]).to eq(false)
     expect(plan_response["hasActiveSubscriptions"]).to eq(false)
     expect(plan_response["hasSubscriptions"]).to eq(false)
+
+    expect(plan_response["usageThresholds"]).to contain_exactly({
+      "amountCents" => "100",
+      "thresholdDisplayName" => usage_threshold.threshold_display_name,
+      "recurring" => false
+    })
+
+    expect(plan_response["applicableUsageThresholds"]).to contain_exactly({
+      "amountCents" => "100",
+      "thresholdDisplayName" => usage_threshold.threshold_display_name,
+      "recurring" => false
+    })
 
     expect(plan_response["minimumCommitment"]).to include(
       "id" => minimum_commitment.id,
@@ -226,6 +242,31 @@ RSpec.describe Resolvers::PlanResolver do
       plan_response = result["data"]["plan"]
 
       expect(plan_response["hasDraftInvoices"]).to eq(true)
+    end
+  end
+
+  context "when plan is a child plan" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {planId: child_plan.id}
+      )
+    end
+
+    let(:child_plan) { create(:plan, organization:, parent: plan) }
+
+    it "returns parent usage thresholds as applicable usage thresholds" do
+      plan_response = result["data"]["plan"]
+
+      expect(plan_response["usageThresholds"]).to be_empty
+      expect(plan_response["applicableUsageThresholds"]).to contain_exactly({
+        "amountCents" => "100",
+        "thresholdDisplayName" => usage_threshold.threshold_display_name,
+        "recurring" => false
+      })
     end
   end
 
