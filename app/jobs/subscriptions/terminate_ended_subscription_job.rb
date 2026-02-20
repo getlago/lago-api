@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
-# Used for async termination in Clock::TerminateEndedSubscriptionsJob
-
 module Subscriptions
+  # Handles async termination of ended subscriptions from `Clock::TerminateEndedSubscriptionsJob`.
+  # Intentionally on the `default` queue: this job only triggers termination which schedules
+  # billing separately — it doesn't perform billing itself, so it shouldn't compete
+  # with billing jobs on the :billing queue.
   class TerminateEndedSubscriptionJob < ApplicationJob
     retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
