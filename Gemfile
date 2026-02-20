@@ -26,6 +26,7 @@ group :"sidekiq-pro", optional: true do
 end
 gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
+gem "device_detector"
 gem "dry-validation"
 
 # Security

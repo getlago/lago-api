@@ -32,6 +32,8 @@ class GraphqlController < ApplicationController
       permissions: (current_membership || Permission)&.permissions_hash
     }
 
+    CurrentContext.device_info = Utils::DeviceInfo.parse(request)
+
     if query.present? && query.length > MAX_QUERY_LENGTH
       return render_graphql_error(
         code: "query_is_too_large",
