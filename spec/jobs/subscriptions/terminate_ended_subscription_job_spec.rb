@@ -7,6 +7,7 @@ RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
   let(:result) { BaseService::Result.new }
 
   before do
+    allow(Subscriptions::TerminateService).to receive(:call!).and_call_original
     allow(Subscriptions::TerminateService).to receive(:call)
       .with(subscription:)
       .and_return(result)
