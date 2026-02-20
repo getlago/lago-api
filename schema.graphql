@@ -4163,6 +4163,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
+  featureFlags: [FeatureFlagEnum!]
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
   hmacKey: String
@@ -5550,6 +5551,14 @@ type EventCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+"""
+Organization Feature Flag Values
+"""
+enum FeatureFlagEnum {
+  multiple_payment_methods
+  postgres_enriched_events
 }
 
 type FeatureObject {
