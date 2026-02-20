@@ -81,8 +81,7 @@ module CreditNotes
     end
 
     def wallet_balance_insufficient?
-      prepaid_credit_fee = invoice.fees.first
-      item.amount_cents > prepaid_credit_fee.creditable_from_wallet_amount_cents
+      item.amount_cents > invoice.prepaid_credit_fee.creditable_from_wallet_amount_cents
     end
 
     # NOTE: Check if item amount is less than or equal to invoice remaining creditable amount

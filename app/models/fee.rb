@@ -224,17 +224,23 @@ class Fee < ApplicationRecord
   end
 
   def creditable_from_wallet_amount_cents
-    return 0 unless credit?
+    return 0 unless credit? && active_prepaid_credit_fee_wallet?
 
-    wallet_transaction = invoiceable
-    wallet = wallet_transaction.wallet
-    return 0 unless wallet.active?
-
-    if wallet.traceable?
-      wallet_transaction.remaining_amount_cents || 0
+    if prepaid_credit_fee_wallet.traceable?
+      invoiceable.remaining_amount_cents || 0
     else
-      wallet.balance_cents
+      prepaid_credit_fee_wallet.balance_cents
     end
+  end
+
+  def prepaid_credit_fee_wallet
+    return unless credit?
+
+    # For historical fees, the invoiceable association might be missing, so we need to handle that case.
+    return unless invoiceable
+
+    # For historical wallet transaction, the wallet association might be missing, so may return nil.
+    invoiceable.wallet
   end
 
   # There are add_on type and one_off type so in order not to mix those two types with associations,
@@ -280,6 +286,10 @@ class Fee < ApplicationRecord
   end
 
   private
+
+  def active_prepaid_credit_fee_wallet?
+    prepaid_credit_fee_wallet&.active?
+  end
 
   def from_date
     property = if charge?
