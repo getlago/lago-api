@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# Used for async termination in Clock::TerminateEndedSubscriptionsJob
+
 module Subscriptions
   class TerminateEndedSubscriptionJob < ApplicationJob
     retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
