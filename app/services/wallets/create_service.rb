@@ -38,7 +38,7 @@ module Wallets
         status: :active,
         paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents],
-        traceable: customer.organization.feature_flag_enabled?(:wallet_traceability)
+        traceable: traceable?
       }
 
       attributes[:priority] = params[:priority] if params[:priority]
@@ -193,6 +193,10 @@ module Wallets
         value: metadata_value,
         partial: false
       ).call
+    end
+
+    def traceable?
+      customer.organization.feature_flag_enabled?(:wallet_traceability) && customer.wallets.active.where(traceable: false).none?
     end
   end
 end
