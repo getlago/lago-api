@@ -117,3 +117,84 @@ Utils::SecurityLog.produce(
   user:,
   resources: {name: "Hooli Key", value_ending: {deleted: "7890", added: "5678"}}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.created",
+  user:,
+  resources: {webhook_url: "https://webhook.example.com/#{organization.id}"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.updated",
+  user:,
+  resources: {webhook_url: {deleted: "https://webhook.example.com/old", added: "https://webhook.example.com/#{organization.id}"}}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.deleted",
+  user:,
+  resources: {webhook_url: "https://webhook.example.com/#{organization.id}"}
+)
+
+api_key = organization.api_keys.first
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "webhook_endpoint",
+  log_event: "webhook_endpoint.deleted",
+  api_key:,
+  resources: {webhook_url: "https://webhook.example.com/api-deleted"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "export",
+  log_event: "export.created",
+  user:,
+  resources: {export_type: "invoices"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.created",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.updated",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite", name: {deleted: "Netsuite Old", added: "Netsuite Production"}}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.deleted",
+  user:,
+  resources: {integration_name: "Okta Production", integration_type: "okta"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.created",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.updated",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli", name: {deleted: "Hooli Old", added: "Hooli"}}
+)

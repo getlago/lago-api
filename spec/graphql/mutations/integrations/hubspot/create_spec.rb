@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Hubspot::Create, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "hubspot1" }
@@ -31,26 +33,39 @@ RSpec.describe Mutations::Integrations::Hubspot::Create, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates a hubspot integration" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          code:,
-          name:,
-          connectionId: "this-is-random-uuid",
-          defaultTargetedObject: "companies"
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code:,
+            name:,
+            connectionId: "this-is-random-uuid",
+            defaultTargetedObject: "companies"
+          }
         }
-      }
-    )
+      )
+    end
 
-    result_data = result["data"]["createHubspotIntegration"]
+    it "creates a hubspot integration" do
+      result_data = result["data"]["createHubspotIntegration"]
 
-    expect(result_data["id"]).to be_present
-    expect(result_data["code"]).to eq(code)
-    expect(result_data["name"]).to eq(name)
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "hubspot"}
+      )
+    end
   end
 end

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe BillingEntities::UpdateService do
   subject(:update_service) { described_class.new(billing_entity:, params:) }
 
+  include_context "with mocked security logger"
+
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
 
@@ -66,6 +68,48 @@ RSpec.describe BillingEntities::UpdateService do
 
       expect(result.billing_entity.invoice_footer).to eq("invoice footer")
       expect(result.billing_entity.document_locale).to eq("fr")
+    end
+
+    it "produces a security log" do
+      original_name = billing_entity.name
+      update_service.call
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "billing_entity",
+        log_event: "billing_entity.updated",
+        resources: hash_including(
+          billing_entity_name: "New Name",
+          billing_entity_code: billing_entity.code,
+          name: {deleted: original_name, added: "New Name"}
+        )
+      )
+    end
+
+    context "when tax_codes are changed" do
+      let(:old_tax) { create(:tax, organization:, code: "old_tax") }
+      let(:new_tax) { create(:tax, organization:, code: "new_tax") }
+      let(:kept_tax) { create(:tax, organization:, code: "kept_tax") }
+      let(:params) { {tax_codes: %w[new_tax kept_tax]} }
+
+      before do
+        create(:billing_entity_applied_tax, billing_entity:, tax: old_tax)
+        create(:billing_entity_applied_tax, billing_entity:, tax: kept_tax)
+        new_tax
+      end
+
+      it "produces a security log with tax_codes diff" do
+        update_service.call
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "billing_entity",
+          log_event: "billing_entity.updated",
+          resources: hash_including(
+            tax_codes: {deleted: %w[old_tax], added: %w[new_tax]}
+          )
+        )
+      end
     end
 
     it "produces an activity log" do
@@ -403,6 +447,12 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.resource).to eq("billing_entity")
+      end
+
+      it "does not produce a security log" do
+        update_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end

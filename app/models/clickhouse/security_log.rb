@@ -13,8 +13,12 @@ module Clickhouse
 
     LOG_TYPES = %w[
       api_key
+      billing_entity
+      export
+      integration
       role
       user
+      webhook_endpoint
     ].freeze
 
     LOG_EVENTS = %w[
@@ -22,6 +26,12 @@ module Clickhouse
       api_key.deleted
       api_key.rotated
       api_key.updated
+      billing_entity.created
+      billing_entity.updated
+      export.created
+      integration.created
+      integration.deleted
+      integration.updated
       role.created
       role.deleted
       role.updated
@@ -31,6 +41,9 @@ module Clickhouse
       user.password_reset_requested
       user.role_edited
       user.signed_up
+      webhook_endpoint.created
+      webhook_endpoint.deleted
+      webhook_endpoint.updated
     ].freeze
 
     before_save :ensure_log_id

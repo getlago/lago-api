@@ -6546,6 +6546,36 @@ enum LogEventEnum {
   api_key_updated
 
   """
+  billing_entity.created
+  """
+  billing_entity_created
+
+  """
+  billing_entity.updated
+  """
+  billing_entity_updated
+
+  """
+  export.created
+  """
+  export_created
+
+  """
+  integration.created
+  """
+  integration_created
+
+  """
+  integration.deleted
+  """
+  integration_deleted
+
+  """
+  integration.updated
+  """
+  integration_updated
+
+  """
   role.created
   """
   role_created
@@ -6589,6 +6619,21 @@ enum LogEventEnum {
   user.signed_up
   """
   user_signed_up
+
+  """
+  webhook_endpoint.created
+  """
+  webhook_endpoint_created
+
+  """
+  webhook_endpoint.deleted
+  """
+  webhook_endpoint_deleted
+
+  """
+  webhook_endpoint.updated
+  """
+  webhook_endpoint_updated
 }
 
 """
@@ -6601,6 +6646,21 @@ enum LogTypeEnum {
   api_key
 
   """
+  billing_entity
+  """
+  billing_entity
+
+  """
+  export
+  """
+  export
+
+  """
+  integration
+  """
+  integration
+
+  """
   role
   """
   role
@@ -6609,6 +6669,11 @@ enum LogTypeEnum {
   user
   """
   user
+
+  """
+  webhook_endpoint
+  """
+  webhook_endpoint
 }
 
 type LoginUser {
