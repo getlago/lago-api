@@ -109,17 +109,48 @@ module Fees
           return []
         end
 
-        charge_model_result.grouped_results.map do |amount_result|
+        charge_fees = charge_model_result.grouped_results.map do |amount_result|
+          # TODO: check if this is still needed as we now skip certain zero units fees
           next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
           init_fee(amount_result, properties:, charge_filter:)
         end.compact
+
+        filter_non_persistable_fees_for_caching(charge_fees)
+      end
+
+      if fees.empty? && skip_caching_of_non_persistable_fee?
+        fees = [hydrate_non_persistable_fee(properties:, charge_filter:)]
       end
 
       # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
       fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
 
       result.fees.concat(fees.compact)
+    end
+
+    def skip_caching_of_non_persistable_fee?
+      current_usage && organization.feature_flag_enabled?(:non_persistable_charge_cache_optimization)
+    end
+
+    def hydrate_non_persistable_fee(properties:, charge_filter:)
+      zero_aggregation = BillableMetrics::Aggregations::BaseService.empty_result(grouped_by_keys: grouped_by_keys(charge_filter:))
+
+      charge_model_result = ChargeModels::Factory.new_instance(
+        chargeable: charge,
+        aggregation_result: zero_aggregation,
+        properties:,
+        period_ratio: calculate_period_ratio,
+        calculate_projected_usage:
+      ).apply
+
+      init_fee(charge_model_result.grouped_results.first, properties:, charge_filter:)
+    end
+
+    def filter_non_persistable_fees_for_caching(charge_fees)
+      return charge_fees unless skip_caching_of_non_persistable_fee?
+
+      charge_fees.filter { |f| should_persist_fee?(f, charge_fees) }
     end
 
     def init_fee(amount_result, properties:, charge_filter:)
@@ -361,14 +392,19 @@ module Fees
       end
     end
 
-    def aggregation_filters(charge_filter: nil)
-      filters = {charge_id: charge.id}
-
+    def grouped_by_keys(charge_filter: nil)
       model = charge_filter.presence || charge
       grouped_by_keys = model.pricing_group_keys&.dup || []
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
+      grouped_by_keys
+    end
+
+    def aggregation_filters(charge_filter: nil)
+      filters = {charge_id: charge.id}
+
+      grouped_by_keys = grouped_by_keys(charge_filter:)
       filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
 
       if charge_filter.present?
