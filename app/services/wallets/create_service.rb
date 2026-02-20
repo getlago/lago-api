@@ -37,7 +37,8 @@ module Wallets
         expiration_at: params[:expiration_at],
         status: :active,
         paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
-        paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents]
+        paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents],
+        traceable: customer.organization.feature_flag_enabled?(:wallet_traceability)
       }
 
       attributes[:priority] = params[:priority] if params[:priority]
