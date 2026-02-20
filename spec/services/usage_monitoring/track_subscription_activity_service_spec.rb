@@ -8,6 +8,7 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[lifetime_usage]) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
+  let(:date) { Date.new(2025, 1, 15) }
 
   context "when the plan has usage_thresholds" do
     it "tracks activity" do
