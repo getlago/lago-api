@@ -6,12 +6,14 @@ module Api
       class UsageController < Api::BaseController
         def current
           apply_taxes = ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true))
+          usage_filters = UsageFilters.init_from_params(params)
           result = ::Invoices::CustomerUsageService
             .with_external_ids(
               customer_external_id: params[:customer_external_id],
               external_subscription_id: params[:external_subscription_id],
               organization_id: current_organization.id,
-              apply_taxes:
+              apply_taxes:,
+              usage_filters:
             ).call
 
           if result.success?

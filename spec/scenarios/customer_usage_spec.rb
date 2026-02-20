@@ -181,7 +181,7 @@ describe "Customer usage Scenario" do
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          usage_filters: UsageFilters.new(filter_by_charge: charge_1)
+          usage_filters: UsageFilters.new(filter_by_charge_id: charge_1.id)
         )
 
         expect(result).to be_success

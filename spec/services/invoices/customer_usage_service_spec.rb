@@ -289,14 +289,48 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
-    context "with filter_by_charge" do
+    context "with filter_by_charge_id" do
       subject(:usage_service) do
         described_class.new(
           customer:,
           subscription:,
           apply_taxes: false,
           with_cache: false,
-          usage_filters: UsageFilters.new(filter_by_charge: charge)
+          usage_filters: UsageFilters.new(filter_by_charge_id: charge.id)
+        )
+      end
+
+      let(:billable_metric_2) { create(:billable_metric, aggregation_type: "count_agg") }
+
+      let(:charge_2) do
+        create(:standard_charge, plan:, billable_metric: billable_metric_2, properties: {amount: "5"})
+      end
+
+      let(:events_2) do
+        create_list(:event, 3, organization:, subscription:, customer:, code: billable_metric_2.code, timestamp:)
+      end
+
+      before do
+        events_2
+        charge_2
+      end
+
+      it "returns fees only for the specified charge" do
+        result = usage_service.call
+
+        expect(result).to be_success
+        expect(result.usage.fees.map(&:charge_id).uniq).to eq([charge.id])
+      end
+    end
+
+    context "with filter_by_charge_code" do
+      subject(:usage_service) do
+        described_class.new(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters: UsageFilters.new(filter_by_charge_code: charge.code)
         )
       end
 
@@ -376,14 +410,37 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
       let(:events) { [] }
 
-      context "when filter_by_charge is provided and no prorated charges" do
+      context "when filter_by_charge_id is provided and no prorated charges" do
         subject(:usage_service) do
           described_class.new(
             customer:,
             subscription:,
             apply_taxes: false,
             with_cache: false,
-            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
+          )
+        end
+
+        before do
+          create_list(:event, 2, organization:, subscription:, customer:, code: billable_metric.code, timestamp:)
+        end
+
+        it "returns usage successfully" do
+          result = usage_service.call
+
+          expect(result).to be_success
+          expect(result.usage.fees.size).to eq(1)
+        end
+      end
+
+      context "when filter_by_charge_code is provided and no prorated charges" do
+        subject(:usage_service) do
+          described_class.new(
+            customer:,
+            subscription:,
+            apply_taxes: false,
+            with_cache: false,
+            usage_filters: UsageFilters.new(filter_by_charge_code: charge.code, full_usage: true)
           )
         end
 
@@ -430,7 +487,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             subscription:,
             apply_taxes: false,
             with_cache: false,
-            usage_filters: UsageFilters.new(filter_by_charge: charge, full_usage: true)
+            usage_filters: UsageFilters.new(filter_by_charge_id: charge.id, full_usage: true)
           )
         end
 
