@@ -12,7 +12,7 @@ module Clock
           Time.current
         )
         .find_each do |subscription|
-          Subscriptions::TerminateService.call(subscription:)
+          Subscriptions::TerminateEndedSubscriptionJob.perform_later(subscription)
         end
     end
   end

@@ -5,30 +5,24 @@ require "rails_helper"
 describe Clock::TerminateEndedSubscriptionsJob, job: true do
   subject { described_class }
 
+  let(:ending_at) { (Time.current + 2.months).beginning_of_day }
+  let!(:subscription1) { create(:subscription, ending_at:) }
+  let!(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
+  let!(:subscription3) { create(:subscription, ending_at: nil) }
+
   describe ".perform" do
-    let(:ending_at) { (Time.current + 2.months).beginning_of_day }
-    let(:subscription1) { create(:subscription, ending_at:) }
-    let(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
-    let(:subscription3) { create(:subscription, ending_at: nil) }
-
-    before do
-      subscription1
-      subscription2
-      subscription3
-      allow(Subscriptions::TerminateService).to receive(:call)
-    end
-
-    it "terminates the subscriptions where ending_at matches current data" do
+    it "enqueues a TerminateEndedSubscriptionJob for matching subscriptions" do
       current_date = Time.current + 2.months
 
       travel_to(current_date) do
         described_class.perform_now
-        expect(Subscriptions::TerminateService)
-          .to have_received(:call).with(subscription: subscription1)
-        expect(Subscriptions::TerminateService)
-          .not_to have_received(:call).with(subscription: subscription2)
-        expect(Subscriptions::TerminateService)
-          .not_to have_received(:call).with(subscription: subscription3)
+
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .to have_been_enqueued.with(subscription1)
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .not_to have_been_enqueued.with(subscription2)
+        expect(Subscriptions::TerminateEndedSubscriptionJob)
+          .not_to have_been_enqueued.with(subscription3)
       end
     end
 
@@ -44,12 +38,13 @@ describe Clock::TerminateEndedSubscriptionsJob, job: true do
 
         travel_to(current_date) do
           described_class.perform_now
-          expect(Subscriptions::TerminateService)
-            .to have_received(:call).with(subscription: subscription1)
-          expect(Subscriptions::TerminateService)
-            .not_to have_received(:call).with(subscription: subscription2)
-          expect(Subscriptions::TerminateService)
-            .not_to have_received(:call).with(subscription: subscription3)
+
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .to have_been_enqueued.with(subscription1)
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription2)
+          expect(Subscriptions::TerminateEndedSubscriptionJob)
+            .not_to have_been_enqueued.with(subscription3)
         end
       end
     end

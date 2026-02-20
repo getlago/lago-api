@@ -61,7 +61,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
             allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call).and_raise(error)
           end
 
-          it "raises a #{error_class.class.name} error and retries" do
+          it "raises a #{error_class.name} error and retries" do
             assert_performed_jobs(attempts, only: [described_class]) do
               expect do
                 described_class.perform_later(subscription, timestamp)
