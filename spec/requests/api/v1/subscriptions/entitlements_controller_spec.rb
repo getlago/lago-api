@@ -61,7 +61,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController do
     end
 
     context "when there are subscriptions in :active, :pending, and :terminated status" do
-      let(:external_id) { 'test' }
+      let(:external_id) { "test" }
       let(:active_subscription) { create(:subscription, organization:, customer:, plan:, status: :active, external_id:) }
       let(:pending_subscription) { create(:subscription, organization:, customer:, plan:, status: :pending, external_id:) }
       let(:terminated_subscription) { create(:subscription, organization:, customer:, plan:, status: :terminated, external_id:) }
