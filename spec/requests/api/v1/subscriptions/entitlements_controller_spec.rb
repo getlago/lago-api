@@ -59,6 +59,50 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController do
 
       expect(response).to be_not_found_error("subscription")
     end
+
+    context "when there are subscriptions in :active, :pending, and :terminated status" do
+      let(:external_id) { 'test' }
+      let(:active_subscription) { create(:subscription, organization:, customer:, plan:, status: :active, external_id:) }
+      let(:pending_subscription) { create(:subscription, organization:, customer:, plan:, status: :pending, external_id:) }
+      let(:terminated_subscription) { create(:subscription, organization:, customer:, plan:, status: :terminated, external_id:) }
+
+      let(:sub_entitlement_active) { create(:entitlement, subscription_id: active_subscription.id, plan: nil, feature:) }
+      let(:entitlement_value_active) { create(:entitlement_value, entitlement: sub_entitlement_active, privilege: privilege1, value: 100) }
+      let(:sub_entitlement_pending) { create(:entitlement, subscription_id: pending_subscription.id, plan: nil, feature:) }
+      let(:entitlement_value_pending) { create(:entitlement_value, entitlement: sub_entitlement_pending, privilege: privilege1, value: 200) }
+      let(:sub_entitlement_terminated) { create(:entitlement, subscription_id: terminated_subscription.id, plan: nil, feature:) }
+      let(:entitlement_value_terminated) { create(:entitlement_value, entitlement: sub_entitlement_terminated, privilege: privilege1, value: 300) }
+
+      before do
+        entitlement_value_active
+        entitlement_value_pending
+        entitlement_value_terminated
+      end
+
+      it "returns entitlements for active subscription by default" do
+        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements"
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements]).to be_present
+        expect(json[:entitlements].first[:overrides][:max]).to eq(100)
+      end
+
+      it "returns entitlements for pending subscription when status param is pending" do
+        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "pending"}
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements]).to be_present
+        expect(json[:entitlements].first[:overrides][:max]).to eq(200)
+      end
+
+      it "returns entitlements for terminated subscription when status param is terminated" do
+        get_with_token organization, "/api/v1/subscriptions/#{external_id}/entitlements", {status: "terminated"}
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements]).to be_present
+        expect(json[:entitlements].first[:overrides][:max]).to eq(300)
+      end
+    end
   end
 
   describe "PATCH /api/v1/subscriptions/:external_id/entitlements" do
