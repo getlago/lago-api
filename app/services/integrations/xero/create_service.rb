@@ -2,7 +2,7 @@
 
 module Integrations
   module Xero
-    class CreateService < BaseService
+    class CreateService < Integrations::CreateService
       def call(**args) # rubocop:disable Cops/ServiceCallCop
         organization = Organization.find_by(id: args[:organization_id])
 

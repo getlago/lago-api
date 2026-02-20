@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
   subject(:update_service) { described_class.new(billing_entity:, applied_dunning_campaign_id:) }
 
+  include_context "with mocked security logger"
+
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
   let(:second_billing_entity) { create(:billing_entity, organization:) }
@@ -83,6 +85,21 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
               .to(dunning_campaign_2)
           end
 
+          it "produces a security log" do
+            update_service.call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization: organization,
+              log_type: "billing_entity",
+              log_event: "billing_entity.updated",
+              resources: {
+                billing_entity_name: billing_entity.name,
+                billing_entity_code: billing_entity.code,
+                applied_dunning_campaign: {added: dunning_campaign_2.code}
+              }
+            )
+          end
+
           it "resets only fallback customers of this billing entity attempts" do
             expect { update_service.call }
               .to change { customer_1.reload.last_dunning_campaign_attempt }
@@ -124,6 +141,12 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
 
           it "does not update the billing entity" do
             expect { update_service.call }.not_to change { billing_entity.reload.applied_dunning_campaign }
+          end
+
+          it "does not produce a security log" do
+            update_service.call
+
+            expect(security_logger).not_to have_received(:produce)
           end
 
           it "does not reset customer attempts" do

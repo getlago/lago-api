@@ -158,3 +158,43 @@ Utils::SecurityLog.produce(
   user:,
   resources: {export_type: "invoices"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.created",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.updated",
+  user:,
+  resources: {integration_name: "Netsuite Production", integration_type: "netsuite", name: {deleted: "Netsuite Old", added: "Netsuite Production"}}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "integration",
+  log_event: "integration.deleted",
+  user:,
+  resources: {integration_name: "Okta Production", integration_type: "okta"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.created",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.updated",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli", name: {deleted: "Hooli Old", added: "Hooli"}}
+)
