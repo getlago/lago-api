@@ -9,7 +9,7 @@ RSpec.describe DailyUsages::ComputeAllService do
 
   let(:organization) { create(:organization, premium_integrations:) }
   let(:customer) { create(:customer, organization:) }
-  let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 1.day) }
+  let(:subscriptions) { create_list(:subscription, 5, customer:) }
 
   let(:premium_integrations) do
     ["revenue_analytics"]
@@ -133,37 +133,6 @@ RSpec.describe DailyUsages::ComputeAllService do
             expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
           end
         end
-      end
-    end
-
-    context "when last_received_event_on is nil" do
-      let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: nil) }
-
-      it "enqueues a job to compute the daily usage" do
-        expect(compute_service.call).to be_success
-        subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
-        end
-      end
-    end
-
-    context "when last_received_event_on is today" do
-      let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date) }
-
-      it "does enqueue jobs" do
-        expect(compute_service.call).to be_success
-        subscriptions.each do |subscription|
-          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
-        end
-      end
-    end
-
-    context "when last_received_event_on is stale" do
-      let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 5.days) }
-
-      it "does not enqueue any job" do
-        expect(compute_service.call).to be_success
-        expect(DailyUsages::ComputeJob).not_to have_been_enqueued
       end
     end
 
