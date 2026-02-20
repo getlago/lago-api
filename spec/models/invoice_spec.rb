@@ -1900,10 +1900,25 @@ RSpec.describe Invoice do
     end
 
     context "when invoice is a credit" do
+      let(:customer) { create(:customer, organization:) }
+      let(:wallet) { create(:wallet, customer:, balance_cents: 500, traceable: false) }
+      let(:inbound_wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 10,
+          credit_amount: 10,
+          remaining_amount_cents: 300)
+      end
       let(:invoice) do
         create(
           :invoice,
           :credit,
+          organization:,
+          customer:,
           version_number: 2,
           status: :finalized,
           payment_status: :succeeded,
@@ -1911,15 +1926,68 @@ RSpec.describe Invoice do
           total_paid_amount_cents: 900
         )
       end
-      let(:associated_active_wallet) { create(:wallet, balance_cents: 500) }
 
       before do
-        allow(invoice).to receive(:associated_active_wallet).and_return(associated_active_wallet)
-        allow(invoice).to receive(:available_to_credit_amount_cents).and_return(1000)
+        create(:fee, invoice:, fee_type: :credit, invoiceable: inbound_wallet_transaction)
+        create(:payment, payable: invoice, amount_cents: 900, status: :succeeded, payable_payment_status: :succeeded)
       end
 
-      it "returns the minimum of refundable amount and wallet balance" do
-        expect(invoice.refundable_amount_cents).to eq(500)
+      context "when wallet is not traceable" do
+        it "returns the minimum of refundable amount and wallet balance" do
+          expect(invoice.refundable_amount_cents).to eq(500)
+        end
+      end
+
+      context "when wallet is traceable" do
+        let(:wallet) { create(:wallet, customer:, balance_cents: 500, traceable: true) }
+
+        it "returns the minimum of refundable amount and inbound transaction remaining amount" do
+          expect(invoice.refundable_amount_cents).to eq(300)
+        end
+
+        context "when remaining amount is higher than paid amount" do
+          let(:inbound_wallet_transaction) do
+            create(:wallet_transaction,
+              wallet:,
+              organization:,
+              transaction_type: :inbound,
+              transaction_status: :purchased,
+              status: :settled,
+              amount: 10,
+              credit_amount: 10,
+              remaining_amount_cents: 1000)
+          end
+
+          it "returns the paid amount" do
+            expect(invoice.refundable_amount_cents).to eq(900)
+          end
+        end
+
+        context "when inbound transaction has nil remaining amount" do
+          let(:inbound_wallet_transaction) do
+            create(:wallet_transaction,
+              wallet:,
+              organization:,
+              transaction_type: :inbound,
+              transaction_status: :purchased,
+              status: :settled,
+              amount: 10,
+              credit_amount: 10,
+              remaining_amount_cents: nil)
+          end
+
+          it "returns 0" do
+            expect(invoice.refundable_amount_cents).to eq(0)
+          end
+        end
+      end
+
+      context "when wallet is terminated" do
+        let(:wallet) { create(:wallet, customer:, balance_cents: 500, traceable: true, status: :terminated) }
+
+        it "returns 0" do
+          expect(invoice.refundable_amount_cents).to eq(0)
+        end
       end
 
       context "when payment is pending" do

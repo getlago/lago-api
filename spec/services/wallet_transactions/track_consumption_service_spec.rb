@@ -385,5 +385,123 @@ RSpec.describe WalletTransactions::TrackConsumptionService do
         expect(result).to be_success
       end
     end
+
+    context "when consuming from specific inbound transaction" do
+      subject(:result) do
+        described_class.call(
+          outbound_wallet_transaction:,
+          inbound_wallet_transaction_id: specific_inbound.id
+        )
+      end
+
+      let!(:specific_inbound) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :purchased,
+          status: :settled,
+          amount: 50,
+          credit_amount: 50,
+          remaining_amount_cents: 5000,
+          priority: 50)
+      end
+
+      let!(:other_inbound) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :inbound,
+          transaction_status: :granted,
+          status: :settled,
+          amount: 100,
+          credit_amount: 100,
+          remaining_amount_cents: 10000,
+          priority: 1)
+      end
+
+      let(:outbound_wallet_transaction) do
+        create(:wallet_transaction,
+          wallet:,
+          organization:,
+          transaction_type: :outbound,
+          transaction_status: :voided,
+          status: :settled,
+          amount: 30,
+          credit_amount: 30)
+      end
+
+      it "consumes from the specific inbound transaction ignoring priority" do
+        result
+
+        expect(specific_inbound.reload.remaining_amount_cents).to eq(2000)
+        expect(other_inbound.reload.remaining_amount_cents).to eq(10000)
+      end
+
+      it "creates a single consumption record" do
+        expect { result }.to change(WalletTransactionConsumption, :count).by(1)
+
+        consumption = WalletTransactionConsumption.last
+        expect(consumption.inbound_wallet_transaction).to eq(specific_inbound)
+        expect(consumption.outbound_wallet_transaction).to eq(outbound_wallet_transaction)
+        expect(consumption.consumed_amount_cents).to eq(3000)
+      end
+
+      it "returns a success result" do
+        expect(result).to be_success
+      end
+
+      context "when outbound amount exceeds specific inbound remaining amount" do
+        let(:outbound_wallet_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :outbound,
+            transaction_status: :voided,
+            status: :settled,
+            amount: 60,
+            credit_amount: 60)
+        end
+
+        it "does not create consumption records" do
+          expect { result }.not_to change(WalletTransactionConsumption, :count)
+        end
+
+        it "returns a failure result with specific error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:amount_cents]).to eq(["exceeds_remaining_transaction_amount"])
+        end
+      end
+
+      context "when specific inbound has zero remaining amount" do
+        let!(:specific_inbound) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :inbound,
+            transaction_status: :purchased,
+            status: :settled,
+            amount: 50,
+            credit_amount: 50,
+            remaining_amount_cents: 0)
+        end
+
+        let(:outbound_wallet_transaction) do
+          create(:wallet_transaction,
+            wallet:,
+            organization:,
+            transaction_type: :outbound,
+            transaction_status: :voided,
+            status: :settled,
+            amount: 10,
+            credit_amount: 10)
+        end
+
+        it "returns a failure result" do
+          expect(result).to be_failure
+          expect(result.error.messages[:amount_cents]).to eq(["exceeds_remaining_transaction_amount"])
+        end
+      end
+    end
   end
 end
