@@ -96,8 +96,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       }
       attributes[:grouped_by] = last_event.grouped_by if last_event.respond_to?(:grouped_by)
 
-      if last_event.respond_to?(:charge_filter_id?)
-        attributes[:charge_filter] = last_event.charge_filter_id? ? charge_filter : nil
+      if last_event.respond_to?(:charge_filter_id)
+        attributes[:charge_filter] = last_event.charge_filter_id.present? ? charge_filter : nil
       end
 
       if last_event.respond_to?(:enriched_at)
