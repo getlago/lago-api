@@ -18,6 +18,13 @@ RSpec.describe Invites::AcceptService do
   end
 
   describe "#call" do
+    before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+    it "registers the user device" do
+      accept_service.call(**accept_args)
+      expect(UserDevices::RegisterService).to have_received(:call!).with(user:, skip_log: false)
+    end
+
     it "sets the recipient of the invite" do
       expect { accept_service.call(**accept_args) }
         .to change { invite.reload.membership_id }.from(nil)

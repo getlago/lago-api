@@ -28,6 +28,14 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
   end
 
   describe "#call", :premium do
+    before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+    it "registers the user device" do
+      result = service.call
+
+      expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
+    end
+
     it "creates user, membership and authenticate user" do
       result = service.call
 

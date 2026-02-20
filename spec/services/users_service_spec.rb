@@ -10,6 +10,14 @@ RSpec.describe UsersService do
   describe "#register" do
     include_context "with mocked security logger"
 
+    before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+    it "registers the user device" do
+      result = user_service.register("email", "password", "organization_name")
+
+      expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user, skip_log: true)
+    end
+
     it "calls SegmentIdentifyJob" do
       allow(SegmentIdentifyJob).to receive(:perform_later)
       result = user_service.register("email", "password", "organization_name")
@@ -150,6 +158,14 @@ RSpec.describe UsersService do
 
         context "when user has active membership" do
           let!(:active_membership) { create(:membership, user:, organization: membership.organization) }
+
+          before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+          it "registers the user device" do
+            result
+
+            expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
+          end
 
           it "returns success result" do
             expect(result).to be_success
