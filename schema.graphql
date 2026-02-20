@@ -856,6 +856,7 @@ input BillingEntityBillingConfigurationInput {
   documentNumbering: BillingEntityDocumentNumberingEnum
   invoiceFooter: String
   invoiceGracePeriod: Int
+  skipInvoicePdf: Boolean
   subscriptionInvoiceIssuingDateAdjustment: BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum
   subscriptionInvoiceIssuingDateAnchor: BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum
 }
