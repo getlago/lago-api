@@ -5,3 +5,7 @@ multiple_payment_methods:
 postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
+
+wallet_traceability:
+  description: "Enable wallet traceability on newly created wallets"
+  owners: ["@groyoh", "@D1353L"]

@@ -119,6 +119,40 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when wallet_traceability feature flag is enabled" do
+      before { organization.update!(feature_flags: ["wallet_traceability"]) }
+
+      it "creates a traceable wallet" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.traceable).to eq(true)
+      end
+
+      context "when customer has an existing active non-traceable wallet" do
+        before { create(:wallet, customer:, organization:, traceable: false) }
+
+        it "creates a non-traceable wallet" do
+          expect(service_result).to be_success
+          expect(service_result.wallet.traceable).to eq(false)
+        end
+      end
+
+      context "when customer has an existing terminated non-traceable wallet" do
+        before { create(:wallet, customer:, organization:, traceable: false, status: :terminated) }
+
+        it "creates a traceable wallet" do
+          expect(service_result).to be_success
+          expect(service_result.wallet.traceable).to eq(true)
+        end
+      end
+    end
+
+    context "when wallet_traceability feature flag is not enabled" do
+      it "creates a non-traceable wallet" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.traceable).to eq(false)
+      end
+    end
+
     context "with validation error" do
       let(:paid_credits) { "-15.00" }
 
