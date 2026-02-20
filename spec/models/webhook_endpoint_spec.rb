@@ -59,5 +59,102 @@ RSpec.describe WebhookEndpoint do
         expect(webhook_endpoint).not_to be_valid
       end
     end
+
+    describe "event_type validity" do
+      context "when nil" do
+        before { webhook_endpoint.event_types = nil }
+
+        it "is valid" do
+          expect(webhook_endpoint).to be_valid
+        end
+      end
+
+      context "when an empty array" do
+        before { webhook_endpoint.event_types = [] }
+
+        it "is valid" do
+          expect(webhook_endpoint).to be_valid
+        end
+      end
+
+      context "when not an array" do
+        before { webhook_endpoint.event_types = "not_an_array" }
+
+        it "is not valid" do
+          expect(webhook_endpoint).not_to be_valid
+        end
+      end
+
+      context "when contains valid types" do
+        before { webhook_endpoint.event_types = ["customer.updated"] }
+
+        it "is valid" do
+          expect(webhook_endpoint).to be_valid
+        end
+      end
+
+      context "when contains invalid types" do
+        before { webhook_endpoint.event_types = ["invalid.event"] }
+
+        it "is not valid" do
+          expect(webhook_endpoint).not_to be_valid
+        end
+      end
+    end
+  end
+
+  describe "callbacks" do
+    describe "#normalize_event_types" do
+      subject(:webhook_endpoint) { build(:webhook_endpoint, event_types:) }
+
+      context "when event_types contains duplicates, blanks, mixed case and whitespaces" do
+        let(:event_types) {
+          [
+            " Customer.Created ",
+            "invoice.drafted ",
+            " Invoice.DRAFTED",
+            nil,
+            "  ",
+            ""
+          ]
+        }
+
+        it "normalizes the event types" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to eq(["customer.created", "invoice.drafted"])
+        end
+      end
+
+      context "when event_types is nil" do
+        let(:event_types) { nil }
+
+        it "does not change event_types" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to be_nil
+        end
+      end
+
+      context "when event_types contains *" do
+        let(:event_types) { ["*"] }
+
+        it "sets event_types to nil" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to be_nil
+        end
+      end
+
+      context "when event_types contains * and other values" do
+        let(:event_types) { ["*", "customer.created"] }
+
+        it "does not change event_types" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).not_to be_valid
+          expect(webhook_endpoint.event_types).to eq(["*", "customer.created"])
+        end
+      end
+    end
   end
 end

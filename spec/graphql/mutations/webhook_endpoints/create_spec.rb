@@ -10,7 +10,9 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
   let(:input) do
     {
       webhookUrl: webhook_url,
-      signatureAlgo: "hmac"
+      signatureAlgo: "hmac",
+      name: "Test Webhook",
+      eventTypes: ["customer.created"]
     }
   end
 
@@ -21,6 +23,8 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
           id,
           webhookUrl,
           signatureAlgo,
+          name,
+          eventTypes
         }
       }
     GQL
@@ -42,7 +46,9 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
     expect(result["data"]["createWebhookEndpoint"]).to include(
       "id" => String,
       "webhookUrl" => webhook_url,
-      "signatureAlgo" => "hmac"
+      "signatureAlgo" => "hmac",
+      "name" => "Test Webhook",
+      "eventTypes" => ["customer.created"]
     )
   end
 end
