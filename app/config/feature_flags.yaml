@@ -2,6 +2,10 @@ multiple_payment_methods:
   description: "Allow multiple payment methods per customer"
   owners: ["@lovrocolic", "@mariohd"]
 
+non_persistable_charge_cache_optimization:
+  description: "Optimize current usage cache by not storing non-persistable fees (zero units/amounts/events)"
+  owners: ["@groyoh"]
+
 postgres_enriched_events:
   description: "Turn on events pre-enrichement for organizations using the PG event store"
   owners: ["@vincent-pochet"]
