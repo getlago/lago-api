@@ -109,17 +109,29 @@ module Fees
           return []
         end
 
-        charge_model_result.grouped_results.map do |amount_result|
+        charge_fees = charge_model_result.grouped_results.map do |amount_result|
+          # TODO: check if this is still needed as we now skip certain zero units fees
           next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
           init_fee(amount_result, properties:, charge_filter:)
         end.compact
+
+        charge_fees = filter_non_persistable_fees_for_current_usage(charge_fees)
+
+        charge_fees
       end
 
       # Preserve preloaded billable_metric on all fees (including cached ones) to avoid N+1 queries
       fees.each { |fee| fee.association(:billable_metric).target = billable_metric }
 
       result.fees.concat(fees.compact)
+    end
+
+    def filter_non_persistable_fees_for_current_usage(charge_fees)
+      return charge_fees unless current_usage
+      return charge_fees unless organization.feature_flag_enabled?(:non_persistable_charge_cache_optimization)
+
+      charge_fees.filter {|f| should_persist_fee?(f, charge_fees) }
     end
 
     def init_fee(amount_result, properties:, charge_filter:)
