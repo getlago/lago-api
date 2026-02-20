@@ -34422,6 +34422,42 @@
               "deprecationReason": null
             },
             {
+              "name": "billing_entity_created",
+              "description": "billing_entity.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity_updated",
+              "description": "billing_entity.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "export_created",
+              "description": "export.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_created",
+              "description": "integration.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_deleted",
+              "description": "integration.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_updated",
+              "description": "integration.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role_created",
               "description": "role.created",
               "isDeprecated": false,
@@ -34507,6 +34543,24 @@
             {
               "name": "api_key",
               "description": "api_key",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity",
+              "description": "billing_entity",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "export",
+              "description": "export",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration",
+              "description": "integration",
               "isDeprecated": false,
               "deprecationReason": null
             },
