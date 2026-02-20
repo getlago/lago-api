@@ -5,8 +5,9 @@ module Types
     class LogTypeEnum < Types::BaseEnum
       description "Security Log type"
 
-      # More values will be added as event integrations are implemented
-      value "user", value: "user", description: "User events"
+      Clickhouse::SecurityLog::LOG_TYPES.each do |type|
+        value type.tr(".", "_"), value: type, description: type
+      end
     end
   end
 end
