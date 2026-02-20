@@ -61,13 +61,13 @@ describe "Add customer-specific taxes" do
       expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_fr_standard"
 
       create_or_update_customer(italian_attributes.merge(external_id: "user_it_123"))
-      expect(Customer.find_by(external_id: "user_it_123").taxes.sole.code).to eq "lago_eu_it_standard"
+      expect(Customer.find_by(external_id: "user_it_123").taxes.sole.code).to eq "lago_eu_fr_standard"
 
       webhooks_sent.clear
       # Update customer to provide an INVALID EU VAT identifier
       # Nothing changes and no API call is made
       create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT123"})
-      expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_it_standard"
+      expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
       expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => false
@@ -104,7 +104,7 @@ describe "Add customer-specific taxes" do
       # Then, remove the tax_identification_number for the customer
       # The custom tax is overridden by the default VAT of the country, even if an invoice used the previous taxes
       create_or_update_customer({external_id: customer.external_id, tax_identification_number: nil})
-      expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
+      expect(customer.taxes.sole.code).to eq "lago_eu_fr_standard"
     end
   end
 
@@ -212,7 +212,7 @@ describe "Add customer-specific taxes" do
       expect(customer.reload.taxes.sole.code).to eq "lago_eu_fr_standard"
 
       create_or_update_customer({external_id: customer.external_id, country: "DE"})
-      expect(customer.reload.taxes.sole.code).to eq "lago_eu_de_standard"
+      expect(customer.reload.taxes.sole.code).to eq "lago_eu_fr_standard"
     end
   end
 
@@ -222,7 +222,7 @@ describe "Add customer-specific taxes" do
 
       create_or_update_customer(italian_attributes.merge(external_id: "user_it_123"))
       customer = Customer.find_by(external_id: "user_it_123")
-      expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
+      expect(customer.taxes.sole.code).to eq "lago_eu_fr_standard"
 
       # Make an invoice with another tax
       create_tax({name: "Banking rates", code: "banking_rates", rate: 1.3})
@@ -231,7 +231,7 @@ describe "Add customer-specific taxes" do
       expect(customer.invoices.sole.taxes.sole.code).to eq "banking_rates"
 
       # The customer tax is unaffected
-      expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
+      expect(customer.taxes.sole.code).to eq "lago_eu_fr_standard"
     end
   end
 

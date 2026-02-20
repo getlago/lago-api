@@ -35,7 +35,7 @@ RSpec.describe Customers::RetryViesCheckJob do
 
       expect(Customers::EuAutoTaxesService).to have_received(:call)
       expect(Customers::ApplyTaxesService).to have_received(:call)
-        .with(customer: customer, tax_codes: ["lago_eu_de_standard"])
+        .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
     end
 
     context "with pending invoices blocked by VIES" do

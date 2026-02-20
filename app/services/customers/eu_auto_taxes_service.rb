@@ -96,7 +96,7 @@ module Customers
 
     def process_not_vies_tax
       return "lago_eu_#{billing_country_code.downcase}_standard" if customer.country.blank?
-      return "lago_eu_#{customer.country.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
+      return "lago_eu_#{billing_country_code.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
 
       "lago_eu_tax_exempt"
     end
