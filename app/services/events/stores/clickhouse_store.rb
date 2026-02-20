@@ -3,6 +3,8 @@
 module Events
   module Stores
     class ClickhouseStore < BaseStore
+      include Events::Stores::Utils::QueryHelpers
+
       DECIMAL_SCALE = 26
       DECIMAL_DATE_SCALE = 10
 
@@ -661,14 +663,6 @@ module Events
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
         query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
         query
-      end
-
-      def with_ctes(ctes, query)
-        <<-SQL
-          WITH #{ctes.map { |name, sql| "#{name} AS (#{sql})" }.join(",\n")}
-
-          #{query}
-        SQL
       end
 
       def filters_scope(scope)
