@@ -8315,7 +8315,7 @@ CREATE INDEX index_payment_methods_on_payment_provider_id ON public.payment_meth
 -- Name: index_payment_methods_on_provider_customer_and_provider_method; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_payment_methods_on_provider_customer_and_provider_method ON public.payment_methods USING btree (payment_provider_customer_id, provider_method_id);
+CREATE UNIQUE INDEX index_payment_methods_on_provider_customer_and_provider_method ON public.payment_methods USING btree (payment_provider_customer_id, provider_method_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -11470,6 +11470,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
 ('20260218102426'),
