@@ -32,6 +32,7 @@ module V1
         subscription_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
         subscription_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
         document_locale: model.document_locale,
+        skip_invoice_pdf: model.skip_invoice_pdf,
         is_default: model.organization.default_billing_entity&.id == model.id,
         eu_tax_management: model.eu_tax_management,
         logo_url: model.logo_url
