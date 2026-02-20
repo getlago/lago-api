@@ -4163,7 +4163,7 @@ type CurrentOrganization {
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
-  featureFlags: [FeatureFlagEnum!]
+  featureFlags: [FeatureFlagEnum!]!
   finalizeZeroAmountInvoice: Boolean!
   gocardlessPaymentProviders: [GocardlessProvider!]
   hmacKey: String
