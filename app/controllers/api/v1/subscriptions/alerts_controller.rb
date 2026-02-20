@@ -8,8 +8,7 @@ module Api
 
         def destroy_all
           result = UsageMonitoring::Alerts::DestroyAllService.call(
-            organization: current_organization,
-            subscription:
+            alertable: subscription
           )
 
           if result.success?

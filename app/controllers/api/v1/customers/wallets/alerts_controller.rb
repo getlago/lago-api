@@ -39,16 +39,10 @@ module Api
           end
 
           def create
-            result = UsageMonitoring::CreateAlertService.call(
-              organization: current_organization,
-              alertable: wallet,
-              params: create_params.to_h
-            )
-
-            if result.success?
-              render_alert(result.alert)
+            if params[:alerts].present?
+              create_batch
             else
-              render_error_response(result)
+              create_single
             end
           end
 
@@ -75,9 +69,54 @@ module Api
             end
           end
 
+          def destroy_all
+            result = UsageMonitoring::Alerts::DestroyAllService.call(alertable: wallet)
+
+            if result.success?
+              head(:ok)
+            else
+              render_error_response(result)
+            end
+          end
+
           private
 
           attr_reader :alert
+
+          def create_single
+            result = UsageMonitoring::CreateAlertService.call(
+              organization: current_organization,
+              alertable: wallet,
+              params: create_params.to_h
+            )
+
+            if result.success?
+              render_alert(result.alert)
+            else
+              render_error_response(result)
+            end
+          end
+
+          def create_batch
+            result = UsageMonitoring::Alerts::CreateBatchService.call(
+              organization: current_organization,
+              alertable: wallet,
+              alerts_params: batch_create_params[:alerts]
+            )
+
+            if result.success?
+              render(
+                json: ::CollectionSerializer.new(
+                  result.alerts,
+                  ::V1::UsageMonitoring::AlertSerializer,
+                  collection_name: "alerts",
+                  includes: %i[thresholds]
+                )
+              )
+            else
+              render_error_response(result)
+            end
+          end
 
           def find_alert
             @alert = current_organization.alerts.find_by!(
@@ -104,6 +143,10 @@ module Api
 
           def update_params
             params.require(:alert).permit(:code, :name, thresholds: %i[code value recurring])
+          end
+
+          def batch_create_params
+            params.permit(alerts: [:alert_type, :code, :name, {thresholds: %i[code value recurring]}])
           end
 
           def resource_name

@@ -5,17 +5,16 @@ module UsageMonitoring
     class DestroyAllService < BaseService
       Result = BaseResult[:alerts]
 
-      def initialize(organization:, subscription:)
-        @organization = organization
-        @subscription = subscription
+      def initialize(alertable:)
+        @alertable = alertable
         super
       end
 
       def call
-        return result.not_found_failure!(resource: "organization") unless organization
-        return result.not_found_failure!(resource: "subscription") unless subscription
+        return result.not_found_failure!(resource: "alertable") unless alertable
 
-        alert_ids = organization.alerts.where(subscription_external_id: subscription.external_id).ids
+        alert_ids = alertable.alerts.ids
+
         ActiveRecord::Base.transaction do
           AlertThreshold.where(usage_monitoring_alert_id: alert_ids).delete_all
           Alert.where(id: alert_ids).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
@@ -26,7 +25,7 @@ module UsageMonitoring
 
       private
 
-      attr_reader :organization, :subscription
+      attr_reader :organization, :alertable
     end
   end
 end
