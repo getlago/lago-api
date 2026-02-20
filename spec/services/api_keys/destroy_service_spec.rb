@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe ApiKeys::DestroyService do
+  include_context "with mocked security logger"
+
   describe "#call" do
     subject(:service_result) { described_class.call(api_key) }
 
@@ -17,6 +19,12 @@ RSpec.describe ApiKeys::DestroyService do
 
       it "does not send an API key destroyed email" do
         expect { service_result }.not_to have_enqueued_mail(ApiKeyMailer, :destroyed)
+      end
+
+      it "does not produce a security log" do
+        service_result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -37,6 +45,20 @@ RSpec.describe ApiKeys::DestroyService do
           expect { service_result }
             .to have_enqueued_mail(ApiKeyMailer, :destroyed).with hash_including(params: {api_key:})
         end
+
+        it "produces a security log" do
+          service_result
+
+          expect(security_logger).to have_received(:produce).with(
+            organization: api_key.organization,
+            log_type: "api_key",
+            log_event: "api_key.deleted",
+            resources: {
+              name: api_key.name,
+              value_ending: api_key.value.last(4)
+            }
+          )
+        end
       end
 
       context "when organization has no another non-expiring key" do
@@ -54,6 +76,12 @@ RSpec.describe ApiKeys::DestroyService do
 
         it "does not send an API key destroyed email" do
           expect { service_result }.not_to have_enqueued_mail(ApiKeyMailer, :destroyed)
+        end
+
+        it "does not produce a security log" do
+          service_result
+
+          expect(security_logger).not_to have_received(:produce)
         end
       end
     end

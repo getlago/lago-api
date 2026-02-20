@@ -20,6 +20,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       }
     end
 
+    include_context "with mocked security logger"
     include_examples "requires API permission", "webhook_endpoint", "write"
 
     it "returns a success" do
@@ -29,6 +30,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       expect(json[:webhook_endpoint][:webhook_url]).to eq(create_params[:webhook_url])
       expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+    end
+
+    it "produces a security log" do
+      subject
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.created",
+        resources: {webhook_url: create_params[:webhook_url], signature_algo: "jwt"}
+      )
     end
   end
 
@@ -81,6 +93,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
   describe "DELETE /api/v1webhook_endpoints/:id" do
     subject { delete_with_token(organization, "/api/v1/webhook_endpoints/#{id}") }
 
+    include_context "with mocked security logger"
+
     let!(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
 
@@ -100,6 +114,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
         expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
         expect(json[:webhook_endpoint][:webhook_url]).to eq(webhook_endpoint.webhook_url)
+      end
+
+      it "produces a security log" do
+        subject
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.deleted",
+          resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
+        )
       end
     end
 
@@ -121,6 +146,8 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         {webhook_endpoint: update_params}
       )
     end
+
+    include_context "with mocked security logger"
 
     let(:webhook_endpoint) { create(:webhook_endpoint) }
     let(:organization) { webhook_endpoint.organization.reload }
@@ -145,6 +172,33 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
         expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
         expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+      end
+
+      it "produces a security log" do
+        subject
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.updated",
+          resources: {
+            webhook_url: {deleted: webhook_endpoint.webhook_url, added: "http://foo.bar"},
+            signature_algo: {deleted: "jwt", added: "hmac"}
+          }
+        )
+      end
+
+      context "when only webhook_url is provided" do
+        let(:update_params) { {webhook_url: "http://foo.bar"} }
+
+        it "updates webhook_url without resetting signature_algo" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        end
       end
     end
 

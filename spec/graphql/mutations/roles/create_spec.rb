@@ -13,6 +13,8 @@ RSpec.describe Mutations::Roles::Create do
     )
   end
 
+  include_context "with mocked security logger"
+
   let(:query) do
     <<-GQL
       mutation($input: CreateRoleInput!) {
@@ -52,6 +54,17 @@ RSpec.describe Mutations::Roles::Create do
         "name" => name,
         "description" => description,
         "permissions" => role_permissions
+      )
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "role",
+        log_event: "role.created",
+        resources: {role_code: "custom_role", permissions: %w[customers:view customers:create]}
       )
     end
 

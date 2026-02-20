@@ -3,17 +3,17 @@
 require "rails_helper"
 
 RSpec.describe Mutations::WebhookEndpoints::Create do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
-
   let(:input) do
     {
       webhookUrl: webhook_url,
       signatureAlgo: "hmac"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: WebhookEndpointCreateInput!) {
@@ -30,19 +30,32 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:manage"
 
-  it "creates a webhook_endpoint" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {input:}
-    )
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+    end
 
-    expect(result["data"]["createWebhookEndpoint"]).to include(
-      "id" => String,
-      "webhookUrl" => webhook_url,
-      "signatureAlgo" => "hmac"
-    )
+    it "creates a webhook_endpoint" do
+      expect(result["data"]["createWebhookEndpoint"]).to include(
+        "id" => String,
+        "webhookUrl" => webhook_url,
+        "signatureAlgo" => "hmac"
+      )
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.created",
+        resources: {webhook_url: webhook_url, signature_algo: "hmac"}
+      )
+    end
   end
 end

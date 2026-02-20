@@ -22,11 +22,12 @@ RSpec.describe Mutations::Roles::Destroy do
       }
     GQL
   end
-
   let(:required_permission) { "roles:delete" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
   let(:role) { create(:role, organization:) }
+
+  include_context "with mocked security logger"
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -41,6 +42,17 @@ RSpec.describe Mutations::Roles::Destroy do
       role_response = result["data"]["destroyRole"]
 
       expect(role_response["id"]).to eq(role.id)
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "role",
+        log_event: "role.deleted",
+        resources: {role_code: role.code}
+      )
     end
   end
 

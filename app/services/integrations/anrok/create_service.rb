@@ -2,7 +2,7 @@
 
 module Integrations
   module Anrok
-    class CreateService < BaseService
+    class CreateService < Integrations::CreateService
       def call(**args)
         organization = Organization.find_by(id: args[:organization_id])
 
