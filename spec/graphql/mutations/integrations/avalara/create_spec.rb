@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Avalara::Create, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
   let(:code) { "avalara1" }
@@ -29,32 +31,45 @@ RSpec.describe Mutations::Integrations::Avalara::Create, :premium do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates an avalara integration" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          code:,
-          name:,
-          accountId: "account-id1",
-          licenseKey: "license-key12",
-          connectionId: "this-is-random-uuid",
-          companyCode: "company-code1"
+  context "with valid input" do
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code:,
+            name:,
+            accountId: "account-id1",
+            licenseKey: "license-key12",
+            connectionId: "this-is-random-uuid",
+            companyCode: "company-code1"
+          }
         }
-      }
-    )
+      )
+    end
 
-    result_data = result["data"]["createAvalaraIntegration"]
+    it "creates an avalara integration" do
+      result_data = result["data"]["createAvalaraIntegration"]
 
-    expect(result_data["id"]).to be_present
-    expect(result_data["code"]).to eq(code)
-    expect(result_data["name"]).to eq(name)
-    expect(result_data["licenseKey"]).to eq("••••••••…y12")
-    expect(result_data["accountId"]).to eq("account-id1")
-    expect(result_data["companyCode"]).to eq("company-code1")
-    expect(Integrations::AvalaraIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
+      expect(result_data["id"]).to be_present
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["licenseKey"]).to eq("••••••••…y12")
+      expect(result_data["accountId"]).to eq("account-id1")
+      expect(result_data["companyCode"]).to eq("company-code1")
+      expect(Integrations::AvalaraIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
+    end
+
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.created",
+        resources: {integration_name: name, integration_type: "avalara"}
+      )
+    end
   end
 end

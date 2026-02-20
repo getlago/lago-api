@@ -2,7 +2,7 @@
 
 module Integrations
   module Salesforce
-    class CreateService < BaseService
+    class CreateService < Integrations::CreateService
       attr_reader :params
 
       def initialize(params:)

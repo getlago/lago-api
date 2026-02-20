@@ -20,6 +20,8 @@ module ApiKeys
 
       ApiKeyMailer.with(api_key:).created.deliver_later
 
+      register_security_log(api_key)
+
       result.api_key = api_key
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -29,5 +31,18 @@ module ApiKeys
     private
 
     attr_reader :params
+
+    def register_security_log(api_key)
+      Utils::SecurityLog.produce(
+        organization: api_key.organization,
+        log_type: "api_key",
+        log_event: "api_key.created",
+        resources: {
+          name: api_key.name,
+          value_ending: api_key.value.last(4),
+          permissions: api_key.flat_permissions
+        }
+      )
+    end
   end
 end

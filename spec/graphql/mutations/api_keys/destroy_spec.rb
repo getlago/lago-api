@@ -24,6 +24,8 @@ RSpec.describe Mutations::ApiKeys::Destroy do
   let(:required_permission) { "developers:keys:manage" }
   let!(:membership) { create(:membership) }
 
+  include_context "with mocked security logger"
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
@@ -41,6 +43,20 @@ RSpec.describe Mutations::ApiKeys::Destroy do
 
       expect(api_key_response["id"]).to eq(api_key.id)
       expect(api_key_response["expiresAt"]).to eq(api_key.expires_at.iso8601)
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "api_key",
+        log_event: "api_key.deleted",
+        resources: {
+          name: api_key.name,
+          value_ending: api_key.value.last(4)
+        }
+      )
     end
   end
 

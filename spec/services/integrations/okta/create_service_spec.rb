@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Okta::CreateService do
+  include_context "with mocked security logger"
+
   let(:service) { described_class.new(membership.user) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -60,6 +62,17 @@ RSpec.describe Integrations::Okta::CreateService do
           it "enables okta authentication" do
             service_call
             expect(organization.reload).to be_okta_authentication_enabled
+          end
+
+          it "produces a security log" do
+            service_call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization:,
+              log_type: "integration",
+              log_event: "integration.created",
+              resources: {integration_name: "Okta Integration", integration_type: "okta"}
+            )
           end
         end
 

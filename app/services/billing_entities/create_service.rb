@@ -41,6 +41,7 @@ module BillingEntities
       end
 
       track_billing_entity_created
+      register_security_log(billing_entity)
 
       result.billing_entity = billing_entity
       result
@@ -104,6 +105,15 @@ module BillingEntities
       ChangeEuTaxManagementService.call!(
         billing_entity:,
         eu_tax_management: params[:eu_tax_management]
+      )
+    end
+
+    def register_security_log(billing_entity)
+      Utils::SecurityLog.produce(
+        organization:,
+        log_type: "billing_entity",
+        log_event: "billing_entity.created",
+        resources: {billing_entity_name: billing_entity.name, billing_entity_code: billing_entity.code}
       )
     end
 

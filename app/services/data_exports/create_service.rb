@@ -23,6 +23,8 @@ module DataExports
 
       ExportResourcesJob.perform_later(data_export)
 
+      register_security_log(data_export)
+
       result.data_export = data_export
       result
     end
@@ -30,6 +32,16 @@ module DataExports
     private
 
     attr_reader :organization, :user, :format, :resource_type, :resource_query
+
+    def register_security_log(data_export)
+      Utils::SecurityLog.produce(
+        organization: organization,
+        log_type: "export",
+        log_event: "export.created",
+        user: user,
+        resources: {export_type: data_export.resource_type, resource_query: data_export.resource_query}
+      )
+    end
 
     def membership
       user.memberships.find_by(organization: organization)

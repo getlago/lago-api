@@ -2,7 +2,7 @@
 
 module Integrations
   module Avalara
-    class UpdateService < BaseService
+    class UpdateService < Integrations::UpdateService
       Result = BaseResult[:integration]
 
       def initialize(integration:, params:)
