@@ -16,6 +16,10 @@ module UsageMonitoring
     def call
       return result unless License.premium?
       return result unless subscription.active?
+      if subscription.last_received_event_on != date
+        subscription.update(last_received_event_on: date)
+      end
+
       return result unless need_lifetime_usage? || has_alerts?
 
       UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
