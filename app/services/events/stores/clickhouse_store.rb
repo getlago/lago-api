@@ -778,6 +778,10 @@ module Events
           grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         ]
       end
+
+      def operation_type_sql
+        "events_enriched.sorted_properties['operation_type']"
+      end
     end
   end
 end
