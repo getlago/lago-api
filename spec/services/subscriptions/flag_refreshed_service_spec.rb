@@ -24,7 +24,8 @@ RSpec.describe Subscriptions::FlagRefreshedService, :premium do
       subject
       expect(result).to be_success
       expect(subscription.subscription_activity).to be_present
-      expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call).with(subscription:)
+      expected_date = Time.current.in_time_zone(customer.applicable_timezone).to_date
+      expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call).with(subscription:, date: expected_date)
     end
   end
 end

@@ -40,6 +40,8 @@ module DailyUsages
         result.daily_usage = daily_usage
       end
 
+      subscription.update!(last_received_event_on: usage_date) if subscription.last_received_event_on.nil?
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
