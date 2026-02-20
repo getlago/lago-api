@@ -378,6 +378,77 @@ module Events
         end
       end
 
+      def grouped_max_debugs
+        groups, group_names = grouped_arel_columns
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
+            deduplicated_columns: %w[decimal_value properties]
+          )
+
+          sql1 = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              #{group_names},
+              property
+            FROM events
+          SQL
+
+          sql2 = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              MAX(property)
+            FROM events
+          SQL
+
+          sql3 = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              #{group_names},
+              groupConcat('|')(property)
+            FROM events
+            GROUP BY #{group_names}
+          SQL
+
+          sql4 = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              #{group_names},
+              MAX(property)
+            FROM events
+            GROUP BY #{group_names}
+          SQL
+
+          sql5 = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              #{group_names},
+              property,
+              property > 1,
+              property > -2,
+              property > 3
+            FROM events
+          SQL
+
+          sql6 = <<-SQL
+            WITH events AS
+                (
+                    SELECT *
+                    FROM VALUES('region String, country String, decimal_value String', ('europe', 'france', '1'), ('europe', 'france', '3'), ('europe', 'france', '-2'))
+                )
+            SELECT
+                region,
+                country,
+                max(decimal_value)
+            FROM events
+            GROUP BY
+                region,
+                country
+          SQL
+          sqls = [
+            sql1, sql2, sql3, sql4, sql5, sql6
+          ]
+
+          sqls.map { connection.select_all(it) }
+        end
+      end
+
       def last
         value = Events::Stores::Utils::ClickhouseConnection.with_retry do
           events(ordered: true).last&.properties&.[](aggregation_property)

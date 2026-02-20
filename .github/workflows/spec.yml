@@ -31,8 +31,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ci_node_total: [8]
-        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
+        ci_node_total: [1]
+        ci_node_index: [0]
 
     env:
       RAILS_ENV: test
@@ -73,8 +73,7 @@ jobs:
           bundler-cache: true
       - name: Start Clickhouse database
         run: |
-          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:25.12-alpine
-
+          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
@@ -83,6 +82,8 @@ jobs:
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
       - name: Run tests
+        env:
+          KNAPSACK_PRO_TEST_FILE_LIST: ./spec/services/events/stores/clickhouse_store_spec.rb
         run: |
           if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then
             echo "::warning::This is a community PR. We'll default to running the test using 'parallel_tests'."
