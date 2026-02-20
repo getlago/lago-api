@@ -11,12 +11,12 @@ module Api
         attr_reader :subscription
 
         def find_subscription
-          find_by_params = {external_id: params[:subscription_external_id]}
-          find_by_params[:status] = params[:status] if params[:status].present?
-
           @subscription = current_organization.subscriptions
             .order("terminated_at DESC NULLS FIRST, started_at DESC") # TODO: Confirm
-            .find_by!(find_by_params)
+            .find_by!(
+              external_id: params[:subscription_external_id],
+              status: params[:status] || :active
+            )
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "subscription")
         end
