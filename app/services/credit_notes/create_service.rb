@@ -292,7 +292,9 @@ module CreditNotes
 
     def void_prepaid_credit
       wallet_credit = WalletCredit.from_amount_cents(wallet: prepaid_credit_wallet, amount_cents: credit_note.refund_amount_cents)
-      wallet_transaction = prepaid_credit_wallet.traceable? ? invoice.fees.first.invoiceable : nil
+      # When the wallet is traceable, we want to specify which wallet transaction to void. Otherwise, the void service
+      # will void inbound transactions (decrease remaining amount) based on their priority.
+      wallet_transaction = prepaid_credit_wallet.traceable? ? invoice.prepaid_credit_fee.invoiceable : nil
       WalletTransactions::VoidService.call!(
         wallet: prepaid_credit_wallet,
         wallet_credit: wallet_credit,
