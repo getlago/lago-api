@@ -14,7 +14,8 @@ module Customers
 
     def call
       usage_amount_cents = customer.active_subscriptions.map do |subscription|
-        invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:).invoice
+        usage_filters = UsageFilters.new(skip_grouping: subscription.all_charges_pricing_group_agnostic?)
+        invoice = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters:).invoice
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)
