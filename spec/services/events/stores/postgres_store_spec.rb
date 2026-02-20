@@ -6,7 +6,7 @@ require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::PostgresStore do
   it_behaves_like "an event store", with_event_duplication: false do
-    def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
+    def create_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
       create(
         :event,
         transaction_id: transaction_id,
@@ -20,7 +20,7 @@ RSpec.describe Events::Stores::PostgresStore do
       )
     end
 
-    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code)
+    def create_enriched_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
       event = create(
         :event,
         transaction_id:,

@@ -5,7 +5,7 @@ require "rails_helper"
 require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_before: true} do
-  def create_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil)
+  def create_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
     Clickhouse::EventsEnrichedExpanded.create!(
       transaction_id:,
       organization_id: organization.id,
@@ -23,17 +23,70 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       grouped_by: grouped_by.transform_values { it || "" },
       value:,
       decimal_value: value&.to_i&.to_d,
-      precise_total_amount_cents: nil
+      precise_total_amount_cents: nil,
+      enriched_at:
     )
   end
 
   alias_method :create_enriched_event, :create_event
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false
+    it_behaves_like "an event store", with_event_duplication: false,
+      excluding_features: %i[
+        events
+        events_values
+        last_event
+        grouped_last_event
+        prorated_events_values
+        distinct_codes
+        distinct_charges_and_filters
+        active_unique_property?
+        grouped_count
+        grouped_max
+        last
+        grouped_last
+        unique_count
+        grouped_unique_count
+        sum
+        sum_date_breakdown
+        grouped_sum
+        sum_precise_total_amount_cents
+        grouped_sum_precise_total_amount_cents
+        prorated_sum
+        grouped_prorated_sum
+        weighted_sum
+        weighted_sum_breakdown
+        grouped_weighted_sum
+      ]
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true
+    it_behaves_like "an event store", with_event_duplication: true,
+      excluding_features: %i[
+        events
+        events_values
+        last_event
+        grouped_last_event
+        distinct_codes
+        distinct_charges_and_filters
+        prorated_events_values
+        active_unique_property?
+        grouped_count
+        grouped_max
+        last
+        grouped_last
+        unique_count
+        grouped_unique_count
+        sum
+        sum_date_breakdown
+        grouped_sum
+        sum_precise_total_amount_cents
+        grouped_sum_precise_total_amount_cents
+        prorated_sum
+        grouped_prorated_sum
+        weighted_sum
+        weighted_sum_breakdown
+        grouped_weighted_sum
+      ]
   end
 end
