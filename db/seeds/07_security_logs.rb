@@ -182,3 +182,19 @@ Utils::SecurityLog.produce(
   user:,
   resources: {integration_name: "Okta Production", integration_type: "okta"}
 )
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.created",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli"}
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "billing_entity",
+  log_event: "billing_entity.updated",
+  user:,
+  resources: {billing_entity_name: "Hooli", billing_entity_code: "hooli", name: {deleted: "Hooli Old", added: "Hooli"}}
+)

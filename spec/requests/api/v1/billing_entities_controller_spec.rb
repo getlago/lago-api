@@ -95,6 +95,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
       post_with_token(organization, "/api/v1/billing_entities", create_params)
     end
 
+    include_context "with mocked security logger"
+
     let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
 
     let(:create_params) do
@@ -175,6 +177,17 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
+    it "produces a security log" do
+      subject
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "billing_entity",
+        log_event: "billing_entity.created",
+        resources: {billing_entity_name: "New Name", billing_entity_code: "NEW-0001"}
+      )
+    end
+
     context "when the logo is not provided" do
       let(:logo) { nil }
 
@@ -214,6 +227,8 @@ RSpec.describe Api::V1::BillingEntitiesController do
     subject do
       put_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}", update_params)
     end
+
+    include_context "with mocked security logger"
 
     let(:billing_entity_code) { billing_entity1.code }
 
@@ -291,6 +306,20 @@ RSpec.describe Api::V1::BillingEntitiesController do
       expect(json[:billing_entity][:subscription_invoice_issuing_date_anchor]).to eq("current_period_end")
       expect(json[:billing_entity][:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
+    end
+
+    it "produces a security log" do
+      subject
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "billing_entity",
+        log_event: "billing_entity.updated",
+        resources: hash_including(
+          billing_entity_name: "New Name",
+          billing_entity_code: billing_entity1.code
+        )
+      )
     end
 
     context "when updating the applicable invoice custom sections" do

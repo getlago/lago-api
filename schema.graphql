@@ -6546,6 +6546,16 @@ enum LogEventEnum {
   api_key_updated
 
   """
+  billing_entity.created
+  """
+  billing_entity_created
+
+  """
+  billing_entity.updated
+  """
+  billing_entity_updated
+
+  """
   export.created
   """
   export_created
@@ -6634,6 +6644,11 @@ enum LogTypeEnum {
   api_key
   """
   api_key
+
+  """
+  billing_entity
+  """
+  billing_entity
 
   """
   export
