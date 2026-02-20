@@ -34451,6 +34451,66 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "api_key_created",
+              "description": "api_key.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "api_key_deleted",
+              "description": "api_key.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "api_key_rotated",
+              "description": "api_key.rotated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "api_key_updated",
+              "description": "api_key.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity_created",
+              "description": "billing_entity.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity_updated",
+              "description": "billing_entity.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "export_created",
+              "description": "export.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_created",
+              "description": "integration.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_deleted",
+              "description": "integration.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration_updated",
+              "description": "integration.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role_created",
               "description": "role.created",
               "isDeprecated": false,
@@ -34503,6 +34563,24 @@
               "description": "user.signed_up",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint_created",
+              "description": "webhook_endpoint.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint_deleted",
+              "description": "webhook_endpoint.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint_updated",
+              "description": "webhook_endpoint.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -34516,6 +34594,30 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "api_key",
+              "description": "api_key",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity",
+              "description": "billing_entity",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "export",
+              "description": "export",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "integration",
+              "description": "integration",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role",
               "description": "role",
               "isDeprecated": false,
@@ -34524,6 +34626,12 @@
             {
               "name": "user",
               "description": "user",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "webhook_endpoint",
+              "description": "webhook_endpoint",
               "isDeprecated": false,
               "deprecationReason": null
             }

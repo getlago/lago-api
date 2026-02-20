@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe WebhookEndpoints::UpdateService do
   subject(:update_service) { described_class.new(id: webhook_endpoint.id, organization:, params: update_params) }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization) }
   let!(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
   let(:update_params) do
@@ -23,6 +25,20 @@ RSpec.describe WebhookEndpoints::UpdateService do
       expect(result.webhook_endpoint.signature_algo).to eq("hmac")
     end
 
+    it "produces a security log" do
+      update_service.call
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.updated",
+        resources: hash_including(
+          webhook_url: {deleted: webhook_endpoint.webhook_url, added: "http://foo.bar"},
+          signature_algo: {deleted: "jwt", added: "hmac"}
+        )
+      )
+    end
+
     context "when webhook endpoint does not exist" do
       let(:webhook_endpoint) { instance_double(WebhookEndpoint, id: "123456") }
 
@@ -31,6 +47,12 @@ RSpec.describe WebhookEndpoints::UpdateService do
 
         expect(result).not_to be_success
         expect(result.error.message).to eq("webhook_endpoint_not_found")
+      end
+
+      it "does not produce a security log" do
+        update_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -46,6 +68,12 @@ RSpec.describe WebhookEndpoints::UpdateService do
 
         expect(result).not_to be_success
         expect(result.error.class).to eq(BaseService::ValidationFailure)
+      end
+
+      it "does not produce a security log" do
+        update_service.call
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end
