@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe ApiKeys::RotateService do
+  include_context "with mocked security logger"
+
   describe "#call" do
     subject(:service_result) { described_class.call(api_key:, params:) }
 
@@ -34,6 +36,20 @@ RSpec.describe ApiKeys::RotateService do
             expect { service_result }
               .to have_enqueued_mail(ApiKeyMailer, :rotated).with hash_including(params: {api_key:})
           end
+
+          it "produces a security log" do
+            new_api_key = service_result.api_key
+
+            expect(security_logger).to have_received(:produce).with(
+              organization: organization,
+              log_type: "api_key",
+              log_event: "api_key.rotated",
+              resources: {
+                name: new_api_key.name,
+                value_ending: {deleted: api_key.value.last(4), added: new_api_key.value.last(4)}
+              }
+            )
+          end
         end
 
         context "with free organization" do
@@ -49,6 +65,12 @@ RSpec.describe ApiKeys::RotateService do
             expect(service_result).not_to be_success
             expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
             expect(service_result.error.code).to eq("cannot_rotate_with_provided_date")
+          end
+
+          it "does not produce a security log" do
+            service_result
+
+            expect(security_logger).not_to have_received(:produce)
           end
         end
       end
@@ -112,6 +134,12 @@ RSpec.describe ApiKeys::RotateService do
         expect(service_result).not_to be_success
         expect(service_result.error).to be_a(BaseService::NotFoundFailure)
         expect(service_result.error.error_code).to eq("api_key_not_found")
+      end
+
+      it "does not produce a security log" do
+        service_result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end

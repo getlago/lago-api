@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe BillingEntities::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create :organization }
   let(:params) do
     {
@@ -25,6 +27,12 @@ RSpec.describe BillingEntities::CreateService do
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
     end
 
+    it "does not produce a security log" do
+      result
+
+      expect(security_logger).not_to have_received(:produce)
+    end
+
     context "when the organization does not have active billing entities" do
       before do
         organization.billing_entities.each(&:discard)
@@ -35,6 +43,17 @@ RSpec.describe BillingEntities::CreateService do
         expect(result.billing_entity).to be_persisted
         expect(result.billing_entity.name).to eq("Billing Entity")
         expect(result.billing_entity.code).to eq("billing-entity")
+      end
+
+      it "produces a security log" do
+        result
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "billing_entity",
+          log_event: "billing_entity.created",
+          resources: {billing_entity_name: "Billing Entity", billing_entity_code: "billing-entity"}
+        )
       end
 
       it "does not set eu_tax_management when not provided" do
@@ -87,6 +106,12 @@ RSpec.describe BillingEntities::CreateService do
       it "returns an error" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 

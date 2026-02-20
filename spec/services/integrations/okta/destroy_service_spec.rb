@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Integrations::Okta::DestroyService do
   subject(:destroy_service) { described_class.new(integration:) }
 
+  include_context "with mocked security logger"
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:okta_integration, organization:) }
@@ -23,6 +25,17 @@ RSpec.describe Integrations::Okta::DestroyService do
     it "removes the authentication_method" do
       destroy_service.call
       expect(organization.authentication_methods).not_to include("okta")
+    end
+
+    it "produces a security log" do
+      destroy_service.call
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "integration",
+        log_event: "integration.deleted",
+        resources: {integration_name: integration.name, integration_type: "okta"}
+      )
     end
 
     context "when integration is not found" do

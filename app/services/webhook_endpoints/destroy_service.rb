@@ -13,6 +13,7 @@ module WebhookEndpoints
 
       webhook_endpoint.destroy!
       track_webhook_endpoint_deleted
+      register_security_log
 
       result.webhook_endpoint = webhook_endpoint
       result
@@ -21,6 +22,15 @@ module WebhookEndpoints
     private
 
     attr_reader :webhook_endpoint
+
+    def register_security_log
+      Utils::SecurityLog.produce(
+        organization: webhook_endpoint.organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.deleted",
+        resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: webhook_endpoint.signature_algo}
+      )
+    end
 
     def track_webhook_endpoint_deleted
       SegmentTrackJob.perform_later(

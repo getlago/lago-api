@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Okta::UpdateService do
+  include_context "with mocked security logger"
+
   let(:integration) { create(:okta_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
@@ -53,6 +55,20 @@ RSpec.describe Integrations::Okta::UpdateService do
 
             expect(integration.domain).to eq(domain)
             expect(integration.organization_name).to eq(organization_name)
+          end
+
+          it "produces a security log" do
+            service_call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization:,
+              log_type: "integration",
+              log_event: "integration.updated",
+              resources: hash_including(
+                integration_name: integration.name,
+                integration_type: "okta"
+              )
+            )
           end
         end
 
