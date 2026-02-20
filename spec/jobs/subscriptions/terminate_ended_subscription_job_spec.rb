@@ -16,7 +16,7 @@ RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
     it "calls the subscription service" do
       described_class.perform_now(subscription)
 
-      expect(Subscriptions::TerminateService).to have_received(:call).with(subscription:)
+      expect(Subscriptions::TerminateService).to have_received(:call!).with(subscription:)
     end
 
     context "when the service returns a failure" do
@@ -40,7 +40,7 @@ RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
 
       context "when a #{error_class} error is raised" do
         before do
-          allow(Subscriptions::TerminateService).to receive(:call)
+          allow(Subscriptions::TerminateService).to receive(:call!)
             .and_raise(error)
         end
 
