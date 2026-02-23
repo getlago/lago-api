@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
-  subject(:mandate_active_service) { described_class.new(payment_provider:, mandate_id:) }
+RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateCreatedService do
+  subject(:mandate_created_service) { described_class.new(payment_provider:, mandate_id:) }
 
   let(:organization) { create(:organization) }
   let(:payment_provider) { create(:gocardless_provider, organization:) }
@@ -40,11 +40,11 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
       end
 
       it "creates a payment method for the customer" do
-        expect { mandate_active_service.call }.to change(PaymentMethod, :count).by(1)
+        expect { mandate_created_service.call }.to change(PaymentMethod, :count).by(1)
       end
 
       it "returns a successful result with the payment method" do
-        result = mandate_active_service.call
+        result = mandate_created_service.call
 
         expect(result).to be_success
         expect(result.payment_method).to be_present
@@ -53,7 +53,7 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
       end
 
       it "updates the gocardless customer provider_mandate_id" do
-        mandate_active_service.call
+        mandate_created_service.call
 
         expect(gocardless_customer.reload.provider_mandate_id).to eq(mandate_id)
       end
@@ -65,11 +65,11 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
       end
 
       it "does not create a payment method" do
-        expect { mandate_active_service.call }.not_to change(PaymentMethod, :count)
+        expect { mandate_created_service.call }.not_to change(PaymentMethod, :count)
       end
 
       it "returns a successful result without payment method" do
-        result = mandate_active_service.call
+        result = mandate_created_service.call
 
         expect(result).to be_success
         expect(result.payment_method).to be_nil
@@ -83,11 +83,11 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
       end
 
       it "does not create a payment method" do
-        expect { mandate_active_service.call }.not_to change(PaymentMethod, :count)
+        expect { mandate_created_service.call }.not_to change(PaymentMethod, :count)
       end
 
       it "returns a successful result without payment method" do
-        result = mandate_active_service.call
+        result = mandate_created_service.call
 
         expect(result).to be_success
         expect(result.payment_method).to be_nil
@@ -104,11 +104,11 @@ RSpec.describe PaymentProviders::Gocardless::Webhooks::MandateActiveService do
       end
 
       it "does not create a payment method" do
-        expect { mandate_active_service.call }.not_to change(PaymentMethod, :count)
+        expect { mandate_created_service.call }.not_to change(PaymentMethod, :count)
       end
 
       it "returns a successful result without payment method" do
-        result = mandate_active_service.call
+        result = mandate_created_service.call
 
         expect(result).to be_success
         expect(result.payment_method).to be_nil
