@@ -23,15 +23,8 @@ module Mutations
       type Types::AppliedCoupons::Object
 
       def resolve(**args)
-        customer = Customer.find_by(
-          id: args[:customer_id],
-          organization_id: current_organization.id
-        )
-
-        coupon = Coupon.find_by(
-          id: args[:coupon_id],
-          organization_id: current_organization.id
-        )
+        customer = current_organization.customers.find_by(id: args[:customer_id])
+        coupon = current_organization.coupons.find_by(id: args[:coupon_id])
 
         result = ::AppliedCoupons::CreateService.call(customer:, coupon:, params: args)
         result.success? ? result.applied_coupon : result_error(result)

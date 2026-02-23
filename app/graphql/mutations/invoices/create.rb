@@ -16,10 +16,7 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(**args)
-        customer = Customer.find_by(
-          id: args[:customer_id],
-          organization_id: current_organization.id
-        )
+        customer = current_organization.customers.find_by(id: args[:customer_id])
 
         result = ::Invoices::CreateOneOffService.call(
           customer:,

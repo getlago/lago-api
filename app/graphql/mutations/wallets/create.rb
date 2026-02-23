@@ -26,7 +26,7 @@ module Mutations
       end
 
       def current_customer(id)
-        Customer.find_by(id:, organization_id: current_organization.id)
+        current_organization.customers.find_by(id:)
       end
     end
   end

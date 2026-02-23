@@ -16,15 +16,8 @@ module Mutations
       type Types::Subscriptions::Object
 
       def resolve(entitlements: nil, **args)
-        customer = Customer.find_by(
-          id: args[:customer_id],
-          organization_id: current_organization.id
-        )
-
-        plan = Plan.find_by(
-          id: args[:plan_id],
-          organization_id: current_organization.id
-        )
+        customer = current_organization.customers.find_by(id: args[:customer_id])
+        plan = current_organization.plans.find_by(id: args[:plan_id])
 
         result = ::Subscriptions::CreateService.call(
           customer:,
