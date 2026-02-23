@@ -147,15 +147,11 @@ RSpec.describe Mutations::Customers::Update do
     end
 
     it "returns a third party error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permissions,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: input.merge(
-            providerCustomer: {providerCustomerId: "cus_invalid"}
-          )
-        }
+        input: input.merge(
+          providerCustomer: {providerCustomerId: "cus_invalid"}
+        )
       )
 
       expect(result["errors"].first["extensions"]["status"]).to eq(422)
