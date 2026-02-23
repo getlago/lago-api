@@ -271,7 +271,7 @@ class Subscription < ApplicationRecord
   end
 
   def all_charges_pricing_group_agnostic?
-    charges.all?(&:pricing_group_agnostic?)
+    plan.charges.all?(&:pricing_group_agnostic?)
   end
 end
 

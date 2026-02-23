@@ -91,7 +91,7 @@ class Charge < ApplicationRecord
   end
 
   def pricing_group_agnostic?
-    charge_model.standard? && filters.empty?
+    charge_model == "standard" && filters.empty?
   end
 
   private
