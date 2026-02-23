@@ -53,6 +53,36 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
       end
     end
 
+    context "when alertable is a wallet" do
+      let(:alertable) { create(:wallet, organization:) }
+
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "wallet_balance_amount",
+            code: "alert1",
+            name: "First Alert",
+            thresholds: [{code: "warning", value: 80}]
+          },
+          {
+            alert_type: "wallet_credits_balance",
+            code: "alert2",
+            name: "Second Alert",
+            thresholds: [{code: "critical", value: 100}]
+          }
+        ]
+      end
+
+      it "creates multiple alerts for the wallet" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(2)
+        expect(result).to be_success
+        expect(result.alerts).to match_array([
+          have_attributes(code: "alert1", name: "First Alert", wallet: alertable),
+          have_attributes(code: "alert2", name: "Second Alert", wallet: alertable)
+        ])
+      end
+    end
+
     context "when alerts_params is empty" do
       let(:alerts_params) { [] }
 

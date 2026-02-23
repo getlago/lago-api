@@ -284,4 +284,113 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       end
     end
   end
+
+  describe "POST /api/v1/customers/:external_id/wallets/:wallet_code/alerts (batch)" do
+    subject { post_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts", params) }
+
+    let(:alert) { nil }
+    let(:params) do
+      {
+        alerts: [
+          {
+            code: "alert1",
+            name: "First Alert",
+            alert_type: "wallet_balance_amount",
+            thresholds: [{code: :notice, value: 1000}]
+          },
+          {
+            code: "alert2",
+            alert_type: "wallet_credits_balance",
+            thresholds: [{value: 2000}]
+          }
+        ]
+      }
+    end
+
+    it_behaves_like "requires API permission", "alert", "write"
+    it_behaves_like "returns error if customer not found"
+    it_behaves_like "returns error if wallet not found"
+
+    it "creates multiple alerts" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:alerts].count).to eq 2
+
+      expect(json[:alerts]).to match_array([
+        include(code: "alert1"),
+        include(code: "alert2")
+      ])
+    end
+
+    context "when alerts are empty" do
+      let(:params) { {alerts: []} }
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error]).to include("value is empty or invalid: alert")
+      end
+    end
+
+    context "when several alerts are invalid" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "duplicated",
+              alert_type: "wallet_balance_amount",
+              thresholds: [{value: 1000}]
+            },
+            {
+              code: "alert2",
+              alert_type: "invalid_type",
+              thresholds: [{value: 2000}]
+            },
+            {
+              code: "duplicated",
+              alert_type: "wallet_balance_amount",
+              thresholds: [{value: 3000}]
+            }
+          ]
+        }
+      end
+
+      it "returns all the errors" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:code]).to eq "validation_errors"
+
+        expect(json[:error_details]).to match(
+          "1": match(params: params[:alerts][1], errors: include("value_is_invalid")),
+          "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
+        )
+      end
+    end
+  end
+
+  describe "DELETE /api/v1/customers/:external_id/wallets/:wallet_code/alerts" do
+    subject { delete_with_token(organization, "/api/v1/customers/#{customer_external_id}/wallets/#{wallet_code}/alerts") }
+
+    it_behaves_like "requires API permission", "alert", "write"
+    it_behaves_like "returns error if customer not found"
+    it_behaves_like "returns error if wallet not found"
+
+    it "soft deletes all alerts for the wallets" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    context "when there are no alerts" do
+      let(:alert) { nil }
+
+      it "returns ok" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+  end
 end
