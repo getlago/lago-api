@@ -16,9 +16,7 @@ module Mutations
       type Types::AppliedCoupons::Object
 
       def resolve(id:)
-        applied_coupon = AppliedCoupon.joins(coupon: :organization)
-          .where(organizations: {id: current_organization.id})
-          .find_by(id:)
+        applied_coupon = current_organization.applied_coupons.find_by(id:)
 
         result = ::AppliedCoupons::TerminateService.call(applied_coupon:)
 

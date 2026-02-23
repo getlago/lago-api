@@ -21,7 +21,7 @@ module Resolvers
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
       else
-        Event.where(organization_id: current_organization.id)
+        current_organization.events
           .order(created_at: :desc)
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)

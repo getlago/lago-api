@@ -6,8 +6,9 @@ RSpec.describe Mutations::AppliedCoupons::Terminate do
   let(:required_permission) { "coupons:detach" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
-  let(:applied_coupon) { create(:applied_coupon, coupon:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
 
   let(:mutation) do
     <<-GQL
