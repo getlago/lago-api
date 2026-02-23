@@ -199,7 +199,7 @@ module Events
         end
 
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+          @group_names ||= store.grouped_arel_columns.last
         end
       end
     end
