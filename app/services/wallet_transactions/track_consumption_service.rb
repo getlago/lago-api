@@ -4,15 +4,20 @@ module WalletTransactions
   class TrackConsumptionService < BaseService
     Result = BaseResult
 
-    def initialize(outbound_wallet_transaction:)
+    def initialize(outbound_wallet_transaction:, inbound_wallet_transaction_id: nil)
       @outbound_wallet_transaction = outbound_wallet_transaction
+      @inbound_wallet_transaction_id = inbound_wallet_transaction_id
 
       super
     end
 
     def call
       ActiveRecord::Base.transaction do
-        consume_by_priority
+        if inbound_wallet_transaction_id.present?
+          consume_from_specific_inbound
+        else
+          consume_by_priority
+        end
       end
 
       result
@@ -20,9 +25,23 @@ module WalletTransactions
 
     private
 
-    attr_reader :outbound_wallet_transaction
+    attr_reader :outbound_wallet_transaction, :inbound_wallet_transaction_id
 
     delegate :wallet, to: :outbound_wallet_transaction
+
+    def consume_from_specific_inbound
+      inbound = wallet.wallet_transactions.inbound.find(inbound_wallet_transaction_id)
+      amount_cents = outbound_wallet_transaction.amount_cents
+
+      if amount_cents > inbound.remaining_amount_cents
+        return result.single_validation_failure!(
+          field: :amount_cents,
+          error_code: "exceeds_remaining_transaction_amount"
+        )
+      end
+
+      create_consumption(inbound, amount_cents)
+    end
 
     def consume_by_priority
       amount_cents = outbound_wallet_transaction.amount_cents

@@ -369,19 +369,22 @@ class Invoice < ApplicationRecord
     # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note
     # as refund only if the wallet balance is greater or equal than the remaining paid amount
     if credit?
-      wallet_balance = associated_active_wallet&.balance_cents || 0
-      return [wallet_balance, remaining_paid_cents].min
+      return [prepaid_credit_fee.creditable_from_wallet_amount_cents, remaining_paid_cents].min
     end
 
     refundable_cents = [remaining_paid_cents, creditable_amount_cents].min
     refundable_cents.negative? ? 0 : refundable_cents
   end
 
+  # Credit invoices have a single credit-type fee linked to the wallet transaction
+  def prepaid_credit_fee
+    fees.first
+  end
+
   def associated_active_wallet
     return if !credit? || customer.wallets.active.empty?
 
-    wallet = fees.credit.first&.invoiceable&.wallet
-    wallet if wallet&.active?
+    prepaid_credit_invoice_wallet if prepaid_credit_invoice_wallet&.active?
   end
 
   def payment_dispute_losable?
@@ -490,6 +493,14 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  # Returns the wallet associated with this credit invoice's prepaid credit fee.
+  # Can be nil for historical invoices where the fee or wallet transaction is missing.
+  def prepaid_credit_invoice_wallet
+    return unless credit?
+
+    prepaid_credit_fee.prepaid_credit_fee_wallet
+  end
 
   # Checks that every charge has at least one fee without a filter (charge_filter_id IS NULL)
   # This "base fee" is created for charges without filters, or for unmatched events when filters exist
