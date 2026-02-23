@@ -103,8 +103,8 @@ class BillingEntity < ApplicationRecord
   validates :name, presence: true
   validates :timezone, timezone: true
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
-  # todo: options that should be implemented: 'credit_notes', 'payment_receipts'
-  validates :skip_automatic_pdf_generation, inclusion: {in: ['invoices']}
+  # todo: options that should be implemented: "credit_notes", "payment_receipts"
+  validates :skip_automatic_pdf_generation, inclusion: {in: ["invoices"]}
 
   validate :validate_email_settings
   validate :validate_einvoicing
@@ -153,7 +153,7 @@ class BillingEntity < ApplicationRecord
       )
   end
 
-  def skip_automatic_invoice_pdf_generation
+  def skip_automatic_invoice_pdf_generation?
     skip_automatic_pdf_generation.include?("invoices")
   end
 

@@ -96,7 +96,7 @@ module Api
             :subscription_invoice_issuing_date_anchor,
             :subscription_invoice_issuing_date_adjustment,
             :document_locale,
-            :skip_invoice_pdf
+            skip_automatic_pdf_generation: []
           ]
         )
       end
@@ -130,7 +130,7 @@ module Api
             :subscription_invoice_issuing_date_anchor,
             :subscription_invoice_issuing_date_adjustment,
             :document_locale,
-            :skip_invoice_pdf
+            skip_automatic_pdf_generation: []
           ],
           tax_codes: [],
           invoice_custom_section_codes: []

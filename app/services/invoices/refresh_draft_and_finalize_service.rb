@@ -41,7 +41,7 @@ module Invoices
         unless invoice.closed?
           SendWebhookJob.perform_later("invoice.created", invoice)
           Utils::ActivityLog.produce(invoice, "invoice.created")
-          GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless billing_entity.skip_invoice_pdf?
+          GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless billing_entity.skip_automatic_invoice_pdf_generation?
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)

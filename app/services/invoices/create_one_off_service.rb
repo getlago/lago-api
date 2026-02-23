@@ -63,7 +63,7 @@ module Invoices
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         SendWebhookJob.perform_later("invoice.one_off_created", invoice)
-        GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless customer.billing_entity.skip_automatic_invoice_pdf_generation
+        GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless billing_entity.skip_automatic_invoice_pdf_generation?
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
         Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:) unless skip_psp
@@ -105,8 +105,12 @@ module Invoices
       fees_result
     end
 
+    def billing_entity
+      @billing_entity ||= customer.billing_entity
+    end
+
     def should_deliver_email?
-      License.premium? && customer.billing_entity.email_settings.include?("invoice.finalized")
+      License.premium? && billing_entity.email_settings.include?("invoice.finalized")
     end
 
     def add_ons

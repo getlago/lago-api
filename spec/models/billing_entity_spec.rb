@@ -380,15 +380,15 @@ RSpec.describe BillingEntity do
     end
   end
 
-  describe "#skip_automatic_invoice_pdf_generation" do
+  describe "#skip_automatic_invoice_pdf_generation?" do
     it "returns true when skip_automatic_pdf_generation includes invoices" do
       billing_entity.skip_automatic_pdf_generation = ["invoices"]
-      expect(billing_entity.skip_automatic_invoice_pdf_generation).to be true
+      expect(billing_entity.skip_automatic_invoice_pdf_generation?).to be true
     end
 
     it "returns false when skip_automatic_pdf_generation is empty" do
       billing_entity.skip_automatic_pdf_generation = []
-      expect(billing_entity.skip_automatic_invoice_pdf_generation).to be false
+      expect(billing_entity.skip_automatic_invoice_pdf_generation?).to be false
     end
   end
 
