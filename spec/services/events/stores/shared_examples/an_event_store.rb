@@ -984,6 +984,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         before { create_events_for_filters }
 
         it "returns the last filtered event value" do
@@ -1047,6 +1049,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
         let(:grouped_by) { %w[region country] }
+
+        let(:charge_filter) { create(:charge_filter, charge:) }
 
         before { create_events_for_filters }
 

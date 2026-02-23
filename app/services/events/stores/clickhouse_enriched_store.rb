@@ -161,11 +161,30 @@ module Events
       end
 
       def last
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT decimal_value
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT 1
+          SQL
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_last
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+              events.decimal_value as value
+            FROM events
+            ORDER BY sorted_grouped_by, timestamp DESC
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def sum
