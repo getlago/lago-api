@@ -4,6 +4,7 @@ module Events
   module Stores
     class ClickhouseEnrichedStore < BaseStore
       include Events::Stores::Utils::QueryHelpers
+      include Events::Stores::Utils::ClickhouseSqlHelpers
 
       def events
         raise NotImplementedError
@@ -308,7 +309,25 @@ module Events
       end
 
       def weighted_sum(initial_value: 0)
-        raise NotImplementedError
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE,
+                initial_value: initial_value || 0
+              }
+            ]
+          )
+
+          connection.select_one(sql)
+        end
+
+        BigDecimal(result["aggregation"].presence || 0)
       end
 
       def grouped_weighted_sum(initial_values: [])
@@ -317,6 +336,13 @@ module Events
 
       def arel_table
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
+      end
+
+      def grouped_arel_columns
+        [
+          [arel_table[:sorted_grouped_by].as("grouped_by")],
+          "grouped_by"
+        ]
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
@@ -344,9 +370,12 @@ module Events
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
       end
 
-      def prepare_grouped_result(result)
+      def prepare_grouped_result(result, decimal: false)
         result.to_ary.map do |row|
-          row.symbolize_keys.tap { |r| r[:groups] = r[:groups].transform_values(&:presence) }
+          row.symbolize_keys.tap do |r|
+            r[:groups] = r[:groups].transform_values(&:presence)
+            r[:value] = decimal ? BigDecimal(r[:value].presence || 0) : r[:value]
+          end
         end
       end
     end

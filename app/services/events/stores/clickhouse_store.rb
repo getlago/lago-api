@@ -4,9 +4,7 @@ module Events
   module Stores
     class ClickhouseStore < BaseStore
       include Events::Stores::Utils::QueryHelpers
-
-      DECIMAL_SCALE = 26
-      DECIMAL_DATE_SCALE = 10
+      include Events::Stores::Utils::ClickhouseSqlHelpers
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do

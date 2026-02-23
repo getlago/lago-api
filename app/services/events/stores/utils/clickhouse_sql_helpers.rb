@@ -4,6 +4,9 @@ module Events
   module Stores
     module Utils
       module ClickhouseSqlHelpers
+        DECIMAL_SCALE = 26
+        DECIMAL_DATE_SCALE = 10
+
         # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period
         #       Dates are in customer timezone to make sure the duration is good
         def self.duration_ratio_sql(from, to, duration, timezone)

@@ -48,7 +48,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         unique_count
         grouped_unique_count
         sum_date_breakdown
-        weighted_sum
         weighted_sum_breakdown
         grouped_weighted_sum
       ]
@@ -68,7 +67,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         unique_count
         grouped_unique_count
         sum_date_breakdown
-        weighted_sum
         weighted_sum_breakdown
         grouped_weighted_sum
       ]
