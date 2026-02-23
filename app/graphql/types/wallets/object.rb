@@ -57,6 +57,8 @@ module Types
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :traceable, Boolean, null: false
+
       def recurring_transaction_rules
         object.recurring_transaction_rules.active
       end
