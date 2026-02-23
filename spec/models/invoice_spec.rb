@@ -2113,6 +2113,17 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#prepaid_credit_fee" do
+    let(:invoice) { create(:invoice, :credit) }
+    let(:fee) { create(:fee, fee_type: :credit, invoice:) }
+
+    before { fee }
+
+    it "returns the first fee of the invoice" do
+      expect(invoice.prepaid_credit_fee).to eq(fee)
+    end
+  end
+
   describe "#associated_active_wallet" do
     context "when invoice is not a credit" do
       let(:wallet) { create(:wallet) }

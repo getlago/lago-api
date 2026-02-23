@@ -727,6 +727,46 @@ RSpec.describe Fee do
           end
         end
       end
+
+      context "when invoiceable is nil (historical fee)" do
+        let(:invoice) { create(:invoice, invoice_type: :credit) }
+        let(:fee) { create(:fee, fee_type: :credit, amount_cents: 1000, invoice:, invoiceable: nil) }
+
+        it "returns 0" do
+          expect(subject).to eq(0)
+        end
+      end
+    end
+  end
+
+  describe "#prepaid_credit_fee_wallet" do
+    subject { fee.prepaid_credit_fee_wallet }
+
+    context "when fee is not credit" do
+      let(:fee) { create(:fee, fee_type: :subscription) }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+
+    context "when fee is credit" do
+      let(:wallet) { create(:wallet, customer: invoice.customer) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let(:invoice) { create(:invoice, invoice_type: :credit) }
+      let(:fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+
+      it "returns the wallet" do
+        expect(subject).to eq(wallet)
+      end
+
+      context "when invoiceable is nil (historical fee)" do
+        let(:fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: nil) }
+
+        it "returns nil" do
+          expect(subject).to be_nil
+        end
+      end
     end
   end
 
