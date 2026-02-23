@@ -136,6 +136,57 @@ module Events
         end
       end
 
+      def unique_count
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {decimal_date_scale: DECIMAL_DATE_SCALE}
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def unique_count_breakdown
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {decimal_date_scale: DECIMAL_DATE_SCALE}
+              ]
+            )
+          ).rows
+        end
+      end
+
+      def prorated_unique_count
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
+      end
+
       def max
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
@@ -343,6 +394,10 @@ module Events
           [arel_table[:sorted_grouped_by].as("grouped_by")],
           "grouped_by"
         ]
+      end
+
+      def operation_type_sql
+        "events_enriched_expanded.sorted_properties['operation_type']"
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
