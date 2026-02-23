@@ -558,7 +558,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
   # ==========================================================================
   # Graduated percentage charge model (with sum_agg)
   # ==========================================================================
-  context "with graduated_percentage charge" do
+  context "with graduated_percentage charge", :premium do
     let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
 
     let(:charge) do
@@ -784,7 +784,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
   # ==========================================================================
   # Complex case: all charge models combined on a single plan
   # ==========================================================================
-  context "with all charge models combined on a single plan" do
+  context "with all charge models combined on a single plan", :premium do
     let(:bm_standard) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
     let(:bm_graduated) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
     let(:bm_package) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
