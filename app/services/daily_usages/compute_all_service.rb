@@ -60,10 +60,10 @@ module DailyUsages
       each_organization do |organization|
         each_billing_entity(organization) do |billing_entity|
           each_customer_batch(billing_entity) do |customers|
-            customer_ids = customers.pluck(:id)
+            customer_ids = customers.select(:id)
             subscription_ids_with_daily_usage = DailyUsage.usage_date_in_timezone(timestamp.to_date - 1.day)
               .where(customer_id: customer_ids)
-              .pluck(:subscription_id)
+              .select(:subscription_id)
             Subscription.where(customer_id: customer_ids)
               .active
               .where.not(id: subscription_ids_with_daily_usage)
