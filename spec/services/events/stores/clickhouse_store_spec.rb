@@ -5,7 +5,7 @@ require "rails_helper"
 require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true} do
-  def create_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
+  def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
     Clickhouse::EventsEnriched.create!(
       transaction_id: transaction_id,
       organization_id: organization.id,
@@ -20,7 +20,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     )
   end
 
-  def create_enriched_event(timestamp:, value:, properties: {}, grouped_by: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
+  def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
     Clickhouse::EventsEnrichedExpanded.create!(
       transaction_id:,
       organization_id: organization.id,
