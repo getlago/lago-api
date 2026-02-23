@@ -122,7 +122,17 @@ module Events
       end
 
       def grouped_count
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              toDecimal32(count(), 0) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def max
@@ -137,7 +147,17 @@ module Events
       end
 
       def grouped_max
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              MAX(events.decimal_value) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def last
@@ -211,6 +231,12 @@ module Events
 
         map_fn = Arel::Nodes::NamedFunction.new("map", groups)
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
+      end
+
+      def prepare_grouped_result(result)
+        result.to_ary.map do |row|
+          row.symbolize_keys.tap { |r| r[:groups] = r[:groups].transform_values(&:presence) }
+        end
       end
     end
   end
