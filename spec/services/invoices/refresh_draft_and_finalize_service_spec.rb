@@ -178,8 +178,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
-    context "when billing entity has skip_invoice_pdf enabled" do
-      before { invoice.billing_entity.update!(skip_invoice_pdf: true) }
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { invoice.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
 
       it "does not enqueue GenerateDocumentsJob" do
         expect do

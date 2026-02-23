@@ -103,6 +103,8 @@ class BillingEntity < ApplicationRecord
   validates :name, presence: true
   validates :timezone, timezone: true
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
+  # todo: options that should be implemented: 'credit_notes', 'payment_receipts'
+  validates :skip_automatic_pdf_generation, inclusion: {in: ['invoices']}
 
   validate :validate_email_settings
   validate :validate_einvoicing
@@ -149,6 +151,10 @@ class BillingEntity < ApplicationRecord
         last_dunning_campaign_attempt: 0,
         last_dunning_campaign_attempt_at: nil
       )
+  end
+
+  def skip_automatic_invoice_pdf_generation
+    skip_automatic_pdf_generation.include?("invoices")
   end
 
   private
@@ -203,7 +209,7 @@ end
 #  logo                                         :string
 #  name                                         :string           not null
 #  net_payment_term                             :integer          default(0), not null
-#  skip_invoice_pdf                             :boolean          default(FALSE), not null
+#  skip_automatic_pdf_generation                :string           default([]), not null, is an Array
 #  state                                        :string
 #  subscription_invoice_issuing_date_adjustment :enum             default("align_with_finalization_date"), not null
 #  subscription_invoice_issuing_date_anchor     :enum             default("next_period_start"), not null

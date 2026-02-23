@@ -196,6 +196,15 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
         .to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { customer.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        expect { create_service.call }
+          .not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+    end
+
     it "produces an activity log" do
       invoice = described_class.call(sorted_usage_thresholds:, lifetime_usage:, timestamp:).invoice
 
