@@ -5,7 +5,7 @@ module PaymentProviders
     class HandleEventService < BaseService
       PAYMENT_ACTIONS = %w[paid_out failed cancelled customer_approval_denied charged_back].freeze
       REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
-      MANDATE_ACTIVE_ACTIONS = %w[active].freeze
+      MANDATE_CREATED_ACTIONS = %w[created].freeze
       MANDATE_CANCELLED_ACTIONS = %w[cancelled].freeze
 
       PAYMENT_SERVICE_CLASS_MAP = {
@@ -40,8 +40,8 @@ module PaymentProviders
               ).raise_if_error!
           end
         when "mandates"
-          if MANDATE_ACTIVE_ACTIONS.include?(event.action)
-            PaymentProviders::Gocardless::Webhooks::MandateActiveService.call(
+          if MANDATE_CREATED_ACTIONS.include?(event.action)
+            PaymentProviders::Gocardless::Webhooks::MandateCreatedService.call(
               payment_provider:,
               mandate_id: event.links.mandate
             ).raise_if_error!

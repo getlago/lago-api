@@ -84,19 +84,19 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
       end
     end
 
-    context "with mandate activation event" do
+    context "with mandate created event" do
       let(:event_json) do
-        path = Rails.root.join("spec/fixtures/gocardless/events_mandate_activation.json")
+        path = Rails.root.join("spec/fixtures/gocardless/events_mandate_created.json")
         JSON.parse(File.read(path))["events"].first.to_json
       end
 
-      it "routes the event to MandateActiveService" do
-        allow(PaymentProviders::Gocardless::Webhooks::MandateActiveService).to receive(:call)
+      it "routes the event to MandateCreatedService" do
+        allow(PaymentProviders::Gocardless::Webhooks::MandateCreatedService).to receive(:call)
           .and_return(service_result)
 
         event_service.call
 
-        expect(PaymentProviders::Gocardless::Webhooks::MandateActiveService).to have_received(:call)
+        expect(PaymentProviders::Gocardless::Webhooks::MandateCreatedService).to have_received(:call)
           .with(payment_provider:, mandate_id: "index_ID_123")
       end
     end
