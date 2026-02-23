@@ -294,5 +294,127 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         expect(next_subscription.reload).to be_canceled
       end
     end
+
+    context "when new subscription is payment gated" do
+      let(:params) do
+        {
+          name: subscription_name,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]
+        }
+      end
+
+      it "creates a new subscription in activating status" do
+        expect(result).to be_success
+        expect(result.subscription).to be_activating
+        expect(result.subscription.activating_at).to be_present
+        expect(result.subscription.started_at).to be_present
+        expect(result.subscription.activation_rules).to eq([{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+
+      it "does not terminate the current subscription" do
+        result
+        expect(subscription.reload).to be_active
+      end
+
+      it "enqueues BillSubscriptionJob with upgrading reason" do
+        expect { result }.to have_enqueued_job(BillSubscriptionJob)
+      end
+
+      it "schedules ActivationTimeoutJob" do
+        expect { result }.to have_enqueued_job(Subscriptions::ActivationTimeoutJob)
+      end
+
+      it "sends subscription.activating webhook" do
+        result
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.activating", result.subscription)
+      end
+
+      it "produces an activity log for subscription.activating" do
+        result
+        expect(Utils::ActivityLog).to have_produced("subscription.activating").with(result.subscription)
+      end
+
+      it "does not send subscription.started webhook" do
+        result
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.started", anything)
+      end
+
+      it "does not send subscription.terminated webhook for current subscription" do
+        result
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
+      end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:) }
+
+        before { fixed_charge }
+
+        it "creates fixed charge events" do
+          expect { result }.to change(FixedChargeEvent, :count).by(1)
+        end
+      end
+
+      context "when subscription is in trial period" do
+        let(:plan) { create(:plan, amount_cents: 100, organization:, trial_period: 10) }
+        let(:params) do
+          {
+            name: subscription_name,
+            activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]
+          }
+        end
+
+        it "upgrades immediately instead of payment gating" do
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+          expect(subscription.reload).to be_terminated
+        end
+      end
+    end
+
+    context "when activation_rules are inherited from current subscription" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 72}}]
+        )
+      end
+
+      it "inherits activation_rules from the current subscription" do
+        expect(result).to be_success
+        expect(result.subscription.activation_rules).to eq([{"type" => "payment", "config" => {"timeout_hours" => 72}}])
+      end
+    end
+
+    context "when activation_rules are overridden in params" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 72}}]
+        )
+      end
+      let(:params) do
+        {
+          name: subscription_name,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 24}}]
+        }
+      end
+
+      it "uses the overridden activation_rules" do
+        expect(result).to be_success
+        expect(result.subscription.activation_rules).to eq([{"type" => "payment", "config" => {"timeout_hours" => 24}}])
+      end
+    end
   end
 end

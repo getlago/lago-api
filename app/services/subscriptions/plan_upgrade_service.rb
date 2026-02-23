@@ -21,6 +21,51 @@ module Subscriptions
 
       new_subscription = new_subscription_with_overrides
 
+      if new_subscription.payment_gated? && !new_subscription.in_trial_period?
+        upgrade_with_payment_gating(new_subscription)
+      else
+        upgrade_immediately(new_subscription)
+      end
+
+      result.subscription = new_subscription
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
+    end
+
+    private
+
+    attr_reader :current_subscription, :plan, :params, :name
+
+    def upgrade_with_payment_gating(new_subscription)
+      ActiveRecord::Base.transaction do
+        cancel_pending_subscription if pending_subscription?
+
+        new_subscription.mark_as_activating!
+
+        EmitFixedChargeEventsService.call!(
+          subscriptions: [new_subscription],
+          timestamp: new_subscription.started_at + 1.second
+        )
+
+        after_commit do
+          BillSubscriptionJob.perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+            invoicing_reason: :upgrading
+          )
+          Subscriptions::ActivationTimeoutJob.set(
+            wait_until: new_subscription.activation_timeout_at
+          ).perform_later(new_subscription)
+          SendWebhookJob.perform_later("subscription.activating", new_subscription)
+          Utils::ActivityLog.produce(new_subscription, "subscription.activating")
+        end
+      end
+    end
+
+    def upgrade_immediately(new_subscription)
       ActiveRecord::Base.transaction do
         cancel_pending_subscription if pending_subscription?
 
@@ -47,18 +92,7 @@ module Subscriptions
 
         bill_subscriptions(billable_subscriptions) if billable_subscriptions.any?
       end
-
-      result.subscription = new_subscription
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      result.fail_with_error!(e)
     end
-
-    private
-
-    attr_reader :current_subscription, :plan, :params, :name
 
     def new_subscription_with_overrides
       new_subscription = Subscription.new(
@@ -70,7 +104,8 @@ module Subscriptions
         previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         billing_time: current_subscription.billing_time,
-        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
+        ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at,
+        activation_rules: params.key?(:activation_rules) ? params[:activation_rules] : current_subscription.activation_rules
       )
 
       if params.key?(:payment_method)

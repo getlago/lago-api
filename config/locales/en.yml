@@ -54,8 +54,10 @@ en:
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required
         only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable
         payment_request_is_already_succeeded: payment_request_is_already_succeeded
+        cannot_be_modified_while_activating: cannot_be_modified_while_activating
         present: value_must_be_blank
         required: relation_must_exist
+        required_for_activating: required_for_activating
         taken: value_already_exist
         too_long: value_is_too_long
         unsupported_value: unsupported_value

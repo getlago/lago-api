@@ -573,6 +573,50 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when subscription is activating" do
+      let(:invoicing_reason) { :subscription_starting }
+      let(:subscription) do
+        create(
+          :subscription,
+          :activating,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at
+        )
+      end
+
+      it "sets the invoice status to open" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.status).to eq("open")
+      end
+
+      it "triggers payment creation" do
+        invoice_service.call
+
+        expect(Invoices::Payments::CreateService).to have_received(:call_async)
+      end
+
+      it "does not send invoice.created webhook" do
+        expect { invoice_service.call }
+          .not_to have_enqueued_job(SendWebhookJob).with("invoice.created", anything)
+      end
+
+      it "does not generate documents" do
+        expect { invoice_service.call }
+          .not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+
+      it "does not track segment event" do
+        invoice_service.call
+
+        expect(SegmentTrackJob).not_to have_received(:perform_later)
+      end
+    end
+
     context "when an error occurs" do
       context "with a stale object error" do
         it "propagates the error" do

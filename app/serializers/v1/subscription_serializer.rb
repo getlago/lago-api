@@ -27,7 +27,9 @@ module V1
         current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
         current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
-        on_termination_invoice: model.on_termination_invoice
+        on_termination_invoice: model.on_termination_invoice,
+        activation_rules: model.activation_rules,
+        activating_at: model.activating_at&.iso8601
       }
 
       payload = payload.merge(customer:) if include?(:customer)

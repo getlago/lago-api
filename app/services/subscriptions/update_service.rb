@@ -51,6 +51,23 @@ module Subscriptions
           subscription.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
+        if params.key?(:activation_rules)
+          if subscription.activating?
+            if params[:activation_rules].present?
+              return result.single_validation_failure!(
+                field: :activation_rules,
+                error_code: "cannot_be_modified_while_activating"
+              )
+            end
+
+            handle_activation_rules_removal
+            result.subscription = subscription
+            return result
+          else
+            subscription.activation_rules = params[:activation_rules]
+          end
+        end
+
         subscription.plan = handle_plan_override.plan if params.key?(:plan_overrides)
 
         if subscription.starting_in_the_future? && params.key?(:subscription_at)
@@ -139,6 +156,52 @@ module Subscriptions
       return nil if params[:payment_method].blank? || params[:payment_method][:payment_method_id].blank?
 
       @payment_method = PaymentMethod.find_by(id: params[:payment_method][:payment_method_id], organization_id: subscription.organization_id)
+    end
+
+    def handle_activation_rules_removal
+      invoice = subscription.invoices.order(created_at: :desc).first
+
+      subscription.activation_rules = nil
+      subscription.activating_at = nil
+      subscription.active!
+
+      if invoice
+        finalize_activation_invoice(invoice)
+
+        after_commit do
+          Subscriptions::Payments::CancelService.call(invoice:)
+
+          SendWebhookJob.perform_later("invoice.created", invoice)
+          Utils::ActivityLog.produce(invoice, "invoice.created")
+          Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_finalized_email?)
+          Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+          Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+          Invoices::Payments::CreateService.call_async(invoice:)
+          Utils::SegmentTrack.invoice_created(invoice)
+        end
+      end
+
+      if subscription.previous_subscription.present?
+        Subscriptions::TerminateService.call(
+          subscription: subscription.previous_subscription,
+          upgrade: true
+        )
+      end
+
+      after_commit do
+        SendWebhookJob.perform_later("subscription.started", subscription)
+        Utils::ActivityLog.produce(subscription, "subscription.started")
+      end
+    end
+
+    def finalize_activation_invoice(invoice)
+      invoice.issuing_date = Time.current.in_time_zone(subscription.customer.applicable_timezone).to_date
+      invoice.payment_due_date = invoice.issuing_date + invoice.net_payment_term.days
+      Invoices::FinalizeService.call!(invoice:)
+    end
+
+    def should_deliver_finalized_email?
+      License.premium? && subscription.customer.billing_entity.email_settings.include?("invoice.finalized")
     end
   end
 end

@@ -19,7 +19,12 @@ module Subscriptions
           Time.zone.at(timestamp)
         )
         .find_each do |subscription|
-          subscription.mark_as_active!(Time.zone.at(timestamp))
+          if subscription.payment_gated? && !subscription.in_trial_period?
+            subscription.mark_as_activating!(Time.zone.at(timestamp))
+          else
+            subscription.mark_as_active!(Time.zone.at(timestamp))
+          end
+
           fixed_charge_timestamp = subscription.started_at + 1.second
 
           EmitFixedChargeEventsService.call!(
@@ -31,13 +36,26 @@ module Subscriptions
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
           end
 
-          SendWebhookJob.perform_later("subscription.started", subscription)
-          Utils::ActivityLog.produce(subscription, "subscription.started")
+          if subscription.activating?
+            BillSubscriptionJob.perform_later(
+              [subscription],
+              timestamp,
+              invoicing_reason: :subscription_starting
+            )
+            Subscriptions::ActivationTimeoutJob.set(
+              wait_until: subscription.activation_timeout_at
+            ).perform_later(subscription)
+            SendWebhookJob.perform_later("subscription.activating", subscription)
+            Utils::ActivityLog.produce(subscription, "subscription.activating")
+          else
+            SendWebhookJob.perform_later("subscription.started", subscription)
+            Utils::ActivityLog.produce(subscription, "subscription.started")
 
-          if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
-            BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)
-          elsif subscription.fixed_charges.pay_in_advance.any?
-            Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, fixed_charge_timestamp)
+            if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
+              BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)
+            elsif subscription.fixed_charges.pay_in_advance.any?
+              Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, fixed_charge_timestamp)
+            end
           end
         end
     end

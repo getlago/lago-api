@@ -78,6 +78,8 @@ module Subscriptions
     end
 
     def handle_subscription
+      cancel_existing_activating_subscription
+
       return upgrade_subscription if upgrade?
       return downgrade_subscription if downgrade?
 
@@ -118,7 +120,8 @@ module Subscriptions
         name:,
         external_id:,
         billing_time: billing_time || :calendar,
-        ending_at: params[:ending_at]
+        ending_at: params[:ending_at],
+        activation_rules: params[:activation_rules]
       )
 
       if params.key?(:payment_method)
@@ -130,11 +133,13 @@ module Subscriptions
         new_subscription.pending!
       elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
+      elsif new_subscription.payment_gated? && !new_subscription.in_trial_period?
+        new_subscription.mark_as_activating!
       else
         new_subscription.mark_as_active!
       end
 
-      if new_subscription.active?
+      if new_subscription.active? || new_subscription.activating?
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
           timestamp: new_subscription.started_at + 1.second
@@ -150,7 +155,20 @@ module Subscriptions
         end
       end
 
-      if should_be_billed_today?(new_subscription)
+      if new_subscription.activating?
+        after_commit do
+          BillSubscriptionJob.perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+            invoicing_reason: :subscription_starting
+          )
+          Subscriptions::ActivationTimeoutJob.set(
+            wait_until: new_subscription.activation_timeout_at
+          ).perform_later(new_subscription)
+          SendWebhookJob.perform_later("subscription.activating", new_subscription)
+          Utils::ActivityLog.produce(new_subscription, "subscription.activating")
+        end
+      elsif should_be_billed_today?(new_subscription)
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
@@ -229,6 +247,16 @@ module Subscriptions
 
     def cancel_pending_subscription
       current_subscription.next_subscription.mark_as_canceled!
+    end
+
+    def cancel_existing_activating_subscription
+      activating_sub = customer.subscriptions.activating.find_by(external_id:)
+      return unless activating_sub
+
+      invoice = activating_sub.invoices.order(created_at: :desc).first
+      return unless invoice
+
+      Subscriptions::ActivationFailedService.call(subscription: activating_sub, invoice:)
     end
 
     def subscription_type

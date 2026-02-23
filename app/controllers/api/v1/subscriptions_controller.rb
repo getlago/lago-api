@@ -119,8 +119,10 @@ module Api
         subscription = if query.count > 1
           if params[:status] == "pending"
             query.pending
+          elsif params[:status] == "activating"
+            query.activating
           else
-            query.active
+            query.active.or(query.activating)
           end
         else
           query
@@ -176,6 +178,7 @@ module Api
               :payment_method_type,
               :payment_method_id
             ],
+            activation_rules: [:type, config: [:timeout_hours]],
             plan_overrides:
           )
       end
@@ -195,6 +198,7 @@ module Api
             :payment_method_type,
             :payment_method_id
           ],
+          activation_rules: [:type, config: [:timeout_hours]],
           plan_overrides:
         )
       end

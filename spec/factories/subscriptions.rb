@@ -15,6 +15,12 @@ FactoryBot.define do
       started_at { nil }
     end
 
+    trait :activating do
+      status { :activating }
+      activating_at { Time.current }
+      activation_rules { [{"type" => "payment", "config" => {"timeout_hours" => 48}}] }
+    end
+
     trait :canceled do
       status { :canceled }
       canceled_at { Time.current }

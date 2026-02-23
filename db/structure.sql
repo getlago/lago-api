@@ -3033,7 +3033,9 @@ CREATE TABLE public.subscriptions (
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     progressive_billing_disabled boolean DEFAULT false NOT NULL,
-    last_received_event_on date
+    last_received_event_on date,
+    activation_rules jsonb,
+    activating_at timestamp(6) without time zone
 );
 
 
@@ -11470,6 +11472,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260222141621'),
 ('20260219102644'),
 ('20260219083335'),
 ('20260218102426'),

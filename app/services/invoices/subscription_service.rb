@@ -71,6 +71,10 @@ module Invoices
       if grace_period?
         SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
         Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+      elsif activating_subscription?
+        # For payment-gated subscriptions, only trigger payment creation.
+        # All other side effects are deferred until ActivationService runs after successful payment.
+        Invoices::Payments::CreateService.call_async(invoice:)
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
@@ -141,8 +145,13 @@ module Invoices
 
     def set_invoice_generated_status
       return invoice.status = :draft if grace_period?
+      return invoice.status = :open if activating_subscription?
 
       Invoices::TransitionToFinalStatusService.call(invoice:)
+    end
+
+    def activating_subscription?
+      subscriptions.any?(&:activating?)
     end
 
     def should_deliver_finalized_email?

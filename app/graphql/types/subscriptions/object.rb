@@ -48,6 +48,9 @@ module Types
       field :payment_method, Types::PaymentMethods::Object
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum
 
+      field :activating_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :activation_rules, [Types::Subscriptions::ActivationRuleObject], null: true
+
       def next_plan
         object.next_subscription&.plan
       end

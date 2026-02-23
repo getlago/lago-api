@@ -1211,5 +1211,104 @@ RSpec.describe Subscriptions::CreateService do
         end
       end
     end
+
+    context "when subscription is payment gated" do
+      let(:subscription_at) { Time.current }
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]
+        }
+      end
+
+      around { |test| freeze_time { test.run } }
+
+      it "creates an activating subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        subscription = result.subscription
+        expect(subscription).to be_activating
+        expect(subscription.activating_at).to be_present
+        expect(subscription.started_at).to be_present
+        expect(subscription.activation_rules).to eq([{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+
+      it "enqueues BillSubscriptionJob with subscription_starting reason" do
+        expect { create_service.call }.to have_enqueued_job(BillSubscriptionJob)
+      end
+
+      it "schedules ActivationTimeoutJob" do
+        expect { create_service.call }.to have_enqueued_job(Subscriptions::ActivationTimeoutJob)
+      end
+
+      it "sends subscription.activating webhook" do
+        create_service.call
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.activating", an_instance_of(Subscription))
+      end
+
+      it "produces an activity log for subscription.activating" do
+        subscription = create_service.call.subscription
+        expect(Utils::ActivityLog).to have_produced("subscription.activating").with(subscription)
+      end
+
+      it "does not send subscription.started webhook" do
+        create_service.call
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.started", anything)
+      end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:) }
+
+        before { fixed_charge }
+
+        it "creates fixed charge events for the activating subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_activating
+          expect(result.subscription.fixed_charge_events.count).to eq(1)
+        end
+      end
+
+      context "when subscription is in trial period" do
+        let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", trial_period: 10) }
+
+        it "creates an active subscription instead" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+        end
+      end
+    end
+
+    context "when an activating subscription with same external_id exists" do
+      let(:activating_subscription) do
+        create(:subscription, :activating, customer:, plan:, organization:, external_id:)
+      end
+      let(:activating_invoice) { create(:invoice, customer:, organization:) }
+
+      before do
+        activating_subscription
+        create(:invoice_subscription, invoice: activating_invoice, subscription: activating_subscription)
+        allow(Subscriptions::ActivationFailedService).to receive(:call).and_return(BaseResult.new)
+      end
+
+      it "cancels the existing activating subscription" do
+        create_service.call
+
+        expect(Subscriptions::ActivationFailedService).to have_received(:call).with(
+          subscription: activating_subscription,
+          invoice: activating_invoice
+        )
+      end
+    end
   end
 end

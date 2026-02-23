@@ -61,6 +61,8 @@ class SendWebhookJob < ApplicationJob
     "feature.deleted" => Webhooks::Features::DeletedService,
     "subscription.terminated" => Webhooks::Subscriptions::TerminatedService,
     "subscription.started" => Webhooks::Subscriptions::StartedService,
+    "subscription.activating" => Webhooks::Subscriptions::ActivatingService,
+    "subscription.activation_failed" => Webhooks::Subscriptions::ActivationFailedService,
     "subscription.termination_alert" => Webhooks::Subscriptions::TerminationAlertService,
     "subscription.trial_ended" => Webhooks::Subscriptions::TrialEndedService,
     "subscription.updated" => Webhooks::Subscriptions::UpdatedService,

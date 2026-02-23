@@ -72,6 +72,7 @@ module Invoices
     def schedule_post_processing_jobs(old_payment_status)
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
+        handle_payment_gated_subscription
         update_fees_payment_status
         if old_payment_status != params[:payment_status] && invoice.visible?
           deliver_webhook
@@ -95,6 +96,22 @@ module Invoices
 
     def valid_payment_status?(payment_status)
       Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
+    end
+
+    def handle_payment_gated_subscription
+      subscription = invoice.invoice_subscriptions.first&.subscription
+      return unless subscription&.payment_gated?
+
+      case params[:payment_status].to_sym
+      when :succeeded
+        if subscription.activating?
+          Subscriptions::ActivationService.call(subscription:, invoice:)
+        end
+      when :failed
+        if subscription.activating?
+          Subscriptions::ActivationFailedService.call(subscription:, invoice:)
+        end
+      end
     end
 
     def handle_prepaid_credits(payment_status)

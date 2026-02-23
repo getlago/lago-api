@@ -155,5 +155,61 @@ RSpec.describe Subscriptions::ActivateService, clickhouse: true do
           .to have_enqueued_job(Invoices::CreatePayInAdvanceFixedChargesJob).once
       end
     end
+
+    context "when pending subscription is payment gated" do
+      let(:plan) { create(:plan, pay_in_advance: true) }
+      let(:subscription) do
+        create(:subscription, :pending,
+          subscription_at: timestamp,
+          plan:,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+
+      before { subscription }
+
+      it "transitions to activating instead of active" do
+        activate_service.activate_all_pending
+        expect(subscription.reload).to be_activating
+        expect(subscription.activating_at).to be_present
+        expect(subscription.started_at).to be_present
+      end
+
+      it "enqueues BillSubscriptionJob with subscription_starting reason" do
+        expect { activate_service.activate_all_pending }.to have_enqueued_job(BillSubscriptionJob)
+      end
+
+      it "schedules ActivationTimeoutJob" do
+        expect { activate_service.activate_all_pending }.to have_enqueued_job(Subscriptions::ActivationTimeoutJob)
+      end
+
+      it "sends subscription.activating webhook" do
+        activate_service.activate_all_pending
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.activating", subscription)
+      end
+
+      it "does not send subscription.started webhook" do
+        activate_service.activate_all_pending
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.started", anything)
+      end
+
+      context "when plan has fixed charges" do
+        let(:fixed_charge) { create(:fixed_charge, plan:) }
+
+        before { fixed_charge }
+
+        it "creates fixed charge events" do
+          expect { activate_service.activate_all_pending }.to change(FixedChargeEvent, :count).by(1)
+        end
+      end
+
+      context "when subscription is in trial period" do
+        let(:plan) { create(:plan, pay_in_advance: true, trial_period: 10) }
+
+        it "transitions to active instead of activating" do
+          activate_service.activate_all_pending
+          expect(subscription.reload).to be_active
+        end
+      end
+    end
   end
 end

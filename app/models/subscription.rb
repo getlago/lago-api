@@ -41,12 +41,15 @@ class Subscription < ApplicationRecord
 
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create
+  validate :validate_activating_at
+  validate :validate_activation_rules
 
   STATUSES = [
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
+    :activating
   ].freeze
 
   BILLING_TIME = %i[
@@ -105,6 +108,39 @@ class Subscription < ApplicationRecord
   def mark_as_canceled!
     self.canceled_at ||= Time.current
     canceled!
+  end
+
+  def mark_as_activating!(timestamp = Time.current)
+    self.activating_at = Time.current
+    self.started_at ||= timestamp
+    self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
+    self.lifetime_usage.recalculate_invoiced_usage = true
+    activating!
+  end
+
+  def clear_activation!
+    self.started_at = nil
+    self.activating_at = nil
+  end
+
+  def payment_gated?
+    payment_activation_rule.present?
+  end
+
+  def payment_activation_rule
+    return nil if activation_rules.blank?
+
+    activation_rules.find { |rule| rule.with_indifferent_access["type"] == "payment" }
+  end
+
+  def activation_timeout_hours
+    payment_activation_rule&.with_indifferent_access&.dig("config", "timeout_hours") || 24
+  end
+
+  def activation_timeout_at
+    return nil unless activating_at
+
+    activating_at + activation_timeout_hours.hours
   end
 
   def upgraded?
@@ -167,6 +203,30 @@ class Subscription < ApplicationRecord
 
     # NOTE: We want unique external id per organization.
     errors.add(:external_id, :value_already_exist)
+  end
+
+  def validate_activating_at
+    if activating? && activating_at.blank?
+      errors.add(:activating_at, :required_for_activating)
+    end
+  end
+
+  def validate_activation_rules
+    return if activation_rules.blank?
+    return if activation_rules.is_a?(Array) && activation_rules.all? { |rule| valid_activation_rule?(rule) }
+
+    errors.add(:activation_rules, :invalid)
+  end
+
+  def valid_activation_rule?(rule)
+    return false unless rule.is_a?(Hash)
+
+    rule = rule.with_indifferent_access
+    return false unless rule["type"] == "payment"
+    return false unless rule["config"].is_a?(Hash)
+
+    timeout = rule.dig("config", "timeout_hours")
+    timeout.is_a?(Numeric) && timeout.positive?
   end
 
   def downgrade_plan_date
@@ -277,6 +337,8 @@ end
 # Database name: primary
 #
 #  id                           :uuid             not null, primary key
+#  activating_at                :datetime
+#  activation_rules             :jsonb
 #  billing_time                 :integer          default("calendar"), not null
 #  canceled_at                  :datetime
 #  ending_at                    :datetime
@@ -306,6 +368,7 @@ end
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
 #  index_subscriptions_on_last_received_event_on               (last_received_event_on)
+#  index_subscriptions_on_last_received_event_on_null          (id) WHERE (last_received_event_on IS NULL)
 #  index_subscriptions_on_organization_id                      (organization_id)
 #  index_subscriptions_on_payment_method_id                    (payment_method_id)
 #  index_subscriptions_on_plan_id                              (plan_id)

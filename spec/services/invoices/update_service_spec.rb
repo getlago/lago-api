@@ -312,5 +312,67 @@ RSpec.describe Invoices::UpdateService do
         expect(result.error.messages[:issuing_date]).to eq(["value_is_mandatory"])
       end
     end
+
+    context "when invoice is for a payment-gated subscription" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) do
+        create(:subscription, :activating, customer:, plan:, organization:)
+      end
+      let(:invoice) { create(:invoice, customer:, organization:) }
+
+      before do
+        create(:invoice_subscription, invoice:, subscription:)
+        allow(Subscriptions::ActivationService).to receive(:call).and_return(BaseResult.new)
+        allow(Subscriptions::ActivationFailedService).to receive(:call).and_return(BaseResult.new)
+      end
+
+      context "when payment_status is succeeded and subscription is activating" do
+        let(:update_args) { {payment_status: "succeeded"} }
+
+        it "calls ActivationService" do
+          result
+
+          expect(Subscriptions::ActivationService).to have_received(:call).with(subscription:, invoice:)
+        end
+
+        it "does not call ActivationFailedService" do
+          result
+
+          expect(Subscriptions::ActivationFailedService).not_to have_received(:call)
+        end
+      end
+
+      context "when payment_status is failed and subscription is activating" do
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "calls ActivationFailedService" do
+          result
+
+          expect(Subscriptions::ActivationFailedService).to have_received(:call).with(subscription:, invoice:)
+        end
+
+        it "does not call ActivationService" do
+          result
+
+          expect(Subscriptions::ActivationService).not_to have_received(:call)
+        end
+      end
+
+      context "when payment_status is succeeded and subscription is active" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, organization:,
+            activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+        end
+        let(:update_args) { {payment_status: "succeeded"} }
+
+        it "does not call ActivationService" do
+          result
+
+          expect(Subscriptions::ActivationService).not_to have_received(:call)
+        end
+      end
+    end
   end
 end

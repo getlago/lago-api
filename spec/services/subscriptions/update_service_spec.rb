@@ -817,6 +817,177 @@ RSpec.describe Subscriptions::UpdateService do
       end
     end
 
+    context "when subscription is activating" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:subscription) do
+        create(:subscription, :activating, customer:, plan:, organization:)
+      end
+      let(:invoice) { create(:invoice, customer:, organization:, status: :open) }
+
+      before do
+        create(:invoice_subscription, invoice:, subscription:)
+        allow(Invoices::FinalizeService).to receive(:call!).and_return(BaseResult.new)
+        allow(SendWebhookJob).to receive(:perform_later)
+        allow(Utils::ActivityLog).to receive(:produce)
+        allow(Invoices::GenerateDocumentsJob).to receive(:perform_later)
+        allow(Utils::SegmentTrack).to receive(:invoice_created)
+        allow(Subscriptions::Payments::CancelService).to receive(:call).and_return(BaseResult.new)
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+      end
+
+      context "when activation_rules are removed (set to nil)" do
+        let(:params) { {activation_rules: nil} }
+
+        it "transitions the subscription to active" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+        end
+
+        it "clears activating_at and activation_rules" do
+          result = update_service.call
+
+          expect(result.subscription.activating_at).to be_nil
+          expect(result.subscription.activation_rules).to be_nil
+        end
+
+        it "finalizes the invoice" do
+          update_service.call
+
+          expect(Invoices::FinalizeService).to have_received(:call!).with(invoice:)
+        end
+
+        it "cancels the gating payment" do
+          update_service.call
+
+          expect(Subscriptions::Payments::CancelService).to have_received(:call).with(invoice:)
+        end
+
+        it "triggers new payment creation" do
+          update_service.call
+
+          expect(Invoices::Payments::CreateService).to have_received(:call_async).with(invoice:)
+        end
+
+        it "sends subscription.started webhook" do
+          update_service.call
+
+          expect(SendWebhookJob).to have_received(:perform_later).with("subscription.started", subscription)
+        end
+
+        it "sends invoice.created webhook" do
+          update_service.call
+
+          expect(SendWebhookJob).to have_received(:perform_later).with("invoice.created", invoice)
+        end
+
+        it "produces activity logs" do
+          update_service.call
+
+          expect(Utils::ActivityLog).to have_produced("subscription.started").with(subscription)
+          expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+        end
+
+        it "generates documents" do
+          update_service.call
+
+          expect(Invoices::GenerateDocumentsJob).to have_received(:perform_later).with(invoice:, notify: false)
+        end
+
+        it "tracks the segment event" do
+          update_service.call
+
+          expect(Utils::SegmentTrack).to have_received(:invoice_created).with(invoice)
+        end
+
+        context "when there is a previous subscription" do
+          let(:previous_subscription) { create(:subscription, customer:, plan:, organization:) }
+          let(:subscription) do
+            create(:subscription, :activating, customer:, plan:, organization:, previous_subscription:)
+          end
+
+          before do
+            allow(Subscriptions::TerminateService).to receive(:call).and_return(BaseResult.new)
+          end
+
+          it "terminates the previous subscription" do
+            update_service.call
+
+            expect(Subscriptions::TerminateService).to have_received(:call).with(
+              subscription: previous_subscription,
+              upgrade: true
+            )
+          end
+        end
+      end
+
+      context "when activation_rules are removed (set to empty array)" do
+        let(:params) { {activation_rules: []} }
+
+        it "transitions the subscription to active" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription).to be_active
+        end
+      end
+
+      context "when activation_rules are modified (set to different value)" do
+        let(:params) do
+          {activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 24}}]}
+        end
+
+        it "returns a validation error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:activation_rules]).to include("cannot_be_modified_while_activating")
+        end
+
+        it "does not change the subscription status" do
+          update_service.call
+
+          expect(subscription.reload).to be_activating
+        end
+      end
+    end
+
+    context "when subscription is pending and activation_rules are updated" do
+      let(:subscription) do
+        create(:subscription, :pending,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+      let(:params) do
+        {activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 24}}]}
+      end
+
+      it "allows full modification" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.activation_rules).to eq([{"type" => "payment", "config" => {"timeout_hours" => 24}}])
+      end
+    end
+
+    context "when subscription is pending and activation_rules are removed" do
+      let(:subscription) do
+        create(:subscription, :pending,
+          activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+      let(:params) { {activation_rules: nil} }
+
+      it "allows removal" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.activation_rules).to be_nil
+      end
+    end
+
     context "with empty params" do
       let(:params) { {} }
 

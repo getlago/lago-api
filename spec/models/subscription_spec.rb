@@ -15,7 +15,8 @@ RSpec.describe Subscription do
         pending: 0,
         active: 1,
         terminated: 2,
-        canceled: 3
+        canceled: 3,
+        activating: 4
       )
       expect(subject).to define_enum_for(:billing_time).with_values(
         calendar: 0,
@@ -101,6 +102,87 @@ RSpec.describe Subscription do
         subject(:subscription) { build(:subscription, plan: create(:plan, :pay_in_advance)) }
 
         it { is_expected.to be_valid }
+      end
+    end
+
+    describe "activating_at validation" do
+      context "when status is activating and activating_at is blank" do
+        let(:subscription) { build(:subscription, status: :activating, activating_at: nil, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]) }
+
+        it "is invalid" do
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:activating_at]).to include("required_for_activating")
+        end
+      end
+
+      context "when status is activating and activating_at is present" do
+        let(:subscription) { build(:subscription, :activating) }
+
+        it "is valid" do
+          expect(subscription).to be_valid
+        end
+      end
+
+      context "when status is not activating and activating_at is blank" do
+        let(:subscription) { build(:subscription, status: :active) }
+
+        it "is valid" do
+          expect(subscription).to be_valid
+        end
+      end
+    end
+
+    describe "activation_rules validation" do
+      context "when activation_rules is nil" do
+        let(:subscription) { build(:subscription, activation_rules: nil) }
+
+        it "is valid" do
+          expect(subscription).to be_valid
+        end
+      end
+
+      context "when activation_rules is a valid array" do
+        let(:subscription) { build(:subscription, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]) }
+
+        it "is valid" do
+          expect(subscription).to be_valid
+        end
+      end
+
+      context "when activation_rules contains an invalid rule type" do
+        let(:subscription) { build(:subscription, activation_rules: [{"type" => "invalid", "config" => {"timeout_hours" => 48}}]) }
+
+        it "is invalid" do
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:activation_rules]).to include("value_is_invalid")
+        end
+      end
+
+      context "when activation_rules contains a rule without config" do
+        let(:subscription) { build(:subscription, activation_rules: [{"type" => "payment"}]) }
+
+        it "is invalid" do
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:activation_rules]).to include("value_is_invalid")
+        end
+      end
+
+      context "when activation_rules contains a rule with non-positive timeout_hours" do
+        let(:subscription) { build(:subscription, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 0}}]) }
+
+        it "is invalid" do
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:activation_rules]).to include("value_is_invalid")
+        end
+      end
+
+      context "when activation_rules is not an array" do
+        let(:subscription) { build(:subscription, activation_rules: "invalid") }
+
+        it "is invalid" do
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:activation_rules]).to include("value_is_invalid")
+        end
       end
     end
 
@@ -739,6 +821,140 @@ RSpec.describe Subscription do
       it "returns false" do
         expect(subscription.has_progressive_billing?).to be(false)
       end
+    end
+  end
+
+  describe "#payment_gated?" do
+    context "when subscription has a payment activation rule" do
+      let(:subscription) { build(:subscription, :activating) }
+
+      it "returns true" do
+        expect(subscription.payment_gated?).to be true
+      end
+    end
+
+    context "when subscription has no activation rules" do
+      let(:subscription) { build(:subscription, activation_rules: nil) }
+
+      it "returns false" do
+        expect(subscription.payment_gated?).to be false
+      end
+    end
+
+    context "when subscription has empty activation rules" do
+      let(:subscription) { build(:subscription, activation_rules: []) }
+
+      it "returns false" do
+        expect(subscription.payment_gated?).to be false
+      end
+    end
+  end
+
+  describe "#payment_activation_rule" do
+    context "when subscription has a payment activation rule" do
+      let(:activation_rules) { [{"type" => "payment", "config" => {"timeout_hours" => 48}}] }
+      let(:subscription) { build(:subscription, activation_rules:) }
+
+      it "returns the payment rule" do
+        expect(subscription.payment_activation_rule).to eq(activation_rules.first)
+      end
+    end
+
+    context "when subscription has no activation rules" do
+      let(:subscription) { build(:subscription, activation_rules: nil) }
+
+      it "returns nil" do
+        expect(subscription.payment_activation_rule).to be_nil
+      end
+    end
+
+    context "when subscription has empty activation rules" do
+      let(:subscription) { build(:subscription, activation_rules: []) }
+
+      it "returns nil" do
+        expect(subscription.payment_activation_rule).to be_nil
+      end
+    end
+  end
+
+  describe "#activation_timeout_hours" do
+    context "when subscription has a payment activation rule with timeout_hours" do
+      let(:subscription) { build(:subscription, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 72}}]) }
+
+      it "returns the configured timeout_hours" do
+        expect(subscription.activation_timeout_hours).to eq(72)
+      end
+    end
+
+    context "when subscription has no activation rules" do
+      let(:subscription) { build(:subscription, activation_rules: nil) }
+
+      it "returns the default of 24" do
+        expect(subscription.activation_timeout_hours).to eq(24)
+      end
+    end
+  end
+
+  describe "#activation_timeout_at" do
+    context "when activating_at is present" do
+      let(:activating_at) { Time.zone.parse("2026-01-15 10:00:00") }
+      let(:subscription) do
+        build(:subscription, activating_at:, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}])
+      end
+
+      it "returns activating_at plus timeout_hours" do
+        expect(subscription.activation_timeout_at).to eq(activating_at + 48.hours)
+      end
+    end
+
+    context "when activating_at is nil" do
+      let(:subscription) { build(:subscription, activating_at: nil) }
+
+      it "returns nil" do
+        expect(subscription.activation_timeout_at).to be_nil
+      end
+    end
+  end
+
+  describe "#mark_as_activating!" do
+    subject(:subscription) { create(:subscription, status: :pending, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]) }
+
+    it "changes the status to activating and sets activating_at" do
+      freeze_time do
+        expect { subscription.mark_as_activating! }
+          .to change(subscription, :status).from("pending").to("activating")
+
+        expect(subscription.activating_at).to be_present
+        expect(subscription.started_at).to be_present
+        expect(subscription.lifetime_usage).to be_present
+      end
+    end
+
+    context "with a previous subscription" do
+      subject(:subscription) { create(:subscription, status: :pending, previous_subscription:, activation_rules: [{"type" => "payment", "config" => {"timeout_hours" => 48}}]) }
+
+      let(:previous_subscription) { create(:subscription, :terminated) }
+      let(:lifetime_usage) { create(:lifetime_usage, subscription: previous_subscription) }
+
+      before { lifetime_usage }
+
+      it "changes the status to activating and transfers lifetime_usage" do
+        expect { subscription.mark_as_activating! }
+          .to change(subscription, :status).from("pending").to("activating")
+
+        expect(lifetime_usage.reload.subscription).to eq(subscription)
+      end
+    end
+  end
+
+  describe "#clear_activation!" do
+    let(:subscription) { create(:subscription, :activating) }
+
+    it "clears started_at and activating_at" do
+      subscription.clear_activation!
+
+      expect(subscription.started_at).to be_nil
+      expect(subscription.activating_at).to be_nil
     end
   end
 

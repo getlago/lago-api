@@ -15,6 +15,7 @@ module Types
       argument :plan_id, ID, required: true
       argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
 
+      argument :activation_rules, [Types::Subscriptions::ActivationRuleInput], required: false
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
