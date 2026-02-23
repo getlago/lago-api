@@ -216,11 +216,28 @@ module Events
       end
 
       def sum_precise_total_amount_cents
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[precise_total_amount_cents]), <<-SQL)
+            SELECT COALESCE(sum(events.precise_total_amount_cents), 0)
+            FROM events
+          SQL
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_sum_precise_total_amount_cents
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[precise_total_amount_cents]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              sum(events.precise_total_amount_cents) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
