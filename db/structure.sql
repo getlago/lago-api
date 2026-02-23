@@ -1853,7 +1853,7 @@ CREATE TABLE public.charges (
     regroup_paid_fees integer,
     parent_id uuid,
     organization_id uuid NOT NULL,
-    code character varying,
+    code character varying NOT NULL,
     accepts_target_wallet boolean DEFAULT false NOT NULL
 );
 
@@ -3982,7 +3982,7 @@ CREATE TABLE public.fixed_charges (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    code character varying
+    code character varying NOT NULL
 );
 
 
@@ -11508,6 +11508,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260105144123'),
 ('20251231162838'),
 ('20251230154408'),
+('20251229153734'),
+('20251229153718'),
 ('20251226145247'),
 ('20251224152737'),
 ('20251224152736'),

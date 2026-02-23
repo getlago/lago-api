@@ -20,6 +20,7 @@ RSpec.describe FixedCharge do
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
   it { is_expected.to validate_presence_of(:charge_model) }
+  it { is_expected.to validate_presence_of(:code) }
   it { is_expected.to validate_exclusion_of(:pay_in_advance).in_array([nil]) }
   it { is_expected.to validate_exclusion_of(:prorated).in_array([nil]) }
   it { is_expected.to validate_presence_of(:properties) }

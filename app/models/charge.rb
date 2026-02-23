@@ -47,9 +47,9 @@ class Charge < ApplicationRecord
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-  validates :charge_model, presence: true
+  validates :charge_model, :code, presence: true
 
-  validate :validate_code_unique, if: -> { code.present? }
+  validate :validate_code_unique
   validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
@@ -184,7 +184,7 @@ end
 #  accepts_target_wallet :boolean          default(FALSE), not null
 #  amount_currency       :string
 #  charge_model          :integer          default("standard"), not null
-#  code                  :string
+#  code                  :string           not null
 #  deleted_at            :datetime
 #  invoice_display_name  :string
 #  invoiceable           :boolean          default(TRUE), not null
