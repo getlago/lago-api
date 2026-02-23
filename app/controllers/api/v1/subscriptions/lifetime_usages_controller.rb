@@ -5,7 +5,7 @@ module Api
     module Subscriptions
       class LifetimeUsagesController < Api::BaseController
         def show
-          # TODO: should we consider statuses here?
+          # Note: lifetime usage is counted against all sub upgrades-downgrades
           lifetime_usage = current_organization.subscriptions
             .find_by(external_id: params[:subscription_external_id])&.lifetime_usage
 
