@@ -5559,6 +5559,7 @@ Organization Feature Flag Values
 enum FeatureFlagEnum {
   multiple_payment_methods
   postgres_enriched_events
+  wallet_traceability
 }
 
 type FeatureObject {
