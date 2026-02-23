@@ -15,6 +15,7 @@ class UsageFilters
 
   def self.init_from_params(params)
     group = params[:filter_by_group]
+    group = JSON.parse(group) if group.is_a?(String)
     group = group.to_unsafe_h if group.respond_to?(:to_unsafe_h)
 
     new(
