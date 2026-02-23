@@ -26,6 +26,8 @@ RSpec.describe Mutations::ApiKeys::Rotate do
   let(:expires_at) { generate(:future_date).iso8601 }
   let(:name) { Faker::Lorem.words.join(" ") }
 
+  include_context "with mocked security logger"
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
@@ -48,6 +50,21 @@ RSpec.describe Mutations::ApiKeys::Rotate do
       expect(api_key_response["name"]).to eq(name)
       expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
       expect(api_key_response["expiresAt"]).to be_nil
+    end
+
+    it "produces a security log" do
+      result
+      new_api_key = membership.organization.api_keys.order(:created_at).last
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "api_key",
+        log_event: "api_key.rotated",
+        resources: {
+          name: new_api_key.name,
+          value_ending: {deleted: api_key.value.last(4), added: new_api_key.value.last(4)}
+        }
+      )
     end
   end
 

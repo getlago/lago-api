@@ -27,6 +27,8 @@ RSpec.describe Mutations::ApiKeys::Update, :premium do
   let(:permissions) { api_key.permissions.merge("add_on" => ["read"]) }
   let(:name) { Faker::Lorem.words.join(" ") }
 
+  include_context "with mocked security logger"
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
@@ -43,6 +45,21 @@ RSpec.describe Mutations::ApiKeys::Update, :premium do
         expect(api_key_response["id"]).to eq(api_key.id)
         expect(api_key_response["name"]).to eq(name)
         expect(api_key_response["permissions"]).to eq(permissions)
+      end
+
+      it "produces a security log" do
+        result
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: membership.organization,
+          log_type: "api_key",
+          log_event: "api_key.updated",
+          resources: {
+            value_ending: api_key.value.last(4),
+            name: {deleted: api_key.name, added: name},
+            permissions: {deleted: %w[add_on:write]}
+          }
+        )
       end
     end
 

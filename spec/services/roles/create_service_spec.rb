@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Roles::CreateService do
+  include_context "with mocked security logger"
+
   describe "#call" do
     subject(:result) { described_class.call(organization:, code:, name:, description:, permissions:) }
 
@@ -32,6 +34,17 @@ RSpec.describe Roles::CreateService do
         )
       end
 
+      it "produces a security log" do
+        result
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "role",
+          log_event: "role.created",
+          resources: {role_code: "custom_role", permissions: %w[customers:view customers:create]}
+        )
+      end
+
       context "with invalid params" do
         let(:name) { nil }
 
@@ -42,6 +55,12 @@ RSpec.describe Roles::CreateService do
         it "returns validation error" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+
+        it "does not produce a security log" do
+          result
+
+          expect(security_logger).not_to have_received(:produce)
         end
       end
 
@@ -71,6 +90,12 @@ RSpec.describe Roles::CreateService do
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("premium_integration_missing")
       end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
+      end
     end
 
     context "without premium license" do
@@ -81,6 +106,12 @@ RSpec.describe Roles::CreateService do
       it "returns forbidden error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
   end

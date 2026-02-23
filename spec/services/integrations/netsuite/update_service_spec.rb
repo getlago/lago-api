@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Netsuite::UpdateService do
+  include_context "with mocked security logger"
+
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
@@ -62,6 +64,22 @@ RSpec.describe Integrations::Netsuite::UpdateService do
             result = service_call
 
             expect(result.integration).to be_a(Integrations::NetsuiteIntegration)
+          end
+
+          it "produces a security log" do
+            original_name = integration.name
+            service_call
+
+            expect(security_logger).to have_received(:produce).with(
+              organization:,
+              log_type: "integration",
+              log_event: "integration.updated",
+              resources: hash_including(
+                integration_name: name,
+                integration_type: "netsuite",
+                name: {deleted: original_name, added: name}
+              )
+            )
           end
 
           it "calls Integrations::Aggregator::SendRestletEndpointJob" do

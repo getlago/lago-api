@@ -2,7 +2,7 @@
 
 module Integrations
   module Xero
-    class UpdateService < BaseService
+    class UpdateService < Integrations::UpdateService
       def initialize(integration:, params:)
         @integration = integration
         @params = params

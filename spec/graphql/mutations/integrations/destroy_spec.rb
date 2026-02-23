@@ -3,6 +3,18 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Destroy do
+  subject(:result) do
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: membership.organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {input: {id: integration.id}}
+    )
+  end
+
+  include_context "with mocked security logger"
+
   let(:required_permission) { "organization:integrations:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -23,17 +35,18 @@ RSpec.describe Mutations::Integrations::Destroy do
   it_behaves_like "requires permission", "organization:integrations:delete"
 
   it "deletes an integration" do
-    expect do
-      execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {id: integration.id}
-        }
-      )
-    end.to change(::Integrations::BaseIntegration, :count).by(-1)
+    expect { result }.to change(::Integrations::BaseIntegration, :count).by(-1)
+  end
+
+  it "produces a security log" do
+    result
+
+    expect(security_logger).to have_received(:produce).with(
+      organization: membership.organization,
+      log_type: "integration",
+      log_event: "integration.deleted",
+      resources: {integration_name: integration.name, integration_type: "netsuite"}
+    )
   end
 
   context "when okta integration", :premium do
@@ -46,18 +59,19 @@ RSpec.describe Mutations::Integrations::Destroy do
     end
 
     it "deletes calling the okta destroy service" do
-      expect do
-        execute_graphql(
-          current_user: membership.user,
-          current_organization: membership.organization,
-          permissions: required_permission,
-          query: mutation,
-          variables: {
-            input: {id: integration.id}
-          }
-        )
-      end.to change(::Integrations::BaseIntegration, :count).by(-1)
+      expect { result }.to change(::Integrations::BaseIntegration, :count).by(-1)
       expect(::Integrations::Okta::DestroyService).to have_received(:call).with(integration:)
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "integration",
+        log_event: "integration.deleted",
+        resources: {integration_name: integration.name, integration_type: "okta"}
+      )
     end
   end
 end

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::RegisterUser do
+  include_context "with mocked security logger"
+
   before { create(:role, :admin) }
 
   let(:mutation) do
@@ -26,29 +28,46 @@ RSpec.describe Mutations::RegisterUser do
     GQL
   end
 
-  it "returns user, organization and membership" do
-    result = execute_graphql(
-      query: mutation,
-      variables: {
-        input: {
-          email: "foo@bar.com",
-          password: "ILoveLago",
-          organizationName: "FooBar"
+  context "with a valid new user" do
+    subject(:result) do
+      execute_graphql(
+        query: mutation,
+        variables: {
+          input: {
+            email: "foo@bar.com",
+            password: "ILoveLago",
+            organizationName: "FooBar"
+          }
         }
-      }
-    )
+      )
+    end
 
-    expect(result["data"]["registerUser"]["membership"]["id"]).to be_present
-    expect(result["data"]["registerUser"]["user"]["email"]).to eq("foo@bar.com")
-    expect(result["data"]["registerUser"]["organization"]["name"]).to eq("FooBar")
-    expect(result["data"]["registerUser"]["token"]).to be_present
+    it "returns user, organization and membership" do
+      aggregate_failures do
+        expect(result["data"]["registerUser"]["membership"]["id"]).to be_present
+        expect(result["data"]["registerUser"]["user"]["email"]).to eq("foo@bar.com")
+        expect(result["data"]["registerUser"]["organization"]["name"]).to eq("FooBar")
+        expect(result["data"]["registerUser"]["token"]).to be_present
+      end
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: Organization.last,
+        log_type: "user",
+        log_event: "user.signed_up",
+        user: User.last,
+        resources: {email: "foo@bar.com", roles: %w[admin]},
+        skip_organization_check: true
+      )
+    end
   end
 
   context "with already existing user" do
-    it "returns an error" do
-      user = create(:user)
-
-      result = execute_graphql(
+    subject(:result) do
+      execute_graphql(
         query: mutation,
         variables: {
           input: {
@@ -58,10 +77,16 @@ RSpec.describe Mutations::RegisterUser do
           }
         }
       )
+    end
 
-      expect_unprocessable_entity(result)
-      expect(result["errors"].first.dig("extensions", "details").keys).to include("email")
-      expect(result["errors"].first.dig("extensions", "details", "email")).to include("user_already_exists")
+    let(:user) { create(:user) }
+
+    it "returns an error" do
+      aggregate_failures do
+        expect_unprocessable_entity(result)
+        expect(result["errors"].first.dig("extensions", "details").keys).to include("email")
+        expect(result["errors"].first.dig("extensions", "details", "email")).to include("user_already_exists")
+      end
     end
   end
 end

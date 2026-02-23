@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Roles::DestroyService do
+  include_context "with mocked security logger"
+
   describe "#call" do
     subject(:result) { described_class.call(role:) }
 
@@ -18,6 +20,17 @@ RSpec.describe Roles::DestroyService do
         expect(result).to be_success
         expect(result.role).to eq(role)
       end
+
+      it "produces a security log" do
+        result
+
+        expect(security_logger).to have_received(:produce).with(
+          organization: organization,
+          log_type: "role",
+          log_event: "role.deleted",
+          resources: {role_code: role.code}
+        )
+      end
     end
 
     context "when role is nil" do
@@ -27,6 +40,12 @@ RSpec.describe Roles::DestroyService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("role_not_found")
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -41,6 +60,12 @@ RSpec.describe Roles::DestroyService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("predefined_role")
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
@@ -57,6 +82,12 @@ RSpec.describe Roles::DestroyService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("role_assigned_to_members")
+      end
+
+      it "does not produce a security log" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
       end
     end
 
