@@ -241,11 +241,66 @@ module Events
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
-        raise NotImplementedError
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+            "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
+          )
+        end
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT sum(events.prorated_value)
+            FROM events
+          SQL
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
-        raise NotImplementedError
+        ratio = if persisted_duration
+          persisted_duration.fdiv(period_duration)
+        else
+          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+            "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
+          )
+        end
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [arel_table[:sorted_grouped_by]] + [
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              sum(events.prorated_value) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def sum_date_breakdown
