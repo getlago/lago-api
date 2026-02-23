@@ -517,8 +517,7 @@ RSpec.describe CreditNotes::CreateService do
         credit_note = result.credit_note
         expect(credit_note.refund_amount_cents).to eq(1200)
         wallet_transaction = wallet.wallet_transactions.order(:created_at).last
-        # we're refunding 10_00 cents -> 10 euros, the rate of the wallet, 1 credit = 10 euros, so amount credits
-        # in the transaction is 1, while the "money" amount is 10
+        # we're refunding 12_00 cents -> 12 euros, the rate of the wallet is 10, 1 credit = 10 euros, so credit amount in the transaction is 1.2, while the money amount is 12
         expect(wallet_transaction.credit_amount).to eq(1.2)
         expect(wallet_transaction.amount).to eq(12)
         expect(wallet_transaction.transaction_status).to eq("voided")
