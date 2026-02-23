@@ -456,6 +456,10 @@ module Events
         "events_enriched_expanded.sorted_properties['operation_type']"
       end
 
+      def operation_type_sql
+        "events_enriched_expanded.sorted_properties['operation_type']"
+      end
+
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
         query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
         query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
