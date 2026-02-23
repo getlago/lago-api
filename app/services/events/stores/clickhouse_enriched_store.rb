@@ -188,11 +188,28 @@ module Events
       end
 
       def sum
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT sum(events.decimal_value)
+            FROM events
+          SQL
+
+          connection.select_value(sql) || 0
+        end
       end
 
       def grouped_sum
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              sum(events.decimal_value) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def sum_precise_total_amount_cents
