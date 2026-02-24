@@ -23,7 +23,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       charge_filter_id: charge_filter&.id,
       charge_filter_version: charge_filter&.updated_at,
       timestamp:,
-      properties:,
+      properties: properties.merge(billable_metric.field_name => value).compact,
       grouped_by: grouped_values,
       value:,
       decimal_value: value&.to_i&.to_d,
@@ -46,7 +46,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_charges_and_filters
         active_unique_property?
         grouped_unique_count
-        sum_date_breakdown
         weighted_sum_breakdown
         grouped_weighted_sum
       ]
@@ -64,7 +63,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         prorated_events_values
         active_unique_property?
         grouped_unique_count
-        sum_date_breakdown
         weighted_sum_breakdown
         grouped_weighted_sum
       ]

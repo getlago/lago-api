@@ -356,7 +356,33 @@ module Events
       end
 
       def sum_date_breakdown
-        raise NotImplementedError
+        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("events_enriched_expanded.timestamp", timezone)
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [
+              Arel::Nodes::NamedFunction.new(
+                "toDate",
+                [Arel::Nodes::SqlLiteral.new(date_field)]
+              ).as("day"),
+              arel_table[:decimal_value].as("property")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              events.day,
+              sum(events.property) AS day_sum
+            FROM events
+            GROUP BY events.day
+            ORDER BY events.day asc
+          SQL
+
+          connection.select_all(Arel.sql(sql)).rows.map do |row|
+            {date: row.first.to_date, value: row.last}
+          end
+        end
       end
 
       def weighted_sum(initial_value: 0)
