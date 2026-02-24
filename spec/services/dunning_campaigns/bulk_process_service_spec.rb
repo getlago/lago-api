@@ -481,6 +481,69 @@ RSpec.describe DunningCampaigns::BulkProcessService do
         end
       end
     end
+
+    context "when maximum attempts are reached" do
+      let(:dunning_campaign) do
+        create(
+          :dunning_campaign,
+          organization:,
+          max_attempts: 3,
+          days_between_attempts: 5
+        )
+      end
+
+      let(:dunning_campaign_threshold) do
+        create(
+          :dunning_campaign_threshold,
+          dunning_campaign:,
+          currency:,
+          amount_cents: 500
+        )
+      end
+
+      let(:customer) do
+        create :customer,
+          organization:,
+          billing_entity:,
+          currency:,
+          last_dunning_campaign_attempt: 3,
+          last_dunning_campaign_attempt_at:
+      end
+
+      before do
+        dunning_campaign_threshold
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+        create(:invoice, organization:, customer:, currency:, payment_overdue: true, total_amount_cents: 600)
+      end
+
+      context "when not enough days have passed since last attempt" do
+        let(:last_dunning_campaign_attempt_at) { 3.days.ago }
+
+        it "does not send the campaign finished webhook" do
+          result
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+
+        it "does not enqueue a process attempt job" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when enough days have passed since last attempt" do
+        let(:last_dunning_campaign_attempt_at) { 6.days.ago }
+
+        it "sends the campaign finished webhook" do
+          expect { result }.to have_enqueued_job(SendWebhookJob)
+            .with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+        end
+
+        it "does not enqueue a process attempt job" do
+          result
+          expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
+        end
+      end
+    end
   end
 
   it "does not queue jobs" do
