@@ -18,36 +18,27 @@ module DailyUsages
       diff = daily_usage.usage.deep_dup
       previous_usage = previous_daily_usage.usage
 
+      previous_charges_index = previous_usage["charges_usage"].index_by { |cu| cu["charge"]["lago_id"] }
+
       diff["charges_usage"].each do |current_charge_usage|
-        previous_charge_usage = previous_usage["charges_usage"].find { |cu| cu["charge"]["lago_id"] == current_charge_usage["charge"]["lago_id"] }
+        previous_charge_usage = previous_charges_index[current_charge_usage["charge"]["lago_id"]]
         next unless previous_charge_usage
 
         apply_diff(previous_charge_usage, current_charge_usage)
+        apply_filters_diff(previous_charge_usage, current_charge_usage)
 
-        current_charge_usage["filters"].each do |current_usage_filter|
-          previous_usage_filter = previous_charge_usage["filters"].find { |fu| fu["values"] == current_usage_filter["values"] }
-          next unless previous_usage_filter
-
-          apply_diff(previous_usage_filter, current_usage_filter)
-        end
-
+        previous_grouped_index = previous_charge_usage["grouped_usage"].index_by { |gu| gu["grouped_by"] }
         current_charge_usage["grouped_usage"].each do |current_grouped_usage|
-          previous_grouped_usage = previous_charge_usage["grouped_usage"].find { |gu| gu["grouped_by"] == current_grouped_usage["grouped_by"] }
+          previous_grouped_usage = previous_grouped_index[current_grouped_usage["grouped_by"]]
           next unless previous_grouped_usage
 
           apply_diff(previous_grouped_usage, current_grouped_usage)
-
-          current_grouped_usage["filters"].each do |current_usage_filter|
-            previous_usage_filter = previous_grouped_usage["filters"].find { |fu| fu["values"] == current_usage_filter["values"] }
-            next unless previous_usage_filter
-
-            apply_diff(previous_usage_filter, current_usage_filter)
-          end
+          apply_filters_diff(previous_grouped_usage, current_grouped_usage)
         end
       end
 
       diff["amount_cents"] = diff["charges_usage"].sum { |cu| cu["amount_cents"] }
-      diff["taxes_amount_cents"] -= previous_common_taxes(diff, previous_usage)
+      diff["taxes_amount_cents"] -= previous_common_taxes(diff, previous_usage, previous_charges_index)
       diff["total_amount_cents"] = diff["amount_cents"] + diff["taxes_amount_cents"]
 
       result.usage_diff = diff
@@ -66,16 +57,31 @@ module DailyUsages
         .find_by(usage_date: usage_date - 1.day)
     end
 
-    def previous_common_taxes(diff, previous_usage)
+    # Prorates previous taxes based on how much of the previous amount came from charges
+    # that still exist in the current snapshot. This avoids over-deducting taxes when charges
+    # are added or removed between snapshots.
+    #
+    # Example: previous had charges A(100) + B(200) = 300 with 30 in taxes.
+    # Current only has charge A. Common ratio = 100/300 = 1/3, so we deduct 10 (not 30).
+    def previous_common_taxes(diff, previous_usage, previous_charges_index)
       return previous_usage["taxes_amount_cents"] unless previous_usage["amount_cents"].positive?
 
-      common_charge_ids = diff["charges_usage"].map { |cu| cu["charge"]["lago_id"] }
-      previous_common_amount = previous_usage["charges_usage"]
-        .select { |cu| common_charge_ids.include?(cu["charge"]["lago_id"]) }
-        .sum { |cu| cu["amount_cents"] }
+      previous_common_amount = diff["charges_usage"].sum do |cu|
+        previous_charges_index.dig(cu["charge"]["lago_id"], "amount_cents") || 0
+      end
 
-      common_ratio = previous_common_amount.to_f / previous_usage["amount_cents"]
+      common_ratio = previous_common_amount.fdiv(previous_usage["amount_cents"])
       (previous_usage["taxes_amount_cents"] * common_ratio).round
+    end
+
+    def apply_filters_diff(previous_parent, current_parent)
+      previous_filters_index = previous_parent["filters"].index_by { |fu| fu["values"] }
+      current_parent["filters"].each do |current_filter|
+        previous_filter = previous_filters_index[current_filter["values"]]
+        next unless previous_filter
+
+        apply_diff(previous_filter, current_filter)
+      end
     end
 
     def apply_diff(previous_values, current_values)
