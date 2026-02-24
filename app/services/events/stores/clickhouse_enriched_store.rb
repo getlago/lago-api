@@ -145,7 +145,39 @@ module Events
       end
 
       def last_event
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value properties]), <<-SQL)
+            SELECT *
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT 1
+          SQL
+
+          attributes = connection.select_one(sql)
+          break if attributes.nil?
+
+          ::Clickhouse::EventsEnrichedExpanded.new(attributes)
+        end
+      end
+
+      def grouped_last_event
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value].as("property"), arel_table[:timestamp]],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+              events.timestamp,
+              property as value
+            FROM events
+            ORDER BY sorted_grouped_by, timestamp DESC
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def count
