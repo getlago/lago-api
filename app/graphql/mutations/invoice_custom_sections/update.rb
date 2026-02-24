@@ -16,7 +16,10 @@ module Mutations
       type Types::InvoiceCustomSections::Object
 
       def resolve(**args)
-        invoice_custom_section = ::InvoiceCustomSection.find(args.delete(:id))
+        invoice_custom_section = current_organization
+          .invoice_custom_sections
+          .find_by(id: args.delete(:id))
+
         result = ::InvoiceCustomSections::UpdateService.call(
           invoice_custom_section:, update_params: args.to_h
         )

@@ -3,10 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::AppliedCoupons::Terminate do
+  let(:required_permission) { "coupons:detach" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
-  let(:applied_coupon) { create(:applied_coupon, coupon:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
 
   let(:mutation) do
     <<-GQL
@@ -21,16 +23,13 @@ RSpec.describe Mutations::AppliedCoupons::Terminate do
   before { applied_coupon }
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "coupons:detach"
 
   it "terminates an applied coupon" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: "coupons:detach",
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {id: applied_coupon.id}
-      }
+      input: {id: applied_coupon.id}
     )
 
     data = result["data"]["terminateAppliedCoupon"]

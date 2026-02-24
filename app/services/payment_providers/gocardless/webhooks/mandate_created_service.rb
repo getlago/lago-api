@@ -3,7 +3,7 @@
 module PaymentProviders
   module Gocardless
     module Webhooks
-      class MandateActiveService < BaseService
+      class MandateCreatedService < BaseService
         Result = BaseResult[:payment_method]
 
         def initialize(payment_provider:, mandate_id:)

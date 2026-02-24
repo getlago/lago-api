@@ -30,6 +30,10 @@ class ApiKey < ApplicationRecord
   scope :non_expiring, -> { where(expires_at: nil) }
   scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
 
+  def flat_permissions
+    permissions.flat_map { |resource, modes| Array(modes).map { |mode| "#{resource}:#{mode}" } }.sort
+  end
+
   def permit?(resource, mode)
     return true unless organization.api_permissions_enabled?
 

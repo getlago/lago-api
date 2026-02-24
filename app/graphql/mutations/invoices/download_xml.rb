@@ -16,7 +16,7 @@ module Mutations
       type Types::Invoices::Object
 
       def resolve(id:)
-        invoice = Invoice.visible.find_by(id:, organization_id: current_organization.id)
+        invoice = current_organization.invoices.visible.find_by(id:)
         result = ::Invoices::GenerateXmlService.call(invoice:)
         result.success? ? result.invoice : result_error(result)
       end

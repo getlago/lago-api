@@ -61,6 +61,7 @@ class Organization < ApplicationRecord
   has_many :integrations, class_name: "Integrations::BaseIntegration"
   has_many :payment_methods
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
+  has_many :payment_receipts
   has_many :payment_requests
   has_many :taxes
   has_many :wallets

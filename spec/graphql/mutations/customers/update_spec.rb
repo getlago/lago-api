@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Customers::Update do
-  let(:required_permissions) { "customers:update" }
+  let(:required_permission) { "customers:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { create(:billing_entity, organization:) }
@@ -98,18 +98,15 @@ RSpec.describe Mutations::Customers::Update do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", %w[customers:update]
 
   it "updates a customer" do
     stripe_provider
 
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permissions,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input:
-      }
+      input:
     )
 
     result_data = result["data"]["updateCustomer"]
@@ -150,15 +147,11 @@ RSpec.describe Mutations::Customers::Update do
     end
 
     it "returns a third party error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permissions,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: input.merge(
-            providerCustomer: {providerCustomerId: "cus_invalid"}
-          )
-        }
+        input: input.merge(
+          providerCustomer: {providerCustomerId: "cus_invalid"}
+        )
       )
 
       expect(result["errors"].first["extensions"]["status"]).to eq(422)
@@ -168,18 +161,14 @@ RSpec.describe Mutations::Customers::Update do
 
   context "with premium feature", :premium do
     it "updates a customer" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: required_permissions,
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: {
-            id: customer.id,
-            externalId: SecureRandom.uuid,
-            name: "Updated customer",
-            timezone: "TZ_EUROPE_PARIS",
-            invoiceGracePeriod: 2
-          }
+        input: {
+          id: customer.id,
+          externalId: SecureRandom.uuid,
+          name: "Updated customer",
+          timezone: "TZ_EUROPE_PARIS",
+          invoiceGracePeriod: 2
         }
       )
 
@@ -192,16 +181,12 @@ RSpec.describe Mutations::Customers::Update do
 
   context "when user can update customers", :premium do
     it "updates a customer" do
-      result = execute_graphql(
-        current_user: membership.user,
-        permissions: %w[customers:update],
+      result = execute_query(
         query: mutation,
-        variables: {
-          input: input.merge({
-            invoiceGracePeriod: 2,
-            timezone: "TZ_EUROPE_PARIS"
-          })
-        }
+        input: input.merge({
+          invoiceGracePeriod: 2,
+          timezone: "TZ_EUROPE_PARIS"
+        })
       )
 
       result_data = result["data"]["updateCustomer"]

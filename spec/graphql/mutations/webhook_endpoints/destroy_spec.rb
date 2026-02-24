@@ -3,34 +3,48 @@
 require "rails_helper"
 
 RSpec.describe Mutations::WebhookEndpoints::Destroy do
-  let(:required_permission) { "developers:manage" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+  subject(:result) do
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query:,
+      variables: {input: {id: webhook_endpoint.id}}
+    )
+  end
 
-  let(:mutation) do
+  include_context "with mocked security logger"
+
+  let(:query) do
     <<-GQL
       mutation($input: DestroyWebhookEndpointInput!) {
         destroyWebhookEndpoint(input: $input) { id }
       }
     GQL
   end
-
-  before { webhook_endpoint }
+  let(:required_permission) { "developers:manage" }
+  let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+  let!(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:manage"
 
-  it "destroys a webhook_endpoint" do
-    expect do
-      execute_graphql(
-        current_user: membership.user,
-        current_organization: membership.organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {input: {id: webhook_endpoint.id}}
+  context "when webhook endpoint exists in the current organization" do
+    it "destroys the webhook endpoint" do
+      expect { result }.to change(WebhookEndpoint, :count).by(-1)
+    end
+
+    it "produces a security log" do
+      result
+
+      expect(security_logger).to have_received(:produce).with(
+        organization: organization,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.deleted",
+        resources: {webhook_url: webhook_endpoint.webhook_url, signature_algo: "jwt"}
       )
-    end.to change(WebhookEndpoint, :count).by(-1)
+    end
   end
 end

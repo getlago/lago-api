@@ -24,6 +24,8 @@ module Roles
         permissions:
       )
 
+      register_security_log(role)
+
       result.role = role
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -33,5 +35,14 @@ module Roles
     private
 
     attr_reader :organization, :code, :name, :description, :permissions
+
+    def register_security_log(role)
+      Utils::SecurityLog.produce(
+        organization: organization,
+        log_type: "role",
+        log_event: "role.created",
+        resources: {role_code: role.code, permissions: role.permissions}
+      )
+    end
   end
 end

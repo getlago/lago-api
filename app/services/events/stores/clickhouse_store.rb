@@ -3,6 +3,8 @@
 module Events
   module Stores
     class ClickhouseStore < BaseStore
+      include Events::Stores::Utils::QueryHelpers
+
       DECIMAL_SCALE = 26
       DECIMAL_DATE_SCALE = 10
 
@@ -663,14 +665,6 @@ module Events
         query
       end
 
-      def with_ctes(ctes, query)
-        <<-SQL
-          WITH #{ctes.map { |name, sql| "#{name} AS (#{sql})" }.join(",\n")}
-
-          #{query}
-        SQL
-      end
-
       def filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
@@ -777,6 +771,10 @@ module Events
           end,
           grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         ]
+      end
+
+      def operation_type_sql
+        "events_enriched.sorted_properties['operation_type']"
       end
     end
   end

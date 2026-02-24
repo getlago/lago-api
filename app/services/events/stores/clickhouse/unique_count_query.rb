@@ -284,7 +284,13 @@ module Events
 
         attr_reader :store
 
-        delegate :arel_table, :with_ctes, :charges_duration, :events_cte_queries, :grouped_arel_columns, to: :store
+        delegate :arel_table,
+          :with_ctes,
+          :charges_duration,
+          :events_cte_queries,
+          :grouped_arel_columns,
+          :operation_type_sql,
+          to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -297,7 +303,7 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new(operation_type_sql),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")
@@ -320,7 +326,7 @@ module Events
                 "coalesce",
                 [
                   Arel::Nodes::NamedFunction.new("NULLIF", [
-                    Arel::Nodes::SqlLiteral.new("events_enriched.sorted_properties['operation_type']"),
+                    Arel::Nodes::SqlLiteral.new(operation_type_sql),
                     Arel::Nodes::SqlLiteral.new("''")
                   ]),
                   Arel::Nodes::SqlLiteral.new("'add'")

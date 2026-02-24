@@ -18,6 +18,7 @@ module PasswordResets
       )
 
       PasswordResetMailer.with(password_reset:).requested.deliver_later
+      register_security_log
 
       result.id = password_reset.id
 
@@ -27,5 +28,17 @@ module PasswordResets
     private
 
     attr_reader :user
+
+    def register_security_log
+      user.memberships.active.each do |membership|
+        Utils::SecurityLog.produce(
+          organization: membership.organization,
+          log_type: "user",
+          log_event: "user.password_reset_requested",
+          user: user,
+          resources: {email: user.email}
+        )
+      end
+    end
   end
 end

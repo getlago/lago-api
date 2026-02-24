@@ -2,8 +2,9 @@
 
 module Integrations
   module Hubspot
-    class CreateService < BaseService
+    class CreateService < Integrations::CreateService
       attr_reader :params
+
       def initialize(params:)
         @params = params
 

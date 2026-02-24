@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::BillableMetrics::Update do
   let(:required_permission) { "billable_metrics:update" }
   let(:membership) { create(:membership) }
-  let(:billable_metric) { create(:weighted_sum_billable_metric, organization: membership.organization) }
+  let(:organization) { membership.organization }
+  let(:billable_metric) { create(:weighted_sum_billable_metric, organization:) }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateBillableMetricInput!) {
@@ -24,29 +25,26 @@ RSpec.describe Mutations::BillableMetrics::Update do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billable_metrics:update"
 
   it "updates a billable metric" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: billable_metric.id,
-          name: "New Metric",
-          code: "new_metric",
-          description: "New metric description",
-          aggregationType: "count_agg",
-          recurring: false,
-          weightedInterval: "seconds",
-          filters: [
-            {
-              key: "region",
-              values: %w[usa europe]
-            }
-          ]
-        }
+      input: {
+        id: billable_metric.id,
+        name: "New Metric",
+        code: "new_metric",
+        description: "New metric description",
+        aggregationType: "count_agg",
+        recurring: false,
+        weightedInterval: "seconds",
+        filters: [
+          {
+            key: "region",
+            values: %w[usa europe]
+          }
+        ]
       }
     )
 

@@ -55,8 +55,8 @@ module Utils
       @log_event = log_event
       @user_id = resolve_user_id(user)
       @api_key_id = api_key&.id
-      @resources = resources.to_h.transform_keys(&:to_s)
-      @device_info = device_info.to_h.transform_keys(&:to_s)
+      @resources = resources.to_h.stringify_keys
+      @device_info = (device_info || CurrentContext.device_info).to_h.stringify_keys
       @current_time = Time.current.iso8601[...-1]
       @log_id = SecureRandom.uuid
       @key = "#{@organization.id}--#{@log_id}"

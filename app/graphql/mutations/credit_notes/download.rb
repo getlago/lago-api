@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::CreditNotes::GeneratePdfService.call(
-          credit_note: context[:current_user].credit_notes.find_by(id: args[:id])
+          credit_note: current_organization.credit_notes.find_by(id: args[:id])
         )
 
         result.success? ? result.credit_note : result_error(result)

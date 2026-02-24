@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe Mutations::InvoiceCustomSections::Update do
   let(:required_permission) { "invoice_custom_sections:update" }
   let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
 
   let(:mutation) do
     <<~GQL
@@ -26,7 +27,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Update do
   it_behaves_like "requires permission", "invoice_custom_sections:update"
 
   context "when there is a invoice_custom_section" do
-    let(:invoice_custom_section) { create(:invoice_custom_section) }
+    let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
     before { invoice_custom_section }
 
@@ -59,7 +60,7 @@ RSpec.describe Mutations::InvoiceCustomSections::Update do
   end
 
   context "when updating to wrong values" do
-    let(:invoice_custom_section) { create(:invoice_custom_section) }
+    let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
     before { invoice_custom_section }
 

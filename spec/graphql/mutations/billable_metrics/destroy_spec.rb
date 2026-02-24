@@ -19,14 +19,13 @@ RSpec.describe Mutations::BillableMetrics::Destroy do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billable_metrics:delete"
 
   it "deletes a billable metric" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permission,
+    result = execute_query(
       query: mutation,
-      variables: {input: {id: billable_metric.id}}
+      input: {id: billable_metric.id}
     )
 
     data = result["data"]["destroyBillableMetric"]

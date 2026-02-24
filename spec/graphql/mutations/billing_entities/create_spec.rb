@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::Create, :premium do
+  include_context "with mocked security logger"
+
   let(:required_permission) { "billing_entities:create" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization) }
@@ -106,15 +108,17 @@ RSpec.describe Mutations::BillingEntities::Create, :premium do
   context "when the organization can create billing entities" do
     let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
 
-    it "creates a billing entity for the current organization" do
-      result = execute_graphql(
+    let!(:result) do
+      execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
         permissions: required_permission,
         query: mutation,
         variables: {input:}
       )
+    end
 
+    it "creates a billing entity for the current organization" do
       result_data = result["data"]["createBillingEntity"]
       expect(result_data["id"]).to be_present
       expect(result_data["code"]).to eq("NEW-0001")
@@ -141,28 +145,38 @@ RSpec.describe Mutations::BillingEntities::Create, :premium do
       expect(result_data["billingConfiguration"]).to be_nil
     end
 
-    context "with extra view permissions" do
-      let(:permissions) do
-        [required_permission].concat(%w[billing_entities:view])
-      end
+    it "produces a security log" do
+      expect(security_logger).to have_received(:produce).with(
+        organization: membership.organization,
+        log_type: "billing_entity",
+        log_event: "billing_entity.created",
+        resources: {billing_entity_name: "New entity", billing_entity_code: "NEW-0001"}
+      )
+    end
+  end
 
-      it "includes the email settings and billing configuration in the response" do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: membership.organization,
-          permissions:,
-          query: mutation,
-          variables: {input:}
-        )
+  context "when the organization can create billing entities with extra view permissions" do
+    let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
+    let(:permissions) { %w[billing_entities:create billing_entities:view] }
 
-        result_data = result["data"]["createBillingEntity"]
-        expect(result_data["emailSettings"]).to eq(["invoice_finalized", "credit_note_created"])
-        expect(result_data["billingConfiguration"]["invoiceFooter"]).to eq("invoice footer")
-        expect(result_data["billingConfiguration"]["documentLocale"]).to eq("es")
-        expect(result_data["billingConfiguration"]["invoiceGracePeriod"]).to eq(10)
-        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
-        expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
-      end
+    let!(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions:,
+        query: mutation,
+        variables: {input:}
+      )
+    end
+
+    it "includes the email settings and billing configuration in the response" do
+      result_data = result["data"]["createBillingEntity"]
+      expect(result_data["emailSettings"]).to eq(["invoice_finalized", "credit_note_created"])
+      expect(result_data["billingConfiguration"]["invoiceFooter"]).to eq("invoice footer")
+      expect(result_data["billingConfiguration"]["documentLocale"]).to eq("es")
+      expect(result_data["billingConfiguration"]["invoiceGracePeriod"]).to eq(10)
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAnchor"]).to eq("current_period_end")
+      expect(result_data["billingConfiguration"]["subscriptionInvoiceIssuingDateAdjustment"]).to eq("keep_anchor")
     end
   end
 end

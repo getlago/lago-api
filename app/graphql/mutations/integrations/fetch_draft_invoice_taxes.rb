@@ -15,10 +15,7 @@ module Mutations
       type Types::Integrations::TaxObjects::FeeObject.collection_type
 
       def resolve(**args)
-        customer = Customer.find_by(
-          id: args[:customer_id],
-          organization_id: current_organization.id
-        )
+        customer = current_organization.customers.find_by(id: args[:customer_id])
 
         result = ::Integrations::Aggregator::Taxes::Invoices::CreateDraftService.new(
           invoice: invoice(customer, args),

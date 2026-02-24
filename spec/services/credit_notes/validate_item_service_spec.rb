@@ -169,6 +169,28 @@ RSpec.describe CreditNotes::ValidateItemService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:amount_cents]).to eq(["higher_than_wallet_balance"])
       end
+
+      context "with traceable wallet" do
+        let(:wallet) { create(:wallet, customer:, balance_cents: 2000, traceable: true) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, remaining_amount_cents: 500) }
+        let(:fee) { create(:fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000) }
+
+        it "allows offsetting up to remaining amount" do
+          invoice.update!(invoice_type: :credit, total_amount_cents: 1000, payment_status: :succeeded)
+          item.amount_cents = 500
+
+          expect(validator).to be_valid
+        end
+
+        it "rejects amount exceeding remaining amount" do
+          invoice.update!(invoice_type: :credit, total_amount_cents: 1000, payment_status: :succeeded)
+          item.amount_cents = 700
+
+          expect(validator).not_to be_valid
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:amount_cents]).to eq(["higher_than_wallet_balance"])
+        end
+      end
     end
   end
 end
