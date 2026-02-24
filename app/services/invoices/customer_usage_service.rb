@@ -28,10 +28,11 @@ module Invoices
       @max_timestamp = max_timestamp
     end
 
-    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true, calculate_projected_usage: false)
+    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
+      calculate_projected_usage: false, usage_filters: UsageFilters::NONE)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -48,6 +49,7 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
       return result.not_allowed_failure!(code: "full_usage_not_allowed") if usage_filters.full_usage && !querying_full_usage_allowed
+      return result.not_found_failure!(resource: "charge") if charges.empty? && usage_filters.has_charge_filter?
 
       result.usage = compute_usage
       result.invoice = invoice
@@ -64,6 +66,22 @@ module Invoices
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
+
+    def charges
+      return @charges if defined?(@charges)
+
+      charges = subscription
+        .plan
+        .charges
+        .joins(:billable_metric)
+        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+      if usage_filters.filter_by_charge_id.present?
+        charges = charges.where(id: usage_filters.filter_by_charge_id)
+      elsif usage_filters.filter_by_charge_code.present?
+        charges = charges.where(code: usage_filters.filter_by_charge_code)
+      end
+      @charges = charges
+    end
 
     # NOTE: Since computing customer usage could take some time as it as to
     #       loop over a lot of records in database, the result is stored in a cache store.
@@ -94,21 +112,9 @@ module Invoices
 
     def compute_charge_fees
       fees = []
-
       filters = event_filters(subscription, boundaries).charges
-
-      charges = subscription
-        .plan
-        .charges
-        .joins(:billable_metric)
-        .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
-      if usage_filters.filter_by_charge.present?
-        charges = charges.where(id: usage_filters.filter_by_charge.id)
-      end
-
       charges.find_each { |c| fees += charge_usage(c, filters[c.id] || []) }
-
-      return fees if usage_filters.filter_by_charge
+      return fees if usage_filters.has_charge_filter?
 
       fees.sort_by { |f| f.billable_metric.name.downcase }
     end
@@ -236,7 +242,7 @@ module Invoices
     end
 
     def querying_full_usage_allowed
-      any_filter_present = usage_filters.filter_by_charge.present? || usage_filters.filter_by_group.present?
+      any_filter_present = usage_filters.has_charge_filter? || usage_filters.filter_by_group.present?
       subscription_has_prorated_charges = subscription.plan.charges.where(prorated: true).exists?
 
       # full usage is only allowed for subscriptions without prorated charges

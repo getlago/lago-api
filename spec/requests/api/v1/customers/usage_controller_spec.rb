@@ -125,6 +125,192 @@ RSpec.describe Api::V1::Customers::UsageController do
       end
     end
 
+    context "with charge and group filtering" do
+      let(:metric_a) { create(:sum_billable_metric, organization:, field_name: "units") }
+      let(:metric_b) { create(:sum_billable_metric, organization:, field_name: "units") }
+
+      let(:charge_a) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          billable_metric: metric_a,
+          organization:,
+          properties: {amount: "10", pricing_group_keys: ["cloud"]}
+        )
+      end
+
+      let(:charge_b) do
+        create(:standard_charge, plan: subscription.plan, billable_metric: metric_b, organization:, properties: {amount: "20"})
+      end
+
+      let(:charge) { nil }
+
+      before do
+        charge_a
+        charge_b
+
+        # Previous billing period events
+        create(:event, organization:, customer:, subscription:, code: metric_a.code,
+          timestamp: subscription.started_at + 1.day, properties: {cloud: "aws", units: 5})
+        create(:event, organization:, customer:, subscription:, code: metric_a.code,
+          timestamp: subscription.started_at + 1.day, properties: {cloud: "gcp", units: 7})
+        create(:event, organization:, customer:, subscription:, code: metric_b.code,
+          timestamp: subscription.started_at + 1.day, properties: {units: 3})
+
+        # Current billing period events
+        create(:event, organization:, customer:, subscription:, code: metric_a.code,
+          timestamp: Time.zone.now, properties: {cloud: "aws", units: 4})
+        create(:event, organization:, customer:, subscription:, code: metric_a.code,
+          timestamp: Time.zone.now, properties: {cloud: "aws", units: 4})
+        create(:event, organization:, customer:, subscription:, code: metric_a.code,
+          timestamp: Time.zone.now, properties: {cloud: "gcp", units: 6})
+        create(:event, organization:, customer:, subscription:, code: metric_b.code,
+          timestamp: Time.zone.now, properties: {units: 2})
+      end
+
+      context "when filter_by_charge_code is provided" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_charge_code: charge_a.code, apply_taxes: false} }
+
+        it "returns only the filtered charge with current period usage" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+          charge_usage = json[:customer_usage][:charges_usage].first
+          expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+          # Current period only: aws(4+4) + gcp(6) = 14 units
+          expect(charge_usage[:units]).to eq("14.0")
+          expect(charge_usage[:amount_cents]).to eq(14_000)
+        end
+      end
+
+      context "when filter_by_charge_code does not match any charge" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_charge_code: "nonexistent"} }
+
+        it "returns not found" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+
+      context "when filter_by_charge_code belongs to another organization" do
+        let(:other_charge) { create(:standard_charge) }
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_charge_code: other_charge.code} }
+
+        it "returns not found" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+
+      context "when filter_by_charge_id is provided" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_charge_id: charge_a.id, apply_taxes: false} }
+
+        it "returns only the filtered charge with current period usage" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+          charge_usage = json[:customer_usage][:charges_usage].first
+          expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+          expect(charge_usage[:units]).to eq("14.0")
+          expect(charge_usage[:amount_cents]).to eq(14_000)
+        end
+      end
+
+      context "when filter_by_charge_id does not match any charge" do
+        let(:params) { {external_subscription_id: subscription.external_id, filter_by_charge_id: SecureRandom.uuid} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
+
+      context "when full_usage is true without filter" do
+        let(:params) { {external_subscription_id: subscription.external_id, full_usage: true} }
+
+        it "returns method not allowed" do
+          subject
+
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json[:code]).to eq("full_usage_not_allowed")
+        end
+      end
+
+      context "when full_usage is true with filter_by_charge" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            filter_by_charge_code: charge_a.code,
+            full_usage: true,
+            apply_taxes: false
+          }
+        end
+
+        it "returns usage aggregated from subscription start" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_usage][:charges_usage].count).to eq(1)
+
+          charge_usage = json[:customer_usage][:charges_usage].first
+          expect(charge_usage[:billable_metric][:code]).to eq(metric_a.code)
+          # All periods: aws(5+4+4) + gcp(7+6) = 26 units
+          expect(charge_usage[:units]).to eq("26.0")
+          expect(charge_usage[:amount_cents]).to eq(26_000)
+        end
+      end
+
+      context "when filter_by_group is provided" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            filter_by_group: {cloud: "aws"},
+            apply_taxes: false
+          }
+        end
+
+        it "returns only usage matching the group filter for current period" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          charge_usage = json[:customer_usage][:charges_usage].find { |c| c[:billable_metric][:code] == metric_a.code }
+          # Current period, cloud=aws only: 4 + 4 = 8 units
+          expect(charge_usage[:units]).to eq("8.0")
+          expect(charge_usage[:amount_cents]).to eq(8_000)
+        end
+      end
+
+      context "when filter_by_group is provided with full_usage" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            filter_by_group: {cloud: "aws"},
+            full_usage: true,
+            apply_taxes: false
+          }
+        end
+
+        it "returns group-filtered usage aggregated from subscription start" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          charge_usage = json[:customer_usage][:charges_usage].find { |c| c[:billable_metric][:code] == metric_a.code }
+          # All periods, cloud=aws only: 5 + 4 + 4 = 13 units
+          expect(charge_usage[:units]).to eq("13.0")
+          expect(charge_usage[:amount_cents]).to eq(13_000)
+        end
+      end
+    end
+
     context "with filters" do
       let(:filter_metric) { create(:billable_metric, aggregation_type: "count_agg", organization:) }
       let(:billable_metric_filter) do
