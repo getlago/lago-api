@@ -122,7 +122,17 @@ module Events
       end
 
       def grouped_count
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value], select: [arel_table[:sorted_grouped_by]]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              toDecimal32(count(), 0) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def max
@@ -137,23 +147,72 @@ module Events
       end
 
       def grouped_max
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(
+            deduplicated_columns: %w[decimal_value],
+            select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
+          ), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              MAX(events.decimal_value) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def last
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT decimal_value
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT 1
+          SQL
+
+          connection.select_value(sql)
+        end
       end
 
       def grouped_last
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              DISTINCT ON (sorted_grouped_by) sorted_grouped_by as groups,
+              events.decimal_value as value
+            FROM events
+            ORDER BY sorted_grouped_by, timestamp DESC
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def sum
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT sum(events.decimal_value)
+            FROM events
+          SQL
+
+          connection.select_value(sql) || 0
+        end
       end
 
       def grouped_sum
-        raise NotImplementedError
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+            SELECT
+              sorted_grouped_by as groups,
+              sum(events.decimal_value) as value
+            FROM events
+            GROUP BY sorted_grouped_by
+          SQL
+
+          prepare_grouped_result(connection.select_all(sql))
+        end
       end
 
       def sum_precise_total_amount_cents
@@ -204,13 +263,19 @@ module Events
 
       def apply_arel_grouped_by_values(query)
         # NOTE: grouped_by is populated from a sorted Map(String, String) converted into a String
-        #       to make it comparable, we need to sort the group keys and replace nil values with "<nil>" string
+        #       to make it comparable, we need to sort the group keys and replace nil values with empty strings
         groups = grouped_by_values
           .sort_by { |key, _| key }
           .flat_map { |k, v| [Arel::Nodes.build_quoted(k), Arel::Nodes.build_quoted(v.presence || "")] }
 
         map_fn = Arel::Nodes::NamedFunction.new("map", groups)
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
+      end
+
+      def prepare_grouped_result(result)
+        result.to_ary.map do |row|
+          row.symbolize_keys.tap { |r| r[:groups] = r[:groups].transform_values(&:presence) }
+        end
       end
     end
   end

@@ -45,15 +45,9 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_codes
         distinct_charges_and_filters
         active_unique_property?
-        grouped_count
-        grouped_max
-        last
-        grouped_last
         unique_count
         grouped_unique_count
-        sum
         sum_date_breakdown
-        grouped_sum
         sum_precise_total_amount_cents
         grouped_sum_precise_total_amount_cents
         prorated_sum
@@ -75,15 +69,9 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_charges_and_filters
         prorated_events_values
         active_unique_property?
-        grouped_count
-        grouped_max
-        last
-        grouped_last
         unique_count
         grouped_unique_count
-        sum
         sum_date_breakdown
-        grouped_sum
         sum_precise_total_amount_cents
         grouped_sum_precise_total_amount_cents
         prorated_sum
