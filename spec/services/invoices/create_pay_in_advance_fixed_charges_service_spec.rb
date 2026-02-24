@@ -121,6 +121,16 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end.to have_enqueued_job(Invoices::GenerateDocumentsJob).with(hash_including(notify: false))
     end
 
+    context "when billing entity skips automatic invoice pdf generation" do
+      before { billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+      it "does not enqueue GenerateDocumentsJob" do
+        expect do
+          invoice_service.call
+        end.not_to have_enqueued_job(Invoices::GenerateDocumentsJob)
+      end
+    end
+
     context "when subscription is not active" do
       let(:subscription) { create(:subscription, customer:, plan:, status: :pending) }
 
