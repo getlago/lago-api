@@ -12816,6 +12816,7 @@ type Wallet {
   skipInvoiceCustomSections: Boolean
   status: WalletStatusEnum!
   terminatedAt: ISO8601DateTime
+  traceable: Boolean!
   updatedAt: ISO8601DateTime!
 }
 

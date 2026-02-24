@@ -50,6 +50,8 @@ RSpec.describe Types::Wallets::Object do
 
     expect(subject).to have_field(:metadata).of_type("[ItemMetadata!]")
 
+    expect(subject).to have_field(:traceable).of_type("Boolean!")
+
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:expiration_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:terminated_at).of_type("ISO8601DateTime")
