@@ -47,7 +47,7 @@ RSpec.describe Queries::WebhooksQueryFiltersContract do
 
         it "is invalid" do
           expect(result.success?).to be(false)
-          expect(result.errors.to_h).to include({statuses: {1 => ["must be one of: pending, succeeded, failed"]}})
+          expect(result.errors.to_h).to include({statuses: {1 => ["must be one of: pending, succeeded, failed, retrying"]}})
         end
       end
     end
@@ -77,7 +77,7 @@ RSpec.describe Queries::WebhooksQueryFiltersContract do
 
         it "is invalid" do
           expect(result.success?).to be(false)
-          expect(result.errors.to_h).to include({event_types: {1 => ["must be one of: #{WebhookEndpoint.event_types.join(", ")}"]}})
+          expect(result.errors.to_h).to include({event_types: {1 => ["must be one of: #{WebhookEndpoint::WEBHOOK_EVENT_TYPES.join(", ")}"]}})
         end
       end
     end

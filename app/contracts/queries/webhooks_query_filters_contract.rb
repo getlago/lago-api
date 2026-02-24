@@ -17,7 +17,7 @@ module Queries
       end
 
       optional(:event_types).maybe do
-        array(:string, included_in?: WebhookEndpoint.event_types)
+        array(:string, included_in?: WebhookEndpoint::WEBHOOK_EVENT_TYPES)
       end
 
       optional(:http_statuses).maybe(:array) do

@@ -23,6 +23,18 @@ FactoryBot.define do
       last_retried_at { Time.zone.now - 3.minutes }
     end
 
+    trait :retrying do
+      status { :retrying }
+      response { Faker::Json.shallow_json(width: 1) }
+    end
+
+    trait :retrying_with_retries do
+      status { :retrying }
+      retries { Faker::Number.between(from: 1, to: 20) }
+      last_retried_at { Time.zone.now - 3.minutes }
+      response { Faker::Json.shallow_json(width: 1) }
+    end
+
     trait :failed do
       http_status { 500 }
       status { :failed }

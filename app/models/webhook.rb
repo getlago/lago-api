@@ -3,7 +3,7 @@
 class Webhook < ApplicationRecord
   include RansackUuidSearch
 
-  STATUS = %i[pending succeeded failed].freeze
+  STATUS = %i[pending succeeded failed retrying].freeze
 
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true

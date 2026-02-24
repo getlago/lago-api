@@ -13178,6 +13178,7 @@ type WebhookEventType {
 enum WebhookStatusEnum {
   failed
   pending
+  retrying
   succeeded
 }
 
