@@ -135,14 +135,12 @@ module Events
       end
 
       def distinct_charges_and_filters
-        Events::Stores::Utils::ClickhouseConnection.with_retry do
-          ::Clickhouse::EventsEnrichedExpanded
-            .where(subscription_id: subscription.id)
-            .where(organization_id: subscription.organization_id)
-            .where(timestamp: from_datetime..to_datetime)
-            .distinct
-            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
-        end
+        # Implementation relies directly to the events_enriched_expanded table,
+        # so we delegate the implementation to the ClickhouseEnrichedStore
+        Events::Stores::ClickhouseEnrichedStore.new(
+          subscription:,
+          boundaries:
+        ).distinct_charges_and_filters
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)
