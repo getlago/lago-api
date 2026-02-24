@@ -236,7 +236,7 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       create(:standard_charge,
         plan: subscription.plan,
         billable_metric:,
-        properties: {amount: "10", grouped_by: ["agent_name"]})
+        properties: {amount: "10", pricing_group_keys: ["agent_name"]})
     end
 
     let(:wallet) { create(:wallet, wallet_attrs) }
@@ -264,8 +264,14 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     # Total usage: 3000 cents
     # Wallet: balance 1000 - 3000 = -2000
     ##
-    it "correctly calculates wallet balance with grouped fees" do
+    it "correctly calculates wallet balance skipping groupeing fees" do
+      allow(::Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
       expect_wallet(wallet, ongoing_usage: 3000, credits_usage: 30, ongoing: -2000, credits: -20)
+
+      expect(::Invoices::CustomerUsageService).to have_received(:call!).with(
+        hash_including(usage_filters: having_attributes(skip_grouping: true))
+      )
     end
   end
 
@@ -341,11 +347,11 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       create(:standard_charge,
         plan: subscription.plan,
         billable_metric:,
-        properties: {amount: "10", grouped_by: ["agent_name"]})
+        properties: {amount: "10", pricing_group_keys: ["agent_name"]})
     end
 
     let(:cf) do
-      create(:charge_filter, charge:, properties: {amount: "5", grouped_by: ["agent_name"]})
+      create(:charge_filter, charge:, properties: {amount: "5", pricing_group_keys: ["agent_name"]})
     end
 
     let(:cf_value) do
@@ -384,7 +390,11 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
     # Wallet: balance 1000 - 2500 = -1500
     ##
     it "correctly calculates wallet balance with grouped and filtered fees" do
+      allow(::Invoices::CustomerUsageService).to receive(:call!).and_call_original
       expect_wallet(wallet, ongoing_usage: 2500, credits_usage: 25, ongoing: -1500, credits: -15)
+      expect(::Invoices::CustomerUsageService).to have_received(:call!).with(
+        hash_including(usage_filters: having_attributes(skip_grouping: false))
+      )
     end
   end
 
@@ -923,11 +933,11 @@ describe "Use wallet's credits and recalculate balances", transaction: false do
       create(:standard_charge,
         plan: subscription.plan,
         billable_metric: bm_standard,
-        properties: {amount: "10", grouped_by: ["agent_name"]})
+        properties: {amount: "10", pricing_group_keys: ["agent_name"]})
     end
 
     let(:standard_cf) do
-      create(:charge_filter, charge: standard_ch, properties: {amount: "5", grouped_by: ["agent_name"]})
+      create(:charge_filter, charge: standard_ch, properties: {amount: "5", pricing_group_keys: ["agent_name"]})
     end
 
     let(:standard_cf_value) do
