@@ -34,6 +34,10 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
 
   alias_method :create_enriched_event, :create_event
 
+  def format_timestamp(timestamp, precision: 3)
+    Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%#{precision}L")
+  end
+
   context "without deduplication" do
     it_behaves_like "an event store", with_event_duplication: false,
       excluding_features: %i[
@@ -46,7 +50,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_charges_and_filters
         active_unique_property?
         grouped_unique_count
-        weighted_sum_breakdown
         grouped_weighted_sum
       ]
   end
@@ -63,7 +66,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         prorated_events_values
         active_unique_property?
         grouped_unique_count
-        weighted_sum_breakdown
         grouped_weighted_sum
       ]
   end

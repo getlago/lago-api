@@ -296,7 +296,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          duration_ratio_sql(
             "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
           )
         end
@@ -326,7 +326,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          duration_ratio_sql(
             "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
           )
         end
@@ -356,7 +356,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("events_enriched_expanded.timestamp", timezone)
+        date_field = date_in_customer_timezone_sql("events_enriched_expanded.timestamp", timezone)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -409,6 +409,39 @@ module Events
 
       def grouped_weighted_sum(initial_values: [])
         raise NotImplementedError
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def weighted_sum_breakdown(initial_value: 0)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+          rows = connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {
+                  from_datetime:,
+                  to_datetime: to_datetime.ceil,
+                  decimal_scale: DECIMAL_SCALE,
+                  initial_value: initial_value || 0
+                }
+              ]
+            )
+          ).rows
+          # `date_diff` actually returns an `Int64` and ActiveRecord transform that into a `String`. If we cast the
+          # result in a `Int32`, then we get the result as `Integer`:
+          # ```ruby
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int64")
+          # => {"CAST('1', 'Int64')" => "1"}
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int32")
+          # => {"CAST('1', 'Int32')" => 1}
+          # ```
+          # To keep consistency with the PG implementation, we call `#to_i` on the value.
+          rows.map do |(timestamp, difference, cumul, second_duration, period_ratio)|
+            [timestamp, difference, cumul, second_duration.to_i, period_ratio]
+          end
+        end
       end
 
       def arel_table
