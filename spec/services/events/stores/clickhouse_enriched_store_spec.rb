@@ -42,7 +42,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     it_behaves_like "an event store", with_event_duplication: false,
       excluding_features: %i[
         events
-        events_values
         last_event
         grouped_last_event
         prorated_events_values
@@ -57,7 +56,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
     it_behaves_like "an event store", with_event_duplication: true,
       excluding_features: %i[
         events
-        events_values
         last_event
         grouped_last_event
         distinct_codes

@@ -619,7 +619,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
               grouped_by_values:,
               matching_filters:,
               ignored_filters:,
-              event:
+              event:,
+              charge_id: charge&.id,
+              charge_filter: charge_filter
             },
             deduplicate: with_event_duplication
           )
@@ -668,6 +670,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       context "with filters" do
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
+
+        let(:charge_filter) { create(:charge_filter, charge:) }
 
         before { create_events_for_filters }
 

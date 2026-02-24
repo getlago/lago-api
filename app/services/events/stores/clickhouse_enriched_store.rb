@@ -99,8 +99,24 @@ module Events
         )
       end
 
-      def events_values
-        raise NotImplementedError
+      def events_values(limit: nil, force_from: false, exclude_event: false)
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          table = Arel::Table.new("events")
+          query = table.order(table[:timestamp].asc)
+
+          if exclude_event
+            query = query.where(table[:transaction_id].not_eq(filters[:event].transaction_id))
+          end
+
+          query = query.take(limit) if limit
+
+          sql = with_ctes(events_cte_queries(
+            deduplicated_columns: %w[decimal_value],
+            force_from:
+          ), query.project(table[:decimal_value]).to_sql)
+
+          connection.select_values(sql)
+        end
       end
 
       def last_event
