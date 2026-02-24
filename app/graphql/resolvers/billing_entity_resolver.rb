@@ -14,7 +14,7 @@ module Resolvers
     type Types::BillingEntities::Object, null: true
 
     def resolve(code:)
-      BillingEntity.find_by!(code:, organization: current_organization)
+      current_organization.all_billing_entities.find_by!(code:)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "billing_entity")
     end

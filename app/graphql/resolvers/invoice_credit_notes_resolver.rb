@@ -16,7 +16,9 @@ module Resolvers
     type Types::CreditNotes::Object.collection_type, null: true
 
     def resolve(invoice_id: nil, page: nil, limit: nil)
-      Invoice.find(invoice_id)
+      current_organization
+        .invoices
+        .find(invoice_id)
         .credit_notes
         .finalized
         .order(created_at: :desc)

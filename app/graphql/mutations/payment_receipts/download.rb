@@ -16,7 +16,7 @@ module Mutations
       type Types::PaymentReceipts::Object
 
       def resolve(id:)
-        payment_receipt = PaymentReceipt.find_by(id:, organization_id: current_organization.id)
+        payment_receipt = current_organization.payment_receipts.find_by(id:)
         result = ::PaymentReceipts::GeneratePdfService.call(payment_receipt:)
         result.success? ? result.payment_receipt : result_error(result)
       end

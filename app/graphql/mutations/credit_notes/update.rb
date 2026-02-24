@@ -4,6 +4,7 @@ module Mutations
   module CreditNotes
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "credit_notes:update"
 
@@ -16,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         result = ::CreditNotes::UpdateService.new(
-          credit_note: context[:current_user].credit_notes.find_by(id: args[:id]),
+          credit_note: current_organization.credit_notes.find_by(id: args[:id]),
           refund_status: args[:refund_status],
           metadata: args[:metadata]
         ).call

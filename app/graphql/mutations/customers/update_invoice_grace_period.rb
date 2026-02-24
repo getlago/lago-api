@@ -6,6 +6,7 @@ module Mutations
   module Customers
     class UpdateInvoiceGracePeriod < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = %w[customers:update]
 
@@ -18,7 +19,7 @@ module Mutations
       type Types::Customers::Object
 
       def resolve(id:, invoice_grace_period:)
-        customer = context[:current_user].customers.find_by(id:)
+        customer = current_organization.customers.find_by(id:)
         result = ::Customers::UpdateService.call(customer:, args: {invoice_grace_period:})
 
         result.success? ? result.customer : result_error(result)

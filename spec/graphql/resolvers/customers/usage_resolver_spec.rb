@@ -131,6 +131,7 @@ RSpec.describe Resolvers::Customers::UsageResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "customers:view"
 
   it "returns the usage for the customer" do

@@ -4,6 +4,7 @@ module Mutations
   module Plans
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "plans:update"
 
@@ -16,7 +17,7 @@ module Mutations
       def resolve(entitlements: nil, **args)
         args[:charges].map!(&:to_h)
         args[:fixed_charges]&.map!(&:to_h)
-        plan = context[:current_user].plans.find_by(id: args[:id])
+        plan = current_organization.plans.find_by(id: args[:id])
 
         result = ::Plans::UpdateService.call(plan:, params: args)
 

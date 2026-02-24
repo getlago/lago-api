@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, :premium do
-  let(:required_permissions) { "customers:update" }
+  let(:required_permission) { "customers:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -22,18 +22,15 @@ RSpec.describe Mutations::Customers::UpdateInvoiceGracePeriod, :premium do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", %w[customers:update]
 
   it "updates a customer" do
-    result = execute_graphql(
-      current_user: membership.user,
-      permissions: required_permissions,
+    result = execute_query(
       query: mutation,
-      variables: {
-        input: {
-          id: customer.id,
-          invoiceGracePeriod: 12
-        }
+      input: {
+        id: customer.id,
+        invoiceGracePeriod: 12
       }
     )
 

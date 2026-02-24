@@ -16,8 +16,9 @@ module Mutations
       field :id, ID, null: true
 
       def resolve(id:)
-        organization_draft_invoices = current_organization.invoices.draft.pluck(:id)
-        fee = Fee.where(invoice_id: organization_draft_invoices).find_by(id:)
+        fee = current_organization.fees
+          .where(invoice_id: current_organization.invoices.draft.select(:id))
+          .find_by(id:)
 
         result = ::AdjustedFees::DestroyService.call(fee:)
 
