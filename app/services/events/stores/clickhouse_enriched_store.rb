@@ -99,6 +99,17 @@ module Events
         )
       end
 
+      def distinct_charges_and_filters
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization_id)
+            .where(timestamp: from_datetime..to_datetime)
+            .distinct
+            .pluck("charge_id", Arel.sql("nullIf(charge_filter_id, '')"))
+        end
+      end
+
       def events_values(limit: nil, force_from: false, exclude_event: false)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           table = Arel::Table.new("events")

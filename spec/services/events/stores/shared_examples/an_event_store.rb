@@ -1812,15 +1812,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
   if include_feature?(:distinct_charges_and_filters)
     describe "#distinct_charges_and_filters" do
-      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
       let(:charge_filter) { create(:charge_filter, charge:) }
+
+      let(:events) { nil }
 
       before do
         create_enriched_event(
           timestamp: boundaries[:from_datetime] + 12.days,
           value: 12,
           properties: {billable_metric.field_name => 12},
-          charge_filter: charge_filter
+          charge_filter:
         )
       end
 

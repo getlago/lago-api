@@ -43,7 +43,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       excluding_features: %i[
         events
         distinct_codes
-        distinct_charges_and_filters
         grouped_unique_count
         grouped_weighted_sum
       ]
@@ -54,7 +53,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       excluding_features: %i[
         events
         distinct_codes
-        distinct_charges_and_filters
         grouped_unique_count
         grouped_weighted_sum
       ]
