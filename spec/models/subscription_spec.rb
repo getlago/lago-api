@@ -796,4 +796,45 @@ RSpec.describe Subscription do
       end
     end
   end
+
+  describe "#all_charges_pricing_group_agnostic?" do
+    context "when all charges are standard with no filters" do
+      before do
+        create(:standard_charge, plan:)
+        create(:standard_charge, plan:)
+      end
+
+      it "returns true" do
+        expect(subscription.all_charges_pricing_group_agnostic?).to be true
+      end
+    end
+
+    context "when one charge is not standard" do
+      before do
+        create(:standard_charge, plan:)
+        create(:graduated_charge, plan:)
+      end
+
+      it "returns false" do
+        expect(subscription.all_charges_pricing_group_agnostic?).to be false
+      end
+    end
+
+    context "when a standard charge has filters" do
+      before do
+        charge = create(:standard_charge, plan:)
+        create(:charge_filter, charge:)
+      end
+
+      it "returns false" do
+        expect(subscription.all_charges_pricing_group_agnostic?).to be false
+      end
+    end
+
+    context "when plan has no charges" do
+      it "returns true" do
+        expect(subscription.all_charges_pricing_group_agnostic?).to be true
+      end
+    end
+  end
 end

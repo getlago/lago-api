@@ -819,4 +819,41 @@ RSpec.describe Charge do
       end
     end
   end
+
+  describe "#pricing_group_agnostic?" do
+    context "when charge is standard with no filters" do
+      let(:charge) { create(:standard_charge) }
+
+      it "returns true" do
+        expect(charge.pricing_group_agnostic?).to be true
+      end
+    end
+
+    context "when charge is standard with filters" do
+      let(:charge) { create(:standard_charge) }
+      let(:charge_filter) { create(:charge_filter, charge:) }
+
+      before { charge_filter }
+
+      it "returns false" do
+        expect(charge.pricing_group_agnostic?).to be false
+      end
+    end
+
+    context "when charge is graduated with no filters" do
+      let(:charge) { create(:graduated_charge) }
+
+      it "returns false" do
+        expect(charge.pricing_group_agnostic?).to be false
+      end
+    end
+
+    context "when charge is percentage with no filters" do
+      let(:charge) { create(:percentage_charge) }
+
+      it "returns false" do
+        expect(charge.pricing_group_agnostic?).to be false
+      end
+    end
+  end
 end
