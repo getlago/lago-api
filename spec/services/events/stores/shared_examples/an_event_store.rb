@@ -523,7 +523,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
       it "returns false when no previous events exist" do
         event = create_event(timestamp: subscription_started_at + 2.days, value: 999)
-
         expect(event_store).not_to be_active_unique_property(event)
       end
 
