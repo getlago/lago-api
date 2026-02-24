@@ -119,11 +119,32 @@ module Events
         end
       end
 
-      def last_event
-        raise NotImplementedError
+      def prorated_events_values(total_duration)
+        ratio = duration_ratio_sql(
+          "events_enriched_expanded.timestamp", to_datetime, total_duration, timezone
+        )
+
+        Utils::ClickhouseConnection.connection_with_retry do |connection|
+          table = Arel::Table.new("events")
+          query = table.order(table[:timestamp].asc)
+
+          sql = with_ctes(events_cte_queries(
+            select: [
+              arel_table[:timestamp],
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          ), query.project(table[:prorated_value]).to_sql)
+
+          connection.select_values(sql)
+        end
       end
 
-      def prorated_events_values
+      def last_event
         raise NotImplementedError
       end
 
@@ -213,6 +234,7 @@ module Events
             SELECT properties
             FROM events
             WHERE value = ?
+            ORDER BY timestamp DESC
             LIMIT 1
           SQL
 

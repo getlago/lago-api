@@ -1286,6 +1286,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:matching_filters) { {"region" => ["europe"], "country" => ["france", "united kingdom"]} }
         let(:ignored_filters) { [{"city" => ["caen"]}, {"city" => ["cambridge", "london"], "country" => ["united kingdom"]}] }
 
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         before { create_events_for_filters }
 
         it "returns the filtered prorated event values" do

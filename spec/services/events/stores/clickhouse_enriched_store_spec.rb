@@ -44,7 +44,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         events
         last_event
         grouped_last_event
-        prorated_events_values
         distinct_codes
         distinct_charges_and_filters
         grouped_unique_count
@@ -60,7 +59,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         grouped_last_event
         distinct_codes
         distinct_charges_and_filters
-        prorated_events_values
         grouped_unique_count
         grouped_weighted_sum
       ]
