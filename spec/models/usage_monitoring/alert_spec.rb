@@ -68,6 +68,8 @@ RSpec.describe UsageMonitoring::Alert do
       expect(described_class.find_sti_class("billable_metric_current_usage_amount")).to eq(UsageMonitoring::BillableMetricCurrentUsageAmountAlert)
       expect(described_class.find_sti_class("wallet_balance_amount")).to eq(UsageMonitoring::WalletBalanceAmountAlert)
       expect(described_class.find_sti_class("wallet_credits_balance")).to eq(UsageMonitoring::WalletCreditsBalanceAlert)
+      expect(described_class.find_sti_class("wallet_ongoing_balance_amount")).to eq(UsageMonitoring::WalletOngoingBalanceAmountAlert)
+      expect(described_class.find_sti_class("wallet_credits_ongoing_balance")).to eq(UsageMonitoring::WalletCreditsOngoingBalanceAlert)
     end
 
     it "raises KeyError for unknown alert type" do
