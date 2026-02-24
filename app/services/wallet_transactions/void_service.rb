@@ -42,6 +42,9 @@ module WalletTransactions
               inbound_wallet_transaction_id: inbound_wallet_transaction&.id
             )
           end
+
+          Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
+          result.wallet_transaction = wallet_transaction
         end
       end
 
