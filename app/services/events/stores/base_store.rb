@@ -116,7 +116,7 @@ module Events
       end
 
       def from_datetime
-        boundaries[:from_datetime]
+        boundaries[:from_datetime]&.to_time&.floor(3)
       end
 
       def to_datetime

@@ -1405,6 +1405,27 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true|
         expect(event_store.weighted_sum.round(5)).to eq(870.96774) # 4 / 31 * 0 + 27 / 31 * 1000
       end
     end
+
+    context "when from_datetime has microsecond precision and event has millisecond precision" do
+      let(:boundaries) do
+        {
+          from_datetime: Time.zone.parse("2023-03-01 00:00:00.000000") + 0.000285,
+          to_datetime: Time.zone.parse("2023-03-31").end_of_day,
+          charges_duration: 31
+        }
+      end
+
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-03-01 00:00:00.000"), value: 5}
+        ]
+      end
+
+      it "includes the event in the weighted sum" do
+        result = event_store.weighted_sum
+        expect(result.round(5)).to eq(5.0)
+      end
+    end
   end
 
   describe "#weighted_sum_breakdown" do
