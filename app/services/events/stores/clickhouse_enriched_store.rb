@@ -123,7 +123,7 @@ module Events
 
       def grouped_count
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
+          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[value], select: [arel_table[:sorted_grouped_by]]), <<-SQL)
             SELECT
               sorted_grouped_by as groups,
               toDecimal32(count(), 0) as value
@@ -148,7 +148,10 @@ module Events
 
       def grouped_max
         Utils::ClickhouseConnection.connection_with_retry do |connection|
-          sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
+          sql = with_ctes(events_cte_queries(
+            deduplicated_columns: %w[decimal_value],
+            select: [arel_table[:sorted_grouped_by], arel_table[:decimal_value]]
+          ), <<-SQL)
             SELECT
               sorted_grouped_by as groups,
               MAX(events.decimal_value) as value
@@ -260,7 +263,7 @@ module Events
 
       def apply_arel_grouped_by_values(query)
         # NOTE: grouped_by is populated from a sorted Map(String, String) converted into a String
-        #       to make it comparable, we need to sort the group keys and replace nil values with "<nil>" string
+        #       to make it comparable, we need to sort the group keys and replace nil values with empty strings
         groups = grouped_by_values
           .sort_by { |key, _| key }
           .flat_map { |k, v| [Arel::Nodes.build_quoted(k), Arel::Nodes.build_quoted(v.presence || "")] }
