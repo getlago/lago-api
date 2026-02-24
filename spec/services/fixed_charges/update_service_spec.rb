@@ -40,6 +40,27 @@ RSpec.describe FixedCharges::UpdateService do
       end
     end
 
+    context "when updating code to one that already exists on the plan" do
+      let(:params) do
+        {
+          charge_model: "standard",
+          code: "taken_code",
+          units: 10,
+          properties: {amount: "100"}
+        }
+      end
+
+      before do
+        create(:fixed_charge, plan:, add_on:, code: "taken_code")
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({code: ["value_already_exist"]})
+      end
+    end
+
     context "when fixed_charge exists" do
       it "updates the fixed charge without updating pay_in_advance and prorated" do
         expect(result).to be_success

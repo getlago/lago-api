@@ -59,6 +59,27 @@ RSpec.describe FixedCharges::CreateService do
         end
       end
 
+      context "when a fixed charge with the same code already exists on the plan" do
+        let(:params) do
+          {
+            add_on_id: add_on.id,
+            code: "existing_code",
+            charge_model: "standard",
+            properties: {amount: "100"}
+          }
+        end
+
+        before do
+          create(:fixed_charge, plan:, add_on:, code: "existing_code")
+        end
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({code: ["value_already_exist"]})
+        end
+      end
+
       context "when params are invalid" do
         let(:params) do
           {add_on_id: add_on.id}

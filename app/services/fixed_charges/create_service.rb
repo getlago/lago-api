@@ -58,6 +58,8 @@ module FixedCharges
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(field: :code, error_code: "value_already_exist")
     rescue ActiveRecord::RecordNotFound => e
       result.not_found_failure!(resource: e.model.underscore)
     rescue BaseService::FailedResult => e

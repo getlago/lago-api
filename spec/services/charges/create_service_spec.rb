@@ -30,6 +30,29 @@ RSpec.describe Charges::CreateService do
       end
     end
 
+    context "when a charge with the same code already exists on the plan" do
+      let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+
+      let(:params) do
+        {
+          billable_metric_id: sum_billable_metric.id,
+          code: "existing_code",
+          charge_model: "standard",
+          properties: {amount: "100"}
+        }
+      end
+
+      before do
+        create(:standard_charge, plan:, organization:, billable_metric: sum_billable_metric, code: "existing_code")
+      end
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({code: ["value_already_exist"]})
+      end
+    end
+
     context "when plan exists" do
       let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
