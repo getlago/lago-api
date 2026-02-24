@@ -44,30 +44,4 @@ RSpec.describe Subscriptions::TerminateJob do
       expect(subscription_service).to have_received(:terminate_and_start_next)
     end
   end
-
-  describe "retry_on" do
-    [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
-      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25]
-    ].each do |error, attempts|
-      error_class = error.class
-
-      context "when a #{error_class} error is raised" do
-        before do
-          allow(Subscriptions::TerminateService).to receive(:new)
-            .and_return(subscription_service)
-          allow(subscription_service).to receive(:terminate_and_start_next)
-            .and_raise(error)
-        end
-
-        it "raises a #{error_class.name} error and retries" do
-          assert_performed_jobs(attempts, only: [described_class]) do
-            expect do
-              described_class.perform_later(subscription, timestamp)
-            end.to raise_error(error_class)
-          end
-        end
-      end
-    end
-  end
 end

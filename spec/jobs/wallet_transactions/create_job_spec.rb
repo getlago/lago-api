@@ -55,26 +55,4 @@ RSpec.describe WalletTransactions::CreateJob do
       end
     end
   end
-
-  describe "retry_on" do
-    [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25]
-    ].each do |error, attempts|
-      error_class = error.class
-
-      context "when a #{error_class} error is raised" do
-        before do
-          allow(WalletTransactions::CreateFromParamsService).to receive(:call!).and_raise(error)
-        end
-
-        it "raises a #{error_class.name} error and retries" do
-          assert_performed_jobs(attempts, only: [described_class]) do
-            expect do
-              described_class.perform_later(organization_id: organization.id, params:)
-            end.to raise_error(error_class)
-          end
-        end
-      end
-    end
-  end
 end

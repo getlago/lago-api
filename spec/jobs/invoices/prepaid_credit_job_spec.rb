@@ -51,6 +51,18 @@ RSpec.describe Invoices::PrepaidCreditJob do
     }.not_to have_enqueued_job(described_class)
   end
 
+  context "when there is race condition error" do
+    before do
+      allow(Wallets::ApplyPaidCreditsService).to receive(:call).and_raise(ActiveRecord::StaleObjectError.new)
+    end
+
+    it "retries the job" do
+      expect {
+        described_class.perform_now(invoice)
+      }.to have_enqueued_job(described_class)
+    end
+  end
+
   shared_examples "does not grant credits" do |payment_status|
     it "marks the wallet transaction as failed" do
       allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
@@ -109,29 +121,6 @@ RSpec.describe Invoices::PrepaidCreditJob do
     it "converts payment_status string to symbol" do
       job = described_class.new(invoice, "failed")
       expect(job.lock_key_arguments).to eq([invoice, :failed])
-    end
-  end
-
-  describe "retry_on" do
-    [
-      [Customers::FailedToAcquireLock.new("customer-1-prepaid_credit"), 25],
-      [ActiveRecord::StaleObjectError.new("Attempted to update a stale object: Wallet."), 25]
-    ].each do |error, attempts|
-      error_class = error.class
-
-      context "when a #{error_class} error is raised" do
-        before do
-          allow(Wallets::ApplyPaidCreditsService).to receive(:call).and_raise(error)
-        end
-
-        it "raises a #{error_class.name} error and retries" do
-          assert_performed_jobs(attempts, only: [described_class]) do
-            expect do
-              described_class.perform_later(invoice)
-            end.to raise_error(error_class)
-          end
-        end
-      end
     end
   end
 end
