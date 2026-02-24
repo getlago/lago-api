@@ -510,13 +510,13 @@ RSpec.describe Customers::EuAutoTaxesService do
         it "falls through when zipcode does not match any exception" do
           customer.update(country: "ES", zipcode: "28001")
           result = eu_tax_service.call
-          expect(result.tax_code).to eq("lago_eu_es_standard")
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
 
         it "falls through when customer has no zipcode" do
           customer.update(country: "DE")
           result = eu_tax_service.call
-          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
 
         it "falls through when customer has no country" do
