@@ -505,6 +505,18 @@ RSpec.describe Customers::EuAutoTaxesService do
         end
       end
 
+      context "when customer has an invalid VAT number in a special territory" do
+        let(:tax_identification_number) { "INVALID123" }
+        let(:vies_response) { false }
+
+        before { customer.update(country: "FR", zipcode: "97100") }
+
+        it "skips special territory detection and falls through to VIES check" do
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
+        end
+      end
+
       context "when territory is not detected" do
         let(:tax_identification_number) { nil }
         let(:vies_response) { false }
