@@ -32,7 +32,7 @@ module DatabaseMigrations
           )
 
           last_event_date = find_last_event_date(base_scope, subscription.started_at.to_date)
-          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
+          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date # rubocop:disable Rails/SkipsModelValidations
       end
     end
 
@@ -47,7 +47,7 @@ module DatabaseMigrations
             .pick(:ingested_at)
             &.to_date
 
-          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
+          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date # rubocop:disable Rails/SkipsModelValidations
       end
     end
 
