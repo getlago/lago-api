@@ -17,6 +17,8 @@ namespace :upgrade do
       {model: FixedCharge, job: DatabaseMigrations::BackfillFixedChargesCodeJob}
     ]
 
+    subscriptions_pending_count = -> { Subscription.active.where(last_received_event_on: nil).count }
+
     puts "##################################\nStarting required jobs"
     puts "\n#### Checking for resource to fill ####"
 
@@ -35,6 +37,15 @@ namespace :upgrade do
       end
     end
 
+    pp "- Checking Subscription#last_received_event_on: 🔎"
+    subscriptions_count = subscriptions_pending_count.call
+    backfill_subscriptions = subscriptions_count > 0
+    if backfill_subscriptions
+      pp "  -> #{subscriptions_count} records to fill 🧮"
+    else
+      pp "  -> Nothing to do ✅"
+    end
+
     if to_fill.any?
       puts "\n#### Enqueue jobs in the low_priority queue ####"
       to_fill.each do |resource|
@@ -43,7 +54,20 @@ namespace :upgrade do
       end
     end
 
-    while to_fill.present?
+    if backfill_subscriptions
+      puts "\n#### Enqueue BackfillLastReceivedEventOnJob per organization ####"
+      Organization
+        .joins(:subscriptions)
+        .where(subscriptions: {status: :active, last_received_event_on: nil})
+        .distinct
+        .pluck(:id)
+        .each do |organization_id|
+          pp "- Enqueuing BackfillLastReceivedEventOnJob for org #{organization_id}"
+          DatabaseMigrations::BackfillLastReceivedEventOnJob.perform_later(organization_id)
+        end
+    end
+
+    while to_fill.present? || backfill_subscriptions
       sleep 5
       puts "\n#### Checking status ####"
 
@@ -60,8 +84,16 @@ namespace :upgrade do
           pp "  -> Done ✅"
         end
       end
-
       to_delete.each { to_fill.delete(it) }
+
+      pp "- Checking Subscription#last_received_event_on: 🔎"
+      remaining = subscriptions_pending_count.call
+      if remaining > 0
+        pp "  -> #{remaining} remaining 🧮"
+      else
+        backfill_subscriptions = false
+        pp "  -> Done ✅"
+      end
     end
 
     puts "\n#### All good, ready to Upgrade! ✅ ####"
