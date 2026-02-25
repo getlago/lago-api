@@ -44,7 +44,6 @@ RSpec.describe Invoices::Payments::AdyenService do
     end
 
     before do
-      allow(SendWebhookJob).to receive(:perform_later)
       payment
     end
 
@@ -62,6 +61,15 @@ RSpec.describe Invoices::Payments::AdyenService do
         ready_for_payment_processing: false,
         total_paid_amount_cents: 200
       )
+    end
+
+    it "enqueues a SendWebhookJob for payment.succeeded" do
+      expect do
+        adyen_service.update_payment_status(
+          provider_payment_id: "ch_123456",
+          status: "Authorised"
+        )
+      end.to have_enqueued_job(SendWebhookJob).with("payment.succeeded", Payment)
     end
 
     context "when status is failed" do
