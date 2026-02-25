@@ -26,6 +26,7 @@ module DatabaseMigrations
         .where(last_received_event_on: nil)
         .find_each do |subscription|
           base_scope = Event.where(
+            organization_id: organization.id,
             external_subscription_id: subscription.external_id,
             deleted_at: nil
           )
