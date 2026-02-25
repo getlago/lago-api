@@ -23,31 +23,31 @@ module DatabaseMigrations
 
     def process_postgres(organization)
       organization.subscriptions.active
-                  .where(last_received_event_on: nil)
-                  .find_each do |subscription|
-        base_scope = Event.where(
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          deleted_at: nil
-        )
+        .where(last_received_event_on: nil)
+        .find_each do |subscription|
+          base_scope = Event.where(
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            deleted_at: nil
+          )
 
-        last_event_date = find_last_event_date(base_scope, subscription.started_at.to_date)
-        subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
+          last_event_date = find_last_event_date(base_scope, subscription.started_at.to_date)
+          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
       end
     end
 
     def process_clickhouse(organization)
       organization.subscriptions.active
-                  .where(last_received_event_on: nil)
-                  .find_each do |subscription|
-        last_event_date = Clickhouse::EventsRaw
-                            .where(organization_id: organization.id, external_subscription_id: subscription.external_id)
-                            .order(ingested_at: :desc)
-                            .limit(1)
-                            .pick(:ingested_at)
-                            &.to_date
+        .where(last_received_event_on: nil)
+        .find_each do |subscription|
+          last_event_date = Clickhouse::EventsRaw
+            .where(organization_id: organization.id, external_subscription_id: subscription.external_id)
+            .order(ingested_at: :desc)
+            .limit(1)
+            .pick(:ingested_at)
+            &.to_date
 
-        subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
+          subscription.update_column(:last_received_event_on, last_event_date) if last_event_date
       end
     end
 
