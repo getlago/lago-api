@@ -32,7 +32,7 @@ class ApplicationJob < ActiveJob::Base
   # retry_on ExceptionClass, attempts: 5, wait: random_delay(16)
   #
   def self.random_delay(max_seconds)
-    ->(_) { rand(0...max_seconds) }
+    ->(*) { rand(0...max_seconds) }
   end
 
   # This method is a generic proc for using with lock retry attempts

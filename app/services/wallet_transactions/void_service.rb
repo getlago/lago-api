@@ -24,25 +24,28 @@ module WalletTransactions
       return result unless valid?
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = CreateService.call!(
-          wallet:,
-          wallet_credit:,
-          transaction_type: :outbound,
-          status: :settled,
-          settled_at: Time.current,
-          transaction_status: :voided,
-          **transaction_params
-        ).wallet_transaction
+        Customers::LockService.call(customer:, scope: :prepaid_credit) do
+          wallet.reload
+          wallet_transaction = CreateService.call!(
+            wallet:,
+            wallet_credit:,
+            transaction_type: :outbound,
+            status: :settled,
+            settled_at: Time.current,
+            transaction_status: :voided,
+            **transaction_params
+          ).wallet_transaction
 
-        if wallet.traceable?
-          TrackConsumptionService.call!(
-            outbound_wallet_transaction: wallet_transaction,
-            inbound_wallet_transaction_id: inbound_wallet_transaction&.id
-          )
+          if wallet.traceable?
+            TrackConsumptionService.call!(
+              outbound_wallet_transaction: wallet_transaction,
+              inbound_wallet_transaction_id: inbound_wallet_transaction&.id
+            )
+          end
+
+          Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
+          result.wallet_transaction = wallet_transaction
         end
-
-        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
-        result.wallet_transaction = wallet_transaction
       end
 
       result
@@ -51,6 +54,7 @@ module WalletTransactions
     private
 
     attr_reader :wallet, :wallet_credit, :inbound_wallet_transaction, :transaction_params
+    delegate :customer, to: :wallet
 
     def valid?
       return true unless wallet.traceable?

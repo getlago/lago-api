@@ -5,6 +5,8 @@ module WalletTransactions
     queue_as "high_priority"
     unique :until_executed, on_conflict: :log
 
+    # ActiveRecord::StaleObjectError is handled in WalletTransactions::CreateFromParamsService
+
     def perform(organization_id:, params:, unique_transaction: false)
       organization = Organization.find(organization_id)
       WalletTransactions::CreateFromParamsService.call!(organization:, params:)
