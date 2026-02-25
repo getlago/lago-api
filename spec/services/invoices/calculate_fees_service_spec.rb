@@ -2333,6 +2333,187 @@ RSpec.describe Invoices::CalculateFeesService do
       end
     end
 
+    context "when subscription is pending with nil started_at and subscription_at" do
+      let(:billing_period_start) { Time.zone.parse("2024-01-01 00:00:00") }
+      let(:billing_period_end) { Time.zone.parse("2024-01-31 23:59:59") }
+      let(:timestamp) { Time.zone.parse("2024-02-01") }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          :pending,
+          organization:,
+          plan:,
+          customer:,
+          billing_time: :calendar,
+          subscription_at: nil,
+          started_at: nil,
+          status: :activating
+        )
+      end
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: billing_period_start,
+          to_datetime: billing_period_end,
+          charges_from_datetime: billing_period_start,
+          charges_to_datetime: billing_period_end,
+          fixed_charges_from_datetime: billing_period_start,
+          fixed_charges_to_datetime: billing_period_end
+        )
+      end
+
+      let(:charge) { nil }
+      let(:event) { nil }
+
+      let(:fixed_charge) do
+        create(:fixed_charge, plan:, charge_model: "standard", pay_in_advance: true, properties: {amount: "10"}, units: 5)
+      end
+
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          fixed_charge:,
+          subscription:,
+          timestamp: billing_period_start + 1.day,
+          units: 5
+        )
+      end
+
+      it "does not create fixed charge fees" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(invoice.fees.fixed_charge.count).to eq(1)
+        expect(subscription.reload).to be_activating
+      end
+    end
+
+    context "when subscription was activating and then becomes active on next billing period" do
+      let(:activation_date) { Time.zone.parse("2024-01-15 10:00:00") }
+      let(:first_period_start) { Time.zone.parse("2024-01-01 00:00:00") }
+      let(:first_period_end) { Time.zone.parse("2024-01-31 23:59:59") }
+      let(:second_period_start) { Time.zone.parse("2024-02-01 00:00:00") }
+      let(:second_period_end) { Time.zone.parse("2024-02-29 23:59:59") }
+      let(:timestamp) { Time.zone.parse("2024-03-01") }
+
+      let(:subscription) do
+        create(
+          :subscription,
+          organization:,
+          plan:,
+          customer:,
+          billing_time: :calendar,
+          subscription_at: activation_date,
+          started_at: activation_date,
+          status: :active
+        )
+      end
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice:,
+          timestamp:,
+          from_datetime: second_period_start,
+          to_datetime: second_period_end,
+          charges_from_datetime: second_period_start,
+          charges_to_datetime: second_period_end,
+          fixed_charges_from_datetime: second_period_start,
+          fixed_charges_to_datetime: second_period_end
+        )
+      end
+
+      let(:charge) { nil }
+      let(:event) { nil }
+
+      let(:fixed_charge) do
+        create(:fixed_charge, plan:, charge_model: "standard", pay_in_advance: true, properties: {amount: "10"}, units: 5)
+      end
+
+      # Event created during activating status, before subscription was activated
+      let(:fixed_charge_event) do
+        create(
+          :fixed_charge_event,
+          fixed_charge:,
+          subscription:,
+          timestamp: first_period_start + 1.day,
+          units: 5
+        )
+      end
+
+      # First period invoice already exists and was paid
+      let(:first_invoice) do
+        create(
+          :invoice,
+          organization:,
+          currency: "EUR",
+          issuing_date: Time.zone.parse("2024-02-01").to_date,
+          customer:,
+          status: :finalized
+        )
+      end
+
+      let(:first_invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription:,
+          invoice: first_invoice,
+          timestamp: Time.zone.parse("2024-02-01"),
+          from_datetime: first_period_start,
+          to_datetime: first_period_end,
+          charges_from_datetime: first_period_start,
+          charges_to_datetime: first_period_end,
+          fixed_charges_from_datetime: first_period_start,
+          fixed_charges_to_datetime: first_period_end
+        )
+      end
+
+      let(:first_period_fee) do
+        create(
+          :fee,
+          invoice: first_invoice,
+          subscription:,
+          fixed_charge:,
+          fee_type: :fixed_charge,
+          amount_cents: 5_000,
+          units: 5,
+          properties: {
+            "fixed_charges_from_datetime" => first_period_start.iso8601(3),
+            "fixed_charges_to_datetime" => first_period_end.iso8601(3)
+          }
+        )
+      end
+
+      before do
+        tax
+        invoice_subscriptions
+        fixed_charge_event
+        first_invoice
+        first_invoice_subscription
+        first_period_fee
+
+        allow(SegmentTrackJob).to receive(:perform_later)
+        allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
+        allow(Credits::ProgressiveBillingService).to receive(:call).and_call_original
+      end
+
+      it "creates fixed charge fee with the same units from the activating period event" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(invoice.fees.fixed_charge.count).to eq(1)
+
+        fee = invoice.fees.fixed_charge.first
+        expect(fee.units).to eq(5)
+      end
+    end
+
     # this case might happen because we only started populating fixed_charge boundaries in the last PR,
     # and we can have some invoices that we're recalculating with old invoice_subscriptions
     context "when invoice has an invoice_subscription with empty fixed_charge boundaries" do

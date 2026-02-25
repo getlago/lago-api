@@ -239,6 +239,8 @@ module Fees
       properties["charges_duration"] = nil
 
       return properties if !fixed_charge.pay_in_advance?
+      return properties unless subscription.started_at
+
       timestamp = boundaries.timestamp
       in_advance_dates = Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(timestamp, subscription)
 

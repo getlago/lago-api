@@ -2,12 +2,28 @@
 
 module Subscriptions
   class ActivateService < BaseService
-    def initialize(timestamp:)
+    def initialize(timestamp:, new_subscription: false)
       @timestamp = timestamp
 
       super(nil)
     end
 
+    # does not have a call method.
+    def call
+      # Do the subscription activation flow
+      #
+      # if new_subscription // subscription.pending?
+      #  then execute actions for new subscriptions
+      # else
+      #  then execute actions for pending subscriptions that are being activated by the clock job
+      #  or after gating was lifted.
+      # end
+      #
+      # this one won't do any billing, just return the subscription and let the caller do billing
+
+    end
+
+    # this is called from a clock job, its batch processing. 
     def activate_all_pending
       Subscription
         .joins(customer: :billing_entity)

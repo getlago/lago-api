@@ -346,7 +346,7 @@ module Invoices
       # NOTE: When a subscription is terminated we still need to charge the fixed_charges
       #       fee if the fixed_charge is pay in arrears, otherwise this fee will never
       #       be created.
-      subscription.active? ||
+      subscription.active? || subscription.activating? ||
         (subscription.terminated? && subscription.plan.fixed_charges.pay_in_arrears.any?) ||
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
     end
