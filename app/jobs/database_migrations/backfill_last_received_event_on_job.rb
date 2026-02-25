@@ -26,7 +26,6 @@ module DatabaseMigrations
         .where(last_received_event_on: nil)
         .find_each do |subscription|
           base_scope = Event.where(
-            organization_id: organization.id,
             external_subscription_id: subscription.external_id,
             deleted_at: nil
           )
@@ -52,7 +51,7 @@ module DatabaseMigrations
     end
 
     def find_last_event_date(base_scope, start_date)
-      return nil unless base_scope.where("created_at >= ?", start_date).exists?
+      return nil unless base_scope.where("timestamp >= ?", start_date).exists?
 
       today = Date.current
       days_active = (today - start_date).to_i
@@ -68,7 +67,7 @@ module DatabaseMigrations
       result = nil
       while low <= high
         mid = low + ((high - low) / 2).days
-        if base_scope.where("created_at >= ?", mid).exists?
+        if base_scope.where("timestamp >= ?", mid).exists?
           result = mid
           low = mid + 1.day
         else
@@ -81,7 +80,7 @@ module DatabaseMigrations
     def find_last_event_date_windowed(base_scope, start_date, today)
       [7, 30, 90, 180, 365, 730, 1500].each do |days|
         window_start = [today - days.days, start_date].max
-        next unless base_scope.where("created_at >= ?", window_start).exists?
+        next unless base_scope.where("timestamp >= ?", window_start).exists?
 
         return find_last_event_date_binary(base_scope, window_start, today)
       end
