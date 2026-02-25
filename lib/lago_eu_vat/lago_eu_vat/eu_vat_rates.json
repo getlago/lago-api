@@ -185,7 +185,14 @@
           "reduced1": 10,
           "reduced2": 14,
           "standard": 25.5
-        }
+        },
+        "exceptions": [
+          {
+            "name": "Aland Islands",
+            "postcode": "22\\d{3,}",
+            "standard": 0
+          }
+        ]
       },
       {
         "effective_from": "0000-01-01",

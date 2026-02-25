@@ -408,6 +408,8 @@ RSpec.describe Customers::EuAutoTaxesService do
           country: "PT", zipcode: "9000", expected_tax_code: "lago_eu_pt_exception_madeira"
         it_behaves_like "a special territory tax assignment",
           country: "GR", zipcode: "63086", expected_tax_code: "lago_eu_gr_exception_mount_athos"
+        it_behaves_like "a special territory tax assignment",
+          country: "FI", zipcode: "22000", expected_tax_code: "lago_eu_fi_exception_aland_islands"
       end
 
       context "when B2C customer (non-France territories apply exception regardless)" do
