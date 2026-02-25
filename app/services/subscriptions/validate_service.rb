@@ -5,6 +5,7 @@ module Subscriptions
     def valid?
       return false unless valid_customer?
       return false unless valid_plan?
+      return false unless valid_activation_rules?
 
       valid_subscription_at?
       valid_ending_at?
@@ -21,6 +22,10 @@ module Subscriptions
     end
 
     private
+
+    def valid_activation_rules?
+      false
+    end
 
     def valid_customer?
       return true if args[:customer]

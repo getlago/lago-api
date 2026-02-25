@@ -26,6 +26,12 @@ module Subscriptions
             SendWebhookJob.perform_after_commit("subscription.updated", previous)
             Utils::ActivityLog.produce_after_commit(previous, "subscription.updated")
           end
+        elsif subscription.activating?
+          #TODO: do the thing....
+          # makr as cancel with reason
+          # cancel payment if payment is in progress (if feasible)
+          # etc.
+
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
           update_on_termination_actions!

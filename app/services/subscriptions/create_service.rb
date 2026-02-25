@@ -133,16 +133,16 @@ module Subscriptions
         new_subscription.pending!
       elsif new_subscription.subscription_at < Time.current
         new_subscription.mark_as_active!(new_subscription.subscription_at)
-      elsif new_subscription.payment_gated? && !new_subscription.in_trial_period?
-        new_subscription.mark_as_activating!
+      elsif gatted_activation?(new_subscription)
+        return Subscriptions::GatedActivationService.call!(subscription: new_subscription)
       else
         new_subscription.mark_as_active!
       end
 
-      if new_subscription.active? || new_subscription.activating?
+      if new_subscription.active?
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at + 1.second
+          timestamp: (new_subscription.started_at + 1.second
         )
 
         after_commit do
@@ -155,20 +155,7 @@ module Subscriptions
         end
       end
 
-      if new_subscription.activating?
-        after_commit do
-          BillSubscriptionJob.perform_later(
-            [new_subscription],
-            Time.zone.now.to_i,
-            invoicing_reason: :subscription_starting
-          )
-          Subscriptions::ActivationTimeoutJob.set(
-            wait_until: new_subscription.activation_timeout_at
-          ).perform_later(new_subscription)
-          SendWebhookJob.perform_later("subscription.activating", new_subscription)
-          Utils::ActivityLog.produce(new_subscription, "subscription.activating")
-        end
-      elsif should_be_billed_today?(new_subscription)
+      if should_be_billed_today?(new_subscription)
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
@@ -196,11 +183,20 @@ module Subscriptions
       new_subscription
     end
 
+    def gatted_activation?(subscription)
+      # bunch of conditions to decide if subscription should be activated with gating (starting now),
+      # currently we gate activation for all subscriptions with activaiton rules,
+      # that have fixed charges pay in advance
+      #  -> or that have plan pay in advnace and no trial period
+    end
+
     def upgrade_subscription
       PlanUpgradeService.call!(current_subscription:, plan:, params:).subscription
     end
 
     def downgrade_subscription
+      # TODO: extract to PlanDowngradeService in a separate initiative
+      #
       if current_subscription.starting_in_the_future?
         update_pending_subscription
 

@@ -111,10 +111,9 @@ class Subscription < ApplicationRecord
   end
 
   def mark_as_activating!(timestamp = Time.current)
-    self.activating_at = Time.current
-    self.started_at ||= timestamp
-    self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
-    self.lifetime_usage.recalculate_invoiced_usage = true
+    self.activating_at ||= timestamp
+    # TODO: kind of....
+    # self.activation_expires_at = timestamp + activation_timeout_hours.hours
     activating!
   end
 

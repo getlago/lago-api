@@ -21,7 +21,10 @@ module Subscriptions
 
       new_subscription = new_subscription_with_overrides
 
-      if new_subscription.payment_gated? && !new_subscription.in_trial_period?
+      # THIS IS NOT ENOUGH BECAUSE THE FIXED CHARGES
+      if new_subscription.in_trial_period?
+        upgrade_immediately(new_subscription)
+      elsif new_subscription.activation_rules.present?
         upgrade_with_payment_gating(new_subscription)
       else
         upgrade_immediately(new_subscription)
@@ -47,7 +50,7 @@ module Subscriptions
 
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
-          timestamp: new_subscription.started_at + 1.second
+          timestamp: new_subscription.activating_at + 1.second
         )
 
         after_commit do
