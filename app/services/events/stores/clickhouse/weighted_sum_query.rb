@@ -57,6 +57,7 @@ module Events
           :events_cte_queries,
           :group_names,
           :grouped_arel_columns,
+          :grouped_by_columns,
           to: :store
 
         def events_cte_sql
@@ -141,7 +142,7 @@ module Events
 
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
+            groups = grouped_by_columns.map do |g|
               "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
             end
 
@@ -154,16 +155,16 @@ module Events
 
           <<-SQL
             SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{store.grouped_by.count + 1} AS timestamp,
-              tuple.#{store.grouped_by.count + 2} AS difference
+              #{grouped_by_columns.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
+              tuple.#{grouped_by_columns.count + 1} AS timestamp,
+              tuple.#{grouped_by_columns.count + 2} AS difference
             FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
         end
 
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = store.grouped_by.map do |g|
+            groups = grouped_by_columns.map do |g|
               "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
             end
 
@@ -176,9 +177,9 @@ module Events
 
           <<-SQL
             SELECT
-              #{store.grouped_by.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{store.grouped_by.count + 1} AS timestamp,
-              tuple.#{store.grouped_by.count + 2} AS difference
+              #{grouped_by_columns.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
+              tuple.#{grouped_by_columns.count + 1} AS timestamp,
+              tuple.#{grouped_by_columns.count + 2} AS difference
             FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
         end

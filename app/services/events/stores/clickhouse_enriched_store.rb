@@ -612,6 +612,10 @@ module Events
         "grouped_by"
       end
 
+      def grouped_by_columns
+        ["sorted_grouped_by"]
+      end
+
       def operation_type_sql
         "events_enriched_expanded.sorted_properties['operation_type']"
       end
