@@ -36,6 +36,7 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
+ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
@@ -339,6 +340,7 @@ DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
+DROP INDEX IF EXISTS public.index_user_devices_on_user_id_and_fingerprint;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
@@ -804,6 +806,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS wallet_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS user_devices_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_triggered_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
@@ -921,6 +924,7 @@ DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
+DROP TABLE IF EXISTS public.user_devices;
 DROP TABLE IF EXISTS public.usage_monitoring_triggered_alerts;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
@@ -4668,6 +4672,24 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
 
 
 --
+-- Name: user_devices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_devices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    fingerprint character varying NOT NULL,
+    browser character varying,
+    os character varying,
+    device_type character varying,
+    last_logged_at timestamp(6) without time zone NOT NULL,
+    last_ip_address character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5677,6 +5699,14 @@ ALTER TABLE ONLY public.usage_monitoring_triggered_alerts
 
 ALTER TABLE ONLY public.usage_thresholds
     ADD CONSTRAINT usage_thresholds_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_devices user_devices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT user_devices_pkey PRIMARY KEY (id);
 
 
 --
@@ -8977,6 +9007,13 @@ CREATE INDEX index_usage_thresholds_on_subscription_id ON public.usage_threshold
 
 
 --
+-- Name: index_user_devices_on_user_id_and_fingerprint; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_user_devices_on_user_id_and_fingerprint ON public.user_devices USING btree (user_id, fingerprint);
+
+
+--
 -- Name: index_versions_on_item_type_and_item_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11248,6 +11285,14 @@ ALTER TABLE ONLY public.integration_mappings
 
 
 --
+-- Name: user_devices fk_rails_e700a96826; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_devices
+    ADD CONSTRAINT fk_rails_e700a96826 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: charge_filters fk_rails_e711e8089e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11471,6 +11516,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260220131101'),
+('20260219130831'),
 ('20260219102644'),
 ('20260219083335'),
 ('20260218102426'),

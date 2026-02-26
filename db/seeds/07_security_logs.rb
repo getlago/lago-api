@@ -33,6 +33,14 @@ Utils::SecurityLog.produce(
 Utils::SecurityLog.produce(
   organization:,
   log_type: "user",
+  log_event: "user.new_device_logged_in",
+  user:,
+  device_info:
+)
+
+Utils::SecurityLog.produce(
+  organization:,
+  log_type: "user",
   log_event: "user.deleted",
   user:,
   device_info:,

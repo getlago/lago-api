@@ -9,16 +9,17 @@ module Invites
         return result.single_validation_failure!(error_code: "login_method_not_authorized", field: args[:login_method])
       end
 
-      ActiveRecord::Base.transaction do
+      result = ActiveRecord::Base.transaction do
         result = UsersService.new.register_from_invite(invite, args[:password])
-
         result.token = generate_token(result.user, login_method: args[:login_method])
         invite.recipient = result.membership
-
         invite.mark_as_accepted!
-
         result
       end
+
+      # Skip log for new users: invite acceptance covers this event
+      UserDevices::RegisterService.call!(user: result.user, skip_log: result.user&.previously_new_record?)
+      result
     end
 
     private

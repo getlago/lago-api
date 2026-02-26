@@ -36,6 +36,7 @@ module Clickhouse
       role.deleted
       role.updated
       user.deleted
+      user.new_device_logged_in
       user.invited
       user.password_edited
       user.password_reset_requested
