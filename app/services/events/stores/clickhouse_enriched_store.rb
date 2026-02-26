@@ -99,6 +99,19 @@ module Events
         )
       end
 
+      # DEPRECATED: This method will be replaced by distinct_codes_and_filters
+      #             to filter the charge and filters in a billing period.
+      #             See app/services/events/billing_period_filter_service.rb:42
+      def distinct_codes
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          ::Clickhouse::EventsEnrichedExpanded
+            .where(subscription_id: subscription.id)
+            .where(organization_id: subscription.organization.id)
+            .where(timestamp: from_datetime..applicable_to_datetime)
+            .pluck("DISTINCT(code)")
+        end
+      end
+
       def distinct_charges_and_filters
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           ::Clickhouse::EventsEnrichedExpanded
