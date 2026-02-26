@@ -847,6 +847,7 @@ type BillingEntityBillingConfiguration {
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
+  skipAutomaticPdfGeneration: [String!]!
   subscriptionInvoiceIssuingDateAdjustment: BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum!
   subscriptionInvoiceIssuingDateAnchor: BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum!
 }
@@ -856,6 +857,7 @@ input BillingEntityBillingConfigurationInput {
   documentNumbering: BillingEntityDocumentNumberingEnum
   invoiceFooter: String
   invoiceGracePeriod: Int
+  skipAutomaticPdfGeneration: [String!]
   subscriptionInvoiceIssuingDateAdjustment: BillingEntitySubscriptionInvoiceIssuingDateAdjustmentEnum
   subscriptionInvoiceIssuingDateAnchor: BillingEntitySubscriptionInvoiceIssuingDateAnchorEnum
 }

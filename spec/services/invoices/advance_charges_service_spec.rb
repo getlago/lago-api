@@ -125,6 +125,15 @@ RSpec.describe Invoices::AdvanceChargesService do
             }
           )
       end
+
+      context "when billing entity skips automatic invoice pdf generation" do
+        before { customer.billing_entity.update!(skip_automatic_pdf_generation: ["invoices"]) }
+
+        it "does not enqueue GenerateDocumentsJob" do
+          invoice_service.call
+          expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
+        end
+      end
     end
 
     context "without any standalone fees" do

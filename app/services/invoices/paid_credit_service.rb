@@ -37,7 +37,7 @@ module Invoices
         Utils::SegmentTrack.invoice_created(result.invoice)
         SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice)
         Utils::ActivityLog.produce(invoice, "invoice.paid_credit_added")
-        GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
+        GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?) unless billing_entity.skip_automatic_invoice_pdf_generation?
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
       end
@@ -97,9 +97,13 @@ module Invoices
       Invoices::Payments::CreateService.call_async(invoice:)
     end
 
+    def billing_entity
+      @billing_entity ||= customer.billing_entity
+    end
+
     def should_deliver_email?
       License.premium? &&
-        customer.billing_entity.email_settings.include?("invoice.finalized")
+        billing_entity.email_settings.include?("invoice.finalized")
     end
   end
 end

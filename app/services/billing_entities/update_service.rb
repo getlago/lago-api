@@ -55,6 +55,7 @@ module BillingEntities
         billing = params[:billing_configuration]&.to_h || {}
         billing_entity.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
         billing_entity.document_locale = billing[:document_locale] if billing.key?(:document_locale)
+        billing_entity.skip_automatic_pdf_generation = billing[:skip_automatic_pdf_generation] if billing.key?(:skip_automatic_pdf_generation)
 
         handle_eu_tax_management if params.key?(:eu_tax_management)
 

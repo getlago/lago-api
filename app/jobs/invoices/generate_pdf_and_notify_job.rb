@@ -2,6 +2,7 @@
 
 module Invoices
   class GeneratePdfAndNotifyJob < ApplicationJob
+    # TODO: I didn't find where this service is being called from, can we delete it?
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PDFS"])
         :pdfs
