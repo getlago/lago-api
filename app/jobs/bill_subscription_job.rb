@@ -14,7 +14,7 @@ class BillSubscriptionJob < ApplicationJob
   retry_on Customers::FailedToAcquireLock, ActiveRecord::StaleObjectError, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
-  def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false)
+  def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false, gated: false)
     Rails.logger.info("BillSubscriptionJob[Invoice ID: #{invoice&.id}] - Started")
 
     result = Invoices::SubscriptionService.call(
@@ -22,7 +22,8 @@ class BillSubscriptionJob < ApplicationJob
       timestamp:,
       invoicing_reason:,
       invoice:,
-      skip_charges:
+      skip_charges:,
+      gated:
     )
 
     if result.success?

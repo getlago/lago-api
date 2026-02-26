@@ -97,7 +97,7 @@ RSpec.describe Invoices::SubscriptionService do
 
       expect(result.invoice.total_amount_cents).to eq(120)
       expect(result.invoice.version_number).to eq(4)
-      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice, gated: false)
       expect(result.invoice).to be_finalized
     end
 

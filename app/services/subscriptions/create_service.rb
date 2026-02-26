@@ -99,14 +99,39 @@ module Subscriptions
     end
 
     def should_be_billed_today?(sub)
-      sub.active? && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
+      (sub.active? || sub.activating?) && sub.subscription_at.today? && plan.pay_in_advance? && !sub.in_trial_period?
     end
 
     def fixed_charges_billed_today?(sub)
-      return false if !(sub.active? && sub.started_at.today?)
+      return false if !sub.active? && !sub.activating?
+      return false if !sub.started_at.today?
       return false if sub.fixed_charges.pay_in_advance.none?
 
       !sub.plan.pay_in_advance? || sub.in_trial_period?
+    end
+
+    def activate_or_gate_subscription(subscription, started_at: Time.current)
+      if params[:activation_rules].present?
+        subscription.mark_as_activating!(started_at)
+        create_activation_rules(subscription)
+        evaluate_result = Subscriptions::ActivationRules::EvaluateService.call!(subscription:)
+
+        unless evaluate_result.has_applicable_rules
+          subscription.mark_as_active!(started_at)
+        end
+      else
+        subscription.mark_as_active!(started_at)
+      end
+    end
+
+    def create_activation_rules(subscription)
+      params[:activation_rules].each do |rule_params|
+        subscription.activation_rules.create!(
+          organization_id: customer.organization_id,
+          rule_type: rule_params[:rule_type],
+          timeout_hours: rule_params[:timeout_hours]
+        )
+      end
     end
 
     def create_subscription
@@ -129,12 +154,14 @@ module Subscriptions
       if new_subscription.subscription_at > Time.current
         new_subscription.pending!
       elsif new_subscription.subscription_at < Time.current
-        new_subscription.mark_as_active!(new_subscription.subscription_at)
+        activate_or_gate_subscription(new_subscription, started_at: new_subscription.subscription_at)
       else
-        new_subscription.mark_as_active!
+        activate_or_gate_subscription(new_subscription)
       end
 
-      if new_subscription.active?
+      gated = new_subscription.activating?
+
+      if new_subscription.active? || new_subscription.activating?
         EmitFixedChargeEventsService.call!(
           subscriptions: [new_subscription],
           timestamp: new_subscription.started_at + 1.second
@@ -144,7 +171,8 @@ module Subscriptions
           if fixed_charges_billed_today?(new_subscription)
             Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(
               new_subscription,
-              new_subscription.started_at + 1.second
+              new_subscription.started_at + 1.second,
+              gated
             )
           end
         end
@@ -159,7 +187,8 @@ module Subscriptions
             [new_subscription],
             Time.zone.now.to_i,
             invoicing_reason: :subscription_starting,
-            skip_charges: true
+            skip_charges: true,
+            gated:
           )
         end
       end

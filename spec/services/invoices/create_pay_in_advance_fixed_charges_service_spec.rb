@@ -67,7 +67,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       expect(result.invoice.taxes_amount_cents).to eq(2000) # factory default 20% tax
       expect(result.invoice.total_amount_cents).to eq(12000) # fees + taxes
 
-      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice, gated: false)
       expect(result.invoice).to be_finalized
     end
 

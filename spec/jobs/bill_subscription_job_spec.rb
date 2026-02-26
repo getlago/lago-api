@@ -12,7 +12,7 @@ RSpec.describe BillSubscriptionJob do
 
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
-      .with(subscriptions:, timestamp:, invoicing_reason:, invoice:, skip_charges: false)
+      .with(subscriptions:, timestamp:, invoicing_reason:, invoice:, skip_charges: false, gated: false)
       .and_return(result)
   end
 

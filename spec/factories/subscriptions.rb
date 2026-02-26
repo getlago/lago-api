@@ -15,6 +15,10 @@ FactoryBot.define do
       started_at { nil }
     end
 
+    trait :activating do
+      status { :activating }
+    end
+
     trait :canceled do
       status { :canceled }
       canceled_at { Time.current }

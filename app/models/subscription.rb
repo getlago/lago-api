@@ -36,6 +36,8 @@ class Subscription < ApplicationRecord
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
 
+  has_many :activation_rules, class_name: "SubscriptionActivationRule", dependent: :destroy
+
   has_one :lifetime_usage, autosave: true
   has_one :subscription_activity, class_name: "UsageMonitoring::SubscriptionActivity"
 
@@ -46,7 +48,8 @@ class Subscription < ApplicationRecord
     :pending,
     :active,
     :terminated,
-    :canceled
+    :canceled,
+    :activating
   ].freeze
 
   BILLING_TIME = %i[
@@ -95,6 +98,13 @@ class Subscription < ApplicationRecord
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
     self.lifetime_usage.recalculate_invoiced_usage = true
     active!
+  end
+
+  def mark_as_activating!(timestamp = Time.current)
+    self.started_at ||= timestamp
+    self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
+    self.lifetime_usage.recalculate_invoiced_usage = true
+    activating!
   end
 
   def mark_as_terminated!(timestamp = Time.current)

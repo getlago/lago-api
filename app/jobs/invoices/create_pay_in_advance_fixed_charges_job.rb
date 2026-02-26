@@ -17,10 +17,11 @@ module Invoices
 
     unique :until_executed, on_conflict: :log
 
-    def perform(subscription, timestamp)
+    def perform(subscription, timestamp, gated = false)
       result = Invoices::CreatePayInAdvanceFixedChargesService.call(
         subscription:,
-        timestamp:
+        timestamp:,
+        gated:
       )
 
       return if result.success?

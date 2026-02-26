@@ -2,15 +2,18 @@
 
 module Invoices
   class TransitionToFinalStatusService < BaseService
-    def initialize(invoice:)
+    def initialize(invoice:, gated: false)
       @invoice = invoice
+      @gated = gated
       @customer = @invoice.customer
       @billing_entity = @customer.billing_entity
       super
     end
 
     def call
-      if should_finalize_invoice?
+      if gated
+        invoice.status = :open
+      elsif should_finalize_invoice?
         Invoices::FinalizeService.call!(invoice: invoice)
       else
         invoice.status = :closed
@@ -31,6 +34,6 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :customer, :billing_entity
+    attr_reader :invoice, :gated, :customer, :billing_entity
   end
 end

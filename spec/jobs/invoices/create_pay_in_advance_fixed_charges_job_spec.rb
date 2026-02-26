@@ -12,7 +12,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
   describe "#perform" do
     before do
       allow(Invoices::CreatePayInAdvanceFixedChargesService).to receive(:call)
-        .with(subscription:, timestamp:).and_return(result)
+        .with(subscription:, timestamp:, gated: false).and_return(result)
     end
 
     it "calls the create pay in advance fixed charges service" do

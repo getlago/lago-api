@@ -2,7 +2,7 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
+    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false, gated: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
       @invoicing_reason = invoicing_reason
@@ -16,6 +16,7 @@ module Invoices
       #       the process can be retried without creating a new invoice
       @invoice = invoice
       @skip_charges = skip_charges
+      @gated = gated
 
       super
     end
@@ -71,6 +72,11 @@ module Invoices
       if grace_period?
         SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
         Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
+      elsif invoice.open?
+        # Gated invoice: only trigger payment, skip webhooks/documents/integrations.
+        # The invoice remains invisible to the customer until payment succeeds
+        # and TryActivateService finalizes it.
+        Invoices::Payments::CreateService.call_async(invoice:)
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
@@ -110,7 +116,8 @@ module Invoices
       :customer,
       :currency,
       :invoice,
-      :skip_charges
+      :skip_charges,
+      :gated
 
     def active_subscriptions
       @active_subscriptions ||= subscriptions.select(&:active?)
@@ -142,7 +149,7 @@ module Invoices
     def set_invoice_generated_status
       return invoice.status = :draft if grace_period?
 
-      Invoices::TransitionToFinalStatusService.call(invoice:)
+      Invoices::TransitionToFinalStatusService.call(invoice:, gated:)
     end
 
     def should_deliver_finalized_email?

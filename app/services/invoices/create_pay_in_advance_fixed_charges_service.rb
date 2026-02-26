@@ -4,9 +4,10 @@ module Invoices
   class CreatePayInAdvanceFixedChargesService < BaseService
     Result = BaseResult[:invoice, :fees_taxes]
 
-    def initialize(subscription:, timestamp:)
+    def initialize(subscription:, timestamp:, gated: false)
       @subscription = subscription
       @timestamp = timestamp
+      @gated = gated
       @customer = subscription.customer
       @organization = subscription.organization
 
@@ -14,7 +15,7 @@ module Invoices
     end
 
     def call
-      return result unless subscription.active?
+      return result unless subscription.active? || subscription.activating?
       return result if fixed_charge_events.empty?
 
       # Calculate fees for all fixed charge events
@@ -61,7 +62,7 @@ module Invoices
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-        Invoices::TransitionToFinalStatusService.call(invoice:)
+        Invoices::TransitionToFinalStatusService.call(invoice:, gated:)
         invoice.save!
       end
 
@@ -71,7 +72,10 @@ module Invoices
 
       return result if vies_check_failed
 
-      unless invoice.closed?
+      if invoice.open?
+        # Gated invoice: only trigger payment, skip webhooks/documents/integrations
+        Invoices::Payments::CreateService.call_async(invoice:)
+      elsif !invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
@@ -92,7 +96,7 @@ module Invoices
 
     private
 
-    attr_reader :subscription, :timestamp, :customer, :organization
+    attr_reader :subscription, :timestamp, :gated, :customer, :organization
     attr_accessor :invoice
 
     def fixed_charge_events
