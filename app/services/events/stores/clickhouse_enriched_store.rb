@@ -280,6 +280,42 @@ module Events
         result["aggregation"]
       end
 
+      def prorated_unique_count_breakdown(with_remove: false)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_breakdown_query(with_remove:)),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+
+          connection.select_all(sql).to_a
+        end
+      end
+
+      def grouped_unique_count
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query),
+              {
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql), groups_key: :grouped_by, value_key: :aggregation)
+        end
+      end
+
       def active_unique_property?(event)
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(
@@ -565,6 +601,13 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
+      def grouped_arel_columns
+        [
+          [arel_table[:sorted_grouped_by].as("grouped_by")],
+          group_names
+        ]
+      end
+
       def group_names
         "grouped_by"
       end
@@ -598,11 +641,12 @@ module Events
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
       end
 
-      def prepare_grouped_result(result, decimal: false)
+      def prepare_grouped_result(result, decimal: false, groups_key: :groups, value_key: :value)
         result.to_ary.map do |row|
           row.symbolize_keys.tap do |r|
-            r[:groups] = r[:groups].transform_values(&:presence)
-            r[:value] = decimal ? BigDecimal(r[:value].presence || 0) : r[:value]
+            r[:groups] = r[groups_key].transform_values(&:presence)
+            r[:value] = decimal ? BigDecimal(r[value_key].presence || 0) : r[value_key]
+            r.slice!(:groups, :value, :timestamp)
           end
         end
       end
