@@ -365,11 +365,15 @@ module Fees
       filters = {charge_id: charge.id}
 
       model = charge_filter.presence || charge
-      grouped_by_keys = model.pricing_group_keys&.dup || []
+      grouped_by_keys = []
+      if model.pricing_group_keys && !usage_filters.skip_grouping
+        grouped_by_keys.concat(model.pricing_group_keys)
+      end
+
       if charge.accepts_target_wallet && !grouped_by_keys.include?("target_wallet_code")
         grouped_by_keys << "target_wallet_code"
       end
-      filters[:grouped_by] = grouped_by_keys if grouped_by_keys.present? && !usage_filters.skip_grouping
+      filters[:grouped_by] = grouped_by_keys
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

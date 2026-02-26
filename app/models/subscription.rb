@@ -269,6 +269,10 @@ class Subscription < ApplicationRecord
 
     usage_thresholds.any? ? usage_thresholds : plan.usage_thresholds
   end
+
+  def all_charges_pricing_group_agnostic?
+    plan.charges.all?(&:pricing_group_agnostic?)
+  end
 end
 
 # == Schema Information
