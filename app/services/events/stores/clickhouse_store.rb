@@ -773,6 +773,8 @@ module Events
         @grouped_names ||= grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
       end
 
+      alias_method :grouped_by_columns, :grouped_by
+
       def operation_type_sql
         "events_enriched.sorted_properties['operation_type']"
       end
