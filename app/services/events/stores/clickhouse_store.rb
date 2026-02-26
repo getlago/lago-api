@@ -767,8 +767,12 @@ module Events
           grouped_by.map.with_index do |group, index|
             Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
           end,
-          grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+          group_names
         ]
+      end
+
+      def group_names
+        @grouped_names ||= grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
       end
 
       def operation_type_sql

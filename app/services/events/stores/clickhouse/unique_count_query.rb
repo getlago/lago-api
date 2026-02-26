@@ -288,6 +288,7 @@ module Events
           :with_ctes,
           :charges_duration,
           :events_cte_queries,
+          :group_names,
           :grouped_arel_columns,
           :operation_type_sql,
           to: :store
@@ -486,10 +487,6 @@ module Events
               ELSE false
             END
           SQL
-        end
-
-        def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
         end
       end
     end

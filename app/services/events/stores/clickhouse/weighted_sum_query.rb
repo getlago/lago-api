@@ -51,7 +51,13 @@ module Events
 
         attr_reader :store
 
-        delegate :arel_table, :with_ctes, :charges_duration, :events_cte_queries, :grouped_arel_columns, to: :store
+        delegate :arel_table,
+          :with_ctes,
+          :charges_duration,
+          :events_cte_queries,
+          :group_names,
+          :grouped_arel_columns,
+          to: :store
 
         def events_cte_sql
           events_cte = events_cte_queries(
@@ -196,10 +202,6 @@ module Events
               0
             )
           SQL
-        end
-
-        def group_names
-          @group_names ||= store.grouped_arel_columns.last
         end
       end
     end

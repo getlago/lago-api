@@ -448,11 +448,8 @@ module Events
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
       end
 
-      def grouped_arel_columns
-        [
-          [arel_table[:sorted_grouped_by].as("grouped_by")],
-          "grouped_by"
-        ]
+      def group_names
+        "grouped_by"
       end
 
       def operation_type_sql
