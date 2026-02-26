@@ -1415,7 +1415,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(
             value: values[:value],
             timestamp: values[:timestamp],
-            properties:
+            properties:,
+            charge_filter: values[:charge_filter]
           )
         end
       end
@@ -1481,10 +1482,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       context "with filters" do
         let(:matching_filters) { {region: ["europe"]} }
 
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         let(:events_values) do
           [
             {timestamp: Time.zone.parse("2023-03-04 00:00:00.000"), value: 1000, region: "us"},
-            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe"}
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe", charge_filter:}
           ]
         end
 
@@ -1540,7 +1543,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(
             value: values[:value],
             timestamp: values[:timestamp],
-            properties:
+            properties:,
+            charge_filter: values[:charge_filter]
           )
         end
       end
@@ -1646,10 +1650,12 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       context "with filters" do
         let(:matching_filters) { {region: ["europe"]} }
 
+        let(:charge_filter) { create(:charge_filter, charge:) }
+
         let(:events_values) do
           [
             {timestamp: Time.zone.parse("2023-03-04 00:00:00.000"), value: 1000, region: "us"},
-            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe"}
+            {timestamp: Time.zone.parse("2023-03-05 00:00:00.000"), value: 1000, region: "europe", charge_filter:}
           ]
         end
 

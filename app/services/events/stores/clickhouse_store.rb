@@ -4,9 +4,7 @@ module Events
   module Stores
     class ClickhouseStore < BaseStore
       include Events::Stores::Utils::QueryHelpers
-
-      DECIMAL_SCALE = 26
-      DECIMAL_DATE_SCALE = 10
+      include Events::Stores::Utils::ClickhouseSqlHelpers
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -185,7 +183,7 @@ module Events
       end
 
       def prorated_events_values(total_duration)
-        ratio_sql = Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+        ratio_sql = duration_ratio_sql(
           "events_enriched.timestamp", to_datetime, total_duration, timezone
         )
 
@@ -479,7 +477,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          duration_ratio_sql(
             "events_enriched.timestamp", to_datetime, period_duration, timezone
           )
         end
@@ -511,7 +509,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql("events_enriched.timestamp", to_datetime, period_duration, timezone)
+          duration_ratio_sql("events_enriched.timestamp", to_datetime, period_duration, timezone)
         end
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -539,7 +537,7 @@ module Events
       end
 
       def sum_date_breakdown
-        date_field = Events::Stores::Utils::ClickhouseSqlHelpers.date_in_customer_timezone_sql("events_enriched.timestamp", timezone)
+        date_field = date_in_customer_timezone_sql("events_enriched.timestamp", timezone)
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
@@ -769,8 +767,12 @@ module Events
           grouped_by.map.with_index do |group, index|
             Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
           end,
-          grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+          group_names
         ]
+      end
+
+      def group_names
+        @grouped_names ||= grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
       end
 
       def operation_type_sql

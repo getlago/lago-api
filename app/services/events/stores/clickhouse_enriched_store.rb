@@ -4,6 +4,7 @@ module Events
   module Stores
     class ClickhouseEnrichedStore < BaseStore
       include Events::Stores::Utils::QueryHelpers
+      include Events::Stores::Utils::ClickhouseSqlHelpers
 
       def events
         raise NotImplementedError
@@ -135,6 +136,57 @@ module Events
         end
       end
 
+      def unique_count
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {decimal_date_scale: DECIMAL_DATE_SCALE}
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
+      end
+
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def unique_count_breakdown
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+
+          connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {decimal_date_scale: DECIMAL_DATE_SCALE}
+              ]
+            )
+          ).rows
+        end
+      end
+
+      def prorated_unique_count
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.prorated_query),
+              {
+                from_datetime:,
+                to_datetime:,
+                decimal_date_scale: DECIMAL_DATE_SCALE,
+                timezone: customer.applicable_timezone
+              }
+            ]
+          )
+          connection.select_one(sql)
+        end
+
+        result["aggregation"]
+      end
+
       def max
         Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
@@ -244,7 +296,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          duration_ratio_sql(
             "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
           )
         end
@@ -274,7 +326,7 @@ module Events
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
         else
-          Events::Stores::Utils::ClickhouseSqlHelpers.duration_ratio_sql(
+          duration_ratio_sql(
             "events_enriched_expanded.timestamp", to_datetime, period_duration, timezone
           )
         end
@@ -304,19 +356,104 @@ module Events
       end
 
       def sum_date_breakdown
-        raise NotImplementedError
+        date_field = date_in_customer_timezone_sql("events_enriched_expanded.timestamp", timezone)
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [
+              Arel::Nodes::NamedFunction.new(
+                "toDate",
+                [Arel::Nodes::SqlLiteral.new(date_field)]
+              ).as("day"),
+              arel_table[:decimal_value].as("property")
+            ],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT
+              events.day,
+              sum(events.property) AS day_sum
+            FROM events
+            GROUP BY events.day
+            ORDER BY events.day asc
+          SQL
+
+          connection.select_all(Arel.sql(sql)).rows.map do |row|
+            {date: row.first.to_date, value: row.last}
+          end
+        end
       end
 
       def weighted_sum(initial_value: 0)
-        raise NotImplementedError
+        result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.query),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE,
+                initial_value: initial_value || 0
+              }
+            ]
+          )
+
+          connection.select_one(sql)
+        end
+
+        BigDecimal(result["aggregation"].presence || 0)
       end
 
       def grouped_weighted_sum(initial_values: [])
         raise NotImplementedError
       end
 
+      # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
+      def weighted_sum_breakdown(initial_value: 0)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
+
+          rows = connection.select_all(
+            ActiveRecord::Base.sanitize_sql_for_conditions(
+              [
+                sanitize_colon(query.breakdown_query),
+                {
+                  from_datetime:,
+                  to_datetime: to_datetime.ceil,
+                  decimal_scale: DECIMAL_SCALE,
+                  initial_value: initial_value || 0
+                }
+              ]
+            )
+          ).rows
+          # `date_diff` actually returns an `Int64` and ActiveRecord transform that into a `String`. If we cast the
+          # result in a `Int32`, then we get the result as `Integer`:
+          # ```ruby
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int64")
+          # => {"CAST('1', 'Int64')" => "1"}
+          # lago-api(staging)> Clickhouse::BaseRecord.connection.select_one("SELECT 1::Int32")
+          # => {"CAST('1', 'Int32')" => 1}
+          # ```
+          # To keep consistency with the PG implementation, we call `#to_i` on the value.
+          rows.map do |(timestamp, difference, cumul, second_duration, period_ratio)|
+            [timestamp, difference, cumul, second_duration.to_i, period_ratio]
+          end
+        end
+      end
+
       def arel_table
         @arel_table ||= ::Clickhouse::EventsEnrichedExpanded.arel_table
+      end
+
+      def group_names
+        "grouped_by"
+      end
+
+      def operation_type_sql
+        "events_enriched_expanded.sorted_properties['operation_type']"
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
@@ -344,9 +481,12 @@ module Events
         query.where(arel_table[:sorted_grouped_by].eq(map_fn))
       end
 
-      def prepare_grouped_result(result)
+      def prepare_grouped_result(result, decimal: false)
         result.to_ary.map do |row|
-          row.symbolize_keys.tap { |r| r[:groups] = r[:groups].transform_values(&:presence) }
+          row.symbolize_keys.tap do |r|
+            r[:groups] = r[:groups].transform_values(&:presence)
+            r[:value] = decimal ? BigDecimal(r[:value].presence || 0) : r[:value]
+          end
         end
       end
     end

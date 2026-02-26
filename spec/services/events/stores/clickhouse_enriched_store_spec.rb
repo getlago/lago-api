@@ -23,7 +23,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       charge_filter_id: charge_filter&.id,
       charge_filter_version: charge_filter&.updated_at,
       timestamp:,
-      properties:,
+      properties: properties.merge(billable_metric.field_name => value).compact,
       grouped_by: grouped_values,
       value:,
       decimal_value: value&.to_i&.to_d,
@@ -33,6 +33,10 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   alias_method :create_enriched_event, :create_event
+
+  def format_timestamp(timestamp, precision: 3)
+    Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%#{precision}L")
+  end
 
   context "without deduplication" do
     it_behaves_like "an event store", with_event_duplication: false,
@@ -45,11 +49,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_codes
         distinct_charges_and_filters
         active_unique_property?
-        unique_count
         grouped_unique_count
-        sum_date_breakdown
-        weighted_sum
-        weighted_sum_breakdown
         grouped_weighted_sum
       ]
   end
@@ -65,11 +65,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         distinct_charges_and_filters
         prorated_events_values
         active_unique_property?
-        unique_count
         grouped_unique_count
-        sum_date_breakdown
-        weighted_sum
-        weighted_sum_breakdown
         grouped_weighted_sum
       ]
   end
