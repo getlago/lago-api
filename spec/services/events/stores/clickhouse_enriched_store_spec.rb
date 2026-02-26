@@ -27,7 +27,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       grouped_by: grouped_values,
       value:,
       decimal_value: value&.to_i&.to_d,
-      precise_total_amount_cents: nil,
+      precise_total_amount_cents: value,
       enriched_at:
     )
   end
@@ -48,10 +48,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         unique_count
         grouped_unique_count
         sum_date_breakdown
-        sum_precise_total_amount_cents
-        grouped_sum_precise_total_amount_cents
-        prorated_sum
-        grouped_prorated_sum
         weighted_sum
         weighted_sum_breakdown
         grouped_weighted_sum
@@ -72,10 +68,6 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
         unique_count
         grouped_unique_count
         sum_date_breakdown
-        sum_precise_total_amount_cents
-        grouped_sum_precise_total_amount_cents
-        prorated_sum
-        grouped_prorated_sum
         weighted_sum
         weighted_sum_breakdown
         grouped_weighted_sum

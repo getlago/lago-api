@@ -427,14 +427,14 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           ctes_sql = events_cte_queries(
-            select: groups + [arel_table[:precise_total_amount_cents].as("property")],
+            select: groups + [arel_table[:precise_total_amount_cents].as("precise_total_amount_cents")],
             deduplicated_columns: %w[precise_total_amount_cents]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{group_names},
-              sum(events.property)
+              sum(events.precise_total_amount_cents)
             FROM events
             GROUP BY #{group_names}
           SQL
