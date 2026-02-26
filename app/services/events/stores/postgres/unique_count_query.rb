@@ -231,7 +231,7 @@ module Events
               FROM event_values
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
-            ORDER BY timestamp ASC
+            ORDER BY timestamp ASC, property ASC
           SQL
         end
 
