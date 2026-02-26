@@ -542,6 +542,11 @@ RSpec.describe DunningCampaigns::BulkProcessService do
           result
           expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
         end
+
+        it "does not send the webhook again on subsequent evaluations" do
+          described_class.call
+          expect { described_class.call }.not_to have_enqueued_job(SendWebhookJob)
+        end
       end
     end
   end
