@@ -43,11 +43,8 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       excluding_features: %i[
         events
         grouped_weighted_sum
+        grouped_prorated_unique_count
       ]
-    # TODO: Add specs for
-    # - prorated_unique_count
-    # - grouped_prorated_unique_count
-    # - prorated_unique_count_breakdown
   end
 
   context "with deduplication" do
@@ -55,10 +52,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       excluding_features: %i[
         events
         grouped_weighted_sum
+        grouped_prorated_unique_count
       ]
-    # TODO: Add specs for
-    # - prorated_unique_count
-    # - grouped_prorated_unique_count
-    # - prorated_unique_count_breakdown
   end
 end
