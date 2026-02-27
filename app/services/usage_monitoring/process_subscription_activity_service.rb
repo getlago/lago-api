@@ -46,6 +46,29 @@ module UsageMonitoring
         exception_to_raise ||= e
       end
 
+      alerts.using_billable_metric_lifetime_usage.group_by(&:billable_metric_id).each do |bm_id, bm_alerts|
+        charge_ids = subscription.plan.charges.where(billable_metric_id: bm_id).ids
+        next if charge_ids.empty?
+
+        usage_filters = UsageFilters.new(full_usage: true, filter_by_charge_id: charge_ids)
+        usage_result = ::Invoices::CustomerUsageService.call(
+          customer: subscription.customer,
+          subscription:,
+          apply_taxes: false,
+          with_cache: false,
+          usage_filters:
+        )
+        next unless usage_result.success?
+
+        bm_alerts.each do |alert|
+          ProcessAlertService.call(alert:, subscription:, current_metrics: usage_result.usage)
+        rescue => e
+          exception_to_raise ||= e
+        end
+      rescue => e
+        exception_to_raise ||= e
+      end
+
       subscription_activity.delete
 
       if exception_to_raise
