@@ -141,7 +141,23 @@ module Credits
         remaining[key] += cap
       end
 
-      remaining.sort_by { |_, v| -v }.to_h
+      ordered = remaining.sort_by { |_, v| -v }.to_h
+      reconcile_remaining_amounts(ordered)
+    end
+
+    def reconcile_remaining_amounts(ordered_remaining_amounts)
+      return ordered_remaining_amounts if ordered_remaining_amounts.empty?
+
+      precise_total = ordered_remaining_amounts.values.sum
+      difference = invoice.total_amount_cents - precise_total
+
+      # Only reconcile small rounding differences (at most 1 cent per fee bucket).
+      return ordered_remaining_amounts if difference <= 0
+      return ordered_remaining_amounts if difference > ordered_remaining_amounts.size
+
+      largest_key = ordered_remaining_amounts.keys.first
+      ordered_remaining_amounts[largest_key] += difference
+      ordered_remaining_amounts
     end
 
     def wallets_already_applied?
