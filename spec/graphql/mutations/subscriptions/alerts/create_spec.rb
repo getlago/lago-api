@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::UsageMonitoring::Alerts::Create do
+RSpec.describe Mutations::Subscriptions::Alerts::Create do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -61,6 +61,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create do
   it "creates an alert" do
     result_data = result["data"]["createSubscriptionAlert"]
     expect(result_data["subscriptionExternalId"]).to eq subscription.external_id
+    expect(result_data["walletId"]).to be_nil
     expect(result_data["alertType"]).to eq "current_usage_amount"
     expect(result_data["code"]).to eq "global"
     expect(result_data["thresholds"]).to contain_exactly(

@@ -18,6 +18,7 @@ module UsageMonitoring
 
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
     BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units]
+    SUBSCRIPTION_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units lifetime_usage_amount]
     WALLET_TYPES = %w[wallet_balance_amount wallet_credits_balance]
 
     DIRECTIONS = {increasing: "increasing", decreasing: "decreasing"}.freeze
@@ -46,6 +47,7 @@ module UsageMonitoring
 
     scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
     scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
+    scope :using_subscription, -> { where(alert_type: SUBSCRIPTION_TYPES) }
     scope :using_wallet, -> { where(alert_type: WALLET_TYPES) }
 
     enum :direction, DIRECTIONS, validate: true

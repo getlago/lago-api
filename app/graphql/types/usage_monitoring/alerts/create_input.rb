@@ -9,7 +9,8 @@ module Types
         argument :billable_metric_id, ID, required: false
         argument :code, String, required: true
         argument :name, String, required: false
-        argument :subscription_id, ID, required: true
+        argument :subscription_id, ID, required: false
+        argument :wallet_id, ID, required: false
 
         argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
       end

@@ -1337,7 +1337,9 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'billable_metric_current_usage_units',
     'lifetime_usage_amount',
     'wallet_balance_amount',
-    'wallet_credits_balance'
+    'wallet_credits_balance',
+    'wallet_ongoing_balance_amount',
+    'wallet_credits_ongoing_balance'
 );
 
 
@@ -3866,8 +3868,8 @@ CREATE TABLE public.wallets (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    code character varying,
-    traceable boolean DEFAULT false NOT NULL
+    traceable boolean DEFAULT false NOT NULL,
+    code character varying
 );
 
 
@@ -11406,6 +11408,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260224134805'),
 ('20260220131101'),
 ('20260219102644'),
 ('20260219083335'),
