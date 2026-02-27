@@ -21,15 +21,15 @@ module Events
         def grouped_query(initial_values:)
           with_ctes(grouped_events_cte_sql(initial_values), <<-SQL)
             SELECT
-              #{group_names},
+              #{joined_group_names},
               SUM(period_ratio) as aggregation
             FROM (
               SELECT
-                #{group_names},
+                #{joined_group_names},
                 (#{grouped_period_ratio_sql}) AS period_ratio
               FROM events_data
             ) cumulated_ratios
-            GROUP BY #{group_names}
+            GROUP BY #{joined_group_names}
           SQL
         end
 
@@ -56,6 +56,7 @@ module Events
           :charges_duration,
           :events_cte_queries,
           :group_names,
+          :joined_group_names,
           :grouped_arel_columns,
           :grouped_by_columns,
           to: :store
@@ -142,9 +143,7 @@ module Events
 
         def grouped_initial_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = grouped_by_columns.map do |g|
-              "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-            end
+            groups = grouped_by_columns(initial_value[:groups])
 
             [
               groups,
@@ -155,18 +154,16 @@ module Events
 
           <<-SQL
             SELECT
-              #{grouped_by_columns.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{grouped_by_columns.count + 1} AS timestamp,
-              tuple.#{grouped_by_columns.count + 2} AS difference
+              #{Array.new(store.grouped_by_count) { |index| "tuple.#{index + 1} AS #{group_names[index]}" }.join(", ")},
+              tuple.#{store.grouped_by_count + 1} AS timestamp,
+              tuple.#{store.grouped_by_count + 2} AS difference
             FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
         end
 
         def grouped_end_of_period_value_sql(initial_values)
           values = initial_values.map do |initial_value|
-            groups = grouped_by_columns.map do |g|
-              "'#{ActiveRecord::Base.sanitize_sql_for_conditions(initial_value[:groups][g])}'"
-            end
+            groups = grouped_by_columns(initial_value[:groups])
 
             [
               groups,
@@ -177,9 +174,9 @@ module Events
 
           <<-SQL
             SELECT
-              #{grouped_by_columns.map.with_index { |_, index| "tuple.#{index + 1} AS g_#{index}" }.join(", ")},
-              tuple.#{grouped_by_columns.count + 1} AS timestamp,
-              tuple.#{grouped_by_columns.count + 2} AS difference
+              #{Array.new(store.grouped_by_count) { |index| "tuple.#{index + 1} AS #{group_names[index]}" }.join(", ")},
+              tuple.#{store.grouped_by_count + 1} AS timestamp,
+              tuple.#{store.grouped_by_count + 2} AS difference
             FROM ( SELECT arrayJoin([#{values.map { "tuple(#{it})" }.join(", ")}]) AS tuple )
           SQL
         end
@@ -188,13 +185,13 @@ module Events
           <<-SQL
             if(
               -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{joined_group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) > 0,
 
               -- NOTE: cumulative sum from previous events in the period
-              (SUM(difference) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
+              (SUM(difference) OVER (PARTITION BY #{joined_group_names} ORDER BY timestamp ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))
               *
               -- NOTE: duration in seconds between current event and next one - or end of period if next event is null
-              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
+              date_diff('seconds', timestamp, leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 5, 'UTC')) OVER (PARTITION BY #{joined_group_names} ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING))
               /
               -- NOTE: full duration of the period
               #{charges_duration.days.to_i}
