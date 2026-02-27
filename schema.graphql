@@ -10369,7 +10369,7 @@ type Query {
   """
   Query Webhooks
   """
-  webhooks(limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, webhookEndpointId: String!): WebhookCollection!
+  webhooks(eventTypes: [String!], fromDate: ISO8601DateTime, httpStatuses: [String!], limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, statuses: [WebhookStatusEnum!], toDate: ISO8601DateTime, webhookEndpointId: String!): WebhookCollection!
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -13178,6 +13178,7 @@ type WebhookEventType {
 enum WebhookStatusEnum {
   failed
   pending
+  retrying
   succeeded
 }
 

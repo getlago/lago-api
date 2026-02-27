@@ -67,31 +67,155 @@ RSpec.describe WebhooksQuery do
     end
   end
 
-  context "when search for /generated/ term" do
-    let(:search_term) { "generated" }
+  context "when text searching" do
+    context "when search for event id" do
+      let(:search_term) { webhook_succeeded.id.to_s }
 
-    it "returns only one webhook" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).to include(webhook_other_type.id)
+      it "returns matching webhooks" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to include(webhook_succeeded.id)
+      end
+    end
+
+    context "when search for resource id" do
+      let(:search_term) { webhook_succeeded.object_id.to_s }
+
+      it "returns matching webhooks" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to include(webhook_succeeded.id)
+      end
     end
   end
 
-  context "when search for /created/ term and filtering by status" do
-    let(:search_term) { "created" }
-    let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, status: "succeeded"} }
+  context "when filtering" do
+    describe "status" do
+      context "when filtering by valid status" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, statuses: ["failed"]} }
 
-    it "returns only one webhook" do
-      expect(returned_ids.count).to eq(1)
-      expect(returned_ids).to include(webhook_succeeded.id)
+        it "returns only one webhook" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(webhook_failed.id)
+        end
+      end
+
+      context "when filtering by invalid status" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, statuses: ["invalid_status"]} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
     end
-  end
 
-  context "when filtering by invalid status" do
-    let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, status: "invalid_status"} }
+    describe "event type" do
+      context "when filtering by valid event type" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, event_types: ["invoice.generated"]} }
 
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error).to be_a(BaseService::ValidationFailure)
+        it "returns only matching webhooks" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(webhook_other_type.id)
+        end
+      end
+
+      context "when filtering by invalid event type" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, event_types: ["invalid.event"]} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+    end
+
+    describe "http status" do
+      context "when filtering by specific status code" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, http_statuses: ["200"]} }
+
+        it "returns only matching webhooks" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(2)
+          expect(returned_ids).to include(webhook_succeeded.id)
+          expect(returned_ids).to include(webhook_other_type.id)
+        end
+      end
+
+      context "when filtering by wildcard status code" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, http_statuses: ["5xx"]} }
+
+        it "returns only matching webhooks" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(webhook_failed.id)
+        end
+      end
+
+      context "when filtering by status code range" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, http_statuses: ["200-205"]} }
+
+        it "returns only matching webhooks" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(2)
+          expect(returned_ids).to include(webhook_succeeded.id)
+          expect(returned_ids).to include(webhook_other_type.id)
+        end
+      end
+
+      context "when filtering by timeout" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, http_statuses: ["timeout"]} }
+        let(:webhook_failed) { create(:webhook, :failed, webhook_endpoint:, http_status: nil) }
+
+        it "returns only matching webhooks" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(1)
+          expect(returned_ids).to include(webhook_failed.id)
+        end
+      end
+
+      context "when filtering by invalid http status format" do
+        let(:filters) { {webhook_endpoint_id: webhook_endpoint.id, http_statuses: ["invalid_status"]} }
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
+    end
+
+    describe "date range" do
+      context "when filtering by valid date range" do
+        let(:filters) do
+          {
+            webhook_endpoint_id: webhook_endpoint.id,
+            from_date: 2.hours.ago,
+            to_date: 1.hour.ago
+          }
+        end
+
+        it "returns webhooks updated within the date range" do
+          expect(result).to be_success
+          expect(returned_ids.count).to eq(0)
+        end
+      end
+
+      context "when filtering with invalid date format" do
+        let(:filters) do
+          {
+            webhook_endpoint_id: webhook_endpoint.id,
+            from_date: "invalid_date",
+            to_date: "invalid_date"
+          }
+        end
+
+        it "returns a validation failure" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
     end
   end
 end
