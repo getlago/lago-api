@@ -3868,8 +3868,8 @@ CREATE TABLE public.wallets (
     payment_method_id uuid,
     payment_method_type public.payment_method_types DEFAULT 'provider'::public.payment_method_types NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    traceable boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying,
+    traceable boolean DEFAULT false NOT NULL
 );
 
 
