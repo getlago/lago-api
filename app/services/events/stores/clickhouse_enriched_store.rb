@@ -579,7 +579,39 @@ module Events
       end
 
       def grouped_weighted_sum(initial_values: [])
-        raise NotImplementedError
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = Clickhouse::WeightedSumQuery.new(store: self)
+
+          # NOTE: build the list of initial values for each groups
+          #       from the events in the period
+          formated_initial_values = grouped_count.map do |group|
+            value = 0
+            previous_group = initial_values.find { |g| g[:groups] == group[:groups] }
+            value = previous_group[:value] if previous_group
+            {groups: group[:groups], value:}
+          end
+
+          # NOTE: add the initial values for groups that are not in the events
+          initial_values.each do |intial_value|
+            next if formated_initial_values.find { |g| g[:groups] == intial_value[:groups] }
+
+            formated_initial_values << intial_value
+          end
+          return [] if formated_initial_values.empty?
+
+          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+            [
+              sanitize_colon(query.grouped_query(initial_values: formated_initial_values)),
+              {
+                from_datetime:,
+                to_datetime: to_datetime.ceil,
+                decimal_scale: DECIMAL_SCALE
+              }
+            ]
+          )
+
+          prepare_grouped_result(connection.select_all(sql), decimal: true, groups_key: :grouped_by, value_key: :aggregation)
+        end
       end
 
       # NOTE: not used in production, only for debug purpose to check the computed values before aggregation
@@ -627,11 +659,26 @@ module Events
       end
 
       def group_names
+        [joined_group_names]
+      end
+
+      def joined_group_names
         "grouped_by"
       end
 
-      def grouped_by_columns
-        ["sorted_grouped_by"]
+      def grouped_by_columns(values)
+        map_values = values.map do |group, value|
+          [
+            "'#{ActiveRecord::Base.sanitize_sql_for_conditions(group)}'",
+            "'#{ActiveRecord::Base.sanitize_sql_for_conditions(value)}'"
+          ]
+        end
+
+        "map(#{map_values.flatten.join(", ")})"
+      end
+
+      def grouped_by_count
+        1
       end
 
       def operation_type_sql

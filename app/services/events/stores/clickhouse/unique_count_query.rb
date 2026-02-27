@@ -102,7 +102,7 @@ module Events
         def grouped_query
           event_values = <<-SQL
             SELECT
-              #{group_names},
+              #{joined_group_names},
               property,
               SUM(adjusted_value) AS sum_adjusted_value
             FROM (
@@ -110,12 +110,12 @@ module Events
                 timestamp,
                 property,
                 operation_type,
-                #{group_names},
+                #{joined_group_names},
                 #{grouped_operation_value_sql} AS adjusted_value
               FROM events
               ORDER BY timestamp ASC, property ASC
             ) adjusted_event_values
-            GROUP BY #{group_names}, property
+            GROUP BY #{joined_group_names}, property
           SQL
 
           ctes_sql = grouped_events_cte_sql.merge!(
@@ -124,10 +124,10 @@ module Events
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{joined_group_names},
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names}
+            GROUP BY #{joined_group_names}
           SQL
         end
 
@@ -135,7 +135,7 @@ module Events
           # Only ignore remove events if they are NOT the last event of the day
           same_day_ignored = <<-SQL
               SELECT
-                #{group_names},
+                #{joined_group_names},
                 property,
                 operation_type,
                 timestamp,
@@ -145,9 +145,9 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  #{joined_group_names},
                   -- Check if this is the last event of the day for this property and group
-                  timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
+                  timestamp = MAX(timestamp) OVER (PARTITION BY #{joined_group_names}, property, toDate(timestamp, :timezone)) AS is_last_event_of_day
                 FROM events
                 ORDER BY timestamp ASC, property ASC
               ) as e
@@ -156,7 +156,7 @@ module Events
           # Check if the operation type is the same as previous, so it nullifies this one
           event_values = <<-SQL
             SELECT
-              #{group_names},
+              #{joined_group_names},
               property,
               operation_type,
               timestamp
@@ -165,14 +165,14 @@ module Events
                 timestamp,
                 property,
                 operation_type,
-                #{group_names},
+                #{joined_group_names},
                 #{grouped_operation_value_sql} AS adjusted_value
               FROM same_day_ignored
               WHERE is_ignored = false
               ORDER BY timestamp ASC, property ASC
             ) adjusted_event_values
             WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-            GROUP BY #{group_names}, property, operation_type, timestamp
+            GROUP BY #{joined_group_names}, property, operation_type, timestamp
           SQL
 
           ctes_sql = grouped_events_cte_sql.merge!(
@@ -182,15 +182,15 @@ module Events
 
           with_ctes(ctes_sql, <<-SQL)
             SELECT
-              #{group_names},
+              #{joined_group_names},
               coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
+                #{joined_group_names}
               FROM event_values
             ) cumulated_ratios
-            GROUP BY #{group_names}
+            GROUP BY #{joined_group_names}
           SQL
         end
 
@@ -288,7 +288,7 @@ module Events
           :with_ctes,
           :charges_duration,
           :events_cte_queries,
-          :group_names,
+          :joined_group_names,
           :grouped_arel_columns,
           :operation_type_sql,
           to: :store
@@ -367,13 +367,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (lagInFrame(operation_type, 1) OVER (PARTITION BY #{joined_group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal32(0, 0),
                 toDecimal32(1, 0)
               ))
               ,
               (if(
-                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                (lagInFrame(operation_type, 1, 'remove') OVER (PARTITION BY #{joined_group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
                 toDecimal32(0, 0),
                 toDecimal32(-1, 0)
               ))
@@ -452,13 +452,13 @@ module Events
                       toTimezone(
                         if(
                           (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                             OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
+                             OVER (PARTITION BY #{joined_group_names}, property ORDER BY timestamp ASC
                                    ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                           ) < toDateTime64(:from_datetime, 3, 'UTC'),
                           toDateTime64(:from_datetime, 3, 'UTC'),
                           addDays(
                             (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC'))
-                               OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC
+                               OVER (PARTITION BY #{joined_group_names}, property ORDER BY timestamp ASC
                                      ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                             ),
                             1

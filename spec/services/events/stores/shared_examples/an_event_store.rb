@@ -1914,8 +1914,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       let(:events) do
         events_values.map do |values|
           properties = {}
-          properties[:region] = values[:region] if values[:region]
-          properties[:agent_name] = values[:agent_name] if values[:agent_name]
+          properties["region"] = values[:region] if values[:region]
+          properties["agent_name"] = values[:agent_name] if values[:agent_name]
 
           create_event(
             timestamp: values[:timestamp],
