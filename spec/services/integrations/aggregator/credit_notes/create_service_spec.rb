@@ -168,7 +168,13 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       ],
       "options" => {
         "ignoreMandatoryFields" => false
-      }
+      },
+      "taxdetails" => [
+        {
+          "sublistId" => "taxdetails",
+          "lineItems" => anything
+        }
+      ]
     }
   end
 
