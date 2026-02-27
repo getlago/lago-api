@@ -24,7 +24,7 @@ module UsageMonitoring
 
         ActiveRecord::Base.transaction do
           batch.update_all(enqueued: true, enqueued_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-          after_commit { ActiveJob.perform_all_later(jobs) }
+          after_commit { ApplicationJob.perform_all_later(jobs) }
         end
 
         nb_jobs_enqueued += jobs.size

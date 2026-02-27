@@ -27,6 +27,19 @@ class ApplicationJob < ActiveJob::Base
     end
   end
 
+  # This method wraps ActiveJob.perform_all_later with a runtime check to ensure
+  # that none of the jobs have uniqueness enabled, as perform_all_later bypasses
+  # the before_enqueue callbacks used by activejob-uniqueness.
+  #
+  def self.perform_all_later(jobs)
+    unique_jobs = jobs.select { |job| job.class.lock_strategy_class }
+    if unique_jobs.any?
+      raise ArgumentError, "perform_all_later is not compatible with unique jobs: #{unique_jobs.map { |j| j.class.name }.uniq.join(", ")}"
+    end
+
+    ActiveJob.perform_all_later(jobs) # rubocop:disable Lago/ActiveJobPerformAllLater
+  end
+
   # This method is a generic proc for specifying random wait between retries
   # Usage:
   # retry_on ExceptionClass, attempts: 5, wait: random_delay(16)

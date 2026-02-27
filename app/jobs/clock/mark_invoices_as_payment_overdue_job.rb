@@ -15,7 +15,7 @@ module Clock
           jobs = invoices.map do |invoice|
             Invoices::Payments::MarkOverdueJob.new(invoice:)
           end
-          ActiveJob.perform_all_later(jobs)
+          ApplicationJob.perform_all_later(jobs)
         end
     end
   end
