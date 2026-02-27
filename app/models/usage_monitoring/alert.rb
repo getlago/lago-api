@@ -15,7 +15,7 @@ module UsageMonitoring
       "wallet_balance_amount" => "UsageMonitoring::WalletBalanceAmountAlert",
       "wallet_credits_balance" => "UsageMonitoring::WalletCreditsBalanceAlert",
       "wallet_ongoing_balance_amount" => "UsageMonitoring::WalletOngoingBalanceAmountAlert",
-      "wallet_credits_ongoing_balance" => "UsageMonitoring::WalletCreditsOngoingBalanceAlert",
+      "wallet_credits_ongoing_balance" => "UsageMonitoring::WalletCreditsOngoingBalanceAlert"
     }
 
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]

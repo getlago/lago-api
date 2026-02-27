@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
+describe "Wallet Credits Ongoing Balance Alerts", :premium, transaction: false do
   include_context "with webhook tracking"
 
   let(:organization) { create(:organization, webhook_url: "https://example.com") }
@@ -49,13 +49,13 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
 
   def create_test_wallet_alert(wallet, **params)
     create_wallet_alert(customer.external_id, wallet.code, {
-      alert_type: :wallet_ongoing_balance_amount,
+      alert_type: :wallet_credits_ongoing_balance,
       code: :ongoing_balance_alert,
-      name: "Ongoing Balance Alert",
+      name: "Credits Ongoing Balance Alert",
       thresholds: [
-        {value: 75_00, code: :warn},
-        {value: 50_00, code: :critical},
-        {value: 25_00, code: :emergency}
+        {value: 75, code: :warn},
+        {value: 50, code: :critical},
+        {value: 25, code: :emergency}
       ],
       **params
     }, as: :model)
@@ -74,9 +74,9 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
       object_type: "triggered_alert",
       triggered_alert: include({
         lago_id: triggered.id,
-        alert_type: "wallet_ongoing_balance_amount",
+        alert_type: "wallet_credits_ongoing_balance",
         alert_code: "ongoing_balance_alert",
-        alert_name: "Ongoing Balance Alert",
+        alert_name: "Credits Ongoing Balance Alert",
         current_value: params[:current_value].to_f.to_s,
         previous_value: params[:previous_value].to_f.to_s,
         crossed_thresholds: params[:crossed_thresholds]
@@ -89,19 +89,19 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
   describe "basic functionality" do
     it "triggers alert when ongoing balance goes down" do
       wallet = create_test_wallet(granted_credits: "100")
-      expect(wallet.ongoing_balance_cents).to eq(100_00)
+      expect(wallet.credits_ongoing_balance).to eq(100)
 
       subscription = create_test_subscription
       alert = create_test_wallet_alert(
         wallet,
-        thresholds: [{value: 50_00, code: :alert, recurring: false}]
+        thresholds: [{value: 50, code: :alert, recurring: false}]
       )
 
       expect(alert).to have_attributes(
-        alert_type: "wallet_ongoing_balance_amount",
+        alert_type: "wallet_credits_ongoing_balance",
         direction: "decreasing",
         thresholds: match_array([
-          have_attributes({value: 50_00, code: "alert", recurring: false})
+          have_attributes({value: 50, code: "alert", recurring: false})
         ])
       )
 
@@ -109,30 +109,30 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
       send_event!(subscription, 25)
       recalculate_wallet_balances
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(75_00)
-      expect(alert.reload.previous_value).to eq(75_00)
+      expect(wallet.reload.credits_ongoing_balance).to eq(75)
+      expect(alert.reload.previous_value).to eq(75)
       expect(alert.triggered_alerts.count).to eq(0)
 
       # Second event - one-time alert
       send_event!(subscription, 30)
       recalculate_wallet_balances
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(45_00)
-      expect(alert.reload.previous_value).to eq(45_00)
+      expect(wallet.reload.credits_ongoing_balance).to eq(45)
+      expect(alert.reload.previous_value).to eq(45)
 
       expect_alert_to_be_triggered(
         alert,
-        current_value: 45_00,
-        previous_value: 75_00,
-        crossed_thresholds: [{"code" => "alert", "value" => "5000.0", "recurring" => false}]
+        current_value: 45,
+        previous_value: 75,
+        crossed_thresholds: [{"code" => "alert", "value" => "50.0", "recurring" => false}]
       )
 
       # Third event - no alert
       send_event!(subscription, 20)
       recalculate_wallet_balances
 
-      expect(wallet.reload.ongoing_balance_cents).to eq(25_00)
-      expect(alert.reload.previous_value).to eq(25_00)
+      expect(wallet.reload.credits_ongoing_balance).to eq(25)
+      expect(alert.reload.previous_value).to eq(25)
       expect(alert.triggered_alerts.count).to eq(1)
     end
 
@@ -153,14 +153,14 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(70_00)
-        expect(alert.reload.previous_value).to eq(70_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(70)
+        expect(alert.reload.previous_value).to eq(70)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 70_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "warn", "value" => "7500.0", "recurring" => false}]
+          current_value: 70,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "warn", "value" => "75.0", "recurring" => false}]
         )
       end
     end
@@ -175,14 +175,14 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(70_00)
-        expect(alert.reload.previous_value).to eq(70_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(70)
+        expect(alert.reload.previous_value).to eq(70)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 70_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "warn", "value" => "7500.0", "recurring" => false}]
+          current_value: 70,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "warn", "value" => "75.0", "recurring" => false}]
         )
       end
     end
@@ -198,14 +198,14 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(70_00)
-        expect(alert.reload.previous_value).to eq(70_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(70)
+        expect(alert.reload.previous_value).to eq(70)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 70_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "warn", "value" => "7500.0", "recurring" => false}]
+          current_value: 70,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "warn", "value" => "75.0", "recurring" => false}]
         )
       end
     end
@@ -219,16 +219,16 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 70)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(30_00)
-        expect(alert.reload.previous_value).to eq(30_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(30)
+        expect(alert.reload.previous_value).to eq(30)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 30_00,
-          previous_value: 100_00,
+          current_value: 30,
+          previous_value: 100,
           crossed_thresholds: [
-            {"code" => "warn", "value" => "7500.0", "recurring" => false},
-            {"code" => "critical", "value" => "5000.0", "recurring" => false}
+            {"code" => "warn", "value" => "75.0", "recurring" => false},
+            {"code" => "critical", "value" => "50.0", "recurring" => false}
           ]
         )
       end
@@ -244,15 +244,15 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(70_00)
-        expect(alert.reload.previous_value).to eq(70_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(70)
+        expect(alert.reload.previous_value).to eq(70)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 70_00,
-          previous_value: 100_00,
+          current_value: 70,
+          previous_value: 100,
           crossed_thresholds: [
-            {"code" => "warn", "value" => "7500.0", "recurring" => false}
+            {"code" => "warn", "value" => "75.0", "recurring" => false}
           ]
         )
 
@@ -260,15 +260,15 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(40_00)
-        expect(alert.reload.previous_value).to eq(40_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(40)
+        expect(alert.reload.previous_value).to eq(40)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 40_00,
-          previous_value: 70_00,
+          current_value: 40,
+          previous_value: 70,
           crossed_thresholds: [
-            {"code" => "critical", "value" => "5000.0", "recurring" => false}
+            {"code" => "critical", "value" => "50.0", "recurring" => false}
           ]
         )
 
@@ -276,15 +276,15 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(10_00)
-        expect(alert.reload.previous_value).to eq(10_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(10)
+        expect(alert.reload.previous_value).to eq(10)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 10_00,
-          previous_value: 40_00,
+          current_value: 10,
+          previous_value: 40,
           crossed_thresholds: [
-            {"code" => "emergency", "value" => "2500.0", "recurring" => false}
+            {"code" => "emergency", "value" => "25.0", "recurring" => false}
           ]
         )
       end
@@ -299,8 +299,8 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 10)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(90_00)
-        expect(alert.reload.previous_value).to eq(90_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(90)
+        expect(alert.reload.previous_value).to eq(90)
 
         expect(alert.triggered_alerts.count).to eq(0)
         expect(alert_webhooks).to be_empty
@@ -318,14 +318,14 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 30)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(70_00)
-        expect(alert.reload.previous_value).to eq(70_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(70)
+        expect(alert.reload.previous_value).to eq(70)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 70_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "warn", "value" => "7500.0", "recurring" => false}]
+          current_value: 70,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "warn", "value" => "75.0", "recurring" => false}]
         )
       end
     end
@@ -338,8 +338,8 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         alert = create_test_wallet_alert(
           wallet,
           thresholds: [
-            {value: 80_00, code: :one_time, recurring: false},
-            {value: 10_00, code: :recurring, recurring: true}
+            {value: 80, code: :one_time, recurring: false},
+            {value: 10, code: :recurring, recurring: true}
           ]
         )
 
@@ -347,44 +347,44 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 25)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(75_00)
-        expect(alert.reload.previous_value).to eq(75_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(75)
+        expect(alert.reload.previous_value).to eq(75)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 75_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "one_time", "value" => "8000.0", "recurring" => false}]
+          current_value: 75,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "one_time", "value" => "80.0", "recurring" => false}]
         )
 
         # Second event - recurring alert
         send_event!(subscription, 10)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(65_00)
-        expect(alert.reload.previous_value).to eq(65_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(65)
+        expect(alert.reload.previous_value).to eq(65)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 65_00,
-          previous_value: 75_00,
-          crossed_thresholds: [{"code" => "recurring", "value" => "7000.0", "recurring" => true}]
+          current_value: 65,
+          previous_value: 75,
+          crossed_thresholds: [{"code" => "recurring", "value" => "70.0", "recurring" => true}]
         )
 
         # Third event - recurring alert
         send_event!(subscription, 20)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(45_00)
-        expect(alert.reload.previous_value).to eq(45_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(45)
+        expect(alert.reload.previous_value).to eq(45)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 45_00,
-          previous_value: 65_00,
+          current_value: 45,
+          previous_value: 65,
           crossed_thresholds: [
-            {"code" => "recurring", "value" => "5000.0", "recurring" => true},
-            {"code" => "recurring", "value" => "6000.0", "recurring" => true}
+            {"code" => "recurring", "value" => "50.0", "recurring" => true},
+            {"code" => "recurring", "value" => "60.0", "recurring" => true}
           ]
         )
       end
@@ -398,8 +398,8 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         alert = create_test_wallet_alert(
           wallet,
           thresholds: [
-            {value: 50_00, code: :positive, recurring: false},
-            {value: -50_00, code: :negative, recurring: false}
+            {value: 50, code: :positive, recurring: false},
+            {value: -50, code: :negative, recurring: false}
           ]
         )
 
@@ -407,28 +407,28 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 55)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(45_00)
-        expect(alert.reload.previous_value).to eq(45_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(45)
+        expect(alert.reload.previous_value).to eq(45)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 45_00,
-          previous_value: 100_00,
-          crossed_thresholds: [{"code" => "positive", "value" => "5000.0", "recurring" => false}]
+          current_value: 45,
+          previous_value: 100,
+          crossed_thresholds: [{"code" => "positive", "value" => "50.0", "recurring" => false}]
         )
 
         # Second event - negative alert, ongoing balance goes down to -$60
         send_event!(subscription, 100)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(-55_00)
-        expect(alert.reload.previous_value).to eq(-55_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(-55)
+        expect(alert.reload.previous_value).to eq(-55)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: -55_00,
-          previous_value: 45_00,
-          crossed_thresholds: [{"code" => "negative", "value" => "-5000.0", "recurring" => false}]
+          current_value: -55,
+          previous_value: 45,
+          crossed_thresholds: [{"code" => "negative", "value" => "-50.0", "recurring" => false}]
         )
       end
     end
@@ -441,8 +441,8 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         alert = create_test_wallet_alert(
           wallet,
           thresholds: [
-            {value: 15_00, code: :one_time, recurring: false},
-            {value: 10_00, code: :recurring, recurring: true}
+            {value: 15, code: :one_time, recurring: false},
+            {value: 10, code: :recurring, recurring: true}
           ]
         )
 
@@ -450,42 +450,42 @@ describe "Wallet Ongoing Balance Amount Alerts", :premium, transaction: false do
         send_event!(subscription, 10)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(10_00)
-        expect(alert.reload.previous_value).to eq(10_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(10)
+        expect(alert.reload.previous_value).to eq(10)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: 10_00,
-          previous_value: 20_00,
-          crossed_thresholds: [{"code" => "one_time", "value" => "1500.0", "recurring" => false}]
+          current_value: 10,
+          previous_value: 20,
+          crossed_thresholds: [{"code" => "one_time", "value" => "15.0", "recurring" => false}]
         )
 
         # Second event - positive recurring alert at $5
         send_event!(subscription, 10)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(0)
+        expect(wallet.reload.credits_ongoing_balance).to eq(0)
         expect(alert.reload.previous_value).to eq(0)
 
         expect_alert_to_be_triggered(
           alert,
           current_value: 0,
-          previous_value: 10_00,
-          crossed_thresholds: [{"code" => "recurring", "value" => "500.0", "recurring" => true}]
+          previous_value: 10,
+          crossed_thresholds: [{"code" => "recurring", "value" => "5.0", "recurring" => true}]
         )
 
         # Third event - negative recurring alert at -$5
         send_event!(subscription, 10)
         recalculate_wallet_balances
 
-        expect(wallet.reload.ongoing_balance_cents).to eq(-10_00)
-        expect(alert.reload.previous_value).to eq(-10_00)
+        expect(wallet.reload.credits_ongoing_balance).to eq(-10)
+        expect(alert.reload.previous_value).to eq(-10)
 
         expect_alert_to_be_triggered(
           alert,
-          current_value: -10_00,
+          current_value: -10,
           previous_value: 0,
-          crossed_thresholds: [{"code" => "recurring", "value" => "-500.0", "recurring" => true}]
+          crossed_thresholds: [{"code" => "recurring", "value" => "-5.0", "recurring" => true}]
         )
       end
     end
