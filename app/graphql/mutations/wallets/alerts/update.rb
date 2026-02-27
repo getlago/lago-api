@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
 module Mutations
-  module UsageMonitoring
+  module Wallets
     module Alerts
       class Update < BaseMutation
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = "subscriptions:update"
+        REQUIRED_PERMISSION = "wallets:update"
 
-        graphql_name "UpdateSubscriptionAlert"
+        graphql_name "UpdateCustomerWalletAlert"
         description "Updates an alert"
 
         input_object_class Types::UsageMonitoring::Alerts::UpdateInput
         type Types::UsageMonitoring::Alerts::Object
 
         def resolve(**args)
-          alert = current_organization.alerts.find_by(id: args[:id])
+          alert = current_organization.alerts.using_wallet.find_by(id: args[:id])
 
           result = ::UsageMonitoring::UpdateAlertService.call(
             alert:,
