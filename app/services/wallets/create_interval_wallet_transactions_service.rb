@@ -82,7 +82,7 @@ module Wallets
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
-          AND #{wallet_started_at} <= '#{Time.current.utc.strftime("%Y-%m-%d %H:%M:%S")}'
+          AND #{wallet_started_at} <= :today
           AND (recurring_transaction_rules.expiration_at IS NULL
            OR recurring_transaction_rules.expiration_at > '#{Time.current.utc.strftime("%Y-%m-%d %H:%M:%S")}')
           AND #{conditions.join(" AND ")}
