@@ -155,6 +155,7 @@ module Subscriptions
         new_subscription.pending!
       elsif new_subscription.subscription_at < Time.current
         activate_or_gate_subscription(new_subscription, started_at: new_subscription.subscription_at)
+        # not okay, should not change behaviour
       else
         activate_or_gate_subscription(new_subscription)
       end
