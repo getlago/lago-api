@@ -20,7 +20,7 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
       aggregation_type: billable_metric.aggregation_type,
       charge_id: charge.id,
       charge_version: charge.updated_at,
-      charge_filter_id: charge_filter&.id,
+      charge_filter_id: charge_filter&.id || "",
       charge_filter_version: charge_filter&.updated_at,
       timestamp:,
       properties: properties.merge(billable_metric.field_name => value).compact,
@@ -39,16 +39,10 @@ RSpec.describe Events::Stores::ClickhouseEnrichedStore, clickhouse: {clean_befor
   end
 
   context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false,
-      excluding_features: %i[
-        events
-      ]
+    it_behaves_like "an event store", with_event_duplication: false
   end
 
   context "with deduplication" do
-    it_behaves_like "an event store", with_event_duplication: true,
-      excluding_features: %i[
-        events
-      ]
+    it_behaves_like "an event store", with_event_duplication: true
   end
 end

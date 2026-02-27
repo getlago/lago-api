@@ -6,8 +6,24 @@ module Events
       include Events::Stores::Utils::QueryHelpers
       include Events::Stores::Utils::ClickhouseSqlHelpers
 
-      def events
-        raise NotImplementedError
+      def events(force_from: false, ordered: false)
+        Events::Stores::Utils::ClickhouseConnection.with_retry do
+          order_clause = ordered ? "ORDER BY timestamp ASC" : ""
+
+          sql = with_ctes(
+            events_cte_queries(
+              deduplicated_columns: %w[decimal_value value properties precise_total_amount_cents code external_subscription_id],
+              force_from:
+            ),
+            <<-SQL
+              SELECT *
+              FROM events
+              #{order_clause}
+            SQL
+          )
+
+          ::Clickhouse::EventsEnrichedExpanded.find_by_sql(sql)
+        end
       end
 
       def events_cte_queries(**args)
