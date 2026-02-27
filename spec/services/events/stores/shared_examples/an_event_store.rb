@@ -726,6 +726,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   if include_feature?(:grouped_prorated_unique_count)
     describe "#grouped_prorated_unique_count" do
       let(:grouped_by) { %w[agent_name other] }
+      let(:events_grouped_by) { ["agent_name", "other"] }
       let(:started_at) { Time.zone.parse("2023-03-01") }
 
       let(:events) do
@@ -733,28 +734,27 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           create_event(
             timestamp: boundaries[:from_datetime] + 1.day,
             properties: {
-              agent_name: "frodo"
+              "agent_name" => "frodo"
             },
             value: "2"
           ),
           create_event(
             timestamp: boundaries[:from_datetime] + 1.day,
             properties: {
-              agent_name: "aragorn"
+              "agent_name" => "aragorn"
             },
             value: "2"
           ),
           create_event(
             timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
             properties: {
-              agent_name: "aragorn",
-              operation_type: "remove"
+              "agent_name" => "aragorn",
+              "operation_type" => "remove"
             },
             value: "2"
           ),
           create_event(
             timestamp: boundaries[:from_datetime] + 2.days,
-            properties: {billable_metric.field_name => 2},
             value: "2"
           )
         ]
