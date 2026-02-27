@@ -408,6 +408,8 @@ RSpec.describe Customers::EuAutoTaxesService do
           country: "PT", zipcode: "9000", expected_tax_code: "lago_eu_pt_exception_madeira"
         it_behaves_like "a special territory tax assignment",
           country: "GR", zipcode: "63086", expected_tax_code: "lago_eu_gr_exception_mount_athos"
+        it_behaves_like "a special territory tax assignment",
+          country: "FI", zipcode: "22000", expected_tax_code: "lago_eu_fi_exception_aland_islands"
       end
 
       context "when B2C customer (non-France territories apply exception regardless)" do
@@ -500,6 +502,18 @@ RSpec.describe Customers::EuAutoTaxesService do
         it "detects the territory and assigns the exception tax code" do
           result = eu_tax_service.call
           expect(result.tax_code).to eq("lago_eu_es_exception_canary_islands")
+        end
+      end
+
+      context "when customer has an invalid VAT number in a special territory" do
+        let(:tax_identification_number) { "INVALID123" }
+        let(:vies_response) { false }
+
+        before { customer.update(country: "FR", zipcode: "97100") }
+
+        it "skips special territory detection and falls through to VIES check" do
+          result = eu_tax_service.call
+          expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
       end
 
