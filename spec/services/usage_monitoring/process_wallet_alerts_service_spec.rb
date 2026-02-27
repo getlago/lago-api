@@ -99,6 +99,7 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsService do
         expect(result).to be_success
 
         triggered_alert = organization.triggered_alerts.sole
+        expect(triggered_alert.alert).to eq(alert)
         expect(triggered_alert.current_value).to eq(400)
         expect(triggered_alert.previous_value).to eq(1000)
         expect(triggered_alert.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
@@ -126,6 +127,7 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsService do
         triggered_alert = organization.triggered_alerts.sole
         expect(triggered_alert.alert).to eq(alert)
         expect(triggered_alert.current_value).to eq(4.0)
+        expect(triggered_alert.previous_value).to eq(15.0)
         expect(triggered_alert.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
           {code: "warn5", value: "5.0", recurring: false},
           {code: "warn10", value: "10.0", recurring: false}
